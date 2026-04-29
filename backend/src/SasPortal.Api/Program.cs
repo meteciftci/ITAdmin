@@ -1,3 +1,4 @@
+using SasPortal.Api.Extensions;
 using SasPortal.Application;
 using SasPortal.Infrastructure;
 using SasPortal.Persistence;
@@ -16,6 +17,8 @@ builder.Services.AddOpenApi();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
+app.UseGlobalExceptionHandling();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
