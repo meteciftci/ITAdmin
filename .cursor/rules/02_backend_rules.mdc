@@ -1,0 +1,268 @@
+---
+description: SASPortal backend kodu için katman, CQRS, API, auth, permission, audit, EF Core ve güvenlik kuralları.
+globs:
+  - "backend/**/*.cs"
+  - "backend/**/*.csproj"
+  - "backend/**/*.json"
+alwaysApply: false
+---
+
+# SASPortal Backend Rules
+
+Bu kurallar backend dosyaları üzerinde çalışırken uygulanır.
+
+Detaylı referans:
+
+```text
+KuralSetleri/02_SASPortal_Backend_Kural_Seti.md
+```
+
+## 1. Solution Yapısı
+
+Backend yapısı:
+
+```text
+backend/src/Sas.Api
+backend/src/Sas.Application
+backend/src/Sas.Domain
+backend/src/Sas.Infrastructure
+backend/src/Sas.Persistence
+backend/src/Sas.Shared
+backend/tests/Sas.UnitTests
+backend/tests/Sas.IntegrationTests
+```
+
+## 2. Katman Kuralları
+
+- `Sas.Api`: HTTP giriş noktasıdır.
+- `Sas.Application`: use-case, command, query, handler, DTO, validation katmanıdır.
+- `Sas.Domain`: entity, enum, value object katmanıdır.
+- `Sas.Infrastructure`: dış sistem ve teknik servis implementasyonlarıdır.
+- `Sas.Persistence`: EF Core, DbContext, migration ve configuration katmanıdır.
+- `Sas.Shared`: ortak result/error/paged modellerini içerir.
+
+Kurallar:
+
+- Controller içinde iş mantığı yazma.
+- Controller içine DbContext inject etme.
+- Domain katmanını başka katmana bağımlı yapma.
+- Infrastructure implementasyonunu Application içine doğrudan sokma.
+- Entity'yi doğrudan API response olarak dönme.
+
+## 3. CQRS / MediatR Kuralları
+
+- Veri değiştiren işlem `Command` olmalıdır.
+- Veri okuyan işlem `Query` olmalıdır.
+- Her command/query için handler yazılır.
+- Handler tek use-case yürütür.
+- Handler validation yapmaz; validation FluentValidation ile yapılır.
+
+Örnek isimler:
+
+```text
+CreateUserCommand
+CreateUserCommandValidator
+CreateUserCommandHandler
+GetUsersPagedQuery
+GetUsersPagedQueryHandler
+```
+
+## 4. Validation Kuralları
+
+- FluentValidation kullan.
+- Controller içinde manuel validation yapma.
+- Validation mesajları kullanıcı dostu olmalıdır.
+- Backend validation her zaman zorunludur.
+
+## 5. API Controller Kuralları
+
+- Controller sadece request alır ve mediator çağırır.
+- Response standardına uy.
+- Permission gereken endpointlerde permission attribute kullan.
+- HTTP status code standardına uy.
+
+Örnek akış:
+
+```text
+Controller -> Mediator.Send(command/query) -> Handler -> Result -> ActionResult
+```
+
+## 6. API Response Standardı
+
+Başarılı response:
+
+```json
+{
+  "success": true,
+  "data": {},
+  "message": null,
+  "errors": []
+}
+```
+
+Hatalı response:
+
+```json
+{
+  "success": false,
+  "data": null,
+  "message": "İşlem başarısız.",
+  "errors": []
+}
+```
+
+## 7. Authentication Kuralları
+
+- Login AD kullanıcı adı/şifre doğrulamasıyla başlar.
+- AD başarılı olsa bile local Users tablosu kontrol edilir.
+- Local kullanıcı yoksa login reddedilir.
+- Pasif kullanıcı login olamaz.
+- Şifre hiçbir zaman loglanmaz.
+- Şifre veritabanına yazılmaz.
+
+## 8. JWT / Refresh Token Kuralları
+
+- Access token kısa ömürlü olur.
+- Refresh token DB'de plain text tutulmaz, hashlenir.
+- Logout refresh token'ı revoke eder.
+- Refresh token rotate işlemi security log üretir.
+- Token secret repo içinde düz metin tutulmaz.
+
+## 9. Permission Kuralları
+
+- Yetkilendirme permission-based yapılır.
+- Permission kodları magic string olarak dağınık kullanılmaz.
+- Merkezi permission sabitleri kullan.
+- Frontend permission kontrolü güvenlik değildir.
+- Asıl kontrol backend tarafındadır.
+
+## 10. Current User Kuralları
+
+- Kullanıcı bilgisine `ICurrentUserService` üzerinden eriş.
+- Her yerde `HttpContext.User.Claims.First(...)` yazma.
+- Audit log current user bilgisini merkezi servisten alır.
+
+## 11. Audit Log Kuralları
+
+Audit log, kim ne yaptı sorusuna cevap vermelidir.
+
+Audit gerektiren işlemler:
+
+```text
+Kullanıcı oluşturma/güncelleme/pasife alma
+Rol oluşturma/güncelleme/pasife alma
+Kullanıcıya rol atama/kaldırma
+Role izin atama/kaldırma
+Ayar güncelleme
+```
+
+Kurallar:
+
+- Kritik işlem audit logsuz bırakılmaz.
+- Audit log şifre/token/credential içermez.
+- Audit log kullanıcı snapshot bilgisi tutar.
+
+## 12. Security Log Kuralları
+
+Security log olayları:
+
+```text
+LoginSuccess
+LoginFailedInvalidAdCredentials
+LoginFailedUserNotFoundInLocalDb
+LoginFailedUserPassive
+Logout
+RefreshTokenCreated
+RefreshTokenRevoked
+RefreshTokenFailed
+ForbiddenAccess
+```
+
+## 13. Serilog / CorrelationId Kuralları
+
+- Serilog kullan.
+- Her request için CorrelationId üret.
+- CorrelationId response header içinde dönsün.
+- Exceptionlar merkezi middleware ile loglansın.
+- Hassas veri loglama.
+
+## 14. EF Core Kuralları
+
+- DbContext scoped olur.
+- DbContext controller'a inject edilmez.
+- Entity configuration ayrı sınıfta yapılır.
+- OnModelCreating şişirilmez.
+- Lazy loading kullanma.
+- Uygun querylerde AsNoTracking kullan.
+
+## 15. Entity Kuralları
+
+- Entity Id tipi Guid olur.
+- User ve Role fiziksel silinmez, pasife alınır.
+- Permission seed/system kayıt olarak yönetilir.
+- Entity içinde HTTP veya DTO bilgisi bulunmaz.
+
+## 16. Migration Kuralları
+
+- Migration isimleri anlamlı olur.
+- Her migration tek mantıksal değişikliği temsil eder.
+- Kullanıcı istemeden migration oluşturma.
+- Production migration öncesi backup gerekir.
+
+## 17. Transaction Kuralları
+
+Transaction gereken örnekler:
+
+```text
+User oluştur + rol ata + audit yaz
+Role oluştur + permission ata + audit yaz
+Refresh token rotate
+```
+
+Kurallar:
+
+- Transaction use-case seviyesinde yönetilir.
+- Transaction içinde dış sistem çağrısından kaçın.
+
+## 18. DateTime Kuralları
+
+- DB içinde UTC sakla.
+- API response için DateTimeOffset tercih et.
+- `DateTime.Now` kullanma.
+- Zaman için `IDateTimeProvider` kullan.
+
+## 19. Pagination Standardı
+
+Liste endpointleri standart pagination destekler:
+
+```text
+page
+pageSize
+search
+sortBy
+sortDirection
+```
+
+Response `PagedResult<T>` olmalıdır.
+
+## 20. Secret / Configuration Kuralları
+
+- appsettings.json hassas veri çöplüğü olmayacak.
+- JWT secret repo içinde düz metin tutulmaz.
+- Connection string production'da güvenli sağlanır.
+- Şifre, token, API key, connection string password loglanmaz.
+
+## 21. Anti-Patternler
+
+Yapma:
+
+```text
+Controller içinde iş mantığı yazma.
+Controller'a DbContext inject etme.
+Entity'yi response olarak dönme.
+Refresh token'ı plain text saklama.
+Şifre/token/credential loglama.
+DateTime.Now kullanma.
+Magic string permission kullanma.
+Her liste için ayrı pagination modeli üretme.
+Her şeyi Shared klasörüne atma.

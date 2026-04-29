@@ -1,0 +1,105 @@
+---
+description: SASPortal projesinin genel iskelet, teknoloji, ilk faz kapsamı ve temel mimari kararları.
+globs:
+alwaysApply: true
+---
+
+# SASPortal Skeleton Rules
+
+Bu kurallar SASPortal projesinde her zaman uygulanır.
+
+## 1. Proje Kimliği
+
+- Proje adı: `SASPortal`
+- Açılım: `Sistem, Ağ ve Siber Portal`
+- Varsayılan görünen ad: `SAS-Portal`
+- Proje sıfırdan geliştirilen yeni bir projedir.
+
+## 2. Ana Teknoloji Kararları
+
+- Backend: ASP.NET Core 10 Web API
+- Frontend: React 19.2 + TypeScript + Vite
+- Veritabanı: PostgreSQL
+- ORM: Entity Framework Core
+- Auth: AD doğrulama + local kullanıcı kontrolü
+- Token: JWT access token + refresh token
+- Yetkilendirme: Permission-based authorization
+- Arka plan işleri: Hangfire
+- Loglama: Serilog + AuditLog + SecurityLog
+
+## 3. İlk Faz Odağı
+
+İlk faz çekirdek sistem fazıdır.
+
+Odaklanılacak alanlar:
+
+```text
+Login
+Logout
+Refresh token
+Current user
+Local kullanıcı yönetimi
+Rol yönetimi
+İzin yönetimi
+Kullanıcı-rol atama
+Rol-izin atama
+Audit log
+Security log
+Temel ayarlar
+Frontend layout
+Auth guard
+Permission guard
+```
+
+## 4. Login Yaklaşımı
+
+Login akışı:
+
+```text
+1. Kullanıcı AD kullanıcı adı ve şifresini girer.
+2. Backend AD üzerinde doğrulama yapar.
+3. AD doğrulaması başarılıysa local Users tablosu kontrol edilir.
+4. Local kullanıcı yoksa giriş reddedilir.
+5. Local kullanıcı pasifse giriş reddedilir.
+6. Kullanıcının rol ve izinleri alınır.
+7. Access token ve refresh token üretilir.
+```
+
+Kurallar:
+
+- İlk girişte otomatik kullanıcı oluşturma.
+- AD şifresi veritabanına yazılmaz.
+- Şifre loglanmaz.
+- Login başarı/başarısızlıkları SecurityLog üretir.
+
+## 5. Local Kullanıcı Kararı
+
+SASPortal kendi kullanıcı tablosunu tutar.
+
+Kurallar:
+
+- Kullanıcı silinmez, pasife alınır.
+- `AdUsername` unique olmalıdır.
+- Pasif kullanıcı login olamaz.
+- Kullanıcı oluşturma/güncelleme/pasife alma audit log üretir.
+
+## 6. Rol ve İzin Kararı
+
+Yetkilendirme permission-based olacaktır.
+
+Kurallar:
+
+- Rol, izinleri gruplayan yapıdır.
+- Backend her kritik endpointte permission kontrolü yapar.
+- Frontend permission kontrolü sadece UX içindir.
+- Permission kodları magic string olarak dağınık yazılmaz.
+
+## 7. Temel Mimari İlke
+
+Önce iskelet, sonra özellik.
+
+Önce çekirdek yapı, sonra modüller.
+
+Önce küçük görev, sonra genişletme.
+
+Cursor veya AI agent bu kurallarla çelişen mimari veya dosya yapısı üretmemelidir.

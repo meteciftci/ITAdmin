@@ -1,0 +1,486 @@
+---
+description: SASPortal loglama, AuditLog, SecurityLog, ApplicationLog, CorrelationId, hassas veri ve log ekranı kuralları.
+globs:
+  - "backend/src/**/*.cs"
+  - "frontend/src/modules/logs/**/*.{ts,tsx}"
+  - "frontend/src/lib/**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# SASPortal Logging & Audit Rules
+
+Bu kurallar loglama, audit, security event, correlation id ve log ekranlarıyla ilgili kod yazılırken uygulanır.
+
+## 1. Log Türleri
+
+SASPortal içinde loglar amaçlarına göre ayrılır.
+
+Temel log türleri:
+
+```text
+ApplicationLog / Serilog
+AuditLog
+SecurityLog
+```
+
+İleride eklenebilecek log türleri:
+
+```text
+IntegrationLog
+JobRunLog
+```
+
+## 2. ApplicationLog / Serilog
+
+Application log teknik logdur.
+
+Kullanım alanları:
+
+```text
+Exception
+Teknik uyarı
+Performans uyarısı
+Sistem davranışı
+Debug/diagnostic bilgi, environment'a göre
+```
+
+Kurallar:
+
+- Serilog kullanılacaktır.
+- Structured logging kullanılacaktır.
+- Exceptionlar merkezi middleware ile loglanacaktır.
+- CorrelationId loglara eklenmelidir.
+- Hassas veri loglanmaz.
+
+Doğru:
+
+```csharp
+_logger.LogInformation("User {UserId} created by {CreatedByUserId}", userId, currentUserId);
+```
+
+Yanlış:
+
+```csharp
+_logger.LogInformation("Password is {Password}", password);
+```
+
+## 3. AuditLog
+
+Audit log, kullanıcı aksiyonlarını izler.
+
+Temel soru:
+
+```text
+Kim, ne zaman, hangi işlemi, hangi kayıt üzerinde yaptı?
+```
+
+AuditLog önerilen alanlar:
+
+```text
+id
+correlation_id
+user_id
+username_snapshot
+display_name_snapshot
+module
+action
+entity_type
+entity_id
+summary
+old_values_json
+new_values_json
+ip_address
+user_agent
+created_at
+```
+
+Kurallar:
+
+- Kritik kullanıcı aksiyonları audit log üretir.
+- Audit log kullanıcı snapshot bilgisi tutar.
+- Audit log hassas veri içermez.
+- Audit log sonradan değiştirilmemelidir.
+- Audit log fiziksel silinmemelidir.
+
+## 4. SecurityLog
+
+Security log güvenlik ve oturum olaylarını izler.
+
+SecurityLog önerilen alanlar:
+
+```text
+id
+event_type
+user_id
+username
+ip_address
+user_agent
+is_success
+failure_reason
+created_at
+```
+
+Security event örnekleri:
+
+```text
+LoginSuccess
+LoginFailedInvalidAdCredentials
+LoginFailedUserNotFoundInLocalDb
+LoginFailedUserPassive
+Logout
+RefreshTokenCreated
+RefreshTokenRevoked
+RefreshTokenFailed
+ForbiddenAccess
+```
+
+Kurallar:
+
+- Login denemeleri security log üretir.
+- Refresh token işlemleri security log üretir.
+- Forbidden erişimler security log üretir.
+- Security log içinde şifre/token yazılmaz.
+
+## 5. Audit Gerektiren İlk Faz İşlemleri
+
+Aşağıdaki işlemler audit log üretmelidir:
+
+```text
+Kullanıcı oluşturma
+Kullanıcı güncelleme
+Kullanıcı pasife alma
+Kullanıcı aktife alma
+Rol oluşturma
+Rol güncelleme
+Rol pasife alma
+Kullanıcıya rol atama
+Kullanıcıdan rol kaldırma
+Role izin atama
+Rolden izin kaldırma
+Ayar güncelleme
+```
+
+## 6. Security Log Gerektiren İlk Faz İşlemleri
+
+Aşağıdaki işlemler security log üretmelidir:
+
+```text
+Başarılı login
+Hatalı AD credential ile login denemesi
+AD doğru ama local kullanıcı yok login denemesi
+Pasif kullanıcı login denemesi
+Logout
+Refresh token oluşturma
+Refresh token yenileme
+Refresh token revoke
+Başarısız refresh token denemesi
+Yetkisiz endpoint erişimi
+```
+
+## 7. CorrelationId Kuralları
+
+Her request bir CorrelationId taşımalıdır.
+
+Kurallar:
+
+- Client `X-Correlation-Id` gönderirse kullanılabilir.
+- Client göndermediyse backend üretir.
+- Response header içinde `X-Correlation-Id` dönülür.
+- ApplicationLog, AuditLog ve SecurityLog aynı CorrelationId'yi kullanır.
+
+Header:
+
+```text
+X-Correlation-Id
+```
+
+## 8. Hassas Veri Loglama Yasağı
+
+Asla loglanmayacak veriler:
+
+```text
+Şifre
+Access token
+Refresh token
+API key
+Connection string password
+Credential secret
+AD kullanıcı şifresi
+JWT secret
+SMS provider token
+```
+
+Maskeleme gerekiyorsa:
+
+```text
+Tam değer değil, sadece kısmi ve güvenli gösterim yapılabilir.
+```
+
+Örnek:
+
+```text
+mete.ciftci -> kullanıcı adı loglanabilir
+password -> asla loglanmaz
+refreshToken -> asla loglanmaz
+```
+
+## 9. OldValuesJson / NewValuesJson Kuralları
+
+AuditLog içinde değişiklik detayları JSON olarak tutulabilir.
+
+Kurallar:
+
+- Sadece değişen alanlar yazılmalıdır.
+- Hassas alanlar yazılmaz.
+- Çok büyük payload yazılmaz.
+- JSON alanları okunabilir isimlerle tutulur.
+
+Örnek:
+
+```json
+{
+  "displayName": {
+    "old": "Mete Ciftci",
+    "new": "Mete Çiftçi"
+  },
+  "isActive": {
+    "old": true,
+    "new": false
+  }
+}
+```
+
+Yasak:
+
+```json
+{
+  "password": {
+    "old": "123",
+    "new": "456"
+  }
+}
+```
+
+## 10. Audit Summary Standardı
+
+Audit summary kısa, anlaşılır ve kullanıcı dostu olmalıdır.
+
+Örnekler:
+
+```text
+Kullanıcı oluşturuldu: mete.ciftci
+Kullanıcı pasife alındı: mete.ciftci
+Rol oluşturuldu: Sistem Yöneticisi
+Kullanıcıya rol atandı: mete.ciftci -> Sistem Yöneticisi
+Rolden izin kaldırıldı: HelpDesk -> Users.Disable
+```
+
+Kurallar:
+
+- Summary teknik stack trace içermez.
+- Summary hassas veri içermez.
+- Summary log ekranında tek satır okunabilir olmalıdır.
+
+## 11. Audit Action Standardı
+
+Action değerleri tutarlı olmalıdır.
+
+Örnekler:
+
+```text
+Create
+Update
+Disable
+Enable
+AssignRole
+RemoveRole
+AssignPermission
+RemovePermission
+UpdateSettings
+```
+
+Module değerleri:
+
+```text
+Users
+Roles
+Permissions
+Settings
+Auth
+```
+
+EntityType değerleri:
+
+```text
+User
+Role
+Permission
+ApplicationSetting
+```
+
+## 12. Login Loglama Kuralları
+
+Başarılı login:
+
+```text
+SecurityLog.EventType = LoginSuccess
+IsSuccess = true
+UserId dolu
+Username dolu
+```
+
+AD credential hatalı:
+
+```text
+SecurityLog.EventType = LoginFailedInvalidAdCredentials
+IsSuccess = false
+FailureReason = InvalidAdCredentials
+UserId null olabilir
+Username request içinden alınır
+```
+
+AD doğru ama local kullanıcı yok:
+
+```text
+SecurityLog.EventType = LoginFailedUserNotFoundInLocalDb
+IsSuccess = false
+FailureReason = UserNotFoundInLocalDb
+```
+
+Pasif kullanıcı:
+
+```text
+SecurityLog.EventType = LoginFailedUserPassive
+IsSuccess = false
+FailureReason = UserPassive
+```
+
+## 13. Forbidden Access Kuralları
+
+Yetkisiz endpoint erişimi security log üretir.
+
+Loglanacak bilgiler:
+
+```text
+UserId
+Username
+RequestedPath
+RequiredPermission
+IpAddress
+UserAgent
+CorrelationId
+```
+
+Kurallar:
+
+- Response 403 olmalıdır.
+- Kullanıcıya gereksiz teknik detay dönülmez.
+- SecurityLog hassas veri içermez.
+
+## 14. Exception Loglama Kuralları
+
+Beklenmeyen exceptionlar ApplicationLog/Serilog ile loglanır.
+
+Kurallar:
+
+- Exception response içinde stack trace dönülmez.
+- CorrelationId response içinde dönebilir.
+- Exception detayları Serilog'a yazılır.
+- Kullanıcıya sade mesaj verilir.
+
+Response örneği:
+
+```json
+{
+  "success": false,
+  "data": null,
+  "message": "Beklenmeyen bir hata oluştu.",
+  "errors": [],
+  "correlationId": "..."
+}
+```
+
+## 15. Log Yazma Servisleri
+
+Backend içinde log yazımı merkezi servisler üzerinden yapılmalıdır.
+
+Örnek interface isimleri:
+
+```text
+IAuditLogService
+ISecurityLogService
+```
+
+Kurallar:
+
+- Handlerlar doğrudan AuditLog DbSet'i ile uğraşmamalı, mümkünse servis kullanmalıdır.
+- Security eventler merkezi servisle yazılmalıdır.
+- Log servisleri current user ve correlation id bilgisini merkezi servislerden alabilir.
+
+## 16. Log Ekranı Kuralları
+
+Frontend log ekranları:
+
+```text
+Audit log listesi
+Security log listesi
+```
+
+Kurallar:
+
+- Server-side pagination kullanılır.
+- Tarih filtresi olmalıdır.
+- Kullanıcı filtresi olabilir.
+- Event/action filtresi olabilir.
+- Detaylar drawer veya dialog ile gösterilebilir.
+- Hassas veri gösterilmez.
+
+## 17. Log Retention
+
+İlk fazda log retention otomatik silme olarak uygulanmayabilir.
+
+Kurallar:
+
+- AuditLog varsayılan olarak silinmez.
+- SecurityLog varsayılan olarak silinmez.
+- Retention gerekiyorsa ayrı karar ister.
+- Log silme işi rastgele cleanup job ile yapılmaz.
+
+## 18. Test Kuralları
+
+Aşağıdaki davranışlar test edilebilir:
+
+```text
+Başarılı login security log üretir.
+Başarısız login security log üretir.
+Kullanıcı oluşturma audit log üretir.
+Rol atama audit log üretir.
+Forbidden erişim security log üretir.
+Audit log hassas veri içermez.
+```
+
+## 19. Anti-Patternler
+
+Yapma:
+
+```text
+Şifre/token/credential loglama.
+Audit log yerine sadece Serilog yazma.
+Security eventleri audit log içine karıştırma.
+Her modülde ayrı log tablosu icat etme.
+CorrelationId olmadan exception loglama.
+OldValuesJson içine hassas veri yazma.
+Login başarısızlıklarını logsuz bırakma.
+Forbidden erişimleri logsuz bırakma.
+Log ekranında hassas veri gösterme.
+```
+
+## 20. Temel İlke
+
+ApplicationLog teknik olaylar içindir.
+
+AuditLog kullanıcı aksiyonları içindir.
+
+SecurityLog güvenlik olayları içindir.
+
+Bu üçü birbirine karıştırılmamalıdır.

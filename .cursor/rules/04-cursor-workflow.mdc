@@ -1,0 +1,365 @@
+---
+description: SASPortal projesinde Cursor/AI agent ile çalışırken uygulanacak genel görev, kapsam, doğrulama ve güvenlik kuralları.
+globs:
+alwaysApply: true
+---
+
+# SASPortal Cursor Workflow Rules
+
+Bu kural dosyası, SASPortal projesinde Cursor Agent veya Inline Edit kullanılırken her zaman uygulanır.
+
+Amaç: AI agent'ın projede kontrolsüz dosya üretmesini, katmanları karıştırmasını, kapsam dışı modül yazmasını ve mimari kuralları ezmesini engellemek.
+
+## 1. Ana Referans Dokümanları
+
+Projede karar kaynağı aşağıdaki dosyalardır:
+
+```text
+KuralSetleri/01_SASPortal_Iskelet_Kural_Seti.md
+KuralSetleri/02_SASPortal_Backend_Kural_Seti.md
+KuralSetleri/03_SASPortal_Frontend_Kural_Seti.md
+```
+
+Bir görev backend ile ilgiliyse backend kural setine uy.
+
+Bir görev frontend ile ilgiliyse frontend kural setine uy.
+
+Genel proje kararı gerekiyorsa iskelet kural setine uy.
+
+Bu dosyalardaki kararlarla çelişen kod üretme.
+
+## 2. Genel Davranış
+
+- Görevi küçük parçalara böl.
+- Kapsam dışı dosya oluşturma.
+- İstenmeyen refactor yapma.
+- İstenmeyen mimari değişiklik yapma.
+- Kullanıcının açıkça istemediği modülü geliştirme.
+- Önce mevcut dosya yapısını incele, sonra değişiklik yap.
+- Aynı iş için birden fazla alternatif yapı üretme.
+- Mevcut pattern varsa ona uy.
+- Belirsizlik varsa varsayımını kısa yaz ve en güvenli küçük adımla ilerle.
+
+## 3. Proje Kapsamı
+
+İlk faz çekirdek iskelet fazıdır.
+
+Odak alanları:
+
+```text
+Login
+JWT + refresh token
+Local kullanıcı yönetimi
+Rol yönetimi
+İzin yönetimi
+Audit log
+Security log
+Temel ayarlar
+Frontend layout
+Auth guard
+Permission guard
+```
+
+İş modülleri ayrı tasarım ister. Kullanıcı açıkça istemedikçe aşağıdaki modülleri yazma:
+
+```text
+AD yönetim modülü
+DNS yönetimi
+Exchange
+HR Sync
+VMware
+Lisans takip
+İş takip
+SMS provider
+Şifre kasası
+Switch yönetimi
+```
+
+## 4. Backend Görevlerinde Uyulacak Kurallar
+
+Backend kodu yazarken:
+
+- `KuralSetleri/02_SASPortal_Backend_Kural_Seti.md` dosyasına uy.
+- Controller içine iş mantığı yazma.
+- Controller içine DbContext inject etme.
+- CQRS/MediatR pattern kullan.
+- Validation için FluentValidation kullan.
+- Entity'yi doğrudan API response olarak dönme.
+- Permission kontrolünü backend tarafında yap.
+- Audit gereken işlemi audit logsuz bırakma.
+- Security eventleri security log ile kaydet.
+- Refresh token'ı plain text saklama.
+- DateTime.Now kullanma; zaman servisi kullan.
+- Hassas verileri loglama.
+
+## 5. Frontend Görevlerinde Uyulacak Kurallar
+
+Frontend kodu yazarken:
+
+- `KuralSetleri/03_SASPortal_Frontend_Kural_Seti.md` dosyasına uy.
+- Component içinde doğrudan axios çağırma.
+- Merkezi API client kullan.
+- Server state için TanStack Query kullan.
+- Formlarda React Hook Form + Zod kullan.
+- Büyük tablolarda TanStack Table kullan.
+- Auth state için Zustand kullan.
+- Permission guard sadece UX içindir; güvenlik backend'dedir.
+- Token'ı console'a yazma.
+- `any` kullanma.
+- Ortak loading/error/empty state componentlerini kullan.
+
+## 6. Görev Verildiğinde İzlenecek Sıra
+
+Her görevde şu sırayı takip et:
+
+```text
+1. Görevin backend, frontend veya genel mimari işi olduğunu belirle.
+2. İlgili kural setini uygula.
+3. Mevcut klasör ve dosya yapısını incele.
+4. Değiştirilecek dosyaları sınırla.
+5. Sadece istenen işi yap.
+6. Kod üretirken mevcut isimlendirme ve patternlere uy.
+7. İş bitince değişiklik özetini ver.
+8. Varsa çalıştırılması gereken komutları belirt.
+```
+
+## 7. Görev Kapsamı Dışına Çıkma Kuralları
+
+Şunları yapma:
+
+- Kullanıcı istemeden yeni paket ekleme.
+- Kullanıcı istemeden klasör mimarisini değiştirme.
+- Kullanıcı istemeden migration oluşturma.
+- Kullanıcı istemeden backend ve frontend'i aynı anda değiştirme.
+- Kullanıcı istemeden büyük refactor yapma.
+- Kullanıcı istemeden iş modülü ekleme.
+- Kullanıcı istemeden authentication stratejisini değiştirme.
+- Kullanıcı istemeden response modelini değiştirme.
+- Kullanıcı istemeden UI tasarım sistemini değiştirme.
+
+## 8. Dosya Değiştirme Disiplini
+
+Bir görevde mümkün olan en az dosyayı değiştir.
+
+Yeni dosya oluştururken:
+
+- Dosya adı proje standardına uygun olmalı.
+- Dosya doğru katmana konmalı.
+- Gereksiz yardımcı sınıf üretme.
+- Aynı amaca hizmet eden mevcut dosya varsa onu kullan.
+
+Mevcut dosyayı değiştirirken:
+
+- Alakasız kodları yeniden formatlama.
+- Büyük kapsamlı otomatik düzenleme yapma.
+- Yalnızca görevle ilgili alanları değiştir.
+
+## 9. Backend Prompt Şablonu
+
+Backend işi verildiğinde şu formata uygun çalış:
+
+```text
+SASPortal backend kural setine göre [Feature/UseCase] için [katman] seviyesinde [iş] oluştur.
+
+Yap:
+- ...
+
+Yapma:
+- ...
+
+Beklenen dosyalar:
+- ...
+```
+
+Örnek:
+
+```text
+SASPortal backend kural setine göre Users.Create use-case'i için Application katmanında CreateUserCommand, CreateUserCommandValidator ve CreateUserCommandHandler oluştur.
+
+Yap:
+- Result pattern kullan
+- FluentValidation kullan
+- Audit log çağrısını interface üzerinden planla
+
+Yapma:
+- Controller yazma
+- Migration oluşturma
+- Frontend kodu yazma
+```
+
+## 10. Frontend Prompt Şablonu
+
+Frontend işi verildiğinde şu formata uygun çalış:
+
+```text
+SASPortal frontend kural setine göre [modül/sayfa/component] için [iş] oluştur.
+
+Yap:
+- ...
+
+Yapma:
+- ...
+
+Beklenen dosyalar:
+- ...
+```
+
+Örnek:
+
+```text
+SASPortal frontend kural setine göre users modülü için UserTable componentini oluştur.
+
+Yap:
+- TanStack Table kullan
+- Props ile gelen data üzerinden render et
+- Loading/empty state destekle
+
+Yapma:
+- API çağrısı yazma
+- Sayfa componenti yazma
+- Mutation yazma
+```
+
+## 11. Bugfix Kuralları
+
+Bugfix yaparken:
+
+- Önce hatanın nedenini açıkla.
+- Sadece hatayı düzelten minimum değişikliği yap.
+- Alakasız refactor yapma.
+- Aynı hatanın tekrarını önleyecek küçük koruma ekle.
+- Gerekirse test öner.
+
+## 12. Refactor Kuralları
+
+Refactor yalnızca kullanıcı açıkça isterse yapılır.
+
+Refactor yaparken:
+
+- Davranışı değiştirme.
+- Public API contract değiştirme.
+- Test veya doğrulama öner.
+- Değişen dosyaları listele.
+- Büyük refactoru küçük adımlara böl.
+
+## 13. Test Yazma Kuralları
+
+Test yazarken:
+
+- Önce hangi davranışın test edildiğini belirt.
+- Test isimleri okunabilir olsun.
+- Backend testlerinde dış bağımlılıkları mockla.
+- Frontend testlerinde kullanıcı davranışına odaklan.
+- Sadece implementation detail test etme.
+
+## 14. Migration Kuralları
+
+Migration yalnızca kullanıcı açıkça isterse oluştur.
+
+Migration öncesi:
+
+- Entity değişikliğini kontrol et.
+- Configuration değişikliğini kontrol et.
+- Migration adını anlamlı ver.
+
+Migration sonrası:
+
+- Değişiklik özetini yaz.
+- Uygulanacak komutu belirt.
+
+## 15. Paket Ekleme Kuralları
+
+Yeni NuGet veya npm paketi ekleme kararı kullanıcı onayı gerektirir.
+
+Paket eklemeden önce:
+
+- Neden gerektiğini açıkla.
+- Mevcut stack ile çözülüp çözülemeyeceğini kontrol et.
+- Alternatifleri belirt, gerekiyorsa.
+
+## 16. Güvenlik Kuralları
+
+Asla üretme veya loglama:
+
+```text
+Şifre
+Access token
+Refresh token
+API key
+Connection string password
+Credential secret
+```
+
+Güvenlik kararlarını zayıflatma.
+
+Permission kontrolünü frontend'e taşıma.
+
+Authentication/authorization davranışını kullanıcı istemeden değiştirme.
+
+## 17. Commit Öncesi Kontrol Listesi
+
+Bir işi bitirdiğinde kullanıcıya şu bilgileri ver:
+
+```text
+Değişen dosyalar
+Ne yapıldı?
+Ne yapılmadı?
+Varsa çalıştırılacak komutlar
+Varsa dikkat edilmesi gereken noktalar
+```
+
+Kod yazıldıysa önerilen kontroller:
+
+```text
+dotnet build
+npm run build
+npm run lint
+ilgili testler
+```
+
+Sadece ilgili komutları öner; gereksiz komut listesi şişirme.
+
+## 18. Yanıt Formatı
+
+İş sonunda kısa ve net özet ver.
+
+Önerilen format:
+
+```text
+Tamamlanan:
+- ...
+
+Değişen dosyalar:
+- ...
+
+Çalıştırılacak komutlar:
+- ...
+
+Notlar:
+- ...
+```
+
+## 19. Yasaklar
+
+Aşağıdakileri yapma:
+
+- Tüm projeyi tek görevde üretme.
+- Aynı anda backend ve frontend'de büyük değişiklik yapma.
+- Kullanıcı istemeden iş modülü ekleme.
+- Kullanıcı istemeden dependency ekleme.
+- Kullanıcı istemeden migration oluşturma.
+- Kullanıcı istemeden authentication modelini değiştirme.
+- Kullanıcı istemeden klasör yapısını değiştirme.
+- Controller içine iş mantığı yazma.
+- Component içinde doğrudan API client oluşturma.
+- Hassas veri loglama.
+
+## 20. Temel İlke
+
+Önce iskelet, sonra özellik.
+
+Önce küçük görev, sonra genişletme.
+
+Önce kural seti, sonra kod.
+
+Kod üretirken SASPortal'ın mevcut kural setleriyle çelişme.

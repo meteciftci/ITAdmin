@@ -1,0 +1,439 @@
+---
+description: SASPortal veritabanı, EF Core, PostgreSQL, tablo/kolon isimlendirme, migration, seed, index ve veri standardı kuralları.
+globs:
+  - "backend/src/Sas.Domain/**/*.cs"
+  - "backend/src/Sas.Persistence/**/*.cs"
+  - "backend/src/Sas.Application/**/*.cs"
+alwaysApply: false
+---
+
+# SASPortal Database Rules
+
+Bu kurallar veritabanı, entity, EF Core, migration, seed ve persistence kodu yazılırken uygulanır.
+
+## 1. Genel Veritabanı Kararı
+
+- Veritabanı PostgreSQL olacaktır.
+- ORM olarak Entity Framework Core kullanılacaktır.
+- Entity modelleri `Sas.Domain` içinde bulunur.
+- DbContext ve EF configuration dosyaları `Sas.Persistence` içinde bulunur.
+- Controller içine DbContext inject edilmez.
+- Entity doğrudan API response olarak dönülmez.
+
+## 2. Tablo İsimlendirme Standardı
+
+Tablo isimleri PostgreSQL uyumlu snake_case olmalıdır.
+
+Örnekler:
+
+```text
+users
+roles
+permissions
+user_roles
+role_permissions
+refresh_tokens
+audit_logs
+security_logs
+application_settings
+```
+
+Kurallar:
+
+- Tablo isimlerinde Türkçe karakter kullanılmaz.
+- Tablo isimlerinde boşluk kullanılmaz.
+- Tablo isimleri tutarlı şekilde çoğul kullanılır.
+- `tbl_` prefix kullanılmaz.
+
+Yanlış:
+
+```text
+tblUser
+UserTable
+Kullanıcılar
+userTable
+```
+
+Doğru:
+
+```text
+users
+user_roles
+security_logs
+```
+
+## 3. Kolon İsimlendirme Standardı
+
+Kolon isimleri snake_case olmalıdır.
+
+Örnekler:
+
+```text
+id
+ad_username
+normalized_ad_username
+display_name
+is_active
+created_at
+created_by_user_id
+updated_at
+updated_by_user_id
+```
+
+Kurallar:
+
+- C# property isimleri PascalCase olabilir.
+- Veritabanı kolonları snake_case olmalıdır.
+- Kısaltmalar tutarlı kullanılmalıdır.
+
+## 4. Primary Key Standardı
+
+Tüm ana entitylerde primary key tipi `Guid` olacaktır.
+
+Örnek:
+
+```csharp
+public Guid Id { get; private set; }
+```
+
+Kurallar:
+
+- User, Role, Permission, AuditLog, SecurityLog gibi entitylerde Guid Id kullanılır.
+- TC, kullanıcı adı, email gibi alanlar primary key yapılmaz.
+- Dış sistem kimlikleri ayrı kolonlarda tutulur.
+
+## 5. Foreign Key Standardı
+
+Foreign key kolonları açık isimli olmalıdır.
+
+Örnekler:
+
+```text
+user_id
+role_id
+permission_id
+created_by_user_id
+updated_by_user_id
+```
+
+Kurallar:
+
+- FK isimleri belirsiz olmamalıdır.
+- `CreatedByUserId`, `UpdatedByUserId` gibi audit FK alanları nullable olabilir.
+- Delete behavior bilinçli seçilmelidir.
+
+## 6. Delete Behavior Kuralları
+
+Varsayılan olarak kritik veriler cascade delete ile silinmemelidir.
+
+Kurallar:
+
+- User fiziksel silinmez, pasife alınır.
+- Role fiziksel silinmez, pasife alınır.
+- Permission seed/system kayıt olarak yönetilir, silinmez.
+- AuditLog ve SecurityLog silinmez.
+- Cascade delete sadece gerçekten güvenli ilişki tablolarında kullanılabilir.
+
+Dikkatli kullanılabilecek cascade örnekleri:
+
+```text
+RolePermission
+UserRole
+```
+
+Ama bu işlemler bile audit gerektirdiği için uygulama üzerinden kontrollü yapılmalıdır.
+
+## 7. Soft Delete / Pasife Alma Standardı
+
+Temel yönetim kayıtları silinmez, pasife alınır.
+
+Pasife alınabilir entitylerde önerilen alanlar:
+
+```text
+is_active
+deactivated_at
+deactivated_by_user_id
+```
+
+Kurallar:
+
+- `IsActive = false` login ve yetki kontrollerinde dikkate alınır.
+- Pasife alma audit log üretir.
+- Fiziksel silme için açık karar olmadan delete endpoint yazılmaz.
+
+## 8. Audit Alanları
+
+Audit gereken entitylerde şu alanlar bulunabilir:
+
+```text
+created_at
+created_by_user_id
+updated_at
+updated_by_user_id
+```
+
+Kurallar:
+
+- Tarihler UTC saklanır.
+- `CreatedAt` oluşturma sırasında set edilir.
+- `UpdatedAt` güncelleme sırasında set edilir.
+- Bu alanlar mümkünse merkezi SaveChanges interceptor ile yönetilir.
+
+## 9. DateTime / UTC Standardı
+
+- Veritabanında tüm tarihler UTC saklanır.
+- C# tarafında `DateTimeOffset` tercih edilir.
+- `DateTime.Now` kullanılmaz.
+- Zaman için `IDateTimeProvider` kullanılır.
+
+Yanlış:
+
+```csharp
+entity.CreatedAt = DateTime.Now;
+```
+
+Doğru:
+
+```csharp
+entity.CreatedAt = _dateTimeProvider.UtcNow;
+```
+
+## 10. Entity Configuration Standardı
+
+Her entity için ayrı configuration sınıfı yazılır.
+
+Örnek:
+
+```csharp
+public sealed class UserConfiguration : IEntityTypeConfiguration<User>
+{
+    public void Configure(EntityTypeBuilder<User> builder)
+    {
+        builder.ToTable("users");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.AdUsername).HasColumnName("ad_username").HasMaxLength(100).IsRequired();
+        builder.HasIndex(x => x.NormalizedAdUsername).IsUnique();
+    }
+}
+```
+
+Kurallar:
+
+- `OnModelCreating` şişirilmez.
+- Configuration dosyaları `Sas.Persistence/Configurations` altında tutulur.
+- MaxLength, required, index ve delete behavior açıkça belirtilir.
+
+## 11. Index Kuralları
+
+Sık sorgulanan alanlara index eklenmelidir.
+
+Örnek index alanları:
+
+```text
+users.normalized_ad_username
+roles.code
+permissions.code
+refresh_tokens.user_id
+refresh_tokens.token_hash
+audit_logs.created_at
+audit_logs.user_id
+security_logs.created_at
+security_logs.username
+```
+
+Kurallar:
+
+- Unique olması gereken alanlara unique index eklenir.
+- Gereksiz index ekleme.
+- Log tablolarında tarih ve kullanıcı bazlı filtreler için index düşün.
+
+## 12. Unique Constraint Kuralları
+
+Unique olması gereken alanlar:
+
+```text
+users.normalized_ad_username
+roles.code
+permissions.code
+```
+
+Kurallar:
+
+- Unique constraint uygulama validasyonuna ek olarak DB seviyesinde de olmalıdır.
+- Unique violation 409 Conflict olarak dönmelidir.
+
+## 13. String Alan Kuralları
+
+Kurallar:
+
+- String alanlara makul max length ver.
+- Sınırsız text sadece gerçekten gerekiyorsa kullan.
+- Username, code, email gibi alanlar normalize edilmiş karşılıkla saklanabilir.
+
+Örnek:
+
+```text
+ad_username max 100
+normalized_ad_username max 100
+display_name max 200
+email max 250
+role_code max 100
+permission_code max 150
+```
+
+## 14. JSON / JSONB Kullanımı
+
+PostgreSQL JSONB sadece gerektiğinde kullanılmalıdır.
+
+Kullanılabilecek alanlar:
+
+```text
+audit_logs.old_values_json
+audit_logs.new_values_json
+application_settings.value_json, gerekiyorsa
+```
+
+Kurallar:
+
+- İlişkisel veri JSONB içine gömülmez.
+- Sorgulanması gereken ana veri tablo/kolon olarak modellenir.
+- JSONB audit ve esnek metadata için kullanılabilir.
+
+## 15. Refresh Token Tablosu
+
+Refresh token plain text saklanmaz.
+
+Önerilen alanlar:
+
+```text
+id
+user_id
+token_hash
+expires_at
+revoked_at
+created_at
+created_by_ip
+revoked_by_ip
+replaced_by_token_id
+```
+
+Kurallar:
+
+- `token_hash` indexlenir.
+- Süresi dolmuş tokenlar cleanup job ile temizlenebilir.
+- Token rotate işlemi transaction içinde yapılmalıdır.
+
+## 16. Permission Seed Kuralları
+
+Permission kayıtları seed ile yönetilir.
+
+Kurallar:
+
+- Permission kodları değişmemelidir.
+- Seed idempotent olmalıdır.
+- Aynı seed tekrar çalışınca duplicate üretmemelidir.
+- Permission kullanıcı tarafından serbest oluşturulmaz.
+
+Örnek permission kodları:
+
+```text
+Users.View
+Users.Create
+Users.Update
+Users.Disable
+Roles.View
+Roles.Create
+Roles.Update
+Roles.Disable
+Permissions.View
+Users.AssignRoles
+Roles.AssignPermissions
+```
+
+## 17. Migration Kuralları
+
+Kurallar:
+
+- Migration isimleri anlamlı olmalıdır.
+- Her migration tek mantıksal değişiklik içermelidir.
+- Kullanıcı istemeden migration oluşturma.
+- Migration dosyalarını gerekmedikçe elle düzenleme.
+- Production migration öncesi backup gerekir.
+
+Örnek migration isimleri:
+
+```text
+AddUsersTable
+AddRolesAndPermissions
+AddRefreshTokens
+AddAuditLogs
+AddSecurityLogs
+```
+
+## 18. DbContext Kuralları
+
+Kurallar:
+
+- DbContext scoped lifetime kullanır.
+- Lazy loading kullanılmaz.
+- Querylerde uygun yerde AsNoTracking kullanılır.
+- DbContext controller'a inject edilmez.
+- DbContext handler/application service seviyesinde kullanılabilir.
+
+## 19. Transaction Kuralları
+
+Aşağıdaki işlemler transaction gerektirebilir:
+
+```text
+User oluştur + rol ata + audit yaz
+Role oluştur + permission ata + audit yaz
+Refresh token rotate
+Kullanıcı pasife al + audit yaz
+```
+
+Kurallar:
+
+- Transaction use-case seviyesinde yönetilir.
+- Transaction içinde dış sistem çağrısından kaçın.
+- Dış sistem çağrısı gerekiyorsa hata senaryosunu ayrıca tasarla.
+
+## 20. Query Performans Kuralları
+
+Kurallar:
+
+- Liste endpointleri pagination kullanır.
+- Büyük tablolar full scan yapacak şekilde sorgulanmaz.
+- Gereksiz Include kullanma.
+- Sadece gerekli kolonları DTO projection ile çek.
+
+Yanlış:
+
+```csharp
+var users = await _db.Users.ToListAsync();
+```
+
+Doğru:
+
+```csharp
+var users = await _db.Users
+    .AsNoTracking()
+    .Where(...)
+    .Select(x => new UserListItemDto(...))
+    .ToListAsync(cancellationToken);
+```
+
+## 21. Anti-Patternler
+
+Yapma:
+
+```text
+TC, username veya email'i primary key yapma.
+Her tabloya farklı isimlendirme standardı uygulama.
+Controller içine DbContext inject etme.
+Entity'yi doğrudan API response olarak dönme.
+Log tablosundaki hassas verileri JSON olarak saklama.
+Gereksiz cascade delete kullanma.
+Migrationları anlamsız isimlendirme.
+DateTime.Now kullanma.
+Permissionları elle DB'ye karışık şekilde ekleme.
+Refresh token'ı plain text saklama.

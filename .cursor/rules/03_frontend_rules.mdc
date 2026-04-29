@@ -1,0 +1,368 @@
+---
+description: SASPortal frontend kodu için React, TypeScript, routing, auth, API client, TanStack Query, form, tablo ve UI kuralları.
+globs:
+  - "frontend/**/*.{ts,tsx,css,json}"
+alwaysApply: false
+---
+
+# SASPortal Frontend Rules
+
+Bu kurallar frontend dosyaları üzerinde çalışırken uygulanır.
+
+Detaylı referans:
+
+```text
+KuralSetleri/03_SASPortal_Frontend_Kural_Seti.md
+```
+
+## 1. Teknoloji Kararları
+
+- React 19.2 kullan.
+- TypeScript strict kullan.
+- Vite kullan.
+- Tailwind CSS v4 kullan.
+- shadcn/ui kullan.
+- Server state için TanStack Query v5 kullan.
+- Tablolar için TanStack Table v8 kullan.
+- Formlar için React Hook Form + Zod kullan.
+- Global auth state için Zustand kullan.
+- API iletişimi için merkezi Axios client kullan.
+- Toast için Sonner kullan.
+- Icon için Lucide React kullan.
+
+## 2. Proje Yapısı
+
+Frontend yapısı:
+
+```text
+frontend/src/app
+frontend/src/modules
+frontend/src/components
+frontend/src/lib
+frontend/src/hooks
+frontend/src/types
+frontend/src/assets
+```
+
+Modül yapısı örneği:
+
+```text
+modules/users/api
+modules/users/components
+modules/users/pages
+modules/users/schemas
+modules/users/types
+modules/users/hooks
+```
+
+Kurallar:
+
+- Modüle özel component modül içinde kalır.
+- Ortak component `components/` altına konur.
+- Modüller birbirinin iç detaylarına doğrudan bağımlı olmaz.
+
+## 3. TypeScript Kuralları
+
+- `any` kullanma.
+- Prop tiplerini açık yaz.
+- API response tiplerini açık yaz.
+- Magic string değerleri her yere dağıtma.
+- `type` ve `interface` kullanımında tutarlı ol.
+
+Yanlış:
+
+```ts
+function UserCard(props: any) {}
+```
+
+Doğru:
+
+```ts
+type UserCardProps = {
+  displayName: string;
+  email?: string | null;
+};
+```
+
+## 4. Component Kuralları
+
+- Componentler küçük ve tek sorumluluklu olmalıdır.
+- Sayfa componentleri `pages/` altında bulunur.
+- UI componentleri mümkün olduğunca dumb/presentational olur.
+- Büyük componentleri parçala.
+- Aynı UI davranışını tekrar etme, ortak component üret.
+
+## 5. Routing Kuralları
+
+React Router kullan.
+
+Route örnekleri:
+
+```text
+/login
+/dashboard
+/users
+/users/new
+/users/:id/edit
+/roles
+/permissions
+/logs/audit
+/logs/security
+/settings
+```
+
+Kurallar:
+
+- Login public route olur.
+- Uygulama içi sayfalar auth guard arkasında olur.
+- Yetki gerektiren route permission guard ile korunur.
+
+## 6. Layout Kuralları
+
+Ana layout:
+
+```text
+AppShell
+  Sidebar
+  Topbar
+  MainContent
+```
+
+Kurallar:
+
+- Sidebar menüleri permission bilgisine göre gösterilir.
+- Topbar kullanıcı bilgisi ve logout içerir.
+- Test/Staging ortam etiketi gerekiyorsa Topbar/AppShell içinde gösterilir.
+
+## 7. Auth State Kuralları
+
+Auth state için Zustand kullan.
+
+Auth store şunları yönetir:
+
+```text
+Access token
+Current user
+Permission listesi
+Role listesi
+Login durumu
+```
+
+Kurallar:
+
+- Componentler localStorage/sessionStorage ile doğrudan konuşmaz.
+- Token erişimi auth store/helper üzerinden olur.
+- Logout auth state'i temizler.
+- Refresh başarısızsa login'e yönlendir.
+
+## 8. API Client Kuralları
+
+Merkezi client:
+
+```text
+src/lib/api/client.ts
+```
+
+Kurallar:
+
+- Component içinde doğrudan `axios.create` yapma.
+- Her API çağrısı merkezi client üzerinden yapılır.
+- Authorization header merkezi eklenir.
+- 401 response merkezi yakalanır.
+- Refresh token akışı merkezi yönetilir.
+- API fonksiyonları modülün `api/` klasöründe bulunur.
+
+## 9. API Response Kuralları
+
+Backend response standardını merkezi helper ile çöz.
+
+Tip:
+
+```ts
+type ApiResponse<T> = {
+  success: boolean;
+  data: T | null;
+  message: string | null;
+  errors: ApiError[];
+};
+```
+
+Kurallar:
+
+- Her component `success` kontrolüyle uğraşmaz.
+- `unwrapApiResponse` gibi merkezi helper kullan.
+- Validation hataları form alanlarına map edilebilir olmalıdır.
+
+## 10. TanStack Query Kuralları
+
+- GET işlemleri `useQuery` ile yapılır.
+- POST/PUT/DELETE işlemleri `useMutation` ile yapılır.
+- Query keyler merkezi ve tutarlı olur.
+- Mutation sonrası ilgili query invalidate edilir.
+- Loading/error state ortak componentlerle gösterilir.
+
+## 11. Form Kuralları
+
+- React Hook Form kullan.
+- Zod schema kullan.
+- Backend validation hatalarını form alanlarına map et.
+- Submit loading state göster.
+- Başarılı işlemde toast göster.
+- Kritik işlemde confirmation dialog kullan.
+
+## 12. TanStack Table Kuralları
+
+Büyük listelerde TanStack Table kullan.
+
+Kullanım alanları:
+
+```text
+Kullanıcı listesi
+Rol listesi
+İzin listesi
+Audit log listesi
+Security log listesi
+```
+
+Kurallar:
+
+- Ortak DataTable componenti kullan.
+- Server-side pagination destekle.
+- Sorting/filtering backend ile uyumlu olsun.
+- Kolon tanımları modül içinde tutulur.
+
+## 13. Loading / Error / Empty State Kuralları
+
+Ortak componentler kullan:
+
+```text
+PageLoading
+TableLoading
+ErrorState
+EmptyState
+ForbiddenState
+NotFoundState
+```
+
+Her sayfa loading/error/empty durumunu göstermelidir.
+
+## 14. Toast / Dialog Kuralları
+
+- Toast için Sonner kullan.
+- Başarılı create/update işlemlerinde toast göster.
+- Hata durumunda kullanıcı dostu mesaj göster.
+- Kritik işlemler confirmation dialog ister.
+- Hassas veri toast içinde gösterilmez.
+
+## 15. Permission Guard Kuralları
+
+- Permission guard sadece UX içindir.
+- Menü ve buton görünürlüğünü yönetir.
+- Asıl güvenlik backend tarafındadır.
+- Permission kontrolünü güvenlik katmanı sanma.
+
+Örnek:
+
+```tsx
+<Can permission="Users.Create">
+  <Button>Yeni Kullanıcı</Button>
+</Can>
+```
+
+## 16. Sidebar Menü Kuralları
+
+Menüler merkezi config ile yönetilir.
+
+Örnek:
+
+```ts
+export const sidebarItems = [
+  {
+    title: "Kullanıcılar",
+    href: "/users",
+    icon: UsersIcon,
+    permission: "Users.View",
+  },
+];
+```
+
+## 17. shadcn/ui Kuralları
+
+- shadcn/ui componentleri `components/ui` altında bulunur.
+- UI componentleri iş mantığı içermez.
+- Variant yapısı korunur.
+- Gereksiz component kopyalama yapma.
+
+## 18. Tailwind Kuralları
+
+- Tailwind CSS v4 kullan.
+- Gereksiz inline style kullanma.
+- Dark/light mode uyumlu tokenlar kullan.
+- Çok uzun class listelerini component/variant ile sadeleştir.
+
+## 19. Tema Kuralları
+
+- Varsayılan görünen ad `SAS-Portal` olur.
+- Dark/light mode desteklenmelidir.
+- Kurumsal renkler ileride ayardan değiştirilebilir yapıya uygun tasarlanır.
+
+## 20. Auth Akışı
+
+Login:
+
+```text
+Login formu -> /auth/login -> token/current user -> auth store -> dashboard
+```
+
+Refresh:
+
+```text
+401 -> refresh dene -> başarılıysa request tekrar et -> başarısızsa login'e yönlendir
+```
+
+Kurallar:
+
+- Aynı anda birden fazla refresh isteği göndermemeye çalış.
+- Token'ı console'a yazma.
+
+## 21. Ekran Kuralları
+
+İlk faz ekranları:
+
+```text
+Login
+Dashboard shell
+Kullanıcı listesi
+Kullanıcı oluşturma/düzenleme
+Rol listesi
+Rol oluşturma/düzenleme
+Rol izin atama
+Kullanıcı rol atama
+İzin listesi
+Audit log listesi
+Security log listesi
+Temel ayarlar
+```
+
+## 22. Log Ekranı Kuralları
+
+- Audit log ve Security log listeleri server-side pagination kullanır.
+- Tarih filtresi olmalıdır.
+- Kullanıcı/event/action filtresi olabilir.
+- Log detay drawer/dialog ile gösterilebilir.
+- Hassas veri gösterilmez.
+
+## 23. Anti-Patternler
+
+Yapma:
+
+```text
+Component içinde doğrudan axios çağırma.
+Her sayfada ayrı API client oluşturma.
+Token'ı console'a yazma.
+any kullanma.
+Her tablo için sıfırdan tablo mantığı yazma.
+Aynı loading/error/empty state'i her yerde farklı tasarlama.
+LocalStorage ile her componentin doğrudan konuşması.
+Magic string route ve permission değerlerini her yere dağıtma.
+Backend entity isimlerini doğrudan UI modeli gibi kullanma.
