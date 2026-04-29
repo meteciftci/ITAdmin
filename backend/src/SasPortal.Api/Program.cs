@@ -2,6 +2,7 @@ using SasPortal.Api.Extensions;
 using SasPortal.Application;
 using SasPortal.Infrastructure;
 using SasPortal.Persistence;
+using Microsoft.Extensions.Hosting;
 using Serilog;
 
 try
@@ -43,9 +44,13 @@ try
     Log.Information("Starting SAS Portal API");
     app.Run();
 }
-catch (Exception ex)
+catch (HostAbortedException)
 {
-    Log.Fatal(ex, "SAS Portal API terminated unexpectedly");
+    // Expected during EF Core design-time operations.
+}
+catch (Exception exception)
+{
+    Log.Fatal(exception, "SAS Portal API terminated unexpectedly");
 }
 finally
 {
