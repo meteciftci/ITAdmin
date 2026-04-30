@@ -17,6 +17,7 @@ public static class DependencyInjection
 
         services.AddScoped<ISecretProtector, SecretProtector>();
         services.AddScoped<ILdapService, LdapService>();
+        services.AddScoped<ITokenService, JwtTokenService>();
 
         return services;
     }

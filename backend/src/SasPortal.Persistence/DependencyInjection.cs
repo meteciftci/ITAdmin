@@ -21,6 +21,7 @@ public static class DependencyInjection
         services.AddDbContext<AppDbContext>(options =>
             options.UseNpgsql(connectionString));
         services.AddScoped<ISetupService, SetupService>();
+        services.AddScoped<IAuthService, AuthService>();
 
         return services;
     }
