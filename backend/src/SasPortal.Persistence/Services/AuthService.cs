@@ -202,4 +202,199 @@ public sealed class AuthService(
             return new AuthTokenResult(false, "Login could not be completed.", null, null, null, null);
         }
     }
+
+    public async Task<AuthTokenResult> RefreshTokenAsync(RefreshTokenRequest request, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(request.RefreshToken))
+        {
+            return new AuthTokenResult(false, "Refresh token is required.", null, null, null, null);
+        }
+
+        try
+        {
+            var now = DateTime.UtcNow;
+            var refreshTokenHash = tokenService.HashRefreshToken(request.RefreshToken);
+
+            var refreshToken = await context.RefreshTokens
+                .Include(x => x.PortalUser)
+                    .ThenInclude(x => x.UserRoles)
+                        .ThenInclude(x => x.PortalRole)
+                            .ThenInclude(x => x.RolePermissions)
+                                .ThenInclude(x => x.PortalPermission)
+                .FirstOrDefaultAsync(x => x.TokenHash == refreshTokenHash, cancellationToken);
+
+            if (refreshToken is null)
+            {
+                await context.SecurityLogs.AddAsync(
+                    new SecurityLog
+                    {
+                        EventType = SecurityEventType.RefreshTokenRevoked,
+                        IsSuccess = false,
+                        Message = "Invalid refresh token.",
+                        IpAddress = request.IpAddress,
+                        UserAgent = request.UserAgent,
+                        CreatedAt = now
+                    },
+                    cancellationToken);
+
+                await context.SaveChangesAsync(cancellationToken);
+                return new AuthTokenResult(false, "Invalid refresh token.", null, null, null, null);
+            }
+
+            if (refreshToken.RevokedAt is not null)
+            {
+                await context.SecurityLogs.AddAsync(
+                    new SecurityLog
+                    {
+                        PortalUserId = refreshToken.PortalUserId,
+                        UserName = refreshToken.PortalUser?.UserName,
+                        EventType = SecurityEventType.RefreshTokenRevoked,
+                        IsSuccess = false,
+                        Message = "Invalid refresh token.",
+                        IpAddress = request.IpAddress,
+                        UserAgent = request.UserAgent,
+                        CreatedAt = now
+                    },
+                    cancellationToken);
+
+                await context.SaveChangesAsync(cancellationToken);
+                return new AuthTokenResult(false, "Invalid refresh token.", null, null, null, null);
+            }
+
+            if (refreshToken.ExpiresAt <= now)
+            {
+                await context.SecurityLogs.AddAsync(
+                    new SecurityLog
+                    {
+                        PortalUserId = refreshToken.PortalUserId,
+                        UserName = refreshToken.PortalUser?.UserName,
+                        EventType = SecurityEventType.RefreshTokenRevoked,
+                        IsSuccess = false,
+                        Message = "Refresh token has expired.",
+                        IpAddress = request.IpAddress,
+                        UserAgent = request.UserAgent,
+                        CreatedAt = now
+                    },
+                    cancellationToken);
+
+                await context.SaveChangesAsync(cancellationToken);
+                return new AuthTokenResult(false, "Refresh token has expired.", null, null, null, null);
+            }
+
+            var user = refreshToken.PortalUser;
+            if (user is null || user.IsDeleted)
+            {
+                await context.SecurityLogs.AddAsync(
+                    new SecurityLog
+                    {
+                        EventType = SecurityEventType.RefreshTokenRevoked,
+                        IsSuccess = false,
+                        Message = "Invalid refresh token.",
+                        IpAddress = request.IpAddress,
+                        UserAgent = request.UserAgent,
+                        CreatedAt = now
+                    },
+                    cancellationToken);
+
+                await context.SaveChangesAsync(cancellationToken);
+                return new AuthTokenResult(false, "Invalid refresh token.", null, null, null, null);
+            }
+
+            if (!user.IsActive)
+            {
+                await context.SecurityLogs.AddAsync(
+                    new SecurityLog
+                    {
+                        PortalUserId = user.Id,
+                        UserName = user.UserName,
+                        EventType = SecurityEventType.RefreshTokenRevoked,
+                        IsSuccess = false,
+                        Message = "User is inactive.",
+                        IpAddress = request.IpAddress,
+                        UserAgent = request.UserAgent,
+                        CreatedAt = now
+                    },
+                    cancellationToken);
+
+                await context.SaveChangesAsync(cancellationToken);
+                return new AuthTokenResult(false, "User is inactive.", null, null, null, null);
+            }
+
+            var activeRoles = user.UserRoles
+                .Where(x => x.PortalRole.IsActive && !x.PortalRole.IsDeleted)
+                .Select(x => x.PortalRole)
+                .ToList();
+
+            var roles = activeRoles
+                .Select(x => x.Code)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var permissions = activeRoles
+                .SelectMany(x => x.RolePermissions)
+                .Where(x => x.PortalPermission.IsActive && !x.PortalPermission.IsDeleted)
+                .Select(x => x.PortalPermission.Code)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var userInfo = new AuthenticatedUserInfo(
+                user.Id,
+                user.UserName,
+                user.DisplayName,
+                user.Email,
+                roles,
+                permissions);
+
+            var accessExpiresAt = now.AddMinutes(_jwtOptions.AccessTokenMinutes);
+            var refreshExpiresAt = now.AddDays(_jwtOptions.RefreshTokenDays);
+
+            var newAccessToken = tokenService.CreateAccessToken(userInfo, accessExpiresAt);
+            var newRefreshToken = tokenService.CreateRefreshToken();
+            var newRefreshTokenHash = tokenService.HashRefreshToken(newRefreshToken);
+
+            refreshToken.RevokedAt = now;
+            refreshToken.RevokedByIp = request.IpAddress;
+            refreshToken.ReplacedByTokenHash = newRefreshTokenHash;
+
+            await context.RefreshTokens.AddAsync(
+                new RefreshToken
+                {
+                    PortalUserId = user.Id,
+                    TokenHash = newRefreshTokenHash,
+                    ExpiresAt = refreshExpiresAt,
+                    CreatedAt = now,
+                    CreatedByIp = request.IpAddress,
+                    UserAgent = request.UserAgent
+                },
+                cancellationToken);
+
+            await context.SecurityLogs.AddAsync(
+                new SecurityLog
+                {
+                    PortalUserId = user.Id,
+                    UserName = user.UserName,
+                    EventType = SecurityEventType.RefreshTokenIssued,
+                    IsSuccess = true,
+                    Message = "Refresh token issued.",
+                    IpAddress = request.IpAddress,
+                    UserAgent = request.UserAgent,
+                    CreatedAt = now
+                },
+                cancellationToken);
+
+            await context.SaveChangesAsync(cancellationToken);
+
+            return new AuthTokenResult(
+                true,
+                "Token refreshed.",
+                newAccessToken,
+                newRefreshToken,
+                accessExpiresAt,
+                refreshExpiresAt);
+        }
+        catch
+        {
+            return new AuthTokenResult(false, "Token refresh could not be completed.", null, null, null, null);
+        }
+    }
 }

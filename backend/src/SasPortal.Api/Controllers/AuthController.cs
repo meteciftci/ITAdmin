@@ -39,4 +39,33 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
 
         return Unauthorized(response);
     }
+
+    [HttpPost("refresh")]
+    [AllowAnonymous]
+    public async Task<ActionResult<RefreshTokenResponse>> Refresh(
+        [FromBody] RefreshTokenRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await authService.RefreshTokenAsync(
+            new AppModels.RefreshTokenRequest(
+                request.RefreshToken,
+                HttpContext.Connection.RemoteIpAddress?.ToString(),
+                Request.Headers.UserAgent.ToString()),
+            cancellationToken);
+
+        var response = new RefreshTokenResponse(
+            result.IsSuccess,
+            result.Message,
+            result.AccessToken,
+            result.RefreshToken,
+            result.AccessTokenExpiresAt,
+            result.RefreshTokenExpiresAt);
+
+        if (result.IsSuccess)
+        {
+            return Ok(response);
+        }
+
+        return Unauthorized(response);
+    }
 }
