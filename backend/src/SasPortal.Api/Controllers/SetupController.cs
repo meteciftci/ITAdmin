@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using SasPortal.Api.Contracts.Setup;
 using SasPortal.Application.Abstractions.Services;
-using SasPortal.Application.Common.Models;
+using AppModels = SasPortal.Application.Common.Models;
 
 namespace SasPortal.Api.Controllers;
 
@@ -21,7 +21,7 @@ public sealed class SetupController(ISetupService setupService, ILdapService lda
         [FromBody] ValidateLdapRequest request,
         CancellationToken cancellationToken)
     {
-        var validationRequest = new LdapValidationRequest
+        var validationRequest = new AppModels.LdapValidationRequest
         {
             Host = request.Host,
             Port = request.Port,
@@ -38,5 +38,40 @@ public sealed class SetupController(ISetupService setupService, ILdapService lda
 
         var result = await ldapService.ValidateAsync(validationRequest, cancellationToken);
         return Ok(new ValidateLdapResponse(result.IsValid, result.Message));
+    }
+
+    [HttpPost("complete")]
+    public async Task<ActionResult<CompleteSetupResponse>> CompleteSetup(
+        [FromBody] CompleteSetupRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await setupService.CompleteSetupAsync(
+            new AppModels.CompleteSetupRequest(
+                request.SetupKey,
+                new AppModels.CompleteSetupLdapSettings(
+                    request.Ldap.Name,
+                    request.Ldap.Host,
+                    request.Ldap.Port,
+                    request.Ldap.UseSsl,
+                    request.Ldap.BaseDn,
+                    request.Ldap.UserSearchBase,
+                    request.Ldap.UserSearchFilter,
+                    request.Ldap.BindUserName,
+                    request.Ldap.BindUserDomain,
+                    request.Ldap.BindPassword),
+                new AppModels.CompleteSetupAdminUser(
+                    request.Admin.UserName,
+                    request.Admin.Password,
+                    request.Admin.DisplayName,
+                    request.Admin.Email)),
+            cancellationToken);
+
+        var response = new CompleteSetupResponse(result.IsCompleted, result.Message);
+        if (result.IsCompleted)
+        {
+            return Ok(response);
+        }
+
+        return BadRequest(response);
     }
 }
