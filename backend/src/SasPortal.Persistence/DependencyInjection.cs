@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using SasPortal.Application.Abstractions.Services;
 using SasPortal.Persistence.Context;
+using SasPortal.Persistence.Services;
 
 namespace SasPortal.Persistence;
 
@@ -18,6 +20,7 @@ public static class DependencyInjection
 
         services.AddDbContext<AppDbContext>(options =>
             options.UseNpgsql(connectionString));
+        services.AddScoped<ISetupService, SetupService>();
 
         return services;
     }
