@@ -397,4 +397,104 @@ public sealed class AuthService(
             return new AuthTokenResult(false, "Token refresh could not be completed.", null, null, null, null);
         }
     }
+
+    public async Task<LogoutResult> LogoutAsync(LogoutRequest request, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(request.RefreshToken))
+        {
+            return new LogoutResult(false, "Refresh token is required.");
+        }
+
+        try
+        {
+            var now = DateTime.UtcNow;
+            var refreshTokenHash = tokenService.HashRefreshToken(request.RefreshToken);
+
+            var refreshToken = await context.RefreshTokens
+                .Include(x => x.PortalUser)
+                .FirstOrDefaultAsync(x => x.TokenHash == refreshTokenHash, cancellationToken);
+
+            if (refreshToken is null)
+            {
+                await context.SecurityLogs.AddAsync(
+                    new SecurityLog
+                    {
+                        EventType = SecurityEventType.Logout,
+                        IsSuccess = false,
+                        Message = "Logout failed. Refresh token was not found.",
+                        IpAddress = request.IpAddress,
+                        UserAgent = request.UserAgent,
+                        CreatedAt = now
+                    },
+                    cancellationToken);
+
+                await context.SaveChangesAsync(cancellationToken);
+                return new LogoutResult(false, "Invalid refresh token.");
+            }
+
+            if (refreshToken.RevokedAt is not null)
+            {
+                await context.SecurityLogs.AddAsync(
+                    new SecurityLog
+                    {
+                        PortalUserId = refreshToken.PortalUserId,
+                        UserName = refreshToken.PortalUser?.UserName,
+                        EventType = SecurityEventType.Logout,
+                        IsSuccess = false,
+                        Message = "Logout failed. Refresh token was already revoked.",
+                        IpAddress = request.IpAddress,
+                        UserAgent = request.UserAgent,
+                        CreatedAt = now
+                    },
+                    cancellationToken);
+
+                await context.SaveChangesAsync(cancellationToken);
+                return new LogoutResult(false, "Refresh token is already revoked.");
+            }
+
+            if (refreshToken.ExpiresAt <= now)
+            {
+                await context.SecurityLogs.AddAsync(
+                    new SecurityLog
+                    {
+                        PortalUserId = refreshToken.PortalUserId,
+                        UserName = refreshToken.PortalUser?.UserName,
+                        EventType = SecurityEventType.Logout,
+                        IsSuccess = false,
+                        Message = "Logout failed. Refresh token has expired.",
+                        IpAddress = request.IpAddress,
+                        UserAgent = request.UserAgent,
+                        CreatedAt = now
+                    },
+                    cancellationToken);
+
+                await context.SaveChangesAsync(cancellationToken);
+                return new LogoutResult(false, "Refresh token has expired.");
+            }
+
+            refreshToken.RevokedAt = now;
+            refreshToken.RevokedByIp = request.IpAddress;
+
+            await context.SecurityLogs.AddAsync(
+                new SecurityLog
+                {
+                    PortalUserId = refreshToken.PortalUserId,
+                    UserName = refreshToken.PortalUser?.UserName,
+                    EventType = SecurityEventType.Logout,
+                    IsSuccess = true,
+                    Message = "Logout succeeded.",
+                    IpAddress = request.IpAddress,
+                    UserAgent = request.UserAgent,
+                    CreatedAt = now
+                },
+                cancellationToken);
+
+            await context.SaveChangesAsync(cancellationToken);
+            return new LogoutResult(true, "Logout succeeded.");
+        }
+        catch
+        {
+            return new LogoutResult(false, "Logout could not be completed.");
+        }
+    }
 }

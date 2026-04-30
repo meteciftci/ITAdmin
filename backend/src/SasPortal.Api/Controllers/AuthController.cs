@@ -68,4 +68,29 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
 
         return Unauthorized(response);
     }
+
+    [HttpPost("logout")]
+    [AllowAnonymous]
+    public async Task<ActionResult<LogoutResponse>> Logout(
+        [FromBody] LogoutRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await authService.LogoutAsync(
+            new AppModels.LogoutRequest(
+                request.RefreshToken,
+                HttpContext.Connection.RemoteIpAddress?.ToString(),
+                Request.Headers.UserAgent.ToString()),
+            cancellationToken);
+
+        var response = new LogoutResponse(
+            result.IsSuccess,
+            result.Message);
+
+        if (result.IsSuccess)
+        {
+            return Ok(response);
+        }
+
+        return BadRequest(response);
+    }
 }
