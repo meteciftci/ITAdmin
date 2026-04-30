@@ -46,10 +46,14 @@ public class LdapSettingConfiguration : IEntityTypeConfiguration<LdapSetting>
             .HasMaxLength(500)
             .IsRequired();
 
-        builder.Property(x => x.BindDn)
-            .HasColumnName("bind_dn")
-            .HasMaxLength(500)
+        builder.Property(x => x.BindUserName)
+            .HasColumnName("bind_user_name")
+            .HasMaxLength(250)
             .IsRequired();
+
+        builder.Property(x => x.BindUserDomain)
+            .HasColumnName("bind_user_domain")
+            .HasMaxLength(250);
 
         builder.Property(x => x.EncryptedBindPassword)
             .HasColumnName("encrypted_bind_password")

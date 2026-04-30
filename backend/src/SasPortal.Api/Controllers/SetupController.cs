@@ -29,7 +29,8 @@ public sealed class SetupController(ISetupService setupService, ILdapService lda
             BaseDn = request.BaseDn,
             UserSearchBase = request.UserSearchBase,
             UserSearchFilter = request.UserSearchFilter,
-            BindDn = request.BindDn,
+            BindUserName = request.BindUserName,
+            BindUserDomain = request.BindUserDomain,
             BindPassword = request.BindPassword,
             TestUserName = request.TestUserName,
             TestPassword = request.TestPassword

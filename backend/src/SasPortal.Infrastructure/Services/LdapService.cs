@@ -21,7 +21,7 @@ public sealed class LdapService : ILdapService
             request.Port <= 0 ||
             string.IsNullOrWhiteSpace(request.BaseDn) ||
             string.IsNullOrWhiteSpace(request.UserSearchFilter) ||
-            string.IsNullOrWhiteSpace(request.BindDn) ||
+            string.IsNullOrWhiteSpace(request.BindUserName) ||
             string.IsNullOrWhiteSpace(request.BindPassword) ||
             string.IsNullOrWhiteSpace(request.TestUserName) ||
             string.IsNullOrWhiteSpace(request.TestPassword))
@@ -32,8 +32,13 @@ public sealed class LdapService : ILdapService
         try
         {
             var identifier = new LdapDirectoryIdentifier(request.Host, request.Port);
+            var bindIdentity = BuildBindIdentity(request.BindUserName, request.BindUserDomain);
+            if (string.IsNullOrWhiteSpace(bindIdentity))
+            {
+                return Task.FromResult(new LdapValidationResult(false, MissingRequiredFieldsMessage));
+            }
 
-            using var serviceConnection = CreateConnection(identifier, request.UseSsl, request.BindDn, request.BindPassword);
+            using var serviceConnection = CreateConnection(identifier, request.UseSsl, bindIdentity, request.BindPassword);
             try
             {
                 serviceConnection.Bind();
@@ -122,5 +127,29 @@ public sealed class LdapService : ILdapService
             .Replace("(", "\\28", StringComparison.Ordinal)
             .Replace(")", "\\29", StringComparison.Ordinal)
             .Replace("\0", "\\00", StringComparison.Ordinal);
+    }
+
+    private static string BuildBindIdentity(string bindUserName, string? bindUserDomain)
+    {
+        if (string.IsNullOrWhiteSpace(bindUserName))
+        {
+            return string.Empty;
+        }
+
+        if (bindUserName.Contains('\\') ||
+            bindUserName.Contains('@') ||
+            bindUserName.StartsWith("CN=", StringComparison.OrdinalIgnoreCase))
+        {
+            return bindUserName;
+        }
+
+        if (string.IsNullOrWhiteSpace(bindUserDomain))
+        {
+            return bindUserName;
+        }
+
+        return bindUserDomain.Contains('.')
+            ? $"{bindUserName}@{bindUserDomain}"
+            : $@"{bindUserDomain}\{bindUserName}";
     }
 }
