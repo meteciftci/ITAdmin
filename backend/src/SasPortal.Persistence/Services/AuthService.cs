@@ -16,6 +16,8 @@ public sealed class AuthService(
     ITokenService tokenService,
     IOptions<JwtOptions> jwtOptions) : IAuthService
 {
+    private const string SuperAdminRoleCode = "SuperAdmin";
+
     private readonly JwtOptions _jwtOptions = jwtOptions.Value;
 
     public async Task<AuthTokenResult> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
@@ -495,6 +497,105 @@ public sealed class AuthService(
         catch
         {
             return new LogoutResult(false, "Logout could not be completed.");
+        }
+    }
+
+    public async Task<CurrentUserResult> GetCurrentUserAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var user = await context.PortalUsers
+                .AsNoTracking()
+                .Include(x => x.UserRoles)
+                    .ThenInclude(x => x.PortalRole)
+                        .ThenInclude(x => x.RolePermissions)
+                            .ThenInclude(x => x.PortalPermission)
+                .FirstOrDefaultAsync(x => x.Id == userId, cancellationToken);
+
+            if (user is null)
+            {
+                return new CurrentUserResult(
+                    false,
+                    "User was not found.",
+                    null,
+                    null,
+                    null,
+                    null,
+                    Array.Empty<string>(),
+                    Array.Empty<string>(),
+                    false);
+            }
+
+            if (user.IsDeleted)
+            {
+                return new CurrentUserResult(
+                    false,
+                    "User was not found.",
+                    null,
+                    null,
+                    null,
+                    null,
+                    Array.Empty<string>(),
+                    Array.Empty<string>(),
+                    false);
+            }
+
+            if (!user.IsActive)
+            {
+                return new CurrentUserResult(
+                    false,
+                    "User is inactive.",
+                    null,
+                    null,
+                    null,
+                    null,
+                    Array.Empty<string>(),
+                    Array.Empty<string>(),
+                    false);
+            }
+
+            var activeRoles = user.UserRoles
+                .Where(x => x.PortalRole.IsActive && !x.PortalRole.IsDeleted)
+                .Select(x => x.PortalRole)
+                .ToList();
+
+            var roles = activeRoles
+                .Select(x => x.Code)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var isSuperAdmin = roles.Contains(SuperAdminRoleCode, StringComparer.OrdinalIgnoreCase);
+
+            var permissions = activeRoles
+                .SelectMany(x => x.RolePermissions)
+                .Where(x => x.PortalPermission.IsActive && !x.PortalPermission.IsDeleted)
+                .Select(x => x.PortalPermission.Code)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            return new CurrentUserResult(
+                true,
+                "Succeeded.",
+                user.Id,
+                user.UserName,
+                user.DisplayName,
+                user.Email,
+                roles,
+                permissions,
+                isSuperAdmin);
+        }
+        catch
+        {
+            return new CurrentUserResult(
+                false,
+                "Current user could not be retrieved.",
+                null,
+                null,
+                null,
+                null,
+                Array.Empty<string>(),
+                Array.Empty<string>(),
+                false);
         }
     }
 }

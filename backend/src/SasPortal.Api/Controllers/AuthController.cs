@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SasPortal.Api.Contracts.Auth;
@@ -92,5 +93,48 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
         }
 
         return BadRequest(response);
+    }
+
+    private const string JwtSubClaimType = "sub";
+
+    [HttpGet("me")]
+    [Authorize]
+    public async Task<ActionResult<CurrentUserResponse>> GetCurrentUser(CancellationToken cancellationToken)
+    {
+        var rawUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+            ?? User.FindFirst(JwtSubClaimType)?.Value;
+
+        if (!Guid.TryParse(rawUserId, out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var result = await authService.GetCurrentUserAsync(userId, cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            if (string.Equals(result.Message, "User was not found.", StringComparison.Ordinal))
+            {
+                return NotFound();
+            }
+
+            return Unauthorized();
+        }
+
+        if (!result.UserId.HasValue || result.UserName is null || result.DisplayName is null)
+        {
+            return Unauthorized();
+        }
+
+        var response = new CurrentUserResponse(
+            result.UserId.Value,
+            result.UserName,
+            result.DisplayName,
+            result.Email,
+            result.Roles,
+            result.Permissions,
+            result.IsSuperAdmin);
+
+        return Ok(response);
     }
 }
