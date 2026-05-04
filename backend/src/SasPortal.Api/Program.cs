@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Authorization;
+using SasPortal.Api.Authorization;
 using SasPortal.Api.Extensions;
 using SasPortal.Application;
 using SasPortal.Application.Common.Models;
@@ -52,6 +54,8 @@ try
         });
 
     builder.Services.AddAuthorization();
+    builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionAuthorizationPolicyProvider>();
+    builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
     // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
     builder.Services.AddOpenApi();
     builder.Services.AddHealthChecks();

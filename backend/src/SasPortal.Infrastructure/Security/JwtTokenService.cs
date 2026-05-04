@@ -6,6 +6,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using SasPortal.Application.Abstractions.Security;
 using SasPortal.Application.Common.Models;
+using SasPortal.Application.Common.Security;
 
 namespace SasPortal.Infrastructure.Security;
 
@@ -24,7 +25,7 @@ public sealed class JwtTokenService(IOptions<JwtOptions> jwtOptions) : ITokenSer
         {
             new(JwtRegisteredClaimNames.Sub, user.UserId.ToString()),
             new(JwtRegisteredClaimNames.Name, user.UserName),
-            new("display_name", user.DisplayName)
+            new(CustomClaimTypes.DisplayName, user.DisplayName)
         };
 
         if (!string.IsNullOrWhiteSpace(user.Email))
@@ -33,7 +34,7 @@ public sealed class JwtTokenService(IOptions<JwtOptions> jwtOptions) : ITokenSer
         }
 
         claims.AddRange(user.Roles.Select(role => new Claim(ClaimTypes.Role, role)));
-        claims.AddRange(user.Permissions.Select(permission => new Claim("permission", permission)));
+        claims.AddRange(user.Permissions.Select(permission => new Claim(CustomClaimTypes.Permission, permission)));
 
         var token = new JwtSecurityToken(
             issuer: _jwtOptions.Issuer,
