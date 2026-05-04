@@ -17,6 +17,11 @@ public sealed class SetupService(
     ISecretProtector secretProtector,
     IConfiguration configuration) : ISetupService
 {
+    private const string SuperAdminRoleCode = "SuperAdmin";
+    private const string AdministratorRoleCode = "Administrator";
+    private const string UserRoleCode = "User";
+    private const string SetupActor = "setup";
+
     private static readonly (string Module, string Code, string Description)[] DefaultPermissions =
     [
         ("Dashboard", "Dashboard.View", "View dashboard."),
@@ -143,7 +148,7 @@ public sealed class SetupService(
                     EncryptedBindPassword = secretProtector.Protect(request.Ldap.BindPassword),
                     IsActive = true,
                     CreatedAt = now,
-                    CreatedBy = "setup"
+                    CreatedBy = SetupActor
                 };
 
                 await context.LdapSettings.AddAsync(activeLdapSetting, cancellationToken);
@@ -161,41 +166,82 @@ public sealed class SetupService(
                 activeLdapSetting.BindUserDomain = request.Ldap.BindUserDomain;
                 activeLdapSetting.EncryptedBindPassword = secretProtector.Protect(request.Ldap.BindPassword);
                 activeLdapSetting.UpdatedAt = now;
-                activeLdapSetting.UpdatedBy = "setup";
+                activeLdapSetting.UpdatedBy = SetupActor;
+            }
+
+            var superAdminRole = await context.PortalRoles
+                .FirstOrDefaultAsync(x => x.Code == SuperAdminRoleCode, cancellationToken);
+            if (superAdminRole is null)
+            {
+                superAdminRole = new PortalRole
+                {
+                    Name = "Super Admin",
+                    Code = SuperAdminRoleCode,
+                    Description = "Full system access role.",
+                    IsSystem = true,
+                    IsActive = true,
+                    CreatedAt = now,
+                    CreatedBy = SetupActor
+                };
+                await context.PortalRoles.AddAsync(superAdminRole, cancellationToken);
+            }
+            else
+            {
+                ApplySystemRoleMetadataIfChanged(
+                    superAdminRole,
+                    name: "Super Admin",
+                    description: "Full system access role.",
+                    now);
             }
 
             var administratorRole = await context.PortalRoles
-                .FirstOrDefaultAsync(x => x.Code == "Administrator", cancellationToken);
+                .FirstOrDefaultAsync(x => x.Code == AdministratorRoleCode, cancellationToken);
             if (administratorRole is null)
             {
                 administratorRole = new PortalRole
                 {
                     Name = "Administrator",
-                    Code = "Administrator",
+                    Code = AdministratorRoleCode,
                     Description = "System administrator role.",
                     IsSystem = true,
                     IsActive = true,
                     CreatedAt = now,
-                    CreatedBy = "setup"
+                    CreatedBy = SetupActor
                 };
                 await context.PortalRoles.AddAsync(administratorRole, cancellationToken);
             }
+            else
+            {
+                ApplySystemRoleMetadataIfChanged(
+                    administratorRole,
+                    name: "Administrator",
+                    description: "System administrator role.",
+                    now);
+            }
 
             var userRole = await context.PortalRoles
-                .FirstOrDefaultAsync(x => x.Code == "User", cancellationToken);
+                .FirstOrDefaultAsync(x => x.Code == UserRoleCode, cancellationToken);
             if (userRole is null)
             {
                 userRole = new PortalRole
                 {
                     Name = "User",
-                    Code = "User",
+                    Code = UserRoleCode,
                     Description = "Default user role.",
                     IsSystem = true,
                     IsActive = true,
                     CreatedAt = now,
-                    CreatedBy = "setup"
+                    CreatedBy = SetupActor
                 };
                 await context.PortalRoles.AddAsync(userRole, cancellationToken);
+            }
+            else
+            {
+                ApplySystemRoleMetadataIfChanged(
+                    userRole,
+                    name: "User",
+                    description: "Default user role.",
+                    now);
             }
 
             var allPermissions = new List<PortalPermission>(DefaultPermissions.Length);
@@ -213,7 +259,7 @@ public sealed class SetupService(
                         Description = defaultPermission.Description,
                         IsActive = true,
                         CreatedAt = now,
-                        CreatedBy = "setup"
+                        CreatedBy = SetupActor
                     };
                     await context.PortalPermissions.AddAsync(permission, cancellationToken);
                 }
@@ -237,7 +283,7 @@ public sealed class SetupService(
                             PortalRoleId = administratorRole.Id,
                             PortalPermissionId = permission.Id,
                             CreatedAt = now,
-                            CreatedBy = "setup"
+                            CreatedBy = SetupActor
                         },
                         cancellationToken);
                 }
@@ -258,7 +304,7 @@ public sealed class SetupService(
                         PortalRoleId = userRole.Id,
                         PortalPermissionId = dashboardPermission.Id,
                         CreatedAt = now,
-                        CreatedBy = "setup"
+                        CreatedBy = SetupActor
                     },
                     cancellationToken);
             }
@@ -275,7 +321,7 @@ public sealed class SetupService(
                     Email = request.Admin.Email,
                     IsActive = true,
                     CreatedAt = now,
-                    CreatedBy = "setup"
+                    CreatedBy = SetupActor
                 };
                 await context.PortalUsers.AddAsync(adminUser, cancellationToken);
             }
@@ -285,24 +331,24 @@ public sealed class SetupService(
                 adminUser.Email = request.Admin.Email;
                 adminUser.IsActive = true;
                 adminUser.UpdatedAt = now;
-                adminUser.UpdatedBy = "setup";
+                adminUser.UpdatedBy = SetupActor;
             }
 
-            var hasAdminRole = await context.PortalUserRoles
+            var hasSuperAdminRole = await context.PortalUserRoles
                 .AnyAsync(
                     x => x.PortalUserId == adminUser.Id &&
-                         x.PortalRoleId == administratorRole.Id,
+                         x.PortalRoleId == superAdminRole.Id,
                     cancellationToken);
 
-            if (!hasAdminRole)
+            if (!hasSuperAdminRole)
             {
                 await context.PortalUserRoles.AddAsync(
                     new PortalUserRole
                     {
                         PortalUserId = adminUser.Id,
-                        PortalRoleId = administratorRole.Id,
+                        PortalRoleId = superAdminRole.Id,
                         CreatedAt = now,
-                        CreatedBy = "setup"
+                        CreatedBy = SetupActor
                     },
                     cancellationToken);
             }
@@ -322,7 +368,7 @@ public sealed class SetupService(
                     IsSystem = true,
                     IsActive = true,
                     CreatedAt = now,
-                    CreatedBy = "setup"
+                    CreatedBy = SetupActor
                 };
                 await context.ApplicationSettings.AddAsync(setupCompletionSetting, cancellationToken);
             }
@@ -335,7 +381,7 @@ public sealed class SetupService(
                 setupCompletionSetting.IsSystem = true;
                 setupCompletionSetting.IsActive = true;
                 setupCompletionSetting.UpdatedAt = now;
-                setupCompletionSetting.UpdatedBy = "setup";
+                setupCompletionSetting.UpdatedBy = SetupActor;
             }
 
             await context.SecurityLogs.AddAsync(
@@ -359,6 +405,26 @@ public sealed class SetupService(
         {
             await transaction.RollbackAsync(cancellationToken);
             return new CompleteSetupResult(false, "Setup could not be completed.");
+        }
+    }
+
+    private static void ApplySystemRoleMetadataIfChanged(
+        PortalRole role,
+        string name,
+        string description,
+        DateTime now)
+    {
+        if (role.Name != name ||
+            role.Description != description ||
+            !role.IsSystem ||
+            !role.IsActive)
+        {
+            role.Name = name;
+            role.Description = description;
+            role.IsSystem = true;
+            role.IsActive = true;
+            role.UpdatedAt = now;
+            role.UpdatedBy = SetupActor;
         }
     }
 }
