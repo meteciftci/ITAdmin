@@ -14,4 +14,8 @@ public interface IUserService
     Task<CreateUserResult> CreateUserAsync(
         CreateUserRequest request,
         CancellationToken cancellationToken = default);
+
+    Task<UpdateUserStatusResult> UpdateUserStatusAsync(
+        UpdateUserStatusRequest request,
+        CancellationToken cancellationToken = default);
 }

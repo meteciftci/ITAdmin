@@ -147,6 +147,54 @@ public sealed class UsersController(IUserService userService) : ControllerBase
             user.UpdatedBy));
     }
 
+    [HttpPatch("{id:guid}/status")]
+    [RequirePermission("Users.Update")]
+    public async Task<ActionResult<UserDetailResponse>> UpdateUserStatus(
+        Guid id,
+        [FromBody] UpdateUserStatusRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await userService.UpdateUserStatusAsync(
+            new AppModels.UpdateUserStatusRequest(
+                id,
+                request.IsActive,
+                ResolveActorUserId(User),
+                ResolveActorUserName(User)),
+            cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            if (string.Equals(result.Message, "User was not found.", StringComparison.Ordinal))
+            {
+                return NotFound();
+            }
+
+            return BadRequest(new { message = result.Message });
+        }
+
+        if (result.User is null)
+        {
+            return BadRequest(new { message = "User status could not be updated." });
+        }
+
+        var u = result.User;
+        return Ok(new UserDetailResponse(
+            u.Id,
+            u.DirectorySource,
+            u.DirectoryObjectId,
+            u.UserName,
+            u.DisplayName,
+            u.NationalIdMasked,
+            u.Email,
+            u.IsActive,
+            u.LastLoginAt,
+            u.Roles,
+            u.CreatedAt,
+            u.CreatedBy,
+            u.UpdatedAt,
+            u.UpdatedBy));
+    }
+
     private static string? ResolveActorUserName(ClaimsPrincipal principal)
     {
         if (!string.IsNullOrWhiteSpace(principal.Identity?.Name))
@@ -157,4 +205,14 @@ public sealed class UsersController(IUserService userService) : ControllerBase
         var nameClaim = principal.FindFirst(ClaimTypes.Name) ?? principal.FindFirst("name");
         return string.IsNullOrWhiteSpace(nameClaim?.Value) ? null : nameClaim.Value.Trim();
     }
+
+    private static Guid? ResolveActorUserId(ClaimsPrincipal principal)
+    {
+        var rawUserId = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value
+            ?? principal.FindFirst(JwtSubClaimType)?.Value;
+
+        return Guid.TryParse(rawUserId, out var userId) ? userId : null;
+    }
+
+    private const string JwtSubClaimType = "sub";
 }

@@ -1,7 +1,9 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using SasPortal.Application.Abstractions.Security;
 using SasPortal.Application.Abstractions.Services;
 using SasPortal.Application.Common.Models;
+using SasPortal.Application.Common.Security;
 using SasPortal.Domain.Entities;
 using SasPortal.Domain.Enums;
 using SasPortal.Persistence.Context;
@@ -14,6 +16,11 @@ public sealed class UserService(
     ISecretProtector secretProtector) : IUserService
 {
     private const string NationalIdApplicationSettingKey = "Directory:NationalIdAttribute";
+
+    private static readonly JsonSerializerOptions AuditJsonSerializerOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
 
     public async Task<PagedResult<UserListItem>> GetUsersAsync(UserListQuery query, CancellationToken cancellationToken = default)
     {
@@ -319,6 +326,118 @@ public sealed class UserService(
             return new CreateUserResult(false, "User could not be created.", null);
         }
     }
+
+    public async Task<UpdateUserStatusResult> UpdateUserStatusAsync(
+        UpdateUserStatusRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var user = await context.PortalUsers
+                .Where(x => !x.IsDeleted && x.Id == request.UserId)
+                .Include(x => x.UserRoles)
+                    .ThenInclude(ur => ur.PortalRole)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (user is null)
+            {
+                return new UpdateUserStatusResult(false, "User was not found.", null);
+            }
+
+            if (!request.IsActive &&
+                request.ActorUserId.HasValue &&
+                request.ActorUserId.Value == request.UserId)
+            {
+                return new UpdateUserStatusResult(
+                    false,
+                    "You cannot deactivate your own user account.",
+                    null);
+            }
+
+            if (!request.IsActive && UserHasActiveSuperAdminRole(user))
+            {
+                var hasAnotherActiveSuperAdmin =
+                    await HasAnotherActiveSuperAdminExcludingAsync(request.UserId, cancellationToken);
+
+                if (!hasAnotherActiveSuperAdmin)
+                {
+                    return new UpdateUserStatusResult(
+                        false,
+                        "The last active SuperAdmin user cannot be deactivated.",
+                        null);
+                }
+            }
+
+            if (user.IsActive == request.IsActive)
+            {
+                return new UpdateUserStatusResult(true, string.Empty, MapToDetail(user));
+            }
+
+            var oldIsActive = user.IsActive;
+            var now = DateTime.UtcNow;
+
+            user.IsActive = request.IsActive;
+            user.UpdatedAt = now;
+            user.UpdatedBy = request.ActorUserName ?? "system";
+
+            var auditSummary = request.IsActive
+                ? "Portal user activated."
+                : "Portal user deactivated.";
+
+            var oldValuesPayload = JsonSerializer.Serialize(
+                new { isActive = oldIsActive },
+                AuditJsonSerializerOptions);
+            var newValuesPayload = JsonSerializer.Serialize(
+                new { isActive = request.IsActive, summary = auditSummary },
+                AuditJsonSerializerOptions);
+
+            await context.AuditLogs.AddAsync(
+                new AuditLog
+                {
+                    Action = AuditActionType.Update,
+                    EntityName = "PortalUser",
+                    EntityId = user.Id.ToString(),
+                    UserName = request.ActorUserName,
+                    OldValues = oldValuesPayload,
+                    NewValues = newValuesPayload,
+                    CreatedAt = now
+                },
+                cancellationToken);
+
+            await context.SaveChangesAsync(cancellationToken);
+
+            return new UpdateUserStatusResult(true, string.Empty, MapToDetail(user));
+        }
+        catch
+        {
+            return new UpdateUserStatusResult(false, "User status could not be updated.", null);
+        }
+    }
+
+    private async Task<bool> HasAnotherActiveSuperAdminExcludingAsync(
+        Guid excludedUserId,
+        CancellationToken cancellationToken) =>
+        await context.PortalUsers
+            .AsNoTracking()
+            .Where(u =>
+                u.Id != excludedUserId &&
+                !u.IsDeleted &&
+                u.IsActive)
+            .AnyAsync(u =>
+                    u.UserRoles.Any(ur =>
+                        ur.PortalRole.IsActive &&
+                        !ur.PortalRole.IsDeleted &&
+                        string.Equals(
+                            ur.PortalRole.Code,
+                            SystemRoles.SuperAdmin,
+                            StringComparison.OrdinalIgnoreCase)),
+                cancellationToken);
+
+    private static bool UserHasActiveSuperAdminRole(PortalUser user) =>
+        user.UserRoles.Any(ur =>
+            ur.PortalRole.IsActive &&
+            !ur.PortalRole.IsDeleted &&
+            string.Equals(ur.PortalRole.Code, SystemRoles.SuperAdmin, StringComparison.OrdinalIgnoreCase));
 
     private static UserListItem MapToListItem(PortalUser user)
     {
