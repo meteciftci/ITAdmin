@@ -223,6 +223,149 @@ public sealed class LdapService : ILdapService
         }
     }
 
+    public Task<LdapUserProfile?> GetUserProfileByObjectIdAsync(
+        LdapUserProfileByObjectIdRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        _ = cancellationToken;
+
+        if (string.IsNullOrWhiteSpace(request.Host) ||
+            request.Port <= 0 ||
+            string.IsNullOrWhiteSpace(request.BaseDn) ||
+            string.IsNullOrWhiteSpace(request.BindUserName) ||
+            string.IsNullOrWhiteSpace(request.BindPassword) ||
+            string.IsNullOrWhiteSpace(request.DirectoryObjectId))
+        {
+            return Task.FromResult<LdapUserProfile?>(null);
+        }
+
+        Guid directoryGuid;
+        try
+        {
+            directoryGuid = Guid.Parse(request.DirectoryObjectId.Trim());
+        }
+        catch
+        {
+            return Task.FromResult<LdapUserProfile?>(null);
+        }
+
+        var escapedObjectGuidFilter = EscapeObjectGuidBinaryForLdapFilter(directoryGuid.ToByteArray());
+        var searchFilter =
+            $"(&(objectCategory=person)(objectClass=user)(!(userAccountControl:1.2.840.113556.1.4.803:=2))(objectGUID={escapedObjectGuidFilter}))";
+        var searchBase = string.IsNullOrWhiteSpace(request.UserSearchBase) ? request.BaseDn : request.UserSearchBase;
+
+        try
+        {
+            var identifier = new LdapDirectoryIdentifier(request.Host, request.Port);
+            var bindIdentity = BuildBindIdentity(request.BindUserName, request.BindUserDomain);
+            if (string.IsNullOrWhiteSpace(bindIdentity))
+            {
+                return Task.FromResult<LdapUserProfile?>(null);
+            }
+
+            using var serviceConnection = CreateConnection(identifier, request.UseSsl, bindIdentity, request.BindPassword);
+            try
+            {
+                serviceConnection.Bind();
+            }
+            catch (LdapException)
+            {
+                return Task.FromResult<LdapUserProfile?>(null);
+            }
+
+            var attributeNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "objectGUID",
+                "sAMAccountName",
+                "displayName",
+                "mail",
+                "userPrincipalName",
+                "distinguishedName"
+            };
+
+            if (!string.IsNullOrWhiteSpace(request.NationalIdAttribute))
+            {
+                attributeNames.Add(request.NationalIdAttribute.Trim());
+            }
+
+            var searchRequest = new SearchRequest(
+                searchBase,
+                searchFilter,
+                SearchScope.Subtree,
+                attributeNames.ToArray());
+
+            SearchResponse searchResponse;
+            try
+            {
+                searchResponse = (SearchResponse)serviceConnection.SendRequest(searchRequest);
+            }
+            catch (LdapException)
+            {
+                return Task.FromResult<LdapUserProfile?>(null);
+            }
+
+            if (searchResponse.Entries.Count == 0)
+            {
+                return Task.FromResult<LdapUserProfile?>(null);
+            }
+
+            var entry = searchResponse.Entries[0];
+
+            var objectGuidAttr = TryGetDirectoryAttribute(entry, "objectGUID");
+            var guidBytes = GetFirstByteArray(objectGuidAttr);
+            if (guidBytes is null || guidBytes.Length == 0)
+            {
+                return Task.FromResult<LdapUserProfile?>(null);
+            }
+
+            string directoryObjectId;
+            try
+            {
+                directoryObjectId = new Guid(guidBytes).ToString("D");
+            }
+            catch
+            {
+                return Task.FromResult<LdapUserProfile?>(null);
+            }
+
+            var sAm = NormalizeOptionalString(GetFirstString(TryGetDirectoryAttribute(entry, "sAMAccountName")));
+            var upn = NormalizeOptionalString(GetFirstString(TryGetDirectoryAttribute(entry, "userPrincipalName")));
+            string? resolvedUserName = null;
+            if (!string.IsNullOrEmpty(sAm))
+            {
+                resolvedUserName = sAm;
+            }
+            else if (!string.IsNullOrEmpty(upn))
+            {
+                resolvedUserName = upn;
+            }
+
+            if (resolvedUserName is null)
+            {
+                return Task.FromResult<LdapUserProfile?>(null);
+            }
+
+            var displayAttr = NormalizeOptionalString(GetFirstString(TryGetDirectoryAttribute(entry, "displayName")));
+            var displayName = !string.IsNullOrEmpty(displayAttr) ? displayAttr : resolvedUserName;
+
+            var email = NormalizeOptionalString(GetFirstString(TryGetDirectoryAttribute(entry, "mail")));
+
+            string? nationalId = null;
+            if (!string.IsNullOrWhiteSpace(request.NationalIdAttribute))
+            {
+                nationalId = NormalizeNationalIdCandidate(
+                    GetFirstString(TryGetDirectoryAttribute(entry, request.NationalIdAttribute.Trim())));
+            }
+
+            return Task.FromResult<LdapUserProfile?>(
+                new LdapUserProfile(directoryObjectId, resolvedUserName, displayName, email, nationalId));
+        }
+        catch
+        {
+            return Task.FromResult<LdapUserProfile?>(null);
+        }
+    }
+
     public Task<IReadOnlyCollection<LdapUserLookupItem>> SearchUsersAsync(
         LdapUserLookupRequest request,
         CancellationToken cancellationToken = default)
@@ -442,6 +585,22 @@ public sealed class LdapService : ILdapService
         }
 
         return connection;
+    }
+
+    private static string EscapeObjectGuidBinaryForLdapFilter(ReadOnlySpan<byte> bytes)
+    {
+        Span<char> buffer = stackalloc char[bytes.Length * 3];
+        var pos = 0;
+        foreach (var b in bytes)
+        {
+            buffer[pos++] = '\\';
+            buffer[pos++] = ToHexChar(b >> 4);
+            buffer[pos++] = ToHexChar(b & 0x0F);
+        }
+
+        return new string(buffer[..pos]);
+
+        static char ToHexChar(int v) => (char)(v < 10 ? '0' + v : 'a' + (v - 10));
     }
 
     private static string EscapeLdapFilterValue(string value)

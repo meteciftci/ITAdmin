@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SasPortal.Api.Authorization;
@@ -44,6 +45,49 @@ public sealed class UsersController(IUserService userService) : ControllerBase
             result.TotalPages);
 
         return Ok(response);
+    }
+
+    [HttpPost]
+    [RequirePermission("Users.Create")]
+    public async Task<ActionResult<UserDetailResponse>> CreateUser(
+        [FromBody] CreateUserRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await userService.CreateUserAsync(
+            new AppModels.CreateUserRequest(
+                request.DirectoryObjectId,
+                request.IsActive,
+                ResolveActorUserName(User)),
+            cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return BadRequest(new { message = result.Message });
+        }
+
+        if (result.User is null)
+        {
+            return BadRequest(new { message = "User could not be created." });
+        }
+
+        var u = result.User;
+        var response = new UserDetailResponse(
+            u.Id,
+            u.DirectorySource,
+            u.DirectoryObjectId,
+            u.UserName,
+            u.DisplayName,
+            u.NationalIdMasked,
+            u.Email,
+            u.IsActive,
+            u.LastLoginAt,
+            u.Roles,
+            u.CreatedAt,
+            u.CreatedBy,
+            u.UpdatedAt,
+            u.UpdatedBy);
+
+        return CreatedAtAction(nameof(GetUserById), new { id = response.Id }, response);
     }
 
     [HttpGet("lookup-directory")]
@@ -101,5 +145,16 @@ public sealed class UsersController(IUserService userService) : ControllerBase
             user.CreatedBy,
             user.UpdatedAt,
             user.UpdatedBy));
+    }
+
+    private static string? ResolveActorUserName(ClaimsPrincipal principal)
+    {
+        if (!string.IsNullOrWhiteSpace(principal.Identity?.Name))
+        {
+            return principal.Identity!.Name;
+        }
+
+        var nameClaim = principal.FindFirst(ClaimTypes.Name) ?? principal.FindFirst("name");
+        return string.IsNullOrWhiteSpace(nameClaim?.Value) ? null : nameClaim.Value.Trim();
     }
 }

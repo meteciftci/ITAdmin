@@ -10,4 +10,8 @@ public interface IUserService
     Task<UserDirectoryLookupResult> LookupDirectoryUsersAsync(
         UserDirectoryLookupQuery query,
         CancellationToken cancellationToken = default);
+
+    Task<CreateUserResult> CreateUserAsync(
+        CreateUserRequest request,
+        CancellationToken cancellationToken = default);
 }

@@ -10,6 +10,10 @@ public interface ILdapService
         LdapUserProfileRequest request,
         CancellationToken cancellationToken = default);
 
+    Task<LdapUserProfile?> GetUserProfileByObjectIdAsync(
+        LdapUserProfileByObjectIdRequest request,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyCollection<LdapUserLookupItem>> SearchUsersAsync(
         LdapUserLookupRequest request,
         CancellationToken cancellationToken = default);

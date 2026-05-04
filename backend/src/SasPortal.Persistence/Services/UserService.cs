@@ -3,6 +3,7 @@ using SasPortal.Application.Abstractions.Security;
 using SasPortal.Application.Abstractions.Services;
 using SasPortal.Application.Common.Models;
 using SasPortal.Domain.Entities;
+using SasPortal.Domain.Enums;
 using SasPortal.Persistence.Context;
 
 namespace SasPortal.Persistence.Services;
@@ -176,6 +177,147 @@ public sealed class UserService(
             .ToList();
 
         return new UserDirectoryLookupResult(mapped);
+    }
+
+    public async Task<CreateUserResult> CreateUserAsync(
+        CreateUserRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(request.DirectoryObjectId))
+            {
+                return new CreateUserResult(false, "Directory object id is required.", null);
+            }
+
+            var directoryObjectIdTrimmed = request.DirectoryObjectId.Trim();
+            if (!Guid.TryParse(directoryObjectIdTrimmed, out _))
+            {
+                return new CreateUserResult(false, "Directory object id is invalid.", null);
+            }
+
+            var ldapSetting = await context.LdapSettings
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.IsActive && !x.IsDeleted, cancellationToken);
+
+            if (ldapSetting is null)
+            {
+                return new CreateUserResult(false, "LDAP settings are not configured.", null);
+            }
+
+            var nationalIdAttrRaw = await context.ApplicationSettings
+                .AsNoTracking()
+                .Where(x =>
+                    x.Key == NationalIdApplicationSettingKey &&
+                    x.IsActive &&
+                    !x.IsDeleted)
+                .Select(x => x.Value)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            var nationalIdAttribute = string.IsNullOrWhiteSpace(nationalIdAttrRaw) ? null : nationalIdAttrRaw.Trim();
+
+            string bindPassword;
+            try
+            {
+                bindPassword = secretProtector.Unprotect(ldapSetting.EncryptedBindPassword);
+            }
+            catch
+            {
+                return new CreateUserResult(false, "LDAP settings are not configured.", null);
+            }
+
+            if (string.IsNullOrWhiteSpace(bindPassword))
+            {
+                return new CreateUserResult(false, "LDAP settings are not configured.", null);
+            }
+
+            var ldapProfile = await ldapService.GetUserProfileByObjectIdAsync(
+                new LdapUserProfileByObjectIdRequest(
+                    ldapSetting.Host,
+                    ldapSetting.Port,
+                    ldapSetting.UseSsl,
+                    ldapSetting.BaseDn,
+                    ldapSetting.UserSearchBase,
+                    ldapSetting.BindUserName,
+                    ldapSetting.BindUserDomain,
+                    bindPassword,
+                    directoryObjectIdTrimmed,
+                    nationalIdAttribute),
+                cancellationToken);
+
+            if (ldapProfile is null)
+            {
+                return new CreateUserResult(false, "Directory user could not be found.", null);
+            }
+
+            var sameObjectExists = await context.PortalUsers.AnyAsync(
+                u => !u.IsDeleted &&
+                     u.DirectoryObjectId.ToUpper() == ldapProfile.DirectoryObjectId.ToUpperInvariant(),
+                cancellationToken);
+            if (sameObjectExists)
+            {
+                return new CreateUserResult(false, "Portal user already exists.", null);
+            }
+
+            var conflictingUserByName = await context.PortalUsers
+                .FirstOrDefaultAsync(
+                    u => !u.IsDeleted &&
+                         u.UserName.ToUpper() == ldapProfile.UserName.ToUpperInvariant(),
+                    cancellationToken);
+            if (conflictingUserByName is not null &&
+                !string.Equals(
+                    conflictingUserByName.DirectoryObjectId,
+                    ldapProfile.DirectoryObjectId,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return new CreateUserResult(
+                    false,
+                    "A portal user with the same user name already exists.",
+                    null);
+            }
+
+            var now = DateTime.UtcNow;
+
+            string? encryptedNationalId =
+                ldapProfile.NationalId is not null ? secretProtector.Protect(ldapProfile.NationalId) : null;
+            var maskedNationalId = ldapProfile.NationalId is not null ? MaskNationalId(ldapProfile.NationalId) : null;
+
+            var user = new PortalUser
+            {
+                DirectorySource = "ActiveDirectory",
+                DirectoryObjectId = ldapProfile.DirectoryObjectId,
+                NationalIdEncrypted = encryptedNationalId,
+                NationalIdMasked = maskedNationalId,
+                UserName = ldapProfile.UserName,
+                DisplayName = ldapProfile.DisplayName,
+                Email = ldapProfile.Email,
+                IsActive = request.IsActive,
+                CreatedAt = now,
+                CreatedBy = request.ActorUserName ?? "system"
+            };
+
+            await context.PortalUsers.AddAsync(user, cancellationToken);
+
+            await context.AuditLogs.AddAsync(
+                new AuditLog
+                {
+                    Action = AuditActionType.Create,
+                    EntityName = "PortalUser",
+                    EntityId = user.Id.ToString(),
+                    UserName = request.ActorUserName,
+                    NewValues = """{"summary":"Portal user created."}""",
+                    CreatedAt = now
+                },
+                cancellationToken);
+
+            await context.SaveChangesAsync(cancellationToken);
+
+            return new CreateUserResult(true, string.Empty, MapToDetail(user));
+        }
+        catch
+        {
+            return new CreateUserResult(false, "User could not be created.", null);
+        }
     }
 
     private static UserListItem MapToListItem(PortalUser user)
