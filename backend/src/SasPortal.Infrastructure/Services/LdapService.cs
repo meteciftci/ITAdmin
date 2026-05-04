@@ -1,5 +1,7 @@
+using System.Collections;
 using System.DirectoryServices.Protocols;
 using System.Net;
+using System.Text;
 using SasPortal.Application.Abstractions.Services;
 using SasPortal.Application.Common.Models;
 
@@ -97,6 +99,177 @@ public sealed class LdapService : ILdapService
             return Task.FromResult(new LdapValidationResult(false, ValidationFailedMessage));
         }
     }
+
+    public Task<LdapUserProfile?> GetUserProfileAsync(
+        LdapUserProfileRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        _ = cancellationToken;
+
+        if (string.IsNullOrWhiteSpace(request.Host) ||
+            request.Port <= 0 ||
+            string.IsNullOrWhiteSpace(request.BaseDn) ||
+            string.IsNullOrWhiteSpace(request.UserSearchFilter) ||
+            string.IsNullOrWhiteSpace(request.BindUserName) ||
+            string.IsNullOrWhiteSpace(request.BindPassword) ||
+            string.IsNullOrWhiteSpace(request.UserName))
+        {
+            return Task.FromResult<LdapUserProfile?>(null);
+        }
+
+        try
+        {
+            var identifier = new LdapDirectoryIdentifier(request.Host, request.Port);
+            var bindIdentity = BuildBindIdentity(request.BindUserName, request.BindUserDomain);
+            if (string.IsNullOrWhiteSpace(bindIdentity))
+            {
+                return Task.FromResult<LdapUserProfile?>(null);
+            }
+
+            using var serviceConnection = CreateConnection(identifier, request.UseSsl, bindIdentity, request.BindPassword);
+            try
+            {
+                serviceConnection.Bind();
+            }
+            catch (LdapException)
+            {
+                return Task.FromResult<LdapUserProfile?>(null);
+            }
+
+            var escapedUserName = EscapeLdapFilterValue(request.UserName);
+            var searchFilter = request.UserSearchFilter.Replace("{0}", escapedUserName, StringComparison.Ordinal);
+            var searchBase = string.IsNullOrWhiteSpace(request.UserSearchBase) ? request.BaseDn : request.UserSearchBase;
+
+            var attributeNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "objectGUID",
+                "sAMAccountName",
+                "displayName",
+                "mail",
+                "userPrincipalName"
+            };
+
+            if (!string.IsNullOrWhiteSpace(request.NationalIdAttribute))
+            {
+                attributeNames.Add(request.NationalIdAttribute.Trim());
+            }
+
+            var searchRequest = new SearchRequest(
+                searchBase,
+                searchFilter,
+                SearchScope.Subtree,
+                attributeNames.ToArray());
+
+            SearchResponse searchResponse;
+            try
+            {
+                searchResponse = (SearchResponse)serviceConnection.SendRequest(searchRequest);
+            }
+            catch (LdapException)
+            {
+                return Task.FromResult<LdapUserProfile?>(null);
+            }
+
+            if (searchResponse.Entries.Count == 0)
+            {
+                return Task.FromResult<LdapUserProfile?>(null);
+            }
+
+            var entry = searchResponse.Entries[0];
+
+            var objectGuidAttr = TryGetDirectoryAttribute(entry, "objectGUID");
+            var guidBytes = GetFirstByteArray(objectGuidAttr);
+            if (guidBytes is null || guidBytes.Length == 0)
+            {
+                return Task.FromResult<LdapUserProfile?>(null);
+            }
+
+            string directoryObjectId;
+            try
+            {
+                directoryObjectId = new Guid(guidBytes).ToString("D");
+            }
+            catch
+            {
+                return Task.FromResult<LdapUserProfile?>(null);
+            }
+
+            var sAm = NormalizeOptionalString(GetFirstString(TryGetDirectoryAttribute(entry, "sAMAccountName")));
+            var upn = NormalizeOptionalString(GetFirstString(TryGetDirectoryAttribute(entry, "userPrincipalName")));
+            var resolvedUserName = !string.IsNullOrEmpty(sAm) ? sAm : upn ?? string.Empty;
+            if (string.IsNullOrEmpty(resolvedUserName))
+            {
+                return Task.FromResult<LdapUserProfile?>(null);
+            }
+
+            var displayAttr = NormalizeOptionalString(GetFirstString(TryGetDirectoryAttribute(entry, "displayName")));
+            var displayName = !string.IsNullOrEmpty(displayAttr) ? displayAttr : resolvedUserName;
+
+            var email = NormalizeOptionalString(GetFirstString(TryGetDirectoryAttribute(entry, "mail")));
+
+            string? nationalId = null;
+            if (!string.IsNullOrWhiteSpace(request.NationalIdAttribute))
+            {
+                nationalId = NormalizeNationalIdCandidate(
+                    GetFirstString(TryGetDirectoryAttribute(entry, request.NationalIdAttribute.Trim())));
+            }
+
+            return Task.FromResult<LdapUserProfile?>(
+                new LdapUserProfile(directoryObjectId, resolvedUserName, displayName, email, nationalId));
+        }
+        catch
+        {
+            return Task.FromResult<LdapUserProfile?>(null);
+        }
+    }
+
+    private static DirectoryAttribute? TryGetDirectoryAttribute(SearchResultEntry entry, string attributeName)
+    {
+        foreach (DictionaryEntry kv in entry.Attributes)
+        {
+            var keyText = kv.Key.ToString();
+            if (string.Equals(keyText, attributeName, StringComparison.OrdinalIgnoreCase))
+            {
+                return kv.Value as DirectoryAttribute;
+            }
+        }
+
+        return null;
+    }
+
+    private static byte[]? GetFirstByteArray(DirectoryAttribute? attribute)
+    {
+        if (attribute is null || attribute.Count == 0)
+        {
+            return null;
+        }
+
+        return attribute[0] as byte[];
+    }
+
+    private static string? GetFirstString(DirectoryAttribute? attribute)
+    {
+        if (attribute is null || attribute.Count == 0)
+        {
+            return null;
+        }
+
+        var raw = attribute[0];
+
+        switch (raw)
+        {
+            case byte[] octets when octets.Length > 0:
+                return Encoding.UTF8.GetString(octets).Trim();
+            default:
+                return raw.ToString()?.Trim();
+        }
+    }
+
+    private static string? NormalizeOptionalString(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static string? NormalizeNationalIdCandidate(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static LdapConnection CreateConnection(
         LdapDirectoryIdentifier identifier,

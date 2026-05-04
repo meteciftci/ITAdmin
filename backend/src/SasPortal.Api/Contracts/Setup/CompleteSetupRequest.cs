@@ -15,7 +15,8 @@ public sealed record CompleteSetupLdapSettingsRequest(
     string UserSearchFilter,
     string BindUserName,
     string? BindUserDomain,
-    string BindPassword);
+    string BindPassword,
+    string? NationalIdAttribute);
 
 public sealed record CompleteSetupAdminUserRequest(
     string UserName,

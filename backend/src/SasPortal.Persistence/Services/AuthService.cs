@@ -17,6 +17,8 @@ public sealed class AuthService(
     IOptions<JwtOptions> jwtOptions) : IAuthService
 {
     private const string SuperAdminRoleCode = "SuperAdmin";
+    private const string ActiveDirectoryDirectorySource = "ActiveDirectory";
+    private const string NationalIdApplicationSettingKey = "Directory:NationalIdAttribute";
 
     private readonly JwtOptions _jwtOptions = jwtOptions.Value;
 
@@ -81,12 +83,64 @@ public sealed class AuthService(
                 return new AuthTokenResult(false, ldapResult.Message, null, null, null, null);
             }
 
+            var nationalIdAttrRaw = await context.ApplicationSettings
+                .AsNoTracking()
+                .Where(x =>
+                    x.Key == NationalIdApplicationSettingKey &&
+                    x.IsActive &&
+                    !x.IsDeleted)
+                .Select(x => x.Value)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            var nationalIdAttribute = string.IsNullOrWhiteSpace(nationalIdAttrRaw) ? null : nationalIdAttrRaw.Trim();
+
+            var ldapProfile = await ldapService.GetUserProfileAsync(
+                new LdapUserProfileRequest(
+                    Host: ldapSetting.Host,
+                    Port: ldapSetting.Port,
+                    UseSsl: ldapSetting.UseSsl,
+                    BaseDn: ldapSetting.BaseDn,
+                    UserSearchBase: ldapSetting.UserSearchBase,
+                    UserSearchFilter: ldapSetting.UserSearchFilter,
+                    BindUserName: ldapSetting.BindUserName,
+                    BindUserDomain: ldapSetting.BindUserDomain,
+                    BindPassword: bindPassword,
+                    UserName: request.UserName,
+                    NationalIdAttribute: nationalIdAttribute),
+                cancellationToken);
+
+            if (ldapProfile is null)
+            {
+                await context.SecurityLogs.AddAsync(
+                    new SecurityLog
+                    {
+                        UserName = request.UserName,
+                        EventType = SecurityEventType.LoginFailed,
+                        IsSuccess = false,
+                        Message = "Directory user profile could not be loaded.",
+                        IpAddress = request.IpAddress,
+                        UserAgent = request.UserAgent,
+                        CreatedAt = DateTime.UtcNow
+                    },
+                    cancellationToken);
+
+                await context.SaveChangesAsync(cancellationToken);
+
+                return new AuthTokenResult(
+                    false,
+                    "Directory user profile could not be loaded.",
+                    null,
+                    null,
+                    null,
+                    null);
+            }
+
             var user = await context.PortalUsers
                 .Include(x => x.UserRoles)
                     .ThenInclude(x => x.PortalRole)
                         .ThenInclude(x => x.RolePermissions)
                             .ThenInclude(x => x.PortalPermission)
-                .FirstOrDefaultAsync(x => x.UserName == request.UserName && !x.IsDeleted, cancellationToken);
+                .FirstOrDefaultAsync(x => x.DirectoryObjectId == ldapProfile.DirectoryObjectId, cancellationToken);
 
             if (user is null)
             {
@@ -125,6 +179,50 @@ public sealed class AuthService(
 
                 await context.SaveChangesAsync(cancellationToken);
                 return new AuthTokenResult(false, "User is inactive.", null, null, null, null);
+            }
+
+            var userNameConflict = await context.PortalUsers.AnyAsync(
+                x =>
+                    x.UserName == ldapProfile.UserName &&
+                    x.Id != user.Id,
+                cancellationToken);
+
+            if (userNameConflict)
+            {
+                await context.SecurityLogs.AddAsync(
+                    new SecurityLog
+                    {
+                        PortalUserId = user.Id,
+                        UserName = ldapProfile.UserName,
+                        EventType = SecurityEventType.LoginFailed,
+                        IsSuccess = false,
+                        Message = "Another portal user already uses this user name.",
+                        IpAddress = request.IpAddress,
+                        UserAgent = request.UserAgent,
+                        CreatedAt = DateTime.UtcNow
+                    },
+                    cancellationToken);
+
+                await context.SaveChangesAsync(cancellationToken);
+                return new AuthTokenResult(
+                    false,
+                    "Another portal user already uses this user name.",
+                    null,
+                    null,
+                    null,
+                    null);
+            }
+
+            user.UserName = ldapProfile.UserName;
+            user.DisplayName = ldapProfile.DisplayName;
+            user.Email = ldapProfile.Email;
+            user.DirectorySource = ActiveDirectoryDirectorySource;
+            user.DirectoryObjectId = ldapProfile.DirectoryObjectId;
+
+            if (ldapProfile.NationalId is not null)
+            {
+                user.NationalIdEncrypted = secretProtector.Protect(ldapProfile.NationalId);
+                user.NationalIdMasked = MaskNationalId(ldapProfile.NationalId);
             }
 
             var activeRoles = user.UserRoles
@@ -203,6 +301,23 @@ public sealed class AuthService(
         {
             return new AuthTokenResult(false, "Login could not be completed.", null, null, null, null);
         }
+    }
+
+    private static string? MaskNationalId(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var trimmed = value.Trim();
+        var length = trimmed.Length;
+
+        string masked =
+            length <= 4 ? new string('*', length)
+            : $"{trimmed[..3]}{new string('*', length - 5)}{trimmed[^2..]}";
+
+        return masked.Length > 50 ? masked[..50] : masked;
     }
 
     public async Task<AuthTokenResult> RefreshTokenAsync(RefreshTokenRequest request, CancellationToken cancellationToken = default)

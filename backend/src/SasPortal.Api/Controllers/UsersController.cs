@@ -29,8 +29,11 @@ public sealed class UsersController(IUserService userService) : ControllerBase
         var response = new PagedResponse<UserListItemResponse>(
             result.Items.Select(x => new UserListItemResponse(
                 x.Id,
+                x.DirectorySource,
+                x.DirectoryObjectId,
                 x.UserName,
                 x.DisplayName,
+                x.NationalIdMasked,
                 x.Email,
                 x.IsActive,
                 x.LastLoginAt,
@@ -57,8 +60,11 @@ public sealed class UsersController(IUserService userService) : ControllerBase
 
         return Ok(new UserDetailResponse(
             user.Id,
+            user.DirectorySource,
+            user.DirectoryObjectId,
             user.UserName,
             user.DisplayName,
+            user.NationalIdMasked,
             user.Email,
             user.IsActive,
             user.LastLoginAt,

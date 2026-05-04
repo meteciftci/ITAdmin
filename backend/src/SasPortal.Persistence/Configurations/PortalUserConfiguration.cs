@@ -13,6 +13,23 @@ public class PortalUserConfiguration : IEntityTypeConfiguration<PortalUser>
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).HasColumnName("id");
 
+        builder.Property(x => x.DirectorySource)
+            .HasColumnName("directory_source")
+            .HasMaxLength(100)
+            .IsRequired();
+
+        builder.Property(x => x.DirectoryObjectId)
+            .HasColumnName("directory_object_id")
+            .HasMaxLength(100)
+            .IsRequired();
+
+        builder.Property(x => x.NationalIdEncrypted)
+            .HasColumnName("national_id_encrypted");
+
+        builder.Property(x => x.NationalIdMasked)
+            .HasColumnName("national_id_masked")
+            .HasMaxLength(50);
+
         builder.Property(x => x.UserName)
             .HasColumnName("user_name")
             .HasMaxLength(100)
@@ -42,6 +59,7 @@ public class PortalUserConfiguration : IEntityTypeConfiguration<PortalUser>
         builder.Property(x => x.DeletedBy).HasColumnName("deleted_by");
 
         builder.HasIndex(x => x.UserName).IsUnique();
+        builder.HasIndex(x => x.DirectoryObjectId).IsUnique();
         builder.HasIndex(x => x.Email);
 
         builder.HasQueryFilter(x => !x.IsDeleted);

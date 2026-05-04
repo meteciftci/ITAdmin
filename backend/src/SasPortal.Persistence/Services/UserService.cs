@@ -76,8 +76,11 @@ public sealed class UserService(AppDbContext context) : IUserService
         var roles = GetActiveRoleCodes(user);
         return new UserListItem(
             user.Id,
+            user.DirectorySource,
+            user.DirectoryObjectId,
             user.UserName,
             user.DisplayName,
+            user.NationalIdMasked,
             user.Email,
             user.IsActive,
             user.LastLoginAt,
@@ -89,8 +92,11 @@ public sealed class UserService(AppDbContext context) : IUserService
         var roles = GetActiveRoleCodes(user);
         return new UserDetail(
             user.Id,
+            user.DirectorySource,
+            user.DirectoryObjectId,
             user.UserName,
             user.DisplayName,
+            user.NationalIdMasked,
             user.Email,
             user.IsActive,
             user.LastLoginAt,

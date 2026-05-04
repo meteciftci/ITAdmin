@@ -58,7 +58,8 @@ public sealed class SetupController(ISetupService setupService, ILdapService lda
                     request.Ldap.UserSearchFilter,
                     request.Ldap.BindUserName,
                     request.Ldap.BindUserDomain,
-                    request.Ldap.BindPassword),
+                    request.Ldap.BindPassword,
+                    request.Ldap.NationalIdAttribute),
                 new AppModels.CompleteSetupAdminUser(
                     request.Admin.UserName,
                     request.Admin.Password,

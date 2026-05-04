@@ -4,6 +4,10 @@ namespace SasPortal.Domain.Entities;
 
 public class PortalUser : SoftDeletableEntity
 {
+    public string DirectorySource { get; set; } = string.Empty;
+    public string DirectoryObjectId { get; set; } = string.Empty;
+    public string? NationalIdEncrypted { get; set; }
+    public string? NationalIdMasked { get; set; }
     public string UserName { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
     public string? Email { get; set; }

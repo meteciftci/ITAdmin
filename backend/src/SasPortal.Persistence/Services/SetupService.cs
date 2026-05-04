@@ -21,6 +21,8 @@ public sealed class SetupService(
     private const string AdministratorRoleCode = "Administrator";
     private const string UserRoleCode = "User";
     private const string SetupActor = "setup";
+    private const string ActiveDirectoryDirectorySource = "ActiveDirectory";
+    private const string NationalIdApplicationSettingKey = "Directory:NationalIdAttribute";
 
     private static readonly (string Module, string Code, string Description)[] DefaultPermissions =
     [
@@ -121,6 +123,39 @@ public sealed class SetupService(
         if (!ldapResult.IsValid)
         {
             return new CompleteSetupResult(false, ldapResult.Message);
+        }
+
+        var ldapProfile = await ldapService.GetUserProfileAsync(
+            new LdapUserProfileRequest(
+                Host: request.Ldap.Host,
+                Port: request.Ldap.Port,
+                UseSsl: request.Ldap.UseSsl,
+                BaseDn: request.Ldap.BaseDn,
+                UserSearchBase: request.Ldap.UserSearchBase,
+                UserSearchFilter: request.Ldap.UserSearchFilter,
+                BindUserName: request.Ldap.BindUserName,
+                BindUserDomain: request.Ldap.BindUserDomain,
+                BindPassword: request.Ldap.BindPassword,
+                UserName: request.Admin.UserName,
+                NationalIdAttribute:
+                string.IsNullOrWhiteSpace(request.Ldap.NationalIdAttribute)
+                    ? null
+                    : request.Ldap.NationalIdAttribute.Trim()),
+            cancellationToken);
+
+        if (ldapProfile is null)
+        {
+            return new CompleteSetupResult(false, "Directory user profile could not be loaded.");
+        }
+
+        var usernameConflictExists = await context.PortalUsers.AnyAsync(
+            x => x.UserName == ldapProfile.UserName &&
+                 x.DirectoryObjectId != ldapProfile.DirectoryObjectId,
+            cancellationToken);
+
+        if (usernameConflictExists)
+        {
+            return new CompleteSetupResult(false, "A portal user with the same user name already exists.");
         }
 
         await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
@@ -310,15 +345,20 @@ public sealed class SetupService(
             }
 
             var adminUser = await context.PortalUsers
-                .FirstOrDefaultAsync(x => x.UserName == request.Admin.UserName, cancellationToken);
+                .FirstOrDefaultAsync(x => x.DirectoryObjectId == ldapProfile.DirectoryObjectId, cancellationToken);
 
             if (adminUser is null)
             {
                 adminUser = new PortalUser
                 {
-                    UserName = request.Admin.UserName,
-                    DisplayName = request.Admin.DisplayName,
-                    Email = request.Admin.Email,
+                    DirectorySource = ActiveDirectoryDirectorySource,
+                    DirectoryObjectId = ldapProfile.DirectoryObjectId,
+                    NationalIdEncrypted =
+                        ldapProfile.NationalId is not null ? secretProtector.Protect(ldapProfile.NationalId) : null,
+                    NationalIdMasked = ldapProfile.NationalId is not null ? MaskNationalId(ldapProfile.NationalId) : null,
+                    UserName = ldapProfile.UserName,
+                    DisplayName = ldapProfile.DisplayName,
+                    Email = ldapProfile.Email ?? request.Admin.Email,
                     IsActive = true,
                     CreatedAt = now,
                     CreatedBy = SetupActor
@@ -327,11 +367,57 @@ public sealed class SetupService(
             }
             else
             {
-                adminUser.DisplayName = request.Admin.DisplayName;
-                adminUser.Email = request.Admin.Email;
+                adminUser.DirectorySource = ActiveDirectoryDirectorySource;
+                adminUser.DirectoryObjectId = ldapProfile.DirectoryObjectId;
+                if (ldapProfile.NationalId is not null)
+                {
+                    adminUser.NationalIdEncrypted = secretProtector.Protect(ldapProfile.NationalId);
+                    adminUser.NationalIdMasked = MaskNationalId(ldapProfile.NationalId);
+                }
+
+                adminUser.UserName = ldapProfile.UserName;
+                adminUser.DisplayName = ldapProfile.DisplayName;
+                adminUser.Email = ldapProfile.Email ?? request.Admin.Email;
                 adminUser.IsActive = true;
                 adminUser.UpdatedAt = now;
                 adminUser.UpdatedBy = SetupActor;
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.Ldap.NationalIdAttribute))
+            {
+                var nationalIdSetting =
+                    await context.ApplicationSettings.FirstOrDefaultAsync(
+                        x => x.Key == NationalIdApplicationSettingKey,
+                        cancellationToken);
+
+                if (nationalIdSetting is null)
+                {
+                    await context.ApplicationSettings.AddAsync(
+                        new ApplicationSetting
+                        {
+                            Key = NationalIdApplicationSettingKey,
+                            Value = request.Ldap.NationalIdAttribute.Trim(),
+                            ValueType = SettingValueType.String,
+                            Description = "LDAP attribute name that stores the national identity value.",
+                            IsEncrypted = false,
+                            IsSystem = true,
+                            IsActive = true,
+                            CreatedAt = now,
+                            CreatedBy = SetupActor
+                        },
+                        cancellationToken);
+                }
+                else
+                {
+                    nationalIdSetting.Value = request.Ldap.NationalIdAttribute.Trim();
+                    nationalIdSetting.ValueType = SettingValueType.String;
+                    nationalIdSetting.Description = "LDAP attribute name that stores the national identity value.";
+                    nationalIdSetting.IsEncrypted = false;
+                    nationalIdSetting.IsSystem = true;
+                    nationalIdSetting.IsActive = true;
+                    nationalIdSetting.UpdatedAt = now;
+                    nationalIdSetting.UpdatedBy = SetupActor;
+                }
             }
 
             var hasSuperAdminRole = await context.PortalUserRoles
@@ -388,7 +474,7 @@ public sealed class SetupService(
                 new SecurityLog
                 {
                     PortalUserId = adminUser.Id,
-                    UserName = request.Admin.UserName,
+                    UserName = ldapProfile.UserName,
                     EventType = SecurityEventType.SetupCompleted,
                     IsSuccess = true,
                     Message = "Initial setup completed.",
@@ -406,6 +492,23 @@ public sealed class SetupService(
             await transaction.RollbackAsync(cancellationToken);
             return new CompleteSetupResult(false, "Setup could not be completed.");
         }
+    }
+
+    private static string? MaskNationalId(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var trimmed = value.Trim();
+        var length = trimmed.Length;
+
+        string masked =
+            length <= 4 ? new string('*', length)
+            : $"{trimmed[..3]}{new string('*', length - 5)}{trimmed[^2..]}";
+
+        return masked.Length > 50 ? masked[..50] : masked;
     }
 
     private static void ApplySystemRoleMetadataIfChanged(
