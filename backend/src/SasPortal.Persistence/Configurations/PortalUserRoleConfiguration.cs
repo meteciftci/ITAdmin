@@ -40,5 +40,11 @@ public class PortalUserRoleConfiguration : IEntityTypeConfiguration<PortalUserRo
             .WithMany(x => x.UserRoles)
             .HasForeignKey(x => x.PortalRoleId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasQueryFilter(x =>
+            x.PortalUser != null &&
+            !x.PortalUser.IsDeleted &&
+            x.PortalRole != null &&
+            !x.PortalRole.IsDeleted);
     }
 }

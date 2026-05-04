@@ -136,6 +136,7 @@ public sealed class AuthService(
             }
 
             var user = await context.PortalUsers
+                .AsSplitQuery()
                 .Include(x => x.UserRoles)
                     .ThenInclude(x => x.PortalRole)
                         .ThenInclude(x => x.RolePermissions)
@@ -333,6 +334,7 @@ public sealed class AuthService(
             var refreshTokenHash = tokenService.HashRefreshToken(request.RefreshToken);
 
             var refreshToken = await context.RefreshTokens
+                .AsSplitQuery()
                 .Include(x => x.PortalUser)
                     .ThenInclude(x => x.UserRoles)
                         .ThenInclude(x => x.PortalRole)
@@ -621,6 +623,7 @@ public sealed class AuthService(
         {
             var user = await context.PortalUsers
                 .AsNoTracking()
+                .AsSplitQuery()
                 .Include(x => x.UserRoles)
                     .ThenInclude(x => x.PortalRole)
                         .ThenInclude(x => x.RolePermissions)

@@ -54,5 +54,7 @@ public class RefreshTokenConfiguration : IEntityTypeConfiguration<RefreshToken>
             .WithMany(x => x.RefreshTokens)
             .HasForeignKey(x => x.PortalUserId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasQueryFilter(x => x.PortalUser != null && !x.PortalUser.IsDeleted);
     }
 }
