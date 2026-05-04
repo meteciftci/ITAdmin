@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using SasPortal.Application.Abstractions.Security;
 using SasPortal.Application.Abstractions.Services;
 using SasPortal.Application.Common.Models;
 using SasPortal.Domain.Entities;
@@ -6,8 +7,13 @@ using SasPortal.Persistence.Context;
 
 namespace SasPortal.Persistence.Services;
 
-public sealed class UserService(AppDbContext context) : IUserService
+public sealed class UserService(
+    AppDbContext context,
+    ILdapService ldapService,
+    ISecretProtector secretProtector) : IUserService
 {
+    private const string NationalIdApplicationSettingKey = "Directory:NationalIdAttribute";
+
     public async Task<PagedResult<UserListItem>> GetUsersAsync(UserListQuery query, CancellationToken cancellationToken = default)
     {
         var pageNumber = query.PageNumber < 1 ? 1 : query.PageNumber;
@@ -71,6 +77,107 @@ public sealed class UserService(AppDbContext context) : IUserService
         return MapToDetail(user);
     }
 
+    public async Task<UserDirectoryLookupResult> LookupDirectoryUsersAsync(
+        UserDirectoryLookupQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        var search = query.Search.Trim();
+        if (search.Length < 2)
+        {
+            return new UserDirectoryLookupResult(Array.Empty<UserDirectoryLookupItem>());
+        }
+
+        var maxResults = query.MaxResults switch
+        {
+            < 1 => 20,
+            > 50 => 50,
+            _ => query.MaxResults
+        };
+
+        var ldapSetting = await context.LdapSettings
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.IsActive && !x.IsDeleted, cancellationToken);
+
+        if (ldapSetting is null)
+        {
+            return new UserDirectoryLookupResult(Array.Empty<UserDirectoryLookupItem>());
+        }
+
+        var nationalIdAttrRaw = await context.ApplicationSettings
+            .AsNoTracking()
+            .Where(x =>
+                x.Key == NationalIdApplicationSettingKey &&
+                x.IsActive &&
+                !x.IsDeleted)
+            .Select(x => x.Value)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var nationalIdAttribute = string.IsNullOrWhiteSpace(nationalIdAttrRaw) ? null : nationalIdAttrRaw.Trim();
+
+        string bindPassword;
+        try
+        {
+            bindPassword = secretProtector.Unprotect(ldapSetting.EncryptedBindPassword);
+        }
+        catch
+        {
+            return new UserDirectoryLookupResult(Array.Empty<UserDirectoryLookupItem>());
+        }
+
+        if (string.IsNullOrWhiteSpace(bindPassword))
+        {
+            return new UserDirectoryLookupResult(Array.Empty<UserDirectoryLookupItem>());
+        }
+
+        var ldapResults = await ldapService.SearchUsersAsync(
+            new LdapUserLookupRequest(
+                ldapSetting.Host,
+                ldapSetting.Port,
+                ldapSetting.UseSsl,
+                ldapSetting.BaseDn,
+                ldapSetting.UserSearchBase,
+                ldapSetting.BindUserName,
+                ldapSetting.BindUserDomain,
+                bindPassword,
+                search,
+                maxResults,
+                nationalIdAttribute),
+            cancellationToken);
+
+        var ldapList = ldapResults.ToList();
+        if (ldapList.Count == 0)
+        {
+            return new UserDirectoryLookupResult(Array.Empty<UserDirectoryLookupItem>());
+        }
+
+        var directoryIds = ldapList.Select(x => x.DirectoryObjectId).ToList();
+        var directoryIdsLower = directoryIds
+            .Select(x => x.ToLowerInvariant())
+            .Distinct()
+            .ToList();
+
+        var existingDirectoryIds = await context.PortalUsers
+            .AsNoTracking()
+            .Where(u => !u.IsDeleted && directoryIdsLower.Contains(u.DirectoryObjectId.ToLower()))
+            .Select(u => u.DirectoryObjectId)
+            .ToListAsync(cancellationToken);
+
+        var existingSet = existingDirectoryIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var mapped = ldapList
+            .Select(it => new UserDirectoryLookupItem(
+                it.DirectoryObjectId,
+                it.UserName,
+                it.DisplayName,
+                it.Email,
+                MaskNationalId(it.NationalId),
+                existingSet.Contains(it.DirectoryObjectId)))
+            .OrderBy(x => x.UserName, StringComparer.Ordinal)
+            .ToList();
+
+        return new UserDirectoryLookupResult(mapped);
+    }
+
     private static UserListItem MapToListItem(PortalUser user)
     {
         var roles = GetActiveRoleCodes(user);
@@ -119,5 +226,25 @@ public sealed class UserService(AppDbContext context) : IUserService
     {
         var trimmed = search.Trim();
         return $"%{trimmed}%";
+    }
+
+    private static string? MaskNationalId(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var v = value.Trim();
+        if (v.Length <= 4)
+        {
+            return new string('*', v.Length);
+        }
+
+        var prefix = v[..3];
+        var suffix = v[^2..];
+        var middleLen = v.Length - 5;
+        var middle = middleLen > 0 ? new string('*', middleLen) : string.Empty;
+        return prefix + middle + suffix;
     }
 }

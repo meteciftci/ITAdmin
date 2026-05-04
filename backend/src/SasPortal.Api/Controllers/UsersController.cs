@@ -46,6 +46,34 @@ public sealed class UsersController(IUserService userService) : ControllerBase
         return Ok(response);
     }
 
+    [HttpGet("lookup-directory")]
+    [RequirePermission("Users.Create")]
+    public async Task<ActionResult<UserDirectoryLookupResponse>> LookupDirectoryUsers(
+        [FromQuery] string search,
+        [FromQuery] int maxResults = 20,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(search) || search.Trim().Length < 2)
+        {
+            return BadRequest(new { message = "Search term must be at least 2 characters." });
+        }
+
+        var result = await userService.LookupDirectoryUsersAsync(
+            new AppModels.UserDirectoryLookupQuery(search.Trim(), maxResults),
+            cancellationToken);
+
+        return Ok(new UserDirectoryLookupResponse(
+            result.Items
+                .Select(x => new UserDirectoryLookupItemResponse(
+                    x.DirectoryObjectId,
+                    x.UserName,
+                    x.DisplayName,
+                    x.Email,
+                    x.NationalIdMasked,
+                    x.IsAlreadyPortalUser))
+                .ToList()));
+    }
+
     [HttpGet("{id:guid}")]
     [RequirePermission("Users.View")]
     public async Task<ActionResult<UserDetailResponse>> GetUserById(

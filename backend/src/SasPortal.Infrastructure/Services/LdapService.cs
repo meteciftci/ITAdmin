@@ -223,6 +223,158 @@ public sealed class LdapService : ILdapService
         }
     }
 
+    public Task<IReadOnlyCollection<LdapUserLookupItem>> SearchUsersAsync(
+        LdapUserLookupRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        _ = cancellationToken;
+
+        if (string.IsNullOrWhiteSpace(request.Host) ||
+            request.Port <= 0 ||
+            string.IsNullOrWhiteSpace(request.BaseDn) ||
+            string.IsNullOrWhiteSpace(request.BindUserName) ||
+            string.IsNullOrWhiteSpace(request.BindPassword))
+        {
+            return Task.FromResult<IReadOnlyCollection<LdapUserLookupItem>>(Array.Empty<LdapUserLookupItem>());
+        }
+
+        var searchTrimmed = request.Search.Trim();
+        if (searchTrimmed.Length == 0)
+        {
+            return Task.FromResult<IReadOnlyCollection<LdapUserLookupItem>>(Array.Empty<LdapUserLookupItem>());
+        }
+
+        if (request.MaxResults < 1)
+        {
+            return Task.FromResult<IReadOnlyCollection<LdapUserLookupItem>>(Array.Empty<LdapUserLookupItem>());
+        }
+
+        try
+        {
+            var identifier = new LdapDirectoryIdentifier(request.Host, request.Port);
+            var bindIdentity = BuildBindIdentity(request.BindUserName, request.BindUserDomain);
+            if (string.IsNullOrWhiteSpace(bindIdentity))
+            {
+                return Task.FromResult<IReadOnlyCollection<LdapUserLookupItem>>(Array.Empty<LdapUserLookupItem>());
+            }
+
+            using var serviceConnection = CreateConnection(identifier, request.UseSsl, bindIdentity, request.BindPassword);
+            try
+            {
+                serviceConnection.Bind();
+            }
+            catch (LdapException)
+            {
+                return Task.FromResult<IReadOnlyCollection<LdapUserLookupItem>>(Array.Empty<LdapUserLookupItem>());
+            }
+
+            var escapedSearch = EscapeLdapFilterValue(searchTrimmed);
+            var searchFilter =
+                $"(&(objectCategory=person)(objectClass=user)(!(userAccountControl:1.2.840.113556.1.4.803:=2))(|(sAMAccountName=*{escapedSearch}*)(displayName=*{escapedSearch}*)(mail=*{escapedSearch}*)))";
+            var searchBase = string.IsNullOrWhiteSpace(request.UserSearchBase) ? request.BaseDn : request.UserSearchBase;
+
+            var attributeNames = new List<string>
+            {
+                "objectGUID",
+                "sAMAccountName",
+                "displayName",
+                "mail",
+                "userPrincipalName",
+                "distinguishedName"
+            };
+
+            if (!string.IsNullOrWhiteSpace(request.NationalIdAttribute))
+            {
+                attributeNames.Add(request.NationalIdAttribute.Trim());
+            }
+
+            var searchRequest = new SearchRequest(
+                searchBase,
+                searchFilter,
+                SearchScope.Subtree,
+                attributeNames.ToArray())
+            {
+                SizeLimit = Math.Min(500, Math.Max(request.MaxResults * 5, request.MaxResults))
+            };
+
+            SearchResponse searchResponse;
+            try
+            {
+                searchResponse = (SearchResponse)serviceConnection.SendRequest(searchRequest);
+            }
+            catch (LdapException)
+            {
+                return Task.FromResult<IReadOnlyCollection<LdapUserLookupItem>>(Array.Empty<LdapUserLookupItem>());
+            }
+
+            var collected = new List<LdapUserLookupItem>(request.MaxResults);
+            var seenObjectIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var seenUserNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (SearchResultEntry entry in searchResponse.Entries)
+            {
+                if (collected.Count >= request.MaxResults)
+                {
+                    break;
+                }
+
+                var objectGuidAttr = TryGetDirectoryAttribute(entry, "objectGUID");
+                var guidBytes = GetFirstByteArray(objectGuidAttr);
+                if (guidBytes is null || guidBytes.Length == 0)
+                {
+                    continue;
+                }
+
+                string directoryObjectId;
+                try
+                {
+                    directoryObjectId = new Guid(guidBytes).ToString("D");
+                }
+                catch
+                {
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(directoryObjectId) || seenObjectIds.Contains(directoryObjectId))
+                {
+                    continue;
+                }
+
+                var sAm = NormalizeOptionalString(GetFirstString(TryGetDirectoryAttribute(entry, "sAMAccountName")));
+                var upn = NormalizeOptionalString(GetFirstString(TryGetDirectoryAttribute(entry, "userPrincipalName")));
+                var resolvedUserName = !string.IsNullOrEmpty(sAm)
+                    ? sAm
+                    : upn ?? string.Empty;
+                if (string.IsNullOrEmpty(resolvedUserName) || seenUserNames.Contains(resolvedUserName))
+                {
+                    continue;
+                }
+
+                var displayAttr = NormalizeOptionalString(GetFirstString(TryGetDirectoryAttribute(entry, "displayName")));
+                var displayName = !string.IsNullOrEmpty(displayAttr) ? displayAttr : resolvedUserName;
+
+                var email = NormalizeOptionalString(GetFirstString(TryGetDirectoryAttribute(entry, "mail")));
+
+                string? nationalId = null;
+                if (!string.IsNullOrWhiteSpace(request.NationalIdAttribute))
+                {
+                    nationalId = NormalizeNationalIdCandidate(
+                        GetFirstString(TryGetDirectoryAttribute(entry, request.NationalIdAttribute.Trim())));
+                }
+
+                seenObjectIds.Add(directoryObjectId);
+                seenUserNames.Add(resolvedUserName);
+                collected.Add(new LdapUserLookupItem(directoryObjectId, resolvedUserName, displayName, email, nationalId));
+            }
+
+            return Task.FromResult<IReadOnlyCollection<LdapUserLookupItem>>(collected);
+        }
+        catch
+        {
+            return Task.FromResult<IReadOnlyCollection<LdapUserLookupItem>>(Array.Empty<LdapUserLookupItem>());
+        }
+    }
+
     private static DirectoryAttribute? TryGetDirectoryAttribute(SearchResultEntry entry, string attributeName)
     {
         foreach (DictionaryEntry kv in entry.Attributes)
