@@ -28,10 +28,10 @@ export function AppSidebar() {
     },
     {
       title: "Roles",
-      to: "#",
+      to: "/roles",
       icon: Shield,
       visible: canAccess(user, "Roles.View"),
-      enabled: false,
+      enabled: true,
     },
     {
       title: "Permissions",

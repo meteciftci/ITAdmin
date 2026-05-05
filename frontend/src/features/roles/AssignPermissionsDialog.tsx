@@ -1,0 +1,219 @@
+import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
+
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { getPermissions, getRoleById, updateRolePermissions } from "@/features/roles/api";
+import type { RoleListItem } from "@/features/roles/types";
+
+type ApiErrorPayload = { message?: string };
+
+const getErrorMessage = (error: unknown, fallback: string): string => {
+  const apiError = error as AxiosError<ApiErrorPayload>;
+  return apiError.response?.data?.message ?? fallback;
+};
+
+type AssignPermissionsDialogProps = {
+  open: boolean;
+  role: RoleListItem | null;
+  onClose: () => void;
+  onSaved: () => void;
+};
+
+export function AssignPermissionsDialog({
+  open,
+  role,
+  onClose,
+  onSaved,
+}: AssignPermissionsDialogProps) {
+  const [selectedPermissionIds, setSelectedPermissionIds] = useState<string[]>([]);
+  const [search, setSearch] = useState("");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const isSystemRole = Boolean(role?.isSystem);
+
+  const roleDetailQuery = useQuery({
+    queryKey: ["roles", "detail-for-permissions", role?.id],
+    queryFn: () => getRoleById(role!.id),
+    enabled: open && Boolean(role?.id),
+  });
+
+  const permissionsQuery = useQuery({
+    queryKey: ["permissions", "active", "assign-dialog"],
+    queryFn: () => getPermissions({ isActive: true, pageSize: 100 }),
+    enabled: open,
+  });
+
+  useEffect(() => {
+    if (!roleDetailQuery.data) return;
+    setSelectedPermissionIds(roleDetailQuery.data.permissions.map((item) => item.id));
+  }, [roleDetailQuery.data]);
+
+  const filteredPermissions = useMemo(() => {
+    const source = permissionsQuery.data?.items ?? [];
+    const keyword = search.trim().toLowerCase();
+    if (!keyword) return source;
+    return source.filter((permission) => {
+      return (
+        permission.name.toLowerCase().includes(keyword) ||
+        permission.code.toLowerCase().includes(keyword) ||
+        (permission.description ?? "").toLowerCase().includes(keyword)
+      );
+    });
+  }, [permissionsQuery.data, search]);
+
+  const saveMutation = useMutation({
+    mutationFn: () =>
+      updateRolePermissions(role!.id, { permissionIds: selectedPermissionIds }),
+    onSuccess: () => {
+      setErrorMessage(null);
+      onSaved();
+      onClose();
+    },
+    onError: (error) => {
+      setErrorMessage(
+        getErrorMessage(error, "Role permissions could not be updated."),
+      );
+    },
+  });
+
+  const handleTogglePermission = (permissionId: string, checked: boolean) => {
+    setSelectedPermissionIds((previous) => {
+      if (checked) {
+        return previous.includes(permissionId)
+          ? previous
+          : [...previous, permissionId];
+      }
+
+      return previous.filter((id) => id !== permissionId);
+    });
+  };
+
+  const handleSave = () => {
+    if (!role || isSystemRole || saveMutation.isPending) return;
+    saveMutation.mutate();
+  };
+
+  return (
+    <Dialog open={open}>
+      <DialogContent onOpenChange={(next) => !next && onClose()} className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>Assign Permissions</DialogTitle>
+          <DialogDescription>
+            Select permissions for {role?.name ?? "selected role"}.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 p-4">
+          {errorMessage ? (
+            <Alert variant="destructive">
+              <AlertTitle>Operation Failed</AlertTitle>
+              <AlertDescription>{errorMessage}</AlertDescription>
+            </Alert>
+          ) : null}
+
+          {isSystemRole ? (
+            <Alert>
+              <AlertTitle>System Role</AlertTitle>
+              <AlertDescription>
+                System roles are managed by the application and cannot be changed.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
+          <Input
+            placeholder="Search permissions..."
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            disabled={isSystemRole || saveMutation.isPending}
+          />
+
+          {(roleDetailQuery.isLoading || permissionsQuery.isLoading) && (
+            <p className="text-sm text-muted-foreground">Loading permissions...</p>
+          )}
+
+          {roleDetailQuery.isError ? (
+            <Alert variant="destructive">
+              <AlertTitle>Role Could Not Be Loaded</AlertTitle>
+              <AlertDescription>
+                {getErrorMessage(roleDetailQuery.error, "Unable to fetch role detail.")}
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
+          {permissionsQuery.isError ? (
+            <Alert variant="destructive">
+              <AlertTitle>Permissions Could Not Be Loaded</AlertTitle>
+              <AlertDescription>
+                {getErrorMessage(
+                  permissionsQuery.error,
+                  "Unable to fetch permission list.",
+                )}
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
+          {filteredPermissions.length ? (
+            <div className="max-h-80 space-y-2 overflow-y-auto rounded-lg border p-2">
+              {filteredPermissions.map((permission) => (
+                <label
+                  key={permission.id}
+                  className="flex items-start gap-2 rounded-md border p-2 text-sm"
+                >
+                  <Checkbox
+                    checked={selectedPermissionIds.includes(permission.id)}
+                    onChange={(event) =>
+                      handleTogglePermission(permission.id, event.target.checked)
+                    }
+                    disabled={isSystemRole || saveMutation.isPending}
+                  />
+                  <span>
+                    <span className="block font-medium">{permission.name}</span>
+                    <span className="block text-xs text-muted-foreground">
+                      {permission.code}
+                    </span>
+                    <span className="block text-xs text-muted-foreground">
+                      {permission.description || "-"}
+                    </span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          ) : null}
+
+          {permissionsQuery.isSuccess && !filteredPermissions.length ? (
+            <p className="text-sm text-muted-foreground">
+              No permissions found for current search.
+            </p>
+          ) : null}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={
+              isSystemRole ||
+              saveMutation.isPending ||
+              roleDetailQuery.isLoading ||
+              permissionsQuery.isLoading
+            }
+          >
+            {saveMutation.isPending ? "Saving..." : "Save"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

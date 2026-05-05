@@ -7,6 +7,7 @@ import { RequireAuth } from "@/features/auth/RequireAuth";
 import { RequirePermission } from "@/features/auth/RequirePermission";
 import { useAuthStore } from "@/features/auth/auth-store";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
+import { RolesPage } from "@/features/roles/RolesPage";
 import { getSetupStatus } from "@/features/setup/api";
 import { SetupRequiredPage } from "@/features/setup/SetupRequiredPage";
 import { UsersPage } from "@/features/users/UsersPage";
@@ -54,6 +55,18 @@ export const router = createBrowserRouter([
         <AppLayout>
           <DashboardPage />
         </AppLayout>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/roles",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission="Roles.View">
+          <AppLayout>
+            <RolesPage />
+          </AppLayout>
+        </RequirePermission>
       </RequireAuth>
     ),
   },
