@@ -11,4 +11,7 @@ public interface IRoleService
     Task<UpdateRoleStatusResult> UpdateRoleStatusAsync(
         UpdateRoleStatusRequest request,
         CancellationToken cancellationToken = default);
+    Task<UpdateRolePermissionsResult> UpdateRolePermissionsAsync(
+        UpdateRolePermissionsRequest request,
+        CancellationToken cancellationToken = default);
 }

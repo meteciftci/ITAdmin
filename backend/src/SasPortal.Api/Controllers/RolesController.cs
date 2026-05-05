@@ -158,6 +158,39 @@ public sealed class RolesController(IRoleService roleService) : ControllerBase
         return Ok(MapRoleDetail(result.Role));
     }
 
+    [HttpPut("{id:guid}/permissions")]
+    [RequirePermission("Roles.AssignPermissions")]
+    public async Task<ActionResult<RoleDetailResponse>> UpdateRolePermissions(
+        Guid id,
+        [FromBody] UpdateRolePermissionsRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var actorUserName = GetActorUserName();
+        var result = await roleService.UpdateRolePermissionsAsync(
+            new AppModels.UpdateRolePermissionsRequest(
+                id,
+                request.PermissionIds,
+                actorUserName),
+            cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            if (result.Message == "Role was not found.")
+            {
+                return NotFound();
+            }
+
+            return BadRequest(new { message = result.Message });
+        }
+
+        if (result.Role is null)
+        {
+            return BadRequest(new { message = "Role permissions could not be updated." });
+        }
+
+        return Ok(MapRoleDetail(result.Role));
+    }
+
     private string? GetActorUserName()
     {
         if (!string.IsNullOrWhiteSpace(User.Identity?.Name))

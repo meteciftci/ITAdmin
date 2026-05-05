@@ -369,6 +369,176 @@ public sealed class RoleService(AppDbContext context) : IRoleService
         }
     }
 
+    public async Task<UpdateRolePermissionsResult> UpdateRolePermissionsAsync(
+        UpdateRolePermissionsRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (request.PermissionIds is null)
+            {
+                return new UpdateRolePermissionsResult(false, "Permission ids are required.", null);
+            }
+
+            var permissionIds = request.PermissionIds.Distinct().ToList();
+            var role = await context.PortalRoles
+                .Where(x => !x.IsDeleted && x.Id == request.RoleId)
+                .Include(x => x.RolePermissions)
+                    .ThenInclude(rp => rp.PortalPermission)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (role is null)
+            {
+                return new UpdateRolePermissionsResult(false, "Role was not found.", null);
+            }
+
+            if (IsSystemRole(role))
+            {
+                return new UpdateRolePermissionsResult(
+                    false,
+                    "System role permissions cannot be changed from this endpoint.",
+                    null);
+            }
+
+            var oldPermissionCodes = role.RolePermissions
+                .Where(x => x.PortalPermission is not null && !x.PortalPermission.IsDeleted)
+                .Select(x => x.PortalPermission.Code)
+                .OrderBy(x => x)
+                .ToList();
+
+            var now = DateTime.UtcNow;
+            var actor = request.ActorUserName ?? "system";
+
+            if (permissionIds.Count == 0)
+            {
+                context.PortalRolePermissions.RemoveRange(role.RolePermissions);
+
+                role.UpdatedAt = now;
+                role.UpdatedBy = actor;
+
+                var clearedPermissionsAuditPayload = JsonSerializer.Serialize(
+                    new
+                    {
+                        summary = "Portal role permissions updated.",
+                        permissions = Array.Empty<string>()
+                    },
+                    AuditJsonSerializerOptions);
+
+                var oldValuesPayload = JsonSerializer.Serialize(
+                    new { permissions = oldPermissionCodes },
+                    AuditJsonSerializerOptions);
+
+                await context.AuditLogs.AddAsync(
+                    new AuditLog
+                    {
+                        Action = AuditActionType.Update,
+                        EntityName = "PortalRole",
+                        EntityId = role.Id.ToString(),
+                        UserName = request.ActorUserName,
+                        OldValues = oldValuesPayload,
+                        NewValues = clearedPermissionsAuditPayload,
+                        CreatedAt = now
+                    },
+                    cancellationToken);
+
+                await context.SaveChangesAsync(cancellationToken);
+
+                return new UpdateRolePermissionsResult(true, string.Empty, MapRoleDetail(role));
+            }
+
+            var permissions = await context.PortalPermissions
+                .Where(x => !x.IsDeleted && permissionIds.Contains(x.Id))
+                .ToListAsync(cancellationToken);
+
+            if (permissions.Count != permissionIds.Count)
+            {
+                return new UpdateRolePermissionsResult(false, "One or more permissions were not found.", null);
+            }
+
+            if (permissions.Any(x => !x.IsActive))
+            {
+                return new UpdateRolePermissionsResult(false, "One or more permissions are inactive.", null);
+            }
+
+            var existingPermissionIds = role.RolePermissions
+                .Select(x => x.PortalPermissionId)
+                .ToHashSet();
+
+            var requestedPermissionIds = permissionIds.ToHashSet();
+
+            var rolePermissionsToRemove = role.RolePermissions
+                .Where(x => !requestedPermissionIds.Contains(x.PortalPermissionId))
+                .ToList();
+
+            if (rolePermissionsToRemove.Count > 0)
+            {
+                context.PortalRolePermissions.RemoveRange(rolePermissionsToRemove);
+            }
+
+            var permissionsToAdd = permissionIds
+                .Where(permissionId => !existingPermissionIds.Contains(permissionId))
+                .Select(permissionId => new PortalRolePermission
+                {
+                    PortalRoleId = role.Id,
+                    PortalPermissionId = permissionId,
+                    CreatedAt = now,
+                    CreatedBy = actor
+                })
+                .ToList();
+
+            if (permissionsToAdd.Count > 0)
+            {
+                await context.PortalRolePermissions.AddRangeAsync(permissionsToAdd, cancellationToken);
+            }
+
+            role.UpdatedAt = now;
+            role.UpdatedBy = actor;
+
+            var newPermissionCodes = permissions
+                .Select(x => x.Code)
+                .OrderBy(x => x)
+                .ToList();
+
+            var rolePermissionsOldValuesPayload = JsonSerializer.Serialize(
+                new { permissions = oldPermissionCodes },
+                AuditJsonSerializerOptions);
+            var rolePermissionsNewValuesPayload = JsonSerializer.Serialize(
+                new
+                {
+                    summary = "Portal role permissions updated.",
+                    permissions = newPermissionCodes
+                },
+                AuditJsonSerializerOptions);
+
+            await context.AuditLogs.AddAsync(
+                new AuditLog
+                {
+                    Action = AuditActionType.Update,
+                    EntityName = "PortalRole",
+                    EntityId = role.Id.ToString(),
+                    UserName = request.ActorUserName,
+                    OldValues = rolePermissionsOldValuesPayload,
+                    NewValues = rolePermissionsNewValuesPayload,
+                    CreatedAt = now
+                },
+                cancellationToken);
+
+            await context.SaveChangesAsync(cancellationToken);
+
+            await context.Entry(role)
+                .Collection(x => x.RolePermissions)
+                .Query()
+                .Include(x => x.PortalPermission)
+                .LoadAsync(cancellationToken);
+
+            return new UpdateRolePermissionsResult(true, string.Empty, MapRoleDetail(role));
+        }
+        catch
+        {
+            return new UpdateRolePermissionsResult(false, "Role permissions could not be updated.", null);
+        }
+    }
+
     private static string BuildILikeContainsPattern(string search)
     {
         var trimmed = search.Trim();
