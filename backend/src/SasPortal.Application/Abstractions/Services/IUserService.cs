@@ -18,4 +18,8 @@ public interface IUserService
     Task<UpdateUserStatusResult> UpdateUserStatusAsync(
         UpdateUserStatusRequest request,
         CancellationToken cancellationToken = default);
+
+    Task<UpdateUserRolesResult> UpdateUserRolesAsync(
+        UpdateUserRolesRequest request,
+        CancellationToken cancellationToken = default);
 }

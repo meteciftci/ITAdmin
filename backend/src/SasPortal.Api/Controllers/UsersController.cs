@@ -195,6 +195,54 @@ public sealed class UsersController(IUserService userService) : ControllerBase
             u.UpdatedBy));
     }
 
+    [HttpPut("{id:guid}/roles")]
+    [RequirePermission("Users.AssignRoles")]
+    public async Task<ActionResult<UserDetailResponse>> UpdateUserRoles(
+        Guid id,
+        [FromBody] UpdateUserRolesRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await userService.UpdateUserRolesAsync(
+            new AppModels.UpdateUserRolesRequest(
+                id,
+                request.RoleIds,
+                ResolveActorUserId(User),
+                ResolveActorUserName(User)),
+            cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            if (string.Equals(result.Message, "User was not found.", StringComparison.Ordinal))
+            {
+                return NotFound();
+            }
+
+            return BadRequest(new { message = result.Message });
+        }
+
+        if (result.User is null)
+        {
+            return BadRequest(new { message = "User roles could not be updated." });
+        }
+
+        var u = result.User;
+        return Ok(new UserDetailResponse(
+            u.Id,
+            u.DirectorySource,
+            u.DirectoryObjectId,
+            u.UserName,
+            u.DisplayName,
+            u.NationalIdMasked,
+            u.Email,
+            u.IsActive,
+            u.LastLoginAt,
+            u.Roles,
+            u.CreatedAt,
+            u.CreatedBy,
+            u.UpdatedAt,
+            u.UpdatedBy));
+    }
+
     private static string? ResolveActorUserName(ClaimsPrincipal principal)
     {
         if (!string.IsNullOrWhiteSpace(principal.Identity?.Name))

@@ -414,6 +414,168 @@ public sealed class UserService(
         }
     }
 
+    public async Task<UpdateUserRolesResult> UpdateUserRolesAsync(
+        UpdateUserRolesRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (request.RoleIds is null)
+            {
+                return new UpdateUserRolesResult(false, "Role ids are required.", null);
+            }
+
+            var roleIds = request.RoleIds.Distinct().ToList();
+            var user = await context.PortalUsers
+                .Where(x => !x.IsDeleted && x.Id == request.UserId)
+                .Include(x => x.UserRoles)
+                    .ThenInclude(ur => ur.PortalRole)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (user is null)
+            {
+                return new UpdateUserRolesResult(false, "User was not found.", null);
+            }
+
+            List<PortalRole> requestedRoles = [];
+            if (roleIds.Count > 0)
+            {
+                requestedRoles = await context.PortalRoles
+                    .Where(x => !x.IsDeleted && roleIds.Contains(x.Id))
+                    .ToListAsync(cancellationToken);
+
+                if (requestedRoles.Count != roleIds.Count)
+                {
+                    return new UpdateUserRolesResult(false, "One or more roles were not found.", null);
+                }
+
+                if (requestedRoles.Any(x => !x.IsActive))
+                {
+                    return new UpdateUserRolesResult(false, "One or more roles are inactive.", null);
+                }
+            }
+
+            var currentlyHasSuperAdmin = UserHasActiveSuperAdminRole(user);
+            var willHaveSuperAdmin = requestedRoles.Any(x =>
+                string.Equals(x.Code, SystemRoles.SuperAdmin, StringComparison.OrdinalIgnoreCase));
+
+            if (request.ActorUserId.HasValue &&
+                request.ActorUserId.Value == user.Id &&
+                currentlyHasSuperAdmin &&
+                !willHaveSuperAdmin)
+            {
+                return new UpdateUserRolesResult(false, "You cannot remove your own SuperAdmin role.", null);
+            }
+
+            if (user.IsActive &&
+                currentlyHasSuperAdmin &&
+                !willHaveSuperAdmin)
+            {
+                var hasAnotherActiveSuperAdmin =
+                    await HasAnotherActiveSuperAdminExcludingAsync(user.Id, cancellationToken);
+
+                if (!hasAnotherActiveSuperAdmin)
+                {
+                    return new UpdateUserRolesResult(
+                        false,
+                        "The last active SuperAdmin user cannot lose the SuperAdmin role.",
+                        null);
+                }
+            }
+
+            var oldRoleCodes = user.UserRoles
+                .Where(ur => ur.PortalRole is not null && !ur.PortalRole.IsDeleted)
+                .Select(ur => ur.PortalRole.Code)
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(x => x, StringComparer.Ordinal)
+                .ToList();
+
+            var now = DateTime.UtcNow;
+            var actor = request.ActorUserName ?? "system";
+
+            var requestedRoleIdSet = roleIds.ToHashSet();
+            var currentRoleIdSet = user.UserRoles
+                .Select(ur => ur.PortalRoleId)
+                .ToHashSet();
+
+            var userRolesToRemove = user.UserRoles
+                .Where(ur => !requestedRoleIdSet.Contains(ur.PortalRoleId))
+                .ToList();
+
+            if (userRolesToRemove.Count > 0)
+            {
+                context.PortalUserRoles.RemoveRange(userRolesToRemove);
+                foreach (var userRole in userRolesToRemove)
+                {
+                    user.UserRoles.Remove(userRole);
+                }
+            }
+
+            var userRolesToAdd = roleIds
+                .Where(roleId => !currentRoleIdSet.Contains(roleId))
+                .Select(roleId => new PortalUserRole
+                {
+                    PortalUserId = user.Id,
+                    PortalRoleId = roleId,
+                    CreatedAt = now,
+                    CreatedBy = actor
+                })
+                .ToList();
+
+            if (userRolesToAdd.Count > 0)
+            {
+                await context.PortalUserRoles.AddRangeAsync(userRolesToAdd, cancellationToken);
+            }
+
+            user.UpdatedAt = now;
+            user.UpdatedBy = actor;
+
+            var newRoleCodes = requestedRoles
+                .Select(x => x.Code)
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(x => x, StringComparer.Ordinal)
+                .ToList();
+
+            var oldValuesPayload = JsonSerializer.Serialize(
+                new { roles = oldRoleCodes },
+                AuditJsonSerializerOptions);
+            var newValuesPayload = JsonSerializer.Serialize(
+                new
+                {
+                    summary = "Portal user roles updated.",
+                    roles = newRoleCodes
+                },
+                AuditJsonSerializerOptions);
+
+            await context.AuditLogs.AddAsync(
+                new AuditLog
+                {
+                    Action = AuditActionType.Update,
+                    EntityName = "PortalUser",
+                    EntityId = user.Id.ToString(),
+                    UserName = request.ActorUserName,
+                    OldValues = oldValuesPayload,
+                    NewValues = newValuesPayload,
+                    CreatedAt = now
+                },
+                cancellationToken);
+
+            await context.SaveChangesAsync(cancellationToken);
+
+            await context.Entry(user)
+                .Collection(x => x.UserRoles)
+                .Query()
+                .Include(x => x.PortalRole)
+                .LoadAsync(cancellationToken);
+
+            return new UpdateUserRolesResult(true, string.Empty, MapToDetail(user));
+        }
+        catch
+        {
+            return new UpdateUserRolesResult(false, "User roles could not be updated.", null);
+        }
+    }
+
     private async Task<bool> HasAnotherActiveSuperAdminExcludingAsync(
         Guid excludedUserId,
         CancellationToken cancellationToken) =>
