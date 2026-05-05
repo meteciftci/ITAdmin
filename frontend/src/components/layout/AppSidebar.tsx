@@ -21,10 +21,10 @@ export function AppSidebar() {
     },
     {
       title: "Users",
-      to: "#",
+      to: "/users",
       icon: Users,
       visible: canAccess(user, "Users.View"),
-      enabled: false,
+      enabled: true,
     },
     {
       title: "Roles",

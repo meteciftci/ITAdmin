@@ -4,10 +4,12 @@ import { Navigate, createBrowserRouter } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { RequireAuth } from "@/features/auth/RequireAuth";
+import { RequirePermission } from "@/features/auth/RequirePermission";
 import { useAuthStore } from "@/features/auth/auth-store";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
 import { getSetupStatus } from "@/features/setup/api";
 import { SetupRequiredPage } from "@/features/setup/SetupRequiredPage";
+import { UsersPage } from "@/features/users/UsersPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 
 function RootRedirect() {
@@ -52,6 +54,18 @@ export const router = createBrowserRouter([
         <AppLayout>
           <DashboardPage />
         </AppLayout>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/users",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission="Users.View">
+          <AppLayout>
+            <UsersPage />
+          </AppLayout>
+        </RequirePermission>
       </RequireAuth>
     ),
   },
