@@ -33,6 +33,8 @@ public sealed class AuthService(
             return new AuthTokenResult(false, "Password is required.", null, null, null, null);
         }
 
+        var normalizedUserName = request.UserName.Trim();
+
         try
         {
             var ldapSetting = await context.LdapSettings
@@ -58,20 +60,22 @@ public sealed class AuthService(
                     BindUserName = ldapSetting.BindUserName,
                     BindUserDomain = ldapSetting.BindUserDomain,
                     BindPassword = bindPassword,
-                    TestUserName = request.UserName,
+                    TestUserName = normalizedUserName,
                     TestPassword = request.Password
                 },
                 cancellationToken);
 
             if (!ldapResult.IsValid)
             {
+                var description = BuildLoginFailedDescription(normalizedUserName, ldapResult.Message);
+
                 await context.SecurityLogs.AddAsync(
                     new SecurityLog
                     {
-                        UserName = request.UserName,
+                        UserName = normalizedUserName,
                         EventType = "LoginFailed",
                         Severity = "Warning",
-                        Description = ldapResult.Message,
+                        Description = description,
                         IpAddress = request.IpAddress,
                         UserAgent = request.UserAgent,
                         CreatedAt = DateTime.UtcNow
@@ -104,7 +108,7 @@ public sealed class AuthService(
                     BindUserName: ldapSetting.BindUserName,
                     BindUserDomain: ldapSetting.BindUserDomain,
                     BindPassword: bindPassword,
-                    UserName: request.UserName,
+                    UserName: normalizedUserName,
                     NationalIdAttribute: nationalIdAttribute),
                 cancellationToken);
 
@@ -113,10 +117,10 @@ public sealed class AuthService(
                 await context.SecurityLogs.AddAsync(
                     new SecurityLog
                     {
-                        UserName = request.UserName,
+                        UserName = normalizedUserName,
                         EventType = "LoginFailed",
                         Severity = "Warning",
-                        Description = "Directory user profile could not be loaded.",
+                        Description = $"Login failed for {normalizedUserName}. Reason: directory user profile could not be loaded.",
                         IpAddress = request.IpAddress,
                         UserAgent = request.UserAgent,
                         CreatedAt = DateTime.UtcNow
@@ -147,10 +151,10 @@ public sealed class AuthService(
                 await context.SecurityLogs.AddAsync(
                     new SecurityLog
                     {
-                        UserName = request.UserName,
+                        UserName = normalizedUserName,
                         EventType = "LoginFailed",
                         Severity = "Warning",
-                        Description = "User is not authorized to access the portal.",
+                        Description = $"Login failed for {normalizedUserName}. Reason: user is not authorized to access the portal.",
                         IpAddress = request.IpAddress,
                         UserAgent = request.UserAgent,
                         CreatedAt = DateTime.UtcNow
@@ -170,7 +174,7 @@ public sealed class AuthService(
                         UserName = user.UserName,
                         EventType = "LoginFailedUserPassive",
                         Severity = "Warning",
-                        Description = "User is inactive.",
+                        Description = $"Login failed for {user.UserName}. Reason: user is inactive.",
                         IpAddress = request.IpAddress,
                         UserAgent = request.UserAgent,
                         CreatedAt = DateTime.UtcNow
@@ -196,7 +200,7 @@ public sealed class AuthService(
                         UserName = ldapProfile.UserName,
                         EventType = "LoginFailed",
                         Severity = "Warning",
-                        Description = "Another portal user already uses this user name.",
+                        Description = $"Login failed for {ldapProfile.UserName}. Reason: another portal user already uses this user name.",
                         IpAddress = request.IpAddress,
                         UserAgent = request.UserAgent,
                         CreatedAt = DateTime.UtcNow
@@ -318,6 +322,19 @@ public sealed class AuthService(
             : $"{trimmed[..3]}{new string('*', length - 5)}{trimmed[^2..]}";
 
         return masked.Length > 50 ? masked[..50] : masked;
+    }
+
+    private static string BuildLoginFailedDescription(string userName, string? reason)
+    {
+        var normalizedReason = string.IsNullOrWhiteSpace(reason)
+            ? "directory authentication failed"
+            : reason.Trim().TrimEnd('.').TrimEnd();
+
+        normalizedReason = normalizedReason.Length == 0
+            ? "directory authentication failed"
+            : char.ToLowerInvariant(normalizedReason[0]) + normalizedReason[1..];
+
+        return $"Login failed for {userName}. Reason: {normalizedReason}.";
     }
 
     public async Task<AuthTokenResult> RefreshTokenAsync(RefreshTokenRequest request, CancellationToken cancellationToken = default)

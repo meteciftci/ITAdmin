@@ -12,9 +12,9 @@ public sealed class LdapService : ILdapService
     private const string MissingRequiredFieldsMessage = "Required LDAP fields are missing.";
     private const string ValidationSucceededMessage = "LDAP validation succeeded.";
     private const string ServiceAccountBindFailedMessage = "LDAP service account authentication failed.";
-    private const string TestUserNotFoundMessage = "Test user could not be found.";
-    private const string UserDistinguishedNameNotFoundMessage = "Test user distinguished name could not be resolved.";
-    private const string TestUserBindFailedMessage = "Test user authentication failed.";
+    private const string DirectoryUserNotFoundMessage = "Directory user could not be found.";
+    private const string DirectoryUserDistinguishedNameNotFoundMessage = "Directory user distinguished name could not be resolved.";
+    private const string DirectoryUserBindFailedMessage = "Directory user authentication failed.";
     private const string ValidationFailedMessage = "LDAP validation failed.";
 
     public Task<LdapValidationResult> ValidateAsync(LdapValidationRequest request, CancellationToken cancellationToken = default)
@@ -74,13 +74,13 @@ public sealed class LdapService : ILdapService
 
             if (searchResponse.Entries.Count == 0)
             {
-                return Task.FromResult(new LdapValidationResult(false, TestUserNotFoundMessage));
+                return Task.FromResult(new LdapValidationResult(false, DirectoryUserNotFoundMessage));
             }
 
             var userDn = searchResponse.Entries[0].DistinguishedName;
             if (string.IsNullOrWhiteSpace(userDn))
             {
-                return Task.FromResult(new LdapValidationResult(false, UserDistinguishedNameNotFoundMessage));
+                return Task.FromResult(new LdapValidationResult(false, DirectoryUserDistinguishedNameNotFoundMessage));
             }
 
             using var userConnection = CreateConnection(identifier, request.UseSsl, userDn, request.TestPassword);
@@ -91,7 +91,7 @@ public sealed class LdapService : ILdapService
             }
             catch (LdapException)
             {
-                return Task.FromResult(new LdapValidationResult(false, TestUserBindFailedMessage));
+                return Task.FromResult(new LdapValidationResult(false, DirectoryUserBindFailedMessage));
             }
         }
         catch
