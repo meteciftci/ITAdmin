@@ -94,7 +94,7 @@ export function AssignRolesDialog({
   return (
     <Dialog open={open}>
       <DialogContent onOpenChange={handleOpenChange} className="max-w-2xl">
-        <DialogHeader>
+        <DialogHeader className="space-y-2">
           <DialogTitle>{t("users:assignRoles.title")}</DialogTitle>
           <DialogDescription>{t("users:assignRoles.description")}</DialogDescription>
         </DialogHeader>
@@ -102,7 +102,9 @@ export function AssignRolesDialog({
           <FormError message={errorMessage} />
 
           {rolesQuery.isLoading ? (
-            <p className="text-sm text-muted-foreground">{t("common:loading")}</p>
+            <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+              {t("common:loading")}
+            </p>
           ) : null}
 
           {rolesQuery.isError ? (
@@ -112,7 +114,7 @@ export function AssignRolesDialog({
           ) : null}
 
           {rolesQuery.data?.items.length ? (
-            <div className="grid max-h-[50vh] gap-2 overflow-y-auto md:grid-cols-2">
+            <div className="grid max-h-[50vh] gap-2 overflow-y-auto rounded-lg border p-2 md:grid-cols-2">
               {rolesQuery.data.items.map((role) => (
                 <label
                   key={role.id}
@@ -133,6 +135,12 @@ export function AssignRolesDialog({
                 </label>
               ))}
             </div>
+          ) : null}
+
+          {rolesQuery.isSuccess && !rolesQuery.data.items.length ? (
+            <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+              {t("users:assignRoles.noRoles")}
+            </p>
           ) : null}
         </div>
         <DialogFooter>

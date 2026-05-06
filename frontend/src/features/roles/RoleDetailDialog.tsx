@@ -31,26 +31,28 @@ export function RoleDetailDialog({ role, open, onOpenChange }: RoleDetailDialogP
             </div>
           ) : null}
           <div className="grid gap-3 md:grid-cols-2">
-            <p>
-              <span className="text-muted-foreground">{t("roles:detail.name")}:</span> {role.name}
-            </p>
-            <p>
-              <span className="text-muted-foreground">{t("roles:detail.code")}:</span> {role.code}
-            </p>
-            <p>
-              <span className="text-muted-foreground">{t("roles:detail.description")}:</span>{" "}
-              {role.description || "-"}
-            </p>
-            <p>
-              <span className="text-muted-foreground">{t("roles:detail.type")}:</span>{" "}
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">{t("roles:detail.name")}</p>
+              <p>{role.name}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">{t("roles:detail.code")}</p>
+              <p className="font-mono text-xs md:text-sm">{role.code}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">{t("roles:detail.description")}</p>
+              <p>{role.description || "-"}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">{t("roles:detail.type")}</p>
               <Badge variant={role.isSystem ? "warning" : "secondary"}>
                 {role.isSystem ? t("roles:type.system") : t("roles:type.custom")}
               </Badge>
-            </p>
-            <p>
-              <span className="text-muted-foreground">{t("roles:detail.status")}:</span>{" "}
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">{t("roles:detail.status")}</p>
               <StatusBadge isActive={role.isActive} />
-            </p>
+            </div>
           </div>
           <Separator />
           <div className="space-y-2">
@@ -71,22 +73,22 @@ export function RoleDetailDialog({ role, open, onOpenChange }: RoleDetailDialogP
           </div>
           <Separator />
           <div className="grid gap-3 md:grid-cols-2">
-            <p>
-              <span className="text-muted-foreground">{t("roles:detail.createdAt")}:</span>{" "}
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">{t("roles:detail.createdAt")}</p>
               <DateTimeText value={role.createdAt} />
-            </p>
-            <p>
-              <span className="text-muted-foreground">{t("roles:detail.createdBy")}:</span>{" "}
-              {role.createdBy || "-"}
-            </p>
-            <p>
-              <span className="text-muted-foreground">{t("roles:detail.updatedAt")}:</span>{" "}
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">{t("roles:detail.createdBy")}</p>
+              <p>{role.createdBy || "-"}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">{t("roles:detail.updatedAt")}</p>
               <DateTimeText value={role.updatedAt} />
-            </p>
-            <p>
-              <span className="text-muted-foreground">{t("roles:detail.updatedBy")}:</span>{" "}
-              {role.updatedBy || "-"}
-            </p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">{t("roles:detail.updatedBy")}</p>
+              <p>{role.updatedBy || "-"}</p>
+            </div>
           </div>
         </div>
       )}

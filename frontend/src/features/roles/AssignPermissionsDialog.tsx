@@ -114,7 +114,7 @@ export function AssignPermissionsDialog({
   return (
     <Dialog open={open}>
       <DialogContent onOpenChange={handleOpenChange} className="max-w-3xl">
-        <DialogHeader>
+        <DialogHeader className="space-y-2">
           <DialogTitle>{t("roles:assignPermissions.title")}</DialogTitle>
           <DialogDescription>
             {t("roles:assignPermissions.description")}
@@ -140,7 +140,9 @@ export function AssignPermissionsDialog({
           />
 
           {(roleDetailQuery.isLoading || permissionsQuery.isLoading) && (
-            <p className="text-sm text-muted-foreground">{t("common:loading")}</p>
+            <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+              {t("common:loading")}
+            </p>
           )}
 
           {roleDetailQuery.isError ? (
@@ -182,7 +184,7 @@ export function AssignPermissionsDialog({
           ) : null}
 
           {permissionsQuery.isSuccess && !filteredPermissions.length ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
               {t("roles:assignPermissions.noPermissions")}
             </p>
           ) : null}

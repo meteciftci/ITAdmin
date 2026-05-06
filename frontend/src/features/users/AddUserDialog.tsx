@@ -79,7 +79,7 @@ export function AddUserDialog({ open, onOpenChange, onCreated }: AddUserDialogPr
   return (
     <Dialog open={open}>
       <DialogContent onOpenChange={handleOpenChange} className="max-w-2xl">
-        <DialogHeader>
+        <DialogHeader className="space-y-2">
           <DialogTitle>{t("users:add.title")}</DialogTitle>
           <DialogDescription>{t("users:add.description")}</DialogDescription>
         </DialogHeader>
@@ -97,7 +97,9 @@ export function AddUserDialog({ open, onOpenChange, onCreated }: AddUserDialogPr
           </div>
 
           {lookupQuery.isLoading ? (
-            <p className="text-sm text-muted-foreground">{t("common:loading")}</p>
+            <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+              {t("common:loading")}
+            </p>
           ) : null}
 
           {lookupQuery.isError ? (
@@ -144,7 +146,9 @@ export function AddUserDialog({ open, onOpenChange, onCreated }: AddUserDialogPr
           ) : null}
 
           {lookupQuery.isSuccess && !lookupQuery.data.items.length ? (
-            <p className="text-sm text-muted-foreground">{t("users:add.noResults")}</p>
+            <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+              {t("users:add.noResults")}
+            </p>
           ) : null}
         </div>
         <DialogFooter>

@@ -107,7 +107,7 @@ export function RoleFormDialog({
         key={`${open ? "open" : "closed"}-${mode}-${role?.id ?? "new"}`}
         onOpenChange={handleOpenChange}
       >
-        <DialogHeader>
+        <DialogHeader className="space-y-2">
           <DialogTitle>{dialogTitle}</DialogTitle>
           <DialogDescription>
             {t("roles:description")}
