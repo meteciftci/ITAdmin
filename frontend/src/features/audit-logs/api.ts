@@ -1,6 +1,7 @@
 import { apiClient } from "@/lib/api-client";
 
 import type {
+  AuditLogFilterOptions,
   AuditLogListItem,
   GetAuditLogsParams,
   PagedResponse,
@@ -20,5 +21,10 @@ export const getAuditLogs = async (
     { params: mergedParams },
   );
 
+  return data;
+};
+
+export const getAuditLogFilterOptions = async (): Promise<AuditLogFilterOptions> => {
+  const { data } = await apiClient.get<AuditLogFilterOptions>("/audit-logs/filter-options");
   return data;
 };

@@ -1,9 +1,11 @@
 import { useMemo, useState } from "react";
+import type { DateRange } from "react-day-picker";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
 import { CodeBadge } from "@/components/common/CodeBadge";
 import { DataToolbar } from "@/components/common/DataToolbar";
+import { DateRangePicker } from "@/components/common/DateRangePicker";
 import { DateTimeText } from "@/components/common/DateTimeText";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ErrorState } from "@/components/common/ErrorState";
@@ -13,17 +15,20 @@ import { SectionCard } from "@/components/common/SectionCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getAuditLogs } from "@/features/audit-logs/api";
+import { getAuditLogFilterOptions, getAuditLogs } from "@/features/audit-logs/api";
 import { getApiErrorMessage } from "@/lib/api-error";
 
 export function AuditLogsPage() {
-  const { t } = useTranslation(["auditLogs", "common"]);
+  const { t, i18n } = useTranslation(["auditLogs", "common"]);
 
   const [search, setSearch] = useState("");
   const [action, setAction] = useState("");
   const [entityName, setEntityName] = useState("");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+
+  const from = dateRange?.from ? toUtcStartOfLocalDay(dateRange.from) : undefined;
+  const to = dateRange?.to ? toUtcEndOfLocalDay(dateRange.to) : undefined;
+  const calendarLocale = i18n.language.startsWith("tr") ? "tr" : "en";
 
   const auditLogsQuery = useQuery({
     queryKey: ["audit-logs", "list", search, action, entityName, from, to],
@@ -32,14 +37,21 @@ export function AuditLogsPage() {
         search: search.trim() || undefined,
         action: action.trim() || undefined,
         entityName: entityName.trim() || undefined,
-        from: from || undefined,
-        to: to || undefined,
+        from,
+        to,
         pageNumber: 1,
         pageSize: 50,
       }),
   });
 
+  const filterOptionsQuery = useQuery({
+    queryKey: ["audit-logs", "filter-options"],
+    queryFn: getAuditLogFilterOptions,
+  });
+
   const auditLogs = useMemo(() => auditLogsQuery.data?.items ?? [], [auditLogsQuery.data]);
+  const actionOptions = filterOptionsQuery.data?.actions ?? [];
+  const entityNameOptions = filterOptionsQuery.data?.entityNames ?? [];
 
   const handleRefresh = () => {
     auditLogsQuery.refetch();
@@ -68,27 +80,32 @@ export function AuditLogsPage() {
               value={action}
               onChange={(event) => setAction(event.target.value)}
               placeholder={t("auditLogs:filters.actionPlaceholder")}
+              list="audit-log-action-options"
               className="w-full sm:w-44"
             />
+            <datalist id="audit-log-action-options">
+              {actionOptions.map((item) => (
+                <option key={item} value={item} />
+              ))}
+            </datalist>
             <Input
               value={entityName}
               onChange={(event) => setEntityName(event.target.value)}
               placeholder={t("auditLogs:filters.entityNamePlaceholder")}
+              list="audit-log-entity-options"
               className="w-full sm:w-44"
             />
-            <Input
-              type="date"
-              value={from}
-              onChange={(event) => setFrom(event.target.value)}
-              aria-label={t("auditLogs:filters.fromDate")}
-              className="w-full sm:w-40"
-            />
-            <Input
-              type="date"
-              value={to}
-              onChange={(event) => setTo(event.target.value)}
-              aria-label={t("auditLogs:filters.toDate")}
-              className="w-full sm:w-40"
+            <datalist id="audit-log-entity-options">
+              {entityNameOptions.map((item) => (
+                <option key={item} value={item} />
+              ))}
+            </datalist>
+            <DateRangePicker
+              value={dateRange}
+              onChange={setDateRange}
+              placeholder={t("auditLogs:filters.dateRangePlaceholder")}
+              clearLabel={t("auditLogs:filters.clearDateRange")}
+              locale={calendarLocale}
             />
           </DataToolbar>
 
@@ -158,4 +175,32 @@ export function AuditLogsPage() {
       </SectionCard>
     </section>
   );
+}
+
+function toUtcStartOfLocalDay(value: Date): string {
+  const startOfLocalDay = new Date(
+    value.getFullYear(),
+    value.getMonth(),
+    value.getDate(),
+    0,
+    0,
+    0,
+    0,
+  );
+
+  return startOfLocalDay.toISOString();
+}
+
+function toUtcEndOfLocalDay(value: Date): string {
+  const endOfLocalDay = new Date(
+    value.getFullYear(),
+    value.getMonth(),
+    value.getDate(),
+    23,
+    59,
+    59,
+    999,
+  );
+
+  return endOfLocalDay.toISOString();
 }

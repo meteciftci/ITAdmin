@@ -19,6 +19,11 @@ export type AuditLogListItem = {
   createdAt: string;
 };
 
+export type AuditLogFilterOptions = {
+  actions: string[];
+  entityNames: string[];
+};
+
 export type GetAuditLogsParams = {
   search?: string;
   action?: string;

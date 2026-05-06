@@ -9,8 +9,8 @@
       "searchPlaceholder": "Search audit logs...",
       "actionPlaceholder": "Action",
       "entityNamePlaceholder": "Entity name",
-      "fromDate": "From date",
-      "toDate": "To date"
+      "dateRangePlaceholder": "Select date range",
+      "clearDateRange": "Clear"
     },
     "table": {
       "createdAt": "Created At",

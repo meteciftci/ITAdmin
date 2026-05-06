@@ -9,8 +9,8 @@
       "searchPlaceholder": "Audit log ara...",
       "actionPlaceholder": "Aksiyon",
       "entityNamePlaceholder": "Varlık adı",
-      "fromDate": "Başlangıç tarihi",
-      "toDate": "Bitiş tarihi"
+      "dateRangePlaceholder": "Tarih aralığı seçin",
+      "clearDateRange": "Temizle"
     },
     "table": {
       "createdAt": "Tarih",
