@@ -9,6 +9,7 @@ import trErrors from "@/locales/tr/errors.json";
 import trNavigation from "@/locales/tr/navigation.json";
 import trPermissions from "@/locales/tr/permissions.json";
 import trRoles from "@/locales/tr/roles.json";
+import trSecurityLogs from "@/locales/tr/securityLogs.json";
 import trUsers from "@/locales/tr/users.json";
 
 import enAuth from "@/locales/en/auth.json";
@@ -19,6 +20,7 @@ import enErrors from "@/locales/en/errors.json";
 import enNavigation from "@/locales/en/navigation.json";
 import enPermissions from "@/locales/en/permissions.json";
 import enRoles from "@/locales/en/roles.json";
+import enSecurityLogs from "@/locales/en/securityLogs.json";
 import enUsers from "@/locales/en/users.json";
 
 export type SupportedLanguage = "tr" | "en";
@@ -39,6 +41,7 @@ const resources = {
     users: trUsers.users,
     roles: trRoles.roles,
     permissions: trPermissions.permissions,
+    securityLogs: trSecurityLogs.securityLogs,
   },
   en: {
     common: enCommon.common,
@@ -50,6 +53,7 @@ const resources = {
     users: enUsers.users,
     roles: enRoles.roles,
     permissions: enPermissions.permissions,
+    securityLogs: enSecurityLogs.securityLogs,
   },
 } as const;
 
@@ -68,6 +72,7 @@ void i18n.use(initReactI18next).init({
     "roles",
     "permissions",
     "auditLogs",
+    "securityLogs",
   ],
   defaultNS: "common",
 });

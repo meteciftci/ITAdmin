@@ -10,6 +10,7 @@ import { DateTimeText } from "@/components/common/DateTimeText";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ErrorState } from "@/components/common/ErrorState";
 import { LoadingState } from "@/components/common/LoadingState";
+import { LogDetailDialog } from "@/components/common/LogDetailDialog";
 import { MultiSelectFilter } from "@/components/common/MultiSelectFilter";
 import { PageHeader } from "@/components/common/PageHeader";
 import { SectionCard } from "@/components/common/SectionCard";
@@ -17,6 +18,7 @@ import { TablePagination } from "@/components/common/TablePagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getAuditLogFilterOptions, getAuditLogs } from "@/features/audit-logs/api";
+import type { AuditLogListItem } from "@/features/audit-logs/types";
 import { getApiErrorMessage } from "@/lib/api-error";
 
 export function AuditLogsPage() {
@@ -28,6 +30,7 @@ export function AuditLogsPage() {
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [selectedAuditLog, setSelectedAuditLog] = useState<AuditLogListItem | null>(null);
 
   const from = dateRange?.from ? toUtcStartOfLocalDay(dateRange.from) : undefined;
   const to = dateRange?.to ? toUtcEndOfLocalDay(dateRange.to) : undefined;
@@ -168,6 +171,7 @@ export function AuditLogsPage() {
                     <th className="px-3 py-2 font-medium">{t("auditLogs:table.description")}</th>
                     <th className="px-3 py-2 font-medium">{t("auditLogs:table.actorUserName")}</th>
                     <th className="px-3 py-2 font-medium">{t("auditLogs:table.ipAddress")}</th>
+                    <th className="px-3 py-2 font-medium">{t("auditLogs:table.actions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -188,6 +192,16 @@ export function AuditLogsPage() {
                       </td>
                       <td className="px-3 py-2">{logItem.actorUserName || "-"}</td>
                       <td className="px-3 py-2">{logItem.ipAddress || "-"}</td>
+                      <td className="px-3 py-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedAuditLog(logItem)}
+                        >
+                          {t("auditLogs:actions.detail")}
+                        </Button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -209,6 +223,67 @@ export function AuditLogsPage() {
           ) : null}
         </div>
       </SectionCard>
+
+      <LogDetailDialog
+        open={Boolean(selectedAuditLog)}
+        onOpenChange={(open) => {
+          if (!open) setSelectedAuditLog(null);
+        }}
+        title={t("auditLogs:detail.title")}
+        rows={[
+          {
+            label: t("auditLogs:detail.createdAt"),
+            value: selectedAuditLog ? <DateTimeText value={selectedAuditLog.createdAt} /> : "-",
+          },
+          {
+            label: t("auditLogs:detail.action"),
+            value: selectedAuditLog ? (
+              <Badge variant="secondary">{selectedAuditLog.action}</Badge>
+            ) : (
+              "-"
+            ),
+          },
+          {
+            label: t("auditLogs:detail.entityName"),
+            value: selectedAuditLog?.entityName ? (
+              <CodeBadge>{selectedAuditLog.entityName}</CodeBadge>
+            ) : (
+              "-"
+            ),
+          },
+          {
+            label: t("auditLogs:detail.entityId"),
+            value: selectedAuditLog?.entityId ? (
+              <span className="font-mono text-xs md:text-sm">{selectedAuditLog.entityId}</span>
+            ) : (
+              "-"
+            ),
+          },
+          {
+            label: t("auditLogs:detail.actorUserId"),
+            value: selectedAuditLog?.actorUserId ? (
+              <span className="font-mono text-xs md:text-sm">{selectedAuditLog.actorUserId}</span>
+            ) : (
+              "-"
+            ),
+          },
+          {
+            label: t("auditLogs:detail.actorUserName"),
+            value: selectedAuditLog?.actorUserName || "-",
+          },
+          {
+            label: t("auditLogs:detail.ipAddress"),
+            value: selectedAuditLog?.ipAddress || "-",
+          },
+          {
+            label: t("auditLogs:detail.userAgent"),
+            value: selectedAuditLog?.userAgent || "-",
+          },
+        ]}
+        description={selectedAuditLog?.description}
+        descriptionLabel={t("auditLogs:detail.description")}
+        closeLabel={t("common:actions.close")}
+      />
     </section>
   );
 }

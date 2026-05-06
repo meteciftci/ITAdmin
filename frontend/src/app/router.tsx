@@ -9,6 +9,7 @@ import { AuditLogsPage } from "@/features/audit-logs/AuditLogsPage";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
 import { PermissionsPage } from "@/features/permissions/PermissionsPage";
 import { RolesPage } from "@/features/roles/RolesPage";
+import { SecurityLogsPage } from "@/features/security-logs/SecurityLogsPage";
 import { SetupRequiredPage } from "@/features/setup/SetupRequiredPage";
 import { UsersPage } from "@/features/users/UsersPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
@@ -43,6 +44,18 @@ export const router = createBrowserRouter([
         <RequirePermission permission="AuditLogs.View">
           <AppLayout>
             <AuditLogsPage />
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/security-logs",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission="SecurityLogs.View">
+          <AppLayout>
+            <SecurityLogsPage />
           </AppLayout>
         </RequirePermission>
       </RequireAuth>

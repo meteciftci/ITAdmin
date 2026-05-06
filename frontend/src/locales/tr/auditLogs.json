@@ -22,7 +22,23 @@
       "entityId": "Varlık Kimliği",
       "description": "Açıklama",
       "actorUserName": "Kullanıcı",
-      "ipAddress": "IP Adresi"
+      "ipAddress": "IP Adresi",
+      "actions": "İşlemler"
+    },
+    "actions": {
+      "detail": "Detay"
+    },
+    "detail": {
+      "title": "Audit Log Detayı",
+      "description": "Açıklama",
+      "createdAt": "Tarih",
+      "action": "Aksiyon",
+      "entityName": "Varlık",
+      "entityId": "Varlık Kimliği",
+      "actorUserId": "Kullanıcı Kimliği",
+      "actorUserName": "Kullanıcı",
+      "ipAddress": "IP Adresi",
+      "userAgent": "User Agent"
     },
     "empty": {
       "title": "Audit log bulunamadı",

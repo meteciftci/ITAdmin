@@ -1,0 +1,49 @@
+{
+  "securityLogs": {
+    "title": "Security Logları",
+    "description": "Güvenlik olay kayıtlarını görüntüleyin.",
+    "sections": {
+      "listTitle": "Security Log Listesi"
+    },
+    "filters": {
+      "searchPlaceholder": "Security log ara...",
+      "eventTypeFilterPlaceholder": "Olay tipi seçin",
+      "severityFilterPlaceholder": "Seviye seçin",
+      "searchOptions": "Seçeneklerde ara...",
+      "clearSelection": "Seçimi temizle",
+      "noOptions": "Seçenek bulunamadı",
+      "dateRangePlaceholder": "Tarih aralığı seçin",
+      "clearDateRange": "Temizle"
+    },
+    "table": {
+      "createdAt": "Tarih",
+      "eventType": "Olay Tipi",
+      "severity": "Seviye",
+      "userName": "Kullanıcı",
+      "ipAddress": "IP Adresi",
+      "description": "Açıklama",
+      "actions": "İşlemler"
+    },
+    "actions": {
+      "detail": "Detay"
+    },
+    "detail": {
+      "title": "Security Log Detayı",
+      "description": "Açıklama",
+      "createdAt": "Tarih",
+      "eventType": "Olay Tipi",
+      "severity": "Seviye",
+      "userId": "Kullanıcı Kimliği",
+      "userName": "Kullanıcı",
+      "ipAddress": "IP Adresi",
+      "userAgent": "User Agent"
+    },
+    "empty": {
+      "title": "Security log bulunamadı",
+      "description": "Mevcut filtrelere uygun security log kaydı yok."
+    },
+    "errors": {
+      "loadFailed": "Security loglar yüklenemedi."
+    }
+  }
+}

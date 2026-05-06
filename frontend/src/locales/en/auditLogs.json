@@ -22,7 +22,23 @@
       "entityId": "Entity Id",
       "description": "Description",
       "actorUserName": "User",
-      "ipAddress": "IP Address"
+      "ipAddress": "IP Address",
+      "actions": "Actions"
+    },
+    "actions": {
+      "detail": "Detail"
+    },
+    "detail": {
+      "title": "Audit Log Detail",
+      "description": "Description",
+      "createdAt": "Created At",
+      "action": "Action",
+      "entityName": "Entity",
+      "entityId": "Entity Id",
+      "actorUserId": "User Id",
+      "actorUserName": "User",
+      "ipAddress": "IP Address",
+      "userAgent": "User Agent"
     },
     "empty": {
       "title": "No audit logs found",

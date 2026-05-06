@@ -1,0 +1,49 @@
+{
+  "securityLogs": {
+    "title": "Security Logs",
+    "description": "View security event records.",
+    "sections": {
+      "listTitle": "Security Log List"
+    },
+    "filters": {
+      "searchPlaceholder": "Search security logs...",
+      "eventTypeFilterPlaceholder": "Select event type",
+      "severityFilterPlaceholder": "Select severity",
+      "searchOptions": "Search options...",
+      "clearSelection": "Clear selection",
+      "noOptions": "No options found",
+      "dateRangePlaceholder": "Select date range",
+      "clearDateRange": "Clear"
+    },
+    "table": {
+      "createdAt": "Created At",
+      "eventType": "Event Type",
+      "severity": "Severity",
+      "userName": "User",
+      "ipAddress": "IP Address",
+      "description": "Description",
+      "actions": "Actions"
+    },
+    "actions": {
+      "detail": "Detail"
+    },
+    "detail": {
+      "title": "Security Log Detail",
+      "description": "Description",
+      "createdAt": "Created At",
+      "eventType": "Event Type",
+      "severity": "Severity",
+      "userId": "User Id",
+      "userName": "User",
+      "ipAddress": "IP Address",
+      "userAgent": "User Agent"
+    },
+    "empty": {
+      "title": "No security logs found",
+      "description": "No security log records found for current filters."
+    },
+    "errors": {
+      "loadFailed": "Security logs could not be loaded."
+    }
+  }
+}
