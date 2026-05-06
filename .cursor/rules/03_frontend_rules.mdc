@@ -36,7 +36,7 @@ Frontend yapısı:
 
 ```text
 frontend/src/app
-frontend/src/modules
+frontend/src/features
 frontend/src/components
 frontend/src/lib
 frontend/src/hooks
@@ -44,22 +44,26 @@ frontend/src/types
 frontend/src/assets
 ```
 
-Modül yapısı örneği:
+Feature yapısı örneği:
 
 ```text
-modules/users/api
-modules/users/components
-modules/users/pages
-modules/users/schemas
-modules/users/types
-modules/users/hooks
+features/users/api.ts
+features/users/types.ts
+features/users/UsersPage.tsx
+features/users/AddUserDialog.tsx
+features/users/AssignRolesDialog.tsx
+features/users/UserDetailDialog.tsx
 ```
 
 Kurallar:
 
-- Modüle özel component modül içinde kalır.
+- Feature'a özel component ilgili feature içinde kalır.
 - Ortak component `components/` altına konur.
-- Modüller birbirinin iç detaylarına doğrudan bağımlı olmaz.
+- Feature'lar birbirinin iç detaylarına doğrudan bağımlı olmaz.
+- Yeni geliştirmede `modules/` klasörü açılmaz.
+- Mevcut pattern düz feature dosya yapısıdır.
+- Büyük feature'larda gerekirse `components/`, `hooks/`, `schemas/` alt klasörleri açılabilir.
+- Cursor gereksiz klasör parçalama yapmamalıdır.
 
 ## 3. TypeScript Kuralları
 
@@ -87,7 +91,8 @@ type UserCardProps = {
 ## 4. Component Kuralları
 
 - Componentler küçük ve tek sorumluluklu olmalıdır.
-- Sayfa componentleri `pages/` altında bulunur.
+- Feature sayfa componentleri ilgili feature altında tutulur.
+- Gerekmedikçe `features/{feature}/pages` klasörü açılmaz.
 - UI componentleri mümkün olduğunca dumb/presentational olur.
 - Büyük componentleri parçala.
 - Aynı UI davranışını tekrar etme, ortak component üret.
@@ -122,8 +127,8 @@ Kurallar:
 Ana layout:
 
 ```text
-AppShell
-  Sidebar
+AppLayout
+  AppSidebar
   Topbar
   MainContent
 ```
@@ -132,7 +137,10 @@ Kurallar:
 
 - Sidebar menüleri permission bilgisine göre gösterilir.
 - Topbar kullanıcı bilgisi ve logout içerir.
-- Test/Staging ortam etiketi gerekiyorsa Topbar/AppShell içinde gösterilir.
+- Layout componentleri `frontend/src/components/layout` altında tutulur.
+- Authenticated sayfalar `AppLayout` içinde çalışır.
+- `AppLayout`, `AppSidebar` ve `Topbar` layout standardının temelidir.
+- Test/Staging ortam etiketi gerekiyorsa Topbar/AppLayout içinde gösterilir.
 
 ## 7. Auth State Kuralları
 
@@ -160,37 +168,41 @@ Kurallar:
 Merkezi client:
 
 ```text
-src/lib/api/client.ts
+frontend/src/lib/api-client.ts
 ```
 
 Kurallar:
 
-- Component içinde doğrudan `axios.create` yapma.
-- Her API çağrısı merkezi client üzerinden yapılır.
+- Merkezi Axios client `frontend/src/lib/api-client.ts` içinde bulunur.
+- Component içinde doğrudan `axios.create` yapılmaz.
+- Her API çağrısı merkezi `apiClient` üzerinden yapılır.
 - Authorization header merkezi eklenir.
 - 401 response merkezi yakalanır.
 - Refresh token akışı merkezi yönetilir.
-- API fonksiyonları modülün `api/` klasöründe bulunur.
+- API fonksiyonları ilgili feature altında `api.ts` dosyasında bulunur.
+- Gerekmedikçe `features/{feature}/api/` klasörü açılmaz.
+- Mevcut `api.ts` pattern'i korunur.
+
+Örnek:
+
+```text
+frontend/src/features/users/api.ts
+frontend/src/features/roles/api.ts
+frontend/src/features/permissions/api.ts
+```
 
 ## 9. API Response Kuralları
 
-Backend response standardını merkezi helper ile çöz.
-
-Tip:
-
-```ts
-type ApiResponse<T> = {
-  success: boolean;
-  data: T | null;
-  message: string | null;
-  errors: ApiError[];
-};
-```
+Backend şu an endpoint bazlı direkt response contract döner.
 
 Kurallar:
 
-- Her component `success` kontrolüyle uğraşmaz.
-- `unwrapApiResponse` gibi merkezi helper kullan.
+- Frontend API tipleri backend response contractlarına birebir uygun tanımlanır.
+- Generic `ApiResponse<T>` envelope varsayılmaz.
+- Hata mesajları için `getApiErrorMessage(error, fallback)` gibi merkezi helper kullanılır.
+- `response.data.message` varsa kullanıcıya gösterilebilir.
+- `response.data.title` fallback olarak kullanılabilir.
+- Uzun vadede backend `errorCode + message` standardına geçebilir; mevcut frontend bunu varsaymaz.
 - Validation hataları form alanlarına map edilebilir olmalıdır.
 
 ## 10. TanStack Query Kuralları
@@ -366,3 +378,256 @@ Aynı loading/error/empty state'i her yerde farklı tasarlama.
 LocalStorage ile her componentin doğrudan konuşması.
 Magic string route ve permission değerlerini her yere dağıtma.
 Backend entity isimlerini doğrudan UI modeli gibi kullanma.
+```
+
+## 24. Ek Frontend UI/UX Standartları
+
+### Gerçek Proje Yapısı
+
+Frontend modül yapısı bu projede `features` klasörü üzerinden ilerler.
+
+Önerilen yapı:
+
+```text
+frontend/src/features/users
+frontend/src/features/roles
+frontend/src/features/permissions
+frontend/src/features/auth
+frontend/src/features/setup
+frontend/src/components
+frontend/src/components/common
+frontend/src/components/layout
+frontend/src/components/ui
+frontend/src/lib
+frontend/src/app
+```
+
+Kurallar:
+
+- Yeni feature ekranları `frontend/src/features/{featureName}` altında oluşturulur.
+- Ortak reusable componentler `frontend/src/components/common` altında tutulur.
+- Layout componentleri `frontend/src/components/layout` altında tutulur.
+- shadcn/ui componentleri `frontend/src/components/ui` altında tutulur.
+- Yeni geliştirmede `modules` klasörü açılmaz.
+- Mevcut `features` yapısı bozulmaz.
+
+### Layout Standardı
+
+Authenticated sayfalar `AppLayout` içinde çalışır.
+
+Standart yapı:
+
+```text
+Sidebar
+Topbar
+Main content
+Page container
+PageHeader
+Toolbar
+Content card/table/dialog
+```
+
+Yeni authenticated sayfalarda layout dışına çıkan bağımsız sayfa görünümü kullanılmaz.
+
+### Sidebar Standardı
+
+Menüler düz liste halinde yazılmaz. Menüler merkezi config ve grup mantığıyla yönetilir.
+
+Varsayılan grup yapısı:
+
+```text
+Main
+  Dashboard
+Administration
+  Users
+  Roles
+  Permissions
+Monitoring
+  Audit Logs
+  Security Logs
+System
+  Settings
+  Health
+```
+
+Kurallar:
+
+- Hazır olmayan route/menu item görünmez.
+- Disabled placeholder menüler kullanılmaz.
+- `/users`, `/roles`, `/permissions` hazır route'lardır.
+- Audit Logs, Security Logs, Settings, Health gibi hazır olmayan route'lar sidebar'da görünmez.
+- Her menü item permission-aware olur.
+- Menü görünürlüğü merkezi `canAccess` helper üzerinden yapılır.
+- SuperAdmin permission bypass frontend tarafında da sadece `canAccess` helper üzerinden çalışır.
+- Ekran içinde özel SuperAdmin `if` blokları mümkün olduğunca yazılmaz.
+- Sidebar active route styling tutarlı olur.
+
+### Route Guard Standardı
+
+Login olmayan kullanıcı protected route açarsa `/login` sayfasına yönlendirilir.
+
+Login olmuş ama yetkisi olmayan kullanıcı `403` ekranı görür.
+`403` ekranı `AppLayout` içinde gösterilir.
+
+`403` ekranında şunlar bulunur:
+
+```text
+Açık ve kullanıcı dostu mesaj
+Dashboard'a dön butonu
+Geri dön butonu
+```
+
+`404` ekranı sade olur ve şunları içerir:
+
+```text
+Dashboard'a dön butonu
+Geri dön butonu
+```
+
+`403/404` ekranları boş, aksiyonsuz veya layout dışı bırakılmaz.
+
+### Alert / Confirm / Toast Standardı
+
+Browser `alert` kullanılmaz.
+Browser `confirm` kullanılmaz.
+
+Başarılı işlemler toast ile gösterilir:
+
+```text
+create success
+update success
+status change success
+role assignment success
+permission assignment success
+```
+
+Kritik işlemler `ConfirmDialog` ile onaylanır:
+
+```text
+user activate/deactivate
+role activate/deactivate
+clear all role permissions
+clear all user roles
+```
+
+Dialog/form içindeki backend validation hataları `FormError` ile gösterilir.
+Sayfa-level hatalar `ErrorState` veya toast error ile gösterilir.
+
+### Ortak Component Standardı
+
+Yeni ekranlar mümkün olduğunca şu ortak componentleri kullanır:
+
+```text
+PageHeader
+SectionCard
+DataToolbar
+EmptyState
+ErrorState
+LoadingState
+StatusBadge
+RoleBadgeList
+DateTimeText
+ConfirmDialog
+FormError
+ActionButtonGroup
+```
+
+Aşırı soyutlama yapılmaz.
+Componentler sade, okunabilir ve TypeScript tipli olur.
+Aynı UI davranışı farklı ekranlarda tekrar edilmez.
+
+### Liste / Tablo Standardı
+
+Liste ekranlarında şu toolbar düzeni tercih edilir:
+
+```text
+Search input
+Filter selectleri
+Refresh button
+Primary action button
+```
+
+Status filter standardı:
+
+```text
+Active
+Passive
+All
+```
+
+Tablo/kart ekranlarında loading, empty ve error state standart componentlerle gösterilir.
+
+Büyük listelerde TanStack Table tercih edilebilir.
+Mevcut ekranlarda basit HTML table varsa, büyük refactor istenmedikçe sadece standardize edilir.
+
+### Badge Standardı
+
+`StatusBadge`:
+
+```text
+Active
+Passive
+```
+
+Role type badge:
+
+```text
+System
+Custom
+```
+
+Permission code değerleri teknik değer olduğu için monospace veya badge benzeri görsel ile gösterilebilir.
+
+### Dialog / Detail Standardı
+
+Detail ekranları aynı görsel dilde olur.
+Create/Edit/Assign işlemleri dialog veya sheet ile yapılabilir.
+Form hataları dialog içinde aynı yerde gösterilir.
+
+Detail, form ve assignment ekranlarında full national id gösterilmez.
+National ID sadece masked değer üzerinden gösterilebilir.
+
+### Permission-aware UI
+
+UI güvenlik katmanı değildir.
+Frontend sadece UX için buton/menü gizler.
+Backend permission guard her zaman asıl güvenlik katmanıdır.
+
+Yeni button/action eklenirken ilgili permission kontrolü yapılır.
+
+Örnek permissionlar:
+
+```text
+Users.View
+Users.Create
+Users.Update
+Users.AssignRoles
+Roles.View
+Roles.Create
+Roles.Update
+Roles.AssignPermissions
+Permissions.View
+```
+
+SuperAdmin için permission bypass sadece merkezi `canAccess` helper üzerinden yapılır.
+
+### Hata Gösterim Standardı
+
+API hatalarında `response.data.message` varsa kullanıcıya bu mesaj gösterilir.
+`response.data.title` varsa fallback olarak kullanılabilir.
+Yoksa kullanıcı dostu generic mesaj gösterilir.
+
+Raw exception, stack trace veya teknik dump UI üzerinde gösterilmez.
+
+### Hassas Veri Standardı
+
+Token, password, refresh token, national id veya secret değerler `console.log` yapılmaz.
+National ID sadece masked alan üzerinden gösterilir.
+Full national id hiçbir frontend ekranında gösterilmez.
+
+### LocalStorage Kullanımı
+
+Componentler `localStorage/sessionStorage` ile doğrudan konuşmaz.
+Token erişimi auth store/helper üzerinden yapılır.
+Kullanıcı tercihleri için localStorage source of truth kabul edilmez.
+Dil tercihi gibi kullanıcı tercihleri backend kullanıcı profili üzerinden yönetilir.

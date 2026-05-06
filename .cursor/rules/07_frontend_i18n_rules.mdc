@@ -1,0 +1,173 @@
+---
+description: SASPortal frontend için çok dil, translation key, dil tercihi ve tarih formatlama kuralları.
+globs:
+  - "frontend/**/*.{ts,tsx,json}"
+alwaysApply: false
+---
+
+# SASPortal Frontend i18n Rules
+
+Bu kurallar frontend dosyaları üzerinde çalışırken uygulanır.
+
+## Genel Amaç
+
+SAS Portal v2 çok dilli geliştirilecektir.
+
+Desteklenecek ilk diller:
+
+- Türkçe: `tr`
+- İngilizce: `en`
+
+## Hardcoded Text Yasağı
+
+Yeni frontend ekranlarında kullanıcıya görünen metinler hardcoded yazılmamalıdır.
+
+Aşağıdaki metinler translation key üzerinden gelmelidir:
+
+- Menü label
+- Sayfa başlığı
+- Sayfa açıklaması
+- Buton metni
+- Tablo kolon adı
+- Badge metni
+- Empty state metni
+- Loading state metni
+- Error state metni
+- Dialog title
+- Dialog description
+- Confirm dialog metinleri
+- Toast mesajları
+- Form validation mesajları
+
+Kullanıcıya görünmeyen teknik constant/string değerler hardcoded olabilir.
+
+## Translation Dosya Yapısı
+
+Modüler translation dosyaları tercih edilmelidir.
+
+Önerilen yapı:
+
+```text
+frontend/src/locales/tr/common.json
+frontend/src/locales/tr/auth.json
+frontend/src/locales/tr/navigation.json
+frontend/src/locales/tr/users.json
+frontend/src/locales/tr/roles.json
+frontend/src/locales/tr/permissions.json
+
+frontend/src/locales/en/common.json
+frontend/src/locales/en/auth.json
+frontend/src/locales/en/navigation.json
+frontend/src/locales/en/users.json
+frontend/src/locales/en/roles.json
+frontend/src/locales/en/permissions.json
+```
+
+Yeni modül eklendiğinde ilgili namespace için ayrı translation dosyası oluşturulabilir.
+
+Örnek:
+
+- `frontend/src/locales/tr/auditLogs.json`
+- `frontend/src/locales/en/auditLogs.json`
+
+## Translation Key Standardı
+
+Key isimleri okunabilir ve modül bazlı olmalıdır.
+
+Örnekler:
+
+- `common.actions.save`
+- `common.actions.cancel`
+- `common.status.active`
+- `common.status.passive`
+- `navigation.dashboard`
+- `navigation.administration`
+- `users.title`
+- `users.actions.addUser`
+- `roles.messages.roleCreated`
+- `permissions.readOnlyNotice`
+
+Aynı metin farklı ekranlarda tekrar ediyorsa `common` namespace kullanılmalıdır.
+
+## Dil Tercihi Kaynağı
+
+Kullanıcı dil tercihi localStorage source of truth olarak saklanmayacaktır.
+Kullanıcı dil tercihi backend DB'de kullanıcı profili üzerinde saklanmalıdır.
+
+Önerilen backend alanı:
+
+`PortalUser.PreferredLanguage`
+
+Desteklenen değerler:
+
+- `tr`
+- `en`
+
+Varsayılan:
+
+- `tr`
+
+Frontend login sonrası `/api/auth/me` response içindeki `preferredLanguage` değerine göre dili ayarlamalıdır.
+
+## Dil Değiştirme
+
+Authenticated kullanıcı dil değiştirdiğinde frontend backend'e preference update isteği göndermelidir.
+
+Önerilen endpoint:
+
+`PATCH /api/auth/me/preferences`
+
+Body:
+
+```json
+{
+  "preferredLanguage": "tr"
+}
+```
+
+veya:
+
+```json
+{
+  "preferredLanguage": "en"
+}
+```
+
+Backend başarılı dönerse frontend i18n dilini değiştirmelidir.
+Backend başarısız olursa kullanıcıya hata gösterilmelidir.
+
+## Unauthenticated Sayfalar
+
+Login/setup gibi unauthenticated sayfalarda varsayılan dil Türkçe olabilir.
+Login öncesi dil localStorage'a zorunlu olarak kaydedilmemelidir.
+Gelecekte public app bootstrap endpoint'i ile default language alınabilir.
+
+## Date/Time Format
+
+Tarih gösterimleri `DateTimeText` gibi ortak component üzerinden yapılmalıdır.
+Date formatı aktif dile göre `Intl.DateTimeFormat` ile oluşturulmalıdır.
+Her ekranda ayrı `toLocaleString` kullanımı yapılmamalıdır.
+
+## Backend Error Messages
+
+Mevcut backend error message'ları şimdilik gösterilebilir.
+Uzun vadede backend hata response'ları `errorCode + message` formatına taşınabilir.
+Frontend ileride `errorCode` üzerinden translation yapabilecek şekilde tasarlanmalıdır.
+
+## Yeni Ekran Geliştirme Kuralı
+
+Yeni frontend ekranı geliştirilirken:
+
+- Görünen tüm metinler translation key ile yazılmalıdır.
+- Hem `tr` hem `en` karşılıkları eklenmelidir.
+- Eksik translation key bırakılmamalıdır.
+- Yeni namespace gerekiyorsa hem `tr` hem `en` altında aynı dosya oluşturulmalıdır.
+
+## Mevcut Ekran Refactor Kuralı
+
+Mevcut Users/Roles gibi ekranlar refactor edilirken:
+
+- Hardcoded metinler translation key'e taşınmalıdır.
+- Alert/confirm davranışları frontend UI standardına göre düzeltilmelidir.
+- Date/time gösterimleri `DateTimeText` üzerinden yapılmalıdır.
+- Permission-aware davranışlar korunmalıdır.
