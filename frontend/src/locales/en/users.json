@@ -1,0 +1,85 @@
+{
+  "users": {
+    "title": "Users",
+    "description": "Manage portal users and role assignments.",
+    "sections": {
+      "listTitle": "User List"
+    },
+    "search": {
+      "placeholder": "Search users..."
+    },
+    "filters": {
+      "active": "Active",
+      "passive": "Passive",
+      "all": "All"
+    },
+    "actions": {
+      "addUser": "Add User",
+      "refresh": "Refresh",
+      "detail": "Detail",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "assignRoles": "Assign Roles"
+    },
+    "table": {
+      "displayName": "Display Name",
+      "userName": "User Name",
+      "email": "Email",
+      "nationalIdMasked": "National ID Masked",
+      "roles": "Roles",
+      "status": "Status",
+      "lastLogin": "Last Login",
+      "actions": "Actions"
+    },
+    "empty": {
+      "title": "No users found",
+      "description": "No users found for current filters."
+    },
+    "errors": {
+      "loadFailed": "Users could not be loaded."
+    },
+    "messages": {
+      "statusUpdated": "User status could not be updated.",
+      "rolesUpdated": "User roles updated.",
+      "userCreated": "User created."
+    },
+    "detail": {
+      "title": "User Details",
+      "close": "Close",
+      "displayName": "Display Name",
+      "userName": "User Name",
+      "email": "Email",
+      "status": "Status",
+      "directorySource": "Directory Source",
+      "directoryObjectId": "Directory Object ID",
+      "nationalIdMasked": "National ID Masked",
+      "lastLogin": "Last Login",
+      "roles": "Roles",
+      "createdAt": "Created At",
+      "createdBy": "Created By",
+      "updatedAt": "Updated At",
+      "updatedBy": "Updated By"
+    },
+    "add": {
+      "title": "Add User",
+      "description": "Search directory users and add them to the portal.",
+      "searchPlaceholder": "Search directory user by name, username or email",
+      "minSearch": "Enter at least 2 characters to search directory users.",
+      "alreadyAdded": "Already added",
+      "notInPortalYet": "Not in portal yet",
+      "create": "Add",
+      "creating": "Adding...",
+      "noResults": "No directory users found.",
+      "error": "User could not be created."
+    },
+    "assignRoles": {
+      "title": "Assign Roles",
+      "description": "Select roles for the user and save.",
+      "save": "Save",
+      "saving": "Saving...",
+      "noRoles": "No active roles found.",
+      "error": "User roles could not be updated."
+    }
+  }
+}
+

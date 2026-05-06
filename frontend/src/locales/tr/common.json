@@ -1,0 +1,29 @@
+{
+  "common": {
+    "actions": {
+      "save": "Kaydet",
+      "cancel": "Vazgeç",
+      "refresh": "Yenile",
+      "logout": "Çıkış yap",
+      "back": "Geri dön",
+      "goToDashboard": "Kontrol paneline dön",
+      "close": "Kapat",
+      "search": "Ara"
+    },
+    "status": {
+      "active": "Aktif",
+      "passive": "Pasif",
+      "all": "Tümü"
+    },
+    "language": {
+      "turkish": "Türkçe",
+      "english": "İngilizce",
+      "label": "Dil"
+    },
+    "loading": "Yükleniyor...",
+    "empty": "Kayıt bulunamadı.",
+    "error": "Bir hata oluştu.",
+    "notAvailable": "Mevcut değil"
+  }
+}
+

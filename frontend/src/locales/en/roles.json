@@ -1,0 +1,87 @@
+{
+  "roles": {
+    "title": "Roles",
+    "description": "Manage role definitions and permission assignments.",
+    "sections": {
+      "listTitle": "Role List"
+    },
+    "search": {
+      "placeholder": "Search roles..."
+    },
+    "filters": {
+      "active": "Active",
+      "passive": "Passive",
+      "all": "All",
+      "system": "System",
+      "custom": "Custom"
+    },
+    "actions": {
+      "addRole": "Add Role",
+      "refresh": "Refresh",
+      "detail": "Detail",
+      "edit": "Edit",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "assignPermissions": "Assign Permissions"
+    },
+    "table": {
+      "name": "Name",
+      "code": "Code",
+      "description": "Description",
+      "type": "Type",
+      "status": "Status",
+      "permissionCount": "Permission Count",
+      "actions": "Actions"
+    },
+    "type": {
+      "system": "System",
+      "custom": "Custom"
+    },
+    "empty": {
+      "title": "No roles found",
+      "description": "No roles found for current filters."
+    },
+    "errors": {
+      "loadFailed": "Roles could not be loaded."
+    },
+    "detail": {
+      "title": "Role Details",
+      "name": "Name",
+      "code": "Code",
+      "description": "Description",
+      "type": "Type",
+      "status": "Status",
+      "permissions": "Permissions",
+      "createdAt": "Created At",
+      "createdBy": "Created By",
+      "updatedAt": "Updated At",
+      "updatedBy": "Updated By",
+      "systemNotice": "System roles are managed by the application."
+    },
+    "form": {
+      "createTitle": "Add Role",
+      "editTitle": "Edit Role",
+      "name": "Name",
+      "code": "Code",
+      "description": "Description",
+      "isActive": "Active",
+      "save": "Save",
+      "create": "Create",
+      "update": "Update",
+      "codeHelp": "Use letters, numbers, dot, dash or underscore. Spaces and Turkish characters are not allowed.",
+      "error": "Operation failed."
+    },
+    "assignPermissions": {
+      "title": "Assign Permissions",
+      "description": "Select permissions for the selected role.",
+      "save": "Save",
+      "saving": "Saving...",
+      "noPermissions": "No permissions found.",
+      "error": "Role permissions could not be updated."
+    },
+    "messages": {
+      "statusUpdateFailed": "Role status could not be updated."
+    }
+  }
+}
+

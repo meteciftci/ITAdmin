@@ -1,0 +1,13 @@
+{
+  "navigation": {
+    "groups": {
+      "main": "Ana",
+      "administration": "Yönetim"
+    },
+    "dashboard": "Kontrol Paneli",
+    "users": "Kullanıcılar",
+    "roles": "Roller",
+    "permissions": "İzinler"
+  }
+}
+

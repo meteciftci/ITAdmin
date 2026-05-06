@@ -12,8 +12,10 @@ import { getSetupStatus } from "@/features/setup/api";
 import { SetupRequiredPage } from "@/features/setup/SetupRequiredPage";
 import { UsersPage } from "@/features/users/UsersPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
+import { useTranslation } from "react-i18next";
 
 function RootRedirect() {
+  const { t } = useTranslation(["common"]);
   const accessToken = useAuthStore((state) => state.accessToken);
   const setupQuery = useQuery({
     queryKey: ["setup", "status"],
@@ -21,7 +23,7 @@ function RootRedirect() {
   });
 
   if (setupQuery.isLoading) {
-    return <div className="p-6 text-sm text-muted-foreground">Loading...</div>;
+    return <div className="p-6 text-sm text-muted-foreground">{t("loading")}</div>;
   }
 
   if (setupQuery.data?.isSetupRequired) {

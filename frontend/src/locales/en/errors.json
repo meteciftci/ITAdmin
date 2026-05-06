@@ -1,0 +1,16 @@
+{
+  "errors": {
+    "forbidden": {
+      "title": "Access denied",
+      "description": "You don't have permission to view this page."
+    },
+    "notFound": {
+      "title": "Page not found",
+      "description": "The page you are looking for might have been moved or removed."
+    },
+    "generic": "An unexpected error occurred.",
+    "goBack": "Go back",
+    "goDashboard": "Go to dashboard"
+  }
+}
+

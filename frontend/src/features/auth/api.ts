@@ -34,3 +34,14 @@ export const getCurrentUser = async (): Promise<CurrentUser> => {
   const { data } = await apiClient.get<CurrentUser>("/auth/me");
   return data;
 };
+
+export type UpdateCurrentUserPreferencesRequest = {
+  preferredLanguage: string;
+};
+
+export const updateCurrentUserPreferences = async (
+  request: UpdateCurrentUserPreferencesRequest,
+): Promise<CurrentUser> => {
+  const { data } = await apiClient.patch<CurrentUser>("/auth/me/preferences", request);
+  return data;
+};

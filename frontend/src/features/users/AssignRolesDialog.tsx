@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getRoles, updateUserRoles } from "@/features/users/api";
 import type { RoleListItem } from "@/features/users/types";
+import { useTranslation } from "react-i18next";
 
 type AssignRolesDialogProps = {
   userId: string;
@@ -30,6 +31,7 @@ export function AssignRolesDialog({
   onClose,
   onSaved,
 }: AssignRolesDialogProps) {
+  const { t } = useTranslation(["users", "common"]);
   const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -63,7 +65,7 @@ export function AssignRolesDialog({
     },
     onError: (error) => {
       setErrorMessage(
-        getErrorMessage(error, "User roles could not be updated."),
+        getErrorMessage(error, t("users:assignRoles.error")),
       );
     },
   });
@@ -84,28 +86,28 @@ export function AssignRolesDialog({
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between">
-        <CardTitle>Assign Roles</CardTitle>
+        <CardTitle>{t("users:assignRoles.title")}</CardTitle>
         <Button variant="ghost" onClick={onClose}>
-          Close
+          {t("common:actions.close")}
         </Button>
       </CardHeader>
       <CardContent className="space-y-4">
         {errorMessage ? (
           <Alert variant="destructive">
-            <AlertTitle>Operation Failed</AlertTitle>
+            <AlertTitle>{t("common:error")}</AlertTitle>
             <AlertDescription>{errorMessage}</AlertDescription>
           </Alert>
         ) : null}
 
         {rolesQuery.isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading roles...</p>
+          <p className="text-sm text-muted-foreground">{t("common:loading")}</p>
         ) : null}
 
         {rolesQuery.isError ? (
           <Alert variant="destructive">
-            <AlertTitle>Roles Could Not Be Loaded</AlertTitle>
+            <AlertTitle>{t("users:assignRoles.noRoles")}</AlertTitle>
             <AlertDescription>
-              {getErrorMessage(rolesQuery.error, "Could not fetch active roles.")}
+              {getErrorMessage(rolesQuery.error, t("users:assignRoles.noRoles"))}
             </AlertDescription>
           </Alert>
         ) : null}
@@ -126,7 +128,7 @@ export function AssignRolesDialog({
                 <span>
                   <span className="block font-medium">{role.name}</span>
                   <span className="block text-xs text-muted-foreground">
-                    {role.code} | permissions: {role.permissionCount}
+                    {role.code} | {role.permissionCount}
                   </span>
                 </span>
               </label>
@@ -136,13 +138,15 @@ export function AssignRolesDialog({
 
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={onClose}>
-            Cancel
+            {t("common:actions.cancel")}
           </Button>
           <Button
             onClick={handleSave}
             disabled={updateRolesMutation.isPending || rolesQuery.isLoading}
           >
-            {updateRolesMutation.isPending ? "Saving..." : "Save"}
+            {updateRolesMutation.isPending
+              ? t("users:assignRoles.saving")
+              : t("users:assignRoles.save")}
           </Button>
         </div>
       </CardContent>

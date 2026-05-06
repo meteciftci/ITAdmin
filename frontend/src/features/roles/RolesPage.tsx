@@ -20,6 +20,7 @@ import { RoleDetailDialog } from "@/features/roles/RoleDetailDialog";
 import { RoleFormDialog } from "@/features/roles/RoleFormDialog";
 import type { RoleListItem } from "@/features/roles/types";
 import { canAccess } from "@/lib/permissions";
+import { useTranslation } from "react-i18next";
 
 type StatusFilter = "active" | "passive" | "all";
 type TypeFilter = "all" | "system" | "custom";
@@ -31,6 +32,7 @@ const getErrorMessage = (error: unknown, fallback: string): string => {
 };
 
 export function RolesPage() {
+  const { t } = useTranslation(["roles", "common"]);
   const queryClient = useQueryClient();
   const currentUser = useAuthStore((state) => state.user);
   const canCreate = canAccess(currentUser, "Roles.Create");
@@ -91,7 +93,7 @@ export function RolesPage() {
       }
     },
     onError: (error) => {
-      setAlertMessage(getErrorMessage(error, "Role status could not be updated."));
+      setAlertMessage(getErrorMessage(error, t("roles:messages.statusUpdateFailed")));
     },
   });
 
@@ -106,7 +108,9 @@ export function RolesPage() {
     if (role.isSystem || !canUpdate) return;
     const nextValue = !role.isActive;
     const confirmed = window.confirm(
-      nextValue ? `Activate ${role.name}?` : `Deactivate ${role.name}?`,
+      nextValue
+        ? `${t("roles:actions.activate")} ${role.name}?`
+        : `${t("roles:actions.deactivate")} ${role.name}?`,
     );
     if (!confirmed) return;
     updateStatusMutation.mutate({ id: role.id, isActive: nextValue });
@@ -125,50 +129,52 @@ export function RolesPage() {
   return (
     <section className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Roles</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("roles:title")}</h1>
         <p className="text-sm text-muted-foreground">
-          Manage role definitions and permission assignments.
+          {t("roles:description")}
         </p>
       </div>
 
       {alertMessage ? (
         <Alert variant="destructive">
-          <AlertTitle>Operation Failed</AlertTitle>
+          <AlertTitle>{t("common:error")}</AlertTitle>
           <AlertDescription>{alertMessage}</AlertDescription>
         </Alert>
       ) : null}
 
       <Card>
         <CardHeader className="space-y-3">
-          <CardTitle>Role List</CardTitle>
+          <CardTitle>{t("roles:sections.listTitle")}</CardTitle>
           <div className="grid gap-2 md:grid-cols-[1fr_150px_150px_auto]">
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search roles..."
+              placeholder={t("roles:search.placeholder")}
             />
             <Select
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
             >
-              <option value="active">Active</option>
-              <option value="passive">Passive</option>
-              <option value="all">All</option>
+              <option value="active">{t("common:status.active")}</option>
+              <option value="passive">{t("common:status.passive")}</option>
+              <option value="all">{t("common:status.all")}</option>
             </Select>
             <Select
               value={typeFilter}
               onChange={(event) => setTypeFilter(event.target.value as TypeFilter)}
             >
-              <option value="all">All</option>
-              <option value="system">System</option>
-              <option value="custom">Custom</option>
+              <option value="all">{t("common:status.all")}</option>
+              <option value="system">{t("roles:type.system")}</option>
+              <option value="custom">{t("roles:type.custom")}</option>
             </Select>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={handleRefresh}>
-                Refresh
+                {t("common:actions.refresh")}
               </Button>
               {canCreate ? (
-                <Button onClick={() => setShowCreateDialog(true)}>Add Role</Button>
+                <Button onClick={() => setShowCreateDialog(true)}>
+                  {t("roles:actions.addRole")}
+                </Button>
               ) : null}
             </div>
           </div>
@@ -184,16 +190,16 @@ export function RolesPage() {
 
           {rolesQuery.isError ? (
             <Alert variant="destructive">
-              <AlertTitle>Roles Could Not Be Loaded</AlertTitle>
+              <AlertTitle>{t("roles:errors.loadFailed")}</AlertTitle>
               <AlertDescription>
-                {getErrorMessage(rolesQuery.error, "Unable to fetch role list.")}
+                {getErrorMessage(rolesQuery.error, t("roles:errors.loadFailed"))}
               </AlertDescription>
             </Alert>
           ) : null}
 
           {rolesQuery.isSuccess && !roles.length ? (
             <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-              No roles found for current filters.
+              {t("roles:empty.description")}
             </div>
           ) : null}
 
@@ -202,13 +208,13 @@ export function RolesPage() {
               <table className="min-w-full text-sm">
                 <thead className="bg-muted/40 text-left">
                   <tr>
-                    <th className="px-3 py-2 font-medium">Name</th>
-                    <th className="px-3 py-2 font-medium">Code</th>
-                    <th className="px-3 py-2 font-medium">Description</th>
-                    <th className="px-3 py-2 font-medium">Type</th>
-                    <th className="px-3 py-2 font-medium">Status</th>
-                    <th className="px-3 py-2 font-medium">Permission Count</th>
-                    <th className="px-3 py-2 font-medium">Actions</th>
+                    <th className="px-3 py-2 font-medium">{t("roles:table.name")}</th>
+                    <th className="px-3 py-2 font-medium">{t("roles:table.code")}</th>
+                    <th className="px-3 py-2 font-medium">{t("roles:table.description")}</th>
+                    <th className="px-3 py-2 font-medium">{t("roles:table.type")}</th>
+                    <th className="px-3 py-2 font-medium">{t("roles:table.status")}</th>
+                    <th className="px-3 py-2 font-medium">{t("roles:table.permissionCount")}</th>
+                    <th className="px-3 py-2 font-medium">{t("roles:table.actions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -228,12 +234,12 @@ export function RolesPage() {
                         </td>
                         <td className="px-3 py-2">
                           <Badge variant={isSystemRole ? "warning" : "secondary"}>
-                            {isSystemRole ? "System" : "Custom"}
+                            {isSystemRole ? t("roles:type.system") : t("roles:type.custom")}
                           </Badge>
                         </td>
                         <td className="px-3 py-2">
                           <Badge variant={role.isActive ? "success" : "outline"}>
-                            {role.isActive ? "Active" : "Passive"}
+                            {role.isActive ? t("common:status.active") : t("common:status.passive")}
                           </Badge>
                         </td>
                         <td className="px-3 py-2">
@@ -246,7 +252,7 @@ export function RolesPage() {
                               size="sm"
                               onClick={() => setSelectedRoleForDetail(role)}
                             >
-                              Detail
+                              {t("roles:actions.detail")}
                             </Button>
                             {canUpdate ? (
                               <Button
@@ -255,7 +261,7 @@ export function RolesPage() {
                                 disabled={!canEditRole}
                                 onClick={() => setSelectedRoleForEdit(role)}
                               >
-                                Edit
+                                {t("roles:actions.edit")}
                               </Button>
                             ) : null}
                             {canUpdate ? (
@@ -265,7 +271,9 @@ export function RolesPage() {
                                 disabled={!canChangeStatus || updateStatusMutation.isPending}
                                 onClick={() => handleToggleStatus(role)}
                               >
-                                {role.isActive ? "Deactivate" : "Activate"}
+                                {role.isActive
+                                  ? t("roles:actions.deactivate")
+                                  : t("roles:actions.activate")}
                               </Button>
                             ) : null}
                             {canAssignPermissions && canViewPermissions ? (
@@ -275,7 +283,7 @@ export function RolesPage() {
                                 disabled={!canAssignRolePermissions}
                                 onClick={() => setSelectedRoleForPermissions(role)}
                               >
-                                Assign Permissions
+                                {t("roles:actions.assignPermissions")}
                               </Button>
                             ) : null}
                           </div>

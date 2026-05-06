@@ -19,6 +19,7 @@ type AuthState = {
   isAuthenticated: boolean;
   setTokens: (tokens: TokenPayload) => void;
   setUser: (user: CurrentUser | null) => void;
+  updateUser: (patch: Partial<CurrentUser>) => void;
   clearAuth: () => void;
 };
 
@@ -41,6 +42,10 @@ export const useAuthStore = create<AuthState>()(
           isAuthenticated: Boolean(tokens.accessToken),
         }),
       setUser: (user) => set({ user }),
+      updateUser: (patch) =>
+        set((state) => ({
+          user: state.user ? { ...state.user, ...patch } : state.user,
+        })),
       clearAuth: () => set(initialState),
     }),
     {

@@ -37,4 +37,5 @@ export type CurrentUser = {
   roles: string[];
   permissions: string[];
   isSuperAdmin: boolean;
+  preferredLanguage: "tr" | "en" | string;
 };

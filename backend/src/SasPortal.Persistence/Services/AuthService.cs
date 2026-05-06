@@ -7,7 +7,6 @@ using SasPortal.Application.Common.Security;
 using SasPortal.Domain.Entities;
 using SasPortal.Domain.Enums;
 using SasPortal.Persistence.Context;
-using System.Text.Json;
 
 namespace SasPortal.Persistence.Services;
 
@@ -23,11 +22,6 @@ public sealed class AuthService(
     private const string NationalIdApplicationSettingKey = "Directory:NationalIdAttribute";
 
     private readonly JwtOptions _jwtOptions = jwtOptions.Value;
-    private static readonly JsonSerializerOptions AuditJsonSerializerOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
-
     public async Task<AuthTokenResult> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(request.UserName))
@@ -761,38 +755,10 @@ public sealed class AuthService(
                 return new UpdateCurrentUserPreferencesResult(false, "User is inactive.", null);
             }
 
-            var oldPreferredLanguage = string.IsNullOrWhiteSpace(user.PreferredLanguage)
-                ? SupportedLanguages.Turkish
-                : user.PreferredLanguage;
-
             var now = DateTime.UtcNow;
             user.PreferredLanguage = normalizedLanguage;
             user.UpdatedAt = now;
             user.UpdatedBy = request.ActorUserName ?? "auth";
-
-            var oldValuesPayload = JsonSerializer.Serialize(
-                new { preferredLanguage = oldPreferredLanguage },
-                AuditJsonSerializerOptions);
-            var newValuesPayload = JsonSerializer.Serialize(
-                new
-                {
-                    preferredLanguage = normalizedLanguage,
-                    summary = "User preferences updated."
-                },
-                AuditJsonSerializerOptions);
-
-            await context.AuditLogs.AddAsync(
-                new AuditLog
-                {
-                    Action = AuditActionType.Update,
-                    EntityName = "PortalUser",
-                    EntityId = user.Id.ToString(),
-                    UserName = request.ActorUserName,
-                    OldValues = oldValuesPayload,
-                    NewValues = newValuesPayload,
-                    CreatedAt = now
-                },
-                cancellationToken);
 
             await context.SaveChangesAsync(cancellationToken);
 

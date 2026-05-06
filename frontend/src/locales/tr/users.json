@@ -1,0 +1,85 @@
+{
+  "users": {
+    "title": "Kullanıcılar",
+    "description": "Portal kullanıcılarını ve rol atamalarını yönetin.",
+    "sections": {
+      "listTitle": "Kullanıcı Listesi"
+    },
+    "search": {
+      "placeholder": "Kullanıcı ara..."
+    },
+    "filters": {
+      "active": "Aktif",
+      "passive": "Pasif",
+      "all": "Tümü"
+    },
+    "actions": {
+      "addUser": "Kullanıcı Ekle",
+      "refresh": "Yenile",
+      "detail": "Detay",
+      "activate": "Aktife Al",
+      "deactivate": "Pasife Al",
+      "assignRoles": "Rol Ata"
+    },
+    "table": {
+      "displayName": "Görünen Ad",
+      "userName": "Kullanıcı Adı",
+      "email": "E-posta",
+      "nationalIdMasked": "Maskeli Kimlik No",
+      "roles": "Roller",
+      "status": "Durum",
+      "lastLogin": "Son Giriş",
+      "actions": "İşlemler"
+    },
+    "empty": {
+      "title": "Kullanıcı bulunamadı",
+      "description": "Mevcut filtrelere uygun kullanıcı bulunamadı."
+    },
+    "errors": {
+      "loadFailed": "Kullanıcılar yüklenemedi."
+    },
+    "messages": {
+      "statusUpdated": "Kullanıcı durumu güncellenemedi.",
+      "rolesUpdated": "Kullanıcı rolleri güncellendi.",
+      "userCreated": "Kullanıcı oluşturuldu."
+    },
+    "detail": {
+      "title": "Kullanıcı Detayları",
+      "close": "Kapat",
+      "displayName": "Görünen Ad",
+      "userName": "Kullanıcı Adı",
+      "email": "E-posta",
+      "status": "Durum",
+      "directorySource": "Dizin Kaynağı",
+      "directoryObjectId": "Dizin Object ID",
+      "nationalIdMasked": "Maskeli Kimlik No",
+      "lastLogin": "Son Giriş",
+      "roles": "Roller",
+      "createdAt": "Oluşturulma",
+      "createdBy": "Oluşturan",
+      "updatedAt": "Güncellenme",
+      "updatedBy": "Güncelleyen"
+    },
+    "add": {
+      "title": "Kullanıcı Ekle",
+      "description": "Dizinden kullanıcı arayın ve portala ekleyin.",
+      "searchPlaceholder": "İsim, kullanıcı adı veya e-posta ile dizinde ara",
+      "minSearch": "Dizinde aramak için en az 2 karakter girin.",
+      "alreadyAdded": "Zaten eklendi",
+      "notInPortalYet": "Henüz portalda değil",
+      "create": "Ekle",
+      "creating": "Ekleniyor...",
+      "noResults": "Dizinde kullanıcı bulunamadı.",
+      "error": "Kullanıcı oluşturulamadı."
+    },
+    "assignRoles": {
+      "title": "Rol Ata",
+      "description": "Kullanıcı için roller seçin ve kaydedin.",
+      "save": "Kaydet",
+      "saving": "Kaydediliyor...",
+      "noRoles": "Aktif rol bulunamadı.",
+      "error": "Kullanıcı rolleri güncellenemedi."
+    }
+  }
+}
+

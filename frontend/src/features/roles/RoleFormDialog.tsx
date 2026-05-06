@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { createRole, updateRole } from "@/features/roles/api";
 import type { RoleListItem } from "@/features/roles/types";
+import { useTranslation } from "react-i18next";
 
 type ApiErrorPayload = { message?: string };
 
@@ -41,6 +42,7 @@ export function RoleFormDialog({
   onClose,
   onSaved,
 }: RoleFormDialogProps) {
+  const { t } = useTranslation(["roles", "common"]);
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [description, setDescription] = useState("");
@@ -49,7 +51,7 @@ export function RoleFormDialog({
 
   const isSystemRole = Boolean(role?.isSystem);
   const isEdit = mode === "edit";
-  const dialogTitle = isEdit ? "Edit Role" : "Add Role";
+  const dialogTitle = isEdit ? t("roles:form.editTitle") : t("roles:form.createTitle");
 
   useEffect(() => {
     if (!open) return;
@@ -101,7 +103,7 @@ export function RoleFormDialog({
       setErrorMessage(
         getErrorMessage(
           error,
-          isEdit ? "Role could not be updated." : "Role could not be created.",
+          t("roles:form.error"),
         ),
       );
     },
@@ -118,30 +120,28 @@ export function RoleFormDialog({
         <DialogHeader>
           <DialogTitle>{dialogTitle}</DialogTitle>
           <DialogDescription>
-            {isEdit
-              ? "Update role information."
-              : "Create a custom role definition."}
+            {t("roles:description")}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 p-4">
           {errorMessage ? (
             <Alert variant="destructive">
-              <AlertTitle>Operation Failed</AlertTitle>
+              <AlertTitle>{t("common:error")}</AlertTitle>
               <AlertDescription>{errorMessage}</AlertDescription>
             </Alert>
           ) : null}
 
           {isSystemRole ? (
             <Alert>
-              <AlertTitle>System Role</AlertTitle>
+              <AlertTitle>{t("roles:type.system")}</AlertTitle>
               <AlertDescription>
-                System roles are managed by the application and cannot be edited.
+                {t("roles:detail.systemNotice")}
               </AlertDescription>
             </Alert>
           ) : null}
 
           <div className="space-y-2">
-            <Label htmlFor="role-name">Name</Label>
+            <Label htmlFor="role-name">{t("roles:form.name")}</Label>
             <Input
               id="role-name"
               value={name}
@@ -151,7 +151,7 @@ export function RoleFormDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="role-code">Code</Label>
+            <Label htmlFor="role-code">{t("roles:form.code")}</Label>
             <Input
               id="role-code"
               value={code}
@@ -160,13 +160,12 @@ export function RoleFormDialog({
               disabled={isSystemRole || saveMutation.isPending || isEdit}
             />
             <p className="text-xs text-muted-foreground">
-              Use letters, numbers, dot, dash or underscore. Spaces and Turkish
-              characters are not allowed.
+              {t("roles:form.codeHelp")}
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="role-description">Description</Label>
+            <Label htmlFor="role-description">{t("roles:form.description")}</Label>
             <Textarea
               id="role-description"
               value={description}
@@ -181,18 +180,18 @@ export function RoleFormDialog({
               onChange={(event) => setIsActive(event.target.checked)}
               disabled={isSystemRole || saveMutation.isPending}
             />
-            Active
+            {t("common:status.active")}
           </label>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Cancel
+            {t("common:actions.cancel")}
           </Button>
           <Button
             onClick={handleSave}
             disabled={isSaveDisabled || saveMutation.isPending}
           >
-            {saveMutation.isPending ? "Saving..." : "Save"}
+            {saveMutation.isPending ? t("roles:assignPermissions.saving") : t("roles:form.save")}
           </Button>
         </DialogFooter>
       </DialogContent>

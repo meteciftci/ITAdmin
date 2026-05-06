@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { getPermissions, getRoleById, updateRolePermissions } from "@/features/roles/api";
 import type { RoleListItem } from "@/features/roles/types";
+import { useTranslation } from "react-i18next";
 
 type ApiErrorPayload = { message?: string };
 
@@ -37,6 +38,7 @@ export function AssignPermissionsDialog({
   onClose,
   onSaved,
 }: AssignPermissionsDialogProps) {
+  const { t } = useTranslation(["roles", "common"]);
   const [selectedPermissionIds, setSelectedPermissionIds] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -83,7 +85,7 @@ export function AssignPermissionsDialog({
     },
     onError: (error) => {
       setErrorMessage(
-        getErrorMessage(error, "Role permissions could not be updated."),
+        getErrorMessage(error, t("roles:assignPermissions.error")),
       );
     },
   });
@@ -109,55 +111,55 @@ export function AssignPermissionsDialog({
     <Dialog open={open}>
       <DialogContent onOpenChange={(next) => !next && onClose()} className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Assign Permissions</DialogTitle>
+          <DialogTitle>{t("roles:assignPermissions.title")}</DialogTitle>
           <DialogDescription>
-            Select permissions for {role?.name ?? "selected role"}.
+            {t("roles:assignPermissions.description")}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 p-4">
           {errorMessage ? (
             <Alert variant="destructive">
-              <AlertTitle>Operation Failed</AlertTitle>
+              <AlertTitle>{t("common:error")}</AlertTitle>
               <AlertDescription>{errorMessage}</AlertDescription>
             </Alert>
           ) : null}
 
           {isSystemRole ? (
             <Alert>
-              <AlertTitle>System Role</AlertTitle>
+              <AlertTitle>{t("roles:type.system")}</AlertTitle>
               <AlertDescription>
-                System roles are managed by the application and cannot be changed.
+                {t("roles:detail.systemNotice")}
               </AlertDescription>
             </Alert>
           ) : null}
 
           <Input
-            placeholder="Search permissions..."
+            placeholder={t("common:actions.search")}
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             disabled={isSystemRole || saveMutation.isPending}
           />
 
           {(roleDetailQuery.isLoading || permissionsQuery.isLoading) && (
-            <p className="text-sm text-muted-foreground">Loading permissions...</p>
+            <p className="text-sm text-muted-foreground">{t("common:loading")}</p>
           )}
 
           {roleDetailQuery.isError ? (
             <Alert variant="destructive">
-              <AlertTitle>Role Could Not Be Loaded</AlertTitle>
+              <AlertTitle>{t("common:error")}</AlertTitle>
               <AlertDescription>
-                {getErrorMessage(roleDetailQuery.error, "Unable to fetch role detail.")}
+                {getErrorMessage(roleDetailQuery.error, t("common:error"))}
               </AlertDescription>
             </Alert>
           ) : null}
 
           {permissionsQuery.isError ? (
             <Alert variant="destructive">
-              <AlertTitle>Permissions Could Not Be Loaded</AlertTitle>
+              <AlertTitle>{t("common:error")}</AlertTitle>
               <AlertDescription>
                 {getErrorMessage(
                   permissionsQuery.error,
-                  "Unable to fetch permission list.",
+                  t("common:error"),
                 )}
               </AlertDescription>
             </Alert>
@@ -193,13 +195,13 @@ export function AssignPermissionsDialog({
 
           {permissionsQuery.isSuccess && !filteredPermissions.length ? (
             <p className="text-sm text-muted-foreground">
-              No permissions found for current search.
+              {t("roles:assignPermissions.noPermissions")}
             </p>
           ) : null}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Cancel
+            {t("common:actions.cancel")}
           </Button>
           <Button
             onClick={handleSave}
@@ -210,7 +212,7 @@ export function AssignPermissionsDialog({
               permissionsQuery.isLoading
             }
           >
-            {saveMutation.isPending ? "Saving..." : "Save"}
+            {saveMutation.isPending ? t("roles:assignPermissions.saving") : t("roles:assignPermissions.save")}
           </Button>
         </DialogFooter>
       </DialogContent>

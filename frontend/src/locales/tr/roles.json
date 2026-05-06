@@ -1,0 +1,87 @@
+{
+  "roles": {
+    "title": "Roller",
+    "description": "Rol tanımlarını ve izin atamalarını yönetin.",
+    "sections": {
+      "listTitle": "Rol Listesi"
+    },
+    "search": {
+      "placeholder": "Rol ara..."
+    },
+    "filters": {
+      "active": "Aktif",
+      "passive": "Pasif",
+      "all": "Tümü",
+      "system": "Sistem",
+      "custom": "Özel"
+    },
+    "actions": {
+      "addRole": "Rol Ekle",
+      "refresh": "Yenile",
+      "detail": "Detay",
+      "edit": "Düzenle",
+      "activate": "Aktife Al",
+      "deactivate": "Pasife Al",
+      "assignPermissions": "İzin Ata"
+    },
+    "table": {
+      "name": "Ad",
+      "code": "Kod",
+      "description": "Açıklama",
+      "type": "Tür",
+      "status": "Durum",
+      "permissionCount": "İzin Sayısı",
+      "actions": "İşlemler"
+    },
+    "type": {
+      "system": "Sistem",
+      "custom": "Özel"
+    },
+    "empty": {
+      "title": "Rol bulunamadı",
+      "description": "Mevcut filtrelere uygun rol bulunamadı."
+    },
+    "errors": {
+      "loadFailed": "Roller yüklenemedi."
+    },
+    "detail": {
+      "title": "Rol Detayları",
+      "name": "Ad",
+      "code": "Kod",
+      "description": "Açıklama",
+      "type": "Tür",
+      "status": "Durum",
+      "permissions": "İzinler",
+      "createdAt": "Oluşturulma",
+      "createdBy": "Oluşturan",
+      "updatedAt": "Güncellenme",
+      "updatedBy": "Güncelleyen",
+      "systemNotice": "Sistem rolleri uygulama tarafından yönetilir."
+    },
+    "form": {
+      "createTitle": "Rol Ekle",
+      "editTitle": "Rol Düzenle",
+      "name": "Ad",
+      "code": "Kod",
+      "description": "Açıklama",
+      "isActive": "Aktif",
+      "save": "Kaydet",
+      "create": "Oluştur",
+      "update": "Güncelle",
+      "codeHelp": "Harf, sayı, nokta, tire veya alt çizgi kullanın. Boşluk ve Türkçe karakter kullanılamaz.",
+      "error": "İşlem başarısız."
+    },
+    "assignPermissions": {
+      "title": "İzin Ata",
+      "description": "Seçili rol için izinleri belirleyin.",
+      "save": "Kaydet",
+      "saving": "Kaydediliyor...",
+      "noPermissions": "Uygun izin bulunamadı.",
+      "error": "Rol izinleri güncellenemedi."
+    },
+    "messages": {
+      "statusUpdateFailed": "Rol durumu güncellenemedi."
+    }
+  }
+}
+

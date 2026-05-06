@@ -1,0 +1,12 @@
+{
+  "dashboard": {
+    "title": "SAS Portal Dashboard",
+    "description": "View the general portal overview.",
+    "welcome": "Welcome",
+    "displayName": "Display name",
+    "roles": "Roles",
+    "permissions": "Permissions",
+    "permissionCount": "Permission count"
+  }
+}
+

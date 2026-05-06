@@ -1,0 +1,13 @@
+{
+  "navigation": {
+    "groups": {
+      "main": "Main",
+      "administration": "Administration"
+    },
+    "dashboard": "Dashboard",
+    "users": "Users",
+    "roles": "Roles",
+    "permissions": "Permissions"
+  }
+}
+

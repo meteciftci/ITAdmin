@@ -5,6 +5,7 @@ import type { AxiosError } from "axios";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DateTimeText } from "@/components/common/DateTimeText";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,6 +16,7 @@ import { AddUserDialog } from "@/features/users/AddUserDialog";
 import { AssignRolesDialog } from "@/features/users/AssignRolesDialog";
 import { UserDetailDialog } from "@/features/users/UserDetailDialog";
 import type { UserListItem } from "@/features/users/types";
+import { useTranslation } from "react-i18next";
 
 type StatusFilter = "active" | "passive" | "all";
 type ApiErrorPayload = { message?: string };
@@ -24,14 +26,8 @@ const getErrorMessage = (error: unknown, fallback: string): string => {
   return apiError.response?.data?.message ?? fallback;
 };
 
-const formatDateTime = (value: string | null): string => {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-  return date.toLocaleString();
-};
-
 export function UsersPage() {
+  const { t } = useTranslation(["users", "common"]);
   const queryClient = useQueryClient();
   const currentUser = useAuthStore((state) => state.user);
   const canCreate = canAccess(currentUser, "Users.Create");
@@ -83,7 +79,7 @@ export function UsersPage() {
     },
     onError: (error) => {
       setAlertMessage(
-        getErrorMessage(error, "User status could not be updated."),
+        getErrorMessage(error, t("users:messages.statusUpdated")),
       );
     },
   });
@@ -101,8 +97,8 @@ export function UsersPage() {
     const nextValue = !user.isActive;
     const confirmed = window.confirm(
       nextValue
-        ? `Activate ${user.displayName || user.userName}?`
-        : `Deactivate ${user.displayName || user.userName}?`,
+        ? `${t("users:actions.activate")} ${user.displayName || user.userName}?`
+        : `${t("users:actions.deactivate")} ${user.displayName || user.userName}?`,
     );
     if (!confirmed) return;
     updateUserStatusMutation.mutate({ id: user.id, isActive: nextValue });
@@ -121,52 +117,54 @@ export function UsersPage() {
   return (
     <section className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Users</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("users:title")}</h1>
         <p className="text-sm text-muted-foreground">
-          Manage portal users and role assignments.
+          {t("users:description")}
         </p>
       </div>
 
       {alertMessage ? (
         <Alert variant="destructive">
-          <AlertTitle>Operation Failed</AlertTitle>
+          <AlertTitle>{t("common:error")}</AlertTitle>
           <AlertDescription>{alertMessage}</AlertDescription>
         </Alert>
       ) : null}
 
       <Card>
         <CardHeader className="space-y-3">
-          <CardTitle>User List</CardTitle>
+          <CardTitle>{t("users:sections.listTitle")}</CardTitle>
           <div className="grid gap-2 md:grid-cols-[1fr_auto_auto_auto_auto]">
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search users..."
+              placeholder={t("users:search.placeholder")}
             />
             <Button
               variant={statusFilter === "active" ? "default" : "outline"}
               onClick={() => setStatusFilter("active")}
             >
-              Active
+              {t("common:status.active")}
             </Button>
             <Button
               variant={statusFilter === "passive" ? "default" : "outline"}
               onClick={() => setStatusFilter("passive")}
             >
-              Passive
+              {t("common:status.passive")}
             </Button>
             <Button
               variant={statusFilter === "all" ? "default" : "outline"}
               onClick={() => setStatusFilter("all")}
             >
-              All
+              {t("common:status.all")}
             </Button>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={handleRefresh}>
-                Refresh
+                {t("common:actions.refresh")}
               </Button>
               {canCreate ? (
-                <Button onClick={() => setShowAddUser(true)}>Add User</Button>
+                <Button onClick={() => setShowAddUser(true)}>
+                  {t("users:actions.addUser")}
+                </Button>
               ) : null}
             </div>
           </div>
@@ -182,16 +180,16 @@ export function UsersPage() {
 
           {usersQuery.isError ? (
             <Alert variant="destructive">
-              <AlertTitle>Users Could Not Be Loaded</AlertTitle>
+              <AlertTitle>{t("users:errors.loadFailed")}</AlertTitle>
               <AlertDescription>
-                {getErrorMessage(usersQuery.error, "Unable to fetch user list.")}
+                {getErrorMessage(usersQuery.error, t("users:errors.loadFailed"))}
               </AlertDescription>
             </Alert>
           ) : null}
 
           {usersQuery.isSuccess && !users.length ? (
             <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-              No users found for current filters.
+              {t("users:empty.description")}
             </div>
           ) : null}
 
@@ -200,14 +198,14 @@ export function UsersPage() {
               <table className="min-w-full text-sm">
                 <thead className="bg-muted/40 text-left">
                   <tr>
-                    <th className="px-3 py-2 font-medium">Display Name</th>
-                    <th className="px-3 py-2 font-medium">User Name</th>
-                    <th className="px-3 py-2 font-medium">Email</th>
-                    <th className="px-3 py-2 font-medium">National ID Masked</th>
-                    <th className="px-3 py-2 font-medium">Roles</th>
-                    <th className="px-3 py-2 font-medium">Status</th>
-                    <th className="px-3 py-2 font-medium">Last Login</th>
-                    <th className="px-3 py-2 font-medium">Actions</th>
+                    <th className="px-3 py-2 font-medium">{t("users:table.displayName")}</th>
+                    <th className="px-3 py-2 font-medium">{t("users:table.userName")}</th>
+                    <th className="px-3 py-2 font-medium">{t("users:table.email")}</th>
+                    <th className="px-3 py-2 font-medium">{t("users:table.nationalIdMasked")}</th>
+                    <th className="px-3 py-2 font-medium">{t("users:table.roles")}</th>
+                    <th className="px-3 py-2 font-medium">{t("users:table.status")}</th>
+                    <th className="px-3 py-2 font-medium">{t("users:table.lastLogin")}</th>
+                    <th className="px-3 py-2 font-medium">{t("users:table.actions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -241,10 +239,14 @@ export function UsersPage() {
                               : "rounded-md bg-amber-100 px-2 py-0.5 text-xs text-amber-700"
                           }
                         >
-                          {user.isActive ? "Active" : "Passive"}
+                          {user.isActive
+                            ? t("common:status.active")
+                            : t("common:status.passive")}
                         </span>
                       </td>
-                      <td className="px-3 py-2">{formatDateTime(user.lastLoginAt)}</td>
+                      <td className="px-3 py-2">
+                        <DateTimeText value={user.lastLoginAt} />
+                      </td>
                       <td className="px-3 py-2">
                         <div className="flex flex-wrap gap-1">
                           <Button
@@ -252,7 +254,7 @@ export function UsersPage() {
                             size="sm"
                             onClick={() => setSelectedUserForDetail(user)}
                           >
-                            Detail
+                            {t("users:actions.detail")}
                           </Button>
                           {canUpdate ? (
                             <Button
@@ -261,7 +263,9 @@ export function UsersPage() {
                               disabled={updateUserStatusMutation.isPending}
                               onClick={() => handleToggleStatus(user)}
                             >
-                              {user.isActive ? "Deactivate" : "Activate"}
+                              {user.isActive
+                                ? t("users:actions.deactivate")
+                                : t("users:actions.activate")}
                             </Button>
                           ) : null}
                           {canAssignRoles ? (
@@ -270,7 +274,7 @@ export function UsersPage() {
                               size="sm"
                               onClick={() => setSelectedUserForRoles(user)}
                             >
-                              Assign Roles
+                              {t("users:actions.assignRoles")}
                             </Button>
                           ) : null}
                         </div>
@@ -305,18 +309,18 @@ export function UsersPage() {
           <Separator />
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <h2 className="text-base font-medium">Selected User Details</h2>
+              <h2 className="text-base font-medium">{t("users:detail.title")}</h2>
               <Button variant="ghost" onClick={() => setSelectedUserForDetail(null)}>
-                Close
+                {t("common:actions.close")}
               </Button>
             </div>
             {userDetailQuery.isLoading ? (
               <Skeleton className="h-36 w-full" />
             ) : userDetailQuery.isError ? (
               <Alert variant="destructive">
-                <AlertTitle>Detail Could Not Be Loaded</AlertTitle>
+                <AlertTitle>{t("common:error")}</AlertTitle>
                 <AlertDescription>
-                  {getErrorMessage(userDetailQuery.error, "Unable to fetch user detail.")}
+                  {getErrorMessage(userDetailQuery.error, t("common:error"))}
                 </AlertDescription>
               </Alert>
             ) : userDetailQuery.data ? (

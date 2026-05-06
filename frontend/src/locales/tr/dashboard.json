@@ -1,0 +1,11 @@
+{
+  "dashboard": {
+    "title": "SAS Portal Kontrol Paneli",
+    "description": "Genel portal özetini görüntüleyin.",
+    "welcome": "Hoş geldiniz",
+    "displayName": "Görünen ad",
+    "roles": "Roller",
+    "permissions": "İzinler",
+    "permissionCount": "İzin sayısı"
+  }
+}

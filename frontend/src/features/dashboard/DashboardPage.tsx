@@ -1,29 +1,33 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useAuthStore } from "@/features/auth/auth-store";
+import { useTranslation } from "react-i18next";
 
 export function DashboardPage() {
+  const { t } = useTranslation(["dashboard"]);
   const user = useAuthStore((state) => state.user);
 
   return (
     <section className="space-y-4">
-      <h1 className="text-2xl font-semibold tracking-tight">SAS Portal Dashboard</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">
+        {t("title")}
+      </h1>
       <Card>
         <CardHeader>
-          <CardTitle>Welcome</CardTitle>
+          <CardTitle>{t("welcome")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <p>
-            <span className="font-medium">Display name:</span>{" "}
+            <span className="font-medium">{t("displayName")}:</span>{" "}
             {user?.displayName ?? "-"}
           </p>
           <Separator />
           <p>
-            <span className="font-medium">Roles:</span>{" "}
+            <span className="font-medium">{t("roles")}:</span>{" "}
             {user?.roles.length ? user.roles.join(", ") : "-"}
           </p>
           <p>
-            <span className="font-medium">Permissions count:</span>{" "}
+            <span className="font-medium">{t("permissionCount")}:</span>{" "}
             {user?.permissions.length ?? 0}
           </p>
         </CardContent>

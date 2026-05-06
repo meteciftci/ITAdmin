@@ -1,0 +1,16 @@
+{
+  "errors": {
+    "forbidden": {
+      "title": "Erişim reddedildi",
+      "description": "Bu sayfayı görüntülemek için yetkiniz yok."
+    },
+    "notFound": {
+      "title": "Sayfa bulunamadı",
+      "description": "Aradığınız sayfa taşınmış veya kaldırılmış olabilir."
+    },
+    "generic": "Beklenmeyen bir hata oluştu.",
+    "goBack": "Geri dön",
+    "goDashboard": "Dashboard'a git"
+  }
+}
+

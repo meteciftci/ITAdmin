@@ -1,0 +1,29 @@
+{
+  "common": {
+    "actions": {
+      "save": "Save",
+      "cancel": "Cancel",
+      "refresh": "Refresh",
+      "logout": "Logout",
+      "back": "Go back",
+      "goToDashboard": "Go to dashboard",
+      "close": "Close",
+      "search": "Search"
+    },
+    "status": {
+      "active": "Active",
+      "passive": "Passive",
+      "all": "All"
+    },
+    "language": {
+      "turkish": "Turkish",
+      "english": "English",
+      "label": "Language"
+    },
+    "loading": "Loading...",
+    "empty": "No records found.",
+    "error": "Something went wrong.",
+    "notAvailable": "N/A"
+  }
+}
+

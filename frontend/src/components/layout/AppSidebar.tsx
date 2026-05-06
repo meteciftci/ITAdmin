@@ -6,35 +6,37 @@ import { Separator } from "@/components/ui/separator";
 import { useAuthStore } from "@/features/auth/auth-store";
 import { canAccess } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 export function AppSidebar() {
+  const { t } = useTranslation(["navigation"]);
   const location = useLocation();
   const user = useAuthStore((state) => state.user);
 
   const menu = [
     {
-      title: "Dashboard",
+      title: t("dashboard"),
       to: "/dashboard",
       icon: LayoutDashboard,
       visible: true,
       enabled: true,
     },
     {
-      title: "Users",
+      title: t("users"),
       to: "/users",
       icon: Users,
       visible: canAccess(user, "Users.View"),
       enabled: true,
     },
     {
-      title: "Roles",
+      title: t("roles"),
       to: "/roles",
       icon: Shield,
       visible: canAccess(user, "Roles.View"),
       enabled: true,
     },
     {
-      title: "Permissions",
+      title: t("permissions"),
       to: "#",
       icon: LockKeyhole,
       visible: canAccess(user, "Permissions.View"),

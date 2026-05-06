@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { createUser, lookupDirectoryUsers } from "@/features/users/api";
+import { useTranslation } from "react-i18next";
 
 type AddUserDialogProps = {
   onClose: () => void;
@@ -23,6 +24,7 @@ const getErrorMessage = (error: unknown, fallback: string): string => {
 };
 
 export function AddUserDialog({ onClose, onCreated }: AddUserDialogProps) {
+  const { t } = useTranslation(["users", "common"]);
   const [searchValue, setSearchValue] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedDirectoryId, setSelectedDirectoryId] = useState<string | null>(
@@ -56,7 +58,7 @@ export function AddUserDialog({ onClose, onCreated }: AddUserDialogProps) {
       onClose();
     },
     onError: (error) => {
-      setErrorMessage(getErrorMessage(error, "User could not be created."));
+      setErrorMessage(getErrorMessage(error, t("users:add.error")));
     },
   });
 
@@ -68,15 +70,15 @@ export function AddUserDialog({ onClose, onCreated }: AddUserDialogProps) {
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between">
-        <CardTitle>Add User</CardTitle>
+        <CardTitle>{t("users:add.title")}</CardTitle>
         <Button variant="ghost" onClick={onClose}>
-          Close
+          {t("common:actions.close")}
         </Button>
       </CardHeader>
       <CardContent className="space-y-4">
         {errorMessage ? (
           <Alert variant="destructive">
-            <AlertTitle>Operation Failed</AlertTitle>
+            <AlertTitle>{t("common:error")}</AlertTitle>
             <AlertDescription>{errorMessage}</AlertDescription>
           </Alert>
         ) : null}
@@ -84,30 +86,30 @@ export function AddUserDialog({ onClose, onCreated }: AddUserDialogProps) {
           <Input
             value={searchValue}
             onChange={(event) => setSearchValue(event.target.value)}
-            placeholder="Search directory user by name, username or email"
+            placeholder={t("users:add.searchPlaceholder")}
           />
           <p className="text-xs text-muted-foreground">
-            Enter at least 2 characters to search directory users.
+            {t("users:add.minSearch")}
           </p>
         </div>
 
         {debouncedSearch.length < 2 ? (
           <p className="text-sm text-muted-foreground">
-            Start typing to search from directory.
+            {t("users:add.description")}
           </p>
         ) : null}
 
         {lookupQuery.isLoading ? (
-          <p className="text-sm text-muted-foreground">Searching directory...</p>
+          <p className="text-sm text-muted-foreground">{t("common:loading")}</p>
         ) : null}
 
         {lookupQuery.isError ? (
           <Alert variant="destructive">
-            <AlertTitle>Lookup Failed</AlertTitle>
+            <AlertTitle>{t("common:error")}</AlertTitle>
             <AlertDescription>
               {getErrorMessage(
                 lookupQuery.error,
-                "Directory lookup could not be completed.",
+                t("common:error"),
               )}
             </AlertDescription>
           </Alert>
@@ -130,18 +132,20 @@ export function AddUserDialog({ onClose, onCreated }: AddUserDialogProps) {
                   <div className="text-muted-foreground">{item.userName}</div>
                   <div className="text-muted-foreground">{item.email || "-"}</div>
                   <div className="text-muted-foreground">
-                    National ID: {item.nationalIdMasked || "-"}
+                    {t("users:table.nationalIdMasked")}: {item.nationalIdMasked || "-"}
                   </div>
                   <div className="mt-2 flex items-center justify-between">
                     <span className="text-xs text-muted-foreground">
-                      {item.isAlreadyPortalUser ? "Already added" : "Not in portal yet"}
+                      {item.isAlreadyPortalUser
+                        ? t("users:add.alreadyAdded")
+                        : t("users:add.notInPortalYet")}
                     </span>
                     <Button
                       variant="outline"
                       disabled={disabled || createUserMutation.isPending}
                       onClick={() => handleCreate(item.directoryObjectId)}
                     >
-                      {isBusy ? "Adding..." : "Add"}
+                      {isBusy ? t("users:add.creating") : t("users:add.create")}
                     </Button>
                   </div>
                 </div>
@@ -151,7 +155,7 @@ export function AddUserDialog({ onClose, onCreated }: AddUserDialogProps) {
         ) : null}
 
         {lookupQuery.isSuccess && !lookupQuery.data.items.length ? (
-          <p className="text-sm text-muted-foreground">No directory users found.</p>
+          <p className="text-sm text-muted-foreground">{t("users:add.noResults")}</p>
         ) : null}
       </CardContent>
     </Card>
