@@ -80,7 +80,18 @@
       "error": "Rol izinleri güncellenemedi."
     },
     "messages": {
-      "statusUpdateFailed": "Rol durumu güncellenemedi."
+      "statusUpdateFailed": "Rol durumu güncellenemedi.",
+      "roleCreated": "Rol oluşturuldu.",
+      "roleUpdated": "Rol güncellendi.",
+      "roleActivated": "Rol aktifleştirildi.",
+      "roleDeactivated": "Rol pasifleştirildi.",
+      "permissionsUpdated": "Rol izinleri güncellendi."
+    },
+    "confirm": {
+      "activateTitle": "Rol aktifleştirilsin mi?",
+      "activateDescription": "{{name}} rolü aktife alınacak.",
+      "deactivateTitle": "Rol pasifleştirilsin mi?",
+      "deactivateDescription": "{{name}} rolü pasife alınacak."
     }
   }
 }

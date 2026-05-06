@@ -8,7 +8,10 @@
       "back": "Go back",
       "goToDashboard": "Go to dashboard",
       "close": "Close",
-      "search": "Search"
+      "search": "Search",
+      "confirm": "Confirm",
+      "more": "More",
+      "actions": "Actions"
     },
     "status": {
       "active": "Active",
@@ -19,6 +22,13 @@
       "turkish": "Turkish",
       "english": "English",
       "label": "Language"
+    },
+    "theme": {
+      "label": "Theme",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System",
+      "toggle": "Toggle theme"
     },
     "loading": "Loading...",
     "empty": "No records found.",

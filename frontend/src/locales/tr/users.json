@@ -41,7 +41,15 @@
     "messages": {
       "statusUpdated": "Kullanıcı durumu güncellenemedi.",
       "rolesUpdated": "Kullanıcı rolleri güncellendi.",
-      "userCreated": "Kullanıcı oluşturuldu."
+      "userCreated": "Kullanıcı oluşturuldu.",
+      "userActivated": "Kullanıcı aktifleştirildi.",
+      "userDeactivated": "Kullanıcı pasifleştirildi."
+    },
+    "confirm": {
+      "activateTitle": "Kullanıcı aktifleştirilsin mi?",
+      "activateDescription": "{{name}} kullanıcısı aktife alınacak.",
+      "deactivateTitle": "Kullanıcı pasifleştirilsin mi?",
+      "deactivateDescription": "{{name}} kullanıcısı pasife alınacak."
     },
     "detail": {
       "title": "Kullanıcı Detayları",

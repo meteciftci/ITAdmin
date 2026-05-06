@@ -80,7 +80,18 @@
       "error": "Role permissions could not be updated."
     },
     "messages": {
-      "statusUpdateFailed": "Role status could not be updated."
+      "statusUpdateFailed": "Role status could not be updated.",
+      "roleCreated": "Role created.",
+      "roleUpdated": "Role updated.",
+      "roleActivated": "Role activated.",
+      "roleDeactivated": "Role deactivated.",
+      "permissionsUpdated": "Role permissions updated."
+    },
+    "confirm": {
+      "activateTitle": "Activate this role?",
+      "activateDescription": "{{name}} role will be activated.",
+      "deactivateTitle": "Deactivate this role?",
+      "deactivateDescription": "{{name}} role will be deactivated."
     }
   }
 }

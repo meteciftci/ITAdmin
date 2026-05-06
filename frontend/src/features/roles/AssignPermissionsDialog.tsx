@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import type { AxiosError } from "axios";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { FormError } from "@/components/common/FormError";
 import {
   Dialog,
   DialogContent,
@@ -16,14 +16,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { getPermissions, getRoleById, updateRolePermissions } from "@/features/roles/api";
 import type { RoleListItem } from "@/features/roles/types";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { useTranslation } from "react-i18next";
-
-type ApiErrorPayload = { message?: string };
-
-const getErrorMessage = (error: unknown, fallback: string): string => {
-  const apiError = error as AxiosError<ApiErrorPayload>;
-  return apiError.response?.data?.message ?? fallback;
-};
 
 type AssignPermissionsDialogProps = {
   open: boolean;
@@ -85,7 +79,7 @@ export function AssignPermissionsDialog({
     },
     onError: (error) => {
       setErrorMessage(
-        getErrorMessage(error, t("roles:assignPermissions.error")),
+        getApiErrorMessage(error, t("roles:assignPermissions.error")),
       );
     },
   });
@@ -117,12 +111,7 @@ export function AssignPermissionsDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 p-4">
-          {errorMessage ? (
-            <Alert variant="destructive">
-              <AlertTitle>{t("common:error")}</AlertTitle>
-              <AlertDescription>{errorMessage}</AlertDescription>
-            </Alert>
-          ) : null}
+          <FormError message={errorMessage} />
 
           {isSystemRole ? (
             <Alert>
@@ -145,24 +134,13 @@ export function AssignPermissionsDialog({
           )}
 
           {roleDetailQuery.isError ? (
-            <Alert variant="destructive">
-              <AlertTitle>{t("common:error")}</AlertTitle>
-              <AlertDescription>
-                {getErrorMessage(roleDetailQuery.error, t("common:error"))}
-              </AlertDescription>
-            </Alert>
+            <FormError message={getApiErrorMessage(roleDetailQuery.error, t("common:error"))} />
           ) : null}
 
           {permissionsQuery.isError ? (
-            <Alert variant="destructive">
-              <AlertTitle>{t("common:error")}</AlertTitle>
-              <AlertDescription>
-                {getErrorMessage(
-                  permissionsQuery.error,
-                  t("common:error"),
-                )}
-              </AlertDescription>
-            </Alert>
+            <FormError
+              message={getApiErrorMessage(permissionsQuery.error, t("common:error"))}
+            />
           ) : null}
 
           {filteredPermissions.length ? (

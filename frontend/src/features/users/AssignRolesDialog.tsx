@@ -1,43 +1,42 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import type { AxiosError } from "axios";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { FormError } from "@/components/common/FormError";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { getRoles, updateUserRoles } from "@/features/users/api";
-import type { RoleListItem } from "@/features/users/types";
+import type { RoleListItem, UserListItem } from "@/features/users/types";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { useTranslation } from "react-i18next";
 
 type AssignRolesDialogProps = {
-  userId: string;
-  currentRoleCodes: string[];
-  onClose: () => void;
-  onSaved: () => void;
-};
-
-type ApiErrorPayload = {
-  message?: string;
-};
-
-const getErrorMessage = (error: unknown, fallback: string): string => {
-  const apiError = error as AxiosError<ApiErrorPayload>;
-  return apiError.response?.data?.message ?? fallback;
+  open: boolean;
+  user: UserListItem | null;
+  onOpenChange: (open: boolean) => void;
+  onUpdated: () => void;
 };
 
 export function AssignRolesDialog({
-  userId,
-  currentRoleCodes,
-  onClose,
-  onSaved,
+  open,
+  user,
+  onOpenChange,
+  onUpdated,
 }: AssignRolesDialogProps) {
   const { t } = useTranslation(["users", "common"]);
   const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const rolesQuery = useQuery({
-    queryKey: ["roles", "active-for-user-assign"],
+    queryKey: ["roles", "active-for-user-assign", open],
     queryFn: () => getRoles({ isActive: true, pageSize: 100 }),
+    enabled: open,
   });
 
   const roleIdsByCode = useMemo(() => {
@@ -50,22 +49,25 @@ export function AssignRolesDialog({
 
   useEffect(() => {
     if (!rolesQuery.data) return;
-    const initialIds = currentRoleCodes
+    const initialIds = (user?.roles ?? [])
       .map((code) => roleIdsByCode.get(code))
       .filter((id): id is string => Boolean(id));
     setSelectedRoleIds(initialIds);
-  }, [currentRoleCodes, roleIdsByCode, rolesQuery.data]);
+  }, [roleIdsByCode, rolesQuery.data, user?.roles]);
 
   const updateRolesMutation = useMutation({
-    mutationFn: (roleIds: string[]) => updateUserRoles(userId, { roleIds }),
+    mutationFn: (roleIds: string[]) => {
+      if (!user) throw new Error("No selected user");
+      return updateUserRoles(user.id, { roleIds });
+    },
     onSuccess: () => {
       setErrorMessage(null);
-      onSaved();
-      onClose();
+      onUpdated();
+      onOpenChange(false);
     },
     onError: (error) => {
       setErrorMessage(
-        getErrorMessage(error, t("users:assignRoles.error")),
+        getApiErrorMessage(error, t("users:assignRoles.error")),
       );
     },
   });
@@ -80,64 +82,56 @@ export function AssignRolesDialog({
   };
 
   const handleSave = () => {
+    if (!user) return;
     updateRolesMutation.mutate(selectedRoleIds);
   };
 
   return (
-    <Card>
-      <CardHeader className="flex-row items-center justify-between">
-        <CardTitle>{t("users:assignRoles.title")}</CardTitle>
-        <Button variant="ghost" onClick={onClose}>
-          {t("common:actions.close")}
-        </Button>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {errorMessage ? (
-          <Alert variant="destructive">
-            <AlertTitle>{t("common:error")}</AlertTitle>
-            <AlertDescription>{errorMessage}</AlertDescription>
-          </Alert>
-        ) : null}
+    <Dialog open={open}>
+      <DialogContent onOpenChange={onOpenChange} className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>{t("users:assignRoles.title")}</DialogTitle>
+          <DialogDescription>{t("users:assignRoles.description")}</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 p-4">
+          <FormError message={errorMessage} />
 
-        {rolesQuery.isLoading ? (
-          <p className="text-sm text-muted-foreground">{t("common:loading")}</p>
-        ) : null}
+          {rolesQuery.isLoading ? (
+            <p className="text-sm text-muted-foreground">{t("common:loading")}</p>
+          ) : null}
 
-        {rolesQuery.isError ? (
-          <Alert variant="destructive">
-            <AlertTitle>{t("users:assignRoles.noRoles")}</AlertTitle>
-            <AlertDescription>
-              {getErrorMessage(rolesQuery.error, t("users:assignRoles.noRoles"))}
-            </AlertDescription>
-          </Alert>
-        ) : null}
+          {rolesQuery.isError ? (
+            <FormError
+              message={getApiErrorMessage(rolesQuery.error, t("users:assignRoles.noRoles"))}
+            />
+          ) : null}
 
-        {rolesQuery.data?.items.length ? (
-          <div className="grid gap-2 md:grid-cols-2">
-            {rolesQuery.data.items.map((role) => (
-              <label
-                key={role.id}
-                className="flex items-start gap-2 rounded-lg border p-2 text-sm"
-              >
-                <input
-                  type="checkbox"
-                  className="mt-0.5"
-                  checked={selectedRoleIds.includes(role.id)}
-                  onChange={(event) => handleToggleRole(role, event.target.checked)}
-                />
-                <span>
-                  <span className="block font-medium">{role.name}</span>
-                  <span className="block text-xs text-muted-foreground">
-                    {role.code} | {role.permissionCount}
+          {rolesQuery.data?.items.length ? (
+            <div className="grid max-h-[50vh] gap-2 overflow-y-auto md:grid-cols-2">
+              {rolesQuery.data.items.map((role) => (
+                <label
+                  key={role.id}
+                  className="flex items-start gap-2 rounded-lg border p-2 text-sm"
+                >
+                  <input
+                    type="checkbox"
+                    className="mt-0.5"
+                    checked={selectedRoleIds.includes(role.id)}
+                    onChange={(event) => handleToggleRole(role, event.target.checked)}
+                  />
+                  <span>
+                    <span className="block font-medium">{role.name}</span>
+                    <span className="block text-xs text-muted-foreground">
+                      {role.code} | {role.permissionCount}
+                    </span>
                   </span>
-                </span>
-              </label>
-            ))}
-          </div>
-        ) : null}
-
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose}>
+                </label>
+              ))}
+            </div>
+          ) : null}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
             {t("common:actions.cancel")}
           </Button>
           <Button
@@ -148,8 +142,8 @@ export function AssignRolesDialog({
               ? t("users:assignRoles.saving")
               : t("users:assignRoles.save")}
           </Button>
-        </div>
-      </CardContent>
-    </Card>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

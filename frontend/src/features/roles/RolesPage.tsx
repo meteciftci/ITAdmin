@@ -1,14 +1,23 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { AxiosError } from "axios";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { DataToolbar } from "@/components/common/DataToolbar";
+import { EmptyState } from "@/components/common/EmptyState";
+import { ErrorState } from "@/components/common/ErrorState";
+import { LoadingState } from "@/components/common/LoadingState";
+import { PageHeader } from "@/components/common/PageHeader";
+import { RowActions } from "@/components/common/RowActions";
+import { SectionCard } from "@/components/common/SectionCard";
+import { StatusBadge } from "@/components/common/StatusBadge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import {
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { Select } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useAuthStore } from "@/features/auth/auth-store";
 import {
   getRoleById,
@@ -19,17 +28,13 @@ import { AssignPermissionsDialog } from "@/features/roles/AssignPermissionsDialo
 import { RoleDetailDialog } from "@/features/roles/RoleDetailDialog";
 import { RoleFormDialog } from "@/features/roles/RoleFormDialog";
 import type { RoleListItem } from "@/features/roles/types";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { canAccess } from "@/lib/permissions";
+import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
 type StatusFilter = "active" | "passive" | "all";
 type TypeFilter = "all" | "system" | "custom";
-type ApiErrorPayload = { message?: string };
-
-const getErrorMessage = (error: unknown, fallback: string): string => {
-  const apiError = error as AxiosError<ApiErrorPayload>;
-  return apiError.response?.data?.message ?? fallback;
-};
 
 export function RolesPage() {
   const { t } = useTranslation(["roles", "common"]);
@@ -43,7 +48,6 @@ export function RolesPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
-  const [alertMessage, setAlertMessage] = useState<string | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedRoleForDetail, setSelectedRoleForDetail] =
     useState<RoleListItem | null>(null);
@@ -51,6 +55,7 @@ export function RolesPage() {
     useState<RoleListItem | null>(null);
   const [selectedRoleForPermissions, setSelectedRoleForPermissions] =
     useState<RoleListItem | null>(null);
+  const [confirmTarget, setConfirmTarget] = useState<RoleListItem | null>(null);
 
   const rolesQuery = useQuery({
     queryKey: ["roles", "list", search, statusFilter, typeFilter],
@@ -83,17 +88,22 @@ export function RolesPage() {
   const updateStatusMutation = useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
       updateRoleStatus(id, { isActive }),
-    onSuccess: () => {
-      setAlertMessage(null);
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["roles", "list"] });
       if (selectedRoleForDetail?.id) {
         queryClient.invalidateQueries({
           queryKey: ["roles", "detail", selectedRoleForDetail.id],
         });
       }
+      toast.success(
+        variables.isActive
+          ? t("roles:messages.roleActivated")
+          : t("roles:messages.roleDeactivated"),
+      );
+      setConfirmTarget(null);
     },
     onError: (error) => {
-      setAlertMessage(getErrorMessage(error, t("roles:messages.statusUpdateFailed")));
+      toast.error(getApiErrorMessage(error, t("roles:messages.statusUpdateFailed")));
     },
   });
 
@@ -106,107 +116,90 @@ export function RolesPage() {
 
   const handleToggleStatus = (role: RoleListItem) => {
     if (role.isSystem || !canUpdate) return;
-    const nextValue = !role.isActive;
-    const confirmed = window.confirm(
-      nextValue
-        ? `${t("roles:actions.activate")} ${role.name}?`
-        : `${t("roles:actions.deactivate")} ${role.name}?`,
-    );
-    if (!confirmed) return;
-    updateStatusMutation.mutate({ id: role.id, isActive: nextValue });
+    setConfirmTarget(role);
   };
 
-  const handleActionSuccess = () => {
-    setAlertMessage(null);
+  const handleActionSuccess = (message?: string) => {
     queryClient.invalidateQueries({ queryKey: ["roles", "list"] });
     if (selectedRoleForDetail?.id) {
       queryClient.invalidateQueries({
         queryKey: ["roles", "detail", selectedRoleForDetail.id],
       });
     }
+    if (message) {
+      toast.success(message);
+    }
   };
 
   return (
     <section className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{t("roles:title")}</h1>
-        <p className="text-sm text-muted-foreground">
-          {t("roles:description")}
-        </p>
-      </div>
-
-      {alertMessage ? (
-        <Alert variant="destructive">
-          <AlertTitle>{t("common:error")}</AlertTitle>
-          <AlertDescription>{alertMessage}</AlertDescription>
-        </Alert>
-      ) : null}
-
-      <Card>
-        <CardHeader className="space-y-3">
-          <CardTitle>{t("roles:sections.listTitle")}</CardTitle>
-          <div className="grid gap-2 md:grid-cols-[1fr_150px_150px_auto]">
-            <Input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder={t("roles:search.placeholder")}
-            />
-            <Select
-              value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
-            >
-              <option value="active">{t("common:status.active")}</option>
-              <option value="passive">{t("common:status.passive")}</option>
-              <option value="all">{t("common:status.all")}</option>
-            </Select>
-            <Select
-              value={typeFilter}
-              onChange={(event) => setTypeFilter(event.target.value as TypeFilter)}
-            >
-              <option value="all">{t("common:status.all")}</option>
-              <option value="system">{t("roles:type.system")}</option>
-              <option value="custom">{t("roles:type.custom")}</option>
-            </Select>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={handleRefresh}>
-                {t("common:actions.refresh")}
-              </Button>
-              {canCreate ? (
-                <Button onClick={() => setShowCreateDialog(true)}>
-                  {t("roles:actions.addRole")}
+      <PageHeader title={t("roles:title")} description={t("roles:description")} />
+      <SectionCard title={t("roles:sections.listTitle")}>
+        <div className="space-y-4">
+          <DataToolbar
+            searchValue={search}
+            onSearchChange={setSearch}
+            searchPlaceholder={t("roles:search.placeholder")}
+            actions={
+              <>
+                <Button variant="outline" onClick={handleRefresh}>
+                  {t("common:actions.refresh")}
                 </Button>
-              ) : null}
+                {canCreate ? (
+                  <Button onClick={() => setShowCreateDialog(true)}>
+                    {t("roles:actions.addRole")}
+                  </Button>
+                ) : null}
+              </>
+            }
+          >
+            <div className="flex items-center gap-2">
+              <Select
+                value={statusFilter}
+                onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
+                className="w-full md:w-40"
+              >
+                <option value="active">{t("common:status.active")}</option>
+                <option value="passive">{t("common:status.passive")}</option>
+                <option value="all">{t("common:status.all")}</option>
+              </Select>
+              <Select
+                value={typeFilter}
+                onChange={(event) => setTypeFilter(event.target.value as TypeFilter)}
+                className="w-full md:w-40"
+              >
+                <option value="all">{t("common:status.all")}</option>
+                <option value="system">{t("roles:type.system")}</option>
+                <option value="custom">{t("roles:type.custom")}</option>
+              </Select>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {rolesQuery.isLoading ? (
-            <div className="space-y-2">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-          ) : null}
+          </DataToolbar>
+
+          {rolesQuery.isLoading ? <LoadingState /> : null}
 
           {rolesQuery.isError ? (
-            <Alert variant="destructive">
-              <AlertTitle>{t("roles:errors.loadFailed")}</AlertTitle>
-              <AlertDescription>
-                {getErrorMessage(rolesQuery.error, t("roles:errors.loadFailed"))}
-              </AlertDescription>
-            </Alert>
+            <ErrorState
+              title={t("roles:errors.loadFailed")}
+              description={getApiErrorMessage(rolesQuery.error, t("roles:errors.loadFailed"))}
+              retry={
+                <Button variant="outline" onClick={handleRefresh}>
+                  {t("common:actions.refresh")}
+                </Button>
+              }
+            />
           ) : null}
 
           {rolesQuery.isSuccess && !roles.length ? (
-            <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-              {t("roles:empty.description")}
-            </div>
+            <EmptyState
+              title={t("roles:empty.title")}
+              description={t("roles:empty.description")}
+            />
           ) : null}
 
           {roles.length ? (
-            <div className="overflow-x-auto rounded-lg border">
+            <div className="overflow-x-auto rounded-lg border bg-card">
               <table className="min-w-full text-sm">
-                <thead className="bg-muted/40 text-left">
+                <thead className="bg-muted/50 text-left">
                   <tr>
                     <th className="px-3 py-2 font-medium">{t("roles:table.name")}</th>
                     <th className="px-3 py-2 font-medium">{t("roles:table.code")}</th>
@@ -226,7 +219,7 @@ export function RolesPage() {
                       canAssignPermissions && canViewPermissions && !isSystemRole;
 
                     return (
-                      <tr key={role.id} className="border-t align-top">
+                      <tr key={role.id} className="border-t align-top hover:bg-muted/20">
                         <td className="px-3 py-2">{role.name}</td>
                         <td className="px-3 py-2">{role.code}</td>
                         <td className="max-w-70 px-3 py-2">
@@ -238,55 +231,41 @@ export function RolesPage() {
                           </Badge>
                         </td>
                         <td className="px-3 py-2">
-                          <Badge variant={role.isActive ? "success" : "outline"}>
-                            {role.isActive ? t("common:status.active") : t("common:status.passive")}
-                          </Badge>
+                          <StatusBadge isActive={role.isActive} />
                         </td>
                         <td className="px-3 py-2">
                           <Badge variant="outline">{role.permissionCount}</Badge>
                         </td>
                         <td className="px-3 py-2">
-                          <div className="flex flex-wrap gap-1">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setSelectedRoleForDetail(role)}
-                            >
+                          <RowActions>
+                            <DropdownMenuLabel>{t("common:actions.actions")}</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => setSelectedRoleForDetail(role)}>
                               {t("roles:actions.detail")}
-                            </Button>
-                            {canUpdate ? (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={!canEditRole}
-                                onClick={() => setSelectedRoleForEdit(role)}
-                              >
+                            </DropdownMenuItem>
+                            {canUpdate && canEditRole ? (
+                              <DropdownMenuItem onClick={() => setSelectedRoleForEdit(role)}>
                                 {t("roles:actions.edit")}
-                              </Button>
+                              </DropdownMenuItem>
                             ) : null}
-                            {canUpdate ? (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={!canChangeStatus || updateStatusMutation.isPending}
+                            {canUpdate && canChangeStatus ? (
+                              <DropdownMenuItem
+                                disabled={updateStatusMutation.isPending}
                                 onClick={() => handleToggleStatus(role)}
                               >
                                 {role.isActive
                                   ? t("roles:actions.deactivate")
                                   : t("roles:actions.activate")}
-                              </Button>
+                              </DropdownMenuItem>
                             ) : null}
-                            {canAssignPermissions && canViewPermissions ? (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={!canAssignRolePermissions}
+                            {canAssignPermissions && canViewPermissions && canAssignRolePermissions ? (
+                              <DropdownMenuItem
                                 onClick={() => setSelectedRoleForPermissions(role)}
                               >
                                 {t("roles:actions.assignPermissions")}
-                              </Button>
+                              </DropdownMenuItem>
                             ) : null}
-                          </div>
+                          </RowActions>
                         </td>
                       </tr>
                     );
@@ -295,20 +274,22 @@ export function RolesPage() {
               </table>
             </div>
           ) : null}
-        </CardContent>
-      </Card>
+        </div>
+      </SectionCard>
 
       <RoleDetailDialog
         open={Boolean(selectedRoleForDetail)}
         role={roleDetailQuery.data ?? null}
-        onClose={() => setSelectedRoleForDetail(null)}
+        onOpenChange={(open) => {
+          if (!open) setSelectedRoleForDetail(null);
+        }}
       />
 
       <RoleFormDialog
         open={showCreateDialog}
         mode="create"
         onClose={() => setShowCreateDialog(false)}
-        onSaved={handleActionSuccess}
+        onSaved={() => handleActionSuccess(t("roles:messages.roleCreated"))}
       />
 
       <RoleFormDialog
@@ -316,14 +297,40 @@ export function RolesPage() {
         mode="edit"
         role={selectedRoleForEdit}
         onClose={() => setSelectedRoleForEdit(null)}
-        onSaved={handleActionSuccess}
+        onSaved={() => handleActionSuccess(t("roles:messages.roleUpdated"))}
       />
 
       <AssignPermissionsDialog
         open={Boolean(selectedRoleForPermissions)}
         role={selectedRoleForPermissions}
         onClose={() => setSelectedRoleForPermissions(null)}
-        onSaved={handleActionSuccess}
+        onSaved={() => handleActionSuccess(t("roles:messages.permissionsUpdated"))}
+      />
+
+      <ConfirmDialog
+        open={Boolean(confirmTarget)}
+        title={
+          confirmTarget?.isActive
+            ? t("roles:confirm.deactivateTitle")
+            : t("roles:confirm.activateTitle")
+        }
+        description={
+          confirmTarget?.isActive
+            ? t("roles:confirm.deactivateDescription", { name: confirmTarget?.name ?? "" })
+            : t("roles:confirm.activateDescription", { name: confirmTarget?.name ?? "" })
+        }
+        confirmText={t("common:actions.confirm")}
+        cancelText={t("common:actions.cancel")}
+        variant="danger"
+        isLoading={updateStatusMutation.isPending}
+        onOpenChange={(open) => !open && setConfirmTarget(null)}
+        onConfirm={() => {
+          if (!confirmTarget) return;
+          updateStatusMutation.mutate({
+            id: confirmTarget.id,
+            isActive: !confirmTarget.isActive,
+          });
+        }}
       />
     </section>
   );

@@ -1,29 +1,28 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import type { AxiosError } from "axios";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { FormError } from "@/components/common/FormError";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { createUser, lookupDirectoryUsers } from "@/features/users/api";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { useTranslation } from "react-i18next";
 
 type AddUserDialogProps = {
-  onClose: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onCreated: () => void;
 };
 
-type ApiErrorPayload = {
-  message?: string;
-};
-
-const getErrorMessage = (error: unknown, fallback: string): string => {
-  const apiError = error as AxiosError<ApiErrorPayload>;
-  return apiError.response?.data?.message ?? fallback;
-};
-
-export function AddUserDialog({ onClose, onCreated }: AddUserDialogProps) {
+export function AddUserDialog({ open, onOpenChange, onCreated }: AddUserDialogProps) {
   const { t } = useTranslation(["users", "common"]);
   const [searchValue, setSearchValue] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -40,6 +39,14 @@ export function AddUserDialog({ onClose, onCreated }: AddUserDialogProps) {
     return () => window.clearTimeout(timer);
   }, [searchValue]);
 
+  useEffect(() => {
+    if (open) return;
+    setSearchValue("");
+    setDebouncedSearch("");
+    setSelectedDirectoryId(null);
+    setErrorMessage(null);
+  }, [open]);
+
   const lookupQuery = useQuery({
     queryKey: ["users", "lookup-directory", debouncedSearch],
     queryFn: () =>
@@ -55,10 +62,10 @@ export function AddUserDialog({ onClose, onCreated }: AddUserDialogProps) {
     onSuccess: () => {
       setErrorMessage(null);
       onCreated();
-      onClose();
+      onOpenChange(false);
     },
     onError: (error) => {
-      setErrorMessage(getErrorMessage(error, t("users:add.error")));
+      setErrorMessage(getApiErrorMessage(error, t("users:add.error")));
     },
   });
 
@@ -68,96 +75,82 @@ export function AddUserDialog({ onClose, onCreated }: AddUserDialogProps) {
   };
 
   return (
-    <Card>
-      <CardHeader className="flex-row items-center justify-between">
-        <CardTitle>{t("users:add.title")}</CardTitle>
-        <Button variant="ghost" onClick={onClose}>
-          {t("common:actions.close")}
-        </Button>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {errorMessage ? (
-          <Alert variant="destructive">
-            <AlertTitle>{t("common:error")}</AlertTitle>
-            <AlertDescription>{errorMessage}</AlertDescription>
-          </Alert>
-        ) : null}
-        <div className="space-y-2">
-          <Input
-            value={searchValue}
-            onChange={(event) => setSearchValue(event.target.value)}
-            placeholder={t("users:add.searchPlaceholder")}
-          />
-          <p className="text-xs text-muted-foreground">
-            {t("users:add.minSearch")}
-          </p>
-        </div>
-
-        {debouncedSearch.length < 2 ? (
-          <p className="text-sm text-muted-foreground">
-            {t("users:add.description")}
-          </p>
-        ) : null}
-
-        {lookupQuery.isLoading ? (
-          <p className="text-sm text-muted-foreground">{t("common:loading")}</p>
-        ) : null}
-
-        {lookupQuery.isError ? (
-          <Alert variant="destructive">
-            <AlertTitle>{t("common:error")}</AlertTitle>
-            <AlertDescription>
-              {getErrorMessage(
-                lookupQuery.error,
-                t("common:error"),
-              )}
-            </AlertDescription>
-          </Alert>
-        ) : null}
-
-        {lookupQuery.data?.items.length ? (
-          <div className="max-h-72 space-y-2 overflow-y-auto">
-            {lookupQuery.data.items.map((item) => {
-              const disabled = item.isAlreadyPortalUser;
-              const isBusy =
-                createUserMutation.isPending &&
-                selectedDirectoryId === item.directoryObjectId;
-
-              return (
-                <div
-                  key={item.directoryObjectId}
-                  className="rounded-lg border p-3 text-sm"
-                >
-                  <div className="font-medium">{item.displayName}</div>
-                  <div className="text-muted-foreground">{item.userName}</div>
-                  <div className="text-muted-foreground">{item.email || "-"}</div>
-                  <div className="text-muted-foreground">
-                    {t("users:table.nationalIdMasked")}: {item.nationalIdMasked || "-"}
-                  </div>
-                  <div className="mt-2 flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">
-                      {item.isAlreadyPortalUser
-                        ? t("users:add.alreadyAdded")
-                        : t("users:add.notInPortalYet")}
-                    </span>
-                    <Button
-                      variant="outline"
-                      disabled={disabled || createUserMutation.isPending}
-                      onClick={() => handleCreate(item.directoryObjectId)}
-                    >
-                      {isBusy ? t("users:add.creating") : t("users:add.create")}
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
+    <Dialog open={open}>
+      <DialogContent onOpenChange={onOpenChange} className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>{t("users:add.title")}</DialogTitle>
+          <DialogDescription>{t("users:add.description")}</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 p-4">
+          <FormError message={errorMessage} />
+          <div className="space-y-2">
+            <Input
+              value={searchValue}
+              onChange={(event) => setSearchValue(event.target.value)}
+              placeholder={t("users:add.searchPlaceholder")}
+            />
+            <p className="text-xs text-muted-foreground">
+              {t("users:add.minSearch")}
+            </p>
           </div>
-        ) : null}
 
-        {lookupQuery.isSuccess && !lookupQuery.data.items.length ? (
-          <p className="text-sm text-muted-foreground">{t("users:add.noResults")}</p>
-        ) : null}
-      </CardContent>
-    </Card>
+          {lookupQuery.isLoading ? (
+            <p className="text-sm text-muted-foreground">{t("common:loading")}</p>
+          ) : null}
+
+          {lookupQuery.isError ? (
+            <FormError message={getApiErrorMessage(lookupQuery.error, t("common:error"))} />
+          ) : null}
+
+          {lookupQuery.data?.items.length ? (
+            <div className="max-h-[50vh] space-y-2 overflow-y-auto">
+              {lookupQuery.data.items.map((item) => {
+                const disabled = item.isAlreadyPortalUser;
+                const isBusy =
+                  createUserMutation.isPending &&
+                  selectedDirectoryId === item.directoryObjectId;
+
+                return (
+                  <div
+                    key={item.directoryObjectId}
+                    className="rounded-lg border p-3 text-sm"
+                  >
+                    <div className="font-medium">{item.displayName}</div>
+                    <div className="text-muted-foreground">{item.userName}</div>
+                    <div className="text-muted-foreground">{item.email || "-"}</div>
+                    <div className="text-muted-foreground">
+                      {t("users:table.nationalIdMasked")}: {item.nationalIdMasked || "-"}
+                    </div>
+                    <div className="mt-2 flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">
+                        {item.isAlreadyPortalUser
+                          ? t("users:add.alreadyAdded")
+                          : t("users:add.notInPortalYet")}
+                      </span>
+                      <Button
+                        variant="outline"
+                        disabled={disabled || createUserMutation.isPending}
+                        onClick={() => handleCreate(item.directoryObjectId)}
+                      >
+                        {isBusy ? t("users:add.creating") : t("users:add.create")}
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
+
+          {lookupQuery.isSuccess && !lookupQuery.data.items.length ? (
+            <p className="text-sm text-muted-foreground">{t("users:add.noResults")}</p>
+          ) : null}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            {t("common:actions.close")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

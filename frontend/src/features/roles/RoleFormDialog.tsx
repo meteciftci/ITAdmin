@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import type { AxiosError } from "axios";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { FormError } from "@/components/common/FormError";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -18,14 +18,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { createRole, updateRole } from "@/features/roles/api";
 import type { RoleListItem } from "@/features/roles/types";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { useTranslation } from "react-i18next";
-
-type ApiErrorPayload = { message?: string };
-
-const getErrorMessage = (error: unknown, fallback: string): string => {
-  const apiError = error as AxiosError<ApiErrorPayload>;
-  return apiError.response?.data?.message ?? fallback;
-};
 
 type RoleFormDialogProps = {
   open: boolean;
@@ -101,7 +95,7 @@ export function RoleFormDialog({
     },
     onError: (error) => {
       setErrorMessage(
-        getErrorMessage(
+        getApiErrorMessage(
           error,
           t("roles:form.error"),
         ),
@@ -124,12 +118,7 @@ export function RoleFormDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 p-4">
-          {errorMessage ? (
-            <Alert variant="destructive">
-              <AlertTitle>{t("common:error")}</AlertTitle>
-              <AlertDescription>{errorMessage}</AlertDescription>
-            </Alert>
-          ) : null}
+          <FormError message={errorMessage} />
 
           {isSystemRole ? (
             <Alert>

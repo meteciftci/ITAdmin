@@ -41,7 +41,15 @@
     "messages": {
       "statusUpdated": "User status could not be updated.",
       "rolesUpdated": "User roles updated.",
-      "userCreated": "User created."
+      "userCreated": "User created.",
+      "userActivated": "User activated.",
+      "userDeactivated": "User deactivated."
+    },
+    "confirm": {
+      "activateTitle": "Activate this user?",
+      "activateDescription": "{{name}} will be activated.",
+      "deactivateTitle": "Deactivate this user?",
+      "deactivateDescription": "{{name}} will be deactivated."
     },
     "detail": {
       "title": "User Details",

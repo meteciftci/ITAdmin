@@ -8,7 +8,10 @@
       "back": "Geri dön",
       "goToDashboard": "Kontrol paneline dön",
       "close": "Kapat",
-      "search": "Ara"
+      "search": "Ara",
+      "confirm": "Onayla",
+      "more": "Daha fazla",
+      "actions": "İşlemler"
     },
     "status": {
       "active": "Aktif",
@@ -19,6 +22,13 @@
       "turkish": "Türkçe",
       "english": "İngilizce",
       "label": "Dil"
+    },
+    "theme": {
+      "label": "Tema",
+      "light": "Açık",
+      "dark": "Koyu",
+      "system": "Sistem",
+      "toggle": "Tema değiştir"
     },
     "loading": "Yükleniyor...",
     "empty": "Kayıt bulunamadı.",

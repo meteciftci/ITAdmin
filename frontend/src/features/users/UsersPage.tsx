@@ -1,14 +1,23 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { AxiosError } from "axios";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DateTimeText } from "@/components/common/DateTimeText";
-import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
+import { DataToolbar } from "@/components/common/DataToolbar";
+import { EmptyState } from "@/components/common/EmptyState";
+import { ErrorState } from "@/components/common/ErrorState";
+import { LoadingState } from "@/components/common/LoadingState";
+import { PageHeader } from "@/components/common/PageHeader";
+import { RowActions } from "@/components/common/RowActions";
+import { RoleBadgeList } from "@/components/common/RoleBadgeList";
+import { SectionCard } from "@/components/common/SectionCard";
+import { StatusBadge } from "@/components/common/StatusBadge";
+import {
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { useAuthStore } from "@/features/auth/auth-store";
 import { canAccess } from "@/lib/permissions";
 import { getUserById, getUsers, updateUserStatus } from "@/features/users/api";
@@ -16,18 +25,14 @@ import { AddUserDialog } from "@/features/users/AddUserDialog";
 import { AssignRolesDialog } from "@/features/users/AssignRolesDialog";
 import { UserDetailDialog } from "@/features/users/UserDetailDialog";
 import type { UserListItem } from "@/features/users/types";
+import { getApiErrorMessage } from "@/lib/api-error";
+import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
 type StatusFilter = "active" | "passive" | "all";
-type ApiErrorPayload = { message?: string };
-
-const getErrorMessage = (error: unknown, fallback: string): string => {
-  const apiError = error as AxiosError<ApiErrorPayload>;
-  return apiError.response?.data?.message ?? fallback;
-};
 
 export function UsersPage() {
-  const { t } = useTranslation(["users", "common"]);
+  const { t } = useTranslation(["users", "common", "errors"]);
   const queryClient = useQueryClient();
   const currentUser = useAuthStore((state) => state.user);
   const canCreate = canAccess(currentUser, "Users.Create");
@@ -36,12 +41,12 @@ export function UsersPage() {
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
-  const [alertMessage, setAlertMessage] = useState<string | null>(null);
-  const [showAddUser, setShowAddUser] = useState(false);
+  const [addUserOpen, setAddUserOpen] = useState(false);
   const [selectedUserForDetail, setSelectedUserForDetail] =
     useState<UserListItem | null>(null);
   const [selectedUserForRoles, setSelectedUserForRoles] =
     useState<UserListItem | null>(null);
+  const [confirmTarget, setConfirmTarget] = useState<UserListItem | null>(null);
 
   const usersQuery = useQuery({
     queryKey: ["users", "list", search, statusFilter],
@@ -68,18 +73,23 @@ export function UsersPage() {
   const updateUserStatusMutation = useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
       updateUserStatus(id, { isActive }),
-    onSuccess: () => {
-      setAlertMessage(null);
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["users", "list"] });
       if (selectedUserForDetail?.id) {
         queryClient.invalidateQueries({
           queryKey: ["users", "detail", selectedUserForDetail.id],
         });
       }
+      toast.success(
+        variables.isActive
+          ? t("users:messages.userActivated")
+          : t("users:messages.userDeactivated"),
+      );
+      setConfirmTarget(null);
     },
     onError: (error) => {
-      setAlertMessage(
-        getErrorMessage(error, t("users:messages.statusUpdated")),
+      toast.error(
+        getApiErrorMessage(error, t("users:messages.statusUpdated")),
       );
     },
   });
@@ -93,110 +103,89 @@ export function UsersPage() {
     }
   };
 
-  const handleToggleStatus = (user: UserListItem) => {
-    const nextValue = !user.isActive;
-    const confirmed = window.confirm(
-      nextValue
-        ? `${t("users:actions.activate")} ${user.displayName || user.userName}?`
-        : `${t("users:actions.deactivate")} ${user.displayName || user.userName}?`,
-    );
-    if (!confirmed) return;
-    updateUserStatusMutation.mutate({ id: user.id, isActive: nextValue });
-  };
+  const handleToggleStatus = (user: UserListItem) => setConfirmTarget(user);
 
-  const handleActionSuccess = () => {
-    setAlertMessage(null);
+  const handleActionSuccess = (message?: string) => {
     queryClient.invalidateQueries({ queryKey: ["users", "list"] });
     if (selectedUserForDetail?.id) {
       queryClient.invalidateQueries({
         queryKey: ["users", "detail", selectedUserForDetail.id],
       });
     }
+    if (message) {
+      toast.success(message);
+    }
   };
 
   return (
     <section className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{t("users:title")}</h1>
-        <p className="text-sm text-muted-foreground">
-          {t("users:description")}
-        </p>
-      </div>
-
-      {alertMessage ? (
-        <Alert variant="destructive">
-          <AlertTitle>{t("common:error")}</AlertTitle>
-          <AlertDescription>{alertMessage}</AlertDescription>
-        </Alert>
-      ) : null}
-
-      <Card>
-        <CardHeader className="space-y-3">
-          <CardTitle>{t("users:sections.listTitle")}</CardTitle>
-          <div className="grid gap-2 md:grid-cols-[1fr_auto_auto_auto_auto]">
-            <Input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder={t("users:search.placeholder")}
-            />
-            <Button
-              variant={statusFilter === "active" ? "default" : "outline"}
-              onClick={() => setStatusFilter("active")}
-            >
-              {t("common:status.active")}
-            </Button>
-            <Button
-              variant={statusFilter === "passive" ? "default" : "outline"}
-              onClick={() => setStatusFilter("passive")}
-            >
-              {t("common:status.passive")}
-            </Button>
-            <Button
-              variant={statusFilter === "all" ? "default" : "outline"}
-              onClick={() => setStatusFilter("all")}
-            >
-              {t("common:status.all")}
-            </Button>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={handleRefresh}>
-                {t("common:actions.refresh")}
-              </Button>
-              {canCreate ? (
-                <Button onClick={() => setShowAddUser(true)}>
-                  {t("users:actions.addUser")}
+      <PageHeader title={t("users:title")} description={t("users:description")} />
+      <SectionCard title={t("users:sections.listTitle")}>
+        <div className="space-y-4">
+          <DataToolbar
+            searchValue={search}
+            onSearchChange={setSearch}
+            searchPlaceholder={t("users:search.placeholder")}
+            actions={
+              <>
+                <Button variant="outline" onClick={handleRefresh}>
+                  {t("common:actions.refresh")}
                 </Button>
-              ) : null}
+                {canCreate ? (
+                  <Button onClick={() => setAddUserOpen(true)}>
+                    {t("users:actions.addUser")}
+                  </Button>
+                ) : null}
+              </>
+            }
+          >
+            <div className="flex items-center gap-2">
+              <Button
+                variant={statusFilter === "active" ? "default" : "outline"}
+                onClick={() => setStatusFilter("active")}
+              >
+                {t("common:status.active")}
+              </Button>
+              <Button
+                variant={statusFilter === "passive" ? "default" : "outline"}
+                onClick={() => setStatusFilter("passive")}
+              >
+                {t("common:status.passive")}
+              </Button>
+              <Button
+                variant={statusFilter === "all" ? "default" : "outline"}
+                onClick={() => setStatusFilter("all")}
+              >
+                {t("common:status.all")}
+              </Button>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {usersQuery.isLoading ? (
-            <div className="space-y-2">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-          ) : null}
+          </DataToolbar>
+
+          {usersQuery.isLoading ? <LoadingState /> : null}
 
           {usersQuery.isError ? (
-            <Alert variant="destructive">
-              <AlertTitle>{t("users:errors.loadFailed")}</AlertTitle>
-              <AlertDescription>
-                {getErrorMessage(usersQuery.error, t("users:errors.loadFailed"))}
-              </AlertDescription>
-            </Alert>
+            <ErrorState
+              title={t("users:errors.loadFailed")}
+              description={getApiErrorMessage(usersQuery.error, t("users:errors.loadFailed"))}
+              retry={
+                <Button variant="outline" onClick={handleRefresh}>
+                  {t("common:actions.refresh")}
+                </Button>
+              }
+            />
           ) : null}
 
           {usersQuery.isSuccess && !users.length ? (
-            <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-              {t("users:empty.description")}
-            </div>
+            <EmptyState
+              title={t("users:empty.title")}
+              description={t("users:empty.description")}
+            />
           ) : null}
 
           {users.length ? (
-            <div className="overflow-x-auto rounded-lg border">
+            <div className="overflow-x-auto rounded-lg border bg-card">
               <table className="min-w-full text-sm">
-                <thead className="bg-muted/40 text-left">
+                <thead className="bg-muted/50 text-left">
                   <tr>
                     <th className="px-3 py-2 font-medium">{t("users:table.displayName")}</th>
                     <th className="px-3 py-2 font-medium">{t("users:table.userName")}</th>
@@ -210,74 +199,43 @@ export function UsersPage() {
                 </thead>
                 <tbody>
                   {users.map((user) => (
-                    <tr key={user.id} className="border-t align-top">
+                    <tr key={user.id} className="border-t align-top hover:bg-muted/20">
                       <td className="px-3 py-2">{user.displayName || "-"}</td>
                       <td className="px-3 py-2">{user.userName}</td>
-                      <td className="px-3 py-2">{user.email || "-"}</td>
+                      <td className="max-w-56 truncate px-3 py-2">{user.email || "-"}</td>
                       <td className="px-3 py-2">{user.nationalIdMasked || "-"}</td>
                       <td className="px-3 py-2">
-                        <div className="flex flex-wrap gap-1">
-                          {user.roles.length ? (
-                            user.roles.map((role) => (
-                              <span
-                                key={`${user.id}-${role}`}
-                                className="rounded-md bg-muted px-2 py-0.5 text-xs"
-                              >
-                                {role}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </div>
+                        <RoleBadgeList roles={user.roles} />
                       </td>
                       <td className="px-3 py-2">
-                        <span
-                          className={
-                            user.isActive
-                              ? "rounded-md bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700"
-                              : "rounded-md bg-amber-100 px-2 py-0.5 text-xs text-amber-700"
-                          }
-                        >
-                          {user.isActive
-                            ? t("common:status.active")
-                            : t("common:status.passive")}
-                        </span>
+                        <StatusBadge isActive={user.isActive} />
                       </td>
                       <td className="px-3 py-2">
                         <DateTimeText value={user.lastLoginAt} />
                       </td>
                       <td className="px-3 py-2">
-                        <div className="flex flex-wrap gap-1">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setSelectedUserForDetail(user)}
-                          >
+                        <RowActions>
+                          <DropdownMenuLabel>{t("common:actions.actions")}</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => setSelectedUserForDetail(user)}>
                             {t("users:actions.detail")}
-                          </Button>
+                          </DropdownMenuItem>
                           {canUpdate ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
+                            <DropdownMenuItem
                               disabled={updateUserStatusMutation.isPending}
                               onClick={() => handleToggleStatus(user)}
                             >
                               {user.isActive
                                 ? t("users:actions.deactivate")
                                 : t("users:actions.activate")}
-                            </Button>
+                            </DropdownMenuItem>
                           ) : null}
                           {canAssignRoles ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setSelectedUserForRoles(user)}
-                            >
+                            <DropdownMenuItem onClick={() => setSelectedUserForRoles(user)}>
                               {t("users:actions.assignRoles")}
-                            </Button>
+                            </DropdownMenuItem>
                           ) : null}
-                        </div>
+                        </RowActions>
                       </td>
                     </tr>
                   ))}
@@ -285,50 +243,63 @@ export function UsersPage() {
               </table>
             </div>
           ) : null}
-        </CardContent>
-      </Card>
+        </div>
+      </SectionCard>
 
-      {showAddUser ? (
-        <AddUserDialog
-          onClose={() => setShowAddUser(false)}
-          onCreated={handleActionSuccess}
-        />
-      ) : null}
+      <AddUserDialog
+        open={addUserOpen}
+        onOpenChange={setAddUserOpen}
+        onCreated={() => handleActionSuccess(t("users:messages.userCreated"))}
+      />
 
-      {selectedUserForRoles ? (
-        <AssignRolesDialog
-          userId={selectedUserForRoles.id}
-          currentRoleCodes={selectedUserForRoles.roles}
-          onClose={() => setSelectedUserForRoles(null)}
-          onSaved={handleActionSuccess}
-        />
-      ) : null}
+      <AssignRolesDialog
+        open={Boolean(selectedUserForRoles)}
+        user={selectedUserForRoles}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedUserForRoles(null);
+          }
+        }}
+        onUpdated={() => handleActionSuccess(t("users:messages.rolesUpdated"))}
+      />
 
-      {selectedUserForDetail ? (
-        <>
-          <Separator />
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <h2 className="text-base font-medium">{t("users:detail.title")}</h2>
-              <Button variant="ghost" onClick={() => setSelectedUserForDetail(null)}>
-                {t("common:actions.close")}
-              </Button>
-            </div>
-            {userDetailQuery.isLoading ? (
-              <Skeleton className="h-36 w-full" />
-            ) : userDetailQuery.isError ? (
-              <Alert variant="destructive">
-                <AlertTitle>{t("common:error")}</AlertTitle>
-                <AlertDescription>
-                  {getErrorMessage(userDetailQuery.error, t("common:error"))}
-                </AlertDescription>
-              </Alert>
-            ) : userDetailQuery.data ? (
-              <UserDetailDialog user={userDetailQuery.data} />
-            ) : null}
-          </div>
-        </>
-      ) : null}
+      <UserDetailDialog
+        open={Boolean(selectedUserForDetail)}
+        user={userDetailQuery.data ?? null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedUserForDetail(null);
+        }}
+      />
+
+      <ConfirmDialog
+        open={Boolean(confirmTarget)}
+        title={
+          confirmTarget?.isActive
+            ? t("users:confirm.deactivateTitle")
+            : t("users:confirm.activateTitle")
+        }
+        description={
+          confirmTarget?.isActive
+            ? t("users:confirm.deactivateDescription", {
+                name: confirmTarget?.displayName || confirmTarget?.userName || "",
+              })
+            : t("users:confirm.activateDescription", {
+                name: confirmTarget?.displayName || confirmTarget?.userName || "",
+              })
+        }
+        confirmText={t("common:actions.confirm")}
+        cancelText={t("common:actions.cancel")}
+        variant="danger"
+        isLoading={updateUserStatusMutation.isPending}
+        onOpenChange={(open) => !open && setConfirmTarget(null)}
+        onConfirm={() => {
+          if (!confirmTarget) return;
+          updateUserStatusMutation.mutate({
+            id: confirmTarget.id,
+            isActive: !confirmTarget.isActive,
+          });
+        }}
+      />
     </section>
   );
 }

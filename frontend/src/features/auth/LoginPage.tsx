@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { getCurrentUser, login } from "@/features/auth/api";
 import { useAuthStore } from "@/features/auth/auth-store";
 import { PublicLanguageSwitcher } from "@/features/auth/PublicLanguageSwitcher";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { i18n, normalizeLanguage } from "@/app/i18n";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
@@ -64,13 +65,12 @@ export function LoginPage() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
-      <div className="w-full max-w-md space-y-3">
-        <PublicLanguageSwitcher />
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("login.title")}</CardTitle>
-            <CardDescription>{t("login.description")}</CardDescription>
+    <main className="relative flex min-h-screen items-center justify-center bg-muted/30 p-4">
+      <div className="w-full max-w-md">
+        <Card className="border-border/70 shadow-lg">
+          <CardHeader className="space-y-2 text-center">
+            <CardTitle className="text-2xl">{t("login.title")}</CardTitle>
+            <CardDescription className="text-center">{t("login.description")}</CardDescription>
           </CardHeader>
           <CardContent>
             <form className="space-y-4" onSubmit={onSubmit}>
@@ -96,6 +96,15 @@ export function LoginPage() {
                 />
               </div>
 
+              <div className="flex justify-end">
+                <a
+                  href="https://sifre.mugla.bel.tr"
+                  className="text-sm text-primary hover:underline"
+                >
+                  {t("login.forgotPassword")}
+                </a>
+              </div>
+
               {errorMessage ? (
                 <Alert variant="destructive">
                   <AlertDescription>{errorMessage}</AlertDescription>
@@ -103,13 +112,15 @@ export function LoginPage() {
               ) : null}
 
               <Button className="w-full" type="submit" disabled={loginMutation.isPending}>
-                {loginMutation.isPending
-                  ? t("login.loading")
-                  : t("login.submit")}
+                {loginMutation.isPending ? t("login.loading") : t("login.submit")}
               </Button>
             </form>
           </CardContent>
         </Card>
+      </div>
+      <div className="fixed bottom-6 right-6 flex items-center gap-2">
+        <ThemeToggle />
+        <PublicLanguageSwitcher />
       </div>
     </main>
   );
