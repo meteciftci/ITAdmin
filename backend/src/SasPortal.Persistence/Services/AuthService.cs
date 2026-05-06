@@ -5,7 +5,6 @@ using SasPortal.Application.Abstractions.Services;
 using SasPortal.Application.Common.Models;
 using SasPortal.Application.Common.Security;
 using SasPortal.Domain.Entities;
-using SasPortal.Domain.Enums;
 using SasPortal.Persistence.Context;
 
 namespace SasPortal.Persistence.Services;
@@ -70,9 +69,9 @@ public sealed class AuthService(
                     new SecurityLog
                     {
                         UserName = request.UserName,
-                        EventType = SecurityEventType.LoginFailed,
-                        IsSuccess = false,
-                        Message = ldapResult.Message,
+                        EventType = "LoginFailed",
+                        Severity = "Warning",
+                        Description = ldapResult.Message,
                         IpAddress = request.IpAddress,
                         UserAgent = request.UserAgent,
                         CreatedAt = DateTime.UtcNow
@@ -115,9 +114,9 @@ public sealed class AuthService(
                     new SecurityLog
                     {
                         UserName = request.UserName,
-                        EventType = SecurityEventType.LoginFailed,
-                        IsSuccess = false,
-                        Message = "Directory user profile could not be loaded.",
+                        EventType = "LoginFailed",
+                        Severity = "Warning",
+                        Description = "Directory user profile could not be loaded.",
                         IpAddress = request.IpAddress,
                         UserAgent = request.UserAgent,
                         CreatedAt = DateTime.UtcNow
@@ -149,9 +148,9 @@ public sealed class AuthService(
                     new SecurityLog
                     {
                         UserName = request.UserName,
-                        EventType = SecurityEventType.LoginFailed,
-                        IsSuccess = false,
-                        Message = "User is not authorized to access the portal.",
+                        EventType = "LoginFailed",
+                        Severity = "Warning",
+                        Description = "User is not authorized to access the portal.",
                         IpAddress = request.IpAddress,
                         UserAgent = request.UserAgent,
                         CreatedAt = DateTime.UtcNow
@@ -167,11 +166,11 @@ public sealed class AuthService(
                 await context.SecurityLogs.AddAsync(
                     new SecurityLog
                     {
-                        PortalUserId = user.Id,
+                        UserId = user.Id,
                         UserName = user.UserName,
-                        EventType = SecurityEventType.LoginFailed,
-                        IsSuccess = false,
-                        Message = "User is inactive.",
+                        EventType = "LoginFailedUserPassive",
+                        Severity = "Warning",
+                        Description = "User is inactive.",
                         IpAddress = request.IpAddress,
                         UserAgent = request.UserAgent,
                         CreatedAt = DateTime.UtcNow
@@ -193,11 +192,11 @@ public sealed class AuthService(
                 await context.SecurityLogs.AddAsync(
                     new SecurityLog
                     {
-                        PortalUserId = user.Id,
+                        UserId = user.Id,
                         UserName = ldapProfile.UserName,
-                        EventType = SecurityEventType.LoginFailed,
-                        IsSuccess = false,
-                        Message = "Another portal user already uses this user name.",
+                        EventType = "LoginFailed",
+                        Severity = "Warning",
+                        Description = "Another portal user already uses this user name.",
                         IpAddress = request.IpAddress,
                         UserAgent = request.UserAgent,
                         CreatedAt = DateTime.UtcNow
@@ -277,11 +276,11 @@ public sealed class AuthService(
             await context.SecurityLogs.AddAsync(
                 new SecurityLog
                 {
-                    PortalUserId = user.Id,
+                    UserId = user.Id,
                     UserName = user.UserName,
-                    EventType = SecurityEventType.LoginSucceeded,
-                    IsSuccess = true,
-                    Message = "Login succeeded.",
+                    EventType = "LoginSuccess",
+                    Severity = "Info",
+                    Description = "Login succeeded.",
                     IpAddress = request.IpAddress,
                     UserAgent = request.UserAgent,
                     CreatedAt = now
@@ -347,9 +346,9 @@ public sealed class AuthService(
                 await context.SecurityLogs.AddAsync(
                     new SecurityLog
                     {
-                        EventType = SecurityEventType.RefreshTokenRevoked,
-                        IsSuccess = false,
-                        Message = "Invalid refresh token.",
+                        EventType = "RefreshTokenFailed",
+                        Severity = "Warning",
+                        Description = "Invalid refresh token.",
                         IpAddress = request.IpAddress,
                         UserAgent = request.UserAgent,
                         CreatedAt = now
@@ -365,11 +364,11 @@ public sealed class AuthService(
                 await context.SecurityLogs.AddAsync(
                     new SecurityLog
                     {
-                        PortalUserId = refreshToken.PortalUserId,
+                        UserId = refreshToken.PortalUserId,
                         UserName = refreshToken.PortalUser?.UserName,
-                        EventType = SecurityEventType.RefreshTokenRevoked,
-                        IsSuccess = false,
-                        Message = "Invalid refresh token.",
+                        EventType = "RefreshTokenFailed",
+                        Severity = "Warning",
+                        Description = "Invalid refresh token.",
                         IpAddress = request.IpAddress,
                         UserAgent = request.UserAgent,
                         CreatedAt = now
@@ -385,11 +384,11 @@ public sealed class AuthService(
                 await context.SecurityLogs.AddAsync(
                     new SecurityLog
                     {
-                        PortalUserId = refreshToken.PortalUserId,
+                        UserId = refreshToken.PortalUserId,
                         UserName = refreshToken.PortalUser?.UserName,
-                        EventType = SecurityEventType.RefreshTokenRevoked,
-                        IsSuccess = false,
-                        Message = "Refresh token has expired.",
+                        EventType = "RefreshTokenFailed",
+                        Severity = "Warning",
+                        Description = "Refresh token has expired.",
                         IpAddress = request.IpAddress,
                         UserAgent = request.UserAgent,
                         CreatedAt = now
@@ -406,9 +405,9 @@ public sealed class AuthService(
                 await context.SecurityLogs.AddAsync(
                     new SecurityLog
                     {
-                        EventType = SecurityEventType.RefreshTokenRevoked,
-                        IsSuccess = false,
-                        Message = "Invalid refresh token.",
+                        EventType = "RefreshTokenFailed",
+                        Severity = "Warning",
+                        Description = "Invalid refresh token.",
                         IpAddress = request.IpAddress,
                         UserAgent = request.UserAgent,
                         CreatedAt = now
@@ -424,11 +423,11 @@ public sealed class AuthService(
                 await context.SecurityLogs.AddAsync(
                     new SecurityLog
                     {
-                        PortalUserId = user.Id,
+                        UserId = user.Id,
                         UserName = user.UserName,
-                        EventType = SecurityEventType.RefreshTokenRevoked,
-                        IsSuccess = false,
-                        Message = "User is inactive.",
+                        EventType = "RefreshTokenFailed",
+                        Severity = "Warning",
+                        Description = "User is inactive.",
                         IpAddress = request.IpAddress,
                         UserAgent = request.UserAgent,
                         CreatedAt = now
@@ -490,11 +489,11 @@ public sealed class AuthService(
             await context.SecurityLogs.AddAsync(
                 new SecurityLog
                 {
-                    PortalUserId = user.Id,
+                    UserId = user.Id,
                     UserName = user.UserName,
-                    EventType = SecurityEventType.RefreshTokenIssued,
-                    IsSuccess = true,
-                    Message = "Refresh token issued.",
+                    EventType = "RefreshTokenCreated",
+                    Severity = "Info",
+                    Description = "Refresh token issued.",
                     IpAddress = request.IpAddress,
                     UserAgent = request.UserAgent,
                     CreatedAt = now
@@ -538,9 +537,9 @@ public sealed class AuthService(
                 await context.SecurityLogs.AddAsync(
                     new SecurityLog
                     {
-                        EventType = SecurityEventType.Logout,
-                        IsSuccess = false,
-                        Message = "Logout failed. Refresh token was not found.",
+                        EventType = "Logout",
+                        Severity = "Warning",
+                        Description = "Logout failed. Refresh token was not found.",
                         IpAddress = request.IpAddress,
                         UserAgent = request.UserAgent,
                         CreatedAt = now
@@ -556,11 +555,11 @@ public sealed class AuthService(
                 await context.SecurityLogs.AddAsync(
                     new SecurityLog
                     {
-                        PortalUserId = refreshToken.PortalUserId,
+                        UserId = refreshToken.PortalUserId,
                         UserName = refreshToken.PortalUser?.UserName,
-                        EventType = SecurityEventType.Logout,
-                        IsSuccess = false,
-                        Message = "Logout failed. Refresh token was already revoked.",
+                        EventType = "Logout",
+                        Severity = "Warning",
+                        Description = "Logout failed. Refresh token was already revoked.",
                         IpAddress = request.IpAddress,
                         UserAgent = request.UserAgent,
                         CreatedAt = now
@@ -576,11 +575,11 @@ public sealed class AuthService(
                 await context.SecurityLogs.AddAsync(
                     new SecurityLog
                     {
-                        PortalUserId = refreshToken.PortalUserId,
+                        UserId = refreshToken.PortalUserId,
                         UserName = refreshToken.PortalUser?.UserName,
-                        EventType = SecurityEventType.Logout,
-                        IsSuccess = false,
-                        Message = "Logout failed. Refresh token has expired.",
+                        EventType = "Logout",
+                        Severity = "Warning",
+                        Description = "Logout failed. Refresh token has expired.",
                         IpAddress = request.IpAddress,
                         UserAgent = request.UserAgent,
                         CreatedAt = now
@@ -597,11 +596,11 @@ public sealed class AuthService(
             await context.SecurityLogs.AddAsync(
                 new SecurityLog
                 {
-                    PortalUserId = refreshToken.PortalUserId,
+                    UserId = refreshToken.PortalUserId,
                     UserName = refreshToken.PortalUser?.UserName,
-                    EventType = SecurityEventType.Logout,
-                    IsSuccess = true,
-                    Message = "Logout succeeded.",
+                    EventType = "Logout",
+                    Severity = "Info",
+                    Description = "Logout succeeded.",
                     IpAddress = request.IpAddress,
                     UserAgent = request.UserAgent,
                     CreatedAt = now

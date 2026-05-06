@@ -474,11 +474,11 @@ public sealed class SetupService(
             await context.SecurityLogs.AddAsync(
                 new SecurityLog
                 {
-                    PortalUserId = adminUser.Id,
+                    UserId = adminUser.Id,
                     UserName = ldapProfile.UserName,
-                    EventType = SecurityEventType.SetupCompleted,
-                    IsSuccess = true,
-                    Message = "Initial setup completed.",
+                    EventType = "SetupCompleted",
+                    Severity = "Info",
+                    Description = "Initial setup completed.",
                     CreatedAt = now
                 },
                 cancellationToken);

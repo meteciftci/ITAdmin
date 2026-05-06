@@ -26,6 +26,7 @@ public static class DependencyInjection
         services.AddScoped<IRoleService, RoleService>();
         services.AddScoped<IPermissionService, PermissionService>();
         services.AddScoped<IAuditLogService, AuditLogService>();
+        services.AddScoped<ISecurityLogService, SecurityLogService>();
 
         return services;
     }
