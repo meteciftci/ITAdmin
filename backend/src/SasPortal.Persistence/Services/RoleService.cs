@@ -1,4 +1,3 @@
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -6,18 +5,12 @@ using SasPortal.Application.Abstractions.Services;
 using SasPortal.Application.Common.Models;
 using SasPortal.Application.Common.Security;
 using SasPortal.Domain.Entities;
-using SasPortal.Domain.Enums;
 using SasPortal.Persistence.Context;
 
 namespace SasPortal.Persistence.Services;
 
 public sealed class RoleService(AppDbContext context) : IRoleService
 {
-    private static readonly JsonSerializerOptions AuditJsonSerializerOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
-
     public async Task<PagedResult<RoleListItem>> GetRolesAsync(RoleListQuery query, CancellationToken cancellationToken = default)
     {
         var pageNumber = query.PageNumber < 1 ? 1 : query.PageNumber;
@@ -167,26 +160,15 @@ public sealed class RoleService(AppDbContext context) : IRoleService
 
             await context.PortalRoles.AddAsync(role, cancellationToken);
 
-            var newValuesPayload = JsonSerializer.Serialize(
-                new
-                {
-                    summary = "Portal role created.",
-                    name = role.Name,
-                    code = role.Code,
-                    isActive = role.IsActive,
-                    isSystem = role.IsSystem
-                },
-                AuditJsonSerializerOptions);
-
             await context.AuditLogs.AddAsync(
                 new AuditLog
                 {
-                    Action = AuditActionType.Create,
+                    Action = "Create",
                     EntityName = "PortalRole",
                     EntityId = role.Id.ToString(),
-                    UserName = request.ActorUserName,
-                    NewValues = newValuesPayload,
-                    CreatedAt = now
+                    Description = "Portal role created.",
+                    ActorUserName = request.ActorUserName,
+                    CreatedAt = new DateTimeOffset(now, TimeSpan.Zero)
                 },
                 cancellationToken);
 
@@ -244,15 +226,6 @@ public sealed class RoleService(AppDbContext context) : IRoleService
                 return new UpdateRoleResult(false, "Role description length is invalid.", null);
             }
 
-            var oldValuesPayload = JsonSerializer.Serialize(
-                new
-                {
-                    name = role.Name,
-                    description = role.Description,
-                    isActive = role.IsActive
-                },
-                AuditJsonSerializerOptions);
-
             var now = DateTime.UtcNow;
             role.Name = normalizedName;
             role.Description = normalizedDescription;
@@ -260,26 +233,15 @@ public sealed class RoleService(AppDbContext context) : IRoleService
             role.UpdatedAt = now;
             role.UpdatedBy = request.ActorUserName ?? "system";
 
-            var newValuesPayload = JsonSerializer.Serialize(
-                new
-                {
-                    summary = "Portal role updated.",
-                    name = role.Name,
-                    description = role.Description,
-                    isActive = role.IsActive
-                },
-                AuditJsonSerializerOptions);
-
             await context.AuditLogs.AddAsync(
                 new AuditLog
                 {
-                    Action = AuditActionType.Update,
+                    Action = "Update",
                     EntityName = "PortalRole",
                     EntityId = role.Id.ToString(),
-                    UserName = request.ActorUserName,
-                    OldValues = oldValuesPayload,
-                    NewValues = newValuesPayload,
-                    CreatedAt = now
+                    Description = "Portal role updated.",
+                    ActorUserName = request.ActorUserName,
+                    CreatedAt = new DateTimeOffset(now, TimeSpan.Zero)
                 },
                 cancellationToken);
 
@@ -318,15 +280,6 @@ public sealed class RoleService(AppDbContext context) : IRoleService
                     null);
             }
 
-            var oldValuesPayload = JsonSerializer.Serialize(
-                new
-                {
-                    name = role.Name,
-                    code = role.Code,
-                    isActive = role.IsActive
-                },
-                AuditJsonSerializerOptions);
-
             var now = DateTime.UtcNow;
             role.IsActive = request.IsActive;
             role.UpdatedAt = now;
@@ -336,26 +289,15 @@ public sealed class RoleService(AppDbContext context) : IRoleService
                 ? "Portal role activated."
                 : "Portal role deactivated.";
 
-            var newValuesPayload = JsonSerializer.Serialize(
-                new
-                {
-                    summary,
-                    name = role.Name,
-                    code = role.Code,
-                    isActive = role.IsActive
-                },
-                AuditJsonSerializerOptions);
-
             await context.AuditLogs.AddAsync(
                 new AuditLog
                 {
-                    Action = AuditActionType.Update,
+                    Action = "Update",
                     EntityName = "PortalRole",
                     EntityId = role.Id.ToString(),
-                    UserName = request.ActorUserName,
-                    OldValues = oldValuesPayload,
-                    NewValues = newValuesPayload,
-                    CreatedAt = now
+                    Description = summary,
+                    ActorUserName = request.ActorUserName,
+                    CreatedAt = new DateTimeOffset(now, TimeSpan.Zero)
                 },
                 cancellationToken);
 
@@ -400,12 +342,6 @@ public sealed class RoleService(AppDbContext context) : IRoleService
                     null);
             }
 
-            var oldPermissionCodes = role.RolePermissions
-                .Where(x => x.PortalPermission is not null && !x.PortalPermission.IsDeleted)
-                .Select(x => x.PortalPermission.Code)
-                .OrderBy(x => x)
-                .ToList();
-
             var now = DateTime.UtcNow;
             var actor = request.ActorUserName ?? "system";
 
@@ -416,28 +352,15 @@ public sealed class RoleService(AppDbContext context) : IRoleService
                 role.UpdatedAt = now;
                 role.UpdatedBy = actor;
 
-                var clearedPermissionsAuditPayload = JsonSerializer.Serialize(
-                    new
-                    {
-                        summary = "Portal role permissions updated.",
-                        permissions = Array.Empty<string>()
-                    },
-                    AuditJsonSerializerOptions);
-
-                var oldValuesPayload = JsonSerializer.Serialize(
-                    new { permissions = oldPermissionCodes },
-                    AuditJsonSerializerOptions);
-
                 await context.AuditLogs.AddAsync(
                     new AuditLog
                     {
-                        Action = AuditActionType.Update,
+                        Action = "Update",
                         EntityName = "PortalRole",
                         EntityId = role.Id.ToString(),
-                        UserName = request.ActorUserName,
-                        OldValues = oldValuesPayload,
-                        NewValues = clearedPermissionsAuditPayload,
-                        CreatedAt = now
+                        Description = "Portal role permissions updated.",
+                        ActorUserName = request.ActorUserName,
+                        CreatedAt = new DateTimeOffset(now, TimeSpan.Zero)
                     },
                     cancellationToken);
 
@@ -494,32 +417,15 @@ public sealed class RoleService(AppDbContext context) : IRoleService
             role.UpdatedAt = now;
             role.UpdatedBy = actor;
 
-            var newPermissionCodes = permissions
-                .Select(x => x.Code)
-                .OrderBy(x => x)
-                .ToList();
-
-            var rolePermissionsOldValuesPayload = JsonSerializer.Serialize(
-                new { permissions = oldPermissionCodes },
-                AuditJsonSerializerOptions);
-            var rolePermissionsNewValuesPayload = JsonSerializer.Serialize(
-                new
-                {
-                    summary = "Portal role permissions updated.",
-                    permissions = newPermissionCodes
-                },
-                AuditJsonSerializerOptions);
-
             await context.AuditLogs.AddAsync(
                 new AuditLog
                 {
-                    Action = AuditActionType.Update,
+                    Action = "Update",
                     EntityName = "PortalRole",
                     EntityId = role.Id.ToString(),
-                    UserName = request.ActorUserName,
-                    OldValues = rolePermissionsOldValuesPayload,
-                    NewValues = rolePermissionsNewValuesPayload,
-                    CreatedAt = now
+                    Description = "Portal role permissions updated.",
+                    ActorUserName = request.ActorUserName,
+                    CreatedAt = new DateTimeOffset(now, TimeSpan.Zero)
                 },
                 cancellationToken);
 

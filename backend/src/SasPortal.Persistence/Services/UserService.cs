@@ -1,11 +1,9 @@
-using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using SasPortal.Application.Abstractions.Security;
 using SasPortal.Application.Abstractions.Services;
 using SasPortal.Application.Common.Models;
 using SasPortal.Application.Common.Security;
 using SasPortal.Domain.Entities;
-using SasPortal.Domain.Enums;
 using SasPortal.Persistence.Context;
 
 namespace SasPortal.Persistence.Services;
@@ -16,11 +14,6 @@ public sealed class UserService(
     ISecretProtector secretProtector) : IUserService
 {
     private const string NationalIdApplicationSettingKey = "Directory:NationalIdAttribute";
-
-    private static readonly JsonSerializerOptions AuditJsonSerializerOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
 
     public async Task<PagedResult<UserListItem>> GetUsersAsync(UserListQuery query, CancellationToken cancellationToken = default)
     {
@@ -309,12 +302,12 @@ public sealed class UserService(
             await context.AuditLogs.AddAsync(
                 new AuditLog
                 {
-                    Action = AuditActionType.Create,
+                    Action = "Create",
                     EntityName = "PortalUser",
                     EntityId = user.Id.ToString(),
-                    UserName = request.ActorUserName,
-                    NewValues = """{"summary":"Portal user created."}""",
-                    CreatedAt = now
+                    Description = "Portal user created.",
+                    ActorUserName = request.ActorUserName,
+                    CreatedAt = new DateTimeOffset(now, TimeSpan.Zero)
                 },
                 cancellationToken);
 
@@ -374,7 +367,6 @@ public sealed class UserService(
                 return new UpdateUserStatusResult(true, string.Empty, MapToDetail(user));
             }
 
-            var oldIsActive = user.IsActive;
             var now = DateTime.UtcNow;
 
             user.IsActive = request.IsActive;
@@ -385,23 +377,16 @@ public sealed class UserService(
                 ? "Portal user activated."
                 : "Portal user deactivated.";
 
-            var oldValuesPayload = JsonSerializer.Serialize(
-                new { isActive = oldIsActive },
-                AuditJsonSerializerOptions);
-            var newValuesPayload = JsonSerializer.Serialize(
-                new { isActive = request.IsActive, summary = auditSummary },
-                AuditJsonSerializerOptions);
-
             await context.AuditLogs.AddAsync(
                 new AuditLog
                 {
-                    Action = AuditActionType.Update,
+                    Action = "Update",
                     EntityName = "PortalUser",
                     EntityId = user.Id.ToString(),
-                    UserName = request.ActorUserName,
-                    OldValues = oldValuesPayload,
-                    NewValues = newValuesPayload,
-                    CreatedAt = now
+                    Description = auditSummary,
+                    ActorUserId = request.ActorUserId,
+                    ActorUserName = request.ActorUserName,
+                    CreatedAt = new DateTimeOffset(now, TimeSpan.Zero)
                 },
                 cancellationToken);
 
@@ -484,13 +469,6 @@ public sealed class UserService(
                 }
             }
 
-            var oldRoleCodes = user.UserRoles
-                .Where(ur => ur.PortalRole is not null && !ur.PortalRole.IsDeleted)
-                .Select(ur => ur.PortalRole.Code)
-                .Distinct(StringComparer.Ordinal)
-                .OrderBy(x => x, StringComparer.Ordinal)
-                .ToList();
-
             var now = DateTime.UtcNow;
             var actor = request.ActorUserName ?? "system";
 
@@ -531,33 +509,16 @@ public sealed class UserService(
             user.UpdatedAt = now;
             user.UpdatedBy = actor;
 
-            var newRoleCodes = requestedRoles
-                .Select(x => x.Code)
-                .Distinct(StringComparer.Ordinal)
-                .OrderBy(x => x, StringComparer.Ordinal)
-                .ToList();
-
-            var oldValuesPayload = JsonSerializer.Serialize(
-                new { roles = oldRoleCodes },
-                AuditJsonSerializerOptions);
-            var newValuesPayload = JsonSerializer.Serialize(
-                new
-                {
-                    summary = "Portal user roles updated.",
-                    roles = newRoleCodes
-                },
-                AuditJsonSerializerOptions);
-
             await context.AuditLogs.AddAsync(
                 new AuditLog
                 {
-                    Action = AuditActionType.Update,
+                    Action = "Update",
                     EntityName = "PortalUser",
                     EntityId = user.Id.ToString(),
-                    UserName = request.ActorUserName,
-                    OldValues = oldValuesPayload,
-                    NewValues = newValuesPayload,
-                    CreatedAt = now
+                    Description = "Portal user roles updated.",
+                    ActorUserId = request.ActorUserId,
+                    ActorUserName = request.ActorUserName,
+                    CreatedAt = new DateTimeOffset(now, TimeSpan.Zero)
                 },
                 cancellationToken);
 
