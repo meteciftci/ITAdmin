@@ -49,4 +49,13 @@ public sealed class AuditLogsController(IAuditLogService auditLogService) : Cont
 
         return Ok(response);
     }
+
+    [HttpGet("filter-options")]
+    [RequirePermission("AuditLogs.View")]
+    public async Task<ActionResult<AuditLogFilterOptionsResponse>> GetFilterOptions(
+        CancellationToken cancellationToken = default)
+    {
+        var result = await auditLogService.GetFilterOptionsAsync(cancellationToken);
+        return Ok(new AuditLogFilterOptionsResponse(result.Actions, result.EntityNames));
+    }
 }

@@ -7,6 +7,8 @@ namespace SasPortal.Persistence.Services;
 
 public sealed class AuditLogService(AppDbContext context) : IAuditLogService
 {
+    private const int FilterOptionLimit = 100;
+
     public async Task<PagedResult<AuditLogListItem>> GetAuditLogsAsync(
         AuditLogListQuery query,
         CancellationToken cancellationToken = default)
@@ -80,6 +82,29 @@ public sealed class AuditLogService(AppDbContext context) : IAuditLogService
             .ToListAsync(cancellationToken);
 
         return new PagedResult<AuditLogListItem>(items, pageNumber, pageSize, totalCount, totalPages);
+    }
+
+    public async Task<AuditLogFilterOptions> GetFilterOptionsAsync(CancellationToken cancellationToken = default)
+    {
+        var logsQuery = context.AuditLogs.AsNoTracking();
+
+        var actions = await logsQuery
+            .Where(x => !string.IsNullOrWhiteSpace(x.Action))
+            .Select(x => x.Action.Trim())
+            .Distinct()
+            .OrderBy(x => x)
+            .Take(FilterOptionLimit)
+            .ToListAsync(cancellationToken);
+
+        var entityNames = await logsQuery
+            .Where(x => !string.IsNullOrWhiteSpace(x.EntityName))
+            .Select(x => x.EntityName.Trim())
+            .Distinct()
+            .OrderBy(x => x)
+            .Take(FilterOptionLimit)
+            .ToListAsync(cancellationToken);
+
+        return new AuditLogFilterOptions(actions, entityNames);
     }
 
     private static string BuildILikeContainsPattern(string search)
