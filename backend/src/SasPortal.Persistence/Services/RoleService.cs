@@ -12,6 +12,8 @@ namespace SasPortal.Persistence.Services;
 public sealed class RoleService(AppDbContext context) : IRoleService
 {
     private const int AuditDescriptionMaxLength = 2000;
+    private const int AuditIpAddressMaxLength = 64;
+    private const int AuditUserAgentMaxLength = 1024;
 
     public async Task<PagedResult<RoleListItem>> GetRolesAsync(RoleListQuery query, CancellationToken cancellationToken = default)
     {
@@ -170,6 +172,8 @@ public sealed class RoleService(AppDbContext context) : IRoleService
                     EntityId = role.Id.ToString(),
                     Description = BuildCreateRoleAuditDescription(role),
                     ActorUserName = request.ActorUserName,
+                    IpAddress = TruncateAuditIpAddress(request.ActorIpAddress),
+                    UserAgent = TruncateAuditUserAgent(request.ActorUserAgent),
                     CreatedAt = new DateTimeOffset(now, TimeSpan.Zero)
                 },
                 cancellationToken);
@@ -250,6 +254,8 @@ public sealed class RoleService(AppDbContext context) : IRoleService
                         oldStatus,
                         role),
                     ActorUserName = request.ActorUserName,
+                    IpAddress = TruncateAuditIpAddress(request.ActorIpAddress),
+                    UserAgent = TruncateAuditUserAgent(request.ActorUserAgent),
                     CreatedAt = new DateTimeOffset(now, TimeSpan.Zero)
                 },
                 cancellationToken);
@@ -307,6 +313,8 @@ public sealed class RoleService(AppDbContext context) : IRoleService
                     EntityId = role.Id.ToString(),
                     Description = TruncateAuditDescription(summary),
                     ActorUserName = request.ActorUserName,
+                    IpAddress = TruncateAuditIpAddress(request.ActorIpAddress),
+                    UserAgent = TruncateAuditUserAgent(request.ActorUserAgent),
                     CreatedAt = new DateTimeOffset(now, TimeSpan.Zero)
                 },
                 cancellationToken);
@@ -380,6 +388,8 @@ public sealed class RoleService(AppDbContext context) : IRoleService
                             Array.Empty<string>(),
                             removedPermissionCodesOnClear),
                         ActorUserName = request.ActorUserName,
+                        IpAddress = TruncateAuditIpAddress(request.ActorIpAddress),
+                        UserAgent = TruncateAuditUserAgent(request.ActorUserAgent),
                         CreatedAt = new DateTimeOffset(now, TimeSpan.Zero)
                     },
                     cancellationToken);
@@ -459,6 +469,8 @@ public sealed class RoleService(AppDbContext context) : IRoleService
                     EntityId = role.Id.ToString(),
                     Description = BuildUpdateRolePermissionsAuditDescription(role, addedPermissionCodes, removedPermissionCodes),
                     ActorUserName = request.ActorUserName,
+                    IpAddress = TruncateAuditIpAddress(request.ActorIpAddress),
+                    UserAgent = TruncateAuditUserAgent(request.ActorUserAgent),
                     CreatedAt = new DateTimeOffset(now, TimeSpan.Zero)
                 },
                 cancellationToken);
@@ -573,6 +585,23 @@ public sealed class RoleService(AppDbContext context) : IRoleService
         description.Length <= AuditDescriptionMaxLength
             ? description
             : $"{description[..(AuditDescriptionMaxLength - 3)]}...";
+
+    private static string? TruncateAuditIpAddress(string? ipAddress) =>
+        TruncateNullable(ipAddress, AuditIpAddressMaxLength);
+
+    private static string? TruncateAuditUserAgent(string? userAgent) =>
+        TruncateNullable(userAgent, AuditUserAgentMaxLength);
+
+    private static string? TruncateNullable(string? value, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var trimmed = value.Trim();
+        return trimmed.Length <= maxLength ? trimmed : trimmed[..maxLength];
+    }
 
     private static bool ValidateRoleCode(string code)
     {

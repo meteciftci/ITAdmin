@@ -15,6 +15,8 @@ public sealed class UserService(
 {
     private const string NationalIdApplicationSettingKey = "Directory:NationalIdAttribute";
     private const int AuditDescriptionMaxLength = 2000;
+    private const int AuditIpAddressMaxLength = 64;
+    private const int AuditUserAgentMaxLength = 1024;
 
     public async Task<PagedResult<UserListItem>> GetUsersAsync(UserListQuery query, CancellationToken cancellationToken = default)
     {
@@ -308,6 +310,8 @@ public sealed class UserService(
                     EntityId = user.Id.ToString(),
                     Description = BuildCreateUserAuditDescription(user),
                     ActorUserName = request.ActorUserName,
+                    IpAddress = TruncateAuditIpAddress(request.ActorIpAddress),
+                    UserAgent = TruncateAuditUserAgent(request.ActorUserAgent),
                     CreatedAt = new DateTimeOffset(now, TimeSpan.Zero)
                 },
                 cancellationToken);
@@ -390,6 +394,8 @@ public sealed class UserService(
                     Description = TruncateAuditDescription(auditSummary),
                     ActorUserId = request.ActorUserId,
                     ActorUserName = request.ActorUserName,
+                    IpAddress = TruncateAuditIpAddress(request.ActorIpAddress),
+                    UserAgent = TruncateAuditUserAgent(request.ActorUserAgent),
                     CreatedAt = new DateTimeOffset(now, TimeSpan.Zero)
                 },
                 cancellationToken);
@@ -541,6 +547,8 @@ public sealed class UserService(
                     Description = BuildUpdateUserRolesAuditDescription(user, addedRoleCodes, removedRoleCodes),
                     ActorUserId = request.ActorUserId,
                     ActorUserName = request.ActorUserName,
+                    IpAddress = TruncateAuditIpAddress(request.ActorIpAddress),
+                    UserAgent = TruncateAuditUserAgent(request.ActorUserAgent),
                     CreatedAt = new DateTimeOffset(now, TimeSpan.Zero)
                 },
                 cancellationToken);
@@ -692,6 +700,23 @@ public sealed class UserService(
         description.Length <= AuditDescriptionMaxLength
             ? description
             : $"{description[..(AuditDescriptionMaxLength - 3)]}...";
+
+    private static string? TruncateAuditIpAddress(string? ipAddress) =>
+        TruncateNullable(ipAddress, AuditIpAddressMaxLength);
+
+    private static string? TruncateAuditUserAgent(string? userAgent) =>
+        TruncateNullable(userAgent, AuditUserAgentMaxLength);
+
+    private static string? TruncateNullable(string? value, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var trimmed = value.Trim();
+        return trimmed.Length <= maxLength ? trimmed : trimmed[..maxLength];
+    }
 
     private static string? MaskNationalId(string? value)
     {

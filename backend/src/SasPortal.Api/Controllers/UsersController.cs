@@ -57,7 +57,9 @@ public sealed class UsersController(IUserService userService) : ControllerBase
             new AppModels.CreateUserRequest(
                 request.DirectoryObjectId,
                 request.IsActive,
-                ResolveActorUserName(User)),
+                ResolveActorUserName(User),
+                ResolveIpAddress(),
+                ResolveUserAgent()),
             cancellationToken);
 
         if (!result.IsSuccess)
@@ -159,7 +161,9 @@ public sealed class UsersController(IUserService userService) : ControllerBase
                 id,
                 request.IsActive,
                 ResolveActorUserId(User),
-                ResolveActorUserName(User)),
+                ResolveActorUserName(User),
+                ResolveIpAddress(),
+                ResolveUserAgent()),
             cancellationToken);
 
         if (!result.IsSuccess)
@@ -207,7 +211,9 @@ public sealed class UsersController(IUserService userService) : ControllerBase
                 id,
                 request.RoleIds,
                 ResolveActorUserId(User),
-                ResolveActorUserName(User)),
+                ResolveActorUserName(User),
+                ResolveIpAddress(),
+                ResolveUserAgent()),
             cancellationToken);
 
         if (!result.IsSuccess)
@@ -260,6 +266,18 @@ public sealed class UsersController(IUserService userService) : ControllerBase
             ?? principal.FindFirst(JwtSubClaimType)?.Value;
 
         return Guid.TryParse(rawUserId, out var userId) ? userId : null;
+    }
+
+    private string? ResolveIpAddress()
+    {
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+        return string.IsNullOrWhiteSpace(ip) ? null : ip;
+    }
+
+    private string? ResolveUserAgent()
+    {
+        var userAgent = Request.Headers.UserAgent.ToString();
+        return string.IsNullOrWhiteSpace(userAgent) ? null : userAgent;
     }
 
     private const string JwtSubClaimType = "sub";

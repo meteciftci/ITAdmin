@@ -5,4 +5,6 @@ public sealed record CreateRoleRequest(
     string Code,
     string? Description,
     bool IsActive,
-    string? ActorUserName);
+    string? ActorUserName,
+    string? ActorIpAddress,
+    string? ActorUserAgent);

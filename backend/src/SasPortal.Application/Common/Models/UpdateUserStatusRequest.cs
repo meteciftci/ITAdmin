@@ -4,4 +4,6 @@ public sealed record UpdateUserStatusRequest(
     Guid UserId,
     bool IsActive,
     Guid? ActorUserId,
-    string? ActorUserName);
+    string? ActorUserName,
+    string? ActorIpAddress,
+    string? ActorUserAgent);

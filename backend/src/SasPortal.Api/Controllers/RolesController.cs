@@ -73,7 +73,9 @@ public sealed class RolesController(IRoleService roleService) : ControllerBase
                 request.Code,
                 request.Description,
                 request.IsActive,
-                actorUserName),
+                actorUserName,
+                ResolveIpAddress(),
+                ResolveUserAgent()),
             cancellationToken);
 
         if (!result.IsSuccess)
@@ -104,7 +106,9 @@ public sealed class RolesController(IRoleService roleService) : ControllerBase
                 request.Name,
                 request.Description,
                 request.IsActive,
-                actorUserName),
+                actorUserName,
+                ResolveIpAddress(),
+                ResolveUserAgent()),
             cancellationToken);
 
         if (!result.IsSuccess)
@@ -137,7 +141,9 @@ public sealed class RolesController(IRoleService roleService) : ControllerBase
             new AppModels.UpdateRoleStatusRequest(
                 id,
                 request.IsActive,
-                actorUserName),
+                actorUserName,
+                ResolveIpAddress(),
+                ResolveUserAgent()),
             cancellationToken);
 
         if (!result.IsSuccess)
@@ -170,7 +176,9 @@ public sealed class RolesController(IRoleService roleService) : ControllerBase
             new AppModels.UpdateRolePermissionsRequest(
                 id,
                 request.PermissionIds,
-                actorUserName),
+                actorUserName,
+                ResolveIpAddress(),
+                ResolveUserAgent()),
             cancellationToken);
 
         if (!result.IsSuccess)
@@ -206,6 +214,18 @@ public sealed class RolesController(IRoleService roleService) : ControllerBase
 
         var nameClaim = User.FindFirstValue("name");
         return string.IsNullOrWhiteSpace(nameClaim) ? null : nameClaim;
+    }
+
+    private string? ResolveIpAddress()
+    {
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+        return string.IsNullOrWhiteSpace(ip) ? null : ip;
+    }
+
+    private string? ResolveUserAgent()
+    {
+        var userAgent = Request.Headers.UserAgent.ToString();
+        return string.IsNullOrWhiteSpace(userAgent) ? null : userAgent;
     }
 
     private static RoleDetailResponse MapRoleDetail(AppModels.RoleDetail role) =>
