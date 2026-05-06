@@ -2,7 +2,8 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { SectionCard } from "@/components/common/SectionCard";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { useAuthStore } from "@/features/auth/auth-store";
 import { useTranslation } from "react-i18next";
 

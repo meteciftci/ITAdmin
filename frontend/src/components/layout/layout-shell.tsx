@@ -1,15 +1,7 @@
 import type { ReactNode } from "react";
-import { createContext, useContext, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
-type LayoutShellContextValue = {
-  sidebarCollapsed: boolean;
-  setSidebarCollapsed: (next: boolean) => void;
-  mobileSidebarOpen: boolean;
-  setMobileSidebarOpen: (next: boolean) => void;
-};
-
-const SIDEBAR_KEY = "sasportal.sidebar.collapsed";
-const LayoutShellContext = createContext<LayoutShellContextValue | null>(null);
+import { LayoutShellContext, SIDEBAR_KEY } from "@/components/layout/layout-shell-context";
 
 export function LayoutShellProvider({ children }: { children: ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsedState] = useState<boolean>(() => {
@@ -33,12 +25,4 @@ export function LayoutShellProvider({ children }: { children: ReactNode }) {
   );
 
   return <LayoutShellContext.Provider value={value}>{children}</LayoutShellContext.Provider>;
-}
-
-export function useLayoutShell() {
-  const context = useContext(LayoutShellContext);
-  if (!context) {
-    throw new Error("useLayoutShell must be used inside LayoutShellProvider");
-  }
-  return context;
 }

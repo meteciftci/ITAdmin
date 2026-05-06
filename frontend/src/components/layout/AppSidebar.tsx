@@ -1,12 +1,12 @@
-import { ChevronLeft, ChevronRight, LayoutDashboard, Shield, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
-import { useLayoutShell } from "@/components/layout/layout-shell";
+import { useLayoutShell } from "@/components/layout/useLayoutShell";
+import { getSidebarGroups } from "@/components/layout/sidebar-items";
 import { Tooltip } from "@/components/ui/tooltip";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { Separator } from "@/components/ui/separator";
 import { useAuthStore } from "@/features/auth/auth-store";
-import { canAccess } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 
@@ -21,36 +21,7 @@ export function AppSidebar() {
     setMobileSidebarOpen,
   } = useLayoutShell();
 
-  const groups = [
-    {
-      label: t("groups.main"),
-      items: [
-        {
-          title: t("dashboard"),
-          to: "/dashboard",
-          icon: LayoutDashboard,
-          visible: true,
-        },
-      ],
-    },
-    {
-      label: t("groups.administration"),
-      items: [
-        {
-          title: t("users"),
-          to: "/users",
-          icon: Users,
-          visible: canAccess(user, "Users.View"),
-        },
-        {
-          title: t("roles"),
-          to: "/roles",
-          icon: Shield,
-          visible: canAccess(user, "Roles.View"),
-        },
-      ],
-    },
-  ];
+  const groups = getSidebarGroups(user);
 
   return (
     <>
@@ -92,20 +63,22 @@ export function AppSidebar() {
           {groups.map((group) => {
             const visibleItems = group.items.filter((item) => item.visible);
             if (!visibleItems.length) return null;
+            const groupLabel = t(group.labelKey);
 
             return (
-              <div key={group.label} className="space-y-1">
+              <div key={group.labelKey} className="space-y-1">
                 {!sidebarCollapsed ? (
                   <p className="px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    {group.label}
+                    {groupLabel}
                   </p>
                 ) : null}
                 {visibleItems.map((item) => {
                   const Icon = item.icon;
                   const isActive = location.pathname === item.to;
+                  const itemTitle = t(item.titleKey);
                   const link = (
                     <Link
-                      key={item.title}
+                      key={item.to}
                       to={item.to}
                       onClick={() => setMobileSidebarOpen(false)}
                       className={cn(
@@ -118,12 +91,12 @@ export function AppSidebar() {
                       )}
                     >
                       <Icon className="size-4 shrink-0" />
-                      {!sidebarCollapsed ? <span className="truncate">{item.title}</span> : null}
+                      {!sidebarCollapsed ? <span className="truncate">{itemTitle}</span> : null}
                     </Link>
                   );
 
                   return (
-                    <Tooltip key={item.title} text={item.title} disabled={!sidebarCollapsed}>
+                    <Tooltip key={item.to} text={itemTitle} disabled={!sidebarCollapsed}>
                       {link}
                     </Tooltip>
                   );

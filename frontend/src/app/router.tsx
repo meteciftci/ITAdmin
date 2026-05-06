@@ -1,41 +1,15 @@
-import { useQuery } from "@tanstack/react-query";
-import { Navigate, createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter } from "react-router-dom";
 
+import { RootRedirect } from "@/app/RootRedirect";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { RequireAuth } from "@/features/auth/RequireAuth";
 import { RequirePermission } from "@/features/auth/RequirePermission";
-import { useAuthStore } from "@/features/auth/auth-store";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
 import { RolesPage } from "@/features/roles/RolesPage";
-import { getSetupStatus } from "@/features/setup/api";
 import { SetupRequiredPage } from "@/features/setup/SetupRequiredPage";
 import { UsersPage } from "@/features/users/UsersPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
-import { useTranslation } from "react-i18next";
-
-function RootRedirect() {
-  const { t } = useTranslation(["common"]);
-  const accessToken = useAuthStore((state) => state.accessToken);
-  const setupQuery = useQuery({
-    queryKey: ["setup", "status"],
-    queryFn: getSetupStatus,
-  });
-
-  if (setupQuery.isLoading) {
-    return <div className="p-6 text-sm text-muted-foreground">{t("loading")}</div>;
-  }
-
-  if (setupQuery.data?.isSetupRequired) {
-    return <Navigate to="/setup" replace />;
-  }
-
-  if (!accessToken) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return <Navigate to="/dashboard" replace />;
-}
 
 export const router = createBrowserRouter([
   {

@@ -1,7 +1,7 @@
 import { LogOut, Menu } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-import { useLayoutShell } from "@/components/layout/layout-shell";
+import { useLayoutShell } from "@/components/layout/useLayoutShell";
 import { Button } from "@/components/ui/button";
 import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";

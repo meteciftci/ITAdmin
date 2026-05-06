@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { cloneElement, isValidElement, useEffect, useRef, useState } from "react";
+import { cloneElement, isValidElement, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { cn } from "@/lib/utils";
@@ -37,7 +37,7 @@ export function DropdownMenuRoot({
     origin: "top",
   });
 
-  const updatePosition = () => {
+  const updatePosition = useCallback(() => {
     if (!triggerRef.current || !contentRef.current) return;
 
     const triggerRect = triggerRef.current.getBoundingClientRect();
@@ -70,7 +70,12 @@ export function DropdownMenuRoot({
       : preferredLeft;
 
     setPosition({ top, left, origin });
-  };
+  }, [
+    contentProps?.align,
+    contentProps?.avoidCollisions,
+    contentProps?.collisionPadding,
+    contentProps?.sideOffset,
+  ]);
 
   useEffect(() => {
     if (!open) return;
@@ -83,7 +88,7 @@ export function DropdownMenuRoot({
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, true);
     };
-  }, [open, contentProps?.align, contentProps?.collisionPadding, contentProps?.sideOffset]);
+  }, [open, updatePosition]);
 
   const triggerNode = isValidElement(trigger)
     ? cloneElement(trigger, {

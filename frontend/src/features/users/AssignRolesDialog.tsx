@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 
 import { FormError } from "@/components/common/FormError";
@@ -30,30 +30,26 @@ export function AssignRolesDialog({
   onUpdated,
 }: AssignRolesDialogProps) {
   const { t } = useTranslation(["users", "common"]);
-  const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>([]);
+  const [selectedRoleIdsOverride, setSelectedRoleIdsOverride] = useState<string[] | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const rolesQuery = useQuery({
-    queryKey: ["roles", "active-for-user-assign", open],
+    queryKey: ["roles", "active-for-user-assign", open, user?.id],
     queryFn: () => getRoles({ isActive: true, pageSize: 100 }),
     enabled: open,
   });
 
-  const roleIdsByCode = useMemo(() => {
-    const map = new Map<string, string>();
+  const initialSelectedRoleIds = useMemo(() => {
+    const roleIdsByCode = new Map<string, string>();
     (rolesQuery.data?.items ?? []).forEach((role) => {
-      map.set(role.code, role.id);
+      roleIdsByCode.set(role.code, role.id);
     });
-    return map;
-  }, [rolesQuery.data]);
-
-  useEffect(() => {
-    if (!rolesQuery.data) return;
-    const initialIds = (user?.roles ?? [])
+    return (user?.roles ?? [])
       .map((code) => roleIdsByCode.get(code))
       .filter((id): id is string => Boolean(id));
-    setSelectedRoleIds(initialIds);
-  }, [roleIdsByCode, rolesQuery.data, user?.roles]);
+  }, [rolesQuery.data, user?.roles]);
+
+  const selectedRoleIds = selectedRoleIdsOverride ?? initialSelectedRoleIds;
 
   const updateRolesMutation = useMutation({
     mutationFn: (roleIds: string[]) => {
@@ -73,7 +69,8 @@ export function AssignRolesDialog({
   });
 
   const handleToggleRole = (role: RoleListItem, checked: boolean) => {
-    setSelectedRoleIds((previous) => {
+    const previous = selectedRoleIds;
+    setSelectedRoleIdsOverride(() => {
       if (checked) {
         return previous.includes(role.id) ? previous : [...previous, role.id];
       }
@@ -86,9 +83,17 @@ export function AssignRolesDialog({
     updateRolesMutation.mutate(selectedRoleIds);
   };
 
+  const handleOpenChange = (next: boolean) => {
+    if (!next) {
+      setErrorMessage(null);
+      setSelectedRoleIdsOverride(null);
+    }
+    onOpenChange(next);
+  };
+
   return (
     <Dialog open={open}>
-      <DialogContent onOpenChange={onOpenChange} className="max-w-2xl">
+      <DialogContent onOpenChange={handleOpenChange} className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>{t("users:assignRoles.title")}</DialogTitle>
           <DialogDescription>{t("users:assignRoles.description")}</DialogDescription>
@@ -131,7 +136,7 @@ export function AssignRolesDialog({
           ) : null}
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => handleOpenChange(false)}>
             {t("common:actions.cancel")}
           </Button>
           <Button

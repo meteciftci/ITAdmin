@@ -1,0 +1,56 @@
+import type { LucideIcon } from "lucide-react";
+import { LayoutDashboard, Shield, Users } from "lucide-react";
+
+import type { CurrentUser } from "@/features/auth/types";
+import { canAccess } from "@/lib/permissions";
+
+type SidebarItem = {
+  titleKey: string;
+  to: string;
+  icon: LucideIcon;
+  visible: boolean;
+};
+
+type SidebarGroup = {
+  labelKey: string;
+  items: SidebarItem[];
+};
+
+export const getSidebarGroups = (user: CurrentUser | null): SidebarGroup[] => [
+  {
+    labelKey: "groups.main",
+    items: [
+      {
+        titleKey: "dashboard",
+        to: "/dashboard",
+        icon: LayoutDashboard,
+        visible: true,
+      },
+    ],
+  },
+  {
+    labelKey: "groups.administration",
+    items: [
+      {
+        titleKey: "users",
+        to: "/users",
+        icon: Users,
+        visible: canAccess(user, "Users.View"),
+      },
+      {
+        titleKey: "roles",
+        to: "/roles",
+        icon: Shield,
+        visible: canAccess(user, "Roles.View"),
+      },
+    ],
+  },
+  {
+    labelKey: "groups.monitoring",
+    items: [],
+  },
+  {
+    labelKey: "groups.system",
+    items: [],
+  },
+];

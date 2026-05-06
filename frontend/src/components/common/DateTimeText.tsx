@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import { i18n, normalizeLanguage } from "@/app/i18n";
+import { normalizeLanguage } from "@/app/i18n";
 
 type DateTimeTextProps = {
   value?: string | null;
@@ -15,14 +15,17 @@ const getLocale = (language: string): string => {
 };
 
 export function DateTimeText({ value, emptyText, options }: DateTimeTextProps) {
-  const { t } = useTranslation(["common"]);
+  const {
+    t,
+    i18n: translationI18n,
+  } = useTranslation(["common"]);
 
   const display = useMemo(() => {
     if (!value) return emptyText ?? "-";
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return emptyText ?? "-";
 
-    const locale = getLocale(i18n.language);
+    const locale = getLocale(translationI18n.resolvedLanguage ?? translationI18n.language);
     const formatter = new Intl.DateTimeFormat(
       locale,
       options ?? {
@@ -34,7 +37,7 @@ export function DateTimeText({ value, emptyText, options }: DateTimeTextProps) {
       },
     );
     return formatter.format(date);
-  }, [value, emptyText, options]);
+  }, [value, emptyText, options, translationI18n.language, translationI18n.resolvedLanguage]);
 
   const ariaLabel = emptyText ?? t("notAvailable");
   return <span aria-label={ariaLabel}>{display}</span>;

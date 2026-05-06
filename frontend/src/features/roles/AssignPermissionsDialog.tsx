@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -33,7 +33,7 @@ export function AssignPermissionsDialog({
   onSaved,
 }: AssignPermissionsDialogProps) {
   const { t } = useTranslation(["roles", "common"]);
-  const [selectedPermissionIds, setSelectedPermissionIds] = useState<string[]>([]);
+  const [selectedPermissionIdsOverride, setSelectedPermissionIdsOverride] = useState<string[] | null>(null);
   const [search, setSearch] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -51,10 +51,10 @@ export function AssignPermissionsDialog({
     enabled: open,
   });
 
-  useEffect(() => {
-    if (!roleDetailQuery.data) return;
-    setSelectedPermissionIds(roleDetailQuery.data.permissions.map((item) => item.id));
-  }, [roleDetailQuery.data]);
+  const selectedPermissionIds =
+    selectedPermissionIdsOverride ??
+    roleDetailQuery.data?.permissions.map((item) => item.id) ??
+    [];
 
   const filteredPermissions = useMemo(() => {
     const source = permissionsQuery.data?.items ?? [];
@@ -85,7 +85,8 @@ export function AssignPermissionsDialog({
   });
 
   const handleTogglePermission = (permissionId: string, checked: boolean) => {
-    setSelectedPermissionIds((previous) => {
+    const previous = selectedPermissionIds;
+    setSelectedPermissionIdsOverride(() => {
       if (checked) {
         return previous.includes(permissionId)
           ? previous
@@ -101,9 +102,18 @@ export function AssignPermissionsDialog({
     saveMutation.mutate();
   };
 
+  const handleOpenChange = (next: boolean) => {
+    if (!next) {
+      setSearch("");
+      setErrorMessage(null);
+      setSelectedPermissionIdsOverride(null);
+      onClose();
+    }
+  };
+
   return (
     <Dialog open={open}>
-      <DialogContent onOpenChange={(next) => !next && onClose()} className="max-w-3xl">
+      <DialogContent onOpenChange={handleOpenChange} className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>{t("roles:assignPermissions.title")}</DialogTitle>
           <DialogDescription>

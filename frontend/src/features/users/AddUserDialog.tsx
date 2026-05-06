@@ -39,14 +39,6 @@ export function AddUserDialog({ open, onOpenChange, onCreated }: AddUserDialogPr
     return () => window.clearTimeout(timer);
   }, [searchValue]);
 
-  useEffect(() => {
-    if (open) return;
-    setSearchValue("");
-    setDebouncedSearch("");
-    setSelectedDirectoryId(null);
-    setErrorMessage(null);
-  }, [open]);
-
   const lookupQuery = useQuery({
     queryKey: ["users", "lookup-directory", debouncedSearch],
     queryFn: () =>
@@ -57,12 +49,22 @@ export function AddUserDialog({ open, onOpenChange, onCreated }: AddUserDialogPr
     enabled: debouncedSearch.length >= 2,
   });
 
+  function handleOpenChange(next: boolean) {
+    if (!next) {
+      setSearchValue("");
+      setDebouncedSearch("");
+      setSelectedDirectoryId(null);
+      setErrorMessage(null);
+    }
+    onOpenChange(next);
+  }
+
   const createUserMutation = useMutation({
     mutationFn: createUser,
     onSuccess: () => {
       setErrorMessage(null);
       onCreated();
-      onOpenChange(false);
+      handleOpenChange(false);
     },
     onError: (error) => {
       setErrorMessage(getApiErrorMessage(error, t("users:add.error")));
@@ -76,7 +78,7 @@ export function AddUserDialog({ open, onOpenChange, onCreated }: AddUserDialogPr
 
   return (
     <Dialog open={open}>
-      <DialogContent onOpenChange={onOpenChange} className="max-w-2xl">
+      <DialogContent onOpenChange={handleOpenChange} className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>{t("users:add.title")}</DialogTitle>
           <DialogDescription>{t("users:add.description")}</DialogDescription>
@@ -146,7 +148,7 @@ export function AddUserDialog({ open, onOpenChange, onCreated }: AddUserDialogPr
           ) : null}
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => handleOpenChange(false)}>
             {t("common:actions.close")}
           </Button>
         </DialogFooter>

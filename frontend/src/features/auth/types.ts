@@ -33,7 +33,7 @@ export type CurrentUser = {
   userId: string;
   userName: string;
   displayName: string;
-  email: string;
+  email: string | null;
   roles: string[];
   permissions: string[];
   isSuperAdmin: boolean;
