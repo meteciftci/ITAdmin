@@ -40,14 +40,17 @@ public sealed class AuditLogService(AppDbContext context) : IAuditLogService
             logsQuery = logsQuery.Where(x => x.ActorUserId == query.ActorUserId.Value);
         }
 
-        if (query.From.HasValue)
+        var fromUtc = query.From?.ToUniversalTime();
+        var toUtc = query.To?.ToUniversalTime();
+
+        if (fromUtc.HasValue)
         {
-            logsQuery = logsQuery.Where(x => x.CreatedAt >= query.From.Value);
+            logsQuery = logsQuery.Where(x => x.CreatedAt >= fromUtc.Value);
         }
 
-        if (query.To.HasValue)
+        if (toUtc.HasValue)
         {
-            logsQuery = logsQuery.Where(x => x.CreatedAt <= query.To.Value);
+            logsQuery = logsQuery.Where(x => x.CreatedAt <= toUtc.Value);
         }
 
         if (!string.IsNullOrWhiteSpace(query.Search))
