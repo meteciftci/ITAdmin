@@ -6,6 +6,7 @@ import { LoginPage } from "@/features/auth/LoginPage";
 import { RequireAuth } from "@/features/auth/RequireAuth";
 import { RequirePermission } from "@/features/auth/RequirePermission";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
+import { PermissionsPage } from "@/features/permissions/PermissionsPage";
 import { RolesPage } from "@/features/roles/RolesPage";
 import { SetupRequiredPage } from "@/features/setup/SetupRequiredPage";
 import { UsersPage } from "@/features/users/UsersPage";
@@ -31,6 +32,18 @@ export const router = createBrowserRouter([
         <AppLayout>
           <DashboardPage />
         </AppLayout>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/permissions",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission="Permissions.View">
+          <AppLayout>
+            <PermissionsPage />
+          </AppLayout>
+        </RequirePermission>
       </RequireAuth>
     ),
   },

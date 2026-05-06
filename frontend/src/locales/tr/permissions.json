@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "title": "İzinler",
+    "description": "Sistemdeki izin kodlarını görüntüleyin.",
+    "sections": {
+      "listTitle": "İzin Listesi"
+    },
+    "search": {
+      "placeholder": "İzin ara..."
+    },
+    "table": {
+      "name": "Ad",
+      "code": "Kod",
+      "description": "Açıklama",
+      "group": "Grup/Modül",
+      "status": "Durum"
+    },
+    "empty": {
+      "title": "İzin bulunamadı",
+      "description": "Mevcut filtrelere uygun izin bulunamadı."
+    },
+    "errors": {
+      "loadFailed": "İzinler yüklenemedi."
+    }
+  }
+}

@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { LayoutDashboard, Shield, Users } from "lucide-react";
+import { KeyRound, LayoutDashboard, Shield, Users } from "lucide-react";
 
 import type { CurrentUser } from "@/features/auth/types";
 import { canAccess } from "@/lib/permissions";
@@ -42,6 +42,12 @@ export const getSidebarGroups = (user: CurrentUser | null): SidebarGroup[] => [
         to: "/roles",
         icon: Shield,
         visible: canAccess(user, "Roles.View"),
+      },
+      {
+        titleKey: "permissions",
+        to: "/permissions",
+        icon: KeyRound,
+        visible: canAccess(user, "Permissions.View"),
       },
     ],
   },

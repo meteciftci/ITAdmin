@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "title": "Permissions",
+    "description": "View permission codes in the system.",
+    "sections": {
+      "listTitle": "Permission List"
+    },
+    "search": {
+      "placeholder": "Search permissions..."
+    },
+    "table": {
+      "name": "Name",
+      "code": "Code",
+      "description": "Description",
+      "group": "Group/Module",
+      "status": "Status"
+    },
+    "empty": {
+      "title": "No permissions found",
+      "description": "No permissions found for current filters."
+    },
+    "errors": {
+      "loadFailed": "Permissions could not be loaded."
+    }
+  }
+}
