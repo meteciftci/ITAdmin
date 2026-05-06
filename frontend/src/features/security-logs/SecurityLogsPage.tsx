@@ -308,15 +308,23 @@ function toUtcEndOfLocalDay(value: Date): string {
 
 function getSeverityBadgeVariant(
   severity: string,
-): "default" | "secondary" | "outline" | "success" | "warning" {
+): "default" | "secondary" | "outline" | "info" | "success" | "warning" | "destructive" {
   const normalizedSeverity = severity.trim().toLocaleLowerCase();
 
-  if (normalizedSeverity === "error" || normalizedSeverity === "critical" || normalizedSeverity === "high") {
+  if (normalizedSeverity === "info") {
+    return "info";
+  }
+
+  if (normalizedSeverity === "low") {
+    return "secondary";
+  }
+
+  if (normalizedSeverity === "warning") {
     return "warning";
   }
 
-  if (normalizedSeverity === "info" || normalizedSeverity === "low") {
-    return "secondary";
+  if (normalizedSeverity === "error" || normalizedSeverity === "critical" || normalizedSeverity === "high") {
+    return "destructive";
   }
 
   if (normalizedSeverity === "success") {
