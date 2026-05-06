@@ -7,8 +7,11 @@
     },
     "filters": {
       "searchPlaceholder": "Search audit logs...",
-      "actionPlaceholder": "Action",
-      "entityNamePlaceholder": "Entity name",
+      "actionFilterPlaceholder": "Select action",
+      "entityNameFilterPlaceholder": "Select entity name",
+      "searchOptions": "Search options...",
+      "clearSelection": "Clear selection",
+      "noOptions": "No options found",
       "dateRangePlaceholder": "Select date range",
       "clearDateRange": "Clear"
     },

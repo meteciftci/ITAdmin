@@ -27,7 +27,9 @@ export type AuditLogFilterOptions = {
 export type GetAuditLogsParams = {
   search?: string;
   action?: string;
+  actions?: string[];
   entityName?: string;
+  entityNames?: string[];
   actorUserId?: string;
   from?: string;
   to?: string;

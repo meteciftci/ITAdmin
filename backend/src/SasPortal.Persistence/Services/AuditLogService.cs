@@ -23,16 +23,16 @@ public sealed class AuditLogService(AppDbContext context) : IAuditLogService
 
         var logsQuery = context.AuditLogs.AsNoTracking().AsQueryable();
 
-        if (!string.IsNullOrWhiteSpace(query.Action))
+        var actions = NormalizeFilterValues(query.Actions, query.Action);
+        if (actions.Count > 0)
         {
-            var action = query.Action.Trim();
-            logsQuery = logsQuery.Where(x => x.Action == action);
+            logsQuery = logsQuery.Where(x => actions.Contains(x.Action));
         }
 
-        if (!string.IsNullOrWhiteSpace(query.EntityName))
+        var entityNames = NormalizeFilterValues(query.EntityNames, query.EntityName);
+        if (entityNames.Count > 0)
         {
-            var entityName = query.EntityName.Trim();
-            logsQuery = logsQuery.Where(x => x.EntityName == entityName);
+            logsQuery = logsQuery.Where(x => entityNames.Contains(x.EntityName));
         }
 
         if (query.ActorUserId.HasValue)
@@ -114,5 +114,34 @@ public sealed class AuditLogService(AppDbContext context) : IAuditLogService
     {
         var trimmed = search.Trim();
         return $"%{trimmed}%";
+    }
+
+    private static List<string> NormalizeFilterValues(
+        IReadOnlyList<string>? values,
+        string? singleValue)
+    {
+        var normalized = new List<string>();
+
+        if (values is not null)
+        {
+            foreach (var value in values)
+            {
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    continue;
+                }
+
+                normalized.Add(value.Trim());
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(singleValue))
+        {
+            normalized.Add(singleValue.Trim());
+        }
+
+        return normalized
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
     }
 }

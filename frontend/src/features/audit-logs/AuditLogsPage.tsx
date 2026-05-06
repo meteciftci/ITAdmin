@@ -10,11 +10,11 @@ import { DateTimeText } from "@/components/common/DateTimeText";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ErrorState } from "@/components/common/ErrorState";
 import { LoadingState } from "@/components/common/LoadingState";
+import { MultiSelectFilter } from "@/components/common/MultiSelectFilter";
 import { PageHeader } from "@/components/common/PageHeader";
 import { SectionCard } from "@/components/common/SectionCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { getAuditLogFilterOptions, getAuditLogs } from "@/features/audit-logs/api";
 import { getApiErrorMessage } from "@/lib/api-error";
 
@@ -22,8 +22,8 @@ export function AuditLogsPage() {
   const { t, i18n } = useTranslation(["auditLogs", "common"]);
 
   const [search, setSearch] = useState("");
-  const [action, setAction] = useState("");
-  const [entityName, setEntityName] = useState("");
+  const [selectedActions, setSelectedActions] = useState<string[]>([]);
+  const [selectedEntityNames, setSelectedEntityNames] = useState<string[]>([]);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
   const from = dateRange?.from ? toUtcStartOfLocalDay(dateRange.from) : undefined;
@@ -31,12 +31,20 @@ export function AuditLogsPage() {
   const calendarLocale = i18n.language.startsWith("tr") ? "tr" : "en";
 
   const auditLogsQuery = useQuery({
-    queryKey: ["audit-logs", "list", search, action, entityName, from, to],
+    queryKey: [
+      "audit-logs",
+      "list",
+      search,
+      selectedActions,
+      selectedEntityNames,
+      from,
+      to,
+    ],
     queryFn: () =>
       getAuditLogs({
         search: search.trim() || undefined,
-        action: action.trim() || undefined,
-        entityName: entityName.trim() || undefined,
+        actions: selectedActions,
+        entityNames: selectedEntityNames,
         from,
         to,
         pageNumber: 1,
@@ -76,30 +84,24 @@ export function AuditLogsPage() {
               </Button>
             }
           >
-            <Input
-              value={action}
-              onChange={(event) => setAction(event.target.value)}
-              placeholder={t("auditLogs:filters.actionPlaceholder")}
-              list="audit-log-action-options"
-              className="w-full sm:w-44"
+            <MultiSelectFilter
+              placeholder={t("auditLogs:filters.actionFilterPlaceholder")}
+              options={actionOptions}
+              selectedValues={selectedActions}
+              onChange={setSelectedActions}
+              clearLabel={t("auditLogs:filters.clearSelection")}
+              emptyLabel={t("auditLogs:filters.noOptions")}
+              searchPlaceholder={t("auditLogs:filters.searchOptions")}
             />
-            <datalist id="audit-log-action-options">
-              {actionOptions.map((item) => (
-                <option key={item} value={item} />
-              ))}
-            </datalist>
-            <Input
-              value={entityName}
-              onChange={(event) => setEntityName(event.target.value)}
-              placeholder={t("auditLogs:filters.entityNamePlaceholder")}
-              list="audit-log-entity-options"
-              className="w-full sm:w-44"
+            <MultiSelectFilter
+              placeholder={t("auditLogs:filters.entityNameFilterPlaceholder")}
+              options={entityNameOptions}
+              selectedValues={selectedEntityNames}
+              onChange={setSelectedEntityNames}
+              clearLabel={t("auditLogs:filters.clearSelection")}
+              emptyLabel={t("auditLogs:filters.noOptions")}
+              searchPlaceholder={t("auditLogs:filters.searchOptions")}
             />
-            <datalist id="audit-log-entity-options">
-              {entityNameOptions.map((item) => (
-                <option key={item} value={item} />
-              ))}
-            </datalist>
             <DateRangePicker
               value={dateRange}
               onChange={setDateRange}

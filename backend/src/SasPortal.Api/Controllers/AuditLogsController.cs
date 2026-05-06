@@ -18,7 +18,11 @@ public sealed class AuditLogsController(IAuditLogService auditLogService) : Cont
     public async Task<ActionResult<PagedResponse<AuditLogListItemResponse>>> GetAuditLogs(
         [FromQuery] string? search,
         [FromQuery] string? action,
+        [FromQuery] List<string>? actions,
+        [FromQuery(Name = "actions[]")] List<string>? actionsBracket,
         [FromQuery] string? entityName,
+        [FromQuery] List<string>? entityNames,
+        [FromQuery(Name = "entityNames[]")] List<string>? entityNamesBracket,
         [FromQuery] Guid? actorUserId,
         [FromQuery] DateTimeOffset? from,
         [FromQuery] DateTimeOffset? to,
@@ -26,8 +30,25 @@ public sealed class AuditLogsController(IAuditLogService auditLogService) : Cont
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
+        var allActions = (actions ?? [])
+            .Concat(actionsBracket ?? [])
+            .ToList();
+        var allEntityNames = (entityNames ?? [])
+            .Concat(entityNamesBracket ?? [])
+            .ToList();
+
         var result = await auditLogService.GetAuditLogsAsync(
-            new AppModels.AuditLogListQuery(search, action, entityName, actorUserId, from, to, pageNumber, pageSize),
+            new AppModels.AuditLogListQuery(
+                search,
+                action,
+                allActions,
+                entityName,
+                allEntityNames,
+                actorUserId,
+                from,
+                to,
+                pageNumber,
+                pageSize),
             cancellationToken);
 
         var response = new PagedResponse<AuditLogListItemResponse>(

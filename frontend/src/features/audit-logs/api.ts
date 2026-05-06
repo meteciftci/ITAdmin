@@ -15,6 +15,13 @@ export const getAuditLogs = async (
     pageSize: 20,
     ...params,
   };
+  if (!mergedParams.actions?.length) {
+    mergedParams.actions = undefined;
+  }
+
+  if (!mergedParams.entityNames?.length) {
+    mergedParams.entityNames = undefined;
+  }
 
   const { data } = await apiClient.get<PagedResponse<AuditLogListItem>>(
     "/audit-logs",

@@ -7,8 +7,11 @@
     },
     "filters": {
       "searchPlaceholder": "Audit log ara...",
-      "actionPlaceholder": "Aksiyon",
-      "entityNamePlaceholder": "Varlık adı",
+      "actionFilterPlaceholder": "Aksiyon seçin",
+      "entityNameFilterPlaceholder": "Varlık adı seçin",
+      "searchOptions": "Seçeneklerde ara...",
+      "clearSelection": "Seçimi temizle",
+      "noOptions": "Seçenek bulunamadı",
       "dateRangePlaceholder": "Tarih aralığı seçin",
       "clearDateRange": "Temizle"
     },
