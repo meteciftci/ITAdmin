@@ -11,6 +11,8 @@ namespace SasPortal.Persistence.Services;
 
 public sealed class RoleService(AppDbContext context) : IRoleService
 {
+    private const int AuditDescriptionMaxLength = 2000;
+
     public async Task<PagedResult<RoleListItem>> GetRolesAsync(RoleListQuery query, CancellationToken cancellationToken = default)
     {
         var pageNumber = query.PageNumber < 1 ? 1 : query.PageNumber;
@@ -166,7 +168,7 @@ public sealed class RoleService(AppDbContext context) : IRoleService
                     Action = "Create",
                     EntityName = "PortalRole",
                     EntityId = role.Id.ToString(),
-                    Description = "Portal role created.",
+                    Description = BuildCreateRoleAuditDescription(role),
                     ActorUserName = request.ActorUserName,
                     CreatedAt = new DateTimeOffset(now, TimeSpan.Zero)
                 },
@@ -226,6 +228,9 @@ public sealed class RoleService(AppDbContext context) : IRoleService
                 return new UpdateRoleResult(false, "Role description length is invalid.", null);
             }
 
+            var oldName = role.Name;
+            var oldDescription = role.Description;
+            var oldStatus = role.IsActive;
             var now = DateTime.UtcNow;
             role.Name = normalizedName;
             role.Description = normalizedDescription;
@@ -239,7 +244,11 @@ public sealed class RoleService(AppDbContext context) : IRoleService
                     Action = "Update",
                     EntityName = "PortalRole",
                     EntityId = role.Id.ToString(),
-                    Description = "Portal role updated.",
+                    Description = BuildUpdateRoleAuditDescription(
+                        oldName,
+                        oldDescription,
+                        oldStatus,
+                        role),
                     ActorUserName = request.ActorUserName,
                     CreatedAt = new DateTimeOffset(now, TimeSpan.Zero)
                 },
@@ -281,13 +290,14 @@ public sealed class RoleService(AppDbContext context) : IRoleService
             }
 
             var now = DateTime.UtcNow;
+            var oldStatus = role.IsActive;
             role.IsActive = request.IsActive;
             role.UpdatedAt = now;
             role.UpdatedBy = request.ActorUserName ?? "system";
 
             var summary = request.IsActive
-                ? "Portal role activated."
-                : "Portal role deactivated.";
+                ? $"Portal role activated: {FormatRoleIdentity(role)}. Status: {FormatStatus(oldStatus)} -> {FormatStatus(request.IsActive)}."
+                : $"Portal role deactivated: {FormatRoleIdentity(role)}. Status: {FormatStatus(oldStatus)} -> {FormatStatus(request.IsActive)}.";
 
             await context.AuditLogs.AddAsync(
                 new AuditLog
@@ -295,7 +305,7 @@ public sealed class RoleService(AppDbContext context) : IRoleService
                     Action = "Update",
                     EntityName = "PortalRole",
                     EntityId = role.Id.ToString(),
-                    Description = summary,
+                    Description = TruncateAuditDescription(summary),
                     ActorUserName = request.ActorUserName,
                     CreatedAt = new DateTimeOffset(now, TimeSpan.Zero)
                 },
@@ -344,6 +354,12 @@ public sealed class RoleService(AppDbContext context) : IRoleService
 
             var now = DateTime.UtcNow;
             var actor = request.ActorUserName ?? "system";
+            var currentPermissionCodes = role.RolePermissions
+                .Where(rp => rp.PortalPermission.IsActive && !rp.PortalPermission.IsDeleted)
+                .Select(rp => rp.PortalPermission.Code)
+                .Distinct(StringComparer.Ordinal)
+                .Order(StringComparer.Ordinal)
+                .ToList();
 
             if (permissionIds.Count == 0)
             {
@@ -351,6 +367,7 @@ public sealed class RoleService(AppDbContext context) : IRoleService
 
                 role.UpdatedAt = now;
                 role.UpdatedBy = actor;
+                var removedPermissionCodesOnClear = currentPermissionCodes;
 
                 await context.AuditLogs.AddAsync(
                     new AuditLog
@@ -358,7 +375,10 @@ public sealed class RoleService(AppDbContext context) : IRoleService
                         Action = "Update",
                         EntityName = "PortalRole",
                         EntityId = role.Id.ToString(),
-                        Description = "Portal role permissions updated.",
+                        Description = BuildUpdateRolePermissionsAuditDescription(
+                            role,
+                            Array.Empty<string>(),
+                            removedPermissionCodesOnClear),
                         ActorUserName = request.ActorUserName,
                         CreatedAt = new DateTimeOffset(now, TimeSpan.Zero)
                     },
@@ -382,6 +402,20 @@ public sealed class RoleService(AppDbContext context) : IRoleService
             {
                 return new UpdateRolePermissionsResult(false, "One or more permissions are inactive.", null);
             }
+
+            var requestedPermissionCodes = permissions
+                .Select(p => p.Code)
+                .Distinct(StringComparer.Ordinal)
+                .Order(StringComparer.Ordinal)
+                .ToList();
+            var addedPermissionCodes = requestedPermissionCodes
+                .Except(currentPermissionCodes, StringComparer.Ordinal)
+                .Order(StringComparer.Ordinal)
+                .ToList();
+            var removedPermissionCodes = currentPermissionCodes
+                .Except(requestedPermissionCodes, StringComparer.Ordinal)
+                .Order(StringComparer.Ordinal)
+                .ToList();
 
             var existingPermissionIds = role.RolePermissions
                 .Select(x => x.PortalPermissionId)
@@ -423,7 +457,7 @@ public sealed class RoleService(AppDbContext context) : IRoleService
                     Action = "Update",
                     EntityName = "PortalRole",
                     EntityId = role.Id.ToString(),
-                    Description = "Portal role permissions updated.",
+                    Description = BuildUpdateRolePermissionsAuditDescription(role, addedPermissionCodes, removedPermissionCodes),
                     ActorUserName = request.ActorUserName,
                     CreatedAt = new DateTimeOffset(now, TimeSpan.Zero)
                 },
@@ -450,6 +484,95 @@ public sealed class RoleService(AppDbContext context) : IRoleService
         var trimmed = search.Trim();
         return $"%{trimmed}%";
     }
+
+    private static string BuildCreateRoleAuditDescription(PortalRole role)
+    {
+        var summary = $"Portal role created: {FormatRoleIdentity(role)}. Status: {FormatStatus(role.IsActive)}.";
+        if (!string.IsNullOrWhiteSpace(role.Description))
+        {
+            summary += " Description provided.";
+        }
+
+        return TruncateAuditDescription(summary);
+    }
+
+    private static string BuildUpdateRoleAuditDescription(
+        string oldName,
+        string? oldDescription,
+        bool oldStatus,
+        PortalRole role)
+    {
+        var summary = $"Portal role updated: {FormatRoleIdentity(role)}.";
+        var changes = new List<string>();
+
+        if (!string.Equals(oldName, role.Name, StringComparison.Ordinal))
+        {
+            changes.Add($"Name: \"{oldName}\" -> \"{role.Name}\".");
+        }
+
+        if (!string.Equals(oldDescription, role.Description, StringComparison.Ordinal))
+        {
+            changes.Add("Description changed.");
+        }
+
+        if (oldStatus != role.IsActive)
+        {
+            changes.Add($"Status: {FormatStatus(oldStatus)} -> {FormatStatus(role.IsActive)}.");
+        }
+
+        if (changes.Count == 0)
+        {
+            return TruncateAuditDescription($"{summary} No field changes.");
+        }
+
+        return TruncateAuditDescription($"{summary} {string.Join(" ", changes)}");
+    }
+
+    private static string BuildUpdateRolePermissionsAuditDescription(
+        PortalRole role,
+        IReadOnlyList<string> addedPermissionCodes,
+        IReadOnlyList<string> removedPermissionCodes)
+    {
+        var summary = $"Portal role permissions updated: {FormatRoleIdentity(role)}.";
+        var addedText = FormatChangedList("Added permissions", addedPermissionCodes);
+        var removedText = FormatChangedList("Removed permissions", removedPermissionCodes);
+
+        if (addedText is null && removedText is null)
+        {
+            return TruncateAuditDescription($"{summary} No permission changes.");
+        }
+
+        if (addedText is not null)
+        {
+            summary += $" {addedText}";
+        }
+
+        if (removedText is not null)
+        {
+            summary += $" {removedText}";
+        }
+
+        return TruncateAuditDescription(summary);
+    }
+
+    private static string FormatRoleIdentity(PortalRole role) => $"{role.Name} ({role.Code})";
+
+    private static string? FormatChangedList(string label, IReadOnlyList<string> values)
+    {
+        if (values.Count == 0)
+        {
+            return null;
+        }
+
+        return $"{label}: {string.Join(", ", values)}.";
+    }
+
+    private static string FormatStatus(bool isActive) => isActive ? "Active" : "Passive";
+
+    private static string TruncateAuditDescription(string description) =>
+        description.Length <= AuditDescriptionMaxLength
+            ? description
+            : $"{description[..(AuditDescriptionMaxLength - 3)]}...";
 
     private static bool ValidateRoleCode(string code)
     {

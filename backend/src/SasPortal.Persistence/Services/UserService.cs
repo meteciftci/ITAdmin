@@ -14,6 +14,7 @@ public sealed class UserService(
     ISecretProtector secretProtector) : IUserService
 {
     private const string NationalIdApplicationSettingKey = "Directory:NationalIdAttribute";
+    private const int AuditDescriptionMaxLength = 2000;
 
     public async Task<PagedResult<UserListItem>> GetUsersAsync(UserListQuery query, CancellationToken cancellationToken = default)
     {
@@ -305,7 +306,7 @@ public sealed class UserService(
                     Action = "Create",
                     EntityName = "PortalUser",
                     EntityId = user.Id.ToString(),
-                    Description = "Portal user created.",
+                    Description = BuildCreateUserAuditDescription(user),
                     ActorUserName = request.ActorUserName,
                     CreatedAt = new DateTimeOffset(now, TimeSpan.Zero)
                 },
@@ -368,14 +369,17 @@ public sealed class UserService(
             }
 
             var now = DateTime.UtcNow;
+            var oldStatus = user.IsActive;
 
             user.IsActive = request.IsActive;
             user.UpdatedAt = now;
             user.UpdatedBy = request.ActorUserName ?? "system";
 
-            var auditSummary = request.IsActive
-                ? "Portal user activated."
-                : "Portal user deactivated.";
+            var actionSummary = request.IsActive
+                ? "Portal user activated"
+                : "Portal user deactivated";
+            var auditSummary =
+                $"{actionSummary}: {FormatUserIdentity(user)}. Status: {FormatStatus(oldStatus)} -> {FormatStatus(request.IsActive)}.";
 
             await context.AuditLogs.AddAsync(
                 new AuditLog
@@ -383,7 +387,7 @@ public sealed class UserService(
                     Action = "Update",
                     EntityName = "PortalUser",
                     EntityId = user.Id.ToString(),
-                    Description = auditSummary,
+                    Description = TruncateAuditDescription(auditSummary),
                     ActorUserId = request.ActorUserId,
                     ActorUserName = request.ActorUserName,
                     CreatedAt = new DateTimeOffset(now, TimeSpan.Zero)
@@ -471,6 +475,25 @@ public sealed class UserService(
 
             var now = DateTime.UtcNow;
             var actor = request.ActorUserName ?? "system";
+            var currentRoleCodes = user.UserRoles
+                .Where(ur => ur.PortalRole.IsActive && !ur.PortalRole.IsDeleted)
+                .Select(ur => ur.PortalRole.Code)
+                .Distinct(StringComparer.Ordinal)
+                .Order(StringComparer.Ordinal)
+                .ToList();
+            var requestedRoleCodes = requestedRoles
+                .Select(role => role.Code)
+                .Distinct(StringComparer.Ordinal)
+                .Order(StringComparer.Ordinal)
+                .ToList();
+            var addedRoleCodes = requestedRoleCodes
+                .Except(currentRoleCodes, StringComparer.Ordinal)
+                .Order(StringComparer.Ordinal)
+                .ToList();
+            var removedRoleCodes = currentRoleCodes
+                .Except(requestedRoleCodes, StringComparer.Ordinal)
+                .Order(StringComparer.Ordinal)
+                .ToList();
 
             var requestedRoleIdSet = roleIds.ToHashSet();
             var currentRoleIdSet = user.UserRoles
@@ -515,7 +538,7 @@ public sealed class UserService(
                     Action = "Update",
                     EntityName = "PortalUser",
                     EntityId = user.Id.ToString(),
-                    Description = "Portal user roles updated.",
+                    Description = BuildUpdateUserRolesAuditDescription(user, addedRoleCodes, removedRoleCodes),
                     ActorUserId = request.ActorUserId,
                     ActorUserName = request.ActorUserName,
                     CreatedAt = new DateTimeOffset(now, TimeSpan.Zero)
@@ -612,6 +635,63 @@ public sealed class UserService(
         var trimmed = search.Trim();
         return $"%{trimmed}%";
     }
+
+    private static string BuildCreateUserAuditDescription(PortalUser user)
+    {
+        var baseText = $"Portal user created: {FormatUserIdentity(user)}";
+        if (!string.IsNullOrWhiteSpace(user.Email))
+        {
+            return TruncateAuditDescription($"{baseText}, email: {user.Email.Trim()}.");
+        }
+
+        return TruncateAuditDescription($"{baseText}.");
+    }
+
+    private static string BuildUpdateUserRolesAuditDescription(
+        PortalUser user,
+        IReadOnlyList<string> addedRoleCodes,
+        IReadOnlyList<string> removedRoleCodes)
+    {
+        var summary = $"Portal user roles updated: {FormatUserIdentity(user)}.";
+        var addedText = FormatChangedList("Added roles", addedRoleCodes);
+        var removedText = FormatChangedList("Removed roles", removedRoleCodes);
+
+        if (addedText is null && removedText is null)
+        {
+            return TruncateAuditDescription($"{summary} No role changes.");
+        }
+
+        if (addedText is not null)
+        {
+            summary += $" {addedText}";
+        }
+
+        if (removedText is not null)
+        {
+            summary += $" {removedText}";
+        }
+
+        return TruncateAuditDescription(summary);
+    }
+
+    private static string FormatUserIdentity(PortalUser user) => $"{user.UserName} ({user.DisplayName})";
+
+    private static string? FormatChangedList(string label, IReadOnlyList<string> values)
+    {
+        if (values.Count == 0)
+        {
+            return null;
+        }
+
+        return $"{label}: {string.Join(", ", values)}.";
+    }
+
+    private static string FormatStatus(bool isActive) => isActive ? "Active" : "Passive";
+
+    private static string TruncateAuditDescription(string description) =>
+        description.Length <= AuditDescriptionMaxLength
+            ? description
+            : $"{description[..(AuditDescriptionMaxLength - 3)]}...";
 
     private static string? MaskNationalId(string? value)
     {
