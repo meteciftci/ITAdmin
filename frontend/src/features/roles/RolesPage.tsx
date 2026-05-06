@@ -153,11 +153,11 @@ export function RolesPage() {
               </>
             }
           >
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Select
                 value={statusFilter}
                 onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
-                className="w-full md:w-40"
+                className="w-full sm:w-40"
               >
                 <option value="active">{t("common:status.active")}</option>
                 <option value="passive">{t("common:status.passive")}</option>
@@ -166,7 +166,7 @@ export function RolesPage() {
               <Select
                 value={typeFilter}
                 onChange={(event) => setTypeFilter(event.target.value as TypeFilter)}
-                className="w-full md:w-40"
+                className="w-full sm:w-40"
               >
                 <option value="all">{t("common:status.all")}</option>
                 <option value="system">{t("roles:type.system")}</option>

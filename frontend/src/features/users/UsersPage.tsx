@@ -18,6 +18,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { Select } from "@/components/ui/select";
 import { useAuthStore } from "@/features/auth/auth-store";
 import { canAccess } from "@/lib/permissions";
 import { getUserById, getUsers, updateUserStatus } from "@/features/users/api";
@@ -139,25 +140,16 @@ export function UsersPage() {
               </>
             }
           >
-            <div className="flex items-center gap-2">
-              <Button
-                variant={statusFilter === "active" ? "default" : "outline"}
-                onClick={() => setStatusFilter("active")}
+            <div className="flex flex-wrap items-center gap-2">
+              <Select
+                value={statusFilter}
+                onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
+                className="w-full sm:w-40"
               >
-                {t("common:status.active")}
-              </Button>
-              <Button
-                variant={statusFilter === "passive" ? "default" : "outline"}
-                onClick={() => setStatusFilter("passive")}
-              >
-                {t("common:status.passive")}
-              </Button>
-              <Button
-                variant={statusFilter === "all" ? "default" : "outline"}
-                onClick={() => setStatusFilter("all")}
-              >
-                {t("common:status.all")}
-              </Button>
+                <option value="active">{t("common:status.active")}</option>
+                <option value="passive">{t("common:status.passive")}</option>
+                <option value="all">{t("common:status.all")}</option>
+              </Select>
             </div>
           </DataToolbar>
 
