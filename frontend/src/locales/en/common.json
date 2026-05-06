@@ -30,6 +30,15 @@
       "system": "System",
       "toggle": "Toggle theme"
     },
+    "pagination": {
+      "totalCount": "Total {{count}} records",
+      "pageInfo": "Page {{pageNumber}} / {{totalPages}}",
+      "pageSize": "Page size",
+      "first": "First",
+      "previous": "Previous",
+      "next": "Next",
+      "last": "Last"
+    },
     "loading": "Loading...",
     "empty": "No records found.",
     "error": "Something went wrong.",

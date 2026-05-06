@@ -13,6 +13,7 @@ import { LoadingState } from "@/components/common/LoadingState";
 import { MultiSelectFilter } from "@/components/common/MultiSelectFilter";
 import { PageHeader } from "@/components/common/PageHeader";
 import { SectionCard } from "@/components/common/SectionCard";
+import { TablePagination } from "@/components/common/TablePagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getAuditLogFilterOptions, getAuditLogs } from "@/features/audit-logs/api";
@@ -25,6 +26,8 @@ export function AuditLogsPage() {
   const [selectedActions, setSelectedActions] = useState<string[]>([]);
   const [selectedEntityNames, setSelectedEntityNames] = useState<string[]>([]);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [pageNumber, setPageNumber] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   const from = dateRange?.from ? toUtcStartOfLocalDay(dateRange.from) : undefined;
   const to = dateRange?.to ? toUtcEndOfLocalDay(dateRange.to) : undefined;
@@ -39,6 +42,8 @@ export function AuditLogsPage() {
       selectedEntityNames,
       from,
       to,
+      pageNumber,
+      pageSize,
     ],
     queryFn: () =>
       getAuditLogs({
@@ -47,8 +52,8 @@ export function AuditLogsPage() {
         entityNames: selectedEntityNames,
         from,
         to,
-        pageNumber: 1,
-        pageSize: 50,
+        pageNumber,
+        pageSize,
       }),
   });
 
@@ -64,6 +69,22 @@ export function AuditLogsPage() {
   const handleRefresh = () => {
     auditLogsQuery.refetch();
   };
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setPageNumber(1);
+  };
+  const handleActionFilterChange = (values: string[]) => {
+    setSelectedActions(values);
+    setPageNumber(1);
+  };
+  const handleEntityNameFilterChange = (values: string[]) => {
+    setSelectedEntityNames(values);
+    setPageNumber(1);
+  };
+  const handleDateRangeChange = (value: DateRange | undefined) => {
+    setDateRange(value);
+    setPageNumber(1);
+  };
 
   return (
     <section className="space-y-4">
@@ -76,7 +97,7 @@ export function AuditLogsPage() {
         <div className="space-y-4">
           <DataToolbar
             searchValue={search}
-            onSearchChange={setSearch}
+            onSearchChange={handleSearchChange}
             searchPlaceholder={t("auditLogs:filters.searchPlaceholder")}
             actions={
               <Button variant="outline" onClick={handleRefresh}>
@@ -88,7 +109,7 @@ export function AuditLogsPage() {
               placeholder={t("auditLogs:filters.actionFilterPlaceholder")}
               options={actionOptions}
               selectedValues={selectedActions}
-              onChange={setSelectedActions}
+              onChange={handleActionFilterChange}
               clearLabel={t("auditLogs:filters.clearSelection")}
               emptyLabel={t("auditLogs:filters.noOptions")}
               searchPlaceholder={t("auditLogs:filters.searchOptions")}
@@ -97,14 +118,14 @@ export function AuditLogsPage() {
               placeholder={t("auditLogs:filters.entityNameFilterPlaceholder")}
               options={entityNameOptions}
               selectedValues={selectedEntityNames}
-              onChange={setSelectedEntityNames}
+              onChange={handleEntityNameFilterChange}
               clearLabel={t("auditLogs:filters.clearSelection")}
               emptyLabel={t("auditLogs:filters.noOptions")}
               searchPlaceholder={t("auditLogs:filters.searchOptions")}
             />
             <DateRangePicker
               value={dateRange}
-              onChange={setDateRange}
+              onChange={handleDateRangeChange}
               placeholder={t("auditLogs:filters.dateRangePlaceholder")}
               clearLabel={t("auditLogs:filters.clearDateRange")}
               locale={calendarLocale}
@@ -171,6 +192,19 @@ export function AuditLogsPage() {
                   ))}
                 </tbody>
               </table>
+              {auditLogsQuery.data && auditLogsQuery.data.totalCount > 0 ? (
+                <TablePagination
+                  pageNumber={auditLogsQuery.data.pageNumber}
+                  pageSize={auditLogsQuery.data.pageSize}
+                  totalCount={auditLogsQuery.data.totalCount}
+                  totalPages={auditLogsQuery.data.totalPages}
+                  onPageChange={setPageNumber}
+                  onPageSizeChange={(nextPageSize) => {
+                    setPageSize(nextPageSize);
+                    setPageNumber(1);
+                  }}
+                />
+              ) : null}
             </div>
           ) : null}
         </div>

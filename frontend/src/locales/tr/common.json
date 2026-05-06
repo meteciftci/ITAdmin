@@ -30,6 +30,15 @@
       "system": "Sistem",
       "toggle": "Tema değiştir"
     },
+    "pagination": {
+      "totalCount": "Toplam {{count}} kayıt",
+      "pageInfo": "Sayfa {{pageNumber}} / {{totalPages}}",
+      "pageSize": "Sayfa boyutu",
+      "first": "İlk",
+      "previous": "Önceki",
+      "next": "Sonraki",
+      "last": "Son"
+    },
     "loading": "Yükleniyor...",
     "empty": "Kayıt bulunamadı.",
     "error": "Bir hata oluştu.",

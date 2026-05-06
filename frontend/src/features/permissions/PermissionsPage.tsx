@@ -10,6 +10,7 @@ import { LoadingState } from "@/components/common/LoadingState";
 import { PageHeader } from "@/components/common/PageHeader";
 import { SectionCard } from "@/components/common/SectionCard";
 import { StatusBadge } from "@/components/common/StatusBadge";
+import { TablePagination } from "@/components/common/TablePagination";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { getPermissions } from "@/features/permissions/api";
@@ -27,9 +28,11 @@ export function PermissionsPage() {
   const { t } = useTranslation(["permissions", "common"]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
+  const [pageNumber, setPageNumber] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   const permissionsQuery = useQuery({
-    queryKey: ["permissions", "list", search, statusFilter],
+    queryKey: ["permissions", "list", search, statusFilter, pageNumber, pageSize],
     queryFn: () =>
       getPermissions({
         search: search.trim() || undefined,
@@ -39,8 +42,8 @@ export function PermissionsPage() {
             : statusFilter === "active"
               ? true
               : false,
-        pageNumber: 1,
-        pageSize: 200,
+        pageNumber,
+        pageSize,
       }),
   });
 
@@ -59,6 +62,10 @@ export function PermissionsPage() {
   const handleRefresh = () => {
     permissionsQuery.refetch();
   };
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setPageNumber(1);
+  };
 
   return (
     <section className="space-y-4">
@@ -71,7 +78,7 @@ export function PermissionsPage() {
         <div className="space-y-4">
           <DataToolbar
             searchValue={search}
-            onSearchChange={setSearch}
+            onSearchChange={handleSearchChange}
             searchPlaceholder={t("permissions:search.placeholder")}
             actions={
               <Button variant="outline" onClick={handleRefresh}>
@@ -81,9 +88,10 @@ export function PermissionsPage() {
           >
             <Select
               value={statusFilter}
-              onChange={(event) =>
-                setStatusFilter(event.target.value as StatusFilter)
-              }
+              onChange={(event) => {
+                setStatusFilter(event.target.value as StatusFilter);
+                setPageNumber(1);
+              }}
               className="w-full sm:w-40"
             >
               <option value="active">{t("common:status.active")}</option>
@@ -171,6 +179,19 @@ export function PermissionsPage() {
                   ))}
                 </tbody>
               </table>
+              {permissionsQuery.data && permissionsQuery.data.totalCount > 0 ? (
+                <TablePagination
+                  pageNumber={permissionsQuery.data.pageNumber}
+                  pageSize={permissionsQuery.data.pageSize}
+                  totalCount={permissionsQuery.data.totalCount}
+                  totalPages={permissionsQuery.data.totalPages}
+                  onPageChange={setPageNumber}
+                  onPageSizeChange={(nextPageSize) => {
+                    setPageSize(nextPageSize);
+                    setPageNumber(1);
+                  }}
+                />
+              ) : null}
             </div>
           ) : null}
         </div>

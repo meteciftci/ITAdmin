@@ -13,6 +13,7 @@ import { RowActions } from "@/components/common/RowActions";
 import { RoleBadgeList } from "@/components/common/RoleBadgeList";
 import { SectionCard } from "@/components/common/SectionCard";
 import { StatusBadge } from "@/components/common/StatusBadge";
+import { TablePagination } from "@/components/common/TablePagination";
 import {
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -42,6 +43,8 @@ export function UsersPage() {
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
+  const [pageNumber, setPageNumber] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [addUserOpen, setAddUserOpen] = useState(false);
   const [selectedUserForDetail, setSelectedUserForDetail] =
     useState<UserListItem | null>(null);
@@ -50,7 +53,7 @@ export function UsersPage() {
   const [confirmTarget, setConfirmTarget] = useState<UserListItem | null>(null);
 
   const usersQuery = useQuery({
-    queryKey: ["users", "list", search, statusFilter],
+    queryKey: ["users", "list", search, statusFilter, pageNumber, pageSize],
     queryFn: () =>
       getUsers({
         search: search.trim() || undefined,
@@ -60,8 +63,8 @@ export function UsersPage() {
             : statusFilter === "active"
               ? true
               : false,
-        pageNumber: 1,
-        pageSize: 50,
+        pageNumber,
+        pageSize,
       }),
   });
 
@@ -105,6 +108,10 @@ export function UsersPage() {
   };
 
   const handleToggleStatus = (user: UserListItem) => setConfirmTarget(user);
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setPageNumber(1);
+  };
 
   const handleActionSuccess = (message?: string) => {
     queryClient.invalidateQueries({ queryKey: ["users", "list"] });
@@ -125,7 +132,7 @@ export function UsersPage() {
         <div className="space-y-4">
           <DataToolbar
             searchValue={search}
-            onSearchChange={setSearch}
+            onSearchChange={handleSearchChange}
             searchPlaceholder={t("users:search.placeholder")}
             actions={
               <>
@@ -143,7 +150,10 @@ export function UsersPage() {
             <div className="flex flex-wrap items-center gap-2">
               <Select
                 value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
+                onChange={(event) => {
+                  setStatusFilter(event.target.value as StatusFilter);
+                  setPageNumber(1);
+                }}
                 className="w-full sm:w-40"
               >
                 <option value="active">{t("common:status.active")}</option>
@@ -233,6 +243,19 @@ export function UsersPage() {
                   ))}
                 </tbody>
               </table>
+              {usersQuery.data && usersQuery.data.totalCount > 0 ? (
+                <TablePagination
+                  pageNumber={usersQuery.data.pageNumber}
+                  pageSize={usersQuery.data.pageSize}
+                  totalCount={usersQuery.data.totalCount}
+                  totalPages={usersQuery.data.totalPages}
+                  onPageChange={setPageNumber}
+                  onPageSizeChange={(nextPageSize) => {
+                    setPageSize(nextPageSize);
+                    setPageNumber(1);
+                  }}
+                />
+              ) : null}
             </div>
           ) : null}
         </div>

@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { RowActions } from "@/components/common/RowActions";
 import { SectionCard } from "@/components/common/SectionCard";
 import { StatusBadge } from "@/components/common/StatusBadge";
+import { TablePagination } from "@/components/common/TablePagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,6 +50,8 @@ export function RolesPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
+  const [pageNumber, setPageNumber] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedRoleForDetail, setSelectedRoleForDetail] =
     useState<RoleListItem | null>(null);
@@ -59,7 +62,7 @@ export function RolesPage() {
   const [confirmTarget, setConfirmTarget] = useState<RoleListItem | null>(null);
 
   const rolesQuery = useQuery({
-    queryKey: ["roles", "list", search, statusFilter, typeFilter],
+    queryKey: ["roles", "list", search, statusFilter, typeFilter, pageNumber, pageSize],
     queryFn: () =>
       getRoles({
         search: search.trim() || undefined,
@@ -75,8 +78,8 @@ export function RolesPage() {
             : typeFilter === "system"
               ? true
               : false,
-        pageNumber: 1,
-        pageSize: 50,
+        pageNumber,
+        pageSize,
       }),
   });
 
@@ -119,6 +122,10 @@ export function RolesPage() {
     if (role.isSystem || !canUpdate) return;
     setConfirmTarget(role);
   };
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setPageNumber(1);
+  };
 
   const handleActionSuccess = (message?: string) => {
     queryClient.invalidateQueries({ queryKey: ["roles", "list"] });
@@ -139,7 +146,7 @@ export function RolesPage() {
         <div className="space-y-4">
           <DataToolbar
             searchValue={search}
-            onSearchChange={setSearch}
+            onSearchChange={handleSearchChange}
             searchPlaceholder={t("roles:search.placeholder")}
             actions={
               <>
@@ -157,7 +164,10 @@ export function RolesPage() {
             <div className="flex flex-wrap items-center gap-2">
               <Select
                 value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
+                onChange={(event) => {
+                  setStatusFilter(event.target.value as StatusFilter);
+                  setPageNumber(1);
+                }}
                 className="w-full sm:w-40"
               >
                 <option value="active">{t("common:status.active")}</option>
@@ -166,7 +176,10 @@ export function RolesPage() {
               </Select>
               <Select
                 value={typeFilter}
-                onChange={(event) => setTypeFilter(event.target.value as TypeFilter)}
+                onChange={(event) => {
+                  setTypeFilter(event.target.value as TypeFilter);
+                  setPageNumber(1);
+                }}
                 className="w-full sm:w-40"
               >
                 <option value="all">{t("common:status.all")}</option>
@@ -275,6 +288,19 @@ export function RolesPage() {
                   })}
                 </tbody>
               </table>
+              {rolesQuery.data && rolesQuery.data.totalCount > 0 ? (
+                <TablePagination
+                  pageNumber={rolesQuery.data.pageNumber}
+                  pageSize={rolesQuery.data.pageSize}
+                  totalCount={rolesQuery.data.totalCount}
+                  totalPages={rolesQuery.data.totalPages}
+                  onPageChange={setPageNumber}
+                  onPageSizeChange={(nextPageSize) => {
+                    setPageSize(nextPageSize);
+                    setPageNumber(1);
+                  }}
+                />
+              ) : null}
             </div>
           ) : null}
         </div>
