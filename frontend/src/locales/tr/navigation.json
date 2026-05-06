@@ -2,12 +2,14 @@
   "navigation": {
     "groups": {
       "main": "Ana",
-      "administration": "Yönetim"
+      "administration": "Yönetim",
+      "monitoring": "İzleme"
     },
     "dashboard": "Kontrol Paneli",
     "users": "Kullanıcılar",
     "roles": "Roller",
-    "permissions": "İzinler"
+    "permissions": "İzinler",
+    "auditLogs": "Audit Logları"
   }
 }
 

@@ -1,0 +1,32 @@
+{
+  "auditLogs": {
+    "title": "Audit Logları",
+    "description": "Sistem değişiklik kayıtlarını görüntüleyin.",
+    "sections": {
+      "listTitle": "Audit Log Listesi"
+    },
+    "filters": {
+      "searchPlaceholder": "Audit log ara...",
+      "actionPlaceholder": "Aksiyon",
+      "entityNamePlaceholder": "Varlık adı",
+      "fromDate": "Başlangıç tarihi",
+      "toDate": "Bitiş tarihi"
+    },
+    "table": {
+      "createdAt": "Tarih",
+      "action": "Aksiyon",
+      "entityName": "Varlık",
+      "entityId": "Varlık Kimliği",
+      "description": "Açıklama",
+      "actorUserName": "Kullanıcı",
+      "ipAddress": "IP Adresi"
+    },
+    "empty": {
+      "title": "Audit log bulunamadı",
+      "description": "Mevcut filtrelere uygun audit log kaydı yok."
+    },
+    "errors": {
+      "loadFailed": "Audit loglar yüklenemedi."
+    }
+  }
+}

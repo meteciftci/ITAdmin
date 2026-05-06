@@ -1,0 +1,32 @@
+{
+  "auditLogs": {
+    "title": "Audit Logs",
+    "description": "View system change records.",
+    "sections": {
+      "listTitle": "Audit Log List"
+    },
+    "filters": {
+      "searchPlaceholder": "Search audit logs...",
+      "actionPlaceholder": "Action",
+      "entityNamePlaceholder": "Entity name",
+      "fromDate": "From date",
+      "toDate": "To date"
+    },
+    "table": {
+      "createdAt": "Created At",
+      "action": "Action",
+      "entityName": "Entity",
+      "entityId": "Entity Id",
+      "description": "Description",
+      "actorUserName": "User",
+      "ipAddress": "IP Address"
+    },
+    "empty": {
+      "title": "No audit logs found",
+      "description": "No audit log records found for current filters."
+    },
+    "errors": {
+      "loadFailed": "Audit logs could not be loaded."
+    }
+  }
+}

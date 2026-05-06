@@ -2,12 +2,14 @@
   "navigation": {
     "groups": {
       "main": "Main",
-      "administration": "Administration"
+      "administration": "Administration",
+      "monitoring": "Monitoring"
     },
     "dashboard": "Dashboard",
     "users": "Users",
     "roles": "Roles",
-    "permissions": "Permissions"
+    "permissions": "Permissions",
+    "auditLogs": "Audit Logs"
   }
 }
 

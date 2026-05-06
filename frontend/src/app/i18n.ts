@@ -2,6 +2,7 @@ import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 
 import trAuth from "@/locales/tr/auth.json";
+import trAuditLogs from "@/locales/tr/auditLogs.json";
 import trCommon from "@/locales/tr/common.json";
 import trDashboard from "@/locales/tr/dashboard.json";
 import trErrors from "@/locales/tr/errors.json";
@@ -11,6 +12,7 @@ import trRoles from "@/locales/tr/roles.json";
 import trUsers from "@/locales/tr/users.json";
 
 import enAuth from "@/locales/en/auth.json";
+import enAuditLogs from "@/locales/en/auditLogs.json";
 import enCommon from "@/locales/en/common.json";
 import enDashboard from "@/locales/en/dashboard.json";
 import enErrors from "@/locales/en/errors.json";
@@ -30,6 +32,7 @@ const resources = {
   tr: {
     common: trCommon.common,
     auth: trAuth.auth,
+    auditLogs: trAuditLogs.auditLogs,
     navigation: trNavigation.navigation,
     dashboard: trDashboard.dashboard,
     errors: trErrors.errors,
@@ -40,6 +43,7 @@ const resources = {
   en: {
     common: enCommon.common,
     auth: enAuth.auth,
+    auditLogs: enAuditLogs.auditLogs,
     navigation: enNavigation.navigation,
     dashboard: enDashboard.dashboard,
     errors: enErrors.errors,
@@ -54,7 +58,17 @@ void i18n.use(initReactI18next).init({
   lng: "tr",
   fallbackLng: "tr",
   interpolation: { escapeValue: false },
-  ns: ["common", "auth", "navigation", "dashboard", "errors", "users", "roles", "permissions"],
+  ns: [
+    "common",
+    "auth",
+    "navigation",
+    "dashboard",
+    "errors",
+    "users",
+    "roles",
+    "permissions",
+    "auditLogs",
+  ],
   defaultNS: "common",
 });
 

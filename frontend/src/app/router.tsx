@@ -5,6 +5,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { RequireAuth } from "@/features/auth/RequireAuth";
 import { RequirePermission } from "@/features/auth/RequirePermission";
+import { AuditLogsPage } from "@/features/audit-logs/AuditLogsPage";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
 import { PermissionsPage } from "@/features/permissions/PermissionsPage";
 import { RolesPage } from "@/features/roles/RolesPage";
@@ -32,6 +33,18 @@ export const router = createBrowserRouter([
         <AppLayout>
           <DashboardPage />
         </AppLayout>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/audit-logs",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission="AuditLogs.View">
+          <AppLayout>
+            <AuditLogsPage />
+          </AppLayout>
+        </RequirePermission>
       </RequireAuth>
     ),
   },
