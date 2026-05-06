@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
 import { DataToolbar } from "@/components/common/DataToolbar";
+import { CodeBadge } from "@/components/common/CodeBadge";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ErrorState } from "@/components/common/ErrorState";
 import { LoadingState } from "@/components/common/LoadingState";
@@ -149,9 +150,7 @@ export function PermissionsPage() {
                     >
                       <td className="px-3 py-2">{permission.name}</td>
                       <td className="px-3 py-2">
-                        <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
-                          {permission.code}
-                        </code>
+                        <CodeBadge>{permission.code}</CodeBadge>
                       </td>
                       <td className="max-w-96 px-3 py-2">
                         <span className="line-clamp-2">

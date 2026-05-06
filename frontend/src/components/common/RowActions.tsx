@@ -19,7 +19,7 @@ export function RowActions({ children, label }: RowActionsProps) {
         <Button
           variant="outline"
           size="sm"
-          className="h-8 gap-1.5 rounded-md border border-primary/20 bg-primary/10 text-primary shadow-sm hover:bg-primary hover:text-primary-foreground dark:border-primary/30 dark:bg-primary/20 dark:text-primary-foreground dark:hover:bg-primary"
+          className="h-8 gap-1.5 rounded-md border-border bg-muted/60 text-foreground shadow-none hover:bg-accent hover:text-accent-foreground"
           title={typeof text === "string" ? text : t("common:actions.actions")}
         >
           {text}

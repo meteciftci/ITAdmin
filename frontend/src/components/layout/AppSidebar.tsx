@@ -85,8 +85,8 @@ export function AppSidebar() {
                         buttonVariants({ variant: "ghost" }),
                         "w-full gap-2 transition-colors",
                         isActive
-                          ? "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                          ? "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground"
+                          : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                         sidebarCollapsed ? "justify-center px-0" : "justify-start",
                       )}
                     >

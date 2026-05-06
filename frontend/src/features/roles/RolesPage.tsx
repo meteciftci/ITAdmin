@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { CodeBadge } from "@/components/common/CodeBadge";
 import { DataToolbar } from "@/components/common/DataToolbar";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ErrorState } from "@/components/common/ErrorState";
@@ -221,7 +222,9 @@ export function RolesPage() {
                     return (
                       <tr key={role.id} className="border-t align-top hover:bg-muted/20">
                         <td className="px-3 py-2">{role.name}</td>
-                        <td className="px-3 py-2">{role.code}</td>
+                        <td className="px-3 py-2">
+                          <CodeBadge>{role.code}</CodeBadge>
+                        </td>
                         <td className="max-w-70 px-3 py-2">
                           <span className="line-clamp-2">{role.description || "-"}</span>
                         </td>
