@@ -6,6 +6,7 @@ public class PortalUser : SoftDeletableEntity
 {
     public string DirectorySource { get; set; } = string.Empty;
     public string DirectoryObjectId { get; set; } = string.Empty;
+    public string PreferredLanguage { get; set; } = "tr";
     public string? NationalIdEncrypted { get; set; }
     public string? NationalIdMasked { get; set; }
     public string UserName { get; set; } = string.Empty;

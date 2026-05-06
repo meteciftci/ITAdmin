@@ -23,6 +23,12 @@ public class PortalUserConfiguration : IEntityTypeConfiguration<PortalUser>
             .HasMaxLength(100)
             .IsRequired();
 
+        builder.Property(x => x.PreferredLanguage)
+            .HasColumnName("preferred_language")
+            .HasMaxLength(10)
+            .HasDefaultValue("tr")
+            .IsRequired();
+
         builder.Property(x => x.NationalIdEncrypted)
             .HasColumnName("national_id_encrypted");
 

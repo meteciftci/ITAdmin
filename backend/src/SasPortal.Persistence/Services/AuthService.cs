@@ -3,9 +3,11 @@ using Microsoft.Extensions.Options;
 using SasPortal.Application.Abstractions.Security;
 using SasPortal.Application.Abstractions.Services;
 using SasPortal.Application.Common.Models;
+using SasPortal.Application.Common.Security;
 using SasPortal.Domain.Entities;
 using SasPortal.Domain.Enums;
 using SasPortal.Persistence.Context;
+using System.Text.Json;
 
 namespace SasPortal.Persistence.Services;
 
@@ -21,6 +23,10 @@ public sealed class AuthService(
     private const string NationalIdApplicationSettingKey = "Directory:NationalIdAttribute";
 
     private readonly JwtOptions _jwtOptions = jwtOptions.Value;
+    private static readonly JsonSerializerOptions AuditJsonSerializerOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
 
     public async Task<AuthTokenResult> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
     {
@@ -639,6 +645,7 @@ public sealed class AuthService(
                     null,
                     null,
                     null,
+                    null,
                     Array.Empty<string>(),
                     Array.Empty<string>(),
                     false);
@@ -653,6 +660,7 @@ public sealed class AuthService(
                     null,
                     null,
                     null,
+                    null,
                     Array.Empty<string>(),
                     Array.Empty<string>(),
                     false);
@@ -663,6 +671,7 @@ public sealed class AuthService(
                 return new CurrentUserResult(
                     false,
                     "User is inactive.",
+                    null,
                     null,
                     null,
                     null,
@@ -691,16 +700,7 @@ public sealed class AuthService(
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            return new CurrentUserResult(
-                true,
-                "Succeeded.",
-                user.Id,
-                user.UserName,
-                user.DisplayName,
-                user.Email,
-                roles,
-                permissions,
-                isSuperAdmin);
+            return MapToCurrentUserResult(user, roles, permissions, isSuperAdmin);
         }
         catch
         {
@@ -711,9 +711,142 @@ public sealed class AuthService(
                 null,
                 null,
                 null,
+                null,
                 Array.Empty<string>(),
                 Array.Empty<string>(),
                 false);
         }
+    }
+
+    public async Task<UpdateCurrentUserPreferencesResult> UpdateCurrentUserPreferencesAsync(
+        UpdateCurrentUserPreferencesRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(request.PreferredLanguage))
+            {
+                return new UpdateCurrentUserPreferencesResult(
+                    false,
+                    "Preferred language is not supported.",
+                    null);
+            }
+
+            var normalizedLanguage = SupportedLanguages.Normalize(request.PreferredLanguage);
+            if (!SupportedLanguages.IsSupported(normalizedLanguage))
+            {
+                return new UpdateCurrentUserPreferencesResult(
+                    false,
+                    "Preferred language is not supported.",
+                    null);
+            }
+
+            var user = await context.PortalUsers
+                .AsSplitQuery()
+                .Include(x => x.UserRoles)
+                    .ThenInclude(x => x.PortalRole)
+                        .ThenInclude(x => x.RolePermissions)
+                            .ThenInclude(x => x.PortalPermission)
+                .FirstOrDefaultAsync(
+                    x => !x.IsDeleted && x.Id == request.UserId,
+                    cancellationToken);
+
+            if (user is null)
+            {
+                return new UpdateCurrentUserPreferencesResult(false, "User was not found.", null);
+            }
+
+            if (!user.IsActive)
+            {
+                return new UpdateCurrentUserPreferencesResult(false, "User is inactive.", null);
+            }
+
+            var oldPreferredLanguage = string.IsNullOrWhiteSpace(user.PreferredLanguage)
+                ? SupportedLanguages.Turkish
+                : user.PreferredLanguage;
+
+            var now = DateTime.UtcNow;
+            user.PreferredLanguage = normalizedLanguage;
+            user.UpdatedAt = now;
+            user.UpdatedBy = request.ActorUserName ?? "auth";
+
+            var oldValuesPayload = JsonSerializer.Serialize(
+                new { preferredLanguage = oldPreferredLanguage },
+                AuditJsonSerializerOptions);
+            var newValuesPayload = JsonSerializer.Serialize(
+                new
+                {
+                    preferredLanguage = normalizedLanguage,
+                    summary = "User preferences updated."
+                },
+                AuditJsonSerializerOptions);
+
+            await context.AuditLogs.AddAsync(
+                new AuditLog
+                {
+                    Action = AuditActionType.Update,
+                    EntityName = "PortalUser",
+                    EntityId = user.Id.ToString(),
+                    UserName = request.ActorUserName,
+                    OldValues = oldValuesPayload,
+                    NewValues = newValuesPayload,
+                    CreatedAt = now
+                },
+                cancellationToken);
+
+            await context.SaveChangesAsync(cancellationToken);
+
+            var activeRoles = user.UserRoles
+                .Where(x => x.PortalRole.IsActive && !x.PortalRole.IsDeleted)
+                .Select(x => x.PortalRole)
+                .ToList();
+
+            var roles = activeRoles
+                .Select(x => x.Code)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var permissions = activeRoles
+                .SelectMany(x => x.RolePermissions)
+                .Where(x => x.PortalPermission.IsActive && !x.PortalPermission.IsDeleted)
+                .Select(x => x.PortalPermission.Code)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var isSuperAdmin = roles.Contains(SuperAdminRoleCode, StringComparer.OrdinalIgnoreCase);
+            var currentUser = MapToCurrentUserResult(user, roles, permissions, isSuperAdmin);
+
+            return new UpdateCurrentUserPreferencesResult(true, "User preferences updated.", currentUser);
+        }
+        catch
+        {
+            return new UpdateCurrentUserPreferencesResult(
+                false,
+                "User preferences could not be updated.",
+                null);
+        }
+    }
+
+    private static CurrentUserResult MapToCurrentUserResult(
+        PortalUser user,
+        IReadOnlyCollection<string> roles,
+        IReadOnlyCollection<string> permissions,
+        bool isSuperAdmin)
+    {
+        var preferredLanguage = string.IsNullOrWhiteSpace(user.PreferredLanguage)
+            ? SupportedLanguages.Turkish
+            : SupportedLanguages.Normalize(user.PreferredLanguage);
+
+        return new CurrentUserResult(
+            true,
+            "Succeeded.",
+            user.Id,
+            user.UserName,
+            user.DisplayName,
+            user.Email,
+            preferredLanguage,
+            roles,
+            permissions,
+            isSuperAdmin);
     }
 }

@@ -5,6 +5,7 @@ public sealed record CurrentUserResponse(
     string UserName,
     string DisplayName,
     string? Email,
+    string PreferredLanguage,
     IReadOnlyCollection<string> Roles,
     IReadOnlyCollection<string> Permissions,
     bool IsSuperAdmin);

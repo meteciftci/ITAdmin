@@ -353,6 +353,7 @@ public sealed class SetupService(
                 {
                     DirectorySource = ActiveDirectoryDirectorySource,
                     DirectoryObjectId = ldapProfile.DirectoryObjectId,
+                    PreferredLanguage = "tr",
                     NationalIdEncrypted =
                         ldapProfile.NationalId is not null ? secretProtector.Protect(ldapProfile.NationalId) : null,
                     NationalIdMasked = ldapProfile.NationalId is not null ? MaskNationalId(ldapProfile.NationalId) : null,

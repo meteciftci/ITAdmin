@@ -126,15 +126,67 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
             return Unauthorized();
         }
 
-        var response = new CurrentUserResponse(
-            result.UserId.Value,
-            result.UserName,
-            result.DisplayName,
-            result.Email,
-            result.Roles,
-            result.Permissions,
-            result.IsSuperAdmin);
+        var response = MapCurrentUserResponse(result);
 
         return Ok(response);
     }
+
+    [HttpPatch("me/preferences")]
+    [Authorize]
+    public async Task<ActionResult<CurrentUserResponse>> UpdateCurrentUserPreferences(
+        [FromBody] UpdateCurrentUserPreferencesRequest request,
+        CancellationToken cancellationToken)
+    {
+        var rawUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+            ?? User.FindFirst(JwtSubClaimType)?.Value;
+
+        if (!Guid.TryParse(rawUserId, out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var actorUserName = User.Identity?.Name
+            ?? User.FindFirst(ClaimTypes.Name)?.Value
+            ?? User.FindFirst("name")?.Value;
+
+        var result = await authService.UpdateCurrentUserPreferencesAsync(
+            new AppModels.UpdateCurrentUserPreferencesRequest(
+                userId,
+                request.PreferredLanguage,
+                actorUserName),
+            cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            if (string.Equals(result.Message, "User was not found.", StringComparison.Ordinal))
+            {
+                return NotFound();
+            }
+
+            if (string.Equals(result.Message, "User is inactive.", StringComparison.Ordinal))
+            {
+                return BadRequest(new { message = result.Message });
+            }
+
+            return BadRequest(new { message = result.Message });
+        }
+
+        if (result.User is null || !result.User.UserId.HasValue || result.User.UserName is null || result.User.DisplayName is null)
+        {
+            return BadRequest(new { message = "User preferences could not be updated." });
+        }
+
+        return Ok(MapCurrentUserResponse(result.User));
+    }
+
+    private static CurrentUserResponse MapCurrentUserResponse(AppModels.CurrentUserResult result) =>
+        new(
+            result.UserId!.Value,
+            result.UserName!,
+            result.DisplayName!,
+            result.Email,
+            result.PreferredLanguage ?? "tr",
+            result.Roles,
+            result.Permissions,
+            result.IsSuperAdmin);
 }

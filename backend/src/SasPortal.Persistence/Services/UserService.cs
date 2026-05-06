@@ -293,6 +293,7 @@ public sealed class UserService(
             {
                 DirectorySource = "ActiveDirectory",
                 DirectoryObjectId = ldapProfile.DirectoryObjectId,
+                PreferredLanguage = "tr",
                 NationalIdEncrypted = encryptedNationalId,
                 NationalIdMasked = maskedNationalId,
                 UserName = ldapProfile.UserName,
