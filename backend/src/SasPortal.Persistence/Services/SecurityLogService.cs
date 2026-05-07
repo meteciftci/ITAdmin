@@ -55,13 +55,7 @@ public sealed class SecurityLogService(AppDbContext context) : ISecurityLogServi
 
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
-            var pattern = BuildILikeContainsPattern(query.Search);
-            logsQuery = logsQuery.Where(x =>
-                EF.Functions.ILike(x.EventType, pattern)
-                || EF.Functions.ILike(x.Severity, pattern)
-                || (x.UserName != null && EF.Functions.ILike(x.UserName, pattern))
-                || (x.IpAddress != null && EF.Functions.ILike(x.IpAddress, pattern))
-                || (x.Description != null && EF.Functions.ILike(x.Description, pattern)));
+            logsQuery = ApplySearch(logsQuery, query.Search);
         }
 
         var totalCount = await logsQuery.CountAsync(cancellationToken);
@@ -113,6 +107,30 @@ public sealed class SecurityLogService(AppDbContext context) : ISecurityLogServi
     {
         var trimmed = search.Trim();
         return $"%{trimmed}%";
+    }
+
+    private IQueryable<Domain.Entities.SecurityLog> ApplySearch(
+        IQueryable<Domain.Entities.SecurityLog> logsQuery,
+        string search)
+    {
+        if (context.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            var pattern = BuildILikeContainsPattern(search);
+            return logsQuery.Where(x =>
+                EF.Functions.ILike(x.EventType, pattern)
+                || EF.Functions.ILike(x.Severity, pattern)
+                || (x.UserName != null && EF.Functions.ILike(x.UserName, pattern))
+                || (x.IpAddress != null && EF.Functions.ILike(x.IpAddress, pattern))
+                || (x.Description != null && EF.Functions.ILike(x.Description, pattern)));
+        }
+
+        var loweredPattern = BuildILikeContainsPattern(search).ToLowerInvariant();
+        return logsQuery.Where(x =>
+            EF.Functions.Like(x.EventType.ToLower(), loweredPattern)
+            || EF.Functions.Like(x.Severity.ToLower(), loweredPattern)
+            || (x.UserName != null && EF.Functions.Like(x.UserName.ToLower(), loweredPattern))
+            || (x.IpAddress != null && EF.Functions.Like(x.IpAddress.ToLower(), loweredPattern))
+            || (x.Description != null && EF.Functions.Like(x.Description.ToLower(), loweredPattern)));
     }
 
     private static List<string> NormalizeFilterValues(IReadOnlyList<string>? values)

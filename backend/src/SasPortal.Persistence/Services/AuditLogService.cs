@@ -55,13 +55,7 @@ public sealed class AuditLogService(AppDbContext context) : IAuditLogService
 
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
-            var pattern = BuildILikeContainsPattern(query.Search);
-            logsQuery = logsQuery.Where(x =>
-                EF.Functions.ILike(x.Action, pattern)
-                || EF.Functions.ILike(x.EntityName, pattern)
-                || (x.EntityId != null && EF.Functions.ILike(x.EntityId, pattern))
-                || (x.Description != null && EF.Functions.ILike(x.Description, pattern))
-                || (x.ActorUserName != null && EF.Functions.ILike(x.ActorUserName, pattern)));
+            logsQuery = ApplySearch(logsQuery, query.Search);
         }
 
         var totalCount = await logsQuery.CountAsync(cancellationToken);
@@ -114,6 +108,30 @@ public sealed class AuditLogService(AppDbContext context) : IAuditLogService
     {
         var trimmed = search.Trim();
         return $"%{trimmed}%";
+    }
+
+    private IQueryable<Domain.Entities.AuditLog> ApplySearch(
+        IQueryable<Domain.Entities.AuditLog> logsQuery,
+        string search)
+    {
+        if (context.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            var pattern = BuildILikeContainsPattern(search);
+            return logsQuery.Where(x =>
+                EF.Functions.ILike(x.Action, pattern)
+                || EF.Functions.ILike(x.EntityName, pattern)
+                || (x.EntityId != null && EF.Functions.ILike(x.EntityId, pattern))
+                || (x.Description != null && EF.Functions.ILike(x.Description, pattern))
+                || (x.ActorUserName != null && EF.Functions.ILike(x.ActorUserName, pattern)));
+        }
+
+        var loweredPattern = BuildILikeContainsPattern(search).ToLowerInvariant();
+        return logsQuery.Where(x =>
+            EF.Functions.Like(x.Action.ToLower(), loweredPattern)
+            || EF.Functions.Like(x.EntityName.ToLower(), loweredPattern)
+            || (x.EntityId != null && EF.Functions.Like(x.EntityId.ToLower(), loweredPattern))
+            || (x.Description != null && EF.Functions.Like(x.Description.ToLower(), loweredPattern))
+            || (x.ActorUserName != null && EF.Functions.Like(x.ActorUserName.ToLower(), loweredPattern)));
     }
 
     private static List<string> NormalizeFilterValues(
