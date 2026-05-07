@@ -344,9 +344,49 @@ public sealed class AuthService(
 
         normalizedReason = normalizedReason.Length == 0
             ? "directory authentication failed"
-            : char.ToLowerInvariant(normalizedReason[0]) + normalizedReason[1..];
+            : LowercaseFirstWordUnlessAcronym(normalizedReason);
 
         return $"Login failed for {userName}. Reason: {normalizedReason}.";
+    }
+
+    private static string LowercaseFirstWordUnlessAcronym(string value)
+    {
+        var firstWordEndIndex = value.IndexOf(' ');
+        if (firstWordEndIndex < 0)
+        {
+            return IsAllUpperCase(value)
+                ? value
+                : char.ToLowerInvariant(value[0]) + value[1..];
+        }
+
+        var firstWord = value[..firstWordEndIndex];
+        if (IsAllUpperCase(firstWord))
+        {
+            return value;
+        }
+
+        return char.ToLowerInvariant(value[0]) + value[1..];
+    }
+
+    private static bool IsAllUpperCase(string value)
+    {
+        var hasLetter = false;
+
+        foreach (var ch in value)
+        {
+            if (!char.IsLetter(ch))
+            {
+                continue;
+            }
+
+            hasLetter = true;
+            if (!char.IsUpper(ch))
+            {
+                return false;
+            }
+        }
+
+        return hasLetter;
     }
 
     private static string GetLoginFailedSeverity(string? ldapMessage)

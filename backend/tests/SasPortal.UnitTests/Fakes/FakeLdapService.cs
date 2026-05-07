@@ -7,11 +7,16 @@ public sealed class FakeLdapService : ILdapService
 {
     public int ValidateBindCallCount { get; private set; }
     public int ValidateCallCount { get; private set; }
+    public int GetUserProfileCallCount { get; private set; }
     public LdapBindValidationRequest? LastValidateBindRequest { get; private set; }
     public LdapValidationRequest? LastValidateRequest { get; private set; }
+    public LdapUserProfileRequest? LastGetUserProfileRequest { get; private set; }
 
     public LdapValidationResult ValidateBindResult { get; set; } = new(true, "bind ok");
     public LdapValidationResult ValidateResult { get; set; } = new(true, "full ok");
+    public LdapUserProfile? UserProfileResult { get; set; }
+    public Exception? ValidateException { get; set; }
+    public Exception? GetUserProfileException { get; set; }
 
     public Task<LdapValidationResult> ValidateBindAsync(LdapBindValidationRequest request, CancellationToken cancellationToken = default)
     {
@@ -24,13 +29,27 @@ public sealed class FakeLdapService : ILdapService
     {
         ValidateCallCount++;
         LastValidateRequest = request;
+        if (ValidateException is not null)
+        {
+            throw ValidateException;
+        }
+
         return Task.FromResult(ValidateResult);
     }
 
     public Task<LdapUserProfile?> GetUserProfileAsync(
         LdapUserProfileRequest request,
         CancellationToken cancellationToken = default)
-        => Task.FromResult<LdapUserProfile?>(null);
+    {
+        GetUserProfileCallCount++;
+        LastGetUserProfileRequest = request;
+        if (GetUserProfileException is not null)
+        {
+            throw GetUserProfileException;
+        }
+
+        return Task.FromResult(UserProfileResult);
+    }
 
     public Task<LdapUserProfile?> GetUserProfileByObjectIdAsync(
         LdapUserProfileByObjectIdRequest request,
