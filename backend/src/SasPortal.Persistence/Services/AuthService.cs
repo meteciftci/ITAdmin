@@ -68,21 +68,20 @@ public sealed class AuthService(
             if (!ldapResult.IsValid)
             {
                 var description = BuildLoginFailedDescription(normalizedUserName, ldapResult.Message);
+                var severity = GetLoginFailedSeverity(ldapResult.Message);
 
-                await context.SecurityLogs.AddAsync(
+                await TryWriteSecurityLogAsync(
                     new SecurityLog
                     {
                         UserName = normalizedUserName,
                         EventType = "LoginFailed",
-                        Severity = "Warning",
+                        Severity = severity,
                         Description = description,
                         IpAddress = request.IpAddress,
                         UserAgent = request.UserAgent,
                         CreatedAt = DateTime.UtcNow
                     },
                     cancellationToken);
-
-                await context.SaveChangesAsync(cancellationToken);
                 return new AuthTokenResult(false, ldapResult.Message, null, null, null, null);
             }
 
@@ -303,6 +302,19 @@ public sealed class AuthService(
         }
         catch
         {
+            await TryWriteSecurityLogAsync(
+                new SecurityLog
+                {
+                    UserName = normalizedUserName,
+                    EventType = "LoginError",
+                    Severity = "Error",
+                    Description = "Login could not be completed because an unexpected error occurred.",
+                    IpAddress = request.IpAddress,
+                    UserAgent = request.UserAgent,
+                    CreatedAt = DateTime.UtcNow
+                },
+                cancellationToken);
+
             return new AuthTokenResult(false, "Login could not be completed.", null, null, null, null);
         }
     }
@@ -335,6 +347,20 @@ public sealed class AuthService(
             : char.ToLowerInvariant(normalizedReason[0]) + normalizedReason[1..];
 
         return $"Login failed for {userName}. Reason: {normalizedReason}.";
+    }
+
+    private static string GetLoginFailedSeverity(string? ldapMessage)
+    {
+        return ldapMessage?.Trim() switch
+        {
+            "Directory user could not be found." => "Warning",
+            "Directory user authentication failed." => "Warning",
+            "Directory user distinguished name could not be resolved." => "Warning",
+            "LDAP service account authentication failed." => "Error",
+            "Required LDAP fields are missing." => "Error",
+            "LDAP validation failed." => "Error",
+            _ => "Warning"
+        };
     }
 
     public async Task<AuthTokenResult> RefreshTokenAsync(RefreshTokenRequest request, CancellationToken cancellationToken = default)
@@ -529,6 +555,18 @@ public sealed class AuthService(
         }
         catch
         {
+            await TryWriteSecurityLogAsync(
+                new SecurityLog
+                {
+                    EventType = "RefreshTokenError",
+                    Severity = "Error",
+                    Description = "Token refresh could not be completed because an unexpected error occurred.",
+                    IpAddress = request.IpAddress,
+                    UserAgent = request.UserAgent,
+                    CreatedAt = DateTime.UtcNow
+                },
+                cancellationToken);
+
             return new AuthTokenResult(false, "Token refresh could not be completed.", null, null, null, null);
         }
     }
@@ -629,7 +667,32 @@ public sealed class AuthService(
         }
         catch
         {
+            await TryWriteSecurityLogAsync(
+                new SecurityLog
+                {
+                    EventType = "LogoutError",
+                    Severity = "Error",
+                    Description = "Logout could not be completed because an unexpected error occurred.",
+                    IpAddress = request.IpAddress,
+                    UserAgent = request.UserAgent,
+                    CreatedAt = DateTime.UtcNow
+                },
+                cancellationToken);
+
             return new LogoutResult(false, "Logout could not be completed.");
+        }
+    }
+
+    private async Task TryWriteSecurityLogAsync(SecurityLog securityLog, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await context.SecurityLogs.AddAsync(securityLog, cancellationToken);
+            await context.SaveChangesAsync(cancellationToken);
+        }
+        catch
+        {
+            context.Entry(securityLog).State = EntityState.Detached;
         }
     }
 
