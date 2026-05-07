@@ -15,6 +15,7 @@ public sealed class FakeLdapService : ILdapService
     public LdapValidationResult ValidateBindResult { get; set; } = new(true, "bind ok");
     public LdapValidationResult ValidateResult { get; set; } = new(true, "full ok");
     public LdapUserProfile? UserProfileResult { get; set; }
+    public LdapUserProfile? UserProfileByObjectIdResult { get; set; }
     public Exception? ValidateException { get; set; }
     public Exception? GetUserProfileException { get; set; }
 
@@ -54,7 +55,9 @@ public sealed class FakeLdapService : ILdapService
     public Task<LdapUserProfile?> GetUserProfileByObjectIdAsync(
         LdapUserProfileByObjectIdRequest request,
         CancellationToken cancellationToken = default)
-        => Task.FromResult<LdapUserProfile?>(null);
+    {
+        return Task.FromResult(UserProfileByObjectIdResult);
+    }
 
     public Task<IReadOnlyCollection<LdapUserLookupItem>> SearchUsersAsync(
         LdapUserLookupRequest request,
