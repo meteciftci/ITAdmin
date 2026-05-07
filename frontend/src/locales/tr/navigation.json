@@ -3,14 +3,16 @@
     "groups": {
       "main": "Ana",
       "administration": "Yönetim",
-      "monitoring": "İzleme"
+      "monitoring": "İzleme",
+      "system": "Sistem"
     },
     "dashboard": "Kontrol Paneli",
     "users": "Kullanıcılar",
     "roles": "Roller",
     "permissions": "İzinler",
     "auditLogs": "Audit Logları",
-    "securityLogs": "Security Logları"
+    "securityLogs": "Security Logları",
+    "settings": "Ayarlar"
   }
 }
 

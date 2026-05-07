@@ -12,6 +12,6 @@ public sealed record ValidateLdapSettingsRequest
     public string BindUserName { get; init; } = string.Empty;
     public string? BindUserDomain { get; init; }
     public string? BindPassword { get; init; }
-    public string TestUserName { get; init; } = string.Empty;
-    public string TestPassword { get; init; } = string.Empty;
+    public string? TestUserName { get; init; }
+    public string? TestPassword { get; init; }
 }

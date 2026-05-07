@@ -222,22 +222,43 @@ public sealed class SettingsService(
             }
         }
 
-        var result = await ldapService.ValidateAsync(
-            new LdapValidationRequest
-            {
-                Host = request.Host.Trim(),
-                Port = request.Port,
-                UseSsl = request.UseSsl,
-                BaseDn = request.BaseDn.Trim(),
-                UserSearchBase = NormalizeNullable(request.UserSearchBase) ?? string.Empty,
-                UserSearchFilter = request.UserSearchFilter.Trim(),
-                BindUserName = request.BindUserName.Trim(),
-                BindUserDomain = NormalizeNullable(request.BindUserDomain),
-                BindPassword = bindPassword!,
-                TestUserName = request.TestUserName.Trim(),
-                TestPassword = request.TestPassword
-            },
-            cancellationToken);
+        var normalizedTestUserName = NormalizeNullable(request.TestUserName);
+        var normalizedTestPassword = NormalizeNullable(request.TestPassword);
+
+        LdapValidationResult result;
+        if (string.IsNullOrWhiteSpace(normalizedTestUserName) || string.IsNullOrWhiteSpace(normalizedTestPassword))
+        {
+            result = await ldapService.ValidateBindAsync(
+                new LdapBindValidationRequest
+                {
+                    Host = request.Host.Trim(),
+                    Port = request.Port,
+                    UseSsl = request.UseSsl,
+                    BindUserName = request.BindUserName.Trim(),
+                    BindUserDomain = NormalizeNullable(request.BindUserDomain),
+                    BindPassword = bindPassword!
+                },
+                cancellationToken);
+        }
+        else
+        {
+            result = await ldapService.ValidateAsync(
+                new LdapValidationRequest
+                {
+                    Host = request.Host.Trim(),
+                    Port = request.Port,
+                    UseSsl = request.UseSsl,
+                    BaseDn = request.BaseDn.Trim(),
+                    UserSearchBase = NormalizeNullable(request.UserSearchBase) ?? string.Empty,
+                    UserSearchFilter = request.UserSearchFilter.Trim(),
+                    BindUserName = request.BindUserName.Trim(),
+                    BindUserDomain = NormalizeNullable(request.BindUserDomain),
+                    BindPassword = bindPassword!,
+                    TestUserName = normalizedTestUserName!,
+                    TestPassword = normalizedTestPassword!
+                },
+                cancellationToken);
+        }
 
         return new ValidateLdapSettingsResult(result.IsValid, result.Message);
     }
@@ -351,9 +372,7 @@ public sealed class SettingsService(
             string.IsNullOrWhiteSpace(request.Host) ||
             string.IsNullOrWhiteSpace(request.BaseDn) ||
             string.IsNullOrWhiteSpace(request.UserSearchFilter) ||
-            string.IsNullOrWhiteSpace(request.BindUserName) ||
-            string.IsNullOrWhiteSpace(request.TestUserName) ||
-            string.IsNullOrWhiteSpace(request.TestPassword))
+            string.IsNullOrWhiteSpace(request.BindUserName))
         {
             message = "Required LDAP validation fields are missing.";
             return false;

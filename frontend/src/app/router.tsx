@@ -11,6 +11,7 @@ import { PermissionsPage } from "@/features/permissions/PermissionsPage";
 import { RolesPage } from "@/features/roles/RolesPage";
 import { SecurityLogsPage } from "@/features/security-logs/SecurityLogsPage";
 import { SetupRequiredPage } from "@/features/setup/SetupRequiredPage";
+import { SettingsPage } from "@/features/settings/SettingsPage";
 import { UsersPage } from "@/features/users/UsersPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 
@@ -92,6 +93,18 @@ export const router = createBrowserRouter([
         <RequirePermission permission="Users.View">
           <AppLayout>
             <UsersPage />
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/settings",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission="Settings.View">
+          <AppLayout>
+            <SettingsPage />
           </AppLayout>
         </RequirePermission>
       </RequireAuth>

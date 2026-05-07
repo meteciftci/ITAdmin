@@ -1,0 +1,74 @@
+{
+  "settings": {
+    "title": "Ayarlar",
+    "description": "LDAP ve uygulama ayarlarını yönetin.",
+    "readOnlyNotice": "Bu sayfayı görüntüleme yetkiniz var. Güncelleme yapmak için ek yetki gerekir.",
+    "actions": {
+      "save": "Kaydet"
+    },
+    "errors": {
+      "loadFailed": "Ayarlar yüklenemedi."
+    },
+    "validation": {
+      "nameRequired": "Ad alanı zorunludur.",
+      "hostRequired": "Host alanı zorunludur.",
+      "portRange": "Port 1 ile 65535 arasında olmalıdır.",
+      "baseDnRequired": "Base DN alanı zorunludur.",
+      "userSearchFilterRequired": "Kullanıcı arama filtresi zorunludur.",
+      "bindUserNameRequired": "Bind kullanıcı adı zorunludur."
+    },
+    "ldap": {
+      "sectionTitle": "LDAP Ayarları",
+      "sectionDescription": "LDAP bağlantı ve kullanıcı arama ayarlarını yönetin.",
+      "useSslHelp": "LDAP bağlantısında SSL kullan.",
+      "bindPasswordConfigured": "Bind şifresi yapılandırılmış.",
+      "bindPasswordKeepHint": "Şifre alanı boş bırakılırsa mevcut şifre korunur.",
+      "messages": {
+        "saveSuccess": "LDAP ayarları kaydedildi.",
+        "saveFailed": "LDAP ayarları kaydedilemedi."
+      },
+      "fields": {
+        "name": "Ad",
+        "host": "Host",
+        "port": "Port",
+        "useSsl": "SSL Kullan",
+        "baseDn": "Base DN",
+        "userSearchBase": "Kullanıcı Arama Base",
+        "userSearchFilter": "Kullanıcı Arama Filtresi",
+        "bindUserName": "Bind Kullanıcı Adı",
+        "bindUserDomain": "Bind Kullanıcı Domain",
+        "bindPassword": "Bind Şifresi",
+        "description": "Açıklama"
+      },
+      "validation": {
+        "requestFailed": "LDAP bağlantı testi başarısız. Ayarlar kaydedilmedi.",
+        "saveBlockedByValidation": "LDAP bağlantı testi başarısız. Ayarlar kaydedilmedi.",
+        "genericCouldNotValidate": "LDAP bağlantısı doğrulanamadı.",
+        "backendMessages": {
+          "serviceAccountAuthFailed": "LDAP servis hesabı kimlik doğrulaması başarısız.",
+          "validationFailed": "LDAP doğrulaması başarısız.",
+          "requiredLdapFieldsMissing": "Zorunlu LDAP alanları eksik.",
+          "requiredLdapValidationFieldsMissing": "Zorunlu LDAP doğrulama alanları eksik.",
+          "portRange": "LDAP portu 1 ile 65535 arasında olmalıdır.",
+          "bindPasswordRequiredWithoutActive": "Aktif LDAP ayarı yoksa bind şifresi zorunludur.",
+          "validationCouldNotComplete": "LDAP doğrulaması tamamlanamadı.",
+          "directoryUserNotFound": "Dizin kullanıcısı bulunamadı.",
+          "directoryUserAuthFailed": "Dizin kullanıcısı kimlik doğrulaması başarısız.",
+          "directoryUserDnNotResolved": "Dizin kullanıcısının ayırt edici adı çözümlenemedi.",
+          "bindValidationSucceeded": "LDAP bind doğrulaması başarılı."
+        }
+      }
+    },
+    "application": {
+      "sectionTitle": "Uygulama Ayarları",
+      "sectionDescription": "Uygulama ayar değerlerini güncelleyin.",
+      "fields": {
+        "nationalIdAttribute": "Directory:NationalIdAttribute"
+      },
+      "messages": {
+        "saveSuccess": "Uygulama ayarı kaydedildi.",
+        "saveFailed": "Uygulama ayarı kaydedilemedi."
+      }
+    }
+  }
+}

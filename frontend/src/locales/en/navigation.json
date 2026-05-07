@@ -3,14 +3,16 @@
     "groups": {
       "main": "Main",
       "administration": "Administration",
-      "monitoring": "Monitoring"
+      "monitoring": "Monitoring",
+      "system": "System"
     },
     "dashboard": "Dashboard",
     "users": "Users",
     "roles": "Roles",
     "permissions": "Permissions",
     "auditLogs": "Audit Logs",
-    "securityLogs": "Security Logs"
+    "securityLogs": "Security Logs",
+    "settings": "Settings"
   }
 }
 

@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   Shield,
   ShieldAlert,
+  SlidersHorizontal,
   Users,
 } from "lucide-react";
 
@@ -77,6 +78,13 @@ export const getSidebarGroups = (user: CurrentUser | null): SidebarGroup[] => [
   },
   {
     labelKey: "groups.system",
-    items: [],
+    items: [
+      {
+        titleKey: "settings",
+        to: "/settings",
+        icon: SlidersHorizontal,
+        visible: canAccess(user, "Settings.View"),
+      },
+    ],
   },
 ];

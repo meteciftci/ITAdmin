@@ -16,6 +16,42 @@ public sealed class LdapService : ILdapService
     private const string DirectoryUserDistinguishedNameNotFoundMessage = "Directory user distinguished name could not be resolved.";
     private const string DirectoryUserBindFailedMessage = "Directory user authentication failed.";
     private const string ValidationFailedMessage = "LDAP validation failed.";
+    private const string BindValidationSucceededMessage = "LDAP bind validation succeeded.";
+
+    public Task<LdapValidationResult> ValidateBindAsync(LdapBindValidationRequest request, CancellationToken cancellationToken = default)
+    {
+        _ = cancellationToken;
+
+        if (string.IsNullOrWhiteSpace(request.Host) ||
+            request.Port <= 0 ||
+            string.IsNullOrWhiteSpace(request.BindUserName) ||
+            string.IsNullOrWhiteSpace(request.BindPassword))
+        {
+            return Task.FromResult(new LdapValidationResult(false, MissingRequiredFieldsMessage));
+        }
+
+        try
+        {
+            var identifier = new LdapDirectoryIdentifier(request.Host, request.Port);
+            var bindIdentity = BuildBindIdentity(request.BindUserName, request.BindUserDomain);
+            if (string.IsNullOrWhiteSpace(bindIdentity))
+            {
+                return Task.FromResult(new LdapValidationResult(false, MissingRequiredFieldsMessage));
+            }
+
+            using var connection = CreateConnection(identifier, request.UseSsl, bindIdentity, request.BindPassword);
+            connection.Bind();
+            return Task.FromResult(new LdapValidationResult(true, BindValidationSucceededMessage));
+        }
+        catch (LdapException)
+        {
+            return Task.FromResult(new LdapValidationResult(false, ServiceAccountBindFailedMessage));
+        }
+        catch
+        {
+            return Task.FromResult(new LdapValidationResult(false, ValidationFailedMessage));
+        }
+    }
 
     public Task<LdapValidationResult> ValidateAsync(LdapValidationRequest request, CancellationToken cancellationToken = default)
     {
