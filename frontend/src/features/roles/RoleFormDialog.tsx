@@ -2,9 +2,9 @@ import { useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { CheckboxField } from "@/components/common/CheckboxField";
 import { FormError } from "@/components/common/FormError";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -159,14 +159,13 @@ export function RoleFormDialog({
             />
           </div>
 
-          <label className="flex items-center gap-2 text-sm">
-            <Checkbox
-              checked={isActive}
-              onChange={(event) => setIsActive(event.target.checked)}
-              disabled={isSystemRole || saveMutation.isPending}
-            />
-            {t("common:status.active")}
-          </label>
+          <CheckboxField
+            id="role-isActive"
+            label={t("common:status.active")}
+            checked={isActive}
+            onCheckedChange={setIsActive}
+            disabled={isSystemRole || saveMutation.isPending}
+          />
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>

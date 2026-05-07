@@ -90,17 +90,25 @@ export function LdapSettingsForm({
           }
         />
 
-        <div className="space-y-2">
-          <Label>{t("settings:ldap.fields.useSsl")}</Label>
-          <div className="flex h-8 items-center gap-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="ldap-useSsl">{t("settings:ldap.fields.useSsl")}</Label>
+          <div className="flex h-9 items-center gap-2">
             <Checkbox
+              id="ldap-useSsl"
               checked={values.useSsl}
               onChange={(event) => onChange("useSsl", event.target.checked)}
               disabled={readOnly}
             />
-            <span className="text-sm text-muted-foreground">
+            <label
+              htmlFor="ldap-useSsl"
+              className={
+                readOnly
+                  ? "cursor-not-allowed text-sm text-muted-foreground"
+                  : "cursor-pointer text-sm text-muted-foreground"
+              }
+            >
               {t("settings:ldap.useSslHelp")}
-            </span>
+            </label>
           </div>
         </div>
 
