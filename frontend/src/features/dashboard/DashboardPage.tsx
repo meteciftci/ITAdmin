@@ -1,17 +1,20 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useAuthStore } from "@/features/auth/auth-store";
+import { useBrandingSettings } from "@/hooks/useBrandingSettings";
 import { useTranslation } from "react-i18next";
 
 export function DashboardPage() {
   const { t } = useTranslation(["dashboard"]);
   const user = useAuthStore((state) => state.user);
+  const { data: branding } = useBrandingSettings();
 
   return (
     <section className="space-y-4">
-      <h1 className="text-2xl font-semibold tracking-tight">
-        {t("title")}
-      </h1>
+      <div className="space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight">{branding.applicationName}</h1>
+        <p className="text-sm text-muted-foreground">{t("description")}</p>
+      </div>
       <Card>
         <CardHeader>
           <CardTitle>{t("welcome")}</CardTitle>

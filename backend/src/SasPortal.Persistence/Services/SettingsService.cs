@@ -14,13 +14,23 @@ public sealed class SettingsService(
     ISecretProtector secretProtector) : ISettingsService
 {
     private const string NationalIdApplicationSettingKey = "Directory:NationalIdAttribute";
+    private const string BrandingApplicationNameKey = "Branding:ApplicationName";
+    private const string BrandingBrowserTitleKey = "Branding:BrowserTitle";
+    private const string BrandingLogoUrlKey = "Branding:LogoUrl";
+    private const string DefaultBrandingApplicationName = "SAS Portal v2";
+    private const string DefaultBrandingBrowserTitle = "SAS Portal v2";
+    private const int BrandingTextMaxLength = 100;
+    private const int BrandingLogoUrlMaxLength = 500;
     private const int AuditDescriptionMaxLength = 2000;
     private const int AuditIpAddressMaxLength = 64;
     private const int AuditUserAgentMaxLength = 1024;
 
     private static readonly HashSet<string> UpdatableApplicationSettingKeys = new(StringComparer.Ordinal)
     {
-        NationalIdApplicationSettingKey
+        NationalIdApplicationSettingKey,
+        BrandingApplicationNameKey,
+        BrandingBrowserTitleKey,
+        BrandingLogoUrlKey
     };
 
     public async Task<SettingsOverview> GetSettingsAsync(CancellationToken cancellationToken = default)
@@ -45,7 +55,30 @@ public sealed class SettingsService(
                 x.IsActive))
             .ToListAsync(cancellationToken);
 
-        return new SettingsOverview(MapLdapSetting(ldapSetting), appSettings);
+        var branding = BuildBrandingSettings(appSettings);
+        return new SettingsOverview(MapLdapSetting(ldapSetting), appSettings, branding);
+    }
+
+    public async Task<BrandingSettings> GetBrandingSettingsAsync(CancellationToken cancellationToken = default)
+    {
+        var appSettings = await context.ApplicationSettings
+            .AsNoTracking()
+            .Where(x => x.IsActive && !x.IsDeleted)
+            .Where(x =>
+                x.Key == BrandingApplicationNameKey
+                || x.Key == BrandingBrowserTitleKey
+                || x.Key == BrandingLogoUrlKey)
+            .Select(x => new ApplicationSettingItem(
+                x.Key,
+                x.IsEncrypted ? null : x.Value,
+                x.ValueType,
+                x.Description,
+                x.IsEncrypted,
+                x.IsSystem,
+                x.IsActive))
+            .ToListAsync(cancellationToken);
+
+        return BuildBrandingSettings(appSettings);
     }
 
     public async Task<UpdateSettingsResult> UpdateLdapSettingsAsync(
@@ -292,6 +325,19 @@ public sealed class SettingsService(
                 return new UpdateSettingsResult(false, "Directory:NationalIdAttribute must use String value type.", null);
             }
 
+            if (key == BrandingApplicationNameKey || key == BrandingBrowserTitleKey || key == BrandingLogoUrlKey)
+            {
+                if (item.ValueType != SettingValueType.String)
+                {
+                    return new UpdateSettingsResult(false, $"Branding setting {key} must use String value type.", null);
+                }
+
+                if (!ValidateBrandingValue(key, item.Value, out var brandingValidationMessage))
+                {
+                    return new UpdateSettingsResult(false, brandingValidationMessage, null);
+                }
+            }
+
             var setting = await context.ApplicationSettings
                 .FirstOrDefaultAsync(x => x.Key == key && !x.IsDeleted, cancellationToken);
 
@@ -342,6 +388,72 @@ public sealed class SettingsService(
         await context.SaveChangesAsync(cancellationToken);
         var settings = await GetSettingsAsync(cancellationToken);
         return new UpdateSettingsResult(true, "Application settings updated.", settings);
+    }
+
+    public async Task<BrandingLogoUploadResult> UploadBrandingLogoAsync(
+        UploadBrandingLogoRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var now = DateTime.UtcNow;
+        var extension = request.FileExtension.ToLowerInvariant();
+        var safeFileName = $"logo-{now:yyyyMMddHHmmss}-{Guid.NewGuid():N}{extension}";
+        var brandingUploadsFolder = request.UploadDirectoryPath;
+        Directory.CreateDirectory(brandingUploadsFolder);
+
+        var filePath = Path.Combine(brandingUploadsFolder, safeFileName);
+        await File.WriteAllBytesAsync(filePath, request.Content, cancellationToken);
+
+        var logoUrl = $"/uploads/branding/{safeFileName}";
+        var setting = await context.ApplicationSettings
+            .FirstOrDefaultAsync(x => x.Key == BrandingLogoUrlKey && !x.IsDeleted, cancellationToken);
+
+        var previousLogoUrl = setting?.Value;
+        if (setting is null)
+        {
+            setting = new ApplicationSetting
+            {
+                Key = BrandingLogoUrlKey,
+                Value = logoUrl,
+                ValueType = SettingValueType.String,
+                Description = "Application branding logo URL.",
+                IsEncrypted = false,
+                IsSystem = true,
+                IsActive = true,
+                CreatedAt = now,
+                CreatedBy = request.ActorUserName ?? "system"
+            };
+            await context.ApplicationSettings.AddAsync(setting, cancellationToken);
+        }
+        else
+        {
+            setting.Value = logoUrl;
+            setting.ValueType = SettingValueType.String;
+            setting.IsEncrypted = false;
+            setting.IsSystem = true;
+            setting.IsActive = true;
+            setting.UpdatedAt = now;
+            setting.UpdatedBy = request.ActorUserName ?? "system";
+        }
+
+        await context.AuditLogs.AddAsync(
+            new AuditLog
+            {
+                Action = "Update",
+                EntityName = "ApplicationSetting",
+                EntityId = BrandingLogoUrlKey,
+                Description = TruncateAuditDescription($"Application branding logo updated. File: {safeFileName}"),
+                ActorUserId = request.ActorUserId,
+                ActorUserName = request.ActorUserName,
+                IpAddress = TruncateAuditIpAddress(request.ActorIpAddress),
+                UserAgent = TruncateAuditUserAgent(request.ActorUserAgent),
+                CreatedAt = new DateTimeOffset(now, TimeSpan.Zero)
+            },
+            cancellationToken);
+
+        await context.SaveChangesAsync(cancellationToken);
+        TryDeleteOldBrandingLogo(previousLogoUrl, logoUrl, brandingUploadsFolder);
+
+        return new BrandingLogoUploadResult(logoUrl);
     }
 
     private static bool IsLdapUpdateRequestValid(UpdateLdapSettingsRequest request, out string message)
@@ -443,6 +555,136 @@ public sealed class SettingsService(
     }
 
     private static string FormatSsl(bool value) => value ? "Enabled" : "Disabled";
+
+    private static BrandingSettings BuildBrandingSettings(IEnumerable<ApplicationSettingItem> settings)
+    {
+        var map = settings
+            .Where(x => x.IsActive)
+            .ToDictionary(x => x.Key, x => x.Value, StringComparer.Ordinal);
+
+        var applicationName = ResolveBrandingText(map, BrandingApplicationNameKey, DefaultBrandingApplicationName);
+        var browserTitle = ResolveBrandingText(map, BrandingBrowserTitleKey, DefaultBrandingBrowserTitle);
+        var logoUrl = ResolveBrandingLogoUrl(map);
+        return new BrandingSettings(applicationName, browserTitle, logoUrl);
+    }
+
+    private static string ResolveBrandingText(
+        IReadOnlyDictionary<string, string?> map,
+        string key,
+        string fallback)
+    {
+        if (!map.TryGetValue(key, out var value))
+        {
+            return fallback;
+        }
+
+        var normalized = NormalizeNullable(value);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return fallback;
+        }
+
+        return normalized.Length > BrandingTextMaxLength ? normalized[..BrandingTextMaxLength] : normalized;
+    }
+
+    private static string? ResolveBrandingLogoUrl(IReadOnlyDictionary<string, string?> map)
+    {
+        if (!map.TryGetValue(BrandingLogoUrlKey, out var logoUrl))
+        {
+            return null;
+        }
+
+        var normalized = NormalizeNullable(logoUrl);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return null;
+        }
+
+        return IsAllowedBrandingLogoUrl(normalized) ? normalized : null;
+    }
+
+    private static bool ValidateBrandingValue(string key, string? value, out string message)
+    {
+        var normalized = NormalizeNullable(value);
+        if (key == BrandingApplicationNameKey || key == BrandingBrowserTitleKey)
+        {
+            if (normalized is not null && normalized.Length > BrandingTextMaxLength)
+            {
+                message = $"{key} must be at most {BrandingTextMaxLength} characters.";
+                return false;
+            }
+
+            message = string.Empty;
+            return true;
+        }
+
+        if (normalized is not null)
+        {
+            if (normalized.Length > BrandingLogoUrlMaxLength)
+            {
+                message = $"{BrandingLogoUrlKey} must be at most {BrandingLogoUrlMaxLength} characters.";
+                return false;
+            }
+
+            if (!IsAllowedBrandingLogoUrl(normalized))
+            {
+                message = $"{BrandingLogoUrlKey} must be an http/https URL or an absolute relative path starting with '/'.";
+                return false;
+            }
+        }
+
+        message = string.Empty;
+        return true;
+    }
+
+    private static bool IsAllowedBrandingLogoUrl(string value)
+    {
+        if (value.StartsWith('/'))
+        {
+            return true;
+        }
+
+        if (!Uri.TryCreate(value, UriKind.Absolute, out var uri))
+        {
+            return false;
+        }
+
+        if (!string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private static void TryDeleteOldBrandingLogo(string? previousLogoUrl, string newLogoUrl, string brandingUploadsFolder)
+    {
+        var normalizedPrevious = NormalizeNullable(previousLogoUrl);
+        if (string.IsNullOrWhiteSpace(normalizedPrevious)
+            || string.Equals(normalizedPrevious, newLogoUrl, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        if (!normalizedPrevious.StartsWith("/uploads/branding/", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var oldFileName = normalizedPrevious["/uploads/branding/".Length..];
+        if (string.IsNullOrWhiteSpace(oldFileName))
+        {
+            return;
+        }
+
+        var oldPath = Path.Combine(brandingUploadsFolder, oldFileName);
+        if (File.Exists(oldPath))
+        {
+            File.Delete(oldPath);
+        }
+    }
+
 
     private static string TruncateAuditDescription(string description) =>
         description.Length <= AuditDescriptionMaxLength

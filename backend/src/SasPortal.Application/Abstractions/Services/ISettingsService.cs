@@ -5,6 +5,7 @@ namespace SasPortal.Application.Abstractions.Services;
 public interface ISettingsService
 {
     Task<SettingsOverview> GetSettingsAsync(CancellationToken cancellationToken = default);
+    Task<BrandingSettings> GetBrandingSettingsAsync(CancellationToken cancellationToken = default);
 
     Task<UpdateSettingsResult> UpdateLdapSettingsAsync(
         UpdateLdapSettingsRequest request,
@@ -16,5 +17,9 @@ public interface ISettingsService
 
     Task<UpdateSettingsResult> UpdateApplicationSettingsAsync(
         UpdateApplicationSettingsRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<BrandingLogoUploadResult> UploadBrandingLogoAsync(
+        UploadBrandingLogoRequest request,
         CancellationToken cancellationToken = default);
 }

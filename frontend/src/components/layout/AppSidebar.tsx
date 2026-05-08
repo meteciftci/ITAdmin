@@ -7,6 +7,7 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { Separator } from "@/components/ui/separator";
 import { useAuthStore } from "@/features/auth/auth-store";
+import { useBrandingSettings } from "@/hooks/useBrandingSettings";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 
@@ -22,6 +23,14 @@ export function AppSidebar() {
   } = useLayoutShell();
 
   const groups = getSidebarGroups(user);
+  const { data: branding } = useBrandingSettings();
+  const appName = branding.applicationName || "SAS Portal v2";
+  const initials = appName
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <>
@@ -41,11 +50,18 @@ export function AppSidebar() {
         )}
       >
         <div className="flex h-16 items-center justify-between border-b px-3">
-          {!sidebarCollapsed ? (
-            <p className="truncate text-sm font-semibold tracking-wide text-muted-foreground">
-              SAS Portal v2
-            </p>
-          ) : null}
+          <div className={cn("flex min-w-0 items-center gap-2", sidebarCollapsed ? "justify-center" : "")}>
+            {branding.logoUrl ? (
+              <img src={branding.logoUrl} alt={appName} className="size-8 rounded-md object-contain" />
+            ) : (
+              <div className="flex size-8 items-center justify-center rounded-md bg-muted text-xs font-semibold text-muted-foreground">
+                {initials || "SP"}
+              </div>
+            )}
+            {!sidebarCollapsed ? (
+              <p className="truncate text-sm font-semibold tracking-wide text-muted-foreground">{appName}</p>
+            ) : null}
+          </div>
           <button
             type="button"
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}

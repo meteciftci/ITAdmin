@@ -62,12 +62,28 @@
     "application": {
       "sectionTitle": "Uygulama Ayarları",
       "sectionDescription": "Uygulama ayar değerlerini güncelleyin.",
+      "brandingSectionTitle": "Uygulama Kimliği",
       "fields": {
-        "nationalIdAttribute": "Directory:NationalIdAttribute"
+        "nationalIdAttribute": "Directory:NationalIdAttribute",
+        "applicationName": "Uygulama adı",
+        "browserTitle": "Tarayıcı başlığı",
+        "logo": "Logo"
+      },
+      "logoPreview": "Logo önizlemesi",
+      "actions": {
+        "selectLogo": "Logo seç"
+      },
+      "validation": {
+        "applicationNameMax": "Uygulama adı en fazla 100 karakter olmalı.",
+        "browserTitleMax": "Tarayıcı başlığı en fazla 100 karakter olmalı.",
+        "logoType": "Logo dosyası PNG, JPG veya JPEG olmalı.",
+        "logoSize": "Logo boyutu en fazla 2 MB olmalı.",
+        "logoDimensions": "Logo görseli 32x32 ile 512x512 piksel arasında olmalı."
       },
       "messages": {
         "saveSuccess": "Uygulama ayarı kaydedildi.",
-        "saveFailed": "Uygulama ayarı kaydedilemedi."
+        "saveFailed": "Uygulama ayarı kaydedilemedi.",
+        "logoUploadFailed": "Logo yüklenemedi."
       }
     }
   }

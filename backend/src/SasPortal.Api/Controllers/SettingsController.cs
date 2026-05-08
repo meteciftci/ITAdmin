@@ -5,6 +5,7 @@ using SasPortal.Api.Authorization;
 using SasPortal.Api.Contracts.Settings;
 using SasPortal.Application.Abstractions.Services;
 using SasPortal.Domain.Enums;
+using SixLabors.ImageSharp;
 using AppModels = SasPortal.Application.Common.Models;
 
 namespace SasPortal.Api.Controllers;
@@ -12,7 +13,9 @@ namespace SasPortal.Api.Controllers;
 [ApiController]
 [Route("api/settings")]
 [Authorize]
-public sealed class SettingsController(ISettingsService settingsService) : ControllerBase
+public sealed class SettingsController(
+    ISettingsService settingsService,
+    IWebHostEnvironment webHostEnvironment) : ControllerBase
 {
     [HttpGet]
     [RequirePermission("Settings.View")]
@@ -20,6 +23,14 @@ public sealed class SettingsController(ISettingsService settingsService) : Contr
     {
         var settings = await settingsService.GetSettingsAsync(cancellationToken);
         return Ok(MapSettingsOverview(settings));
+    }
+
+    [HttpGet("branding")]
+    [AllowAnonymous]
+    public async Task<ActionResult<BrandingSettingsResponse>> GetBrandingSettings(CancellationToken cancellationToken)
+    {
+        var branding = await settingsService.GetBrandingSettingsAsync(cancellationToken);
+        return Ok(MapBranding(branding));
     }
 
     [HttpPut("ldap")]
@@ -126,12 +137,75 @@ public sealed class SettingsController(ISettingsService settingsService) : Contr
         return Ok(MapSettingsOverview(result.Settings));
     }
 
+    [HttpPost("branding/logo")]
+    [RequirePermission("Settings.Update")]
+    public async Task<ActionResult<BrandingLogoUploadResponse>> UploadBrandingLogo(
+        [FromForm] IFormFile? file,
+        CancellationToken cancellationToken)
+    {
+        if (file is null || file.Length == 0)
+        {
+            return BadRequest(new { message = "Logo file is required." });
+        }
+
+        const long maxFileSizeInBytes = 2 * 1024 * 1024;
+        if (file.Length > maxFileSizeInBytes)
+        {
+            return BadRequest(new { message = "Logo file size must be 2 MB or smaller." });
+        }
+
+        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (!IsAllowedLogoExtension(extension))
+        {
+            return BadRequest(new { message = "Logo file extension must be .png, .jpg or .jpeg." });
+        }
+
+        var contentType = file.ContentType?.Trim() ?? string.Empty;
+        if (!IsAllowedLogoContentType(contentType))
+        {
+            return BadRequest(new { message = "Logo content type must be image/png or image/jpeg." });
+        }
+
+        byte[] content;
+        await using (var stream = file.OpenReadStream())
+        await using (var memoryStream = new MemoryStream())
+        {
+            await stream.CopyToAsync(memoryStream, cancellationToken);
+            content = memoryStream.ToArray();
+        }
+
+        if (!HasAllowedMagicBytes(content, extension))
+        {
+            return BadRequest(new { message = "Logo file signature is invalid." });
+        }
+
+        if (!ValidateImageDimensions(content, out var dimensionValidationMessage))
+        {
+            return BadRequest(new { message = dimensionValidationMessage });
+        }
+
+        var result = await settingsService.UploadBrandingLogoAsync(
+            new AppModels.UploadBrandingLogoRequest(
+                content,
+                extension,
+                contentType,
+                ResolveBrandingUploadsDirectory(webHostEnvironment.WebRootPath),
+                ResolveActorUserId(User),
+                ResolveActorUserName(User),
+                ResolveIpAddress(),
+                ResolveUserAgent()),
+            cancellationToken);
+
+        return Ok(new BrandingLogoUploadResponse(result.LogoUrl));
+    }
+
     private static SettingsOverviewResponse MapSettingsOverview(AppModels.SettingsOverview settings) =>
         new(
             settings.Ldap is null ? null : MapLdapSettings(settings.Ldap),
             settings.ApplicationSettings
                 .Select(MapApplicationSetting)
-                .ToList());
+                .ToList(),
+            MapBranding(settings.Branding));
 
     private static LdapSettingsResponse MapLdapSettings(AppModels.LdapSettingsModel ldap) =>
         new(
@@ -158,6 +232,67 @@ public sealed class SettingsController(ISettingsService settingsService) : Contr
             item.IsEncrypted,
             item.IsSystem,
             item.IsActive);
+
+    private static BrandingSettingsResponse MapBranding(AppModels.BrandingSettings branding) =>
+        new(branding.ApplicationName, branding.BrowserTitle, branding.LogoUrl);
+
+    private static bool IsAllowedLogoExtension(string extension) =>
+        extension is ".png" or ".jpg" or ".jpeg";
+
+    private static bool IsAllowedLogoContentType(string contentType) =>
+        string.Equals(contentType, "image/png", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(contentType, "image/jpeg", StringComparison.OrdinalIgnoreCase);
+
+    private static bool HasAllowedMagicBytes(byte[] content, string extension)
+    {
+        if (content.Length < 4)
+        {
+            return false;
+        }
+
+        return extension switch
+        {
+            ".png" => content[0] == 0x89 && content[1] == 0x50 && content[2] == 0x4E && content[3] == 0x47,
+            ".jpg" or ".jpeg" => content[0] == 0xFF && content[1] == 0xD8,
+            _ => false
+        };
+    }
+
+    private static bool ValidateImageDimensions(byte[] content, out string message)
+    {
+        try
+        {
+            var image = Image.Identify(content);
+            if (image is null)
+            {
+                message = "Logo image could not be read.";
+                return false;
+            }
+
+            if (image.Width < 32 || image.Height < 32 || image.Width > 512 || image.Height > 512)
+            {
+                message = "Logo dimensions must be between 32x32 and 512x512 pixels.";
+                return false;
+            }
+
+            message = string.Empty;
+            return true;
+        }
+        catch
+        {
+            message = "Logo image could not be validated.";
+            return false;
+        }
+    }
+
+    private static string ResolveBrandingUploadsDirectory(string? webRootPath)
+    {
+        var root = string.IsNullOrWhiteSpace(webRootPath)
+            ? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot")
+            : webRootPath;
+
+        return Path.Combine(root, "uploads", "branding");
+    }
 
     private static string? ResolveActorUserName(ClaimsPrincipal principal)
     {

@@ -1,6 +1,17 @@
 export type SettingsOverview = {
   ldap: LdapSettings | null;
   applicationSettings: ApplicationSetting[];
+  branding: BrandingSettings;
+};
+
+export type BrandingSettings = {
+  applicationName: string;
+  browserTitle: string;
+  logoUrl: string | null;
+};
+
+export type BrandingLogoUploadResponse = {
+  logoUrl: string;
 };
 
 export type LdapSettings = {

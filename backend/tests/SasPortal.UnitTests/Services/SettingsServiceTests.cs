@@ -187,6 +187,113 @@ public sealed class SettingsServiceTests
     }
 
     [Fact]
+    public async Task GetBrandingSettingsAsync_ReturnsDefaults_WhenSettingsDoNotExist()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext);
+
+        var branding = await service.GetBrandingSettingsAsync();
+
+        Assert.Equal("SAS Portal v2", branding.ApplicationName);
+        Assert.Equal("SAS Portal v2", branding.BrowserTitle);
+        Assert.Null(branding.LogoUrl);
+    }
+
+    [Fact]
+    public async Task GetBrandingSettingsAsync_ReturnsPersistedBrandingValues()
+    {
+        await using var dbContext = CreateDbContext();
+        await dbContext.ApplicationSettings.AddRangeAsync(
+            new ApplicationSetting
+            {
+                Key = "Branding:ApplicationName",
+                Value = "Portal Name",
+                ValueType = SettingValueType.String,
+                IsEncrypted = false,
+                IsSystem = true,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = "seed"
+            },
+            new ApplicationSetting
+            {
+                Key = "Branding:BrowserTitle",
+                Value = "Portal Browser Title",
+                ValueType = SettingValueType.String,
+                IsEncrypted = false,
+                IsSystem = true,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = "seed"
+            },
+            new ApplicationSetting
+            {
+                Key = "Branding:LogoUrl",
+                Value = "/uploads/branding/logo.png",
+                ValueType = SettingValueType.String,
+                IsEncrypted = false,
+                IsSystem = true,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = "seed"
+            });
+        await dbContext.SaveChangesAsync();
+
+        var service = CreateService(dbContext);
+        var branding = await service.GetBrandingSettingsAsync();
+
+        Assert.Equal("Portal Name", branding.ApplicationName);
+        Assert.Equal("Portal Browser Title", branding.BrowserTitle);
+        Assert.Equal("/uploads/branding/logo.png", branding.LogoUrl);
+    }
+
+    [Fact]
+    public async Task UpdateApplicationSettingsAsync_RejectsInvalidBrandingLogoUrl()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext);
+        var request = new UpdateApplicationSettingsRequest(
+            new[]
+            {
+                new UpdateApplicationSettingRequest("Branding:LogoUrl", "javascript:alert(1)", SettingValueType.String)
+            },
+            Guid.NewGuid(),
+            "tester",
+            "127.0.0.1",
+            "xunit");
+
+        var result = await service.UpdateApplicationSettingsAsync(request);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("http/https URL", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(dbContext.ApplicationSettings);
+    }
+
+    [Fact]
+    public async Task UpdateApplicationSettingsAsync_BrandingAuditDescription_DoesNotContainValue()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext);
+        var request = new UpdateApplicationSettingsRequest(
+            new[]
+            {
+                new UpdateApplicationSettingRequest("Branding:ApplicationName", "SAS Secret Portal Name", SettingValueType.String)
+            },
+            Guid.NewGuid(),
+            "tester",
+            "127.0.0.1",
+            "xunit");
+
+        var result = await service.UpdateApplicationSettingsAsync(request);
+
+        Assert.True(result.IsSuccess);
+        var audit = Assert.Single(dbContext.AuditLogs.Where(x => x.EntityName == "ApplicationSetting"));
+        Assert.NotNull(audit.Description);
+        Assert.DoesNotContain("SAS Secret Portal Name", audit.Description!, StringComparison.Ordinal);
+        Assert.Contains("Branding:ApplicationName", audit.Description!, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ValidateLdapSettingsAsync_WithEmptyBindPasswordAndExistingSetting_UsesUnprotectedStoredSecret()
     {
         await using var dbContext = CreateDbContext();
@@ -305,4 +412,5 @@ public sealed class SettingsServiceTests
             ActorUserName: "tester",
             ActorIpAddress: "127.0.0.1",
             ActorUserAgent: "xunit");
+
 }

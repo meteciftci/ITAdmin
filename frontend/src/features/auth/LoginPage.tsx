@@ -15,6 +15,7 @@ import { useAuthStore } from "@/features/auth/auth-store";
 import { PublicLanguageSwitcher } from "@/features/auth/PublicLanguageSwitcher";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { i18n, normalizeLanguage } from "@/app/i18n";
+import { useBrandingSettings } from "@/hooks/useBrandingSettings";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -30,6 +31,14 @@ export function LoginPage() {
   const [userName, setUserName] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { data: branding } = useBrandingSettings();
+  const appName = branding.applicationName || "SAS Portal v2";
+  const initials = appName
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
   const loginMutation = useMutation({
     mutationFn: async () => {
@@ -69,6 +78,16 @@ export function LoginPage() {
       <div className="w-full max-w-md">
         <Card className="border-border/70 shadow-lg">
           <CardHeader className="space-y-2 text-center">
+            <div className="mx-auto mb-2">
+              {branding.logoUrl ? (
+                <img src={branding.logoUrl} alt={appName} className="mx-auto h-14 w-14 rounded-md object-contain" />
+              ) : (
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-md bg-muted text-lg font-semibold text-muted-foreground">
+                  {initials || "SP"}
+                </div>
+              )}
+            </div>
+            <p className="text-sm font-medium text-muted-foreground">{appName}</p>
             <CardTitle className="text-2xl">{t("login.title")}</CardTitle>
             <CardDescription className="text-center">{t("login.description")}</CardDescription>
           </CardHeader>

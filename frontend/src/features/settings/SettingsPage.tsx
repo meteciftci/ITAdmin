@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/features/auth/auth-store";
 import {
   getSettings,
+  uploadBrandingLogo,
   updateApplicationSettings,
   updateLdapSettings,
   validateLdapSettings,
@@ -22,6 +23,7 @@ import {
 } from "@/features/settings/components/LdapSettingsForm";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { canAccess } from "@/lib/permissions";
+import { BRANDING_QUERY_KEY } from "@/hooks/useBrandingSettings";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import type {
@@ -31,7 +33,11 @@ import type {
 
 const SETTINGS_QUERY_KEY = ["settings", "overview"] as const;
 const DIRECTORY_NATIONAL_ID_ATTRIBUTE_KEY = "Directory:NationalIdAttribute";
+const BRANDING_APPLICATION_NAME_KEY = "Branding:ApplicationName";
+const BRANDING_BROWSER_TITLE_KEY = "Branding:BrowserTitle";
+const BRANDING_LOGO_URL_KEY = "Branding:LogoUrl";
 const SETTING_VALUE_TYPE_STRING = 1;
+const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 
 const createEmptyLdapForm = (): LdapFormValues => ({
   name: "",
@@ -60,6 +66,11 @@ export function SettingsPage() {
   >({});
   const [hasBindPassword, setHasBindPassword] = useState(false);
   const [applicationValue, setApplicationValue] = useState("");
+  const [brandingApplicationName, setBrandingApplicationName] = useState("SAS Portal v2");
+  const [brandingBrowserTitle, setBrandingBrowserTitle] = useState("SAS Portal v2");
+  const [brandingLogoUrl, setBrandingLogoUrl] = useState<string | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const [applicationError, setApplicationError] = useState<string | undefined>(undefined);
 
   const settingsQuery = useQuery({
@@ -93,8 +104,21 @@ export function SettingsPage() {
     setHasBindPassword(Boolean(ldap?.hasBindPassword));
     setLdapFieldErrors({});
     setApplicationValue(applicationSetting?.value ?? "");
+    setBrandingApplicationName(settingsQuery.data.branding.applicationName ?? "SAS Portal v2");
+    setBrandingBrowserTitle(settingsQuery.data.branding.browserTitle ?? "SAS Portal v2");
+    setBrandingLogoUrl(settingsQuery.data.branding.logoUrl ?? null);
+    setLogoFile(null);
+    setLogoPreviewUrl(null);
     setApplicationError(undefined);
   }, [settingsQuery.data]);
+
+  useEffect(() => {
+    return () => {
+      if (logoPreviewUrl) {
+        URL.revokeObjectURL(logoPreviewUrl);
+      }
+    };
+  }, [logoPreviewUrl]);
 
   const updateLdapMutation = useMutation({
     mutationFn: updateLdapSettings,
@@ -119,6 +143,12 @@ export function SettingsPage() {
     mutationFn: updateApplicationSettings,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: SETTINGS_QUERY_KEY });
+      await queryClient.invalidateQueries({ queryKey: BRANDING_QUERY_KEY });
+      if (logoPreviewUrl) {
+        URL.revokeObjectURL(logoPreviewUrl);
+      }
+      setLogoFile(null);
+      setLogoPreviewUrl(null);
       setApplicationError(undefined);
       toast.success(t("settings:application.messages.saveSuccess"));
     },
@@ -253,14 +283,110 @@ export function SettingsPage() {
     return t(mappedKey);
   };
 
-  const handleApplicationSave = () => {
+  const validateBrandingInput = (): boolean => {
+    if (brandingApplicationName.trim().length > 100) {
+      setApplicationError(t("settings:application.validation.applicationNameMax"));
+      return false;
+    }
+
+    if (brandingBrowserTitle.trim().length > 100) {
+      setApplicationError(t("settings:application.validation.browserTitleMax"));
+      return false;
+    }
+
+    return true;
+  };
+
+  const validateLogoFile = async (file: File): Promise<boolean> => {
+    const extension = file.name.split(".").pop()?.toLowerCase();
+    if (!extension || !["png", "jpg", "jpeg"].includes(extension)) {
+      toast.error(t("settings:application.validation.logoType"));
+      return false;
+    }
+
+    if (file.size > MAX_LOGO_BYTES) {
+      toast.error(t("settings:application.validation.logoSize"));
+      return false;
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    const dimensionsValid = await new Promise<boolean>((resolve) => {
+      const image = new Image();
+      image.onload = () => {
+        const ok =
+          image.naturalWidth >= 32 &&
+          image.naturalHeight >= 32 &&
+          image.naturalWidth <= 512 &&
+          image.naturalHeight <= 512;
+        resolve(ok);
+      };
+      image.onerror = () => resolve(false);
+      image.src = objectUrl;
+    });
+    URL.revokeObjectURL(objectUrl);
+
+    if (!dimensionsValid) {
+      toast.error(t("settings:application.validation.logoDimensions"));
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleLogoSelect = async (file: File | null) => {
+    if (!file) {
+      return;
+    }
+
+    const valid = await validateLogoFile(file);
+    if (!valid) {
+      return;
+    }
+
+    if (logoPreviewUrl) {
+      URL.revokeObjectURL(logoPreviewUrl);
+    }
+
+    setLogoFile(file);
+    setLogoPreviewUrl(URL.createObjectURL(file));
+  };
+
+  const handleApplicationSave = async () => {
     if (!canUpdate) return;
     setApplicationError(undefined);
+    if (!validateBrandingInput()) return;
+
+    let logoUrlToPersist = brandingLogoUrl;
+    if (logoFile) {
+      try {
+        const uploadResult = await uploadBrandingLogo(logoFile);
+        logoUrlToPersist = uploadResult.logoUrl;
+      } catch (error) {
+        toast.error(getApiErrorMessage(error, t("settings:application.messages.logoUploadFailed")));
+        return;
+      }
+    }
+
     updateApplicationMutation.mutate({
       items: [
         {
           key: DIRECTORY_NATIONAL_ID_ATTRIBUTE_KEY,
           value: applicationValue.trim() || null,
+          valueType: SETTING_VALUE_TYPE_STRING,
+        },
+        {
+          key: BRANDING_APPLICATION_NAME_KEY,
+          value: brandingApplicationName.trim() || "SAS Portal v2",
+          valueType: SETTING_VALUE_TYPE_STRING,
+        },
+        {
+          key: BRANDING_BROWSER_TITLE_KEY,
+          value: brandingBrowserTitle.trim() || "SAS Portal v2",
+          valueType: SETTING_VALUE_TYPE_STRING,
+        },
+        {
+          key: BRANDING_LOGO_URL_KEY,
+          value: logoUrlToPersist,
           valueType: SETTING_VALUE_TYPE_STRING,
         },
       ],
@@ -344,11 +470,14 @@ export function SettingsPage() {
       </SectionCard>
 
       <SectionCard
-        title={t("settings:application.sectionTitle")}
+        title={t("settings:application.brandingSectionTitle")}
         description={t("settings:application.sectionDescription")}
       >
         <ApplicationSettingsForm
           nationalIdAttribute={applicationValue}
+          applicationName={brandingApplicationName}
+          browserTitle={brandingBrowserTitle}
+          logoPreviewUrl={logoPreviewUrl ?? brandingLogoUrl}
           readOnly={isReadOnly}
           isSaving={updateApplicationMutation.isPending}
           errorMessage={applicationError}
@@ -356,7 +485,16 @@ export function SettingsPage() {
             setApplicationError(undefined);
             setApplicationValue(value);
           }}
-          onSave={handleApplicationSave}
+          onApplicationNameChange={(value) => {
+            setApplicationError(undefined);
+            setBrandingApplicationName(value);
+          }}
+          onBrowserTitleChange={(value) => {
+            setApplicationError(undefined);
+            setBrandingBrowserTitle(value);
+          }}
+          onSelectLogo={handleLogoSelect}
+          onSave={() => void handleApplicationSave()}
         />
       </SectionCard>
     </section>

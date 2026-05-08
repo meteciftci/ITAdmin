@@ -62,12 +62,28 @@
     "application": {
       "sectionTitle": "Application Settings",
       "sectionDescription": "Update application setting values.",
+      "brandingSectionTitle": "Application Branding",
       "fields": {
-        "nationalIdAttribute": "Directory:NationalIdAttribute"
+        "nationalIdAttribute": "Directory:NationalIdAttribute",
+        "applicationName": "Application name",
+        "browserTitle": "Browser title",
+        "logo": "Logo"
+      },
+      "logoPreview": "Logo preview",
+      "actions": {
+        "selectLogo": "Select logo"
+      },
+      "validation": {
+        "applicationNameMax": "Application name must be at most 100 characters.",
+        "browserTitleMax": "Browser title must be at most 100 characters.",
+        "logoType": "Logo file must be PNG, JPG, or JPEG.",
+        "logoSize": "Logo size must be at most 2 MB.",
+        "logoDimensions": "Logo image must be between 32x32 and 512x512 pixels."
       },
       "messages": {
         "saveSuccess": "Application setting updated.",
-        "saveFailed": "Application setting could not be updated."
+        "saveFailed": "Application setting could not be updated.",
+        "logoUploadFailed": "Logo upload failed."
       }
     }
   }
