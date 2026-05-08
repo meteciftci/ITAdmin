@@ -15,6 +15,40 @@ const refreshClient = axios.create({
   baseURL: "/api",
 });
 
+const UNSAFE_URL_SCHEME_REGEX = /^\s*(data|javascript|file):/i;
+
+const normalizeOrigin = (value: string): string => value.replace(/\/+$/, "");
+
+export const getApiOrigin = (): string => {
+  const envOrigin = import.meta.env.VITE_API_ORIGIN?.trim();
+  if (envOrigin) {
+    return normalizeOrigin(envOrigin);
+  }
+
+  return normalizeOrigin(window.location.origin);
+};
+
+export const resolveApiAssetUrl = (pathOrUrl?: string | null): string | null => {
+  const value = pathOrUrl?.trim();
+  if (!value) {
+    return null;
+  }
+
+  if (UNSAFE_URL_SCHEME_REGEX.test(value)) {
+    return null;
+  }
+
+  if (/^https?:\/\//i.test(value)) {
+    return value;
+  }
+
+  if (value.startsWith("/")) {
+    return `${getApiOrigin()}${value}`;
+  }
+
+  return null;
+};
+
 apiClient.interceptors.request.use((config) => {
   const accessToken = useAuthStore.getState().accessToken;
   if (accessToken) {

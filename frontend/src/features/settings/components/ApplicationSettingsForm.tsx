@@ -1,13 +1,15 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { resolveApiAssetUrl } from "@/lib/api-client";
 import { useTranslation } from "react-i18next";
 
 type ApplicationSettingsFormProps = {
   nationalIdAttribute: string;
   applicationName: string;
   browserTitle: string;
-  logoPreviewUrl: string | null;
+  selectedLogoPreviewUrl: string | null;
+  currentLogoUrl: string | null;
   readOnly: boolean;
   isSaving: boolean;
   errorMessage?: string;
@@ -22,7 +24,8 @@ export function ApplicationSettingsForm({
   nationalIdAttribute,
   applicationName,
   browserTitle,
-  logoPreviewUrl,
+  selectedLogoPreviewUrl,
+  currentLogoUrl,
   readOnly,
   isSaving,
   errorMessage,
@@ -33,6 +36,8 @@ export function ApplicationSettingsForm({
   onSave,
 }: ApplicationSettingsFormProps) {
   const { t } = useTranslation(["settings", "common"]);
+  const resolvedCurrentLogoUrl = resolveApiAssetUrl(currentLogoUrl);
+  const displayLogoUrl = selectedLogoPreviewUrl ?? resolvedCurrentLogoUrl;
 
   return (
     <div className="space-y-4">
@@ -70,8 +75,8 @@ export function ApplicationSettingsForm({
         <Label>{t("settings:application.fields.logo")}</Label>
         <div className="flex items-center gap-4">
           <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-md border bg-muted">
-            {logoPreviewUrl ? (
-              <img src={logoPreviewUrl} alt={t("settings:application.logoPreview")} className="h-full w-full object-contain" />
+            {displayLogoUrl ? (
+              <img src={displayLogoUrl} alt={t("settings:application.logoPreview")} className="h-full w-full object-contain" />
             ) : (
               <span className="text-xs text-muted-foreground">{t("settings:application.logoPreview")}</span>
             )}

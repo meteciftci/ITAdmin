@@ -8,6 +8,7 @@ import { buttonVariants } from "@/components/ui/button-variants";
 import { Separator } from "@/components/ui/separator";
 import { useAuthStore } from "@/features/auth/auth-store";
 import { useBrandingSettings } from "@/hooks/useBrandingSettings";
+import { resolveApiAssetUrl } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 
@@ -25,6 +26,7 @@ export function AppSidebar() {
   const groups = getSidebarGroups(user);
   const { data: branding } = useBrandingSettings();
   const appName = branding.applicationName || "SAS Portal v2";
+  const resolvedLogoUrl = resolveApiAssetUrl(branding.logoUrl);
   const initials = appName
     .split(" ")
     .map((part) => part[0])
@@ -51,8 +53,8 @@ export function AppSidebar() {
       >
         <div className="flex h-16 items-center justify-between border-b px-3">
           <div className={cn("flex min-w-0 items-center gap-2", sidebarCollapsed ? "justify-center" : "")}>
-            {branding.logoUrl ? (
-              <img src={branding.logoUrl} alt={appName} className="size-8 rounded-md object-contain" />
+            {resolvedLogoUrl ? (
+              <img src={resolvedLogoUrl} alt={appName} className="size-8 rounded-md object-contain" />
             ) : (
               <div className="flex size-8 items-center justify-center rounded-md bg-muted text-xs font-semibold text-muted-foreground">
                 {initials || "SP"}

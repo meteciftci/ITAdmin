@@ -477,7 +477,8 @@ export function SettingsPage() {
           nationalIdAttribute={applicationValue}
           applicationName={brandingApplicationName}
           browserTitle={brandingBrowserTitle}
-          logoPreviewUrl={logoPreviewUrl ?? brandingLogoUrl}
+          selectedLogoPreviewUrl={logoPreviewUrl}
+          currentLogoUrl={brandingLogoUrl}
           readOnly={isReadOnly}
           isSaving={updateApplicationMutation.isPending}
           errorMessage={applicationError}
