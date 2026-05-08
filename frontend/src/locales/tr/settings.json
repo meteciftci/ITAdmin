@@ -77,9 +77,17 @@
       },
       "logoPreview": "Logo önizlemesi",
       "faviconPreview": "Favicon önizlemesi",
+      "noFileSelected": "Dosya seçilmedi",
+      "selectedFile": "Seçilen dosya",
       "actions": {
         "selectLogo": "Logo seç",
-        "selectFavicon": "Favicon seç"
+        "selectFavicon": "Favicon seç",
+        "selectLogoFile": "Logo dosyası seç",
+        "selectFaviconFile": "Favicon dosyası seç"
+      },
+      "help": {
+        "logoFileTypes": "PNG, JPG veya JPEG",
+        "faviconFileTypes": "PNG, JPG, JPEG veya ICO"
       },
       "validation": {
         "applicationNameMax": "Uygulama adı en fazla 100 karakter olmalı.",

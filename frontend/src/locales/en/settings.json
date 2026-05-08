@@ -77,9 +77,17 @@
       },
       "logoPreview": "Logo preview",
       "faviconPreview": "Favicon preview",
+      "noFileSelected": "No file selected",
+      "selectedFile": "Selected file",
       "actions": {
         "selectLogo": "Select logo",
-        "selectFavicon": "Select favicon"
+        "selectFavicon": "Select favicon",
+        "selectLogoFile": "Select logo file",
+        "selectFaviconFile": "Select favicon file"
+      },
+      "help": {
+        "logoFileTypes": "PNG, JPG, or JPEG",
+        "faviconFileTypes": "PNG, JPG, JPEG, or ICO"
       },
       "validation": {
         "applicationNameMax": "Application name must be at most 100 characters.",
