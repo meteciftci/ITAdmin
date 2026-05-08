@@ -12,7 +12,6 @@ import { ErrorState } from "@/components/common/ErrorState";
 import { LoadingState } from "@/components/common/LoadingState";
 import { LogDetailDialog } from "@/components/common/LogDetailDialog";
 import { MultiSelectFilter } from "@/components/common/MultiSelectFilter";
-import { PageHeader } from "@/components/common/PageHeader";
 import { SectionCard } from "@/components/common/SectionCard";
 import { TablePagination } from "@/components/common/TablePagination";
 import { Badge } from "@/components/ui/badge";
@@ -91,11 +90,6 @@ export function AuditLogsPage() {
 
   return (
     <section className="space-y-4">
-      <PageHeader
-        title={t("auditLogs:title")}
-        description={t("auditLogs:description")}
-      />
-
       <SectionCard title={t("auditLogs:sections.listTitle")}>
         <div className="space-y-4">
           <DataToolbar

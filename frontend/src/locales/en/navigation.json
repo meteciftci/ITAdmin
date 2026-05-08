@@ -6,13 +6,16 @@
       "monitoring": "Monitoring",
       "system": "System"
     },
-    "dashboard": "Dashboard",
-    "users": "Users",
-    "roles": "Roles",
-    "permissions": "Permissions",
-    "auditLogs": "Audit Logs",
-    "securityLogs": "Security Logs",
-    "settings": "Settings"
+    "items": {
+      "home": "Home",
+      "dashboard": "Dashboard",
+      "users": "Users",
+      "roles": "Roles",
+      "permissions": "Permissions",
+      "auditLogs": "Audit Logs",
+      "securityLogs": "Security Logs",
+      "settings": "Settings"
+    }
   }
 }
 

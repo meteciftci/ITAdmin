@@ -7,7 +7,6 @@ import { DataToolbar } from "@/components/common/DataToolbar";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ErrorState } from "@/components/common/ErrorState";
 import { LoadingState } from "@/components/common/LoadingState";
-import { PageHeader } from "@/components/common/PageHeader";
 import { RowActions } from "@/components/common/RowActions";
 import { SectionCard } from "@/components/common/SectionCard";
 import { StatusBadge } from "@/components/common/StatusBadge";
@@ -141,7 +140,6 @@ export function RolesPage() {
 
   return (
     <section className="space-y-4">
-      <PageHeader title={t("roles:title")} description={t("roles:description")} />
       <SectionCard title={t("roles:sections.listTitle")}>
         <div className="space-y-4">
           <DataToolbar

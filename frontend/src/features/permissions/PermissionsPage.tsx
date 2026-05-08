@@ -7,7 +7,6 @@ import { CodeBadge } from "@/components/common/CodeBadge";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ErrorState } from "@/components/common/ErrorState";
 import { LoadingState } from "@/components/common/LoadingState";
-import { PageHeader } from "@/components/common/PageHeader";
 import { SectionCard } from "@/components/common/SectionCard";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { TablePagination } from "@/components/common/TablePagination";
@@ -69,11 +68,6 @@ export function PermissionsPage() {
 
   return (
     <section className="space-y-4">
-      <PageHeader
-        title={t("permissions:title")}
-        description={t("permissions:description")}
-      />
-
       <SectionCard title={t("permissions:sections.listTitle")}>
         <div className="space-y-4">
           <DataToolbar

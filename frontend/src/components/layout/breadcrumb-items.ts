@@ -1,0 +1,19 @@
+export type BreadcrumbItem = {
+  to: string;
+  titleKey: string;
+};
+
+const breadcrumbItems: BreadcrumbItem[] = [
+  { to: "/dashboard", titleKey: "items.dashboard" },
+  { to: "/users", titleKey: "items.users" },
+  { to: "/roles", titleKey: "items.roles" },
+  { to: "/permissions", titleKey: "items.permissions" },
+  { to: "/audit-logs", titleKey: "items.auditLogs" },
+  { to: "/security-logs", titleKey: "items.securityLogs" },
+  { to: "/settings", titleKey: "items.settings" },
+];
+
+export function getBreadcrumbKeyByPath(pathname: string): string | null {
+  const exactMatch = breadcrumbItems.find((item) => item.to === pathname);
+  return exactMatch?.titleKey ?? null;
+}

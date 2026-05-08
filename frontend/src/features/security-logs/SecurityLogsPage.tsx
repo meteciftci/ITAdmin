@@ -11,7 +11,6 @@ import { ErrorState } from "@/components/common/ErrorState";
 import { LoadingState } from "@/components/common/LoadingState";
 import { LogDetailDialog } from "@/components/common/LogDetailDialog";
 import { MultiSelectFilter } from "@/components/common/MultiSelectFilter";
-import { PageHeader } from "@/components/common/PageHeader";
 import { SectionCard } from "@/components/common/SectionCard";
 import { TablePagination } from "@/components/common/TablePagination";
 import { Badge } from "@/components/ui/badge";
@@ -96,8 +95,6 @@ export function SecurityLogsPage() {
 
   return (
     <section className="space-y-4">
-      <PageHeader title={t("securityLogs:title")} description={t("securityLogs:description")} />
-
       <SectionCard title={t("securityLogs:sections.listTitle")}>
         <div className="space-y-4">
           <DataToolbar

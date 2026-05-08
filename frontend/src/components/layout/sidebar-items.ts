@@ -29,7 +29,7 @@ export const getSidebarGroups = (user: CurrentUser | null): SidebarGroup[] => [
     labelKey: "groups.main",
     items: [
       {
-        titleKey: "dashboard",
+        titleKey: "items.dashboard",
         to: "/dashboard",
         icon: LayoutDashboard,
         visible: true,
@@ -40,19 +40,19 @@ export const getSidebarGroups = (user: CurrentUser | null): SidebarGroup[] => [
     labelKey: "groups.administration",
     items: [
       {
-        titleKey: "users",
+        titleKey: "items.users",
         to: "/users",
         icon: Users,
         visible: canAccess(user, "Users.View"),
       },
       {
-        titleKey: "roles",
+        titleKey: "items.roles",
         to: "/roles",
         icon: Shield,
         visible: canAccess(user, "Roles.View"),
       },
       {
-        titleKey: "permissions",
+        titleKey: "items.permissions",
         to: "/permissions",
         icon: KeyRound,
         visible: canAccess(user, "Permissions.View"),
@@ -63,13 +63,13 @@ export const getSidebarGroups = (user: CurrentUser | null): SidebarGroup[] => [
     labelKey: "groups.monitoring",
     items: [
       {
-        titleKey: "auditLogs",
+        titleKey: "items.auditLogs",
         to: "/audit-logs",
         icon: ClipboardList,
         visible: canAccess(user, "AuditLogs.View"),
       },
       {
-        titleKey: "securityLogs",
+        titleKey: "items.securityLogs",
         to: "/security-logs",
         icon: ShieldAlert,
         visible: canAccess(user, "SecurityLogs.View"),
@@ -80,7 +80,7 @@ export const getSidebarGroups = (user: CurrentUser | null): SidebarGroup[] => [
     labelKey: "groups.system",
     items: [
       {
-        titleKey: "settings",
+        titleKey: "items.settings",
         to: "/settings",
         icon: SlidersHorizontal,
         visible: canAccess(user, "Settings.View"),

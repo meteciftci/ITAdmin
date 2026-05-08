@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { ErrorState } from "@/components/common/ErrorState";
 import { LoadingState } from "@/components/common/LoadingState";
-import { PageHeader } from "@/components/common/PageHeader";
 import { SectionCard } from "@/components/common/SectionCard";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -547,7 +546,7 @@ export function SettingsPage() {
     });
   };
 
-  const pageActions = useMemo(
+  const refreshAction = useMemo(
     () => (
       <Button variant="outline" onClick={() => settingsQuery.refetch()}>
         {t("common:actions.refresh")}
@@ -559,11 +558,7 @@ export function SettingsPage() {
   if (settingsQuery.isLoading) {
     return (
       <section className="space-y-4">
-        <PageHeader
-          title={t("settings:title")}
-          description={t("settings:description")}
-          actions={pageActions}
-        />
+        <div className="flex justify-end">{refreshAction}</div>
         <LoadingState />
       </section>
     );
@@ -572,11 +567,7 @@ export function SettingsPage() {
   if (settingsQuery.isError) {
     return (
       <section className="space-y-4">
-        <PageHeader
-          title={t("settings:title")}
-          description={t("settings:description")}
-          actions={pageActions}
-        />
+        <div className="flex justify-end">{refreshAction}</div>
         <ErrorState
           title={t("settings:errors.loadFailed")}
           description={getApiErrorMessage(settingsQuery.error, t("settings:errors.loadFailed"))}
@@ -592,11 +583,7 @@ export function SettingsPage() {
 
   return (
     <section className="space-y-4">
-      <PageHeader
-        title={t("settings:title")}
-        description={t("settings:description")}
-        actions={pageActions}
-      />
+      <div className="flex justify-end">{refreshAction}</div>
 
       {isReadOnly ? (
         <p className="rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground">

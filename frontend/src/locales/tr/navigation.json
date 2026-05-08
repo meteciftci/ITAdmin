@@ -6,13 +6,16 @@
       "monitoring": "İzleme",
       "system": "Sistem"
     },
-    "dashboard": "Kontrol Paneli",
-    "users": "Kullanıcılar",
-    "roles": "Roller",
-    "permissions": "İzinler",
-    "auditLogs": "Audit Logları",
-    "securityLogs": "Security Logları",
-    "settings": "Ayarlar"
+    "items": {
+      "home": "Ana Sayfa",
+      "dashboard": "Kontrol Paneli",
+      "users": "Kullanıcılar",
+      "roles": "Roller",
+      "permissions": "İzinler",
+      "auditLogs": "Audit Logları",
+      "securityLogs": "Security Logları",
+      "settings": "Ayarlar"
+    }
   }
 }
 
