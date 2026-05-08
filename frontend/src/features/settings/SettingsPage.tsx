@@ -6,6 +6,7 @@ import { LoadingState } from "@/components/common/LoadingState";
 import { PageHeader } from "@/components/common/PageHeader";
 import { SectionCard } from "@/components/common/SectionCard";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuthStore } from "@/features/auth/auth-store";
 import {
   getSettings,
@@ -18,6 +19,9 @@ import {
 import {
   ApplicationSettingsForm,
 } from "@/features/settings/components/ApplicationSettingsForm";
+import {
+  DirectorySettingsForm,
+} from "@/features/settings/components/DirectorySettingsForm";
 import {
   LdapSettingsForm,
   type LdapFormValues,
@@ -43,6 +47,9 @@ const SETTING_VALUE_TYPE_STRING = 1;
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 const MAX_FAVICON_BYTES = 512 * 1024;
 
+type SettingsTabValue = "ldap" | "branding" | "directory";
+const DEFAULT_TAB: SettingsTabValue = "ldap";
+
 const createEmptyLdapForm = (): LdapFormValues => ({
   name: "",
   host: "",
@@ -64,12 +71,13 @@ export function SettingsPage() {
   const canUpdate = canAccess(currentUser, "Settings.Update");
   const isReadOnly = !canUpdate;
 
+  const [activeTab, setActiveTab] = useState<SettingsTabValue>(DEFAULT_TAB);
   const [ldapForm, setLdapForm] = useState<LdapFormValues>(createEmptyLdapForm);
   const [ldapFieldErrors, setLdapFieldErrors] = useState<
     Partial<Record<keyof LdapFormValues, string>>
   >({});
   const [hasBindPassword, setHasBindPassword] = useState(false);
-  const [applicationValue, setApplicationValue] = useState("");
+  const [nationalIdAttribute, setNationalIdAttribute] = useState("");
   const [brandingApplicationName, setBrandingApplicationName] = useState("SAS Portal v2");
   const [brandingBrowserTitle, setBrandingBrowserTitle] = useState("SAS Portal v2");
   const [brandingLogoUrl, setBrandingLogoUrl] = useState<string | null>(null);
@@ -80,7 +88,8 @@ export function SettingsPage() {
   const [faviconPreviewUrl, setFaviconPreviewUrl] = useState<string | null>(null);
   const [forgotPasswordUrl, setForgotPasswordUrl] = useState("");
   const [forgotPasswordUrlError, setForgotPasswordUrlError] = useState<string | undefined>(undefined);
-  const [applicationError, setApplicationError] = useState<string | undefined>(undefined);
+  const [brandingError, setBrandingError] = useState<string | undefined>(undefined);
+  const [directoryError, setDirectoryError] = useState<string | undefined>(undefined);
 
   const settingsQuery = useQuery({
     queryKey: SETTINGS_QUERY_KEY,
@@ -92,7 +101,7 @@ export function SettingsPage() {
   useEffect(() => {
     if (!settingsQuery.data) return;
     const ldap = settingsQuery.data.ldap;
-    const applicationSetting = settingsQuery.data.applicationSettings.find(
+    const directorySetting = settingsQuery.data.applicationSettings.find(
       (item) => item.key === DIRECTORY_NATIONAL_ID_ATTRIBUTE_KEY,
     );
 
@@ -112,7 +121,7 @@ export function SettingsPage() {
     });
     setHasBindPassword(Boolean(ldap?.hasBindPassword));
     setLdapFieldErrors({});
-    setApplicationValue(applicationSetting?.value ?? "");
+    setNationalIdAttribute(directorySetting?.value ?? "");
     setBrandingApplicationName(settingsQuery.data.branding.applicationName ?? "SAS Portal v2");
     setBrandingBrowserTitle(settingsQuery.data.branding.browserTitle ?? "SAS Portal v2");
     setBrandingLogoUrl(settingsQuery.data.branding.logoUrl ?? null);
@@ -123,7 +132,8 @@ export function SettingsPage() {
     setFaviconPreviewUrl(null);
     setForgotPasswordUrl(settingsQuery.data.branding.forgotPasswordUrl ?? "");
     setForgotPasswordUrlError(undefined);
-    setApplicationError(undefined);
+    setBrandingError(undefined);
+    setDirectoryError(undefined);
   }, [settingsQuery.data]);
 
   useEffect(() => {
@@ -161,7 +171,7 @@ export function SettingsPage() {
     },
   });
 
-  const updateApplicationMutation = useMutation({
+  const updateBrandingMutation = useMutation({
     mutationFn: updateApplicationSettings,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: SETTINGS_QUERY_KEY });
@@ -176,12 +186,24 @@ export function SettingsPage() {
       }
       setFaviconFile(null);
       setFaviconPreviewUrl(null);
-      setApplicationError(undefined);
+      setBrandingError(undefined);
       setForgotPasswordUrlError(undefined);
       toast.success(t("settings:application.messages.saveSuccess"));
     },
     onError: (error) => {
       toast.error(getApiErrorMessage(error, t("settings:application.messages.saveFailed")));
+    },
+  });
+
+  const updateDirectoryMutation = useMutation({
+    mutationFn: updateApplicationSettings,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: SETTINGS_QUERY_KEY });
+      setDirectoryError(undefined);
+      toast.success(t("settings:directory.messages.saveSuccess"));
+    },
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, t("settings:directory.messages.saveFailed")));
     },
   });
 
@@ -313,12 +335,12 @@ export function SettingsPage() {
 
   const validateBrandingInput = (): boolean => {
     if (brandingApplicationName.trim().length > 100) {
-      setApplicationError(t("settings:application.validation.applicationNameMax"));
+      setBrandingError(t("settings:application.validation.applicationNameMax"));
       return false;
     }
 
     if (brandingBrowserTitle.trim().length > 100) {
-      setApplicationError(t("settings:application.validation.browserTitleMax"));
+      setBrandingError(t("settings:application.validation.browserTitleMax"));
       return false;
     }
 
@@ -449,9 +471,9 @@ export function SettingsPage() {
     setFaviconPreviewUrl(URL.createObjectURL(file));
   };
 
-  const handleApplicationSave = async () => {
+  const handleBrandingSave = async () => {
     if (!canUpdate) return;
-    setApplicationError(undefined);
+    setBrandingError(undefined);
     if (!validateBrandingInput()) return;
     if (!validateForgotPasswordUrlInput()) return;
 
@@ -479,13 +501,8 @@ export function SettingsPage() {
 
     const trimmedForgotPasswordUrl = forgotPasswordUrl.trim();
 
-    updateApplicationMutation.mutate({
+    updateBrandingMutation.mutate({
       items: [
-        {
-          key: DIRECTORY_NATIONAL_ID_ATTRIBUTE_KEY,
-          value: applicationValue.trim() || null,
-          valueType: SETTING_VALUE_TYPE_STRING,
-        },
         {
           key: BRANDING_APPLICATION_NAME_KEY,
           value: brandingApplicationName.trim() || "SAS Portal v2",
@@ -509,6 +526,21 @@ export function SettingsPage() {
         {
           key: BRANDING_FORGOT_PASSWORD_URL_KEY,
           value: trimmedForgotPasswordUrl || null,
+          valueType: SETTING_VALUE_TYPE_STRING,
+        },
+      ],
+    });
+  };
+
+  const handleDirectorySave = () => {
+    if (!canUpdate) return;
+    setDirectoryError(undefined);
+
+    updateDirectoryMutation.mutate({
+      items: [
+        {
+          key: DIRECTORY_NATIONAL_ID_ATTRIBUTE_KEY,
+          value: nationalIdAttribute.trim() || null,
           valueType: SETTING_VALUE_TYPE_STRING,
         },
       ],
@@ -572,63 +604,89 @@ export function SettingsPage() {
         </p>
       ) : null}
 
-      <SectionCard
-        title={t("settings:ldap.sectionTitle")}
-        description={t("settings:ldap.sectionDescription")}
-      >
-        <LdapSettingsForm
-          values={ldapForm}
-          fieldErrors={ldapFieldErrors}
-          hasBindPassword={hasBindPassword}
-          readOnly={isReadOnly}
-          savePending={updateLdapMutation.isPending}
-          canSave={canSaveLdap}
-          onChange={(field, value) => {
-            setLdapForm((prev) => ({ ...prev, [field]: value }));
-            setLdapFieldErrors((prev) => ({ ...prev, [field]: undefined }));
-          }}
-          onSave={handleLdapSave}
-        />
-      </SectionCard>
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as SettingsTabValue)}>
+        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3">
+          <TabsTrigger value="ldap">{t("settings:tabs.ldap")}</TabsTrigger>
+          <TabsTrigger value="branding">{t("settings:tabs.branding")}</TabsTrigger>
+          <TabsTrigger value="directory">{t("settings:tabs.directory")}</TabsTrigger>
+        </TabsList>
 
-      <SectionCard
-        title={t("settings:application.brandingSectionTitle")}
-        description={t("settings:application.sectionDescription")}
-      >
-        <ApplicationSettingsForm
-          nationalIdAttribute={applicationValue}
-          applicationName={brandingApplicationName}
-          browserTitle={brandingBrowserTitle}
-          selectedLogoPreviewUrl={logoPreviewUrl}
-          currentLogoUrl={brandingLogoUrl}
-          selectedFaviconPreviewUrl={faviconPreviewUrl}
-          currentFaviconUrl={brandingFaviconUrl}
-          forgotPasswordUrl={forgotPasswordUrl}
-          readOnly={isReadOnly}
-          isSaving={updateApplicationMutation.isPending}
-          errorMessage={applicationError}
-          forgotPasswordUrlError={forgotPasswordUrlError}
-          onNationalIdAttributeChange={(value) => {
-            setApplicationError(undefined);
-            setApplicationValue(value);
-          }}
-          onApplicationNameChange={(value) => {
-            setApplicationError(undefined);
-            setBrandingApplicationName(value);
-          }}
-          onBrowserTitleChange={(value) => {
-            setApplicationError(undefined);
-            setBrandingBrowserTitle(value);
-          }}
-          onSelectLogo={handleLogoSelect}
-          onSelectFavicon={handleFaviconSelect}
-          onForgotPasswordUrlChange={(value) => {
-            setForgotPasswordUrlError(undefined);
-            setForgotPasswordUrl(value);
-          }}
-          onSave={() => void handleApplicationSave()}
-        />
-      </SectionCard>
+        <TabsContent value="ldap">
+          <SectionCard
+            title={t("settings:ldap.sectionTitle")}
+            description={t("settings:ldap.sectionDescription")}
+          >
+            <LdapSettingsForm
+              values={ldapForm}
+              fieldErrors={ldapFieldErrors}
+              hasBindPassword={hasBindPassword}
+              readOnly={isReadOnly}
+              savePending={updateLdapMutation.isPending}
+              canSave={canSaveLdap}
+              onChange={(field, value) => {
+                setLdapForm((prev) => ({ ...prev, [field]: value }));
+                setLdapFieldErrors((prev) => ({ ...prev, [field]: undefined }));
+              }}
+              onSave={handleLdapSave}
+            />
+          </SectionCard>
+        </TabsContent>
+
+        <TabsContent value="branding">
+          <SectionCard
+            title={t("settings:application.brandingSectionTitle")}
+            description={t("settings:application.sectionDescription")}
+          >
+            <ApplicationSettingsForm
+              applicationName={brandingApplicationName}
+              browserTitle={brandingBrowserTitle}
+              selectedLogoPreviewUrl={logoPreviewUrl}
+              currentLogoUrl={brandingLogoUrl}
+              selectedFaviconPreviewUrl={faviconPreviewUrl}
+              currentFaviconUrl={brandingFaviconUrl}
+              forgotPasswordUrl={forgotPasswordUrl}
+              readOnly={isReadOnly}
+              isSaving={updateBrandingMutation.isPending}
+              errorMessage={brandingError}
+              forgotPasswordUrlError={forgotPasswordUrlError}
+              onApplicationNameChange={(value) => {
+                setBrandingError(undefined);
+                setBrandingApplicationName(value);
+              }}
+              onBrowserTitleChange={(value) => {
+                setBrandingError(undefined);
+                setBrandingBrowserTitle(value);
+              }}
+              onSelectLogo={handleLogoSelect}
+              onSelectFavicon={handleFaviconSelect}
+              onForgotPasswordUrlChange={(value) => {
+                setForgotPasswordUrlError(undefined);
+                setForgotPasswordUrl(value);
+              }}
+              onSave={() => void handleBrandingSave()}
+            />
+          </SectionCard>
+        </TabsContent>
+
+        <TabsContent value="directory">
+          <SectionCard
+            title={t("settings:directory.sectionTitle")}
+            description={t("settings:directory.sectionDescription")}
+          >
+            <DirectorySettingsForm
+              nationalIdAttribute={nationalIdAttribute}
+              readOnly={isReadOnly}
+              isSaving={updateDirectoryMutation.isPending}
+              errorMessage={directoryError}
+              onNationalIdAttributeChange={(value) => {
+                setDirectoryError(undefined);
+                setNationalIdAttribute(value);
+              }}
+              onSave={handleDirectorySave}
+            />
+          </SectionCard>
+        </TabsContent>
+      </Tabs>
     </section>
   );
 }

@@ -5,7 +5,6 @@ import { resolveApiAssetUrl } from "@/lib/api-client";
 import { useTranslation } from "react-i18next";
 
 type ApplicationSettingsFormProps = {
-  nationalIdAttribute: string;
   applicationName: string;
   browserTitle: string;
   selectedLogoPreviewUrl: string | null;
@@ -17,7 +16,6 @@ type ApplicationSettingsFormProps = {
   isSaving: boolean;
   errorMessage?: string;
   forgotPasswordUrlError?: string;
-  onNationalIdAttributeChange: (value: string) => void;
   onApplicationNameChange: (value: string) => void;
   onBrowserTitleChange: (value: string) => void;
   onSelectLogo: (file: File | null) => void;
@@ -27,7 +25,6 @@ type ApplicationSettingsFormProps = {
 };
 
 export function ApplicationSettingsForm({
-  nationalIdAttribute,
   applicationName,
   browserTitle,
   selectedLogoPreviewUrl,
@@ -39,7 +36,6 @@ export function ApplicationSettingsForm({
   isSaving,
   errorMessage,
   forgotPasswordUrlError,
-  onNationalIdAttributeChange,
   onApplicationNameChange,
   onBrowserTitleChange,
   onSelectLogo,
@@ -74,16 +70,7 @@ export function ApplicationSettingsForm({
             maxLength={100}
           />
         </div>
-        <div className="space-y-1.5">
-          <Label>{t("settings:application.fields.nationalIdAttribute")}</Label>
-          <Input
-            value={nationalIdAttribute}
-            onChange={(event) => onNationalIdAttributeChange(event.target.value)}
-            readOnly={readOnly}
-          />
-          {errorMessage ? <p className="text-xs text-destructive">{errorMessage}</p> : null}
-        </div>
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 md:col-span-2">
           <Label>{t("settings:application.fields.forgotPasswordUrl")}</Label>
           <Input
             type="url"
@@ -146,6 +133,8 @@ export function ApplicationSettingsForm({
           ) : null}
         </div>
       </div>
+
+      {errorMessage ? <p className="text-xs text-destructive">{errorMessage}</p> : null}
 
       {!readOnly ? (
         <div className="flex justify-end">

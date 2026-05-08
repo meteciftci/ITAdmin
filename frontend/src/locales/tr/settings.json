@@ -9,6 +9,11 @@
     "errors": {
       "loadFailed": "Ayarlar yüklenemedi."
     },
+    "tabs": {
+      "ldap": "LDAP Ayarları",
+      "branding": "Uygulama Kimliği",
+      "directory": "AD Yönetim Modülü"
+    },
     "validation": {
       "nameRequired": "Ad alanı zorunludur.",
       "hostRequired": "Host alanı zorunludur.",
@@ -60,11 +65,10 @@
       }
     },
     "application": {
-      "sectionTitle": "Uygulama Ayarları",
-      "sectionDescription": "Uygulama ayar değerlerini güncelleyin.",
+      "sectionTitle": "Uygulama Kimliği",
+      "sectionDescription": "Uygulama görsel kimliğini ve genel görünüm ayarlarını yönetin.",
       "brandingSectionTitle": "Uygulama Kimliği",
       "fields": {
-        "nationalIdAttribute": "Directory:NationalIdAttribute",
         "applicationName": "Uygulama adı",
         "browserTitle": "Tarayıcı başlığı",
         "logo": "Logo",
@@ -93,6 +97,18 @@
         "saveFailed": "Uygulama ayarı kaydedilemedi.",
         "logoUploadFailed": "Logo yüklenemedi.",
         "faviconUploadFailed": "Favicon yüklenemedi."
+      }
+    },
+    "directory": {
+      "sectionTitle": "AD Yönetim Modülü Ayarları",
+      "sectionDescription": "Active Directory kullanıcı ve kimlik özniteliklerini yönetin.",
+      "fields": {
+        "nationalIdAttribute": "Ulusal kimlik özniteliği",
+        "nationalIdAttributeHelp": "Active Directory kullanıcılarında ulusal kimlik değerinin okunacağı öznitelik adını girin. Örn: employeeId"
+      },
+      "messages": {
+        "saveSuccess": "AD ayarları kaydedildi.",
+        "saveFailed": "AD ayarları kaydedilemedi."
       }
     }
   }

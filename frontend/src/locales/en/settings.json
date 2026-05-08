@@ -9,6 +9,11 @@
     "errors": {
       "loadFailed": "Settings could not be loaded."
     },
+    "tabs": {
+      "ldap": "LDAP Settings",
+      "branding": "Application Branding",
+      "directory": "AD Management"
+    },
     "validation": {
       "nameRequired": "Name is required.",
       "hostRequired": "Host is required.",
@@ -60,11 +65,10 @@
       }
     },
     "application": {
-      "sectionTitle": "Application Settings",
-      "sectionDescription": "Update application setting values.",
+      "sectionTitle": "Application Branding",
+      "sectionDescription": "Manage application visual identity and branding settings.",
       "brandingSectionTitle": "Application Branding",
       "fields": {
-        "nationalIdAttribute": "Directory:NationalIdAttribute",
         "applicationName": "Application name",
         "browserTitle": "Browser title",
         "logo": "Logo",
@@ -93,6 +97,18 @@
         "saveFailed": "Application setting could not be updated.",
         "logoUploadFailed": "Logo upload failed.",
         "faviconUploadFailed": "Favicon upload failed."
+      }
+    },
+    "directory": {
+      "sectionTitle": "AD Management Settings",
+      "sectionDescription": "Manage Active Directory user and identity attributes.",
+      "fields": {
+        "nationalIdAttribute": "National identity attribute",
+        "nationalIdAttributeHelp": "Enter the Active Directory attribute name used to read the national identity value. Example: employeeId"
+      },
+      "messages": {
+        "saveSuccess": "AD settings saved.",
+        "saveFailed": "AD settings could not be saved."
       }
     }
   }
