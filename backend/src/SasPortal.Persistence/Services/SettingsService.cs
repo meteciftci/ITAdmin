@@ -17,10 +17,14 @@ public sealed class SettingsService(
     private const string BrandingApplicationNameKey = "Branding:ApplicationName";
     private const string BrandingBrowserTitleKey = "Branding:BrowserTitle";
     private const string BrandingLogoUrlKey = "Branding:LogoUrl";
+    private const string BrandingFaviconUrlKey = "Branding:FaviconUrl";
+    private const string BrandingForgotPasswordUrlKey = "Branding:ForgotPasswordUrl";
     private const string DefaultBrandingApplicationName = "SAS Portal v2";
     private const string DefaultBrandingBrowserTitle = "SAS Portal v2";
+    private const string DefaultBrandingFaviconUrl = "/favicon.svg";
+    private const string DefaultBrandingForgotPasswordUrl = "https://sifre.mugla.bel.tr";
     private const int BrandingTextMaxLength = 100;
-    private const int BrandingLogoUrlMaxLength = 500;
+    private const int BrandingUrlMaxLength = 500;
     private const int AuditDescriptionMaxLength = 2000;
     private const int AuditIpAddressMaxLength = 64;
     private const int AuditUserAgentMaxLength = 1024;
@@ -30,7 +34,9 @@ public sealed class SettingsService(
         NationalIdApplicationSettingKey,
         BrandingApplicationNameKey,
         BrandingBrowserTitleKey,
-        BrandingLogoUrlKey
+        BrandingLogoUrlKey,
+        BrandingFaviconUrlKey,
+        BrandingForgotPasswordUrlKey
     };
 
     public async Task<SettingsOverview> GetSettingsAsync(CancellationToken cancellationToken = default)
@@ -67,7 +73,9 @@ public sealed class SettingsService(
             .Where(x =>
                 x.Key == BrandingApplicationNameKey
                 || x.Key == BrandingBrowserTitleKey
-                || x.Key == BrandingLogoUrlKey)
+                || x.Key == BrandingLogoUrlKey
+                || x.Key == BrandingFaviconUrlKey
+                || x.Key == BrandingForgotPasswordUrlKey)
             .Select(x => new ApplicationSettingItem(
                 x.Key,
                 x.IsEncrypted ? null : x.Value,
@@ -325,7 +333,11 @@ public sealed class SettingsService(
                 return new UpdateSettingsResult(false, "Directory:NationalIdAttribute must use String value type.", null);
             }
 
-            if (key == BrandingApplicationNameKey || key == BrandingBrowserTitleKey || key == BrandingLogoUrlKey)
+            if (key == BrandingApplicationNameKey
+                || key == BrandingBrowserTitleKey
+                || key == BrandingLogoUrlKey
+                || key == BrandingFaviconUrlKey
+                || key == BrandingForgotPasswordUrlKey)
             {
                 if (item.ValueType != SettingValueType.String)
                 {
@@ -451,9 +463,75 @@ public sealed class SettingsService(
             cancellationToken);
 
         await context.SaveChangesAsync(cancellationToken);
-        TryDeleteOldBrandingLogo(previousLogoUrl, logoUrl, brandingUploadsFolder);
+        TryDeleteOldBrandingFile(previousLogoUrl, logoUrl, brandingUploadsFolder);
 
         return new BrandingLogoUploadResult(logoUrl);
+    }
+
+    public async Task<BrandingFaviconUploadResult> UploadBrandingFaviconAsync(
+        UploadBrandingFaviconRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var now = DateTime.UtcNow;
+        var extension = request.FileExtension.ToLowerInvariant();
+        var safeFileName = $"favicon-{now:yyyyMMddHHmmss}-{Guid.NewGuid():N}{extension}";
+        var brandingUploadsFolder = request.UploadDirectoryPath;
+        Directory.CreateDirectory(brandingUploadsFolder);
+
+        var filePath = Path.Combine(brandingUploadsFolder, safeFileName);
+        await File.WriteAllBytesAsync(filePath, request.Content, cancellationToken);
+
+        var faviconUrl = $"/uploads/branding/{safeFileName}";
+        var setting = await context.ApplicationSettings
+            .FirstOrDefaultAsync(x => x.Key == BrandingFaviconUrlKey && !x.IsDeleted, cancellationToken);
+
+        var previousFaviconUrl = setting?.Value;
+        if (setting is null)
+        {
+            setting = new ApplicationSetting
+            {
+                Key = BrandingFaviconUrlKey,
+                Value = faviconUrl,
+                ValueType = SettingValueType.String,
+                Description = "Application branding favicon URL.",
+                IsEncrypted = false,
+                IsSystem = true,
+                IsActive = true,
+                CreatedAt = now,
+                CreatedBy = request.ActorUserName ?? "system"
+            };
+            await context.ApplicationSettings.AddAsync(setting, cancellationToken);
+        }
+        else
+        {
+            setting.Value = faviconUrl;
+            setting.ValueType = SettingValueType.String;
+            setting.IsEncrypted = false;
+            setting.IsSystem = true;
+            setting.IsActive = true;
+            setting.UpdatedAt = now;
+            setting.UpdatedBy = request.ActorUserName ?? "system";
+        }
+
+        await context.AuditLogs.AddAsync(
+            new AuditLog
+            {
+                Action = "Update",
+                EntityName = "ApplicationSetting",
+                EntityId = BrandingFaviconUrlKey,
+                Description = TruncateAuditDescription($"Application branding favicon updated. File: {safeFileName}"),
+                ActorUserId = request.ActorUserId,
+                ActorUserName = request.ActorUserName,
+                IpAddress = TruncateAuditIpAddress(request.ActorIpAddress),
+                UserAgent = TruncateAuditUserAgent(request.ActorUserAgent),
+                CreatedAt = new DateTimeOffset(now, TimeSpan.Zero)
+            },
+            cancellationToken);
+
+        await context.SaveChangesAsync(cancellationToken);
+        TryDeleteOldBrandingFile(previousFaviconUrl, faviconUrl, brandingUploadsFolder);
+
+        return new BrandingFaviconUploadResult(faviconUrl);
     }
 
     private static bool IsLdapUpdateRequestValid(UpdateLdapSettingsRequest request, out string message)
@@ -564,8 +642,10 @@ public sealed class SettingsService(
 
         var applicationName = ResolveBrandingText(map, BrandingApplicationNameKey, DefaultBrandingApplicationName);
         var browserTitle = ResolveBrandingText(map, BrandingBrowserTitleKey, DefaultBrandingBrowserTitle);
-        var logoUrl = ResolveBrandingLogoUrl(map);
-        return new BrandingSettings(applicationName, browserTitle, logoUrl);
+        var logoUrl = ResolveBrandingAssetUrl(map, BrandingLogoUrlKey, fallback: null, allowRelative: true);
+        var faviconUrl = ResolveBrandingAssetUrl(map, BrandingFaviconUrlKey, fallback: DefaultBrandingFaviconUrl, allowRelative: true);
+        var forgotPasswordUrl = ResolveBrandingAssetUrl(map, BrandingForgotPasswordUrlKey, fallback: DefaultBrandingForgotPasswordUrl, allowRelative: false);
+        return new BrandingSettings(applicationName, browserTitle, logoUrl, faviconUrl, forgotPasswordUrl);
     }
 
     private static string ResolveBrandingText(
@@ -587,20 +667,24 @@ public sealed class SettingsService(
         return normalized.Length > BrandingTextMaxLength ? normalized[..BrandingTextMaxLength] : normalized;
     }
 
-    private static string? ResolveBrandingLogoUrl(IReadOnlyDictionary<string, string?> map)
+    private static string? ResolveBrandingAssetUrl(
+        IReadOnlyDictionary<string, string?> map,
+        string key,
+        string? fallback,
+        bool allowRelative)
     {
-        if (!map.TryGetValue(BrandingLogoUrlKey, out var logoUrl))
+        if (!map.TryGetValue(key, out var value))
         {
-            return null;
+            return fallback;
         }
 
-        var normalized = NormalizeNullable(logoUrl);
+        var normalized = NormalizeNullable(value);
         if (string.IsNullOrWhiteSpace(normalized))
         {
-            return null;
+            return fallback;
         }
 
-        return IsAllowedBrandingLogoUrl(normalized) ? normalized : null;
+        return IsAllowedBrandingUrl(normalized, allowRelative) ? normalized : fallback;
     }
 
     private static bool ValidateBrandingValue(string key, string? value, out string message)
@@ -618,28 +702,34 @@ public sealed class SettingsService(
             return true;
         }
 
-        if (normalized is not null)
+        if (normalized is null)
         {
-            if (normalized.Length > BrandingLogoUrlMaxLength)
-            {
-                message = $"{BrandingLogoUrlKey} must be at most {BrandingLogoUrlMaxLength} characters.";
-                return false;
-            }
+            message = string.Empty;
+            return true;
+        }
 
-            if (!IsAllowedBrandingLogoUrl(normalized))
-            {
-                message = $"{BrandingLogoUrlKey} must be an http/https URL or an absolute relative path starting with '/'.";
-                return false;
-            }
+        if (normalized.Length > BrandingUrlMaxLength)
+        {
+            message = $"{key} must be at most {BrandingUrlMaxLength} characters.";
+            return false;
+        }
+
+        var allowRelative = key != BrandingForgotPasswordUrlKey;
+        if (!IsAllowedBrandingUrl(normalized, allowRelative))
+        {
+            message = allowRelative
+                ? $"{key} must be an http/https URL or an absolute relative path starting with '/'."
+                : $"{key} must be an http/https URL.";
+            return false;
         }
 
         message = string.Empty;
         return true;
     }
 
-    private static bool IsAllowedBrandingLogoUrl(string value)
+    private static bool IsAllowedBrandingUrl(string value, bool allowRelative)
     {
-        if (value.StartsWith('/'))
+        if (allowRelative && value.StartsWith('/'))
         {
             return true;
         }
@@ -658,11 +748,11 @@ public sealed class SettingsService(
         return true;
     }
 
-    private static void TryDeleteOldBrandingLogo(string? previousLogoUrl, string newLogoUrl, string brandingUploadsFolder)
+    private static void TryDeleteOldBrandingFile(string? previousUrl, string newUrl, string brandingUploadsFolder)
     {
-        var normalizedPrevious = NormalizeNullable(previousLogoUrl);
+        var normalizedPrevious = NormalizeNullable(previousUrl);
         if (string.IsNullOrWhiteSpace(normalizedPrevious)
-            || string.Equals(normalizedPrevious, newLogoUrl, StringComparison.Ordinal))
+            || string.Equals(normalizedPrevious, newUrl, StringComparison.Ordinal))
         {
             return;
         }
@@ -681,7 +771,13 @@ public sealed class SettingsService(
         var oldPath = Path.Combine(brandingUploadsFolder, oldFileName);
         if (File.Exists(oldPath))
         {
-            File.Delete(oldPath);
+            try
+            {
+                File.Delete(oldPath);
+            }
+            catch
+            {
+            }
         }
     }
 

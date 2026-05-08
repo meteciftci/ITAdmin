@@ -67,23 +67,32 @@
         "nationalIdAttribute": "Directory:NationalIdAttribute",
         "applicationName": "Application name",
         "browserTitle": "Browser title",
-        "logo": "Logo"
+        "logo": "Logo",
+        "favicon": "Favicon",
+        "forgotPasswordUrl": "Forgot password URL"
       },
       "logoPreview": "Logo preview",
+      "faviconPreview": "Favicon preview",
       "actions": {
-        "selectLogo": "Select logo"
+        "selectLogo": "Select logo",
+        "selectFavicon": "Select favicon"
       },
       "validation": {
         "applicationNameMax": "Application name must be at most 100 characters.",
         "browserTitleMax": "Browser title must be at most 100 characters.",
         "logoType": "Logo file must be PNG, JPG, or JPEG.",
         "logoSize": "Logo size must be at most 2 MB.",
-        "logoDimensions": "Logo image must be between 32x32 and 512x512 pixels."
+        "logoDimensions": "Logo image must be between 32x32 and 512x512 pixels.",
+        "faviconType": "Favicon file must be PNG, JPG, or JPEG.",
+        "faviconSize": "Favicon must be 512 KB or smaller.",
+        "faviconDimensions": "Favicon image must be between 16x16 and 512x512 pixels.",
+        "forgotPasswordUrlInvalid": "Enter a valid http/https URL."
       },
       "messages": {
         "saveSuccess": "Application setting updated.",
         "saveFailed": "Application setting could not be updated.",
-        "logoUploadFailed": "Logo upload failed."
+        "logoUploadFailed": "Logo upload failed.",
+        "faviconUploadFailed": "Favicon upload failed."
       }
     }
   }

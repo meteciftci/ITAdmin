@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/features/auth/auth-store";
 import {
   getSettings,
+  uploadBrandingFavicon,
   uploadBrandingLogo,
   updateApplicationSettings,
   updateLdapSettings,
@@ -36,8 +37,11 @@ const DIRECTORY_NATIONAL_ID_ATTRIBUTE_KEY = "Directory:NationalIdAttribute";
 const BRANDING_APPLICATION_NAME_KEY = "Branding:ApplicationName";
 const BRANDING_BROWSER_TITLE_KEY = "Branding:BrowserTitle";
 const BRANDING_LOGO_URL_KEY = "Branding:LogoUrl";
+const BRANDING_FAVICON_URL_KEY = "Branding:FaviconUrl";
+const BRANDING_FORGOT_PASSWORD_URL_KEY = "Branding:ForgotPasswordUrl";
 const SETTING_VALUE_TYPE_STRING = 1;
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
+const MAX_FAVICON_BYTES = 512 * 1024;
 
 const createEmptyLdapForm = (): LdapFormValues => ({
   name: "",
@@ -71,6 +75,11 @@ export function SettingsPage() {
   const [brandingLogoUrl, setBrandingLogoUrl] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
+  const [brandingFaviconUrl, setBrandingFaviconUrl] = useState<string | null>(null);
+  const [faviconFile, setFaviconFile] = useState<File | null>(null);
+  const [faviconPreviewUrl, setFaviconPreviewUrl] = useState<string | null>(null);
+  const [forgotPasswordUrl, setForgotPasswordUrl] = useState("");
+  const [forgotPasswordUrlError, setForgotPasswordUrlError] = useState<string | undefined>(undefined);
   const [applicationError, setApplicationError] = useState<string | undefined>(undefined);
 
   const settingsQuery = useQuery({
@@ -109,6 +118,11 @@ export function SettingsPage() {
     setBrandingLogoUrl(settingsQuery.data.branding.logoUrl ?? null);
     setLogoFile(null);
     setLogoPreviewUrl(null);
+    setBrandingFaviconUrl(settingsQuery.data.branding.faviconUrl ?? null);
+    setFaviconFile(null);
+    setFaviconPreviewUrl(null);
+    setForgotPasswordUrl(settingsQuery.data.branding.forgotPasswordUrl ?? "");
+    setForgotPasswordUrlError(undefined);
     setApplicationError(undefined);
   }, [settingsQuery.data]);
 
@@ -119,6 +133,14 @@ export function SettingsPage() {
       }
     };
   }, [logoPreviewUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (faviconPreviewUrl) {
+        URL.revokeObjectURL(faviconPreviewUrl);
+      }
+    };
+  }, [faviconPreviewUrl]);
 
   const updateLdapMutation = useMutation({
     mutationFn: updateLdapSettings,
@@ -149,7 +171,13 @@ export function SettingsPage() {
       }
       setLogoFile(null);
       setLogoPreviewUrl(null);
+      if (faviconPreviewUrl) {
+        URL.revokeObjectURL(faviconPreviewUrl);
+      }
+      setFaviconFile(null);
+      setFaviconPreviewUrl(null);
       setApplicationError(undefined);
+      setForgotPasswordUrlError(undefined);
       toast.success(t("settings:application.messages.saveSuccess"));
     },
     onError: (error) => {
@@ -297,6 +325,22 @@ export function SettingsPage() {
     return true;
   };
 
+  const validateForgotPasswordUrlInput = (): boolean => {
+    const trimmed = forgotPasswordUrl.trim();
+    if (!trimmed) {
+      setForgotPasswordUrlError(undefined);
+      return true;
+    }
+
+    if (!/^https?:\/\//i.test(trimmed) || trimmed.length > 500) {
+      setForgotPasswordUrlError(t("settings:application.validation.forgotPasswordUrlInvalid"));
+      return false;
+    }
+
+    setForgotPasswordUrlError(undefined);
+    return true;
+  };
+
   const validateLogoFile = async (file: File): Promise<boolean> => {
     const extension = file.name.split(".").pop()?.toLowerCase();
     if (!extension || !["png", "jpg", "jpeg"].includes(extension)) {
@@ -351,10 +395,65 @@ export function SettingsPage() {
     setLogoPreviewUrl(URL.createObjectURL(file));
   };
 
+  const validateFaviconFile = async (file: File): Promise<boolean> => {
+    const extension = file.name.split(".").pop()?.toLowerCase();
+    if (!extension || !["png", "jpg", "jpeg"].includes(extension)) {
+      toast.error(t("settings:application.validation.faviconType"));
+      return false;
+    }
+
+    if (file.size > MAX_FAVICON_BYTES) {
+      toast.error(t("settings:application.validation.faviconSize"));
+      return false;
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    const dimensionsValid = await new Promise<boolean>((resolve) => {
+      const image = new Image();
+      image.onload = () => {
+        const ok =
+          image.naturalWidth >= 16 &&
+          image.naturalHeight >= 16 &&
+          image.naturalWidth <= 512 &&
+          image.naturalHeight <= 512;
+        resolve(ok);
+      };
+      image.onerror = () => resolve(false);
+      image.src = objectUrl;
+    });
+    URL.revokeObjectURL(objectUrl);
+
+    if (!dimensionsValid) {
+      toast.error(t("settings:application.validation.faviconDimensions"));
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleFaviconSelect = async (file: File | null) => {
+    if (!file) {
+      return;
+    }
+
+    const valid = await validateFaviconFile(file);
+    if (!valid) {
+      return;
+    }
+
+    if (faviconPreviewUrl) {
+      URL.revokeObjectURL(faviconPreviewUrl);
+    }
+
+    setFaviconFile(file);
+    setFaviconPreviewUrl(URL.createObjectURL(file));
+  };
+
   const handleApplicationSave = async () => {
     if (!canUpdate) return;
     setApplicationError(undefined);
     if (!validateBrandingInput()) return;
+    if (!validateForgotPasswordUrlInput()) return;
 
     let logoUrlToPersist = brandingLogoUrl;
     if (logoFile) {
@@ -366,6 +465,19 @@ export function SettingsPage() {
         return;
       }
     }
+
+    let faviconUrlToPersist = brandingFaviconUrl;
+    if (faviconFile) {
+      try {
+        const uploadResult = await uploadBrandingFavicon(faviconFile);
+        faviconUrlToPersist = uploadResult.faviconUrl;
+      } catch (error) {
+        toast.error(getApiErrorMessage(error, t("settings:application.messages.faviconUploadFailed")));
+        return;
+      }
+    }
+
+    const trimmedForgotPasswordUrl = forgotPasswordUrl.trim();
 
     updateApplicationMutation.mutate({
       items: [
@@ -387,6 +499,16 @@ export function SettingsPage() {
         {
           key: BRANDING_LOGO_URL_KEY,
           value: logoUrlToPersist,
+          valueType: SETTING_VALUE_TYPE_STRING,
+        },
+        {
+          key: BRANDING_FAVICON_URL_KEY,
+          value: faviconUrlToPersist,
+          valueType: SETTING_VALUE_TYPE_STRING,
+        },
+        {
+          key: BRANDING_FORGOT_PASSWORD_URL_KEY,
+          value: trimmedForgotPasswordUrl || null,
           valueType: SETTING_VALUE_TYPE_STRING,
         },
       ],
@@ -479,9 +601,13 @@ export function SettingsPage() {
           browserTitle={brandingBrowserTitle}
           selectedLogoPreviewUrl={logoPreviewUrl}
           currentLogoUrl={brandingLogoUrl}
+          selectedFaviconPreviewUrl={faviconPreviewUrl}
+          currentFaviconUrl={brandingFaviconUrl}
+          forgotPasswordUrl={forgotPasswordUrl}
           readOnly={isReadOnly}
           isSaving={updateApplicationMutation.isPending}
           errorMessage={applicationError}
+          forgotPasswordUrlError={forgotPasswordUrlError}
           onNationalIdAttributeChange={(value) => {
             setApplicationError(undefined);
             setApplicationValue(value);
@@ -495,6 +621,11 @@ export function SettingsPage() {
             setBrandingBrowserTitle(value);
           }}
           onSelectLogo={handleLogoSelect}
+          onSelectFavicon={handleFaviconSelect}
+          onForgotPasswordUrlChange={(value) => {
+            setForgotPasswordUrlError(undefined);
+            setForgotPasswordUrl(value);
+          }}
           onSave={() => void handleApplicationSave()}
         />
       </SectionCard>

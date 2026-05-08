@@ -67,23 +67,32 @@
         "nationalIdAttribute": "Directory:NationalIdAttribute",
         "applicationName": "Uygulama adı",
         "browserTitle": "Tarayıcı başlığı",
-        "logo": "Logo"
+        "logo": "Logo",
+        "favicon": "Favicon",
+        "forgotPasswordUrl": "Şifremi unuttum bağlantısı"
       },
       "logoPreview": "Logo önizlemesi",
+      "faviconPreview": "Favicon önizlemesi",
       "actions": {
-        "selectLogo": "Logo seç"
+        "selectLogo": "Logo seç",
+        "selectFavicon": "Favicon seç"
       },
       "validation": {
         "applicationNameMax": "Uygulama adı en fazla 100 karakter olmalı.",
         "browserTitleMax": "Tarayıcı başlığı en fazla 100 karakter olmalı.",
         "logoType": "Logo dosyası PNG, JPG veya JPEG olmalı.",
         "logoSize": "Logo boyutu en fazla 2 MB olmalı.",
-        "logoDimensions": "Logo görseli 32x32 ile 512x512 piksel arasında olmalı."
+        "logoDimensions": "Logo görseli 32x32 ile 512x512 piksel arasında olmalı.",
+        "faviconType": "Favicon dosyası PNG, JPG veya JPEG olmalı.",
+        "faviconSize": "Favicon boyutu en fazla 512 KB olmalı.",
+        "faviconDimensions": "Favicon görseli 16x16 ile 512x512 piksel arasında olmalı.",
+        "forgotPasswordUrlInvalid": "Geçerli bir http/https bağlantısı girin."
       },
       "messages": {
         "saveSuccess": "Uygulama ayarı kaydedildi.",
         "saveFailed": "Uygulama ayarı kaydedilemedi.",
-        "logoUploadFailed": "Logo yüklenemedi."
+        "logoUploadFailed": "Logo yüklenemedi.",
+        "faviconUploadFailed": "Favicon yüklenemedi."
       }
     }
   }

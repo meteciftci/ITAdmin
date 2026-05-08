@@ -8,10 +8,16 @@ export type BrandingSettings = {
   applicationName: string;
   browserTitle: string;
   logoUrl: string | null;
+  faviconUrl: string | null;
+  forgotPasswordUrl: string | null;
 };
 
 export type BrandingLogoUploadResponse = {
   logoUrl: string;
+};
+
+export type BrandingFaviconUploadResponse = {
+  faviconUrl: string;
 };
 
 export type LdapSettings = {

@@ -22,6 +22,12 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
+const sanitizeForgotPasswordUrl = (value: string | null): string | null => {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  return /^https?:\/\//i.test(trimmed) ? trimmed : null;
+};
+
 export function LoginPage() {
   const { t } = useTranslation(["auth"]);
   const navigate = useNavigate();
@@ -35,6 +41,7 @@ export function LoginPage() {
   const { data: branding } = useBrandingSettings();
   const appName = branding.applicationName || "SAS Portal v2";
   const resolvedLogoUrl = resolveApiAssetUrl(branding.logoUrl);
+  const forgotPasswordUrl = sanitizeForgotPasswordUrl(branding.forgotPasswordUrl);
   const initials = appName
     .split(" ")
     .map((part) => part[0])
@@ -117,14 +124,16 @@ export function LoginPage() {
                 />
               </div>
 
-              <div className="flex justify-end">
-                <a
-                  href="https://sifre.mugla.bel.tr"
-                  className="text-sm text-primary hover:underline"
-                >
-                  {t("login.forgotPassword")}
-                </a>
-              </div>
+              {forgotPasswordUrl ? (
+                <div className="flex justify-end">
+                  <a
+                    href={forgotPasswordUrl}
+                    className="text-sm text-primary hover:underline"
+                  >
+                    {t("login.forgotPassword")}
+                  </a>
+                </div>
+              ) : null}
 
               {errorMessage ? (
                 <Alert variant="destructive">

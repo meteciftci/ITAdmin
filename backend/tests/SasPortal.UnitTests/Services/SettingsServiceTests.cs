@@ -197,6 +197,8 @@ public sealed class SettingsServiceTests
         Assert.Equal("SAS Portal v2", branding.ApplicationName);
         Assert.Equal("SAS Portal v2", branding.BrowserTitle);
         Assert.Null(branding.LogoUrl);
+        Assert.Equal("/favicon.svg", branding.FaviconUrl);
+        Assert.Equal("https://sifre.mugla.bel.tr", branding.ForgotPasswordUrl);
     }
 
     [Fact]
@@ -236,6 +238,28 @@ public sealed class SettingsServiceTests
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow,
                 CreatedBy = "seed"
+            },
+            new ApplicationSetting
+            {
+                Key = "Branding:FaviconUrl",
+                Value = "/uploads/branding/favicon.png",
+                ValueType = SettingValueType.String,
+                IsEncrypted = false,
+                IsSystem = true,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = "seed"
+            },
+            new ApplicationSetting
+            {
+                Key = "Branding:ForgotPasswordUrl",
+                Value = "https://reset.example.com",
+                ValueType = SettingValueType.String,
+                IsEncrypted = false,
+                IsSystem = true,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = "seed"
             });
         await dbContext.SaveChangesAsync();
 
@@ -245,6 +269,8 @@ public sealed class SettingsServiceTests
         Assert.Equal("Portal Name", branding.ApplicationName);
         Assert.Equal("Portal Browser Title", branding.BrowserTitle);
         Assert.Equal("/uploads/branding/logo.png", branding.LogoUrl);
+        Assert.Equal("/uploads/branding/favicon.png", branding.FaviconUrl);
+        Assert.Equal("https://reset.example.com", branding.ForgotPasswordUrl);
     }
 
     [Fact]
@@ -291,6 +317,77 @@ public sealed class SettingsServiceTests
         Assert.NotNull(audit.Description);
         Assert.DoesNotContain("SAS Secret Portal Name", audit.Description!, StringComparison.Ordinal);
         Assert.Contains("Branding:ApplicationName", audit.Description!, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task UpdateApplicationSettingsAsync_RejectsInvalidBrandingFaviconUrl()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext);
+        var request = new UpdateApplicationSettingsRequest(
+            new[]
+            {
+                new UpdateApplicationSettingRequest("Branding:FaviconUrl", "javascript:alert(1)", SettingValueType.String)
+            },
+            Guid.NewGuid(),
+            "tester",
+            "127.0.0.1",
+            "xunit");
+
+        var result = await service.UpdateApplicationSettingsAsync(request);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("http/https URL", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(dbContext.ApplicationSettings);
+    }
+
+    [Fact]
+    public async Task UpdateApplicationSettingsAsync_RejectsInvalidBrandingForgotPasswordUrl()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext);
+        var request = new UpdateApplicationSettingsRequest(
+            new[]
+            {
+                new UpdateApplicationSettingRequest(
+                    "Branding:ForgotPasswordUrl",
+                    "/relative/forgot",
+                    SettingValueType.String)
+            },
+            Guid.NewGuid(),
+            "tester",
+            "127.0.0.1",
+            "xunit");
+
+        var result = await service.UpdateApplicationSettingsAsync(request);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("http/https URL", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(dbContext.ApplicationSettings);
+    }
+
+    [Fact]
+    public async Task UpdateApplicationSettingsAsync_RejectsForgotPasswordUrlWithUnsafeScheme()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext);
+        var request = new UpdateApplicationSettingsRequest(
+            new[]
+            {
+                new UpdateApplicationSettingRequest(
+                    "Branding:ForgotPasswordUrl",
+                    "javascript:alert(1)",
+                    SettingValueType.String)
+            },
+            Guid.NewGuid(),
+            "tester",
+            "127.0.0.1",
+            "xunit");
+
+        var result = await service.UpdateApplicationSettingsAsync(request);
+
+        Assert.False(result.IsSuccess);
+        Assert.Empty(dbContext.ApplicationSettings);
     }
 
     [Fact]

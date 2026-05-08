@@ -22,4 +22,8 @@ public interface ISettingsService
     Task<BrandingLogoUploadResult> UploadBrandingLogoAsync(
         UploadBrandingLogoRequest request,
         CancellationToken cancellationToken = default);
+
+    Task<BrandingFaviconUploadResult> UploadBrandingFaviconAsync(
+        UploadBrandingFaviconRequest request,
+        CancellationToken cancellationToken = default);
 }

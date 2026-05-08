@@ -1,6 +1,7 @@
 import { apiClient } from "@/lib/api-client";
 
 import type {
+  BrandingFaviconUploadResponse,
   BrandingLogoUploadResponse,
   BrandingSettings,
   SettingsOverview,
@@ -50,6 +51,25 @@ export const uploadBrandingLogo = async (
 
   const { data } = await apiClient.post<BrandingLogoUploadResponse>(
     "/settings/branding/logo",
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    },
+  );
+
+  return data;
+};
+
+export const uploadBrandingFavicon = async (
+  file: File,
+): Promise<BrandingFaviconUploadResponse> => {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const { data } = await apiClient.post<BrandingFaviconUploadResponse>(
+    "/settings/branding/favicon",
     formData,
     {
       headers: {

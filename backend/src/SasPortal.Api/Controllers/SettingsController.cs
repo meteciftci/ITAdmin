@@ -199,6 +199,68 @@ public sealed class SettingsController(
         return Ok(new BrandingLogoUploadResponse(result.LogoUrl));
     }
 
+    [HttpPost("branding/favicon")]
+    [RequirePermission("Settings.Update")]
+    public async Task<ActionResult<BrandingFaviconUploadResponse>> UploadBrandingFavicon(
+        [FromForm] IFormFile? file,
+        CancellationToken cancellationToken)
+    {
+        if (file is null || file.Length == 0)
+        {
+            return BadRequest(new { message = "Favicon file is required." });
+        }
+
+        const long maxFileSizeInBytes = 512 * 1024;
+        if (file.Length > maxFileSizeInBytes)
+        {
+            return BadRequest(new { message = "Favicon file size must be 512 KB or smaller." });
+        }
+
+        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (!IsAllowedLogoExtension(extension))
+        {
+            return BadRequest(new { message = "Favicon file extension must be .png, .jpg or .jpeg." });
+        }
+
+        var contentType = file.ContentType?.Trim() ?? string.Empty;
+        if (!IsAllowedLogoContentType(contentType))
+        {
+            return BadRequest(new { message = "Favicon content type must be image/png or image/jpeg." });
+        }
+
+        byte[] content;
+        await using (var stream = file.OpenReadStream())
+        await using (var memoryStream = new MemoryStream())
+        {
+            await stream.CopyToAsync(memoryStream, cancellationToken);
+            content = memoryStream.ToArray();
+        }
+
+        if (!HasAllowedMagicBytes(content, extension))
+        {
+            return BadRequest(new { message = "Favicon file signature is invalid." });
+        }
+
+        if (!ValidateFaviconDimensions(content, out var dimensionValidationMessage))
+        {
+            return BadRequest(new { message = dimensionValidationMessage });
+        }
+
+        var result = await settingsService.UploadBrandingFaviconAsync(
+            new AppModels.UploadBrandingFaviconRequest(
+                content,
+                extension,
+                contentType,
+                ResolveBrandingUploadsDirectory(webHostEnvironment.WebRootPath),
+                ResolveActorUserId(User),
+                ResolveActorUserName(User),
+                ResolveIpAddress(),
+                ResolveUserAgent()),
+            cancellationToken);
+
+        return Ok(new BrandingFaviconUploadResponse(result.FaviconUrl));
+    }
+
     private static SettingsOverviewResponse MapSettingsOverview(AppModels.SettingsOverview settings) =>
         new(
             settings.Ldap is null ? null : MapLdapSettings(settings.Ldap),
@@ -234,7 +296,12 @@ public sealed class SettingsController(
             item.IsActive);
 
     private static BrandingSettingsResponse MapBranding(AppModels.BrandingSettings branding) =>
-        new(branding.ApplicationName, branding.BrowserTitle, branding.LogoUrl);
+        new(
+            branding.ApplicationName,
+            branding.BrowserTitle,
+            branding.LogoUrl,
+            branding.FaviconUrl,
+            branding.ForgotPasswordUrl);
 
     private static bool IsAllowedLogoExtension(string extension) =>
         extension is ".png" or ".jpg" or ".jpeg";
@@ -281,6 +348,33 @@ public sealed class SettingsController(
         catch
         {
             message = "Logo image could not be validated.";
+            return false;
+        }
+    }
+
+    private static bool ValidateFaviconDimensions(byte[] content, out string message)
+    {
+        try
+        {
+            var image = Image.Identify(content);
+            if (image is null)
+            {
+                message = "Favicon image could not be read.";
+                return false;
+            }
+
+            if (image.Width < 16 || image.Height < 16 || image.Width > 512 || image.Height > 512)
+            {
+                message = "Favicon dimensions must be between 16x16 and 512x512 pixels.";
+                return false;
+            }
+
+            message = string.Empty;
+            return true;
+        }
+        catch
+        {
+            message = "Favicon image could not be validated.";
             return false;
         }
     }
