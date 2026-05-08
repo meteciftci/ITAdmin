@@ -82,9 +82,11 @@ export function SettingsPage() {
   const [brandingLogoUrl, setBrandingLogoUrl] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
+  const [selectedLogoFileName, setSelectedLogoFileName] = useState<string | null>(null);
   const [brandingFaviconUrl, setBrandingFaviconUrl] = useState<string | null>(null);
   const [faviconFile, setFaviconFile] = useState<File | null>(null);
   const [faviconPreviewUrl, setFaviconPreviewUrl] = useState<string | null>(null);
+  const [selectedFaviconFileName, setSelectedFaviconFileName] = useState<string | null>(null);
   const [forgotPasswordUrl, setForgotPasswordUrl] = useState("");
   const [forgotPasswordUrlError, setForgotPasswordUrlError] = useState<string | undefined>(undefined);
   const [brandingError, setBrandingError] = useState<string | undefined>(undefined);
@@ -126,9 +128,11 @@ export function SettingsPage() {
     setBrandingLogoUrl(settingsQuery.data.branding.logoUrl ?? null);
     setLogoFile(null);
     setLogoPreviewUrl(null);
+    setSelectedLogoFileName(null);
     setBrandingFaviconUrl(settingsQuery.data.branding.faviconUrl ?? null);
     setFaviconFile(null);
     setFaviconPreviewUrl(null);
+    setSelectedFaviconFileName(null);
     setForgotPasswordUrl(settingsQuery.data.branding.forgotPasswordUrl ?? "");
     setForgotPasswordUrlError(undefined);
     setBrandingError(undefined);
@@ -180,11 +184,13 @@ export function SettingsPage() {
       }
       setLogoFile(null);
       setLogoPreviewUrl(null);
+      setSelectedLogoFileName(null);
       if (faviconPreviewUrl) {
         URL.revokeObjectURL(faviconPreviewUrl);
       }
       setFaviconFile(null);
       setFaviconPreviewUrl(null);
+      setSelectedFaviconFileName(null);
       setBrandingError(undefined);
       setForgotPasswordUrlError(undefined);
       toast.success(t("settings:application.messages.saveSuccess"));
@@ -400,11 +406,13 @@ export function SettingsPage() {
 
   const handleLogoSelect = async (file: File | null) => {
     if (!file) {
+      setSelectedLogoFileName(null);
       return;
     }
 
     const valid = await validateLogoFile(file);
     if (!valid) {
+      setSelectedLogoFileName(null);
       return;
     }
 
@@ -414,6 +422,7 @@ export function SettingsPage() {
 
     setLogoFile(file);
     setLogoPreviewUrl(URL.createObjectURL(file));
+    setSelectedLogoFileName(file.name);
   };
 
   const validateFaviconFile = async (file: File): Promise<boolean> => {
@@ -454,11 +463,13 @@ export function SettingsPage() {
 
   const handleFaviconSelect = async (file: File | null) => {
     if (!file) {
+      setSelectedFaviconFileName(null);
       return;
     }
 
     const valid = await validateFaviconFile(file);
     if (!valid) {
+      setSelectedFaviconFileName(null);
       return;
     }
 
@@ -468,6 +479,7 @@ export function SettingsPage() {
 
     setFaviconFile(file);
     setFaviconPreviewUrl(URL.createObjectURL(file));
+    setSelectedFaviconFileName(file.name);
   };
 
   const handleBrandingSave = async () => {
@@ -629,8 +641,10 @@ export function SettingsPage() {
               browserTitle={brandingBrowserTitle}
               selectedLogoPreviewUrl={logoPreviewUrl}
               currentLogoUrl={brandingLogoUrl}
+              selectedLogoFileName={selectedLogoFileName}
               selectedFaviconPreviewUrl={faviconPreviewUrl}
               currentFaviconUrl={brandingFaviconUrl}
+              selectedFaviconFileName={selectedFaviconFileName}
               forgotPasswordUrl={forgotPasswordUrl}
               readOnly={isReadOnly}
               isSaving={updateBrandingMutation.isPending}

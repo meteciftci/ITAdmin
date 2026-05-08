@@ -5,13 +5,39 @@ import { resolveApiAssetUrl } from "@/lib/api-client";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+type FaviconPreviewImageProps = {
+  src: string;
+  alt: string;
+};
+
+function FaviconPreviewImage({ src, alt }: FaviconPreviewImageProps) {
+  const [isFailed, setIsFailed] = useState(false);
+
+  if (isFailed) {
+    return (
+      <span className="px-1 text-center text-[10px] text-muted-foreground">{alt}</span>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className="h-full w-full object-contain"
+      onError={() => setIsFailed(true)}
+    />
+  );
+}
+
 type ApplicationSettingsFormProps = {
   applicationName: string;
   browserTitle: string;
   selectedLogoPreviewUrl: string | null;
   currentLogoUrl: string | null;
+  selectedLogoFileName: string | null;
   selectedFaviconPreviewUrl: string | null;
   currentFaviconUrl: string | null;
+  selectedFaviconFileName: string | null;
   forgotPasswordUrl: string;
   readOnly: boolean;
   isSaving: boolean;
@@ -30,8 +56,10 @@ export function ApplicationSettingsForm({
   browserTitle,
   selectedLogoPreviewUrl,
   currentLogoUrl,
+  selectedLogoFileName,
   selectedFaviconPreviewUrl,
   currentFaviconUrl,
+  selectedFaviconFileName,
   forgotPasswordUrl,
   readOnly,
   isSaving,
@@ -47,15 +75,10 @@ export function ApplicationSettingsForm({
   const { t } = useTranslation(["settings", "common"]);
   const logoInputRef = useRef<HTMLInputElement | null>(null);
   const faviconInputRef = useRef<HTMLInputElement | null>(null);
-  const [selectedLogoFileName, setSelectedLogoFileName] = useState<string | null>(null);
-  const [selectedFaviconFileName, setSelectedFaviconFileName] = useState<string | null>(null);
-  const [faviconPreviewFailedUrl, setFaviconPreviewFailedUrl] = useState<string | null>(null);
   const resolvedCurrentLogoUrl = resolveApiAssetUrl(currentLogoUrl);
   const displayLogoUrl = selectedLogoPreviewUrl ?? resolvedCurrentLogoUrl;
   const resolvedCurrentFaviconUrl = resolveApiAssetUrl(currentFaviconUrl);
   const displayFaviconUrl = selectedFaviconPreviewUrl ?? resolvedCurrentFaviconUrl;
-  const canShowFaviconPreview =
-    Boolean(displayFaviconUrl) && faviconPreviewFailedUrl !== displayFaviconUrl;
 
   return (
     <div className="space-y-4">
@@ -121,9 +144,9 @@ export function ApplicationSettingsForm({
                     accept=".png,.jpg,.jpeg,image/png,image/jpeg"
                     className="hidden"
                     onChange={(event) => {
-                      const file = event.target.files?.[0] ?? null;
-                      setSelectedLogoFileName(file?.name ?? null);
+                      const file = event.currentTarget.files?.[0] ?? null;
                       onSelectLogo(file);
+                      event.currentTarget.value = "";
                     }}
                     disabled={isSaving}
                   />
@@ -154,12 +177,11 @@ export function ApplicationSettingsForm({
           </div>
           <div className="flex items-start gap-3">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-background">
-              {canShowFaviconPreview ? (
-                <img
-                  src={displayFaviconUrl ?? ""}
+              {displayFaviconUrl ? (
+                <FaviconPreviewImage
+                  key={displayFaviconUrl}
+                  src={displayFaviconUrl}
                   alt={t("settings:application.faviconPreview")}
-                  className="h-full w-full object-contain"
-                  onError={() => setFaviconPreviewFailedUrl(displayFaviconUrl)}
                 />
               ) : (
                 <span className="px-1 text-center text-[10px] text-muted-foreground">{t("settings:application.faviconPreview")}</span>
@@ -174,10 +196,9 @@ export function ApplicationSettingsForm({
                     accept=".png,.jpg,.jpeg,.ico,image/png,image/jpeg,image/x-icon,image/vnd.microsoft.icon"
                     className="hidden"
                     onChange={(event) => {
-                      const file = event.target.files?.[0] ?? null;
-                      setSelectedFaviconFileName(file?.name ?? null);
-                      setFaviconPreviewFailedUrl(null);
+                      const file = event.currentTarget.files?.[0] ?? null;
                       onSelectFavicon(file);
+                      event.currentTarget.value = "";
                     }}
                     disabled={isSaving}
                   />
