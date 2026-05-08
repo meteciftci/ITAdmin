@@ -12,13 +12,18 @@ const DEFAULT_BRANDING: BrandingSettings = {
 };
 
 export function useBrandingSettings() {
-  return useQuery({
+  const query = useQuery({
     queryKey: BRANDING_QUERY_KEY,
     queryFn: getBrandingSettings,
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     retry: false,
-    initialData: DEFAULT_BRANDING,
+    placeholderData: DEFAULT_BRANDING,
   });
+
+  return {
+    ...query,
+    data: query.data ?? DEFAULT_BRANDING,
+  };
 }

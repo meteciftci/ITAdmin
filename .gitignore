@@ -491,3 +491,7 @@ node_modules/
 dist/
 .env
 .env.*
+
+# Runtime branding uploads (keep folder structure only)
+backend/src/SasPortal.Api/wwwroot/uploads/branding/*
+!backend/src/SasPortal.Api/wwwroot/uploads/branding/.gitkeep
