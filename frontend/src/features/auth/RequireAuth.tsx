@@ -12,8 +12,7 @@ import { ServiceUnavailableState } from "@/components/common/ServiceUnavailableS
 import { Skeleton } from "@/components/ui/skeleton";
 import { getCurrentUser } from "@/features/auth/api";
 import { useAuthStore } from "@/features/auth/auth-store";
-import { getSyntheticReadinessForAxiosError } from "@/features/health/api";
-import { useReadinessStatus } from "@/hooks/useReadinessStatus";
+import { getReadinessStatus, getSyntheticReadinessForAxiosError } from "@/features/health/api";
 
 type RequireAuthProps = {
   children: ReactNode;
@@ -24,35 +23,27 @@ const isAuthSessionFailure = (error: unknown): boolean =>
 
 type AuthMeBootstrapFailureProps = {
   meError: unknown;
+  isRetrying: boolean;
+  onRetry: () => void;
 };
 
-function AuthMeBootstrapFailure({ meError }: AuthMeBootstrapFailureProps) {
-  const queryClient = useQueryClient();
-  const readiness = useReadinessStatus();
-
-  if (readiness.data && !readiness.isHealthy) {
-    return null;
-  }
-
-  const displayReadiness =
-    readiness.data && readiness.isHealthy
-      ? getSyntheticReadinessForAxiosError(meError)
-      : (readiness.data ?? getSyntheticReadinessForAxiosError(meError));
-
+function AuthMeBootstrapFailure({
+  meError,
+  isRetrying,
+  onRetry,
+}: AuthMeBootstrapFailureProps) {
   return (
     <ServiceUnavailableState
-      readiness={displayReadiness}
-      isLoading={readiness.isFetching}
-      onRetry={() => {
-        void queryClient.invalidateQueries({ queryKey: ["health", "readiness"] });
-        void queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
-      }}
+      readiness={getSyntheticReadinessForAxiosError(meError)}
+      isLoading={isRetrying}
+      onRetry={onRetry}
     />
   );
 }
 
 export function RequireAuth({ children }: RequireAuthProps) {
   const { t } = useTranslation(["common"]);
+  const queryClient = useQueryClient();
   const accessToken = useAuthStore((state) => state.accessToken);
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
@@ -90,7 +81,17 @@ export function RequireAuth({ children }: RequireAuthProps) {
 
     return (
       <AppLayout>
-        <AuthMeBootstrapFailure meError={meQuery.error} />
+        <AuthMeBootstrapFailure
+          meError={meQuery.error}
+          isRetrying={meQuery.isFetching}
+          onRetry={() => {
+            void meQuery.refetch();
+            void queryClient.fetchQuery({
+              queryKey: ["health", "readiness"],
+              queryFn: getReadinessStatus,
+            });
+          }}
+        />
       </AppLayout>
     );
   }
