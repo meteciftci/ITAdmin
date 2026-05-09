@@ -5,6 +5,7 @@ using SasPortal.Application.Abstractions.Services;
 using SasPortal.Application.Common.Models;
 using SasPortal.Application.Common.Security;
 using SasPortal.Domain.Entities;
+using SasPortal.Persistence.Common;
 using SasPortal.Persistence.Context;
 
 namespace SasPortal.Persistence.Services;
@@ -19,6 +20,9 @@ public sealed class AuthService(
     private const string SuperAdminRoleCode = "SuperAdmin";
     private const string ActiveDirectoryDirectorySource = "ActiveDirectory";
     private const string NationalIdApplicationSettingKey = "Directory:NationalIdAttribute";
+
+    public const string ServiceUnavailableErrorCode = "ServiceUnavailable";
+    public const string LoginErrorCode = "LoginError";
 
     private readonly JwtOptions _jwtOptions = jwtOptions.Value;
     public async Task<AuthTokenResult> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
@@ -300,6 +304,34 @@ public sealed class AuthService(
                 accessExpiresAt,
                 refreshExpiresAt);
         }
+        catch (Exception exception) when (DatabaseExceptionClassifier.IsDatabaseConnectivityException(exception))
+        {
+            // Database is unreachable / authentication at the DB level failed.
+            // Persisting a security log is best-effort: the underlying SaveChanges will fail,
+            // but TryWriteSecurityLogAsync swallows the secondary exception so the request
+            // does not crash a second time.
+            await TryWriteSecurityLogAsync(
+                new SecurityLog
+                {
+                    UserName = normalizedUserName,
+                    EventType = "LoginServiceUnavailable",
+                    Severity = "Error",
+                    Description = "Login could not be completed because the authentication service is temporarily unavailable.",
+                    IpAddress = request.IpAddress,
+                    UserAgent = request.UserAgent,
+                    CreatedAt = DateTime.UtcNow
+                },
+                cancellationToken);
+
+            return new AuthTokenResult(
+                false,
+                "Authentication service is temporarily unavailable.",
+                null,
+                null,
+                null,
+                null,
+                ServiceUnavailableErrorCode);
+        }
         catch
         {
             await TryWriteSecurityLogAsync(
@@ -315,7 +347,14 @@ public sealed class AuthService(
                 },
                 cancellationToken);
 
-            return new AuthTokenResult(false, "Login could not be completed.", null, null, null, null);
+            return new AuthTokenResult(
+                false,
+                "Login could not be completed.",
+                null,
+                null,
+                null,
+                null,
+                LoginErrorCode);
         }
     }
 

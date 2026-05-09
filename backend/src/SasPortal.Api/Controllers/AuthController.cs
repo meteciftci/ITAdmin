@@ -11,6 +11,9 @@ namespace SasPortal.Api.Controllers;
 [Route("api/auth")]
 public sealed class AuthController(IAuthService authService) : ControllerBase
 {
+    private const string ServiceUnavailableErrorCode = "ServiceUnavailable";
+    private const string LoginErrorCode = "LoginError";
+
     [HttpPost("login")]
     [AllowAnonymous]
     public async Task<ActionResult<LoginResponse>> Login(
@@ -31,11 +34,26 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
             result.AccessToken,
             result.RefreshToken,
             result.AccessTokenExpiresAt,
-            result.RefreshTokenExpiresAt);
+            result.RefreshTokenExpiresAt,
+            result.ErrorCode);
 
         if (result.IsSuccess)
         {
             return Ok(response);
+        }
+
+        if (string.Equals(result.ErrorCode, ServiceUnavailableErrorCode, StringComparison.Ordinal))
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, response);
+        }
+
+        // Generic unexpected login error (e.g. unhandled exception in AuthService that is not a
+        // database connectivity issue). This is a server-side fault, not a credential mismatch,
+        // so it must not be returned as 401 — otherwise the user sees a misleading
+        // "wrong username or password" message in the UI.
+        if (string.Equals(result.ErrorCode, LoginErrorCode, StringComparison.Ordinal))
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, response);
         }
 
         return Unauthorized(response);

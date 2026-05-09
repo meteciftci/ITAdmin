@@ -10,6 +10,7 @@ export type LoginResponse = {
   refreshToken: string;
   accessTokenExpiresAt: string;
   refreshTokenExpiresAt: string;
+  errorCode?: string | null;
 };
 
 export type RefreshTokenRequest = {

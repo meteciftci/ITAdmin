@@ -1,4 +1,5 @@
 import type { FormEvent } from "react";
+import axios from "axios";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +22,9 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+
+const SERVICE_UNAVAILABLE_ERROR_CODE = "ServiceUnavailable";
+const LOGIN_ERROR_CODE = "LoginError";
 
 const sanitizeForgotPasswordUrl = (value: string | null): string | null => {
   const trimmed = value?.trim();
@@ -49,10 +53,39 @@ export function LoginPage() {
     .slice(0, 2)
     .toUpperCase();
 
+  const resolveLoginErrorMessage = (error: unknown): string => {
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status;
+      const data = error.response?.data as { errorCode?: string | null } | undefined;
+      const errorCode = data?.errorCode ?? null;
+
+      if (status === 503 || errorCode === SERVICE_UNAVAILABLE_ERROR_CODE) {
+        return t("login.serviceUnavailable");
+      }
+
+      if (status === 500 || errorCode === LOGIN_ERROR_CODE) {
+        return t("login.unexpectedServiceError");
+      }
+
+      if (status === 401) {
+        return t("login.error");
+      }
+
+      if (!error.response) {
+        return t("login.networkError");
+      }
+    }
+
+    return t("login.error");
+  };
+
   const loginMutation = useMutation({
     mutationFn: async () => {
       const response = await login({ userName, password });
       if (!response.isSuccess) {
+        if (response.errorCode === SERVICE_UNAVAILABLE_ERROR_CODE) {
+          throw new Error(SERVICE_UNAVAILABLE_ERROR_CODE);
+        }
         throw new Error(response.message || t("login.error"));
       }
 
@@ -70,9 +103,15 @@ export function LoginPage() {
     onSuccess: () => {
       navigate("/dashboard", { replace: true });
     },
-    onError: () => {
+    onError: (error: unknown) => {
       clearAuth();
-      setErrorMessage(t("login.error"));
+
+      if (error instanceof Error && error.message === SERVICE_UNAVAILABLE_ERROR_CODE) {
+        setErrorMessage(t("login.serviceUnavailable"));
+        return;
+      }
+
+      setErrorMessage(resolveLoginErrorMessage(error));
     },
   });
 

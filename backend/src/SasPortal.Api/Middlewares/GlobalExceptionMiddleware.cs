@@ -1,5 +1,6 @@
 using System.Text.Json;
 using SasPortal.Api.Contracts.Common;
+using SasPortal.Persistence.Common;
 
 namespace SasPortal.Api.Middlewares;
 
@@ -16,16 +17,44 @@ public sealed class GlobalExceptionMiddleware(
         }
         catch (Exception exception)
         {
-            logger.LogError(exception, "Unhandled exception occurred. TraceId: {TraceId}", context.TraceIdentifier);
+            var traceId = context.TraceIdentifier;
+            var isDbConnectivity = DatabaseExceptionClassifier.IsDatabaseConnectivityException(exception);
 
-            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            if (isDbConnectivity)
+            {
+                logger.LogError(
+                    exception,
+                    "Database connectivity exception occurred. TraceId: {TraceId}",
+                    traceId);
+            }
+            else
+            {
+                logger.LogError(
+                    exception,
+                    "Unhandled exception occurred. TraceId: {TraceId}",
+                    traceId);
+            }
+
+            var statusCode = isDbConnectivity
+                ? StatusCodes.Status503ServiceUnavailable
+                : StatusCodes.Status500InternalServerError;
+
+            var message = isDbConnectivity
+                ? "Database service is temporarily unavailable."
+                : "An unexpected error occurred.";
+
+            // Detail is only included in Development to avoid leaking DB host / user / pg_hba
+            // details in production responses.
+            var detail = environment.IsDevelopment() ? exception.ToString() : null;
+
+            context.Response.StatusCode = statusCode;
             context.Response.ContentType = "application/json";
 
             var errorResponse = new ErrorResponse(
-                Message: "An unexpected error occurred.",
-                Detail: environment.IsDevelopment() ? exception.ToString() : null,
-                StatusCode: StatusCodes.Status500InternalServerError,
-                TraceId: context.TraceIdentifier);
+                Message: message,
+                Detail: detail,
+                StatusCode: statusCode,
+                TraceId: traceId);
 
             await context.Response.WriteAsync(JsonSerializer.Serialize(errorResponse));
         }
