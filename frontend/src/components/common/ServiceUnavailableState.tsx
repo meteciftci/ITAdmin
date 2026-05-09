@@ -28,17 +28,25 @@ export function ServiceUnavailableState({
 }: ServiceUnavailableStateProps) {
   const { t } = useTranslation(["common"]);
 
+  const showApiIssue = !readiness.apiAvailable;
+  const showDbIssue =
+    readiness.apiAvailable && !readiness.databaseAvailable;
+
   return (
     <div
+      role="alert"
+      aria-live="assertive"
       className={cn(
         "flex w-full justify-center",
-        compact ? "py-4" : "min-h-[50vh] items-center py-10",
+        compact
+          ? "min-h-[140px] py-6"
+          : "min-h-[min(560px,calc(100dvh-10rem))] items-center py-10",
       )}
     >
       <Card
         className={cn(
-          "border-border/80 shadow-sm",
-          compact ? "w-full max-w-lg" : "w-full max-w-xl",
+          "border-border/80 shadow-md ring-2 ring-destructive/15",
+          compact ? "w-full max-w-lg" : "w-full max-w-2xl",
         )}
       >
         <CardHeader className="space-y-2">
@@ -47,27 +55,29 @@ export function ServiceUnavailableState({
               <AlertTriangle className="size-5 shrink-0" aria-hidden />
             </div>
             <div className="min-w-0 space-y-1">
-              <CardTitle className="text-lg leading-tight">
+              <CardTitle className="text-lg leading-tight md:text-xl">
                 {t("common:serviceUnavailable.title")}
               </CardTitle>
-              <CardDescription className="text-pretty">
+              <CardDescription className="text-pretty text-sm md:text-base">
                 {t("common:serviceUnavailable.description")}
               </CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <ul className="space-y-2 text-sm text-muted-foreground">
-            {!readiness.apiAvailable ? (
+          <ul className="space-y-2 text-sm text-muted-foreground md:text-[15px]">
+            {showApiIssue ? (
               <li className="flex gap-2">
                 <span className="text-foreground">•</span>
                 <span>{t("common:serviceUnavailable.apiUnavailable")}</span>
               </li>
             ) : null}
-            {readiness.apiAvailable && !readiness.databaseAvailable ? (
+            {showDbIssue ? (
               <li className="flex gap-2">
                 <span className="text-foreground">•</span>
-                <span>{t("common:serviceUnavailable.databaseUnavailable")}</span>
+                <span>
+                  {t("common:serviceUnavailable.databaseUnavailable")}
+                </span>
               </li>
             ) : null}
           </ul>

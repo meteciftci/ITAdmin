@@ -12,6 +12,8 @@ import { ServiceUnavailableState } from "@/components/common/ServiceUnavailableS
 import { Skeleton } from "@/components/ui/skeleton";
 import { getCurrentUser } from "@/features/auth/api";
 import { useAuthStore } from "@/features/auth/auth-store";
+import { getSyntheticReadinessForAxiosError } from "@/features/health/api";
+import { useReadinessStatus } from "@/hooks/useReadinessStatus";
 
 type RequireAuthProps = {
   children: ReactNode;
@@ -20,9 +22,37 @@ type RequireAuthProps = {
 const isAuthSessionFailure = (error: unknown): boolean =>
   axios.isAxiosError(error) && error.response?.status === 401;
 
+type AuthMeBootstrapFailureProps = {
+  meError: unknown;
+};
+
+function AuthMeBootstrapFailure({ meError }: AuthMeBootstrapFailureProps) {
+  const queryClient = useQueryClient();
+  const readiness = useReadinessStatus();
+
+  if (readiness.data && !readiness.isHealthy) {
+    return null;
+  }
+
+  const displayReadiness =
+    readiness.data && readiness.isHealthy
+      ? getSyntheticReadinessForAxiosError(meError)
+      : (readiness.data ?? getSyntheticReadinessForAxiosError(meError));
+
+  return (
+    <ServiceUnavailableState
+      readiness={displayReadiness}
+      isLoading={readiness.isFetching}
+      onRetry={() => {
+        void queryClient.invalidateQueries({ queryKey: ["health", "readiness"] });
+        void queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
+      }}
+    />
+  );
+}
+
 export function RequireAuth({ children }: RequireAuthProps) {
   const { t } = useTranslation(["common"]);
-  const queryClient = useQueryClient();
   const accessToken = useAuthStore((state) => state.accessToken);
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
@@ -60,20 +90,7 @@ export function RequireAuth({ children }: RequireAuthProps) {
 
     return (
       <AppLayout>
-        <ServiceUnavailableState
-          readiness={{
-            status: "Unhealthy",
-            apiAvailable: true,
-            databaseAvailable: false,
-            message: "",
-            checkedAt: new Date().toISOString(),
-          }}
-          onRetry={() => {
-            void queryClient.invalidateQueries({ queryKey: ["health", "readiness"] });
-            void meQuery.refetch();
-          }}
-          compact
-        />
+        <AuthMeBootstrapFailure meError={meQuery.error} />
       </AppLayout>
     );
   }

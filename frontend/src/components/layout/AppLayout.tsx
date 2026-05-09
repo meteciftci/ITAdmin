@@ -36,6 +36,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                 isLoading={readiness.isFetching}
                 onRetry={() => {
                   void queryClient.invalidateQueries({ queryKey: ["health", "readiness"] });
+                  void queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
                 }}
               />
             ) : (

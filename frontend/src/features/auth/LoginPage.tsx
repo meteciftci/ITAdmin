@@ -1,6 +1,8 @@
 import type { FormEvent } from "react";
 import axios from "axios";
+import { useQueryClient } from "@tanstack/react-query";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ServiceUnavailableState } from "@/components/common/ServiceUnavailableState";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -40,7 +42,7 @@ const shouldClearAuthAfterLoginFailure = (error: unknown): boolean => {
 
   if (axios.isAxiosError(error)) {
     const status = error.response?.status;
-    if (status === 503) {
+    if (status === 502 || status === 503 || status === 504) {
       return false;
     }
     if (!error.response) {
@@ -53,6 +55,7 @@ const shouldClearAuthAfterLoginFailure = (error: unknown): boolean => {
 
 export function LoginPage() {
   const { t } = useTranslation(["auth", "common"]);
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const setTokens = useAuthStore((state) => state.setTokens);
   const setUser = useAuthStore((state) => state.setUser);
@@ -79,7 +82,12 @@ export function LoginPage() {
       const data = error.response?.data as { errorCode?: string | null } | undefined;
       const errorCode = data?.errorCode ?? null;
 
-      if (status === 503 || errorCode === SERVICE_UNAVAILABLE_ERROR_CODE) {
+      if (
+        status === 502 ||
+        status === 503 ||
+        status === 504 ||
+        errorCode === SERVICE_UNAVAILABLE_ERROR_CODE
+      ) {
         return t("login.serviceUnavailable");
       }
 
@@ -176,29 +184,16 @@ export function LoginPage() {
               ) : null}
 
               {readiness.data && !readiness.isHealthy ? (
-                <div className="space-y-2">
-                  {!readiness.data.apiAvailable ? (
-                    <Alert variant="destructive">
-                      <AlertDescription>{t("login.apiUnavailable")}</AlertDescription>
-                    </Alert>
-                  ) : null}
-                  {readiness.data.apiAvailable && !readiness.data.databaseAvailable ? (
-                    <Alert variant="destructive">
-                      <AlertDescription>{t("login.databaseUnavailable")}</AlertDescription>
-                    </Alert>
-                  ) : null}
-                  <div className="flex justify-end">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-auto px-2 text-muted-foreground"
-                      onClick={() => void readiness.refetch()}
-                    >
-                      {t("common:serviceUnavailable.retry")}
-                    </Button>
-                  </div>
-                </div>
+                <ServiceUnavailableState
+                  readiness={readiness.data}
+                  compact
+                  isLoading={readiness.isFetching}
+                  onRetry={() => {
+                    void queryClient.invalidateQueries({
+                      queryKey: ["health", "readiness"],
+                    });
+                  }}
+                />
               ) : null}
 
               <div className="space-y-2">
@@ -209,6 +204,7 @@ export function LoginPage() {
                   onChange={(event) => setUserName(event.target.value)}
                   autoComplete="username"
                   required
+                  disabled={loginBlocked}
                 />
               </div>
               <div className="space-y-2">
@@ -220,6 +216,7 @@ export function LoginPage() {
                   onChange={(event) => setPassword(event.target.value)}
                   autoComplete="current-password"
                   required
+                  disabled={loginBlocked}
                 />
               </div>
 
