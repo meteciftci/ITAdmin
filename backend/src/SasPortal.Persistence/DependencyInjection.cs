@@ -28,6 +28,7 @@ public static class DependencyInjection
         services.AddScoped<IAuditLogService, AuditLogService>();
         services.AddScoped<ISecurityLogService, SecurityLogService>();
         services.AddScoped<ISettingsService, SettingsService>();
+        services.AddScoped<IReadinessService, ReadinessService>();
 
         return services;
     }

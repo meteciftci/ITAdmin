@@ -1,20 +1,28 @@
 import type { ReactNode } from "react";
 
-import { Skeleton } from "@/components/ui/skeleton";
-import { i18n, normalizeLanguage } from "@/app/i18n";
-import { getCurrentUser } from "@/features/auth/api";
-import { useAuthStore } from "@/features/auth/auth-store";
-import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+
+import { i18n, normalizeLanguage } from "@/app/i18n";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { ServiceUnavailableState } from "@/components/common/ServiceUnavailableState";
+import { Skeleton } from "@/components/ui/skeleton";
+import { getCurrentUser } from "@/features/auth/api";
+import { useAuthStore } from "@/features/auth/auth-store";
 
 type RequireAuthProps = {
   children: ReactNode;
 };
 
+const isAuthSessionFailure = (error: unknown): boolean =>
+  axios.isAxiosError(error) && error.response?.status === 401;
+
 export function RequireAuth({ children }: RequireAuthProps) {
   const { t } = useTranslation(["common"]);
+  const queryClient = useQueryClient();
   const accessToken = useAuthStore((state) => state.accessToken);
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
@@ -45,8 +53,29 @@ export function RequireAuth({ children }: RequireAuthProps) {
   }
 
   if (meQuery.isError) {
-    clearAuth();
-    return <Navigate to="/login" replace />;
+    if (isAuthSessionFailure(meQuery.error)) {
+      clearAuth();
+      return <Navigate to="/login" replace />;
+    }
+
+    return (
+      <AppLayout>
+        <ServiceUnavailableState
+          readiness={{
+            status: "Unhealthy",
+            apiAvailable: true,
+            databaseAvailable: false,
+            message: "",
+            checkedAt: new Date().toISOString(),
+          }}
+          onRetry={() => {
+            void queryClient.invalidateQueries({ queryKey: ["health", "readiness"] });
+            void meQuery.refetch();
+          }}
+          compact
+        />
+      </AppLayout>
+    );
   }
 
   if (meQuery.isLoading) {

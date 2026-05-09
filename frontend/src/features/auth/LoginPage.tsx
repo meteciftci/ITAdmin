@@ -17,6 +17,7 @@ import { PublicLanguageSwitcher } from "@/features/auth/PublicLanguageSwitcher";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { i18n, normalizeLanguage } from "@/app/i18n";
 import { useBrandingSettings } from "@/hooks/useBrandingSettings";
+import { useReadinessStatus } from "@/hooks/useReadinessStatus";
 import { resolveApiAssetUrl } from "@/lib/api-client";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
@@ -32,8 +33,26 @@ const sanitizeForgotPasswordUrl = (value: string | null): string | null => {
   return /^https?:\/\//i.test(trimmed) ? trimmed : null;
 };
 
+const shouldClearAuthAfterLoginFailure = (error: unknown): boolean => {
+  if (error instanceof Error && error.message === SERVICE_UNAVAILABLE_ERROR_CODE) {
+    return false;
+  }
+
+  if (axios.isAxiosError(error)) {
+    const status = error.response?.status;
+    if (status === 503) {
+      return false;
+    }
+    if (!error.response) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
 export function LoginPage() {
-  const { t } = useTranslation(["auth"]);
+  const { t } = useTranslation(["auth", "common"]);
   const navigate = useNavigate();
   const setTokens = useAuthStore((state) => state.setTokens);
   const setUser = useAuthStore((state) => state.setUser);
@@ -42,6 +61,7 @@ export function LoginPage() {
   const [userName, setUserName] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const readiness = useReadinessStatus();
   const { data: branding } = useBrandingSettings();
   const appName = branding.applicationName || "SAS Portal v2";
   const resolvedLogoUrl = resolveApiAssetUrl(branding.logoUrl);
@@ -104,7 +124,9 @@ export function LoginPage() {
       navigate("/dashboard", { replace: true });
     },
     onError: (error: unknown) => {
-      clearAuth();
+      if (shouldClearAuthAfterLoginFailure(error)) {
+        clearAuth();
+      }
 
       if (error instanceof Error && error.message === SERVICE_UNAVAILABLE_ERROR_CODE) {
         setErrorMessage(t("login.serviceUnavailable"));
@@ -115,9 +137,15 @@ export function LoginPage() {
     },
   });
 
+  const loginBlocked =
+    readiness.isPending || Boolean(readiness.data && !readiness.isHealthy);
+
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setErrorMessage(null);
+    if (loginBlocked) {
+      return;
+    }
     loginMutation.mutate();
   };
 
@@ -141,6 +169,38 @@ export function LoginPage() {
           </CardHeader>
           <CardContent>
             <form className="space-y-4" onSubmit={onSubmit}>
+              {readiness.isPending ? (
+                <p className="text-xs text-muted-foreground">
+                  {t("login.serviceCheckInProgress")}
+                </p>
+              ) : null}
+
+              {readiness.data && !readiness.isHealthy ? (
+                <div className="space-y-2">
+                  {!readiness.data.apiAvailable ? (
+                    <Alert variant="destructive">
+                      <AlertDescription>{t("login.apiUnavailable")}</AlertDescription>
+                    </Alert>
+                  ) : null}
+                  {readiness.data.apiAvailable && !readiness.data.databaseAvailable ? (
+                    <Alert variant="destructive">
+                      <AlertDescription>{t("login.databaseUnavailable")}</AlertDescription>
+                    </Alert>
+                  ) : null}
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto px-2 text-muted-foreground"
+                      onClick={() => void readiness.refetch()}
+                    >
+                      {t("common:serviceUnavailable.retry")}
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+
               <div className="space-y-2">
                 <Label htmlFor="userName">{t("login.userName")}</Label>
                 <Input
@@ -180,7 +240,11 @@ export function LoginPage() {
                 </Alert>
               ) : null}
 
-              <Button className="w-full" type="submit" disabled={loginMutation.isPending}>
+              <Button
+                className="w-full"
+                type="submit"
+                disabled={loginMutation.isPending || loginBlocked}
+              >
                 {loginMutation.isPending ? t("login.loading") : t("login.submit")}
               </Button>
             </form>
