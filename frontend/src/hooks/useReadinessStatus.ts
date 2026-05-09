@@ -12,7 +12,8 @@ const isHealthyPayload = (data: ReadinessResponse | undefined): boolean =>
     data &&
       data.status === "Healthy" &&
       data.apiAvailable &&
-      data.databaseAvailable,
+      data.databaseAvailable &&
+      data.ldapAvailable,
   );
 
 export function useReadinessStatus(options?: UseReadinessStatusOptions) {
@@ -32,11 +33,18 @@ export function useReadinessStatus(options?: UseReadinessStatusOptions) {
   const isDatabaseUnavailable = Boolean(
     data && data.apiAvailable && !data.databaseAvailable,
   );
+  const isLdapUnavailable = Boolean(
+    data &&
+      data.apiAvailable &&
+      data.databaseAvailable &&
+      !data.ldapAvailable,
+  );
 
   return {
     ...query,
     isHealthy,
     isApiUnavailable,
     isDatabaseUnavailable,
+    isLdapUnavailable,
   };
 }

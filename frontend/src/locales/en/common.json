@@ -47,6 +47,7 @@
       "title": "Service temporarily unavailable",
       "apiUnavailable": "The API service cannot be reached.",
       "databaseUnavailable": "The database service cannot be reached.",
+      "ldapUnavailable": "The LDAP service cannot be reached.",
       "description": "The system cannot communicate with the required services right now. Please try again after the service status is restored.",
       "retry": "Retry",
       "lastChecked": "Last checked"

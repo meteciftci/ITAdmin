@@ -21,39 +21,52 @@ public sealed class HealthController(IReadinessService readinessService, ILogger
         var checkedAt = DateTime.UtcNow;
         const bool apiAvailable = true;
 
-        var dbResult = await readinessService.CheckDatabaseAsync(cancellationToken);
+        var result = await readinessService.CheckAsync(cancellationToken);
 
-        if (!dbResult.IsHealthy)
+        if (!result.IsHealthy)
         {
-            if (dbResult.ExceptionForLog is not null)
+            if (result.ExceptionForLog is not null)
             {
-                if (dbResult.LogExceptionAsError)
+                if (result.LogExceptionAsError)
                 {
                     logger.LogError(
-                        dbResult.ExceptionForLog,
+                        result.ExceptionForLog,
                         "Readiness check failed. TraceId: {TraceId}",
                         traceId);
                 }
                 else
                 {
                     logger.LogWarning(
-                        dbResult.ExceptionForLog,
+                        result.ExceptionForLog,
                         "Readiness check failed. TraceId: {TraceId}",
                         traceId);
                 }
             }
-            else
+            else if (!result.DatabaseAvailable)
             {
                 logger.LogWarning(
                     "Readiness check failed (database not reachable). TraceId: {TraceId}",
+                    traceId);
+            }
+            else if (!result.LdapAvailable)
+            {
+                logger.LogWarning(
+                    "Readiness check failed (LDAP not available). TraceId: {TraceId}",
+                    traceId);
+            }
+            else
+            {
+                logger.LogWarning(
+                    "Readiness check failed. TraceId: {TraceId}",
                     traceId);
             }
 
             var unhealthy = new ReadinessResponse(
                 Status: UnhealthyStatus,
                 ApiAvailable: apiAvailable,
-                DatabaseAvailable: dbResult.DatabaseAvailable,
-                Message: dbResult.Message,
+                DatabaseAvailable: result.DatabaseAvailable,
+                LdapAvailable: result.LdapAvailable,
+                Message: result.Message,
                 TraceId: traceId,
                 CheckedAt: checkedAt);
 
@@ -64,6 +77,7 @@ public sealed class HealthController(IReadinessService readinessService, ILogger
             Status: HealthyStatus,
             ApiAvailable: apiAvailable,
             DatabaseAvailable: true,
+            LdapAvailable: true,
             Message: "Service is ready.",
             TraceId: traceId,
             CheckedAt: checkedAt);

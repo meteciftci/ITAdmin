@@ -31,6 +31,10 @@ export function ServiceUnavailableState({
   const showApiIssue = !readiness.apiAvailable;
   const showDbIssue =
     readiness.apiAvailable && !readiness.databaseAvailable;
+  const showLdapIssue =
+    readiness.apiAvailable &&
+    readiness.databaseAvailable &&
+    !readiness.ldapAvailable;
 
   return (
     <div
@@ -77,6 +81,14 @@ export function ServiceUnavailableState({
                 <span className="text-foreground">•</span>
                 <span>
                   {t("common:serviceUnavailable.databaseUnavailable")}
+                </span>
+              </li>
+            ) : null}
+            {showLdapIssue ? (
+              <li className="flex gap-2">
+                <span className="text-foreground">•</span>
+                <span>
+                  {t("common:serviceUnavailable.ldapUnavailable")}
                 </span>
               </li>
             ) : null}

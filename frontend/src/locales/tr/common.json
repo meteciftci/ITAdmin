@@ -47,6 +47,7 @@
       "title": "Servis geçici olarak kullanılamıyor",
       "apiUnavailable": "API servisine ulaşılamıyor.",
       "databaseUnavailable": "Veritabanı servisine ulaşılamıyor.",
+      "ldapUnavailable": "LDAP servisine ulaşılamıyor.",
       "description": "Sistem şu anda gerekli servislerle iletişim kuramıyor. Lütfen servis durumu düzeldikten sonra tekrar deneyin.",
       "retry": "Tekrar dene",
       "lastChecked": "Son kontrol"
