@@ -467,6 +467,63 @@ public sealed class SettingsServiceTests
     }
 
     [Fact]
+    public async Task UpdateSessionSecuritySettingsAsync_WhenSecurityRowsMissingAndValuesAreDefaults_UpsertsRows()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext);
+
+        var request = CreateSessionSecurityRequest();
+        var result = await service.UpdateSessionSecuritySettingsAsync(request);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("Session security settings initialized.", result.Message);
+
+        var securityRows = await dbContext.ApplicationSettings
+            .Where(x => !x.IsDeleted && x.IsActive && SecuritySettingKeys.AllSet.Contains(x.Key))
+            .ToListAsync();
+
+        Assert.Equal(6, securityRows.Count);
+        Assert.Equal("30", securityRows.Single(x => x.Key == SecuritySettingKeys.AccessTokenMinutes).Value);
+        Assert.Equal("30", securityRows.Single(x => x.Key == SecuritySettingKeys.IdleTimeoutMinutes).Value);
+        Assert.Equal("30", securityRows.Single(x => x.Key == SecuritySettingKeys.IdleWarningSeconds).Value);
+        Assert.Equal("6", securityRows.Single(x => x.Key == SecuritySettingKeys.SessionRefreshTokenHours).Value);
+        Assert.Equal("7", securityRows.Single(x => x.Key == SecuritySettingKeys.RememberMeRefreshTokenDays).Value);
+        Assert.Equal("true", securityRows.Single(x => x.Key == SecuritySettingKeys.RememberMeEnabled).Value);
+
+        foreach (var row in securityRows)
+        {
+            Assert.True(row.IsSystem);
+            Assert.True(row.IsActive);
+            Assert.False(row.IsEncrypted);
+        }
+
+        var audits = await dbContext.AuditLogs.Where(x => x.EntityName == "SessionSecuritySettings").ToListAsync();
+        Assert.Single(audits);
+        Assert.Contains("initialized", audits[0].Description ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task UpdateSessionSecuritySettingsAsync_WhenRowsExistAndValuesUnchanged_DoesNotWriteSecondAudit()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext);
+
+        await service.UpdateSessionSecuritySettingsAsync(CreateSessionSecurityRequest());
+
+        var second = await service.UpdateSessionSecuritySettingsAsync(CreateSessionSecurityRequest());
+
+        Assert.True(second.IsSuccess);
+        Assert.Equal("Session security settings are unchanged.", second.Message);
+
+        var auditCount = await dbContext.AuditLogs.CountAsync(x => x.EntityName == "SessionSecuritySettings");
+        Assert.Equal(1, auditCount);
+
+        var securityCount = await dbContext.ApplicationSettings.CountAsync(x =>
+            !x.IsDeleted && x.IsActive && SecuritySettingKeys.AllSet.Contains(x.Key));
+        Assert.Equal(6, securityCount);
+    }
+
+    [Fact]
     public async Task UpdateSessionSecuritySettingsAsync_RejectsAccessTokenOutOfRange()
     {
         await using var dbContext = CreateDbContext();

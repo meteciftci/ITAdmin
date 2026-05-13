@@ -437,6 +437,13 @@ public sealed class SettingsService(
                 x.IsActive))
             .ToListAsync(cancellationToken);
 
+        var existingActiveSecurityKeys = appSettingItems
+            .Where(x => SecuritySettingKeys.AllSet.Contains(x.Key) && x.IsActive)
+            .Select(x => x.Key)
+            .ToHashSet(StringComparer.Ordinal);
+
+        var hasMissingSecuritySettings = SecuritySettingKeys.All.Any(k => !existingActiveSecurityKeys.Contains(k));
+
         var before = SessionSecuritySettingsHelper.ReadFromItems(appSettingItems, logger);
         var after = new SessionSecuritySettings(
             request.AccessTokenMinutes,
@@ -447,7 +454,7 @@ public sealed class SettingsService(
             request.RememberMeEnabled);
 
         var auditDescription = SessionSecuritySettingsHelper.BuildAuditDescription(before, after);
-        if (string.IsNullOrWhiteSpace(auditDescription))
+        if (string.IsNullOrWhiteSpace(auditDescription) && !hasMissingSecuritySettings)
         {
             var unchanged = await GetSettingsAsync(cancellationToken);
             return new UpdateSettingsResult(true, "Session security settings are unchanged.", unchanged);
@@ -509,13 +516,21 @@ public sealed class SettingsService(
             now,
             cancellationToken);
 
+        var finalAuditDescription = string.IsNullOrWhiteSpace(auditDescription)
+            ? "Session security settings initialized with current values."
+            : auditDescription;
+
+        var successMessage = string.IsNullOrWhiteSpace(auditDescription)
+            ? "Session security settings initialized."
+            : "Session security settings updated.";
+
         await context.AuditLogs.AddAsync(
             new AuditLog
             {
                 Action = "Update",
                 EntityName = "SessionSecuritySettings",
                 EntityId = "SessionSecurity",
-                Description = TruncateAuditDescription(auditDescription),
+                Description = TruncateAuditDescription(finalAuditDescription),
                 ActorUserId = request.ActorUserId,
                 ActorUserName = request.ActorUserName,
                 IpAddress = TruncateAuditIpAddress(request.ActorIpAddress),
@@ -526,7 +541,7 @@ public sealed class SettingsService(
 
         await context.SaveChangesAsync(cancellationToken);
         var settings = await GetSettingsAsync(cancellationToken);
-        return new UpdateSettingsResult(true, "Session security settings updated.", settings);
+        return new UpdateSettingsResult(true, successMessage, settings);
     }
 
     public async Task<SessionSecuritySettings> GetSessionSecuritySettingsAsync(
