@@ -645,10 +645,7 @@ export function SettingsPage() {
         </TabsList>
 
         <TabsContent value="ldap">
-          <SectionCard
-            title={t("settings:ldap.sectionTitle")}
-            description={t("settings:ldap.sectionDescription")}
-          >
+          <SectionCard>
             <LdapSettingsForm
               values={ldapForm}
               fieldErrors={ldapFieldErrors}
@@ -666,10 +663,7 @@ export function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="branding">
-          <SectionCard
-            title={t("settings:application.brandingSectionTitle")}
-            description={t("settings:application.sectionDescription")}
-          >
+          <SectionCard>
             <ApplicationSettingsForm
               applicationName={brandingApplicationName}
               browserTitle={brandingBrowserTitle}
@@ -704,10 +698,7 @@ export function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="directory">
-          <SectionCard
-            title={t("settings:directory.sectionTitle")}
-            description={t("settings:directory.sectionDescription")}
-          >
+          <SectionCard>
             <DirectorySettingsForm
               nationalIdAttribute={nationalIdAttribute}
               readOnly={isReadOnly}
@@ -723,10 +714,7 @@ export function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="sessionSecurity">
-          <SectionCard
-            title={t("settings:sessionSecurity.title")}
-            description={t("settings:sessionSecurity.description")}
-          >
+          <SectionCard>
             {settingsQuery.data ? (
               <SessionSecuritySettingsForm
                 key={sessionSecurityFingerprint(

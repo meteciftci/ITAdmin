@@ -86,43 +86,44 @@ export function SessionSecuritySettingsForm({
   };
 
   const field = (key: NumericFieldKey, unitKey: string) => (
-    <div className="space-y-1.5">
+    <div className="min-w-0 space-y-1.5">
       <Label htmlFor={`session-security-${key}`}>{t(`settings:sessionSecurity.fields.${key}.label`)}</Label>
-      <Input
-        id={`session-security-${key}`}
-        type="number"
-        className="max-w-[11rem]"
-        min={limits[key].min}
-        max={limits[key].max}
-        step={1}
-        value={numberDisplay(key)}
-        onChange={(event) => setNumberField(key, event.target.value)}
-        readOnly={readOnly}
-        disabled={readOnly}
-      />
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <Input
+          id={`session-security-${key}`}
+          type="number"
+          className="max-w-[11rem] shrink-0"
+          min={limits[key].min}
+          max={limits[key].max}
+          step={1}
+          value={numberDisplay(key)}
+          onChange={(event) => setNumberField(key, event.target.value)}
+          readOnly={readOnly}
+          disabled={readOnly}
+        />
+        <span className="text-xs text-muted-foreground tabular-nums">
+          {t(`settings:sessionSecurity.units.${unitKey}`)}
+        </span>
+      </div>
       <p className="text-xs text-muted-foreground">{t(`settings:sessionSecurity.fields.${key}.description`)}</p>
-      <p className="text-xs text-muted-foreground">{t(`settings:sessionSecurity.units.${unitKey}`)}</p>
       {computedErrors[key] ? <p className="text-xs text-destructive">{computedErrors[key]}</p> : null}
     </div>
   );
 
   return (
-    <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">{t("settings:sessionSecurity.description")}</p>
-      <p className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+    <div className="space-y-3">
+      <p className="border-l-2 border-muted-foreground/25 pl-3 text-[11px] leading-snug text-muted-foreground">
         {t("settings:sessionSecurity.futureNote")}
       </p>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-3 md:grid-cols-2">
         {field("accessTokenMinutes", "minutes")}
         {field("idleTimeoutMinutes", "minutes")}
         {field("idleWarningSeconds", "seconds")}
         {field("sessionRefreshTokenHours", "hours")}
         {field("rememberMeRefreshTokenDays", "days")}
-      </div>
 
-      <div className="space-y-2 md:col-span-2">
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-3 md:col-span-2 md:pt-0.5">
           <Checkbox
             id="session-security-remember-me-enabled"
             checked={values.rememberMeEnabled}
@@ -130,9 +131,9 @@ export function SessionSecuritySettingsForm({
               setValues((prev) => ({ ...prev, rememberMeEnabled: event.target.checked }))
             }
             disabled={readOnly}
-            className="mt-1"
+            className="mt-1 shrink-0"
           />
-          <div className="space-y-1">
+          <div className="min-w-0 space-y-1">
             <Label htmlFor="session-security-remember-me-enabled" className="cursor-pointer font-normal">
               {t("settings:sessionSecurity.fields.rememberMeEnabled.label")}
             </Label>
@@ -144,7 +145,7 @@ export function SessionSecuritySettingsForm({
       </div>
 
       {!readOnly ? (
-        <div className="flex justify-end">
+        <div className="flex justify-end pt-1">
           <Button onClick={handleSave} disabled={isSaving || hasBlockingErrors}>
             {t("common:actions.save")}
           </Button>
