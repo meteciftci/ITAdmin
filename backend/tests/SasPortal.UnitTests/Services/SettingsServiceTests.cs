@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
+using SasPortal.Application.Common.Constants;
 using SasPortal.Application.Common.Models;
 using SasPortal.Domain.Entities;
 using SasPortal.Domain.Enums;
@@ -449,6 +451,93 @@ public sealed class SettingsServiceTests
         Assert.Equal("john", ldapService.LastValidateRequest!.TestUserName);
     }
 
+    [Fact]
+    public async Task GetSettingsAsync_IncludesSessionSecurityDefaults_WhenNoSecurityRows()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext);
+        var result = await service.GetSettingsAsync();
+
+        Assert.Equal(30, result.SessionSecurity.AccessTokenMinutes);
+        Assert.Equal(30, result.SessionSecurity.IdleTimeoutMinutes);
+        Assert.Equal(30, result.SessionSecurity.IdleWarningSeconds);
+        Assert.Equal(6, result.SessionSecurity.SessionRefreshTokenHours);
+        Assert.Equal(7, result.SessionSecurity.RememberMeRefreshTokenDays);
+        Assert.True(result.SessionSecurity.RememberMeEnabled);
+    }
+
+    [Fact]
+    public async Task UpdateSessionSecuritySettingsAsync_RejectsAccessTokenOutOfRange()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext);
+        var request = CreateSessionSecurityRequest(accessTokenMinutes: 4);
+
+        var result = await service.UpdateSessionSecuritySettingsAsync(request);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("5 and 240", result.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task UpdateSessionSecuritySettingsAsync_RejectsIdleWarningAgainstIdleTimeout()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext);
+        var request = CreateSessionSecurityRequest(idleTimeoutMinutes: 5, idleWarningSeconds: 300);
+
+        var result = await service.UpdateSessionSecuritySettingsAsync(request);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("less than the idle timeout", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task UpdateSessionSecuritySettingsAsync_UpsertsValues_AndSkipsAuditWhenUnchanged()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext);
+
+        var first = CreateSessionSecurityRequest(accessTokenMinutes: 45);
+        var firstResult = await service.UpdateSessionSecuritySettingsAsync(first);
+        Assert.True(firstResult.IsSuccess);
+        Assert.Equal(45, firstResult.Settings!.SessionSecurity.AccessTokenMinutes);
+
+        var accessRow = await dbContext.ApplicationSettings.SingleAsync(x => x.Key == SecuritySettingKeys.AccessTokenMinutes);
+        Assert.Equal("45", accessRow.Value);
+        Assert.Equal(SettingValueType.Number, accessRow.ValueType);
+
+        var duplicate = CreateSessionSecurityRequest(accessTokenMinutes: 45);
+        var secondResult = await service.UpdateSessionSecuritySettingsAsync(duplicate);
+        Assert.True(secondResult.IsSuccess);
+        Assert.Single(dbContext.AuditLogs.Where(x => x.EntityName == "SessionSecuritySettings"));
+
+        var third = CreateSessionSecurityRequest(accessTokenMinutes: 60);
+        await service.UpdateSessionSecuritySettingsAsync(third);
+        var audits = await dbContext.AuditLogs.Where(x => x.EntityName == "SessionSecuritySettings").ToListAsync();
+        Assert.Equal(2, audits.Count);
+        Assert.Contains("AccessTokenMinutes: 45 -> 60", audits[^1].Description, StringComparison.Ordinal);
+    }
+
+    private static UpdateSessionSecuritySettingsRequest CreateSessionSecurityRequest(
+        int? accessTokenMinutes = null,
+        int? idleTimeoutMinutes = null,
+        int? idleWarningSeconds = null,
+        int? sessionRefreshTokenHours = null,
+        int? rememberMeRefreshTokenDays = null,
+        bool? rememberMeEnabled = null) =>
+        new(
+            accessTokenMinutes ?? 30,
+            idleTimeoutMinutes ?? 30,
+            idleWarningSeconds ?? 30,
+            sessionRefreshTokenHours ?? 6,
+            rememberMeRefreshTokenDays ?? 7,
+            rememberMeEnabled ?? true,
+            Guid.NewGuid(),
+            "tester",
+            "127.0.0.1",
+            "xunit");
+
     private static AppDbContext CreateDbContext()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
@@ -462,7 +551,8 @@ public sealed class SettingsServiceTests
         => new(
             context,
             ldapService ?? new FakeLdapService(),
-            new FakeSecretProtector());
+            new FakeSecretProtector(),
+            NullLogger<SettingsService>.Instance);
 
     private static async Task<LdapSetting> SeedActiveLdapAsync(AppDbContext context, string encryptedBindPassword)
     {

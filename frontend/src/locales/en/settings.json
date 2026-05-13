@@ -12,7 +12,8 @@
     "tabs": {
       "ldap": "LDAP Settings",
       "branding": "Application Branding",
-      "directory": "AD Management"
+      "directory": "AD Management",
+      "sessionSecurity": "Session Security"
     },
     "validation": {
       "nameRequired": "Name is required.",
@@ -117,6 +118,51 @@
       "messages": {
         "saveSuccess": "AD settings saved.",
         "saveFailed": "AD settings could not be saved."
+      }
+    },
+    "sessionSecurity": {
+      "title": "Session Security",
+      "description": "Manage token lifetimes, idle timeout, and remember me behavior.",
+      "futureNote": "These settings will take effect in upcoming session security enhancements.",
+      "fields": {
+        "accessTokenMinutes": {
+          "label": "Access token duration",
+          "description": "Defines how many minutes the short-lived access token remains valid."
+        },
+        "idleTimeoutMinutes": {
+          "label": "Idle timeout",
+          "description": "Defines how many minutes of inactivity before the session ends."
+        },
+        "idleWarningSeconds": {
+          "label": "Session warning duration",
+          "description": "Defines how many seconds before session end the user is warned."
+        },
+        "sessionRefreshTokenHours": {
+          "label": "Browser session refresh token duration",
+          "description": "Defines how many hours the refresh token is valid when remember me is not selected."
+        },
+        "rememberMeRefreshTokenDays": {
+          "label": "Remember me refresh token duration",
+          "description": "Defines how many days the refresh token is valid when remember me is selected."
+        },
+        "rememberMeEnabled": {
+          "label": "Remember me option",
+          "description": "Allows the remember me option to be used on the login screen."
+        }
+      },
+      "units": {
+        "minutes": "minutes",
+        "seconds": "seconds",
+        "hours": "hours",
+        "days": "days"
+      },
+      "messages": {
+        "saved": "Session security settings saved.",
+        "saveFailed": "Session security settings could not be saved."
+      },
+      "validation": {
+        "range": "Value must be between {{min}} and {{max}}.",
+        "warningLessThanIdle": "Session warning duration must be shorter than the idle timeout."
       }
     }
   }

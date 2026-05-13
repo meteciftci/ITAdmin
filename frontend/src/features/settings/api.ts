@@ -7,6 +7,7 @@ import type {
   SettingsOverview,
   UpdateApplicationSettingsRequest,
   UpdateLdapSettingsRequest,
+  UpdateSessionSecuritySettingsRequest,
   ValidateLdapSettingsRequest,
   ValidateLdapSettingsResponse,
 } from "@/features/settings/types";
@@ -36,6 +37,16 @@ export const updateApplicationSettings = async (
   payload: UpdateApplicationSettingsRequest,
 ): Promise<void> => {
   await apiClient.put("/settings/application", payload);
+};
+
+export const updateSessionSecuritySettings = async (
+  payload: UpdateSessionSecuritySettingsRequest,
+): Promise<SettingsOverview> => {
+  const { data } = await apiClient.put<SettingsOverview>(
+    "/settings/session-security",
+    payload,
+  );
+  return data;
 };
 
 export const getBrandingSettings = async (): Promise<BrandingSettings> => {

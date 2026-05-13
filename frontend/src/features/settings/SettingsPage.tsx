@@ -13,6 +13,7 @@ import {
   uploadBrandingLogo,
   updateApplicationSettings,
   updateLdapSettings,
+  updateSessionSecuritySettings,
   validateLdapSettings,
 } from "@/features/settings/api";
 import {
@@ -25,6 +26,7 @@ import {
   LdapSettingsForm,
   type LdapFormValues,
 } from "@/features/settings/components/LdapSettingsForm";
+import { SessionSecuritySettingsForm } from "@/features/settings/components/SessionSecuritySettingsForm";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { createApiErrorRouteState, getErrorRoutePath } from "@/lib/route-error";
 import { canAccess } from "@/lib/permissions";
@@ -32,6 +34,7 @@ import { BRANDING_QUERY_KEY } from "@/hooks/useBrandingSettings";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import type {
+  SessionSecuritySettings,
   UpdateLdapSettingsRequest,
   ValidateLdapSettingsRequest,
 } from "@/features/settings/types";
@@ -47,8 +50,17 @@ const SETTING_VALUE_TYPE_STRING = 1;
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 const MAX_FAVICON_BYTES = 512 * 1024;
 
-type SettingsTabValue = "ldap" | "branding" | "directory";
+type SettingsTabValue = "ldap" | "branding" | "directory" | "sessionSecurity";
 const DEFAULT_TAB: SettingsTabValue = "ldap";
+
+const DEFAULT_SESSION_SECURITY: SessionSecuritySettings = {
+  accessTokenMinutes: 30,
+  idleTimeoutMinutes: 30,
+  idleWarningSeconds: 30,
+  sessionRefreshTokenHours: 6,
+  rememberMeRefreshTokenDays: 7,
+  rememberMeEnabled: true,
+};
 
 const createEmptyLdapForm = (): LdapFormValues => ({
   name: "",
@@ -63,6 +75,16 @@ const createEmptyLdapForm = (): LdapFormValues => ({
   bindPassword: "",
   description: "",
 });
+
+const sessionSecurityFingerprint = (s: SessionSecuritySettings): string =>
+  [
+    s.accessTokenMinutes,
+    s.idleTimeoutMinutes,
+    s.idleWarningSeconds,
+    s.sessionRefreshTokenHours,
+    s.rememberMeRefreshTokenDays,
+    s.rememberMeEnabled ? "1" : "0",
+  ].join("|");
 
 export function SettingsPage() {
   const { t } = useTranslation(["settings", "common"]);
@@ -210,6 +232,17 @@ export function SettingsPage() {
     },
     onError: (error) => {
       toast.error(getApiErrorMessage(error, t("settings:directory.messages.saveFailed")));
+    },
+  });
+
+  const updateSessionSecurityMutation = useMutation({
+    mutationFn: updateSessionSecuritySettings,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: SETTINGS_QUERY_KEY });
+      toast.success(t("settings:sessionSecurity.messages.saved"));
+    },
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, t("settings:sessionSecurity.messages.saveFailed")));
     },
   });
 
@@ -559,6 +592,11 @@ export function SettingsPage() {
     });
   };
 
+  const handleSessionSecuritySubmit = (payload: SessionSecuritySettings) => {
+    if (!canUpdate) return;
+    updateSessionSecurityMutation.mutate(payload);
+  };
+
   const refreshAction = useMemo(
     () => (
       <Button variant="outline" onClick={() => settingsQuery.refetch()}>
@@ -599,10 +637,11 @@ export function SettingsPage() {
       ) : null}
 
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as SettingsTabValue)}>
-        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3">
+        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-4">
           <TabsTrigger value="ldap">{t("settings:tabs.ldap")}</TabsTrigger>
           <TabsTrigger value="branding">{t("settings:tabs.branding")}</TabsTrigger>
           <TabsTrigger value="directory">{t("settings:tabs.directory")}</TabsTrigger>
+          <TabsTrigger value="sessionSecurity">{t("settings:tabs.sessionSecurity")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="ldap">
@@ -680,6 +719,27 @@ export function SettingsPage() {
               }}
               onSave={handleDirectorySave}
             />
+          </SectionCard>
+        </TabsContent>
+
+        <TabsContent value="sessionSecurity">
+          <SectionCard
+            title={t("settings:sessionSecurity.title")}
+            description={t("settings:sessionSecurity.description")}
+          >
+            {settingsQuery.data ? (
+              <SessionSecuritySettingsForm
+                key={sessionSecurityFingerprint(
+                  settingsQuery.data.sessionSecurity ?? DEFAULT_SESSION_SECURITY,
+                )}
+                initialValues={
+                  settingsQuery.data.sessionSecurity ?? DEFAULT_SESSION_SECURITY
+                }
+                readOnly={isReadOnly}
+                isSaving={updateSessionSecurityMutation.isPending}
+                onSubmit={handleSessionSecuritySubmit}
+              />
+            ) : null}
           </SectionCard>
         </TabsContent>
       </Tabs>

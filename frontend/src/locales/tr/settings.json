@@ -12,7 +12,8 @@
     "tabs": {
       "ldap": "LDAP Ayarları",
       "branding": "Uygulama Kimliği",
-      "directory": "AD Yönetim Modülü"
+      "directory": "AD Yönetim Modülü",
+      "sessionSecurity": "Oturum Güvenliği"
     },
     "validation": {
       "nameRequired": "Ad alanı zorunludur.",
@@ -117,6 +118,51 @@
       "messages": {
         "saveSuccess": "AD ayarları kaydedildi.",
         "saveFailed": "AD ayarları kaydedilemedi."
+      }
+    },
+    "sessionSecurity": {
+      "title": "Oturum Güvenliği",
+      "description": "Token sürelerini, boşta kalma zaman aşımını ve beni hatırla davranışını yönetin.",
+      "futureNote": "Bu ayarlar sonraki oturum güvenliği adımlarında kullanılacaktır.",
+      "fields": {
+        "accessTokenMinutes": {
+          "label": "Access token süresi",
+          "description": "Kısa süreli erişim tokenının kaç dakika geçerli olacağını belirler."
+        },
+        "idleTimeoutMinutes": {
+          "label": "Boşta kalma zaman aşımı",
+          "description": "Kullanıcı işlem yapmazsa oturumun kaç dakika sonra sonlandırılacağını belirler."
+        },
+        "idleWarningSeconds": {
+          "label": "Oturum uyarı süresi",
+          "description": "Oturum sonlanmadan kaç saniye önce kullanıcıya uyarı gösterileceğini belirler."
+        },
+        "sessionRefreshTokenHours": {
+          "label": "Tarayıcı oturumu refresh token süresi",
+          "description": "Beni hatırla seçili değilken refresh tokenın kaç saat geçerli olacağını belirler."
+        },
+        "rememberMeRefreshTokenDays": {
+          "label": "Beni hatırla refresh token süresi",
+          "description": "Beni hatırla seçili olduğunda refresh tokenın kaç gün geçerli olacağını belirler."
+        },
+        "rememberMeEnabled": {
+          "label": "Beni hatırla seçeneği",
+          "description": "Login ekranında beni hatırla seçeneğinin kullanılmasına izin verir."
+        }
+      },
+      "units": {
+        "minutes": "dakika",
+        "seconds": "saniye",
+        "hours": "saat",
+        "days": "gün"
+      },
+      "messages": {
+        "saved": "Oturum güvenliği ayarları kaydedildi.",
+        "saveFailed": "Oturum güvenliği ayarları kaydedilemedi."
+      },
+      "validation": {
+        "range": "Değer {{min}} ile {{max}} arasında olmalıdır.",
+        "warningLessThanIdle": "Oturum uyarı süresi, boşta kalma zaman aşımından kısa olmalıdır."
       }
     }
   }

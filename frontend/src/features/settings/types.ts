@@ -1,7 +1,19 @@
+export type SessionSecuritySettings = {
+  accessTokenMinutes: number;
+  idleTimeoutMinutes: number;
+  idleWarningSeconds: number;
+  sessionRefreshTokenHours: number;
+  rememberMeRefreshTokenDays: number;
+  rememberMeEnabled: boolean;
+};
+
+export type UpdateSessionSecuritySettingsRequest = SessionSecuritySettings;
+
 export type SettingsOverview = {
   ldap: LdapSettings | null;
   applicationSettings: ApplicationSetting[];
   branding: BrandingSettings;
+  sessionSecurity: SessionSecuritySettings;
 };
 
 export type BrandingSettings = {

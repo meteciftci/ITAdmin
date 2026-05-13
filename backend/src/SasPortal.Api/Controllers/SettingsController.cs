@@ -137,6 +137,34 @@ public sealed class SettingsController(
         return Ok(MapSettingsOverview(result.Settings));
     }
 
+    [HttpPut("session-security")]
+    [RequirePermission("Settings.Update")]
+    public async Task<ActionResult<SettingsOverviewResponse>> UpdateSessionSecuritySettings(
+        [FromBody] UpdateSessionSecuritySettingsRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await settingsService.UpdateSessionSecuritySettingsAsync(
+            new AppModels.UpdateSessionSecuritySettingsRequest(
+                request.AccessTokenMinutes,
+                request.IdleTimeoutMinutes,
+                request.IdleWarningSeconds,
+                request.SessionRefreshTokenHours,
+                request.RememberMeRefreshTokenDays,
+                request.RememberMeEnabled,
+                ResolveActorUserId(User),
+                ResolveActorUserName(User),
+                ResolveIpAddress(),
+                ResolveUserAgent()),
+            cancellationToken);
+
+        if (!result.IsSuccess || result.Settings is null)
+        {
+            return BadRequest(new { message = result.Message });
+        }
+
+        return Ok(MapSettingsOverview(result.Settings));
+    }
+
     [HttpPost("branding/logo")]
     [RequirePermission("Settings.Update")]
     public async Task<ActionResult<BrandingLogoUploadResponse>> UploadBrandingLogo(
@@ -267,7 +295,17 @@ public sealed class SettingsController(
             settings.ApplicationSettings
                 .Select(MapApplicationSetting)
                 .ToList(),
-            MapBranding(settings.Branding));
+            MapBranding(settings.Branding),
+            MapSessionSecurity(settings.SessionSecurity));
+
+    private static SessionSecuritySettingsResponse MapSessionSecurity(AppModels.SessionSecuritySettings security) =>
+        new(
+            security.AccessTokenMinutes,
+            security.IdleTimeoutMinutes,
+            security.IdleWarningSeconds,
+            security.SessionRefreshTokenHours,
+            security.RememberMeRefreshTokenDays,
+            security.RememberMeEnabled);
 
     private static LdapSettingsResponse MapLdapSettings(AppModels.LdapSettingsModel ldap) =>
         new(

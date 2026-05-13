@@ -1,6 +1,9 @@
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using SasPortal.Application.Abstractions.Security;
 using SasPortal.Application.Abstractions.Services;
+using SasPortal.Application.Common.Constants;
 using SasPortal.Application.Common.Models;
 using SasPortal.Domain.Entities;
 using SasPortal.Domain.Enums;
@@ -11,7 +14,8 @@ namespace SasPortal.Persistence.Services;
 public sealed class SettingsService(
     AppDbContext context,
     ILdapService ldapService,
-    ISecretProtector secretProtector) : ISettingsService
+    ISecretProtector secretProtector,
+    ILogger<SettingsService> logger) : ISettingsService
 {
     private const string NationalIdApplicationSettingKey = "Directory:NationalIdAttribute";
     private const string BrandingApplicationNameKey = "Branding:ApplicationName";
@@ -62,7 +66,8 @@ public sealed class SettingsService(
             .ToListAsync(cancellationToken);
 
         var branding = BuildBrandingSettings(appSettings);
-        return new SettingsOverview(MapLdapSetting(ldapSetting), appSettings, branding);
+        var sessionSecurity = SessionSecuritySettingsHelper.ReadFromItems(appSettings, logger);
+        return new SettingsOverview(MapLdapSetting(ldapSetting), appSettings, branding, sessionSecurity);
     }
 
     public async Task<BrandingSettings> GetBrandingSettingsAsync(CancellationToken cancellationToken = default)
@@ -400,6 +405,170 @@ public sealed class SettingsService(
         await context.SaveChangesAsync(cancellationToken);
         var settings = await GetSettingsAsync(cancellationToken);
         return new UpdateSettingsResult(true, "Application settings updated.", settings);
+    }
+
+    public async Task<UpdateSettingsResult> UpdateSessionSecuritySettingsAsync(
+        UpdateSessionSecuritySettingsRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var validationError = SessionSecuritySettingsHelper.ValidateUpdate(
+            request.AccessTokenMinutes,
+            request.IdleTimeoutMinutes,
+            request.IdleWarningSeconds,
+            request.SessionRefreshTokenHours,
+            request.RememberMeRefreshTokenDays);
+
+        if (validationError is not null)
+        {
+            return new UpdateSettingsResult(false, validationError, null);
+        }
+
+        var appSettingItems = await context.ApplicationSettings
+            .AsNoTracking()
+            .Where(x => !x.IsDeleted)
+            .OrderBy(x => x.Key)
+            .Select(x => new ApplicationSettingItem(
+                x.Key,
+                x.IsEncrypted ? null : x.Value,
+                x.ValueType,
+                x.Description,
+                x.IsEncrypted,
+                x.IsSystem,
+                x.IsActive))
+            .ToListAsync(cancellationToken);
+
+        var before = SessionSecuritySettingsHelper.ReadFromItems(appSettingItems, logger);
+        var after = new SessionSecuritySettings(
+            request.AccessTokenMinutes,
+            request.IdleTimeoutMinutes,
+            request.IdleWarningSeconds,
+            request.SessionRefreshTokenHours,
+            request.RememberMeRefreshTokenDays,
+            request.RememberMeEnabled);
+
+        var auditDescription = SessionSecuritySettingsHelper.BuildAuditDescription(before, after);
+        if (string.IsNullOrWhiteSpace(auditDescription))
+        {
+            var unchanged = await GetSettingsAsync(cancellationToken);
+            return new UpdateSettingsResult(true, "Session security settings are unchanged.", unchanged);
+        }
+
+        var now = DateTime.UtcNow;
+
+        await UpsertSessionSecuritySettingAsync(
+            SecuritySettingKeys.AccessTokenMinutes,
+            after.AccessTokenMinutes.ToString(CultureInfo.InvariantCulture),
+            SettingValueType.Number,
+            "Access token lifetime in minutes.",
+            request,
+            now,
+            cancellationToken);
+
+        await UpsertSessionSecuritySettingAsync(
+            SecuritySettingKeys.IdleTimeoutMinutes,
+            after.IdleTimeoutMinutes.ToString(CultureInfo.InvariantCulture),
+            SettingValueType.Number,
+            "Idle timeout in minutes.",
+            request,
+            now,
+            cancellationToken);
+
+        await UpsertSessionSecuritySettingAsync(
+            SecuritySettingKeys.IdleWarningSeconds,
+            after.IdleWarningSeconds.ToString(CultureInfo.InvariantCulture),
+            SettingValueType.Number,
+            "Seconds before idle timeout to show a warning.",
+            request,
+            now,
+            cancellationToken);
+
+        await UpsertSessionSecuritySettingAsync(
+            SecuritySettingKeys.SessionRefreshTokenHours,
+            after.SessionRefreshTokenHours.ToString(CultureInfo.InvariantCulture),
+            SettingValueType.Number,
+            "Browser session refresh token lifetime in hours.",
+            request,
+            now,
+            cancellationToken);
+
+        await UpsertSessionSecuritySettingAsync(
+            SecuritySettingKeys.RememberMeRefreshTokenDays,
+            after.RememberMeRefreshTokenDays.ToString(CultureInfo.InvariantCulture),
+            SettingValueType.Number,
+            "Remember me refresh token lifetime in days.",
+            request,
+            now,
+            cancellationToken);
+
+        await UpsertSessionSecuritySettingAsync(
+            SecuritySettingKeys.RememberMeEnabled,
+            after.RememberMeEnabled.ToString(CultureInfo.InvariantCulture).ToLowerInvariant(),
+            SettingValueType.Boolean,
+            "Whether the remember me option is enabled on the login screen.",
+            request,
+            now,
+            cancellationToken);
+
+        await context.AuditLogs.AddAsync(
+            new AuditLog
+            {
+                Action = "Update",
+                EntityName = "SessionSecuritySettings",
+                EntityId = "SessionSecurity",
+                Description = TruncateAuditDescription(auditDescription),
+                ActorUserId = request.ActorUserId,
+                ActorUserName = request.ActorUserName,
+                IpAddress = TruncateAuditIpAddress(request.ActorIpAddress),
+                UserAgent = TruncateAuditUserAgent(request.ActorUserAgent),
+                CreatedAt = new DateTimeOffset(now, TimeSpan.Zero)
+            },
+            cancellationToken);
+
+        await context.SaveChangesAsync(cancellationToken);
+        var settings = await GetSettingsAsync(cancellationToken);
+        return new UpdateSettingsResult(true, "Session security settings updated.", settings);
+    }
+
+    private async Task UpsertSessionSecuritySettingAsync(
+        string key,
+        string? value,
+        SettingValueType valueType,
+        string description,
+        UpdateSessionSecuritySettingsRequest request,
+        DateTime now,
+        CancellationToken cancellationToken)
+    {
+        var setting = await context.ApplicationSettings
+            .FirstOrDefaultAsync(x => x.Key == key && !x.IsDeleted, cancellationToken);
+
+        if (setting is null)
+        {
+            setting = new ApplicationSetting
+            {
+                Key = key,
+                Value = value,
+                ValueType = valueType,
+                Description = description,
+                IsEncrypted = false,
+                IsSystem = true,
+                IsActive = true,
+                CreatedAt = now,
+                CreatedBy = request.ActorUserName ?? "system"
+            };
+
+            await context.ApplicationSettings.AddAsync(setting, cancellationToken);
+        }
+        else
+        {
+            setting.Value = value;
+            setting.ValueType = valueType;
+            setting.Description = description;
+            setting.IsEncrypted = false;
+            setting.IsSystem = true;
+            setting.IsActive = true;
+            setting.UpdatedAt = now;
+            setting.UpdatedBy = request.ActorUserName ?? "system";
+        }
     }
 
     public async Task<BrandingLogoUploadResult> UploadBrandingLogoAsync(
