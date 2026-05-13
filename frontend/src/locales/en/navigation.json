@@ -14,7 +14,8 @@
       "permissions": "Permissions",
       "auditLogs": "Audit Logs",
       "securityLogs": "Security Logs",
-      "settings": "Settings"
+      "settings": "Settings",
+      "error": "Error"
     }
   }
 }

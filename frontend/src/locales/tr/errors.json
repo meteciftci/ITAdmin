@@ -55,6 +55,9 @@
       "back": "Geri dön",
       "dashboard": "Kontrol paneline dön",
       "source": "Kaynak",
+      "technicalDetails": "Teknik bilgi",
+      "breadcrumb": "Hata",
+      "valueUnavailable": "-",
       "notFound": {
         "title": "Sayfa bulunamadı",
         "description": "Aradığınız sayfa taşınmış, silinmiş veya hiç var olmamış olabilir. Yazılım bazen böyle dramatik davranır."

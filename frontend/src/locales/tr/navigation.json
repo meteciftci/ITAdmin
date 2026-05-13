@@ -14,7 +14,8 @@
       "permissions": "İzinler",
       "auditLogs": "Audit Logları",
       "securityLogs": "Security Logları",
-      "settings": "Ayarlar"
+      "settings": "Ayarlar",
+      "error": "Hata"
     }
   }
 }

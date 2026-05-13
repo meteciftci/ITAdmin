@@ -14,6 +14,9 @@ const breadcrumbItems: BreadcrumbItem[] = [
 ];
 
 export function getBreadcrumbKeyByPath(pathname: string): string | null {
+  if (pathname === "/error" || pathname.startsWith("/error/")) {
+    return "items.error";
+  }
   const exactMatch = breadcrumbItems.find((item) => item.to === pathname);
   return exactMatch?.titleKey ?? null;
 }

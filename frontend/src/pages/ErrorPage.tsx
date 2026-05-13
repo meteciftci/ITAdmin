@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
@@ -25,23 +25,44 @@ type ErrorRouteIconProps = {
 };
 
 function ErrorRouteIcon({ kind, slug }: ErrorRouteIconProps) {
+  const iconClass = "size-8 shrink-0";
   if (slug === "not-found") {
-    return <AlertTriangle className="size-6" />;
+    return <AlertTriangle className={iconClass} />;
   }
   switch (kind) {
     case "network":
-      return <WifiOff className="size-6" />;
+      return <WifiOff className={iconClass} />;
     case "serviceUnavailable":
     case "server":
-      return <ServerCrash className="size-6" />;
+      return <ServerCrash className={iconClass} />;
     case "forbidden":
     case "unauthorized":
-      return <ShieldAlert className="size-6" />;
+      return <ShieldAlert className={iconClass} />;
     case "validation":
     case "unknown":
     default:
-      return <AlertTriangle className="size-6" />;
+      return <AlertTriangle className={iconClass} />;
   }
+}
+
+type DetailRowProps = {
+  label: string;
+  children: ReactNode;
+  className?: string;
+};
+
+function DetailRow({ label, children, className }: DetailRowProps) {
+  return (
+    <div
+      className={cn(
+        "grid gap-1 border-b border-border/60 pb-3 last:border-b-0 last:pb-0 sm:grid-cols-[minmax(0,10.5rem)_1fr] sm:items-start sm:gap-x-6",
+        className,
+      )}
+    >
+      <dt className="text-xs font-medium text-muted-foreground sm:pt-0.5">{label}</dt>
+      <dd className="min-w-0 text-sm text-foreground">{children}</dd>
+    </div>
+  );
 }
 
 export function ErrorPage() {
@@ -109,6 +130,15 @@ export function ErrorPage() {
   const title = t(merged.titleKey ?? "errors:route.titleFallback");
   const description = t(merged.descriptionKey ?? "errors:route.descriptionFallback");
 
+  const sourceText = useMemo(() => {
+    if (merged.sourceLabel && merged.fromPath) {
+      return `${merged.sourceLabel} (${merged.fromPath})`;
+    }
+    if (merged.sourceLabel) return merged.sourceLabel;
+    if (merged.fromPath) return merged.fromPath;
+    return null;
+  }, [merged.fromPath, merged.sourceLabel]);
+
   const handleRetry = useCallback(() => {
     if (merged.retryPath) {
       void navigate(merged.retryPath);
@@ -136,93 +166,98 @@ export function ErrorPage() {
   }, [merged.traceId, t]);
 
   return (
-    <div className="flex min-h-[min(70vh,36rem)] items-center justify-center">
+    <div className="flex min-h-[min(72vh,40rem)] w-full items-center justify-center px-2 py-6 sm:px-4 sm:py-10">
       <div
         className={cn(
-          "w-full max-w-lg rounded-xl border bg-card p-6 shadow-sm",
-          "text-card-foreground",
+          "w-full max-w-3xl overflow-hidden rounded-2xl border bg-card text-card-foreground shadow-md",
         )}
       >
-        <div className="flex flex-col items-center text-center sm:flex-row sm:items-start sm:gap-4 sm:text-left">
+        <div className="relative border-b border-border/60 bg-gradient-to-br from-muted/50 via-muted/20 to-card px-6 pb-10 pt-8 sm:px-10 sm:pb-12 sm:pt-10">
           <div
-            className="mb-4 flex size-12 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground sm:mb-0"
+            className="pointer-events-none absolute -right-16 -top-24 size-72 rounded-full bg-muted/35 blur-3xl sm:-right-20 sm:-top-28 sm:size-80"
             aria-hidden
-          >
-            <ErrorRouteIcon kind={merged.kind} slug={slug} />
-          </div>
-          <div className="min-w-0 flex-1 space-y-3">
-            <div>
-              <h1 className="text-xl font-semibold tracking-tight text-foreground">
+          />
+          <div className="relative flex flex-col items-center gap-8 sm:flex-row sm:items-start sm:gap-10">
+            <div className="flex shrink-0 justify-center sm:pt-1">
+              <div
+                className="flex size-16 items-center justify-center rounded-2xl bg-destructive/10 text-destructive sm:size-[4.5rem]"
+                aria-hidden
+              >
+                <ErrorRouteIcon kind={merged.kind} slug={slug} />
+              </div>
+            </div>
+            <div className="min-w-0 flex-1 space-y-4 text-center sm:space-y-5 sm:pt-1 sm:text-left">
+              <h1 className="text-balance text-2xl font-semibold tracking-tight text-foreground sm:text-[1.65rem]">
                 {title}
               </h1>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              <p className="mx-auto max-w-prose text-pretty text-base leading-relaxed text-muted-foreground sm:mx-0">
                 {description}
               </p>
             </div>
+          </div>
+        </div>
 
-            <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-              <span className="inline-flex items-center rounded-md border border-border bg-muted/50 px-2.5 py-1 font-mono text-xs font-medium text-foreground">
-                {t("errors:route.errorCode")}: {merged.code}
-              </span>
+        <div className="space-y-8 p-6 sm:p-10">
+          <section
+            className="rounded-lg border border-border bg-muted/30 p-4 sm:p-5"
+            aria-labelledby="error-technical-heading"
+          >
+            <h2
+              id="error-technical-heading"
+              className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+            >
+              {t("errors:route.technicalDetails")}
+            </h2>
+            <dl className="space-y-3">
+              <DetailRow label={t("errors:route.errorCode")}>
+                <code className="break-all font-mono text-sm font-medium">{merged.code}</code>
+              </DetailRow>
               {merged.status !== undefined ? (
-                <span className="inline-flex items-center rounded-md border border-border bg-muted/50 px-2.5 py-1 text-xs text-muted-foreground">
-                  {t("errors:route.httpStatus")}: {merged.status}
-                </span>
+                <DetailRow label={t("errors:route.httpStatus")}>
+                  <span className="font-mono text-sm">{merged.status}</span>
+                </DetailRow>
               ) : null}
-            </div>
+              {sourceText ? (
+                <DetailRow label={t("errors:route.source")}>
+                  <span className="break-words text-sm">{sourceText}</span>
+                </DetailRow>
+              ) : null}
+              {merged.traceId ? (
+                <DetailRow label={t("errors:route.traceId")} className="border-b-0 pb-0">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                    <code className="break-all font-mono text-xs leading-relaxed text-foreground sm:text-sm">
+                      {merged.traceId}
+                    </code>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-full shrink-0 sm:w-auto sm:self-start"
+                      onClick={() => void copyTraceId()}
+                    >
+                      {t("errors:route.copyTraceId")}
+                    </Button>
+                  </div>
+                </DetailRow>
+              ) : null}
+            </dl>
+          </section>
 
-            {merged.traceId ? (
-              <div className="rounded-lg border border-border bg-muted/30 p-3 text-left">
-                <div className="mb-1.5 text-xs font-medium text-muted-foreground">
-                  {t("errors:route.traceId")}
-                </div>
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <code className="break-all text-xs text-foreground">{merged.traceId}</code>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="shrink-0 self-start sm:self-center"
-                    onClick={() => void copyTraceId()}
-                  >
-                    {t("errors:route.copyTraceId")}
-                  </Button>
-                </div>
-              </div>
-            ) : null}
-
-            {merged.sourceLabel || merged.fromPath ? (
-              <p className="text-xs text-muted-foreground">
-                {merged.sourceLabel ? (
-                  <>
-                    <span className="font-medium text-foreground/80">
-                      {t("errors:route.source")}:
-                    </span>{" "}
-                    {merged.sourceLabel}
-                    {merged.fromPath ? ` (${merged.fromPath})` : null}
-                  </>
-                ) : merged.fromPath ? (
-                  <>
-                    <span className="font-medium text-foreground/80">
-                      {t("errors:route.source")}:
-                    </span>{" "}
-                    {merged.fromPath}
-                  </>
-                ) : null}
-              </p>
-            ) : null}
-
-            <div className="flex flex-wrap justify-center gap-2 pt-2 sm:justify-start">
-              <Button type="button" variant="default" onClick={handleRetry}>
-                {t("errors:route.retry")}
-              </Button>
-              <Button type="button" variant="outline" onClick={handleBack}>
-                {t("errors:route.back")}
-              </Button>
-              <Button type="button" variant="outline" onClick={handleDashboard}>
-                {t("errors:route.dashboard")}
-              </Button>
-            </div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
+            <Button type="button" variant="default" className="w-full sm:w-auto" onClick={handleRetry}>
+              {t("errors:route.retry")}
+            </Button>
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={handleBack}>
+              {t("errors:route.back")}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={handleDashboard}
+            >
+              {t("errors:route.dashboard")}
+            </Button>
           </div>
         </div>
       </div>
