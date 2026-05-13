@@ -45,6 +45,11 @@ internal static class SessionSecuritySettingsHelper
             return "Idle timeout must be between 5 and 480 minutes.";
         }
 
+        if (accessTokenMinutes > idleTimeoutMinutes)
+        {
+            return "Access token duration cannot be greater than idle timeout.";
+        }
+
         if (idleWarningSeconds is < 10 or > 300)
         {
             return "Session warning duration must be between 10 and 300 seconds.";

@@ -201,6 +201,19 @@ export function IdleSessionManager() {
   }, [isAuthenticated, accessToken]);
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    // Session policy can be changed from Settings while the user is signed in.
+    // Treat the refetched policy as fresh activity so the active session adopts the
+    // new timeout values without requiring a browser refresh or re-login.
+    const now = Date.now();
+    lastActivityAtRef.current = now;
+    lastActivityWriteRef.current = now;
+  }, [isAuthenticated, idleTimeoutMs, warningMs]);
+
+  useEffect(() => {
     if (!isAuthenticated || dialogOpen) {
       return;
     }
@@ -245,6 +258,11 @@ export function IdleSessionManager() {
         if (!dialogOpen) {
           setDialogOpen(true);
         }
+        return;
+      }
+
+      if (dialogOpen) {
+        setDialogOpen(false);
       }
     };
 

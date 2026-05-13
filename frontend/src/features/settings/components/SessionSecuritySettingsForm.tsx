@@ -9,8 +9,7 @@ import { Label } from "@/components/ui/label";
 import type { SessionSecuritySettings, UpdateSessionSecuritySettingsRequest } from "../types";
 
 const limits = {
-  accessTokenMinutes: { min: 5, max: 240 },
-  idleTimeoutMinutes: { min: 5, max: 480 },
+  sessionDurationMinutes: { min: 5, max: 240 },
   idleWarningSeconds: { min: 10, max: 300 },
   sessionRefreshTokenHours: { min: 1, max: 24 },
   rememberMeRefreshTokenDays: { min: 1, max: 30 },
@@ -18,7 +17,14 @@ const limits = {
 
 type NumericFieldKey = keyof typeof limits;
 
-type FieldKey = keyof SessionSecuritySettings;
+type SessionSecurityFormValues = Omit<
+  SessionSecuritySettings,
+  "accessTokenMinutes" | "idleTimeoutMinutes"
+> & {
+  sessionDurationMinutes: number;
+};
+
+type FieldKey = keyof SessionSecurityFormValues;
 
 type SessionSecuritySettingsFormProps = {
   initialValues: SessionSecuritySettings;
@@ -28,7 +34,7 @@ type SessionSecuritySettingsFormProps = {
 };
 
 function collectErrors(
-  values: SessionSecuritySettings,
+  values: SessionSecurityFormValues,
   t: (key: string, options?: Record<string, unknown>) => string,
 ): Partial<Record<FieldKey, string>> {
   const errors: Partial<Record<FieldKey, string>> = {};
@@ -41,16 +47,33 @@ function collectErrors(
     }
   });
 
-  const idleCap = values.idleTimeoutMinutes * 60;
+  const sessionDurationSeconds = values.sessionDurationMinutes * 60;
   if (
     Number.isFinite(values.idleWarningSeconds) &&
-    Number.isFinite(values.idleTimeoutMinutes) &&
-    values.idleWarningSeconds >= idleCap
+    Number.isFinite(values.sessionDurationMinutes) &&
+    values.idleWarningSeconds >= sessionDurationSeconds
   ) {
-    errors.idleWarningSeconds = t("settings:sessionSecurity.validation.warningLessThanIdle");
+    errors.idleWarningSeconds = t("settings:sessionSecurity.validation.warningLessThanSessionDuration");
   }
 
   return errors;
+}
+
+function toFormValues(initialValues: SessionSecuritySettings): SessionSecurityFormValues {
+  const accessTokenMinutes = Number.isFinite(initialValues.accessTokenMinutes)
+    ? initialValues.accessTokenMinutes
+    : 30;
+  const idleTimeoutMinutes = Number.isFinite(initialValues.idleTimeoutMinutes)
+    ? initialValues.idleTimeoutMinutes
+    : 30;
+
+  return {
+    sessionDurationMinutes: Math.min(accessTokenMinutes, idleTimeoutMinutes),
+    idleWarningSeconds: initialValues.idleWarningSeconds,
+    sessionRefreshTokenHours: initialValues.sessionRefreshTokenHours,
+    rememberMeRefreshTokenDays: initialValues.rememberMeRefreshTokenDays,
+    rememberMeEnabled: initialValues.rememberMeEnabled,
+  };
 }
 
 export function SessionSecuritySettingsForm({
@@ -60,7 +83,7 @@ export function SessionSecuritySettingsForm({
   onSubmit,
 }: SessionSecuritySettingsFormProps) {
   const { t } = useTranslation(["settings", "common"]);
-  const [values, setValues] = useState<SessionSecuritySettings>(() => initialValues);
+  const [values, setValues] = useState<SessionSecurityFormValues>(() => toFormValues(initialValues));
 
   const computedErrors = useMemo(() => collectErrors(values, t), [values, t]);
   const hasBlockingErrors = Object.keys(computedErrors).length > 0;
@@ -82,7 +105,14 @@ export function SessionSecuritySettingsForm({
     if (readOnly) return;
     const errs = collectErrors(values, t);
     if (Object.keys(errs).length > 0) return;
-    onSubmit({ ...values });
+    onSubmit({
+      accessTokenMinutes: values.sessionDurationMinutes,
+      idleTimeoutMinutes: values.sessionDurationMinutes,
+      idleWarningSeconds: values.idleWarningSeconds,
+      sessionRefreshTokenHours: values.sessionRefreshTokenHours,
+      rememberMeRefreshTokenDays: values.rememberMeRefreshTokenDays,
+      rememberMeEnabled: values.rememberMeEnabled,
+    });
   };
 
   const field = (key: NumericFieldKey, unitKey: string) => (
@@ -117,8 +147,7 @@ export function SessionSecuritySettingsForm({
       </p>
 
       <div className="grid gap-3 md:grid-cols-2">
-        {field("accessTokenMinutes", "minutes")}
-        {field("idleTimeoutMinutes", "minutes")}
+        {field("sessionDurationMinutes", "minutes")}
         {field("idleWarningSeconds", "seconds")}
         {field("sessionRefreshTokenHours", "hours")}
         {field("rememberMeRefreshTokenDays", "days")}

@@ -125,6 +125,10 @@
       "description": "Token sürelerini, boşta kalma zaman aşımını ve beni hatırla davranışını yönetin.",
       "futureNote": "Bu ayarlar sonraki oturum güvenliği adımlarında kullanılacaktır.",
       "fields": {
+        "sessionDurationMinutes": {
+          "label": "Oturum süresi",
+          "description": "Access token süresi ve boşta kalma zaman aşımı için kullanılacak ortak süreyi belirler."
+        },
         "accessTokenMinutes": {
           "label": "Access token süresi",
           "description": "Kısa süreli erişim tokenının kaç dakika geçerli olacağını belirler."
@@ -162,7 +166,8 @@
       },
       "validation": {
         "range": "Değer {{min}} ile {{max}} arasında olmalıdır.",
-        "warningLessThanIdle": "Oturum uyarı süresi, boşta kalma zaman aşımından kısa olmalıdır."
+        "warningLessThanIdle": "Oturum uyarı süresi, boşta kalma zaman aşımından kısa olmalıdır.",
+        "warningLessThanSessionDuration": "Oturum uyarı süresi, oturum süresinden kısa olmalıdır."
       }
     }
   }

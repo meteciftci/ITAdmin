@@ -40,6 +40,7 @@ import type {
 } from "@/features/settings/types";
 
 const SETTINGS_QUERY_KEY = ["settings", "overview"] as const;
+const AUTH_SESSION_OPTIONS_QUERY_KEY = ["auth", "session-options"] as const;
 const DIRECTORY_NATIONAL_ID_ATTRIBUTE_KEY = "Directory:NationalIdAttribute";
 const BRANDING_APPLICATION_NAME_KEY = "Branding:ApplicationName";
 const BRANDING_BROWSER_TITLE_KEY = "Branding:BrowserTitle";
@@ -239,6 +240,11 @@ export function SettingsPage() {
     mutationFn: updateSessionSecuritySettings,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: SETTINGS_QUERY_KEY });
+      await queryClient.invalidateQueries({ queryKey: AUTH_SESSION_OPTIONS_QUERY_KEY });
+      await queryClient.refetchQueries({
+        queryKey: AUTH_SESSION_OPTIONS_QUERY_KEY,
+        type: "active",
+      });
       toast.success(t("settings:sessionSecurity.messages.saved"));
     },
     onError: (error) => {

@@ -487,8 +487,8 @@ public sealed class SettingsServiceTests
         var service = CreateService(dbContext);
 
         var request = CreateSessionSecurityRequest(
-            accessTokenMinutes: 45,
-            idleTimeoutMinutes: 15,
+            accessTokenMinutes: 15,
+            idleTimeoutMinutes: 45,
             idleWarningSeconds: 60,
             rememberMeEnabled: false);
         var updateResult = await service.UpdateSessionSecuritySettingsAsync(request);
@@ -497,9 +497,9 @@ public sealed class SettingsServiceTests
         var options = await service.GetAuthSessionOptionsAsync();
 
         Assert.False(options.RememberMeEnabled);
-        Assert.Equal(15, options.IdleTimeoutMinutes);
+        Assert.Equal(45, options.IdleTimeoutMinutes);
         Assert.Equal(60, options.IdleWarningSeconds);
-        Assert.Equal(45, options.AccessTokenMinutes);
+        Assert.Equal(15, options.AccessTokenMinutes);
     }
 
     [Fact]
@@ -573,11 +573,29 @@ public sealed class SettingsServiceTests
     }
 
     [Fact]
+    public async Task UpdateSessionSecuritySettingsAsync_RejectsAccessTokenGreaterThanIdleTimeout()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext);
+        var request = CreateSessionSecurityRequest(accessTokenMinutes: 60, idleTimeoutMinutes: 30);
+
+        var result = await service.UpdateSessionSecuritySettingsAsync(request);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal("Access token duration cannot be greater than idle timeout.", result.Message);
+        Assert.Empty(dbContext.ApplicationSettings);
+        Assert.Empty(dbContext.AuditLogs);
+    }
+
+    [Fact]
     public async Task UpdateSessionSecuritySettingsAsync_RejectsIdleWarningAgainstIdleTimeout()
     {
         await using var dbContext = CreateDbContext();
         var service = CreateService(dbContext);
-        var request = CreateSessionSecurityRequest(idleTimeoutMinutes: 5, idleWarningSeconds: 300);
+        var request = CreateSessionSecurityRequest(
+            accessTokenMinutes: 5,
+            idleTimeoutMinutes: 5,
+            idleWarningSeconds: 300);
 
         var result = await service.UpdateSessionSecuritySettingsAsync(request);
 
@@ -591,7 +609,7 @@ public sealed class SettingsServiceTests
         await using var dbContext = CreateDbContext();
         var service = CreateService(dbContext);
 
-        var first = CreateSessionSecurityRequest(accessTokenMinutes: 45);
+        var first = CreateSessionSecurityRequest(accessTokenMinutes: 45, idleTimeoutMinutes: 45);
         var firstResult = await service.UpdateSessionSecuritySettingsAsync(first);
         Assert.True(firstResult.IsSuccess);
         Assert.Equal(45, firstResult.Settings!.SessionSecurity.AccessTokenMinutes);
@@ -600,12 +618,12 @@ public sealed class SettingsServiceTests
         Assert.Equal("45", accessRow.Value);
         Assert.Equal(SettingValueType.Number, accessRow.ValueType);
 
-        var duplicate = CreateSessionSecurityRequest(accessTokenMinutes: 45);
+        var duplicate = CreateSessionSecurityRequest(accessTokenMinutes: 45, idleTimeoutMinutes: 45);
         var secondResult = await service.UpdateSessionSecuritySettingsAsync(duplicate);
         Assert.True(secondResult.IsSuccess);
         Assert.Single(dbContext.AuditLogs.Where(x => x.EntityName == "SessionSecuritySettings"));
 
-        var third = CreateSessionSecurityRequest(accessTokenMinutes: 60);
+        var third = CreateSessionSecurityRequest(accessTokenMinutes: 60, idleTimeoutMinutes: 60);
         await service.UpdateSessionSecuritySettingsAsync(third);
         var audits = await dbContext.AuditLogs.Where(x => x.EntityName == "SessionSecuritySettings").ToListAsync();
         Assert.Equal(2, audits.Count);

@@ -125,6 +125,10 @@
       "description": "Manage token lifetimes, idle timeout, and remember me behavior.",
       "futureNote": "These settings will take effect in upcoming session security enhancements.",
       "fields": {
+        "sessionDurationMinutes": {
+          "label": "Session duration",
+          "description": "Defines the shared duration used for the access token and idle timeout."
+        },
         "accessTokenMinutes": {
           "label": "Access token duration",
           "description": "Defines how many minutes the short-lived access token remains valid."
@@ -162,7 +166,8 @@
       },
       "validation": {
         "range": "Value must be between {{min}} and {{max}}.",
-        "warningLessThanIdle": "Session warning duration must be shorter than the idle timeout."
+        "warningLessThanIdle": "Session warning duration must be shorter than the idle timeout.",
+        "warningLessThanSessionDuration": "Session warning duration must be shorter than the session duration."
       }
     }
   }

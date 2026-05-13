@@ -272,7 +272,7 @@ public sealed class AuthServiceTests
     public async Task LoginAsync_UsesAccessTokenMinutesFromSessionSecuritySettings()
     {
         await using var testContext = await AuthServiceTestFactory.CreateAsync();
-        testContext.SettingsService.SessionSecurity = new SessionSecuritySettings(45, 30, 30, 6, 7, true);
+        testContext.SettingsService.SessionSecurity = new SessionSecuritySettings(45, 45, 30, 6, 7, true);
         await SeedActiveLdapSettingAsync(testContext.DbContext);
         var user = await SeedPortalUserWithRolePermissionAsync(testContext.DbContext);
         testContext.LdapService.ValidateResult = new LdapValidationResult(true, "ok");
