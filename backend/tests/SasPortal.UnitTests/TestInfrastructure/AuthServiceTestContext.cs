@@ -11,13 +11,15 @@ public sealed class AuthServiceTestContext(
     AuthService authService,
     FakeLdapService ldapService,
     FakeSecretProtector secretProtector,
-    FakeTokenService tokenService) : IAsyncDisposable
+    FakeTokenService tokenService,
+    AuthServiceSettingsFake settingsService) : IAsyncDisposable
 {
     public AppDbContext DbContext { get; } = dbContext;
     public AuthService AuthService { get; } = authService;
     public FakeLdapService LdapService { get; } = ldapService;
     public FakeSecretProtector SecretProtector { get; } = secretProtector;
     public FakeTokenService TokenService { get; } = tokenService;
+    public AuthServiceSettingsFake SettingsService { get; } = settingsService;
 
     public async ValueTask DisposeAsync()
     {

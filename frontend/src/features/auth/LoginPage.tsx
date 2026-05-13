@@ -11,9 +11,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getCurrentUser, login } from "@/features/auth/api";
+import { getAuthSessionOptions, getCurrentUser, login } from "@/features/auth/api";
 import { useAuthStore } from "@/features/auth/auth-store";
 import { PublicLanguageSwitcher } from "@/features/auth/PublicLanguageSwitcher";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
@@ -21,7 +22,7 @@ import { i18n, normalizeLanguage } from "@/app/i18n";
 import { useBrandingSettings } from "@/hooks/useBrandingSettings";
 import { useReadinessStatus } from "@/hooks/useReadinessStatus";
 import { resolveApiAssetUrl } from "@/lib/api-client";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -63,8 +64,15 @@ export function LoginPage() {
 
   const [userName, setUserName] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const readiness = useReadinessStatus();
+  const sessionOptionsQuery = useQuery({
+    queryKey: ["auth", "session-options"],
+    queryFn: getAuthSessionOptions,
+    retry: false,
+  });
+  const rememberMeEnabled = sessionOptionsQuery.data?.rememberMeEnabled ?? true;
   const { data: branding } = useBrandingSettings();
   const appName = branding.applicationName || "SAS Portal v2";
   const resolvedLogoUrl = resolveApiAssetUrl(branding.logoUrl);
@@ -109,7 +117,12 @@ export function LoginPage() {
 
   const loginMutation = useMutation({
     mutationFn: async () => {
-      const response = await login({ userName, password });
+      const effectiveRememberMe = rememberMeEnabled ? rememberMe : false;
+      const response = await login({
+        userName,
+        password,
+        rememberMe: effectiveRememberMe,
+      });
       if (!response.isSuccess) {
         if (response.errorCode === SERVICE_UNAVAILABLE_ERROR_CODE) {
           throw new Error(SERVICE_UNAVAILABLE_ERROR_CODE);
@@ -117,12 +130,15 @@ export function LoginPage() {
         throw new Error(response.message || t("login.error"));
       }
 
-      setTokens({
-        accessToken: response.accessToken,
-        refreshToken: response.refreshToken,
-        accessTokenExpiresAt: response.accessTokenExpiresAt,
-        refreshTokenExpiresAt: response.refreshTokenExpiresAt,
-      });
+      setTokens(
+        {
+          accessToken: response.accessToken,
+          refreshToken: response.refreshToken,
+          accessTokenExpiresAt: response.accessTokenExpiresAt,
+          refreshTokenExpiresAt: response.refreshTokenExpiresAt,
+        },
+        effectiveRememberMe,
+      );
 
       const currentUser = await getCurrentUser();
       setUser(currentUser);
@@ -219,6 +235,24 @@ export function LoginPage() {
                   disabled={loginBlocked}
                 />
               </div>
+
+              {rememberMeEnabled ? (
+                <div className="flex items-start gap-3 rounded-md border border-border/60 bg-muted/20 p-3">
+                  <Checkbox
+                    id="rememberMe"
+                    className="mt-0.5"
+                    checked={rememberMe}
+                    onChange={(event) => setRememberMe(event.target.checked)}
+                    disabled={loginBlocked}
+                  />
+                  <div className="space-y-1">
+                    <Label htmlFor="rememberMe" className="cursor-pointer font-normal leading-none">
+                      {t("login.rememberMe")}
+                    </Label>
+                    <p className="text-xs text-muted-foreground">{t("login.rememberMeDescription")}</p>
+                  </div>
+                </div>
+              ) : null}
 
               {forgotPasswordUrl ? (
                 <div className="flex justify-end">

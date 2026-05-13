@@ -1,6 +1,11 @@
 export type LoginRequest = {
   userName: string;
   password: string;
+  rememberMe: boolean;
+};
+
+export type AuthSessionOptions = {
+  rememberMeEnabled: boolean;
 };
 
 export type LoginResponse = {

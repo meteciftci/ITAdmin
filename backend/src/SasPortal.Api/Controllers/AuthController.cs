@@ -9,10 +9,18 @@ namespace SasPortal.Api.Controllers;
 
 [ApiController]
 [Route("api/auth")]
-public sealed class AuthController(IAuthService authService) : ControllerBase
+public sealed class AuthController(IAuthService authService, ISettingsService settingsService) : ControllerBase
 {
     private const string ServiceUnavailableErrorCode = "ServiceUnavailable";
     private const string LoginErrorCode = "LoginError";
+
+    [HttpGet("session-options")]
+    [AllowAnonymous]
+    public async Task<ActionResult<AuthSessionOptionsResponse>> GetSessionOptions(CancellationToken cancellationToken)
+    {
+        var options = await settingsService.GetAuthSessionOptionsAsync(cancellationToken);
+        return Ok(new AuthSessionOptionsResponse(options.RememberMeEnabled));
+    }
 
     [HttpPost("login")]
     [AllowAnonymous]
@@ -25,7 +33,8 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
                 request.UserName,
                 request.Password,
                 HttpContext.Connection.RemoteIpAddress?.ToString(),
-                Request.Headers.UserAgent.ToString()),
+                Request.Headers.UserAgent.ToString(),
+                request.RememberMe),
             cancellationToken);
 
         var response = new LoginResponse(

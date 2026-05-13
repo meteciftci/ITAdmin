@@ -1,5 +1,6 @@
 import { apiClient } from "@/lib/api-client";
 import type {
+  AuthSessionOptions,
   CurrentUser,
   LoginRequest,
   LoginResponse,
@@ -7,6 +8,11 @@ import type {
   RefreshTokenRequest,
   RefreshTokenResponse,
 } from "@/features/auth/types";
+
+export const getAuthSessionOptions = async (): Promise<AuthSessionOptions> => {
+  const { data } = await apiClient.get<AuthSessionOptions>("/auth/session-options");
+  return data;
+};
 
 export const login = async (request: LoginRequest): Promise<LoginResponse> => {
   const { data } = await apiClient.post<LoginResponse>("/auth/login", request);

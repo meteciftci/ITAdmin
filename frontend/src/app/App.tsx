@@ -3,6 +3,7 @@ import { useEffect } from "react";
 
 import { AppToaster } from "@/components/common/AppToaster";
 import { router } from "@/app/router";
+import { useAuthStore } from "@/features/auth/auth-store";
 import { useBrandingSettings } from "@/hooks/useBrandingSettings";
 import { resolveApiAssetUrl } from "@/lib/api-client";
 
@@ -39,6 +40,10 @@ const applyFavicon = (href: string, type: string): void => {
 
 export function App() {
   const brandingQuery = useBrandingSettings();
+
+  useEffect(() => {
+    useAuthStore.getState().hydrateAuthFromStorage();
+  }, []);
 
   useEffect(() => {
     document.title = brandingQuery.data.browserTitle || "SAS Portal v2";

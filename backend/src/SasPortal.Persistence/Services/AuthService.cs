@@ -15,6 +15,7 @@ public sealed class AuthService(
     ILdapService ldapService,
     ISecretProtector secretProtector,
     ITokenService tokenService,
+    ISettingsService settingsService,
     IOptions<JwtOptions> jwtOptions) : IAuthService
 {
     private const string SuperAdminRoleCode = "SuperAdmin";
@@ -257,8 +258,18 @@ public sealed class AuthService(
                 permissions);
 
             var now = DateTime.UtcNow;
-            var accessExpiresAt = now.AddMinutes(_jwtOptions.AccessTokenMinutes);
-            var refreshExpiresAt = now.AddDays(_jwtOptions.RefreshTokenDays);
+            var sessionSecurity = await settingsService.GetSessionSecuritySettingsAsync(cancellationToken);
+            var rememberMe = request.RememberMe && sessionSecurity.RememberMeEnabled;
+            var accessTokenMinutes = sessionSecurity.AccessTokenMinutes > 0
+                ? sessionSecurity.AccessTokenMinutes
+                : _jwtOptions.AccessTokenMinutes;
+            var accessExpiresAt = now.AddMinutes(accessTokenMinutes);
+            var refreshExpiresAt = rememberMe
+                ? now.AddDays(
+                    sessionSecurity.RememberMeRefreshTokenDays > 0
+                        ? sessionSecurity.RememberMeRefreshTokenDays
+                        : _jwtOptions.RefreshTokenDays)
+                : now.AddHours(sessionSecurity.SessionRefreshTokenHours);
 
             var accessToken = tokenService.CreateAccessToken(userInfo, accessExpiresAt);
             var refreshToken = tokenService.CreateRefreshToken();
@@ -272,7 +283,9 @@ public sealed class AuthService(
                     ExpiresAt = refreshExpiresAt,
                     CreatedAt = now,
                     CreatedByIp = request.IpAddress,
-                    UserAgent = request.UserAgent
+                    UserAgent = request.UserAgent,
+                    IsPersistent = rememberMe,
+                    LastUsedAt = now
                 },
                 cancellationToken);
 
@@ -585,8 +598,12 @@ public sealed class AuthService(
                 roles,
                 permissions);
 
-            var accessExpiresAt = now.AddMinutes(_jwtOptions.AccessTokenMinutes);
-            var refreshExpiresAt = now.AddDays(_jwtOptions.RefreshTokenDays);
+            var sessionSecurity = await settingsService.GetSessionSecuritySettingsAsync(cancellationToken);
+            var accessTokenMinutes = sessionSecurity.AccessTokenMinutes > 0
+                ? sessionSecurity.AccessTokenMinutes
+                : _jwtOptions.AccessTokenMinutes;
+            var accessExpiresAt = now.AddMinutes(accessTokenMinutes);
+            var absoluteRefreshExpiresAt = refreshToken.ExpiresAt;
 
             var newAccessToken = tokenService.CreateAccessToken(userInfo, accessExpiresAt);
             var newRefreshToken = tokenService.CreateRefreshToken();
@@ -601,10 +618,12 @@ public sealed class AuthService(
                 {
                     PortalUserId = user.Id,
                     TokenHash = newRefreshTokenHash,
-                    ExpiresAt = refreshExpiresAt,
+                    ExpiresAt = absoluteRefreshExpiresAt,
                     CreatedAt = now,
                     CreatedByIp = request.IpAddress,
-                    UserAgent = request.UserAgent
+                    UserAgent = request.UserAgent,
+                    IsPersistent = refreshToken.IsPersistent,
+                    LastUsedAt = now
                 },
                 cancellationToken);
 
@@ -630,7 +649,7 @@ public sealed class AuthService(
                 newAccessToken,
                 newRefreshToken,
                 accessExpiresAt,
-                refreshExpiresAt);
+                absoluteRefreshExpiresAt);
         }
         catch
         {

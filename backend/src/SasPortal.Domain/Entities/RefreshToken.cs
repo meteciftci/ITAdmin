@@ -14,4 +14,6 @@ public class RefreshToken : BaseEntity
     public string? RevokedByIp { get; set; }
     public string? UserAgent { get; set; }
     public DateTime CreatedAt { get; set; }
+    public bool IsPersistent { get; set; }
+    public DateTime LastUsedAt { get; set; }
 }

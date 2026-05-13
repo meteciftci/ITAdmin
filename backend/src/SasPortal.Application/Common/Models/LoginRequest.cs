@@ -4,4 +4,5 @@ public sealed record LoginRequest(
     string UserName,
     string Password,
     string? IpAddress,
-    string? UserAgent);
+    string? UserAgent,
+    bool RememberMe = false);

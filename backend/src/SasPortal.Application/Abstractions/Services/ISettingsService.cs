@@ -23,6 +23,12 @@ public interface ISettingsService
         UpdateSessionSecuritySettingsRequest request,
         CancellationToken cancellationToken = default);
 
+    Task<SessionSecuritySettings> GetSessionSecuritySettingsAsync(
+        CancellationToken cancellationToken = default);
+
+    Task<AuthSessionOptions> GetAuthSessionOptionsAsync(
+        CancellationToken cancellationToken = default);
+
     Task<BrandingLogoUploadResult> UploadBrandingLogoAsync(
         UploadBrandingLogoRequest request,
         CancellationToken cancellationToken = default);

@@ -14,11 +14,13 @@ public static class AuthServiceTestFactory
         var ldapService = new FakeLdapService();
         var secretProtector = new FakeSecretProtector();
         var tokenService = new FakeTokenService();
+        var settingsService = new AuthServiceSettingsFake();
         var authService = new AuthService(
             dbContext,
             ldapService,
             secretProtector,
             tokenService,
+            settingsService,
             Options.Create(new JwtOptions
             {
                 Key = "unit-test-key-unit-test-key-unit-test-key",
@@ -28,6 +30,6 @@ public static class AuthServiceTestFactory
                 RefreshTokenDays = 7
             }));
 
-        return new AuthServiceTestContext(connection, dbContext, authService, ldapService, secretProtector, tokenService);
+        return new AuthServiceTestContext(connection, dbContext, authService, ldapService, secretProtector, tokenService, settingsService);
     }
 }

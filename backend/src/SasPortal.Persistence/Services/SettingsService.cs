@@ -529,6 +529,44 @@ public sealed class SettingsService(
         return new UpdateSettingsResult(true, "Session security settings updated.", settings);
     }
 
+    public async Task<SessionSecuritySettings> GetSessionSecuritySettingsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var keys = SecuritySettingKeys.All;
+        var appSettings = await context.ApplicationSettings
+            .AsNoTracking()
+            .Where(x => !x.IsDeleted && x.IsActive && keys.Contains(x.Key))
+            .OrderBy(x => x.Key)
+            .Select(x => new ApplicationSettingItem(
+                x.Key,
+                x.IsEncrypted ? null : x.Value,
+                x.ValueType,
+                x.Description,
+                x.IsEncrypted,
+                x.IsSystem,
+                x.IsActive))
+            .ToListAsync(cancellationToken);
+
+        return SessionSecuritySettingsHelper.ReadFromItems(appSettings, logger);
+    }
+
+    public async Task<AuthSessionOptions> GetAuthSessionOptionsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var sessionSecurity = await GetSessionSecuritySettingsAsync(cancellationToken);
+            return new AuthSessionOptions(sessionSecurity.RememberMeEnabled);
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(
+                exception,
+                "Failed to read auth session options from settings. Defaulting RememberMeEnabled to true.");
+            return new AuthSessionOptions(true);
+        }
+    }
+
     private async Task UpsertSessionSecuritySettingAsync(
         string key,
         string? value,

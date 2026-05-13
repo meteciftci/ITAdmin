@@ -205,13 +205,16 @@ public sealed class AuthServiceTests
 
         Assert.True(result.IsSuccess);
         Assert.Equal("access-token", result.AccessToken);
-        Assert.Equal("refresh-token", result.RefreshToken);
+        Assert.Equal("refresh-token-0", result.RefreshToken);
 
         var refreshToken = await testContext.DbContext.RefreshTokens.SingleAsync();
         Assert.Equal(user.Id, refreshToken.PortalUserId);
-        Assert.Equal("hash:refresh-token", refreshToken.TokenHash);
+        Assert.Equal("hash:refresh-token-0", refreshToken.TokenHash);
         Assert.Equal(IpAddress, refreshToken.CreatedByIp);
         Assert.Equal(UserAgent, refreshToken.UserAgent);
+        Assert.False(refreshToken.IsPersistent);
+        var sessionHours = (refreshToken.ExpiresAt - DateTime.UtcNow).TotalHours;
+        Assert.InRange(sessionHours, 5.9, 6.1);
 
         var log = await AssertSingleSecurityLogAsync(testContext.DbContext);
         Assert.Equal("LoginSuccess", log.EventType);
@@ -224,6 +227,93 @@ public sealed class AuthServiceTests
         Assert.DoesNotContain("bind-secret", log.Description ?? string.Empty, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("refresh-token", log.Description ?? string.Empty, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("access-token", log.Description ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task LoginAsync_WhenRememberMeTrue_CreatesPersistentRefreshTokenWithRememberMeExpiry()
+    {
+        await using var testContext = await AuthServiceTestFactory.CreateAsync();
+        await SeedActiveLdapSettingAsync(testContext.DbContext);
+        var user = await SeedPortalUserWithRolePermissionAsync(testContext.DbContext);
+        testContext.LdapService.ValidateResult = new LdapValidationResult(true, "ok");
+        testContext.LdapService.UserProfileResult = CreateLdapProfile(user.DirectoryObjectId, user.UserName);
+
+        var result = await testContext.AuthService.LoginAsync(
+            new LoginRequest(user.UserName, "password", IpAddress, UserAgent, RememberMe: true));
+
+        Assert.True(result.IsSuccess);
+        var refreshToken = await testContext.DbContext.RefreshTokens.SingleAsync();
+        Assert.True(refreshToken.IsPersistent);
+        var rememberMeDays = (refreshToken.ExpiresAt - DateTime.UtcNow).TotalDays;
+        Assert.InRange(rememberMeDays, 6.9, 7.1);
+    }
+
+    [Fact]
+    public async Task LoginAsync_WhenRememberMeDisabled_IgnoresRememberMeTrue()
+    {
+        await using var testContext = await AuthServiceTestFactory.CreateAsync();
+        testContext.SettingsService.SessionSecurity = new SessionSecuritySettings(30, 30, 30, 6, 7, false);
+        await SeedActiveLdapSettingAsync(testContext.DbContext);
+        var user = await SeedPortalUserWithRolePermissionAsync(testContext.DbContext);
+        testContext.LdapService.ValidateResult = new LdapValidationResult(true, "ok");
+        testContext.LdapService.UserProfileResult = CreateLdapProfile(user.DirectoryObjectId, user.UserName);
+
+        var result = await testContext.AuthService.LoginAsync(
+            new LoginRequest(user.UserName, "password", IpAddress, UserAgent, RememberMe: true));
+
+        Assert.True(result.IsSuccess);
+        var refreshToken = await testContext.DbContext.RefreshTokens.SingleAsync();
+        Assert.False(refreshToken.IsPersistent);
+        var sessionHours = (refreshToken.ExpiresAt - DateTime.UtcNow).TotalHours;
+        Assert.InRange(sessionHours, 5.9, 6.1);
+    }
+
+    [Fact]
+    public async Task LoginAsync_UsesAccessTokenMinutesFromSessionSecuritySettings()
+    {
+        await using var testContext = await AuthServiceTestFactory.CreateAsync();
+        testContext.SettingsService.SessionSecurity = new SessionSecuritySettings(45, 30, 30, 6, 7, true);
+        await SeedActiveLdapSettingAsync(testContext.DbContext);
+        var user = await SeedPortalUserWithRolePermissionAsync(testContext.DbContext);
+        testContext.LdapService.ValidateResult = new LdapValidationResult(true, "ok");
+        testContext.LdapService.UserProfileResult = CreateLdapProfile(user.DirectoryObjectId, user.UserName);
+
+        var result = await testContext.AuthService.LoginAsync(new LoginRequest(user.UserName, "password", IpAddress, UserAgent));
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.AccessTokenExpiresAt);
+        var accessMinutes = (result.AccessTokenExpiresAt.Value - DateTime.UtcNow).TotalMinutes;
+        Assert.InRange(accessMinutes, 43, 47);
+    }
+
+    [Fact]
+    public async Task RefreshTokenAsync_PreservesIsPersistentAndAbsoluteExpiry_AndSetsLastUsedAtOnNewToken()
+    {
+        await using var testContext = await AuthServiceTestFactory.CreateAsync();
+        await SeedActiveLdapSettingAsync(testContext.DbContext);
+        var user = await SeedPortalUserWithRolePermissionAsync(testContext.DbContext);
+        testContext.LdapService.ValidateResult = new LdapValidationResult(true, "ok");
+        testContext.LdapService.UserProfileResult = CreateLdapProfile(user.DirectoryObjectId, user.UserName);
+
+        var loginResult = await testContext.AuthService.LoginAsync(
+            new LoginRequest(user.UserName, "password", IpAddress, UserAgent, RememberMe: true));
+
+        Assert.True(loginResult.IsSuccess);
+        var issued = await testContext.DbContext.RefreshTokens.AsNoTracking().SingleAsync();
+        var absoluteExpiry = issued.ExpiresAt;
+        var issuedLastUsed = issued.LastUsedAt;
+
+        var refreshResult = await testContext.AuthService.RefreshTokenAsync(
+            new RefreshTokenRequest("refresh-token-0", IpAddress, UserAgent));
+
+        Assert.True(refreshResult.IsSuccess);
+        Assert.Equal(absoluteExpiry, refreshResult.RefreshTokenExpiresAt);
+
+        var active = await testContext.DbContext.RefreshTokens.SingleAsync(x => x.RevokedAt == null);
+        Assert.Equal(absoluteExpiry, active.ExpiresAt);
+        Assert.True(active.IsPersistent);
+        Assert.True(active.LastUsedAt >= issuedLastUsed);
+        Assert.Equal("hash:refresh-token-1", active.TokenHash);
     }
 
     [Fact]

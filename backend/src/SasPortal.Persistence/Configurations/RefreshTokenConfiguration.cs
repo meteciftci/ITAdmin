@@ -48,6 +48,14 @@ public class RefreshTokenConfiguration : IEntityTypeConfiguration<RefreshToken>
             .HasColumnName("created_at")
             .IsRequired();
 
+        builder.Property(x => x.IsPersistent)
+            .HasColumnName("is_persistent")
+            .IsRequired();
+
+        builder.Property(x => x.LastUsedAt)
+            .HasColumnName("last_used_at")
+            .IsRequired();
+
         builder.HasIndex(x => x.TokenHash).IsUnique();
 
         builder.HasOne(x => x.PortalUser)

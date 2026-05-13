@@ -76,12 +76,15 @@ const attemptRefresh = async (): Promise<RefreshTokenResponse | null> => {
           return null;
         }
 
-        useAuthStore.getState().setTokens({
-          accessToken: response.data.accessToken,
-          refreshToken: response.data.refreshToken,
-          accessTokenExpiresAt: response.data.accessTokenExpiresAt,
-          refreshTokenExpiresAt: response.data.refreshTokenExpiresAt,
-        });
+        useAuthStore.getState().setTokens(
+          {
+            accessToken: response.data.accessToken,
+            refreshToken: response.data.refreshToken,
+            accessTokenExpiresAt: response.data.accessTokenExpiresAt,
+            refreshTokenExpiresAt: response.data.refreshTokenExpiresAt,
+          },
+          useAuthStore.getState().rememberMe,
+        );
 
         return response.data;
       })
