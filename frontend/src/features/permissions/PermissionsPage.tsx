@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { DataToolbar } from "@/components/common/DataToolbar";
 import { CodeBadge } from "@/components/common/CodeBadge";
 import { EmptyState } from "@/components/common/EmptyState";
-import { ErrorState } from "@/components/common/ErrorState";
 import { LoadingState } from "@/components/common/LoadingState";
 import { SectionCard } from "@/components/common/SectionCard";
 import { StatusBadge } from "@/components/common/StatusBadge";
@@ -13,7 +13,7 @@ import { TablePagination } from "@/components/common/TablePagination";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { getPermissions } from "@/features/permissions/api";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { createApiErrorRouteState, getErrorRoutePath } from "@/lib/route-error";
 
 type StatusFilter = "active" | "passive" | "all";
 
@@ -66,6 +66,17 @@ export function PermissionsPage() {
     setPageNumber(1);
   };
 
+  if (permissionsQuery.isError) {
+    const routeState = createApiErrorRouteState(permissionsQuery.error, {
+      fromPath: "/permissions",
+      retryPath: "/permissions",
+      sourceLabel: t("permissions:sections.listTitle"),
+    });
+    return (
+      <Navigate to={getErrorRoutePath(routeState.code)} replace state={routeState} />
+    );
+  }
+
   return (
     <section className="space-y-4">
       <SectionCard title={t("permissions:sections.listTitle")}>
@@ -95,21 +106,6 @@ export function PermissionsPage() {
           </DataToolbar>
 
           {permissionsQuery.isLoading ? <LoadingState /> : null}
-
-          {permissionsQuery.isError ? (
-            <ErrorState
-              title={t("permissions:errors.loadFailed")}
-              description={getApiErrorMessage(
-                permissionsQuery.error,
-                t("permissions:errors.loadFailed"),
-              )}
-              retry={
-                <Button variant="outline" onClick={handleRefresh}>
-                  {t("common:actions.refresh")}
-                </Button>
-              }
-            />
-          ) : null}
 
           {permissionsQuery.isSuccess && !permissions.length ? (
             <EmptyState

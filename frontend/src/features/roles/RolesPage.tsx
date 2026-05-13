@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Navigate } from "react-router-dom";
 
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { CodeBadge } from "@/components/common/CodeBadge";
 import { DataToolbar } from "@/components/common/DataToolbar";
 import { EmptyState } from "@/components/common/EmptyState";
-import { ErrorState } from "@/components/common/ErrorState";
 import { LoadingState } from "@/components/common/LoadingState";
 import { RowActions } from "@/components/common/RowActions";
 import { SectionCard } from "@/components/common/SectionCard";
@@ -30,6 +30,7 @@ import { RoleDetailDialog } from "@/features/roles/RoleDetailDialog";
 import { RoleFormDialog } from "@/features/roles/RoleFormDialog";
 import type { RoleListItem } from "@/features/roles/types";
 import { getApiErrorMessage } from "@/lib/api-error";
+import { createApiErrorRouteState, getErrorRoutePath } from "@/lib/route-error";
 import { canAccess } from "@/lib/permissions";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -138,6 +139,17 @@ export function RolesPage() {
     }
   };
 
+  if (rolesQuery.isError) {
+    const routeState = createApiErrorRouteState(rolesQuery.error, {
+      fromPath: "/roles",
+      retryPath: "/roles",
+      sourceLabel: t("roles:sections.listTitle"),
+    });
+    return (
+      <Navigate to={getErrorRoutePath(routeState.code)} replace state={routeState} />
+    );
+  }
+
   return (
     <section className="space-y-4">
       <SectionCard title={t("roles:sections.listTitle")}>
@@ -188,18 +200,6 @@ export function RolesPage() {
           </DataToolbar>
 
           {rolesQuery.isLoading ? <LoadingState /> : null}
-
-          {rolesQuery.isError ? (
-            <ErrorState
-              title={t("roles:errors.loadFailed")}
-              description={getApiErrorMessage(rolesQuery.error, t("roles:errors.loadFailed"))}
-              retry={
-                <Button variant="outline" onClick={handleRefresh}>
-                  {t("common:actions.refresh")}
-                </Button>
-              }
-            />
-          ) : null}
 
           {rolesQuery.isSuccess && !roles.length ? (
             <EmptyState

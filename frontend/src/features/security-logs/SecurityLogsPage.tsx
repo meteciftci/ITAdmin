@@ -1,13 +1,13 @@
 import { useMemo, useState } from "react";
 import type { DateRange } from "react-day-picker";
 import { useQuery } from "@tanstack/react-query";
+import { Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { DataToolbar } from "@/components/common/DataToolbar";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
 import { DateTimeText } from "@/components/common/DateTimeText";
 import { EmptyState } from "@/components/common/EmptyState";
-import { ErrorState } from "@/components/common/ErrorState";
 import { LoadingState } from "@/components/common/LoadingState";
 import { LogDetailDialog } from "@/components/common/LogDetailDialog";
 import { MultiSelectFilter } from "@/components/common/MultiSelectFilter";
@@ -20,7 +20,7 @@ import {
   getSecurityLogs,
 } from "@/features/security-logs/api";
 import type { SecurityLogListItem } from "@/features/security-logs/types";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { createApiErrorRouteState, getErrorRoutePath } from "@/lib/route-error";
 
 export function SecurityLogsPage() {
   const { t, i18n } = useTranslation(["securityLogs", "common"]);
@@ -93,6 +93,17 @@ export function SecurityLogsPage() {
     setPageNumber(1);
   };
 
+  if (securityLogsQuery.isError) {
+    const routeState = createApiErrorRouteState(securityLogsQuery.error, {
+      fromPath: "/security-logs",
+      retryPath: "/security-logs",
+      sourceLabel: t("securityLogs:sections.listTitle"),
+    });
+    return (
+      <Navigate to={getErrorRoutePath(routeState.code)} replace state={routeState} />
+    );
+  }
+
   return (
     <section className="space-y-4">
       <SectionCard title={t("securityLogs:sections.listTitle")}>
@@ -135,21 +146,6 @@ export function SecurityLogsPage() {
           </DataToolbar>
 
           {securityLogsQuery.isLoading ? <LoadingState /> : null}
-
-          {securityLogsQuery.isError ? (
-            <ErrorState
-              title={t("securityLogs:errors.loadFailed")}
-              description={getApiErrorMessage(
-                securityLogsQuery.error,
-                t("securityLogs:errors.loadFailed"),
-              )}
-              retry={
-                <Button variant="outline" onClick={handleRefresh}>
-                  {t("common:actions.refresh")}
-                </Button>
-              }
-            />
-          ) : null}
 
           {securityLogsQuery.isSuccess && !securityLogs.length ? (
             <EmptyState

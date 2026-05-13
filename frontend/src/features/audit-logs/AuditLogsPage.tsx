@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type { DateRange } from "react-day-picker";
 import { useQuery } from "@tanstack/react-query";
+import { Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { CodeBadge } from "@/components/common/CodeBadge";
@@ -8,7 +9,6 @@ import { DataToolbar } from "@/components/common/DataToolbar";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
 import { DateTimeText } from "@/components/common/DateTimeText";
 import { EmptyState } from "@/components/common/EmptyState";
-import { ErrorState } from "@/components/common/ErrorState";
 import { LoadingState } from "@/components/common/LoadingState";
 import { LogDetailDialog } from "@/components/common/LogDetailDialog";
 import { MultiSelectFilter } from "@/components/common/MultiSelectFilter";
@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getAuditLogFilterOptions, getAuditLogs } from "@/features/audit-logs/api";
 import type { AuditLogListItem } from "@/features/audit-logs/types";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { createApiErrorRouteState, getErrorRoutePath } from "@/lib/route-error";
 
 export function AuditLogsPage() {
   const { t, i18n } = useTranslation(["auditLogs", "common"]);
@@ -88,6 +88,17 @@ export function AuditLogsPage() {
     setPageNumber(1);
   };
 
+  if (auditLogsQuery.isError) {
+    const routeState = createApiErrorRouteState(auditLogsQuery.error, {
+      fromPath: "/audit-logs",
+      retryPath: "/audit-logs",
+      sourceLabel: t("auditLogs:sections.listTitle"),
+    });
+    return (
+      <Navigate to={getErrorRoutePath(routeState.code)} replace state={routeState} />
+    );
+  }
+
   return (
     <section className="space-y-4">
       <SectionCard title={t("auditLogs:sections.listTitle")}>
@@ -130,21 +141,6 @@ export function AuditLogsPage() {
           </DataToolbar>
 
           {auditLogsQuery.isLoading ? <LoadingState /> : null}
-
-          {auditLogsQuery.isError ? (
-            <ErrorState
-              title={t("auditLogs:errors.loadFailed")}
-              description={getApiErrorMessage(
-                auditLogsQuery.error,
-                t("auditLogs:errors.loadFailed"),
-              )}
-              retry={
-                <Button variant="outline" onClick={handleRefresh}>
-                  {t("common:actions.refresh")}
-                </Button>
-              }
-            />
-          ) : null}
 
           {auditLogsQuery.isSuccess && !auditLogs.length ? (
             <EmptyState

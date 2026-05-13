@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Navigate } from "react-router-dom";
 
-import { ErrorState } from "@/components/common/ErrorState";
 import { LoadingState } from "@/components/common/LoadingState";
 import { SectionCard } from "@/components/common/SectionCard";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ import {
   type LdapFormValues,
 } from "@/features/settings/components/LdapSettingsForm";
 import { getApiErrorMessage } from "@/lib/api-error";
+import { createApiErrorRouteState, getErrorRoutePath } from "@/lib/route-error";
 import { canAccess } from "@/lib/permissions";
 import { BRANDING_QUERY_KEY } from "@/hooks/useBrandingSettings";
 import { toast } from "sonner";
@@ -567,28 +568,22 @@ export function SettingsPage() {
     [settingsQuery, t],
   );
 
+  if (settingsQuery.isError) {
+    const routeState = createApiErrorRouteState(settingsQuery.error, {
+      fromPath: "/settings",
+      retryPath: "/settings",
+      sourceLabel: t("settings:title"),
+    });
+    return (
+      <Navigate to={getErrorRoutePath(routeState.code)} replace state={routeState} />
+    );
+  }
+
   if (settingsQuery.isLoading) {
     return (
       <section className="space-y-4">
         <div className="flex justify-end">{refreshAction}</div>
         <LoadingState />
-      </section>
-    );
-  }
-
-  if (settingsQuery.isError) {
-    return (
-      <section className="space-y-4">
-        <div className="flex justify-end">{refreshAction}</div>
-        <ErrorState
-          title={t("settings:errors.loadFailed")}
-          description={getApiErrorMessage(settingsQuery.error, t("settings:errors.loadFailed"))}
-          retry={
-            <Button variant="outline" onClick={() => settingsQuery.refetch()}>
-              {t("common:actions.refresh")}
-            </Button>
-          }
-        />
       </section>
     );
   }
