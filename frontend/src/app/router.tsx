@@ -13,6 +13,7 @@ import { SecurityLogsPage } from "@/features/security-logs/SecurityLogsPage";
 import { SetupRequiredPage } from "@/features/setup/SetupRequiredPage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 import { UsersPage } from "@/features/users/UsersPage";
+import { ErrorPage } from "@/pages/ErrorPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 
 export const router = createBrowserRouter([
@@ -27,6 +28,16 @@ export const router = createBrowserRouter([
   {
     path: "/setup",
     element: <SetupRequiredPage />,
+  },
+  {
+    path: "/error/:code",
+    element: (
+      <RequireAuth>
+        <AppLayout>
+          <ErrorPage />
+        </AppLayout>
+      </RequireAuth>
+    ),
   },
   {
     path: "/dashboard",

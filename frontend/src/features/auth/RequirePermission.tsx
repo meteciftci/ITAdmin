@@ -1,10 +1,9 @@
 import type { ReactNode } from "react";
 
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 
-import { SectionCard } from "@/components/common/SectionCard";
-import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/features/auth/auth-store";
+import { getErrorRoutePath } from "@/lib/route-error";
 import { canAccess } from "@/lib/permissions";
 import { useTranslation } from "react-i18next";
 
@@ -17,8 +16,8 @@ export function RequirePermission({
   permission,
   children,
 }: RequirePermissionProps) {
-  const { t } = useTranslation(["errors", "common"]);
-  const navigate = useNavigate();
+  const { t } = useTranslation(["common"]);
+  const location = useLocation();
   const accessToken = useAuthStore((state) => state.accessToken);
   const user = useAuthStore((state) => state.user);
 
@@ -34,21 +33,19 @@ export function RequirePermission({
 
   if (!canAccess(user, permission)) {
     return (
-      <main className="mx-auto flex w-full max-w-2xl items-center justify-center p-6">
-        <SectionCard
-          title={t("errors:forbidden.title")}
-          description={t("errors:forbidden.description")}
-        >
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={() => navigate(-1)}>
-              {t("common:actions.back")}
-            </Button>
-            <Button onClick={() => navigate("/dashboard")}>
-              {t("common:actions.goToDashboard")}
-            </Button>
-          </div>
-        </SectionCard>
-      </main>
+      <Navigate
+        to={getErrorRoutePath("FORBIDDEN")}
+        replace
+        state={{
+          code: "FORBIDDEN",
+          kind: "forbidden" as const,
+          status: 403,
+          titleKey: "errors:api.forbidden.title",
+          descriptionKey: "errors:api.forbidden.description",
+          fromPath: location.pathname,
+          retryPath: location.pathname,
+        }}
+      />
     );
   }
 

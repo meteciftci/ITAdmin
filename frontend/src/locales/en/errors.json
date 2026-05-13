@@ -42,6 +42,23 @@
       },
       "errorCode": "Error code",
       "traceId": "Trace ID"
+    },
+    "route": {
+      "titleFallback": "Something went wrong",
+      "descriptionFallback": "The operation could not be completed. Please try again or share the error code with the system administrator.",
+      "errorCode": "Error code",
+      "httpStatus": "HTTP status",
+      "traceId": "Trace ID",
+      "copyTraceId": "Copy",
+      "traceIdCopied": "Trace ID copied.",
+      "retry": "Retry",
+      "back": "Go back",
+      "dashboard": "Go to dashboard",
+      "source": "Source",
+      "notFound": {
+        "title": "Page not found",
+        "description": "The page you are looking for may have been moved, deleted, or never existed."
+      }
     }
   }
 }

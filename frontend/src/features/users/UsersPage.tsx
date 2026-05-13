@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Navigate } from "react-router-dom";
 
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { DateTimeText } from "@/components/common/DateTimeText";
 import { DataToolbar } from "@/components/common/DataToolbar";
-import { ApiErrorState } from "@/components/common/ApiErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
 import { LoadingState } from "@/components/common/LoadingState";
 import { RowActions } from "@/components/common/RowActions";
@@ -27,6 +27,7 @@ import { AssignRolesDialog } from "@/features/users/AssignRolesDialog";
 import { UserDetailDialog } from "@/features/users/UserDetailDialog";
 import type { UserListItem } from "@/features/users/types";
 import { getApiErrorMessage } from "@/lib/api-error";
+import { createApiErrorRouteState, getErrorRoutePath } from "@/lib/route-error";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
@@ -124,6 +125,17 @@ export function UsersPage() {
     }
   };
 
+  if (usersQuery.isError) {
+    const routeState = createApiErrorRouteState(usersQuery.error, {
+      fromPath: "/users",
+      retryPath: "/users",
+      sourceLabel: t("users:sections.listTitle"),
+    });
+    return (
+      <Navigate to={getErrorRoutePath(routeState.code)} replace state={routeState} />
+    );
+  }
+
   return (
     <section className="space-y-4">
       <SectionCard title={t("users:sections.listTitle")}>
@@ -162,19 +174,6 @@ export function UsersPage() {
           </DataToolbar>
 
           {usersQuery.isLoading ? <LoadingState /> : null}
-
-          {usersQuery.isError ? (
-            <ApiErrorState
-              error={usersQuery.error}
-              fallbackTitle={t("users:errors.loadFailed")}
-              fallbackDescription={t("users:errors.loadFailed")}
-              retry={
-                <Button variant="outline" onClick={handleRefresh}>
-                  {t("common:actions.refresh")}
-                </Button>
-              }
-            />
-          ) : null}
 
           {usersQuery.isSuccess && !users.length ? (
             <EmptyState

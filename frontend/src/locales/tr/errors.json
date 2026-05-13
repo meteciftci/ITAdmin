@@ -42,6 +42,23 @@
       },
       "errorCode": "Hata kodu",
       "traceId": "İzleme kodu"
+    },
+    "route": {
+      "titleFallback": "Bir hata oluştu",
+      "descriptionFallback": "İşlem tamamlanamadı. Lütfen tekrar deneyin veya sistem yöneticisine hata kodunu iletin.",
+      "errorCode": "Hata kodu",
+      "httpStatus": "HTTP durumu",
+      "traceId": "İzleme kodu",
+      "copyTraceId": "Kopyala",
+      "traceIdCopied": "İzleme kodu kopyalandı.",
+      "retry": "Tekrar dene",
+      "back": "Geri dön",
+      "dashboard": "Kontrol paneline dön",
+      "source": "Kaynak",
+      "notFound": {
+        "title": "Sayfa bulunamadı",
+        "description": "Aradığınız sayfa taşınmış, silinmiş veya hiç var olmamış olabilir. Yazılım bazen böyle dramatik davranır."
+      }
     }
   }
 }
