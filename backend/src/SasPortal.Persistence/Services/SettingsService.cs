@@ -571,14 +571,22 @@ public sealed class SettingsService(
         try
         {
             var sessionSecurity = await GetSessionSecuritySettingsAsync(cancellationToken);
-            return new AuthSessionOptions(sessionSecurity.RememberMeEnabled);
+            return new AuthSessionOptions(
+                sessionSecurity.RememberMeEnabled,
+                sessionSecurity.IdleTimeoutMinutes,
+                sessionSecurity.IdleWarningSeconds,
+                sessionSecurity.AccessTokenMinutes);
         }
         catch (Exception exception)
         {
             logger.LogError(
                 exception,
-                "Failed to read auth session options from settings. Defaulting RememberMeEnabled to true.");
-            return new AuthSessionOptions(true);
+                "Failed to read auth session options from settings. Returning defaults.");
+            return new AuthSessionOptions(
+                SessionSecurityDefaults.RememberMeEnabled,
+                SessionSecurityDefaults.IdleTimeoutMinutes,
+                SessionSecurityDefaults.IdleWarningSeconds,
+                SessionSecurityDefaults.AccessTokenMinutes);
         }
     }
 

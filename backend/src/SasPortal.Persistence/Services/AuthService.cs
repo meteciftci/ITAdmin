@@ -24,6 +24,7 @@ public sealed class AuthService(
 
     public const string ServiceUnavailableErrorCode = "ServiceUnavailable";
     public const string LoginErrorCode = "LoginError";
+    public const string SessionIdleTimeoutErrorCode = "SessionIdleTimeout";
 
     private readonly JwtOptions _jwtOptions = jwtOptions.Value;
     public async Task<AuthTokenResult> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
@@ -573,6 +574,42 @@ public sealed class AuthService(
                 return new AuthTokenResult(false, "User is inactive.", null, null, null, null);
             }
 
+            var sessionSecurity = await settingsService.GetSessionSecuritySettingsAsync(cancellationToken);
+
+            // Idle timeout is enforced at refresh time for every refresh token (session or persistent).
+            // Remember me only controls absolute refresh token lifetime and storage; idle inactivity
+            // still ends the session once `IdleTimeoutMinutes` elapse since the token was last used.
+            var idleExpiresAt = refreshToken.LastUsedAt.AddMinutes(sessionSecurity.IdleTimeoutMinutes);
+            if (idleExpiresAt <= now)
+            {
+                refreshToken.RevokedAt = now;
+                refreshToken.RevokedByIp = request.IpAddress;
+
+                await context.SecurityLogs.AddAsync(
+                    new SecurityLog
+                    {
+                        UserId = user.Id,
+                        UserName = user.UserName,
+                        EventType = "SessionIdleTimeout",
+                        Severity = "Info",
+                        Description = "Session expired due to inactivity.",
+                        IpAddress = request.IpAddress,
+                        UserAgent = request.UserAgent,
+                        CreatedAt = now
+                    },
+                    cancellationToken);
+
+                await context.SaveChangesAsync(cancellationToken);
+                return new AuthTokenResult(
+                    false,
+                    "Session expired due to inactivity.",
+                    null,
+                    null,
+                    null,
+                    null,
+                    SessionIdleTimeoutErrorCode);
+            }
+
             var activeRoles = user.UserRoles
                 .Where(x => x.PortalRole.IsActive && !x.PortalRole.IsDeleted)
                 .Select(x => x.PortalRole)
@@ -598,7 +635,6 @@ public sealed class AuthService(
                 roles,
                 permissions);
 
-            var sessionSecurity = await settingsService.GetSessionSecuritySettingsAsync(cancellationToken);
             var accessTokenMinutes = sessionSecurity.AccessTokenMinutes > 0
                 ? sessionSecurity.AccessTokenMinutes
                 : _jwtOptions.AccessTokenMinutes;

@@ -14,7 +14,11 @@ public sealed class AuthServiceSettingsFake : ISettingsService
         Task.FromResult(SessionSecurity);
 
     public Task<AuthSessionOptions> GetAuthSessionOptionsAsync(CancellationToken cancellationToken = default) =>
-        Task.FromResult(new AuthSessionOptions(SessionSecurity.RememberMeEnabled));
+        Task.FromResult(new AuthSessionOptions(
+            SessionSecurity.RememberMeEnabled,
+            SessionSecurity.IdleTimeoutMinutes,
+            SessionSecurity.IdleWarningSeconds,
+            SessionSecurity.AccessTokenMinutes));
 
     public Task<SettingsOverview> GetSettingsAsync(CancellationToken cancellationToken = default) =>
         throw new NotSupportedException();

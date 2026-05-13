@@ -287,6 +287,90 @@ public sealed class AuthServiceTests
     }
 
     [Fact]
+    public async Task RefreshTokenAsync_WhenRefreshTokenIdleExpired_RevokesTokenAndReturnsSessionIdleTimeout()
+    {
+        await using var testContext = await AuthServiceTestFactory.CreateAsync();
+        testContext.SettingsService.SessionSecurity = new SessionSecuritySettings(30, 30, 30, 6, 7, true);
+        await SeedActiveLdapSettingAsync(testContext.DbContext);
+        var user = await SeedPortalUserWithRolePermissionAsync(testContext.DbContext);
+        testContext.LdapService.ValidateResult = new LdapValidationResult(true, "ok");
+        testContext.LdapService.UserProfileResult = CreateLdapProfile(user.DirectoryObjectId, user.UserName);
+
+        var loginResult = await testContext.AuthService.LoginAsync(
+            new LoginRequest(user.UserName, "password", IpAddress, UserAgent));
+        Assert.True(loginResult.IsSuccess);
+
+        // Backdate LastUsedAt so the idle window has clearly elapsed while keeping the absolute
+        // ExpiresAt in the future. Logout/refresh tests share this invariant.
+        var issued = await testContext.DbContext.RefreshTokens.SingleAsync();
+        issued.LastUsedAt = DateTime.UtcNow.AddMinutes(-31);
+        issued.ExpiresAt = DateTime.UtcNow.AddHours(5);
+        await testContext.DbContext.SaveChangesAsync();
+
+        var idleStart = DateTime.UtcNow;
+        var refreshResult = await testContext.AuthService.RefreshTokenAsync(
+            new RefreshTokenRequest("refresh-token-0", IpAddress, UserAgent));
+
+        Assert.False(refreshResult.IsSuccess);
+        Assert.Equal("Session expired due to inactivity.", refreshResult.Message);
+        Assert.Equal("SessionIdleTimeout", refreshResult.ErrorCode);
+        Assert.Null(refreshResult.AccessToken);
+        Assert.Null(refreshResult.RefreshToken);
+
+        var revoked = await testContext.DbContext.RefreshTokens.AsNoTracking().SingleAsync();
+        Assert.NotNull(revoked.RevokedAt);
+        Assert.InRange(revoked.RevokedAt!.Value, idleStart.AddSeconds(-1), DateTime.UtcNow.AddSeconds(1));
+        Assert.Equal(IpAddress, revoked.RevokedByIp);
+
+        var idleLog = await testContext.DbContext.SecurityLogs
+            .Where(x => x.EventType == "SessionIdleTimeout")
+            .SingleAsync();
+        Assert.Equal("Info", idleLog.Severity);
+        Assert.Equal("Session expired due to inactivity.", idleLog.Description);
+        Assert.Equal(user.Id, idleLog.UserId);
+        Assert.Equal(user.UserName, idleLog.UserName);
+        Assert.Equal(IpAddress, idleLog.IpAddress);
+        Assert.Equal(UserAgent, idleLog.UserAgent);
+        Assert.DoesNotContain("refresh-token", idleLog.Description ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task RefreshTokenAsync_WhenRefreshTokenWithinIdleWindow_RotatesTokenAndUpdatesLastUsedAt()
+    {
+        await using var testContext = await AuthServiceTestFactory.CreateAsync();
+        testContext.SettingsService.SessionSecurity = new SessionSecuritySettings(30, 30, 30, 6, 7, true);
+        await SeedActiveLdapSettingAsync(testContext.DbContext);
+        var user = await SeedPortalUserWithRolePermissionAsync(testContext.DbContext);
+        testContext.LdapService.ValidateResult = new LdapValidationResult(true, "ok");
+        testContext.LdapService.UserProfileResult = CreateLdapProfile(user.DirectoryObjectId, user.UserName);
+
+        var loginResult = await testContext.AuthService.LoginAsync(
+            new LoginRequest(user.UserName, "password", IpAddress, UserAgent, RememberMe: true));
+        Assert.True(loginResult.IsSuccess);
+
+        var issued = await testContext.DbContext.RefreshTokens.SingleAsync();
+        var absoluteExpiry = issued.ExpiresAt;
+        var originalLastUsedAt = DateTime.UtcNow.AddMinutes(-5);
+        issued.LastUsedAt = originalLastUsedAt;
+        await testContext.DbContext.SaveChangesAsync();
+
+        var refreshStart = DateTime.UtcNow;
+        var refreshResult = await testContext.AuthService.RefreshTokenAsync(
+            new RefreshTokenRequest("refresh-token-0", IpAddress, UserAgent));
+
+        Assert.True(refreshResult.IsSuccess);
+        Assert.Null(refreshResult.ErrorCode);
+        Assert.Equal(absoluteExpiry, refreshResult.RefreshTokenExpiresAt);
+
+        var active = await testContext.DbContext.RefreshTokens
+            .AsNoTracking()
+            .SingleAsync(x => x.RevokedAt == null);
+        Assert.Equal(absoluteExpiry, active.ExpiresAt);
+        Assert.True(active.IsPersistent);
+        Assert.InRange(active.LastUsedAt, refreshStart.AddSeconds(-1), DateTime.UtcNow.AddSeconds(1));
+    }
+
+    [Fact]
     public async Task RefreshTokenAsync_PreservesIsPersistentAndAbsoluteExpiry_AndSetsLastUsedAtOnNewToken()
     {
         await using var testContext = await AuthServiceTestFactory.CreateAsync();

@@ -19,7 +19,11 @@ public sealed class AuthController(IAuthService authService, ISettingsService se
     public async Task<ActionResult<AuthSessionOptionsResponse>> GetSessionOptions(CancellationToken cancellationToken)
     {
         var options = await settingsService.GetAuthSessionOptionsAsync(cancellationToken);
-        return Ok(new AuthSessionOptionsResponse(options.RememberMeEnabled));
+        return Ok(new AuthSessionOptionsResponse(
+            options.RememberMeEnabled,
+            options.IdleTimeoutMinutes,
+            options.IdleWarningSeconds,
+            options.AccessTokenMinutes));
     }
 
     [HttpPost("login")]
@@ -87,7 +91,8 @@ public sealed class AuthController(IAuthService authService, ISettingsService se
             result.AccessToken,
             result.RefreshToken,
             result.AccessTokenExpiresAt,
-            result.RefreshTokenExpiresAt);
+            result.RefreshTokenExpiresAt,
+            result.ErrorCode);
 
         if (result.IsSuccess)
         {

@@ -467,6 +467,42 @@ public sealed class SettingsServiceTests
     }
 
     [Fact]
+    public async Task GetAuthSessionOptionsAsync_ReturnsDefaults_WhenNoSecurityRows()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext);
+
+        var options = await service.GetAuthSessionOptionsAsync();
+
+        Assert.True(options.RememberMeEnabled);
+        Assert.Equal(30, options.IdleTimeoutMinutes);
+        Assert.Equal(30, options.IdleWarningSeconds);
+        Assert.Equal(30, options.AccessTokenMinutes);
+    }
+
+    [Fact]
+    public async Task GetAuthSessionOptionsAsync_ReturnsConfiguredIdleSettings()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext);
+
+        var request = CreateSessionSecurityRequest(
+            accessTokenMinutes: 45,
+            idleTimeoutMinutes: 15,
+            idleWarningSeconds: 60,
+            rememberMeEnabled: false);
+        var updateResult = await service.UpdateSessionSecuritySettingsAsync(request);
+        Assert.True(updateResult.IsSuccess);
+
+        var options = await service.GetAuthSessionOptionsAsync();
+
+        Assert.False(options.RememberMeEnabled);
+        Assert.Equal(15, options.IdleTimeoutMinutes);
+        Assert.Equal(60, options.IdleWarningSeconds);
+        Assert.Equal(45, options.AccessTokenMinutes);
+    }
+
+    [Fact]
     public async Task UpdateSessionSecuritySettingsAsync_WhenSecurityRowsMissingAndValuesAreDefaults_UpsertsRows()
     {
         await using var dbContext = CreateDbContext();

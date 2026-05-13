@@ -6,6 +6,9 @@ export type LoginRequest = {
 
 export type AuthSessionOptions = {
   rememberMeEnabled: boolean;
+  idleTimeoutMinutes: number;
+  idleWarningSeconds: number;
+  accessTokenMinutes: number;
 };
 
 export type LoginResponse = {
@@ -29,6 +32,7 @@ export type RefreshTokenResponse = {
   refreshToken: string;
   accessTokenExpiresAt: string;
   refreshTokenExpiresAt: string;
+  errorCode?: string | null;
 };
 
 export type LogoutRequest = {

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { LayoutShellProvider } from "@/components/layout/layout-shell";
+import { IdleSessionManager } from "@/features/auth/components/IdleSessionManager";
 
 type AppLayoutProps = {
   children: ReactNode;
@@ -20,6 +21,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           </main>
         </div>
       </div>
+      <IdleSessionManager />
     </LayoutShellProvider>
   );
 }

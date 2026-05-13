@@ -23,8 +23,8 @@ import { useBrandingSettings } from "@/hooks/useBrandingSettings";
 import { useReadinessStatus } from "@/hooks/useReadinessStatus";
 import { resolveApiAssetUrl } from "@/lib/api-client";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 const SERVICE_UNAVAILABLE_ERROR_CODE = "ServiceUnavailable";
@@ -54,10 +54,15 @@ const shouldClearAuthAfterLoginFailure = (error: unknown): boolean => {
   return true;
 };
 
+type LoginLocationState = {
+  reason?: string;
+};
+
 export function LoginPage() {
   const { t } = useTranslation(["auth", "common"]);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const location = useLocation();
   const setTokens = useAuthStore((state) => state.setTokens);
   const setUser = useAuthStore((state) => state.setUser);
   const clearAuth = useAuthStore((state) => state.clearAuth);
@@ -66,6 +71,23 @@ export function LoginPage() {
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // Read the reason once during initial render so we can show a one-shot idle-timeout notice
+  // without calling setState in an effect.
+  const [idleExpiredMessage] = useState<string | null>(() => {
+    const state = location.state as LoginLocationState | null;
+    return state?.reason === "idleTimeout"
+      ? t("auth:sessionTimeout.expiredMessage")
+      : null;
+  });
+
+  useEffect(() => {
+    const state = location.state as LoginLocationState | null;
+    if (state?.reason === "idleTimeout") {
+      navigate(location.pathname, { replace: true, state: null });
+    }
+    // We only care about cleaning up the router state once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const readiness = useReadinessStatus();
   const sessionOptionsQuery = useQuery({
     queryKey: ["auth", "session-options"],
@@ -193,6 +215,12 @@ export function LoginPage() {
           </CardHeader>
           <CardContent>
             <form className="space-y-4" onSubmit={onSubmit}>
+              {idleExpiredMessage ? (
+                <Alert>
+                  <AlertDescription>{idleExpiredMessage}</AlertDescription>
+                </Alert>
+              ) : null}
+
               {readiness.isPending ? (
                 <p className="text-xs text-muted-foreground">
                   {t("login.serviceCheckInProgress")}
