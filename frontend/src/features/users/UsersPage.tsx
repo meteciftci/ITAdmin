@@ -5,8 +5,8 @@ import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { DateTimeText } from "@/components/common/DateTimeText";
 import { DataToolbar } from "@/components/common/DataToolbar";
+import { ApiErrorState } from "@/components/common/ApiErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
-import { ErrorState } from "@/components/common/ErrorState";
 import { LoadingState } from "@/components/common/LoadingState";
 import { RowActions } from "@/components/common/RowActions";
 import { RoleBadgeList } from "@/components/common/RoleBadgeList";
@@ -164,9 +164,10 @@ export function UsersPage() {
           {usersQuery.isLoading ? <LoadingState /> : null}
 
           {usersQuery.isError ? (
-            <ErrorState
-              title={t("users:errors.loadFailed")}
-              description={getApiErrorMessage(usersQuery.error, t("users:errors.loadFailed"))}
+            <ApiErrorState
+              error={usersQuery.error}
+              fallbackTitle={t("users:errors.loadFailed")}
+              fallbackDescription={t("users:errors.loadFailed")}
               retry={
                 <Button variant="outline" onClick={handleRefresh}>
                   {t("common:actions.refresh")}

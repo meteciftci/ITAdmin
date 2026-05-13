@@ -10,7 +10,39 @@
     },
     "generic": "An unexpected error occurred.",
     "goBack": "Go back",
-    "goDashboard": "Go to dashboard"
+    "goDashboard": "Go to dashboard",
+    "api": {
+      "network": {
+        "title": "API service cannot be reached",
+        "description": "The server could not be reached. Please check the network connection and API service status."
+      },
+      "serviceUnavailable": {
+        "title": "Service temporarily unavailable",
+        "description": "The requested data cannot be loaded right now. Please try again later or share the error code with the system administrator."
+      },
+      "unauthorized": {
+        "title": "Session invalid",
+        "description": "Your session is invalid or has expired. Please sign in again."
+      },
+      "forbidden": {
+        "title": "Access denied",
+        "description": "You do not have permission to perform this operation."
+      },
+      "server": {
+        "title": "Unexpected service error",
+        "description": "The server could not complete the operation. Please try again later or share the error code with the system administrator."
+      },
+      "validation": {
+        "title": "Request validation failed",
+        "description": "The submitted information is not valid. Please check the fields and try again."
+      },
+      "unknown": {
+        "title": "Something went wrong",
+        "description": "The operation could not be completed. Please try again or share the error code with the system administrator."
+      },
+      "errorCode": "Error code",
+      "traceId": "Trace ID"
+    }
   }
 }
 

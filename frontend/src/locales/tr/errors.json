@@ -10,7 +10,39 @@
     },
     "generic": "Beklenmeyen bir hata oluştu.",
     "goBack": "Geri dön",
-    "goDashboard": "Dashboard'a git"
+    "goDashboard": "Dashboard'a git",
+    "api": {
+      "network": {
+        "title": "API servisine ulaşılamıyor",
+        "description": "Sunucuya erişilemiyor. Lütfen ağ bağlantınızı ve API servisinin çalıştığını kontrol edin."
+      },
+      "serviceUnavailable": {
+        "title": "Servis geçici olarak kullanılamıyor",
+        "description": "İstenen veri şu anda alınamıyor. Lütfen daha sonra tekrar deneyin veya sistem yöneticisine hata kodunu iletin."
+      },
+      "unauthorized": {
+        "title": "Oturum geçersiz",
+        "description": "Oturumunuz geçersiz veya süresi dolmuş. Lütfen tekrar giriş yapın."
+      },
+      "forbidden": {
+        "title": "Yetkiniz yok",
+        "description": "Bu işlem için gerekli yetkiye sahip değilsiniz."
+      },
+      "server": {
+        "title": "Beklenmeyen servis hatası",
+        "description": "Sunucu işlemi tamamlayamadı. Lütfen daha sonra tekrar deneyin veya sistem yöneticisine hata kodunu iletin."
+      },
+      "validation": {
+        "title": "İstek doğrulanamadı",
+        "description": "Gönderilen bilgiler geçerli değil. Lütfen alanları kontrol edin."
+      },
+      "unknown": {
+        "title": "Bir hata oluştu",
+        "description": "İşlem tamamlanamadı. Lütfen tekrar deneyin veya sistem yöneticisine hata kodunu iletin."
+      },
+      "errorCode": "Hata kodu",
+      "traceId": "İzleme kodu"
+    }
   }
 }
 
