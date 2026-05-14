@@ -63,11 +63,6 @@ export const uploadBrandingLogo = async (
   const { data } = await apiClient.post<BrandingLogoUploadResponse>(
     "/settings/branding/logo",
     formData,
-    {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    },
   );
 
   return data;
@@ -82,11 +77,6 @@ export const uploadBrandingFavicon = async (
   const { data } = await apiClient.post<BrandingFaviconUploadResponse>(
     "/settings/branding/favicon",
     formData,
-    {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    },
   );
 
   return data;

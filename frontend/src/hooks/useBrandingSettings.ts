@@ -10,7 +10,7 @@ const DEFAULT_BRANDING: BrandingSettings = {
   browserTitle: "SAS Portal v2",
   logoUrl: null,
   faviconUrl: "/favicon.svg",
-  forgotPasswordUrl: "https://sifre.mugla.bel.tr",
+  forgotPasswordUrl: null,
 };
 
 export function useBrandingSettings() {
