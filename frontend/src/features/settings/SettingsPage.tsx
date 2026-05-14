@@ -28,11 +28,10 @@ import {
   AUTH_SESSION_OPTIONS_QUERY_KEY,
   DEFAULT_SESSION_SECURITY,
   DEFAULT_TAB,
-  MAX_FAVICON_BYTES,
-  MAX_LOGO_BYTES,
   SETTINGS_QUERY_KEY,
   type SettingsTabValue,
 } from "@/features/settings/settings-constants";
+import { useBrandingAssetSettingsForm } from "@/features/settings/hooks/useBrandingAssetSettingsForm";
 import { useBrandingSettingsForm } from "@/features/settings/hooks/useBrandingSettingsForm";
 import { useDirectorySettingsForm } from "@/features/settings/hooks/useDirectorySettingsForm";
 import { useLdapSettingsForm } from "@/features/settings/hooks/useLdapSettingsForm";
@@ -91,15 +90,22 @@ export function SettingsPage() {
     buildBrandingPayload,
   } = useBrandingSettingsForm({ t });
 
+  const {
+    brandingLogoUrl,
+    logoFile,
+    logoPreviewUrl,
+    selectedLogoFileName,
+    brandingFaviconUrl,
+    faviconFile,
+    faviconPreviewUrl,
+    selectedFaviconFileName,
+    hydrateAssetUrlsFromBranding,
+    handleLogoSelect,
+    handleFaviconSelect,
+    resetSelectedAssetsAfterSave,
+  } = useBrandingAssetSettingsForm({ t });
+
   const [activeTab, setActiveTab] = useState<SettingsTabValue>(DEFAULT_TAB);
-  const [brandingLogoUrl, setBrandingLogoUrl] = useState<string | null>(null);
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
-  const [selectedLogoFileName, setSelectedLogoFileName] = useState<string | null>(null);
-  const [brandingFaviconUrl, setBrandingFaviconUrl] = useState<string | null>(null);
-  const [faviconFile, setFaviconFile] = useState<File | null>(null);
-  const [faviconPreviewUrl, setFaviconPreviewUrl] = useState<string | null>(null);
-  const [selectedFaviconFileName, setSelectedFaviconFileName] = useState<string | null>(null);
 
   const settingsQuery = useQuery({
     queryKey: SETTINGS_QUERY_KEY,
@@ -112,36 +118,17 @@ export function SettingsPage() {
     if (!settingsQuery.data) return;
     const ldap = settingsQuery.data.ldap;
 
-    /* eslint-disable react-hooks/set-state-in-effect -- bulk hydrate local UI from settings query snapshot */
     hydrateFromSettings(ldap);
     hydrateFromApplicationSettings(settingsQuery.data.applicationSettings);
     hydrateFromBranding(settingsQuery.data.branding);
-    setBrandingLogoUrl(settingsQuery.data.branding.logoUrl ?? null);
-    setLogoFile(null);
-    setLogoPreviewUrl(null);
-    setSelectedLogoFileName(null);
-    setBrandingFaviconUrl(settingsQuery.data.branding.faviconUrl ?? null);
-    setFaviconFile(null);
-    setFaviconPreviewUrl(null);
-    setSelectedFaviconFileName(null);
-    /* eslint-enable react-hooks/set-state-in-effect */
-  }, [settingsQuery.data, hydrateFromApplicationSettings, hydrateFromBranding, hydrateFromSettings]);
-
-  useEffect(() => {
-    return () => {
-      if (logoPreviewUrl) {
-        URL.revokeObjectURL(logoPreviewUrl);
-      }
-    };
-  }, [logoPreviewUrl]);
-
-  useEffect(() => {
-    return () => {
-      if (faviconPreviewUrl) {
-        URL.revokeObjectURL(faviconPreviewUrl);
-      }
-    };
-  }, [faviconPreviewUrl]);
+    hydrateAssetUrlsFromBranding(settingsQuery.data.branding);
+  }, [
+    settingsQuery.data,
+    hydrateAssetUrlsFromBranding,
+    hydrateFromApplicationSettings,
+    hydrateFromBranding,
+    hydrateFromSettings,
+  ]);
 
   const updateLdapMutation = useMutation({
     mutationFn: updateLdapSettings,
@@ -167,18 +154,7 @@ export function SettingsPage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: SETTINGS_QUERY_KEY });
       await queryClient.invalidateQueries({ queryKey: BRANDING_QUERY_KEY });
-      if (logoPreviewUrl) {
-        URL.revokeObjectURL(logoPreviewUrl);
-      }
-      setLogoFile(null);
-      setLogoPreviewUrl(null);
-      setSelectedLogoFileName(null);
-      if (faviconPreviewUrl) {
-        URL.revokeObjectURL(faviconPreviewUrl);
-      }
-      setFaviconFile(null);
-      setFaviconPreviewUrl(null);
-      setSelectedFaviconFileName(null);
+      resetSelectedAssetsAfterSave();
       clearBrandingError();
       clearForgotPasswordUrlError();
       toast.success(t("settings:application.messages.saveSuccess"));
@@ -282,124 +258,6 @@ export function SettingsPage() {
     }
 
     return t(mappedKey);
-  };
-
-  const validateLogoFile = async (file: File): Promise<boolean> => {
-    const extension = file.name.split(".").pop()?.toLowerCase();
-    if (!extension || !["png", "jpg", "jpeg"].includes(extension)) {
-      toast.error(t("settings:application.validation.logoType"));
-      return false;
-    }
-
-    if (file.size > MAX_LOGO_BYTES) {
-      toast.error(t("settings:application.validation.logoSize"));
-      return false;
-    }
-
-    const objectUrl = URL.createObjectURL(file);
-    const dimensionsValid = await new Promise<boolean>((resolve) => {
-      const image = new Image();
-      image.onload = () => {
-        const ok =
-          image.naturalWidth >= 32 &&
-          image.naturalHeight >= 32 &&
-          image.naturalWidth <= 512 &&
-          image.naturalHeight <= 512;
-        resolve(ok);
-      };
-      image.onerror = () => resolve(false);
-      image.src = objectUrl;
-    });
-    URL.revokeObjectURL(objectUrl);
-
-    if (!dimensionsValid) {
-      toast.error(t("settings:application.validation.logoDimensions"));
-      return false;
-    }
-
-    return true;
-  };
-
-  const handleLogoSelect = async (file: File | null) => {
-    if (!file) {
-      setSelectedLogoFileName(null);
-      return;
-    }
-
-    const valid = await validateLogoFile(file);
-    if (!valid) {
-      setSelectedLogoFileName(null);
-      return;
-    }
-
-    if (logoPreviewUrl) {
-      URL.revokeObjectURL(logoPreviewUrl);
-    }
-
-    setLogoFile(file);
-    setLogoPreviewUrl(URL.createObjectURL(file));
-    setSelectedLogoFileName(file.name);
-  };
-
-  const validateFaviconFile = async (file: File): Promise<boolean> => {
-    const extension = file.name.split(".").pop()?.toLowerCase();
-    if (!extension || !["png", "jpg", "jpeg", "ico"].includes(extension)) {
-      toast.error(t("settings:application.validation.faviconType"));
-      return false;
-    }
-
-    if (file.size > MAX_FAVICON_BYTES) {
-      toast.error(t("settings:application.validation.faviconSize"));
-      return false;
-    }
-
-    if (extension === "ico") {
-      return true;
-    }
-
-    const objectUrl = URL.createObjectURL(file);
-    const dimensionsValid = await new Promise<boolean>((resolve) => {
-      const image = new Image();
-      image.onload = () => {
-        const ok =
-          image.naturalWidth >= 16 &&
-          image.naturalHeight >= 16 &&
-          image.naturalWidth <= 512 &&
-          image.naturalHeight <= 512;
-        resolve(ok);
-      };
-      image.onerror = () => resolve(false);
-      image.src = objectUrl;
-    });
-    URL.revokeObjectURL(objectUrl);
-
-    if (!dimensionsValid) {
-      toast.error(t("settings:application.validation.faviconDimensions"));
-      return false;
-    }
-
-    return true;
-  };
-
-  const handleFaviconSelect = async (file: File | null) => {
-    if (!file) {
-      setSelectedFaviconFileName(null);
-      return;
-    }
-
-    const valid = await validateFaviconFile(file);
-    if (!valid) {
-      setSelectedFaviconFileName(null);
-      return;
-    }
-
-    if (faviconPreviewUrl) {
-      URL.revokeObjectURL(faviconPreviewUrl);
-    }
-
-    setFaviconFile(file);
-    setFaviconPreviewUrl(URL.createObjectURL(file));
-    setSelectedFaviconFileName(file.name);
   };
 
   const handleBrandingSave = async () => {
