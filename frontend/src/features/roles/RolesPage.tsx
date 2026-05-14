@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Navigate } from "react-router-dom";
 
@@ -61,11 +63,16 @@ export function RolesPage() {
     useState<RoleListItem | null>(null);
   const [confirmTarget, setConfirmTarget] = useState<RoleListItem | null>(null);
 
+  const debouncedSearch = useDebouncedValue(search, 400);
+  const normalizedSearch = debouncedSearch.trim();
+  const effectiveSearch =
+    normalizedSearch.length >= 3 ? normalizedSearch : undefined;
+
   const rolesQuery = useQuery({
-    queryKey: ["roles", "list", search, statusFilter, typeFilter, pageNumber, pageSize],
+    queryKey: ["roles", "list", effectiveSearch, statusFilter, typeFilter, pageNumber, pageSize],
     queryFn: () =>
       getRoles({
-        search: search.trim() || undefined,
+        search: effectiveSearch,
         isActive:
           statusFilter === "all"
             ? undefined

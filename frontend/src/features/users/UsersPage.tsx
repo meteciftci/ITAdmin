@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Navigate } from "react-router-dom";
 
@@ -52,11 +54,16 @@ export function UsersPage() {
     useState<UserListItem | null>(null);
   const [confirmTarget, setConfirmTarget] = useState<UserListItem | null>(null);
 
+  const debouncedSearch = useDebouncedValue(search, 400);
+  const normalizedSearch = debouncedSearch.trim();
+  const effectiveSearch =
+    normalizedSearch.length >= 3 ? normalizedSearch : undefined;
+
   const usersQuery = useQuery({
-    queryKey: ["users", "list", search, statusFilter, pageNumber, pageSize],
+    queryKey: ["users", "list", effectiveSearch, statusFilter, pageNumber, pageSize],
     queryFn: () =>
       getUsers({
-        search: search.trim() || undefined,
+        search: effectiveSearch,
         isActive:
           statusFilter === "all"
             ? undefined

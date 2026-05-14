@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import type { DateRange } from "react-day-picker";
 import { useQuery } from "@tanstack/react-query";
 import { Navigate } from "react-router-dom";
@@ -35,11 +37,16 @@ export function AuditLogsPage() {
   const to = dateRange?.to ? toUtcEndOfLocalDay(dateRange.to) : undefined;
   const calendarLocale = i18n.language.startsWith("tr") ? "tr" : "en";
 
+  const debouncedSearch = useDebouncedValue(search, 400);
+  const normalizedSearch = debouncedSearch.trim();
+  const effectiveSearch =
+    normalizedSearch.length >= 3 ? normalizedSearch : undefined;
+
   const auditLogsQuery = useQuery({
     queryKey: [
       "audit-logs",
       "list",
-      search,
+      effectiveSearch,
       selectedActions,
       selectedEntityNames,
       from,
@@ -49,7 +56,7 @@ export function AuditLogsPage() {
     ],
     queryFn: () =>
       getAuditLogs({
-        search: search.trim() || undefined,
+        search: effectiveSearch,
         actions: selectedActions,
         entityNames: selectedEntityNames,
         from,

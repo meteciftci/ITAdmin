@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useQuery } from "@tanstack/react-query";
 import { Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -30,11 +32,16 @@ export function PermissionsPage() {
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
+  const debouncedSearch = useDebouncedValue(search, 400);
+  const normalizedSearch = debouncedSearch.trim();
+  const effectiveSearch =
+    normalizedSearch.length >= 3 ? normalizedSearch : undefined;
+
   const permissionsQuery = useQuery({
-    queryKey: ["permissions", "list", search, statusFilter, pageNumber, pageSize],
+    queryKey: ["permissions", "list", effectiveSearch, statusFilter, pageNumber, pageSize],
     queryFn: () =>
       getPermissions({
-        search: search.trim() || undefined,
+        search: effectiveSearch,
         isActive:
           statusFilter === "all"
             ? undefined
