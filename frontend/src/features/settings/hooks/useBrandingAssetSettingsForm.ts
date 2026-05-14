@@ -28,7 +28,6 @@ export type UseBrandingAssetSettingsFormReturn = {
   handleLogoSelect: (file: File | null) => Promise<void>;
   handleFaviconSelect: (file: File | null) => Promise<void>;
   resetSelectedAssetsAfterSave: () => void;
-  clearSelectedAssets: () => void;
 };
 
 async function validateLogoFile(
@@ -248,6 +247,5 @@ export function useBrandingAssetSettingsForm({
     handleLogoSelect,
     handleFaviconSelect,
     resetSelectedAssetsAfterSave,
-    clearSelectedAssets,
   };
 }

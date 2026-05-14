@@ -27,7 +27,6 @@ export type UseLdapSettingsSaveReturn = {
   saveLdapSettings: () => Promise<void>;
   canSaveLdap: boolean;
   isSavingLdap: boolean;
-  isValidatingLdap: boolean;
 };
 
 function getLocalizedLdapValidationMessage(
@@ -152,6 +151,5 @@ export function useLdapSettingsSave({
     saveLdapSettings,
     canSaveLdap,
     isSavingLdap: updateLdapMutation.isPending,
-    isValidatingLdap: validateLdapMutation.isPending,
   };
 }
