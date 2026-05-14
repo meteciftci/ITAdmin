@@ -7,8 +7,8 @@
       "system": "Sistem"
     },
     "items": {
-      "home": "Ana Sayfa",
-      "dashboard": "Kontrol Paneli",
+      "home": "Anasayfa",
+      "dashboard": "Anasayfa",
       "users": "Kullanıcılar",
       "roles": "Roller",
       "permissions": "İzinler",

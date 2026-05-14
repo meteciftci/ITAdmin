@@ -8,7 +8,7 @@
     },
     "items": {
       "home": "Home",
-      "dashboard": "Dashboard",
+      "dashboard": "Home",
       "users": "Users",
       "roles": "Roles",
       "permissions": "Permissions",

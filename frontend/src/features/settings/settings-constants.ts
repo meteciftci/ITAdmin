@@ -15,7 +15,7 @@ export const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 export const MAX_FAVICON_BYTES = 512 * 1024;
 
 export type SettingsTabValue = "ldap" | "branding" | "directory" | "sessionSecurity";
-export const DEFAULT_TAB: SettingsTabValue = "ldap";
+export const DEFAULT_TAB: SettingsTabValue = "branding";
 
 export const DEFAULT_SESSION_SECURITY: SessionSecuritySettings = {
   accessTokenMinutes: 30,

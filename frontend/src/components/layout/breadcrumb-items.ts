@@ -4,7 +4,6 @@ export type BreadcrumbItem = {
 };
 
 const breadcrumbItems: BreadcrumbItem[] = [
-  { to: "/dashboard", titleKey: "items.dashboard" },
   { to: "/users", titleKey: "items.users" },
   { to: "/roles", titleKey: "items.roles" },
   { to: "/permissions", titleKey: "items.permissions" },

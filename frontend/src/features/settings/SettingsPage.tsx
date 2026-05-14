@@ -33,13 +33,13 @@ import {
   BRANDING_LOGO_URL_KEY,
   DEFAULT_SESSION_SECURITY,
   DEFAULT_TAB,
-  DIRECTORY_NATIONAL_ID_ATTRIBUTE_KEY,
   MAX_FAVICON_BYTES,
   MAX_LOGO_BYTES,
   SETTING_VALUE_TYPE_STRING,
   SETTINGS_QUERY_KEY,
   type SettingsTabValue,
 } from "@/features/settings/settings-constants";
+import { useDirectorySettingsForm } from "@/features/settings/hooks/useDirectorySettingsForm";
 import { useLdapSettingsForm } from "@/features/settings/hooks/useLdapSettingsForm";
 import { sessionSecurityFingerprint } from "@/features/settings/settings-utils";
 import { getApiErrorMessage } from "@/lib/api-error";
@@ -70,8 +70,16 @@ export function SettingsPage() {
     clearBindPasswordAfterSave,
   } = useLdapSettingsForm({ t });
 
+  const {
+    nationalIdAttribute,
+    directoryError,
+    hydrateFromApplicationSettings,
+    updateNationalIdAttribute,
+    clearDirectoryError,
+    buildDirectoryPayload,
+  } = useDirectorySettingsForm();
+
   const [activeTab, setActiveTab] = useState<SettingsTabValue>(DEFAULT_TAB);
-  const [nationalIdAttribute, setNationalIdAttribute] = useState("");
   const [brandingApplicationName, setBrandingApplicationName] = useState("SAS Portal v2");
   const [brandingBrowserTitle, setBrandingBrowserTitle] = useState("SAS Portal v2");
   const [brandingLogoUrl, setBrandingLogoUrl] = useState<string | null>(null);
@@ -85,7 +93,6 @@ export function SettingsPage() {
   const [forgotPasswordUrl, setForgotPasswordUrl] = useState("");
   const [forgotPasswordUrlError, setForgotPasswordUrlError] = useState<string | undefined>(undefined);
   const [brandingError, setBrandingError] = useState<string | undefined>(undefined);
-  const [directoryError, setDirectoryError] = useState<string | undefined>(undefined);
 
   const settingsQuery = useQuery({
     queryKey: SETTINGS_QUERY_KEY,
@@ -97,13 +104,10 @@ export function SettingsPage() {
   useEffect(() => {
     if (!settingsQuery.data) return;
     const ldap = settingsQuery.data.ldap;
-    const directorySetting = settingsQuery.data.applicationSettings.find(
-      (item) => item.key === DIRECTORY_NATIONAL_ID_ATTRIBUTE_KEY,
-    );
 
     /* eslint-disable react-hooks/set-state-in-effect -- bulk hydrate local UI from settings query snapshot */
     hydrateFromSettings(ldap);
-    setNationalIdAttribute(directorySetting?.value ?? "");
+    hydrateFromApplicationSettings(settingsQuery.data.applicationSettings);
     setBrandingApplicationName(settingsQuery.data.branding.applicationName ?? "SAS Portal v2");
     setBrandingBrowserTitle(settingsQuery.data.branding.browserTitle ?? "SAS Portal v2");
     setBrandingLogoUrl(settingsQuery.data.branding.logoUrl ?? null);
@@ -117,9 +121,8 @@ export function SettingsPage() {
     setForgotPasswordUrl(settingsQuery.data.branding.forgotPasswordUrl ?? "");
     setForgotPasswordUrlError(undefined);
     setBrandingError(undefined);
-    setDirectoryError(undefined);
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, [settingsQuery.data, hydrateFromSettings]);
+  }, [settingsQuery.data, hydrateFromApplicationSettings, hydrateFromSettings]);
 
   useEffect(() => {
     return () => {
@@ -186,7 +189,7 @@ export function SettingsPage() {
     mutationFn: updateApplicationSettings,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: SETTINGS_QUERY_KEY });
-      setDirectoryError(undefined);
+      clearDirectoryError();
       toast.success(t("settings:directory.messages.saveSuccess"));
     },
     onError: (error) => {
@@ -485,17 +488,9 @@ export function SettingsPage() {
 
   const handleDirectorySave = () => {
     if (!canUpdate) return;
-    setDirectoryError(undefined);
+    clearDirectoryError();
 
-    updateDirectoryMutation.mutate({
-      items: [
-        {
-          key: DIRECTORY_NATIONAL_ID_ATTRIBUTE_KEY,
-          value: nationalIdAttribute.trim() || null,
-          valueType: SETTING_VALUE_TYPE_STRING,
-        },
-      ],
-    });
+    updateDirectoryMutation.mutate(buildDirectoryPayload());
   };
 
   const handleSessionSecuritySubmit = (payload: SessionSecuritySettings) => {
@@ -544,26 +539,11 @@ export function SettingsPage() {
 
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as SettingsTabValue)}>
         <TabsList className="grid w-full grid-cols-1 sm:grid-cols-4">
-          <TabsTrigger value="ldap">{t("settings:tabs.ldap")}</TabsTrigger>
           <TabsTrigger value="branding">{t("settings:tabs.branding")}</TabsTrigger>
-          <TabsTrigger value="directory">{t("settings:tabs.directory")}</TabsTrigger>
           <TabsTrigger value="sessionSecurity">{t("settings:tabs.sessionSecurity")}</TabsTrigger>
+          <TabsTrigger value="ldap">{t("settings:tabs.ldap")}</TabsTrigger>
+          <TabsTrigger value="directory">{t("settings:tabs.directory")}</TabsTrigger>
         </TabsList>
-
-        <TabsContent value="ldap">
-          <SectionCard>
-            <LdapSettingsForm
-              values={ldapForm}
-              fieldErrors={ldapFieldErrors}
-              hasBindPassword={hasBindPassword}
-              readOnly={isReadOnly}
-              savePending={updateLdapMutation.isPending}
-              canSave={canSaveLdap}
-              onChange={updateField}
-              onSave={handleLdapSave}
-            />
-          </SectionCard>
-        </TabsContent>
 
         <TabsContent value="branding">
           <SectionCard>
@@ -600,22 +580,6 @@ export function SettingsPage() {
           </SectionCard>
         </TabsContent>
 
-        <TabsContent value="directory">
-          <SectionCard>
-            <DirectorySettingsForm
-              nationalIdAttribute={nationalIdAttribute}
-              readOnly={isReadOnly}
-              isSaving={updateDirectoryMutation.isPending}
-              errorMessage={directoryError}
-              onNationalIdAttributeChange={(value) => {
-                setDirectoryError(undefined);
-                setNationalIdAttribute(value);
-              }}
-              onSave={handleDirectorySave}
-            />
-          </SectionCard>
-        </TabsContent>
-
         <TabsContent value="sessionSecurity">
           <SectionCard>
             {settingsQuery.data ? (
@@ -631,6 +595,37 @@ export function SettingsPage() {
                 onSubmit={handleSessionSecuritySubmit}
               />
             ) : null}
+          </SectionCard>
+        </TabsContent>
+
+        <TabsContent value="ldap">
+          <SectionCard>
+            <LdapSettingsForm
+              values={ldapForm}
+              fieldErrors={ldapFieldErrors}
+              hasBindPassword={hasBindPassword}
+              readOnly={isReadOnly}
+              savePending={updateLdapMutation.isPending}
+              canSave={canSaveLdap}
+              onChange={updateField}
+              onSave={handleLdapSave}
+            />
+          </SectionCard>
+        </TabsContent>
+
+        <TabsContent value="directory">
+          <SectionCard>
+            <DirectorySettingsForm
+              nationalIdAttribute={nationalIdAttribute}
+              readOnly={isReadOnly}
+              isSaving={updateDirectoryMutation.isPending}
+              errorMessage={directoryError}
+              onNationalIdAttributeChange={(value) => {
+                clearDirectoryError();
+                updateNationalIdAttribute(value);
+              }}
+              onSave={handleDirectorySave}
+            />
           </SectionCard>
         </TabsContent>
       </Tabs>
