@@ -142,10 +142,6 @@ export function SessionSecuritySettingsForm({
 
   return (
     <div className="space-y-3">
-      <p className="border-l-2 border-muted-foreground/25 pl-3 text-[11px] leading-snug text-muted-foreground">
-        {t("settings:sessionSecurity.futureNote")}
-      </p>
-
       <div className="grid gap-3 md:grid-cols-2">
         {field("sessionDurationMinutes", "minutes")}
         {field("idleWarningSeconds", "seconds")}

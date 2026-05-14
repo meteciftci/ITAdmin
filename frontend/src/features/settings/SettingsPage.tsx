@@ -22,10 +22,7 @@ import {
 import {
   DirectorySettingsForm,
 } from "@/features/settings/components/DirectorySettingsForm";
-import {
-  LdapSettingsForm,
-  type LdapFormValues,
-} from "@/features/settings/components/LdapSettingsForm";
+import { LdapSettingsForm } from "@/features/settings/components/LdapSettingsForm";
 import { SessionSecuritySettingsForm } from "@/features/settings/components/SessionSecuritySettingsForm";
 import {
   AUTH_SESSION_OPTIONS_QUERY_KEY,
@@ -43,18 +40,15 @@ import {
   SETTINGS_QUERY_KEY,
   type SettingsTabValue,
 } from "@/features/settings/settings-constants";
-import { createEmptyLdapForm, sessionSecurityFingerprint } from "@/features/settings/settings-utils";
+import { useLdapSettingsForm } from "@/features/settings/hooks/useLdapSettingsForm";
+import { sessionSecurityFingerprint } from "@/features/settings/settings-utils";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { createApiErrorRouteState, getErrorRoutePath } from "@/lib/route-error";
 import { canAccess } from "@/lib/permissions";
 import { BRANDING_QUERY_KEY } from "@/hooks/useBrandingSettings";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import type {
-  SessionSecuritySettings,
-  UpdateLdapSettingsRequest,
-  ValidateLdapSettingsRequest,
-} from "@/features/settings/types";
+import type { SessionSecuritySettings } from "@/features/settings/types";
 
 export function SettingsPage() {
   const { t } = useTranslation(["settings", "common"]);
@@ -63,12 +57,20 @@ export function SettingsPage() {
   const canUpdate = canAccess(currentUser, "Settings.Update");
   const isReadOnly = !canUpdate;
 
+  const {
+    ldapForm,
+    ldapFieldErrors,
+    hasBindPassword,
+    hydrateFromSettings,
+    updateField,
+    validateLdapForm,
+    buildLdapPayload,
+    buildLdapValidatePayload,
+    ldapFormIsMinimumValid,
+    clearBindPasswordAfterSave,
+  } = useLdapSettingsForm({ t });
+
   const [activeTab, setActiveTab] = useState<SettingsTabValue>(DEFAULT_TAB);
-  const [ldapForm, setLdapForm] = useState<LdapFormValues>(createEmptyLdapForm);
-  const [ldapFieldErrors, setLdapFieldErrors] = useState<
-    Partial<Record<keyof LdapFormValues, string>>
-  >({});
-  const [hasBindPassword, setHasBindPassword] = useState(false);
   const [nationalIdAttribute, setNationalIdAttribute] = useState("");
   const [brandingApplicationName, setBrandingApplicationName] = useState("SAS Portal v2");
   const [brandingBrowserTitle, setBrandingBrowserTitle] = useState("SAS Portal v2");
@@ -99,22 +101,8 @@ export function SettingsPage() {
       (item) => item.key === DIRECTORY_NATIONAL_ID_ATTRIBUTE_KEY,
     );
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLdapForm({
-      name: ldap?.name ?? "",
-      host: ldap?.host ?? "",
-      port: ldap?.port ? String(ldap.port) : "389",
-      useSsl: ldap?.useSsl ?? false,
-      baseDn: ldap?.baseDn ?? "",
-      userSearchBase: ldap?.userSearchBase ?? "",
-      userSearchFilter: ldap?.userSearchFilter ?? "",
-      bindUserName: ldap?.bindUserName ?? "",
-      bindUserDomain: ldap?.bindUserDomain ?? "",
-      bindPassword: "",
-      description: ldap?.description ?? "",
-    });
-    setHasBindPassword(Boolean(ldap?.hasBindPassword));
-    setLdapFieldErrors({});
+    /* eslint-disable react-hooks/set-state-in-effect -- bulk hydrate local UI from settings query snapshot */
+    hydrateFromSettings(ldap);
     setNationalIdAttribute(directorySetting?.value ?? "");
     setBrandingApplicationName(settingsQuery.data.branding.applicationName ?? "SAS Portal v2");
     setBrandingBrowserTitle(settingsQuery.data.branding.browserTitle ?? "SAS Portal v2");
@@ -130,7 +118,8 @@ export function SettingsPage() {
     setForgotPasswordUrlError(undefined);
     setBrandingError(undefined);
     setDirectoryError(undefined);
-  }, [settingsQuery.data]);
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [settingsQuery.data, hydrateFromSettings]);
 
   useEffect(() => {
     return () => {
@@ -152,7 +141,7 @@ export function SettingsPage() {
     mutationFn: updateLdapSettings,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: SETTINGS_QUERY_KEY });
-      setLdapForm((prev) => ({ ...prev, bindPassword: "" }));
+      clearBindPasswordAfterSave();
       toast.success(t("settings:ldap.messages.saveSuccess"));
     },
     onError: (error) => {
@@ -221,64 +210,6 @@ export function SettingsPage() {
     },
   });
 
-  const getLdapFormErrors = (form: LdapFormValues) => {
-    const errors: Partial<Record<keyof LdapFormValues, string>> = {};
-    if (!form.name.trim()) errors.name = t("settings:validation.nameRequired");
-    if (!form.host.trim()) errors.host = t("settings:validation.hostRequired");
-    if (!form.baseDn.trim()) errors.baseDn = t("settings:validation.baseDnRequired");
-    if (!form.userSearchFilter.trim()) {
-      errors.userSearchFilter = t("settings:validation.userSearchFilterRequired");
-    }
-    if (!form.bindUserName.trim()) {
-      errors.bindUserName = t("settings:validation.bindUserNameRequired");
-    }
-    const parsedPort = Number(form.port);
-    if (!Number.isInteger(parsedPort) || parsedPort < 1 || parsedPort > 65535) {
-      errors.port = t("settings:validation.portRange");
-    }
-    return errors;
-  };
-
-  const validateLdapForm = () => {
-    const errors = getLdapFormErrors(ldapForm);
-    setLdapFieldErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const buildLdapPayload = (): UpdateLdapSettingsRequest => {
-    const payload = {
-      name: ldapForm.name.trim(),
-      host: ldapForm.host.trim(),
-      port: Number(ldapForm.port),
-      useSsl: ldapForm.useSsl,
-      baseDn: ldapForm.baseDn.trim(),
-      userSearchBase: ldapForm.userSearchBase.trim(),
-      userSearchFilter: ldapForm.userSearchFilter.trim(),
-      bindUserName: ldapForm.bindUserName.trim(),
-      bindUserDomain: ldapForm.bindUserDomain.trim() || null,
-      description: ldapForm.description.trim() || null,
-    };
-
-    return ldapForm.bindPassword ? { ...payload, bindPassword: ldapForm.bindPassword } : payload;
-  };
-
-  const buildLdapValidatePayload = (): ValidateLdapSettingsRequest => {
-    const payload = {
-      name: ldapForm.name.trim(),
-      host: ldapForm.host.trim(),
-      port: Number(ldapForm.port),
-      useSsl: ldapForm.useSsl,
-      baseDn: ldapForm.baseDn.trim(),
-      userSearchBase: ldapForm.userSearchBase.trim(),
-      userSearchFilter: ldapForm.userSearchFilter.trim(),
-      bindUserName: ldapForm.bindUserName.trim(),
-      bindUserDomain: ldapForm.bindUserDomain.trim() || null,
-    };
-
-    return ldapForm.bindPassword ? { ...payload, bindPassword: ldapForm.bindPassword } : payload;
-  };
-
-  const ldapFormIsMinimumValid = Object.keys(getLdapFormErrors(ldapForm)).length === 0;
   const canSaveLdap =
     canUpdate &&
     ldapFormIsMinimumValid &&
@@ -628,10 +559,7 @@ export function SettingsPage() {
               readOnly={isReadOnly}
               savePending={updateLdapMutation.isPending}
               canSave={canSaveLdap}
-              onChange={(field, value) => {
-                setLdapForm((prev) => ({ ...prev, [field]: value }));
-                setLdapFieldErrors((prev) => ({ ...prev, [field]: undefined }));
-              }}
+              onChange={updateField}
               onSave={handleLdapSave}
             />
           </SectionCard>
