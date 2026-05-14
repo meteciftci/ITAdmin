@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Navigate } from "react-router-dom";
 
 import { LoadingState } from "@/components/common/LoadingState";
@@ -7,11 +7,7 @@ import { SectionCard } from "@/components/common/SectionCard";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuthStore } from "@/features/auth/auth-store";
-import {
-  getSettings,
-  updateLdapSettings,
-  validateLdapSettings,
-} from "@/features/settings/api";
+import { getSettings } from "@/features/settings/api";
 import {
   ApplicationSettingsForm,
 } from "@/features/settings/components/ApplicationSettingsForm";
@@ -32,17 +28,15 @@ import { useBrandingSettingsSave } from "@/features/settings/hooks/useBrandingSe
 import { useDirectorySettingsForm } from "@/features/settings/hooks/useDirectorySettingsForm";
 import { useDirectorySettingsSave } from "@/features/settings/hooks/useDirectorySettingsSave";
 import { useLdapSettingsForm } from "@/features/settings/hooks/useLdapSettingsForm";
+import { useLdapSettingsSave } from "@/features/settings/hooks/useLdapSettingsSave";
 import { useSessionSecuritySettingsSave } from "@/features/settings/hooks/useSessionSecuritySettingsSave";
 import { sessionSecurityFingerprint } from "@/features/settings/settings-utils";
-import { getApiErrorMessage } from "@/lib/api-error";
 import { createApiErrorRouteState, getErrorRoutePath } from "@/lib/route-error";
 import { canAccess } from "@/lib/permissions";
-import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
 export function SettingsPage() {
   const { t } = useTranslation(["settings", "common"]);
-  const queryClient = useQueryClient();
   const currentUser = useAuthStore((state) => state.user);
   const canUpdate = canAccess(currentUser, "Settings.Update");
   const isReadOnly = !canUpdate;
@@ -59,6 +53,16 @@ export function SettingsPage() {
     ldapFormIsMinimumValid,
     clearBindPasswordAfterSave,
   } = useLdapSettingsForm({ t });
+
+  const { saveLdapSettings, canSaveLdap, isSavingLdap } = useLdapSettingsSave({
+    t,
+    canUpdate,
+    ldapFormIsMinimumValid,
+    validateLdapForm,
+    buildLdapPayload,
+    buildLdapValidatePayload,
+    clearBindPasswordAfterSave,
+  });
 
   const {
     nationalIdAttribute,
@@ -153,93 +157,6 @@ export function SettingsPage() {
     hydrateFromBranding,
     hydrateFromSettings,
   ]);
-
-  const updateLdapMutation = useMutation({
-    mutationFn: updateLdapSettings,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: SETTINGS_QUERY_KEY });
-      clearBindPasswordAfterSave();
-      toast.success(t("settings:ldap.messages.saveSuccess"));
-    },
-    onError: (error) => {
-      toast.error(getApiErrorMessage(error, t("settings:ldap.messages.saveFailed")));
-    },
-  });
-
-  const validateLdapMutation = useMutation({
-    mutationFn: validateLdapSettings,
-    onError: (error) => {
-      toast.error(getApiErrorMessage(error, t("settings:ldap.validation.requestFailed")));
-    },
-  });
-
-  const canSaveLdap =
-    canUpdate &&
-    ldapFormIsMinimumValid &&
-    !updateLdapMutation.isPending &&
-    !validateLdapMutation.isPending;
-
-  const handleLdapSave = async () => {
-    if (!canUpdate) return;
-    if (!validateLdapForm()) return;
-
-    const payload = buildLdapPayload();
-    const validatePayload = buildLdapValidatePayload();
-    let validateResult;
-    try {
-      validateResult = await validateLdapMutation.mutateAsync(validatePayload);
-    } catch {
-      return;
-    }
-
-    if (!validateResult.isValid) {
-      const detailMessage = getLocalizedLdapValidationMessage(validateResult.message);
-      toast.error(t("settings:ldap.validation.saveBlockedByValidation"), {
-        description: detailMessage,
-      });
-      return;
-    }
-
-    updateLdapMutation.mutate(payload);
-  };
-
-  const getLocalizedLdapValidationMessage = (message?: string | null): string => {
-    const trimmedMessage = message?.trim();
-    if (!trimmedMessage) {
-      return t("settings:ldap.validation.genericCouldNotValidate");
-    }
-
-    const messageKeyMap: Record<string, string> = {
-      "LDAP service account authentication failed.":
-        "settings:ldap.validation.backendMessages.serviceAccountAuthFailed",
-      "LDAP validation failed.": "settings:ldap.validation.backendMessages.validationFailed",
-      "Required LDAP fields are missing.":
-        "settings:ldap.validation.backendMessages.requiredLdapFieldsMissing",
-      "Required LDAP validation fields are missing.":
-        "settings:ldap.validation.backendMessages.requiredLdapValidationFieldsMissing",
-      "LDAP port must be between 1 and 65535.":
-        "settings:ldap.validation.backendMessages.portRange",
-      "Bind password is required when no active LDAP setting exists.":
-        "settings:ldap.validation.backendMessages.bindPasswordRequiredWithoutActive",
-      "LDAP validation could not be completed.":
-        "settings:ldap.validation.backendMessages.validationCouldNotComplete",
-      "Directory user could not be found.":
-        "settings:ldap.validation.backendMessages.directoryUserNotFound",
-      "Directory user authentication failed.":
-        "settings:ldap.validation.backendMessages.directoryUserAuthFailed",
-      "Directory user distinguished name could not be resolved.":
-        "settings:ldap.validation.backendMessages.directoryUserDnNotResolved",
-      "LDAP bind validation succeeded.":
-        "settings:ldap.validation.backendMessages.bindValidationSucceeded",
-    };
-
-    const mappedKey = messageKeyMap[trimmedMessage];
-    if (!mappedKey) {
-      return t("settings:ldap.validation.genericCouldNotValidate");
-    }
-
-    return t(mappedKey);
-  };
 
   const refreshAction = useMemo(
     () => (
@@ -339,10 +256,10 @@ export function SettingsPage() {
               fieldErrors={ldapFieldErrors}
               hasBindPassword={hasBindPassword}
               readOnly={isReadOnly}
-              savePending={updateLdapMutation.isPending}
+              savePending={isSavingLdap}
               canSave={canSaveLdap}
               onChange={updateField}
-              onSave={handleLdapSave}
+              onSave={saveLdapSettings}
             />
           </SectionCard>
         </TabsContent>
