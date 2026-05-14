@@ -245,15 +245,19 @@ public sealed class SettingsController(
         }
 
         var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-        if (!IsAllowedLogoExtension(extension))
+        if (!IsAllowedFaviconExtension(extension))
         {
-            return BadRequest(new { message = "Favicon file extension must be .png, .jpg or .jpeg." });
+            return BadRequest(new { message = "Favicon file extension must be .png, .jpg, .jpeg or .ico." });
         }
 
         var contentType = file.ContentType?.Trim() ?? string.Empty;
-        if (!IsAllowedLogoContentType(contentType))
+        if (!IsAllowedFaviconContentType(contentType, extension))
         {
-            return BadRequest(new { message = "Favicon content type must be image/png or image/jpeg." });
+            return BadRequest(new
+            {
+                message =
+                    "Favicon content type must be image/png, image/jpeg, image/x-icon, image/vnd.microsoft.icon, or image/ico. application/octet-stream is accepted only for .ico files.",
+            });
         }
 
         byte[] content;
@@ -264,14 +268,17 @@ public sealed class SettingsController(
             content = memoryStream.ToArray();
         }
 
-        if (!HasAllowedMagicBytes(content, extension))
+        if (!HasAllowedFaviconMagicBytes(content, extension))
         {
             return BadRequest(new { message = "Favicon file signature is invalid." });
         }
 
-        if (!ValidateFaviconDimensions(content, out var dimensionValidationMessage))
+        if (!string.Equals(extension, ".ico", StringComparison.OrdinalIgnoreCase))
         {
-            return BadRequest(new { message = dimensionValidationMessage });
+            if (!ValidateFaviconDimensions(content, out var dimensionValidationMessage))
+            {
+                return BadRequest(new { message = dimensionValidationMessage });
+            }
         }
 
         var result = await settingsService.UploadBrandingFaviconAsync(
@@ -347,6 +354,48 @@ public sealed class SettingsController(
     private static bool IsAllowedLogoContentType(string contentType) =>
         string.Equals(contentType, "image/png", StringComparison.OrdinalIgnoreCase)
         || string.Equals(contentType, "image/jpeg", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsAllowedFaviconExtension(string extension) =>
+        extension is ".png" or ".jpg" or ".jpeg" or ".ico";
+
+    private static bool IsAllowedFaviconContentType(string contentType, string extension)
+    {
+        if (string.Equals(contentType, "image/png", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(contentType, "image/jpeg", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(contentType, "image/x-icon", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(contentType, "image/vnd.microsoft.icon", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(contentType, "image/ico", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (string.Equals(extension, ".ico", StringComparison.OrdinalIgnoreCase)
+            && string.Equals(contentType, "application/octet-stream", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool HasAllowedFaviconMagicBytes(byte[] content, string extension)
+    {
+        return extension switch
+        {
+            ".png" => content.Length >= 4
+                && content[0] == 0x89
+                && content[1] == 0x50
+                && content[2] == 0x4E
+                && content[3] == 0x47,
+            ".jpg" or ".jpeg" => content.Length >= 2 && content[0] == 0xFF && content[1] == 0xD8,
+            ".ico" => content.Length >= 4
+                && content[0] == 0x00
+                && content[1] == 0x00
+                && content[2] == 0x01
+                && content[3] == 0x00,
+            _ => false,
+        };
+    }
 
     private static bool HasAllowedMagicBytes(byte[] content, string extension)
     {

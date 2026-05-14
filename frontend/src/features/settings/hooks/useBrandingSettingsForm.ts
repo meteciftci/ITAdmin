@@ -120,35 +120,38 @@ export function useBrandingSettingsForm({
     ({
       logoUrlToPersist,
       faviconUrlToPersist,
-    }: BuildBrandingPayloadParams): UpdateApplicationSettingsRequest => ({
-      items: [
-        {
-          key: BRANDING_APPLICATION_NAME_KEY,
-          value: brandingApplicationName.trim() || DEFAULT_APPLICATION_LABEL,
-          valueType: SETTING_VALUE_TYPE_STRING,
-        },
-        {
-          key: BRANDING_BROWSER_TITLE_KEY,
-          value: brandingBrowserTitle.trim() || DEFAULT_APPLICATION_LABEL,
-          valueType: SETTING_VALUE_TYPE_STRING,
-        },
-        {
-          key: BRANDING_LOGO_URL_KEY,
-          value: logoUrlToPersist,
-          valueType: SETTING_VALUE_TYPE_STRING,
-        },
-        {
-          key: BRANDING_FAVICON_URL_KEY,
-          value: faviconUrlToPersist,
-          valueType: SETTING_VALUE_TYPE_STRING,
-        },
-        {
-          key: BRANDING_FORGOT_PASSWORD_URL_KEY,
-          value: forgotPasswordUrl.trim() || null,
-          valueType: SETTING_VALUE_TYPE_STRING,
-        },
-      ],
-    }),
+    }: BuildBrandingPayloadParams): UpdateApplicationSettingsRequest => {
+      const trimmedForgotPasswordUrl = forgotPasswordUrl.trim();
+      return {
+        items: [
+          {
+            key: BRANDING_APPLICATION_NAME_KEY,
+            value: brandingApplicationName.trim() || DEFAULT_APPLICATION_LABEL,
+            valueType: SETTING_VALUE_TYPE_STRING,
+          },
+          {
+            key: BRANDING_BROWSER_TITLE_KEY,
+            value: brandingBrowserTitle.trim() || DEFAULT_APPLICATION_LABEL,
+            valueType: SETTING_VALUE_TYPE_STRING,
+          },
+          {
+            key: BRANDING_LOGO_URL_KEY,
+            value: logoUrlToPersist,
+            valueType: SETTING_VALUE_TYPE_STRING,
+          },
+          {
+            key: BRANDING_FAVICON_URL_KEY,
+            value: faviconUrlToPersist,
+            valueType: SETTING_VALUE_TYPE_STRING,
+          },
+          {
+            key: BRANDING_FORGOT_PASSWORD_URL_KEY,
+            value: trimmedForgotPasswordUrl === "" ? "" : trimmedForgotPasswordUrl,
+            valueType: SETTING_VALUE_TYPE_STRING,
+          },
+        ],
+      };
+    },
     [brandingApplicationName, brandingBrowserTitle, forgotPasswordUrl],
   );
 

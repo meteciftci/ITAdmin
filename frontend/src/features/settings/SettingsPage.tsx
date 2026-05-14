@@ -343,7 +343,7 @@ export function SettingsPage() {
 
   const validateFaviconFile = async (file: File): Promise<boolean> => {
     const extension = file.name.split(".").pop()?.toLowerCase();
-    if (!extension || !["png", "jpg", "jpeg"].includes(extension)) {
+    if (!extension || !["png", "jpg", "jpeg", "ico"].includes(extension)) {
       toast.error(t("settings:application.validation.faviconType"));
       return false;
     }
@@ -351,6 +351,10 @@ export function SettingsPage() {
     if (file.size > MAX_FAVICON_BYTES) {
       toast.error(t("settings:application.validation.faviconSize"));
       return false;
+    }
+
+    if (extension === "ico") {
+      return true;
     }
 
     const objectUrl = URL.createObjectURL(file);

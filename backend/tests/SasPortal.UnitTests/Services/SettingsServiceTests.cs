@@ -200,7 +200,7 @@ public sealed class SettingsServiceTests
         Assert.Equal("SAS Portal v2", branding.BrowserTitle);
         Assert.Null(branding.LogoUrl);
         Assert.Equal("/favicon.svg", branding.FaviconUrl);
-        Assert.Equal("https://sifre.mugla.bel.tr", branding.ForgotPasswordUrl);
+        Assert.Null(branding.ForgotPasswordUrl);
     }
 
     [Fact]
@@ -273,6 +273,54 @@ public sealed class SettingsServiceTests
         Assert.Equal("/uploads/branding/logo.png", branding.LogoUrl);
         Assert.Equal("/uploads/branding/favicon.png", branding.FaviconUrl);
         Assert.Equal("https://reset.example.com", branding.ForgotPasswordUrl);
+    }
+
+    [Fact]
+    public async Task GetBrandingSettingsAsync_ForgotPasswordUrl_IsNull_WhenStoredEmptyOrWhitespace()
+    {
+        await using var dbContext = CreateDbContext();
+        await dbContext.ApplicationSettings.AddAsync(
+            new ApplicationSetting
+            {
+                Key = "Branding:ForgotPasswordUrl",
+                Value = "   ",
+                ValueType = SettingValueType.String,
+                IsEncrypted = false,
+                IsSystem = true,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = "seed"
+            });
+        await dbContext.SaveChangesAsync();
+
+        var service = CreateService(dbContext);
+        var branding = await service.GetBrandingSettingsAsync();
+
+        Assert.Null(branding.ForgotPasswordUrl);
+    }
+
+    [Fact]
+    public async Task GetBrandingSettingsAsync_ForgotPasswordUrl_IsNull_WhenStoredValueIsInvalidUrl()
+    {
+        await using var dbContext = CreateDbContext();
+        await dbContext.ApplicationSettings.AddAsync(
+            new ApplicationSetting
+            {
+                Key = "Branding:ForgotPasswordUrl",
+                Value = "not-a-valid-url",
+                ValueType = SettingValueType.String,
+                IsEncrypted = false,
+                IsSystem = true,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = "seed"
+            });
+        await dbContext.SaveChangesAsync();
+
+        var service = CreateService(dbContext);
+        var branding = await service.GetBrandingSettingsAsync();
+
+        Assert.Null(branding.ForgotPasswordUrl);
     }
 
     [Fact]

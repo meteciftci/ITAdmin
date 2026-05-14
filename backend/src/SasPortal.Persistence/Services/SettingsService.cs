@@ -26,7 +26,6 @@ public sealed class SettingsService(
     private const string DefaultBrandingApplicationName = "SAS Portal v2";
     private const string DefaultBrandingBrowserTitle = "SAS Portal v2";
     private const string DefaultBrandingFaviconUrl = "/favicon.svg";
-    private const string DefaultBrandingForgotPasswordUrl = "https://sifre.mugla.bel.tr";
     private const int BrandingTextMaxLength = 100;
     private const int BrandingUrlMaxLength = 500;
     private const int AuditDescriptionMaxLength = 2000;
@@ -874,7 +873,7 @@ public sealed class SettingsService(
         var browserTitle = ResolveBrandingText(map, BrandingBrowserTitleKey, DefaultBrandingBrowserTitle);
         var logoUrl = ResolveBrandingAssetUrl(map, BrandingLogoUrlKey, fallback: null, allowRelative: true);
         var faviconUrl = ResolveBrandingAssetUrl(map, BrandingFaviconUrlKey, fallback: DefaultBrandingFaviconUrl, allowRelative: true);
-        var forgotPasswordUrl = ResolveBrandingAssetUrl(map, BrandingForgotPasswordUrlKey, fallback: DefaultBrandingForgotPasswordUrl, allowRelative: false);
+        var forgotPasswordUrl = ResolveBrandingAssetUrl(map, BrandingForgotPasswordUrlKey, fallback: null, allowRelative: false);
         return new BrandingSettings(applicationName, browserTitle, logoUrl, faviconUrl, forgotPasswordUrl);
     }
 

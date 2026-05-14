@@ -96,7 +96,7 @@
         "logoType": "Logo file must be PNG, JPG, or JPEG.",
         "logoSize": "Logo size must be at most 2 MB.",
         "logoDimensions": "Logo image must be between 32x32 and 512x512 pixels.",
-        "faviconType": "Favicon file must be PNG, JPG, or JPEG.",
+        "faviconType": "Favicon file must be PNG, JPG, JPEG, or ICO.",
         "faviconSize": "Favicon must be 512 KB or smaller.",
         "faviconDimensions": "Favicon image must be between 16x16 and 512x512 pixels.",
         "forgotPasswordUrlInvalid": "Enter a valid http/https URL."
