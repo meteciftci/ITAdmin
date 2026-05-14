@@ -9,10 +9,12 @@ const authPaths = ["/auth/login", "/auth/refresh", "/auth/logout"];
 
 export const apiClient = axios.create({
   baseURL: "/api",
+  withCredentials: true,
 });
 
 const refreshClient = axios.create({
   baseURL: "/api",
+  withCredentials: true,
 });
 
 const UNSAFE_URL_SCHEME_REGEX = /^\s*(data|javascript|file):/i;
@@ -61,16 +63,9 @@ apiClient.interceptors.request.use((config) => {
 let refreshPromise: Promise<RefreshTokenResponse | null> | null = null;
 
 const attemptRefresh = async (): Promise<RefreshTokenResponse | null> => {
-  const store = useAuthStore.getState();
-  if (!store.refreshToken) {
-    return null;
-  }
-
   if (!refreshPromise) {
     refreshPromise = refreshClient
-      .post<RefreshTokenResponse>("/auth/refresh", {
-        refreshToken: store.refreshToken,
-      })
+      .post<RefreshTokenResponse>("/auth/refresh", undefined)
       .then((response) => {
         if (!response.data.isSuccess) {
           return null;
@@ -79,9 +74,7 @@ const attemptRefresh = async (): Promise<RefreshTokenResponse | null> => {
         useAuthStore.getState().setTokens(
           {
             accessToken: response.data.accessToken,
-            refreshToken: response.data.refreshToken,
             accessTokenExpiresAt: response.data.accessTokenExpiresAt,
-            refreshTokenExpiresAt: response.data.refreshTokenExpiresAt,
           },
           useAuthStore.getState().rememberMe,
         );

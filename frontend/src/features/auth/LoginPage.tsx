@@ -155,9 +155,7 @@ export function LoginPage() {
       setTokens(
         {
           accessToken: response.accessToken,
-          refreshToken: response.refreshToken,
           accessTokenExpiresAt: response.accessTokenExpiresAt,
-          refreshTokenExpiresAt: response.refreshTokenExpiresAt,
         },
         effectiveRememberMe,
       );

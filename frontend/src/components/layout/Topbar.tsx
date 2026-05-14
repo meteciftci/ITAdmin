@@ -21,16 +21,13 @@ export function Topbar() {
   const { t } = useTranslation(["common", "navigation"]);
   const location = useLocation();
   const navigate = useNavigate();
-  const refreshToken = useAuthStore((state) => state.refreshToken);
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const { setMobileSidebarOpen } = useLayoutShell();
   const currentPageKey = getBreadcrumbKeyByPath(location.pathname);
 
   const handleLogout = async () => {
     try {
-      if (refreshToken) {
-        await logout(refreshToken);
-      }
+      await logout();
     } finally {
       clearAuth();
       navigate("/login", { replace: true });

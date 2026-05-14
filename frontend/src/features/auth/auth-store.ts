@@ -2,20 +2,17 @@ import { create } from "zustand";
 
 import type { CurrentUser } from "@/features/auth/types";
 
-type TokenPayload = {
+/** Persisted access session; refresh token lives in HttpOnly cookie only. */
+export type AccessTokenPayload = {
   accessToken: string;
-  refreshToken: string;
   accessTokenExpiresAt: string;
-  refreshTokenExpiresAt: string;
 };
 
 export type AuthStorageMode = "session" | "persistent";
 
 type StoredAuthSnapshot = {
   accessToken: string | null;
-  refreshToken: string | null;
   accessTokenExpiresAt: string | null;
-  refreshTokenExpiresAt: string | null;
   user: CurrentUser | null;
   isAuthenticated: boolean;
   rememberMe: boolean;
@@ -35,14 +32,12 @@ export const AUTH_PERSISTENT_STORAGE_KEY = "sasportal-auth-persistent";
 
 type AuthState = {
   accessToken: string | null;
-  refreshToken: string | null;
   accessTokenExpiresAt: string | null;
-  refreshTokenExpiresAt: string | null;
   user: CurrentUser | null;
   isAuthenticated: boolean;
   rememberMe: boolean;
   storageMode: AuthStorageMode | null;
-  setTokens: (tokens: TokenPayload, rememberMe: boolean) => void;
+  setTokens: (tokens: AccessTokenPayload, rememberMe: boolean) => void;
   setUser: (user: CurrentUser | null) => void;
   updateUser: (patch: Partial<CurrentUser>) => void;
   clearAuth: () => void;
@@ -51,9 +46,7 @@ type AuthState = {
 
 const emptyTokens = {
   accessToken: null,
-  refreshToken: null,
   accessTokenExpiresAt: null,
-  refreshTokenExpiresAt: null,
 };
 
 function clearLegacyKeys(): void {
@@ -84,7 +77,7 @@ function removeBothAuthKeys(): void {
 
 function parseSnapshot(raw: string): StoredAuthSnapshot | null {
   try {
-    const parsed = JSON.parse(raw) as Partial<StoredAuthSnapshot>;
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
     if (
       !parsed ||
       typeof parsed !== "object" ||
@@ -95,15 +88,12 @@ function parseSnapshot(raw: string): StoredAuthSnapshot | null {
 
     return {
       accessToken: typeof parsed.accessToken === "string" ? parsed.accessToken : null,
-      refreshToken: typeof parsed.refreshToken === "string" ? parsed.refreshToken : null,
       accessTokenExpiresAt:
         typeof parsed.accessTokenExpiresAt === "string" ? parsed.accessTokenExpiresAt : null,
-      refreshTokenExpiresAt:
-        typeof parsed.refreshTokenExpiresAt === "string" ? parsed.refreshTokenExpiresAt : null,
       user: (parsed.user ?? null) as CurrentUser | null,
       isAuthenticated: Boolean(parsed.accessToken),
       rememberMe: Boolean(parsed.rememberMe),
-      storageMode: parsed.storageMode,
+      storageMode: parsed.storageMode as AuthStorageMode,
       updatedAt: typeof parsed.updatedAt === "number" ? parsed.updatedAt : 0,
     };
   } catch {
@@ -113,14 +103,7 @@ function parseSnapshot(raw: string): StoredAuthSnapshot | null {
 
 function readBootstrapFromStorage(): Pick<
   AuthState,
-  | "accessToken"
-  | "refreshToken"
-  | "accessTokenExpiresAt"
-  | "refreshTokenExpiresAt"
-  | "user"
-  | "isAuthenticated"
-  | "rememberMe"
-  | "storageMode"
+  "accessToken" | "accessTokenExpiresAt" | "user" | "isAuthenticated" | "rememberMe" | "storageMode"
 > {
   const base = {
     ...emptyTokens,
@@ -143,9 +126,7 @@ function readBootstrapFromStorage(): Pick<
       if (parsed?.accessToken && parsed.storageMode === "session") {
         return {
           accessToken: parsed.accessToken,
-          refreshToken: parsed.refreshToken,
           accessTokenExpiresAt: parsed.accessTokenExpiresAt,
-          refreshTokenExpiresAt: parsed.refreshTokenExpiresAt,
           user: parsed.user,
           isAuthenticated: parsed.isAuthenticated,
           rememberMe: parsed.rememberMe,
@@ -160,9 +141,7 @@ function readBootstrapFromStorage(): Pick<
       if (parsed?.accessToken && parsed.storageMode === "persistent") {
         return {
           accessToken: parsed.accessToken,
-          refreshToken: parsed.refreshToken,
           accessTokenExpiresAt: parsed.accessTokenExpiresAt,
-          refreshTokenExpiresAt: parsed.refreshTokenExpiresAt,
           user: parsed.user,
           isAuthenticated: parsed.isAuthenticated,
           rememberMe: parsed.rememberMe,
@@ -179,9 +158,7 @@ function readBootstrapFromStorage(): Pick<
 
 function toSnapshot(state: {
   accessToken: string | null;
-  refreshToken: string | null;
   accessTokenExpiresAt: string | null;
-  refreshTokenExpiresAt: string | null;
   user: CurrentUser | null;
   isAuthenticated: boolean;
   rememberMe: boolean;
@@ -189,9 +166,7 @@ function toSnapshot(state: {
 }): StoredAuthSnapshot {
   return {
     accessToken: state.accessToken,
-    refreshToken: state.refreshToken,
     accessTokenExpiresAt: state.accessTokenExpiresAt,
-    refreshTokenExpiresAt: state.refreshTokenExpiresAt,
     user: state.user,
     isAuthenticated: state.isAuthenticated,
     rememberMe: state.rememberMe,
@@ -202,9 +177,7 @@ function toSnapshot(state: {
 
 function persistAuthSnapshot(state: {
   accessToken: string | null;
-  refreshToken: string | null;
   accessTokenExpiresAt: string | null;
-  refreshTokenExpiresAt: string | null;
   user: CurrentUser | null;
   isAuthenticated: boolean;
   rememberMe: boolean;
@@ -239,7 +212,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       const storageMode: AuthStorageMode = rememberMe ? "persistent" : "session";
       const next = {
         ...state,
-        ...tokens,
+        accessToken: tokens.accessToken,
+        accessTokenExpiresAt: tokens.accessTokenExpiresAt,
         rememberMe,
         storageMode,
         isAuthenticated: Boolean(tokens.accessToken),

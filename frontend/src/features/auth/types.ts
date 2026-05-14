@@ -21,10 +21,6 @@ export type LoginResponse = {
   errorCode?: string | null;
 };
 
-export type RefreshTokenRequest = {
-  refreshToken: string;
-};
-
 export type RefreshTokenResponse = {
   isSuccess: boolean;
   message: string;
@@ -33,10 +29,6 @@ export type RefreshTokenResponse = {
   accessTokenExpiresAt: string;
   refreshTokenExpiresAt: string;
   errorCode?: string | null;
-};
-
-export type LogoutRequest = {
-  refreshToken: string;
 };
 
 export type CurrentUser = {

@@ -31,20 +31,17 @@ type RefreshOutcome =
   | { kind: "transient" };
 
 const attemptIdleRefresh = async (
-  refreshTokenValue: string,
   setTokens: ReturnType<typeof useAuthStore.getState>["setTokens"],
   rememberMe: boolean,
 ): Promise<RefreshOutcome> => {
   try {
-    const response = await refreshTokenApi(refreshTokenValue);
+    const response = await refreshTokenApi();
 
-    if (response.isSuccess && response.accessToken && response.refreshToken) {
+    if (response.isSuccess && response.accessToken) {
       setTokens(
         {
           accessToken: response.accessToken,
-          refreshToken: response.refreshToken,
           accessTokenExpiresAt: response.accessTokenExpiresAt,
-          refreshTokenExpiresAt: response.refreshTokenExpiresAt,
         },
         rememberMe,
       );
@@ -114,13 +111,10 @@ export function IdleSessionManager() {
     }
     isExpiredRef.current = true;
 
-    const token = useAuthStore.getState().refreshToken;
-    if (token) {
-      try {
-        await logoutApi(token);
-      } catch {
-        // best-effort logout; backend may be unreachable
-      }
+    try {
+      await logoutApi();
+    } catch {
+      // best-effort logout; backend may be unreachable
     }
 
     clearAuth();
@@ -135,13 +129,10 @@ export function IdleSessionManager() {
     }
     isExpiredRef.current = true;
 
-    const token = useAuthStore.getState().refreshToken;
-    if (token) {
-      try {
-        await logoutApi(token);
-      } catch {
-        // best-effort logout
-      }
+    try {
+      await logoutApi();
+    } catch {
+      // best-effort logout
     }
 
     clearAuth();
@@ -155,17 +146,12 @@ export function IdleSessionManager() {
       return;
     }
 
-    const token = useAuthStore.getState().refreshToken;
     const currentRememberMe = useAuthStore.getState().rememberMe;
-    if (!token) {
-      await expireSession();
-      return;
-    }
 
     isExtendingRef.current = true;
     setIsExtending(true);
 
-    const outcome = await attemptIdleRefresh(token, setTokens, currentRememberMe);
+    const outcome = await attemptIdleRefresh(setTokens, currentRememberMe);
 
     isExtendingRef.current = false;
     setIsExtending(false);
