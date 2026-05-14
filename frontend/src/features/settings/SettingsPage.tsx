@@ -27,6 +27,23 @@ import {
   type LdapFormValues,
 } from "@/features/settings/components/LdapSettingsForm";
 import { SessionSecuritySettingsForm } from "@/features/settings/components/SessionSecuritySettingsForm";
+import {
+  AUTH_SESSION_OPTIONS_QUERY_KEY,
+  BRANDING_APPLICATION_NAME_KEY,
+  BRANDING_BROWSER_TITLE_KEY,
+  BRANDING_FAVICON_URL_KEY,
+  BRANDING_FORGOT_PASSWORD_URL_KEY,
+  BRANDING_LOGO_URL_KEY,
+  DEFAULT_SESSION_SECURITY,
+  DEFAULT_TAB,
+  DIRECTORY_NATIONAL_ID_ATTRIBUTE_KEY,
+  MAX_FAVICON_BYTES,
+  MAX_LOGO_BYTES,
+  SETTING_VALUE_TYPE_STRING,
+  SETTINGS_QUERY_KEY,
+  type SettingsTabValue,
+} from "@/features/settings/settings-constants";
+import { createEmptyLdapForm, sessionSecurityFingerprint } from "@/features/settings/settings-utils";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { createApiErrorRouteState, getErrorRoutePath } from "@/lib/route-error";
 import { canAccess } from "@/lib/permissions";
@@ -38,54 +55,6 @@ import type {
   UpdateLdapSettingsRequest,
   ValidateLdapSettingsRequest,
 } from "@/features/settings/types";
-
-const SETTINGS_QUERY_KEY = ["settings", "overview"] as const;
-const AUTH_SESSION_OPTIONS_QUERY_KEY = ["auth", "session-options"] as const;
-const DIRECTORY_NATIONAL_ID_ATTRIBUTE_KEY = "Directory:NationalIdAttribute";
-const BRANDING_APPLICATION_NAME_KEY = "Branding:ApplicationName";
-const BRANDING_BROWSER_TITLE_KEY = "Branding:BrowserTitle";
-const BRANDING_LOGO_URL_KEY = "Branding:LogoUrl";
-const BRANDING_FAVICON_URL_KEY = "Branding:FaviconUrl";
-const BRANDING_FORGOT_PASSWORD_URL_KEY = "Branding:ForgotPasswordUrl";
-const SETTING_VALUE_TYPE_STRING = 1;
-const MAX_LOGO_BYTES = 2 * 1024 * 1024;
-const MAX_FAVICON_BYTES = 512 * 1024;
-
-type SettingsTabValue = "ldap" | "branding" | "directory" | "sessionSecurity";
-const DEFAULT_TAB: SettingsTabValue = "ldap";
-
-const DEFAULT_SESSION_SECURITY: SessionSecuritySettings = {
-  accessTokenMinutes: 30,
-  idleTimeoutMinutes: 30,
-  idleWarningSeconds: 30,
-  sessionRefreshTokenHours: 6,
-  rememberMeRefreshTokenDays: 7,
-  rememberMeEnabled: true,
-};
-
-const createEmptyLdapForm = (): LdapFormValues => ({
-  name: "",
-  host: "",
-  port: "389",
-  useSsl: false,
-  baseDn: "",
-  userSearchBase: "",
-  userSearchFilter: "",
-  bindUserName: "",
-  bindUserDomain: "",
-  bindPassword: "",
-  description: "",
-});
-
-const sessionSecurityFingerprint = (s: SessionSecuritySettings): string =>
-  [
-    s.accessTokenMinutes,
-    s.idleTimeoutMinutes,
-    s.idleWarningSeconds,
-    s.sessionRefreshTokenHours,
-    s.rememberMeRefreshTokenDays,
-    s.rememberMeEnabled ? "1" : "0",
-  ].join("|");
 
 export function SettingsPage() {
   const { t } = useTranslation(["settings", "common"]);
