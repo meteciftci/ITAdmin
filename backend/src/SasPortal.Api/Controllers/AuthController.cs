@@ -1,7 +1,9 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using SasPortal.Api.Contracts.Auth;
+using SasPortal.Api.Security;
 using SasPortal.Application.Abstractions.Services;
 using AppModels = SasPortal.Application.Common.Models;
 
@@ -52,6 +54,15 @@ public sealed class AuthController(IAuthService authService, ISettingsService se
 
         if (result.IsSuccess)
         {
+            if (!string.IsNullOrWhiteSpace(result.RefreshToken) && result.RefreshTokenExpiresAt is { } refreshExpiresAt)
+            {
+                AuthRefreshCookie.Append(
+                    Response.Cookies,
+                    Request,
+                    result.RefreshToken,
+                    new DateTimeOffset(refreshExpiresAt, TimeSpan.Zero));
+            }
+
             return Ok(response);
         }
 
@@ -75,12 +86,17 @@ public sealed class AuthController(IAuthService authService, ISettingsService se
     [HttpPost("refresh")]
     [AllowAnonymous]
     public async Task<ActionResult<RefreshTokenResponse>> Refresh(
-        [FromBody] RefreshTokenRequest request,
+        [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] RefreshTokenRequest? request,
         CancellationToken cancellationToken)
     {
+        Request.Cookies.TryGetValue(AuthRefreshCookie.CookieName, out var cookieRefresh);
+        var refreshToken = AuthRefreshTokenResolution.ResolveFromBodyFirstThenCookie(
+            request?.RefreshToken,
+            cookieRefresh) ?? string.Empty;
+
         var result = await authService.RefreshTokenAsync(
             new AppModels.RefreshTokenRequest(
-                request.RefreshToken,
+                refreshToken,
                 HttpContext.Connection.RemoteIpAddress?.ToString(),
                 Request.Headers.UserAgent.ToString()),
             cancellationToken);
@@ -96,24 +112,47 @@ public sealed class AuthController(IAuthService authService, ISettingsService se
 
         if (result.IsSuccess)
         {
+            if (!string.IsNullOrWhiteSpace(result.RefreshToken) && result.RefreshTokenExpiresAt is { } refreshExpiresAt)
+            {
+                AuthRefreshCookie.Append(
+                    Response.Cookies,
+                    Request,
+                    result.RefreshToken,
+                    new DateTimeOffset(refreshExpiresAt, TimeSpan.Zero));
+            }
+
             return Ok(response);
         }
 
+        AuthRefreshCookie.Delete(Response.Cookies, Request);
         return Unauthorized(response);
     }
 
     [HttpPost("logout")]
     [AllowAnonymous]
     public async Task<ActionResult<LogoutResponse>> Logout(
-        [FromBody] LogoutRequest request,
+        [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] LogoutRequest? request,
         CancellationToken cancellationToken)
     {
-        var result = await authService.LogoutAsync(
-            new AppModels.LogoutRequest(
-                request.RefreshToken,
-                HttpContext.Connection.RemoteIpAddress?.ToString(),
-                Request.Headers.UserAgent.ToString()),
-            cancellationToken);
+        Request.Cookies.TryGetValue(AuthRefreshCookie.CookieName, out var cookieRefresh);
+        var refreshToken = AuthRefreshTokenResolution.ResolveFromBodyFirstThenCookie(
+            request?.RefreshToken,
+            cookieRefresh) ?? string.Empty;
+
+        AppModels.LogoutResult result;
+        try
+        {
+            result = await authService.LogoutAsync(
+                new AppModels.LogoutRequest(
+                    refreshToken,
+                    HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    Request.Headers.UserAgent.ToString()),
+                cancellationToken);
+        }
+        finally
+        {
+            AuthRefreshCookie.Delete(Response.Cookies, Request);
+        }
 
         var response = new LogoutResponse(
             result.IsSuccess,
