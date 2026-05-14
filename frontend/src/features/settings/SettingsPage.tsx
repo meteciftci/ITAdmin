@@ -10,7 +10,6 @@ import { useAuthStore } from "@/features/auth/auth-store";
 import {
   getSettings,
   updateLdapSettings,
-  updateSessionSecuritySettings,
   validateLdapSettings,
 } from "@/features/settings/api";
 import {
@@ -22,7 +21,6 @@ import {
 import { LdapSettingsForm } from "@/features/settings/components/LdapSettingsForm";
 import { SessionSecuritySettingsForm } from "@/features/settings/components/SessionSecuritySettingsForm";
 import {
-  AUTH_SESSION_OPTIONS_QUERY_KEY,
   DEFAULT_SESSION_SECURITY,
   DEFAULT_TAB,
   SETTINGS_QUERY_KEY,
@@ -34,13 +32,13 @@ import { useBrandingSettingsSave } from "@/features/settings/hooks/useBrandingSe
 import { useDirectorySettingsForm } from "@/features/settings/hooks/useDirectorySettingsForm";
 import { useDirectorySettingsSave } from "@/features/settings/hooks/useDirectorySettingsSave";
 import { useLdapSettingsForm } from "@/features/settings/hooks/useLdapSettingsForm";
+import { useSessionSecuritySettingsSave } from "@/features/settings/hooks/useSessionSecuritySettingsSave";
 import { sessionSecurityFingerprint } from "@/features/settings/settings-utils";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { createApiErrorRouteState, getErrorRoutePath } from "@/lib/route-error";
 import { canAccess } from "@/lib/permissions";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import type { SessionSecuritySettings } from "@/features/settings/types";
 
 export function SettingsPage() {
   const { t } = useTranslation(["settings", "common"]);
@@ -125,6 +123,12 @@ export function SettingsPage() {
     resetSelectedAssetsAfterSave,
   });
 
+  const { saveSessionSecuritySettings, isSavingSessionSecurity } =
+    useSessionSecuritySettingsSave({
+      t,
+      canUpdate,
+    });
+
   const [activeTab, setActiveTab] = useState<SettingsTabValue>(DEFAULT_TAB);
 
   const settingsQuery = useQuery({
@@ -166,22 +170,6 @@ export function SettingsPage() {
     mutationFn: validateLdapSettings,
     onError: (error) => {
       toast.error(getApiErrorMessage(error, t("settings:ldap.validation.requestFailed")));
-    },
-  });
-
-  const updateSessionSecurityMutation = useMutation({
-    mutationFn: updateSessionSecuritySettings,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: SETTINGS_QUERY_KEY });
-      await queryClient.invalidateQueries({ queryKey: AUTH_SESSION_OPTIONS_QUERY_KEY });
-      await queryClient.refetchQueries({
-        queryKey: AUTH_SESSION_OPTIONS_QUERY_KEY,
-        type: "active",
-      });
-      toast.success(t("settings:sessionSecurity.messages.saved"));
-    },
-    onError: (error) => {
-      toast.error(getApiErrorMessage(error, t("settings:sessionSecurity.messages.saveFailed")));
     },
   });
 
@@ -251,11 +239,6 @@ export function SettingsPage() {
     }
 
     return t(mappedKey);
-  };
-
-  const handleSessionSecuritySubmit = (payload: SessionSecuritySettings) => {
-    if (!canUpdate) return;
-    updateSessionSecurityMutation.mutate(payload);
   };
 
   const refreshAction = useMemo(
@@ -342,8 +325,8 @@ export function SettingsPage() {
                   settingsQuery.data.sessionSecurity ?? DEFAULT_SESSION_SECURITY
                 }
                 readOnly={isReadOnly}
-                isSaving={updateSessionSecurityMutation.isPending}
-                onSubmit={handleSessionSecuritySubmit}
+                isSaving={isSavingSessionSecurity}
+                onSubmit={saveSessionSecuritySettings}
               />
             ) : null}
           </SectionCard>
