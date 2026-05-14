@@ -9,7 +9,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuthStore } from "@/features/auth/auth-store";
 import {
   getSettings,
-  updateApplicationSettings,
   updateLdapSettings,
   updateSessionSecuritySettings,
   validateLdapSettings,
@@ -33,6 +32,7 @@ import { useBrandingAssetSettingsForm } from "@/features/settings/hooks/useBrand
 import { useBrandingSettingsForm } from "@/features/settings/hooks/useBrandingSettingsForm";
 import { useBrandingSettingsSave } from "@/features/settings/hooks/useBrandingSettingsSave";
 import { useDirectorySettingsForm } from "@/features/settings/hooks/useDirectorySettingsForm";
+import { useDirectorySettingsSave } from "@/features/settings/hooks/useDirectorySettingsSave";
 import { useLdapSettingsForm } from "@/features/settings/hooks/useLdapSettingsForm";
 import { sessionSecurityFingerprint } from "@/features/settings/settings-utils";
 import { getApiErrorMessage } from "@/lib/api-error";
@@ -70,6 +70,13 @@ export function SettingsPage() {
     clearDirectoryError,
     buildDirectoryPayload,
   } = useDirectorySettingsForm();
+
+  const { saveDirectorySettings, isSavingDirectory } = useDirectorySettingsSave({
+    t,
+    canUpdate,
+    buildDirectoryPayload,
+    clearDirectoryError,
+  });
 
   const {
     brandingApplicationName,
@@ -162,18 +169,6 @@ export function SettingsPage() {
     },
   });
 
-  const updateDirectoryMutation = useMutation({
-    mutationFn: updateApplicationSettings,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: SETTINGS_QUERY_KEY });
-      clearDirectoryError();
-      toast.success(t("settings:directory.messages.saveSuccess"));
-    },
-    onError: (error) => {
-      toast.error(getApiErrorMessage(error, t("settings:directory.messages.saveFailed")));
-    },
-  });
-
   const updateSessionSecurityMutation = useMutation({
     mutationFn: updateSessionSecuritySettings,
     onSuccess: async () => {
@@ -256,13 +251,6 @@ export function SettingsPage() {
     }
 
     return t(mappedKey);
-  };
-
-  const handleDirectorySave = () => {
-    if (!canUpdate) return;
-    clearDirectoryError();
-
-    updateDirectoryMutation.mutate(buildDirectoryPayload());
   };
 
   const handleSessionSecuritySubmit = (payload: SessionSecuritySettings) => {
@@ -381,13 +369,13 @@ export function SettingsPage() {
             <DirectorySettingsForm
               nationalIdAttribute={nationalIdAttribute}
               readOnly={isReadOnly}
-              isSaving={updateDirectoryMutation.isPending}
+              isSaving={isSavingDirectory}
               errorMessage={directoryError}
               onNationalIdAttributeChange={(value) => {
                 clearDirectoryError();
                 updateNationalIdAttribute(value);
               }}
-              onSave={handleDirectorySave}
+              onSave={saveDirectorySettings}
             />
           </SectionCard>
         </TabsContent>
