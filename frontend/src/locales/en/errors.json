@@ -10,7 +10,6 @@
     },
     "generic": "An unexpected error occurred.",
     "goBack": "Go back",
-    "goDashboard": "Go to dashboard",
     "api": {
       "network": {
         "title": "API service cannot be reached",
@@ -53,7 +52,7 @@
       "traceIdCopied": "Trace ID copied.",
       "retry": "Retry",
       "back": "Go back",
-      "dashboard": "Go to dashboard",
+      "home": "Go to home",
       "source": "Source",
       "technicalDetails": "Technical details",
       "breadcrumb": "Error",

@@ -1,6 +1,6 @@
 {
-  "dashboard": {
-    "title": "SAS Portal Dashboard",
+  "home": {
+    "title": "SAS Portal",
     "description": "View the general portal overview.",
     "welcome": "Welcome",
     "displayName": "Display name",
@@ -9,4 +9,3 @@
     "permissionCount": "Permission count"
   }
 }
-

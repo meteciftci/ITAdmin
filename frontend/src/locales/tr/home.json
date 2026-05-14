@@ -1,6 +1,6 @@
 {
-  "dashboard": {
-    "title": "SAS Portal Kontrol Paneli",
+  "home": {
+    "title": "SAS Portal",
     "description": "Genel portal özetini görüntüleyin.",
     "welcome": "Hoş geldiniz",
     "displayName": "Görünen ad",

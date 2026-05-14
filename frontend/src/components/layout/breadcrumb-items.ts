@@ -13,6 +13,9 @@ const breadcrumbItems: BreadcrumbItem[] = [
 ];
 
 export function getBreadcrumbKeyByPath(pathname: string): string | null {
+  if (pathname === "/home") {
+    return null;
+  }
   if (pathname === "/error" || pathname.startsWith("/error/")) {
     return "items.error";
   }

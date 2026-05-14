@@ -10,7 +10,6 @@
     },
     "generic": "Beklenmeyen bir hata oluştu.",
     "goBack": "Geri dön",
-    "goDashboard": "Dashboard'a git",
     "api": {
       "network": {
         "title": "API servisine ulaşılamıyor",
@@ -53,7 +52,7 @@
       "traceIdCopied": "İzleme kodu kopyalandı.",
       "retry": "Tekrar dene",
       "back": "Geri dön",
-      "dashboard": "Kontrol paneline dön",
+      "home": "Anasayfaya dön",
       "source": "Kaynak",
       "technicalDetails": "Teknik bilgi",
       "breadcrumb": "Hata",

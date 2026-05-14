@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 
 import { RootRedirect } from "@/app/RootRedirect";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -6,7 +6,7 @@ import { LoginPage } from "@/features/auth/LoginPage";
 import { RequireAuth } from "@/features/auth/RequireAuth";
 import { RequirePermission } from "@/features/auth/RequirePermission";
 import { AuditLogsPage } from "@/features/audit-logs/AuditLogsPage";
-import { DashboardPage } from "@/features/dashboard/DashboardPage";
+import { HomePage } from "@/features/home/HomePage";
 import { PermissionsPage } from "@/features/permissions/PermissionsPage";
 import { RolesPage } from "@/features/roles/RolesPage";
 import { SecurityLogsPage } from "@/features/security-logs/SecurityLogsPage";
@@ -40,12 +40,20 @@ export const router = createBrowserRouter([
     ),
   },
   {
-    path: "/dashboard",
+    path: "/home",
     element: (
       <RequireAuth>
         <AppLayout>
-          <DashboardPage />
+          <HomePage />
         </AppLayout>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/dashboard",
+    element: (
+      <RequireAuth>
+        <Navigate to="/home" replace />
       </RequireAuth>
     ),
   },

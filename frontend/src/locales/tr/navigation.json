@@ -8,7 +8,6 @@
     },
     "items": {
       "home": "Anasayfa",
-      "dashboard": "Anasayfa",
       "users": "Kullanıcılar",
       "roles": "Roller",
       "permissions": "İzinler",

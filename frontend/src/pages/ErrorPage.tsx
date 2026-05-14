@@ -151,8 +151,8 @@ export function ErrorPage() {
     void navigate(-1);
   }, [navigate]);
 
-  const handleDashboard = useCallback(() => {
-    void navigate("/dashboard");
+  const handleGoHome = useCallback(() => {
+    void navigate("/home");
   }, [navigate]);
 
   const copyTraceId = useCallback(async () => {
@@ -254,9 +254,9 @@ export function ErrorPage() {
               type="button"
               variant="outline"
               className="w-full sm:w-auto"
-              onClick={handleDashboard}
+              onClick={handleGoHome}
             >
-              {t("errors:route.dashboard")}
+              {t("errors:route.home")}
             </Button>
           </div>
         </div>

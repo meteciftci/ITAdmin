@@ -3,8 +3,8 @@ import { Separator } from "@/components/ui/separator";
 import { useAuthStore } from "@/features/auth/auth-store";
 import { useTranslation } from "react-i18next";
 
-export function DashboardPage() {
-  const { t } = useTranslation(["dashboard"]);
+export function HomePage() {
+  const { t } = useTranslation(["home"]);
   const user = useAuthStore((state) => state.user);
 
   return (

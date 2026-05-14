@@ -22,8 +22,8 @@ export function NotFoundPage() {
           <Button variant="outline" onClick={() => navigate(-1)}>
             {t("common:actions.back")}
           </Button>
-          <Link className={buttonVariants()} to="/dashboard">
-            {t("common:actions.goToDashboard")}
+          <Link className={buttonVariants()} to="/home">
+            {t("common:actions.goToHome")}
           </Link>
         </div>
       </SectionCard>

@@ -167,7 +167,7 @@ export function LoginPage() {
       await i18n.changeLanguage(normalizeLanguage(currentUser.preferredLanguage));
     },
     onSuccess: () => {
-      navigate("/dashboard", { replace: true });
+      navigate("/home", { replace: true });
     },
     onError: (error: unknown) => {
       if (shouldClearAuthAfterLoginFailure(error)) {

@@ -4,7 +4,7 @@ import { initReactI18next } from "react-i18next";
 import trAuth from "@/locales/tr/auth.json";
 import trAuditLogs from "@/locales/tr/auditLogs.json";
 import trCommon from "@/locales/tr/common.json";
-import trDashboard from "@/locales/tr/dashboard.json";
+import trHome from "@/locales/tr/home.json";
 import trErrors from "@/locales/tr/errors.json";
 import trNavigation from "@/locales/tr/navigation.json";
 import trPermissions from "@/locales/tr/permissions.json";
@@ -16,7 +16,7 @@ import trUsers from "@/locales/tr/users.json";
 import enAuth from "@/locales/en/auth.json";
 import enAuditLogs from "@/locales/en/auditLogs.json";
 import enCommon from "@/locales/en/common.json";
-import enDashboard from "@/locales/en/dashboard.json";
+import enHome from "@/locales/en/home.json";
 import enErrors from "@/locales/en/errors.json";
 import enNavigation from "@/locales/en/navigation.json";
 import enPermissions from "@/locales/en/permissions.json";
@@ -38,7 +38,7 @@ const resources = {
     auth: trAuth.auth,
     auditLogs: trAuditLogs.auditLogs,
     navigation: trNavigation.navigation,
-    dashboard: trDashboard.dashboard,
+    home: trHome.home,
     errors: trErrors.errors,
     users: trUsers.users,
     roles: trRoles.roles,
@@ -51,7 +51,7 @@ const resources = {
     auth: enAuth.auth,
     auditLogs: enAuditLogs.auditLogs,
     navigation: enNavigation.navigation,
-    dashboard: enDashboard.dashboard,
+    home: enHome.home,
     errors: enErrors.errors,
     users: enUsers.users,
     roles: enRoles.roles,
@@ -70,7 +70,7 @@ void i18n.use(initReactI18next).init({
     "common",
     "auth",
     "navigation",
-    "dashboard",
+    "home",
     "errors",
     "users",
     "roles",

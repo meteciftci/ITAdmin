@@ -54,7 +54,7 @@ export function Topbar() {
             <BreadcrumbItem>
               {currentPageKey ? (
                 <Link
-                  to="/dashboard"
+                  to="/home"
                   className="max-w-40 truncate rounded-sm text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:max-w-56"
                 >
                   {t("navigation:items.home")}

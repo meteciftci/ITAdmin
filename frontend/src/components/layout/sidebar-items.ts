@@ -1,8 +1,8 @@
 import type { LucideIcon } from "lucide-react";
 import {
   ClipboardList,
+  House,
   KeyRound,
-  LayoutDashboard,
   Shield,
   ShieldAlert,
   SlidersHorizontal,
@@ -29,9 +29,9 @@ export const getSidebarGroups = (user: CurrentUser | null): SidebarGroup[] => [
     labelKey: "groups.main",
     items: [
       {
-        titleKey: "items.dashboard",
-        to: "/dashboard",
-        icon: LayoutDashboard,
+        titleKey: "items.home",
+        to: "/home",
+        icon: House,
         visible: true,
       },
     ],
