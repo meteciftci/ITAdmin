@@ -9,8 +9,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuthStore } from "@/features/auth/auth-store";
 import {
   getSettings,
-  uploadBrandingFavicon,
-  uploadBrandingLogo,
   updateApplicationSettings,
   updateLdapSettings,
   updateSessionSecuritySettings,
@@ -33,13 +31,13 @@ import {
 } from "@/features/settings/settings-constants";
 import { useBrandingAssetSettingsForm } from "@/features/settings/hooks/useBrandingAssetSettingsForm";
 import { useBrandingSettingsForm } from "@/features/settings/hooks/useBrandingSettingsForm";
+import { useBrandingSettingsSave } from "@/features/settings/hooks/useBrandingSettingsSave";
 import { useDirectorySettingsForm } from "@/features/settings/hooks/useDirectorySettingsForm";
 import { useLdapSettingsForm } from "@/features/settings/hooks/useLdapSettingsForm";
 import { sessionSecurityFingerprint } from "@/features/settings/settings-utils";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { createApiErrorRouteState, getErrorRoutePath } from "@/lib/route-error";
 import { canAccess } from "@/lib/permissions";
-import { BRANDING_QUERY_KEY } from "@/hooks/useBrandingSettings";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import type { SessionSecuritySettings } from "@/features/settings/types";
@@ -105,6 +103,21 @@ export function SettingsPage() {
     resetSelectedAssetsAfterSave,
   } = useBrandingAssetSettingsForm({ t });
 
+  const { saveBrandingSettings, isSavingBranding } = useBrandingSettingsSave({
+    t,
+    canUpdate,
+    brandingLogoUrl,
+    brandingFaviconUrl,
+    logoFile,
+    faviconFile,
+    validateBrandingInput,
+    validateForgotPasswordUrlInput,
+    buildBrandingPayload,
+    clearBrandingError,
+    clearForgotPasswordUrlError,
+    resetSelectedAssetsAfterSave,
+  });
+
   const [activeTab, setActiveTab] = useState<SettingsTabValue>(DEFAULT_TAB);
 
   const settingsQuery = useQuery({
@@ -146,21 +159,6 @@ export function SettingsPage() {
     mutationFn: validateLdapSettings,
     onError: (error) => {
       toast.error(getApiErrorMessage(error, t("settings:ldap.validation.requestFailed")));
-    },
-  });
-
-  const updateBrandingMutation = useMutation({
-    mutationFn: updateApplicationSettings,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: SETTINGS_QUERY_KEY });
-      await queryClient.invalidateQueries({ queryKey: BRANDING_QUERY_KEY });
-      resetSelectedAssetsAfterSave();
-      clearBrandingError();
-      clearForgotPasswordUrlError();
-      toast.success(t("settings:application.messages.saveSuccess"));
-    },
-    onError: (error) => {
-      toast.error(getApiErrorMessage(error, t("settings:application.messages.saveFailed")));
     },
   });
 
@@ -260,39 +258,6 @@ export function SettingsPage() {
     return t(mappedKey);
   };
 
-  const handleBrandingSave = async () => {
-    if (!canUpdate) return;
-    clearBrandingError();
-    if (!validateBrandingInput()) return;
-    if (!validateForgotPasswordUrlInput()) return;
-
-    let logoUrlToPersist = brandingLogoUrl;
-    if (logoFile) {
-      try {
-        const uploadResult = await uploadBrandingLogo(logoFile);
-        logoUrlToPersist = uploadResult.logoUrl;
-      } catch (error) {
-        toast.error(getApiErrorMessage(error, t("settings:application.messages.logoUploadFailed")));
-        return;
-      }
-    }
-
-    let faviconUrlToPersist = brandingFaviconUrl;
-    if (faviconFile) {
-      try {
-        const uploadResult = await uploadBrandingFavicon(faviconFile);
-        faviconUrlToPersist = uploadResult.faviconUrl;
-      } catch (error) {
-        toast.error(getApiErrorMessage(error, t("settings:application.messages.faviconUploadFailed")));
-        return;
-      }
-    }
-
-    updateBrandingMutation.mutate(
-      buildBrandingPayload({ logoUrlToPersist, faviconUrlToPersist }),
-    );
-  };
-
   const handleDirectorySave = () => {
     if (!canUpdate) return;
     clearDirectoryError();
@@ -365,7 +330,7 @@ export function SettingsPage() {
               selectedFaviconFileName={selectedFaviconFileName}
               forgotPasswordUrl={forgotPasswordUrl}
               readOnly={isReadOnly}
-              isSaving={updateBrandingMutation.isPending}
+              isSaving={isSavingBranding}
               errorMessage={brandingError}
               forgotPasswordUrlError={forgotPasswordUrlError}
               onApplicationNameChange={updateApplicationName}
@@ -373,7 +338,7 @@ export function SettingsPage() {
               onSelectLogo={handleLogoSelect}
               onSelectFavicon={handleFaviconSelect}
               onForgotPasswordUrlChange={updateForgotPasswordUrl}
-              onSave={() => void handleBrandingSave()}
+              onSave={() => void saveBrandingSettings()}
             />
           </SectionCard>
         </TabsContent>
