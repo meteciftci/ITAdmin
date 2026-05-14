@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -29,6 +29,32 @@ type RoleFormDialogProps = {
   onSaved: () => void;
 };
 
+function getFormSnapshot(
+  mode: "create" | "edit",
+  role: RoleListItem | null | undefined,
+): {
+  name: string;
+  code: string;
+  description: string;
+  isActive: boolean;
+} {
+  if (mode === "edit" && role) {
+    return {
+      name: role.name,
+      code: role.code,
+      description: role.description ?? "",
+      isActive: role.isActive,
+    };
+  }
+
+  return {
+    name: "",
+    code: "",
+    description: "",
+    isActive: true,
+  };
+}
+
 export function RoleFormDialog({
   open,
   mode,
@@ -40,15 +66,35 @@ export function RoleFormDialog({
   const isSystemRole = Boolean(role?.isSystem);
   const isEdit = mode === "edit";
   const dialogTitle = isEdit ? t("roles:form.editTitle") : t("roles:form.createTitle");
-  const initialName = isEdit && role ? role.name : "";
-  const initialCode = isEdit && role ? role.code : "";
-  const initialDescription = isEdit && role ? (role.description ?? "") : "";
-  const initialIsActive = isEdit && role ? role.isActive : true;
-  const [name, setName] = useState(initialName);
-  const [code, setCode] = useState(initialCode);
-  const [description, setDescription] = useState(initialDescription);
-  const [isActive, setIsActive] = useState(initialIsActive);
+  const [name, setName] = useState("");
+  const [code, setCode] = useState("");
+  const [description, setDescription] = useState("");
+  const [isActive, setIsActive] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const snapshot = getFormSnapshot(mode, role);
+    /* eslint-disable react-hooks/set-state-in-effect -- hydrate fields when dialog opens or role data arrives */
+    setName(snapshot.name);
+    setCode(snapshot.code);
+    setDescription(snapshot.description);
+    setIsActive(snapshot.isActive);
+    setErrorMessage(null);
+    /* eslint-enable react-hooks/set-state-in-effect */
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- use role field primitives instead of full `role` object to avoid resets on parent reference churn
+  }, [
+    open,
+    mode,
+    role?.id,
+    role?.name,
+    role?.code,
+    role?.description,
+    role?.isActive,
+  ]);
 
   const isSaveDisabled = useMemo(() => {
     if (isSystemRole) return true;
@@ -103,10 +149,7 @@ export function RoleFormDialog({
 
   return (
     <Dialog open={open}>
-      <DialogContent
-        key={`${open ? "open" : "closed"}-${mode}-${role?.id ?? "new"}`}
-        onOpenChange={handleOpenChange}
-      >
+      <DialogContent onOpenChange={handleOpenChange}>
         <DialogHeader className="space-y-2">
           <DialogTitle>{dialogTitle}</DialogTitle>
           <DialogDescription>
