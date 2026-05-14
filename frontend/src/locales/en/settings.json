@@ -52,6 +52,7 @@
         "genericCouldNotValidate": "LDAP connection could not be validated.",
         "backendMessages": {
           "serviceAccountAuthFailed": "LDAP service account authentication failed.",
+          "serverConnectionFailed": "Could not connect to the LDAP server or resolve the bind domain. Check host, port, SSL, and bind user domain settings.",
           "validationFailed": "LDAP validation failed.",
           "requiredLdapFieldsMissing": "Required LDAP fields are missing.",
           "requiredLdapValidationFieldsMissing": "Required LDAP validation fields are missing.",
@@ -61,7 +62,9 @@
           "directoryUserNotFound": "Directory user could not be found.",
           "directoryUserAuthFailed": "Directory user authentication failed.",
           "directoryUserDnNotResolved": "Directory user distinguished name could not be resolved.",
-          "bindValidationSucceeded": "LDAP bind validation succeeded."
+          "bindValidationSucceeded": "LDAP bind validation succeeded.",
+          "baseDnCouldNotBeResolved": "LDAP base DN could not be resolved.",
+          "userSearchBaseCouldNotBeResolved": "LDAP user search base could not be resolved."
         }
       }
     },

@@ -452,8 +452,9 @@ public sealed class SettingsServiceTests
         var result = await service.ValidateLdapSettingsAsync(request);
 
         Assert.True(result.IsValid);
-        Assert.Equal(1, ldapService.ValidateBindCallCount);
-        Assert.Equal("persisted-secret", ldapService.LastValidateBindRequest!.BindPassword);
+        Assert.Equal(1, ldapService.ValidateSearchBasesCallCount);
+        Assert.Equal("persisted-secret", ldapService.LastValidateSearchBasesRequest!.BindPassword);
+        Assert.Equal(0, ldapService.ValidateBindCallCount);
         Assert.Equal(0, ldapService.ValidateCallCount);
     }
 
@@ -471,7 +472,7 @@ public sealed class SettingsServiceTests
     }
 
     [Fact]
-    public async Task ValidateLdapSettingsAsync_WithoutTestCredentials_CallsValidateBindAsync()
+    public async Task ValidateLdapSettingsAsync_WithoutTestCredentials_CallsValidateSearchBasesAsync()
     {
         await using var dbContext = CreateDbContext();
         var ldapService = new FakeLdapService();
@@ -480,12 +481,13 @@ public sealed class SettingsServiceTests
         var request = CreateValidateRequest(bindPassword: "plain-secret", testUserName: " ", testPassword: " ");
         await service.ValidateLdapSettingsAsync(request);
 
-        Assert.Equal(1, ldapService.ValidateBindCallCount);
+        Assert.Equal(1, ldapService.ValidateSearchBasesCallCount);
+        Assert.Equal(0, ldapService.ValidateBindCallCount);
         Assert.Equal(0, ldapService.ValidateCallCount);
     }
 
     [Fact]
-    public async Task ValidateLdapSettingsAsync_WithTestCredentials_CallsValidateAsync()
+    public async Task ValidateLdapSettingsAsync_WithTestCredentials_CallsValidateSearchBasesThenValidateAsync()
     {
         await using var dbContext = CreateDbContext();
         var ldapService = new FakeLdapService();
@@ -494,9 +496,85 @@ public sealed class SettingsServiceTests
         var request = CreateValidateRequest(bindPassword: "plain-secret", testUserName: "john", testPassword: "pw");
         await service.ValidateLdapSettingsAsync(request);
 
+        Assert.Equal(1, ldapService.ValidateSearchBasesCallCount);
         Assert.Equal(0, ldapService.ValidateBindCallCount);
         Assert.Equal(1, ldapService.ValidateCallCount);
         Assert.Equal("john", ldapService.LastValidateRequest!.TestUserName);
+    }
+
+    [Fact]
+    public async Task ValidateLdapSettingsAsync_WhenSearchBasesValidationFails_ReturnsFalse()
+    {
+        await using var dbContext = CreateDbContext();
+        var ldapService = new FakeLdapService
+        {
+            ValidateSearchBasesResult = new(false, "LDAP base DN could not be resolved.")
+        };
+        var service = CreateService(dbContext, ldapService);
+
+        var request = CreateValidateRequest(bindPassword: "plain-secret", testUserName: " ", testPassword: " ");
+        var result = await service.ValidateLdapSettingsAsync(request);
+
+        Assert.False(result.IsValid);
+        Assert.Equal("LDAP base DN could not be resolved.", result.Message);
+        Assert.Equal(1, ldapService.ValidateSearchBasesCallCount);
+        Assert.Equal(0, ldapService.ValidateCallCount);
+    }
+
+    [Fact]
+    public async Task ValidateLdapSettingsAsync_WhenUserSearchBaseValidationFails_ReturnsFalse()
+    {
+        await using var dbContext = CreateDbContext();
+        var ldapService = new FakeLdapService
+        {
+            ValidateSearchBasesResult = new(false, "LDAP user search base could not be resolved.")
+        };
+        var service = CreateService(dbContext, ldapService);
+
+        var request = CreateValidateRequest(bindPassword: "plain-secret", testUserName: " ", testPassword: " ");
+        var result = await service.ValidateLdapSettingsAsync(request);
+
+        Assert.False(result.IsValid);
+        Assert.Equal("LDAP user search base could not be resolved.", result.Message);
+        Assert.Equal(1, ldapService.ValidateSearchBasesCallCount);
+        Assert.Equal(0, ldapService.ValidateCallCount);
+    }
+
+    [Fact]
+    public async Task ValidateLdapSettingsAsync_WhenSearchBasesFails_WithTestCredentials_DoesNotCallValidateAsync()
+    {
+        await using var dbContext = CreateDbContext();
+        var ldapService = new FakeLdapService
+        {
+            ValidateSearchBasesResult = new(false, "LDAP service account authentication failed.")
+        };
+        var service = CreateService(dbContext, ldapService);
+
+        var request = CreateValidateRequest(bindPassword: "plain-secret", testUserName: "john", testPassword: "pw");
+        var result = await service.ValidateLdapSettingsAsync(request);
+
+        Assert.False(result.IsValid);
+        Assert.Equal(1, ldapService.ValidateSearchBasesCallCount);
+        Assert.Equal(0, ldapService.ValidateCallCount);
+    }
+
+    [Fact]
+    public async Task ValidateLdapSettingsAsync_WithTestCredentials_WhenUserValidationFails_ReturnsUserValidationMessage()
+    {
+        await using var dbContext = CreateDbContext();
+        var ldapService = new FakeLdapService
+        {
+            ValidateResult = new(false, "Directory user could not be found.")
+        };
+        var service = CreateService(dbContext, ldapService);
+
+        var request = CreateValidateRequest(bindPassword: "plain-secret", testUserName: "john", testPassword: "pw");
+        var result = await service.ValidateLdapSettingsAsync(request);
+
+        Assert.False(result.IsValid);
+        Assert.Equal("Directory user could not be found.", result.Message);
+        Assert.Equal(1, ldapService.ValidateSearchBasesCallCount);
+        Assert.Equal(1, ldapService.ValidateCallCount);
     }
 
     [Fact]

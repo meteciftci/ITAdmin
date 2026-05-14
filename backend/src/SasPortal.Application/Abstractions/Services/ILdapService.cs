@@ -6,6 +6,10 @@ public interface ILdapService
 {
     Task<LdapValidationResult> ValidateBindAsync(LdapBindValidationRequest request, CancellationToken cancellationToken = default);
 
+    Task<LdapValidationResult> ValidateSearchBasesAsync(
+        LdapSearchBasesValidationRequest request,
+        CancellationToken cancellationToken = default);
+
     Task<LdapValidationResult> ValidateAsync(LdapValidationRequest request, CancellationToken cancellationToken = default);
 
     Task<LdapUserProfile?> GetUserProfileAsync(

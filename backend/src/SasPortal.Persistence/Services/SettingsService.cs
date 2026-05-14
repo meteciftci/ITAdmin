@@ -270,42 +270,47 @@ public sealed class SettingsService(
         var normalizedTestUserName = NormalizeNullable(request.TestUserName);
         var normalizedTestPassword = NormalizeNullable(request.TestPassword);
 
-        LdapValidationResult result;
-        if (string.IsNullOrWhiteSpace(normalizedTestUserName) || string.IsNullOrWhiteSpace(normalizedTestPassword))
+        var searchBasesRequest = new LdapSearchBasesValidationRequest
         {
-            result = await ldapService.ValidateBindAsync(
-                new LdapBindValidationRequest
-                {
-                    Host = request.Host.Trim(),
-                    Port = request.Port,
-                    UseSsl = request.UseSsl,
-                    BindUserName = request.BindUserName.Trim(),
-                    BindUserDomain = NormalizeNullable(request.BindUserDomain),
-                    BindPassword = bindPassword!
-                },
-                cancellationToken);
-        }
-        else
+            Host = request.Host.Trim(),
+            Port = request.Port,
+            UseSsl = request.UseSsl,
+            BaseDn = request.BaseDn.Trim(),
+            UserSearchBase = NormalizeNullable(request.UserSearchBase) ?? string.Empty,
+            BindUserName = request.BindUserName.Trim(),
+            BindUserDomain = NormalizeNullable(request.BindUserDomain),
+            BindPassword = bindPassword!
+        };
+
+        var basesResult = await ldapService.ValidateSearchBasesAsync(searchBasesRequest, cancellationToken);
+        if (!basesResult.IsValid)
         {
-            result = await ldapService.ValidateAsync(
-                new LdapValidationRequest
-                {
-                    Host = request.Host.Trim(),
-                    Port = request.Port,
-                    UseSsl = request.UseSsl,
-                    BaseDn = request.BaseDn.Trim(),
-                    UserSearchBase = NormalizeNullable(request.UserSearchBase) ?? string.Empty,
-                    UserSearchFilter = request.UserSearchFilter.Trim(),
-                    BindUserName = request.BindUserName.Trim(),
-                    BindUserDomain = NormalizeNullable(request.BindUserDomain),
-                    BindPassword = bindPassword!,
-                    TestUserName = normalizedTestUserName!,
-                    TestPassword = normalizedTestPassword!
-                },
-                cancellationToken);
+            return new ValidateLdapSettingsResult(false, basesResult.Message);
         }
 
-        return new ValidateLdapSettingsResult(result.IsValid, result.Message);
+        if (string.IsNullOrWhiteSpace(normalizedTestUserName) || string.IsNullOrWhiteSpace(normalizedTestPassword))
+        {
+            return new ValidateLdapSettingsResult(true, basesResult.Message);
+        }
+
+        var userResult = await ldapService.ValidateAsync(
+            new LdapValidationRequest
+            {
+                Host = request.Host.Trim(),
+                Port = request.Port,
+                UseSsl = request.UseSsl,
+                BaseDn = request.BaseDn.Trim(),
+                UserSearchBase = NormalizeNullable(request.UserSearchBase) ?? string.Empty,
+                UserSearchFilter = request.UserSearchFilter.Trim(),
+                BindUserName = request.BindUserName.Trim(),
+                BindUserDomain = NormalizeNullable(request.BindUserDomain),
+                BindPassword = bindPassword!,
+                TestUserName = normalizedTestUserName!,
+                TestPassword = normalizedTestPassword!
+            },
+            cancellationToken);
+
+        return new ValidateLdapSettingsResult(userResult.IsValid, userResult.Message);
     }
 
     public async Task<UpdateSettingsResult> UpdateApplicationSettingsAsync(

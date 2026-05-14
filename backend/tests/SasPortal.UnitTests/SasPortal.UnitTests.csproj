@@ -23,6 +23,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\SasPortal.Application\SasPortal.Application.csproj" />
     <ProjectReference Include="..\..\src\SasPortal.Domain\SasPortal.Domain.csproj" />
+    <ProjectReference Include="..\..\src\SasPortal.Infrastructure\SasPortal.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\SasPortal.Persistence\SasPortal.Persistence.csproj" />
   </ItemGroup>
 

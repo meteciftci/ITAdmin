@@ -52,6 +52,7 @@
         "genericCouldNotValidate": "LDAP bağlantısı doğrulanamadı.",
         "backendMessages": {
           "serviceAccountAuthFailed": "LDAP servis hesabı kimlik doğrulaması başarısız.",
+          "serverConnectionFailed": "LDAP sunucusuna bağlantı kurulamadı veya bind domain çözümlenemedi. Host, port, SSL ve Bind Kullanıcı Domain ayarlarını kontrol edin.",
           "validationFailed": "LDAP doğrulaması başarısız.",
           "requiredLdapFieldsMissing": "Zorunlu LDAP alanları eksik.",
           "requiredLdapValidationFieldsMissing": "Zorunlu LDAP doğrulama alanları eksik.",
@@ -61,7 +62,9 @@
           "directoryUserNotFound": "Dizin kullanıcısı bulunamadı.",
           "directoryUserAuthFailed": "Dizin kullanıcısı kimlik doğrulaması başarısız.",
           "directoryUserDnNotResolved": "Dizin kullanıcısının ayırt edici adı çözümlenemedi.",
-          "bindValidationSucceeded": "LDAP bind doğrulaması başarılı."
+          "bindValidationSucceeded": "LDAP bind doğrulaması başarılı.",
+          "baseDnCouldNotBeResolved": "LDAP Base DN doğrulanamadı.",
+          "userSearchBaseCouldNotBeResolved": "LDAP kullanıcı arama base doğrulanamadı."
         }
       }
     },

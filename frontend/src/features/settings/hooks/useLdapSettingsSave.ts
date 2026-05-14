@@ -42,6 +42,8 @@ function getLocalizedLdapValidationMessage(
   const messageKeyMap: Record<string, string> = {
     "LDAP service account authentication failed.":
       "settings:ldap.validation.backendMessages.serviceAccountAuthFailed",
+    "LDAP server connection failed.":
+      "settings:ldap.validation.backendMessages.serverConnectionFailed",
     "LDAP validation failed.": "settings:ldap.validation.backendMessages.validationFailed",
     "Required LDAP fields are missing.":
       "settings:ldap.validation.backendMessages.requiredLdapFieldsMissing",
@@ -61,6 +63,10 @@ function getLocalizedLdapValidationMessage(
       "settings:ldap.validation.backendMessages.directoryUserDnNotResolved",
     "LDAP bind validation succeeded.":
       "settings:ldap.validation.backendMessages.bindValidationSucceeded",
+    "LDAP base DN could not be resolved.":
+      "settings:ldap.validation.backendMessages.baseDnCouldNotBeResolved",
+    "LDAP user search base could not be resolved.":
+      "settings:ldap.validation.backendMessages.userSearchBaseCouldNotBeResolved",
   };
 
   const mappedKey = messageKeyMap[trimmedMessage];

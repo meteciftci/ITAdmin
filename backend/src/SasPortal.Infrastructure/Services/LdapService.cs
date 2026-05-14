@@ -11,12 +11,12 @@ public sealed class LdapService : ILdapService
 {
     private const string MissingRequiredFieldsMessage = "Required LDAP fields are missing.";
     private const string ValidationSucceededMessage = "LDAP validation succeeded.";
-    private const string ServiceAccountBindFailedMessage = "LDAP service account authentication failed.";
     private const string DirectoryUserNotFoundMessage = "Directory user could not be found.";
     private const string DirectoryUserDistinguishedNameNotFoundMessage = "Directory user distinguished name could not be resolved.";
     private const string DirectoryUserBindFailedMessage = "Directory user authentication failed.";
-    private const string ValidationFailedMessage = "LDAP validation failed.";
     private const string BindValidationSucceededMessage = "LDAP bind validation succeeded.";
+    private const string BaseDnCouldNotBeResolvedMessage = "LDAP base DN could not be resolved.";
+    private const string UserSearchBaseCouldNotBeResolvedMessage = "LDAP user search base could not be resolved.";
 
     public Task<LdapValidationResult> ValidateBindAsync(LdapBindValidationRequest request, CancellationToken cancellationToken = default)
     {
@@ -43,13 +43,74 @@ public sealed class LdapService : ILdapService
             connection.Bind();
             return Task.FromResult(new LdapValidationResult(true, BindValidationSucceededMessage));
         }
-        catch (LdapException)
+        catch (LdapException exception)
         {
-            return Task.FromResult(new LdapValidationResult(false, ServiceAccountBindFailedMessage));
+            return Task.FromResult(
+                new LdapValidationResult(false, LdapBindFailureMessageResolver.ResolveForServiceAccountBind(exception)));
         }
         catch
         {
-            return Task.FromResult(new LdapValidationResult(false, ValidationFailedMessage));
+            return Task.FromResult(new LdapValidationResult(false, LdapBindFailureMessageResolver.ValidationFailedMessage));
+        }
+    }
+
+    public Task<LdapValidationResult> ValidateSearchBasesAsync(
+        LdapSearchBasesValidationRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        _ = cancellationToken;
+
+        if (string.IsNullOrWhiteSpace(request.Host) ||
+            request.Port <= 0 ||
+            string.IsNullOrWhiteSpace(request.BaseDn) ||
+            string.IsNullOrWhiteSpace(request.BindUserName) ||
+            string.IsNullOrWhiteSpace(request.BindPassword))
+        {
+            return Task.FromResult(new LdapValidationResult(false, MissingRequiredFieldsMessage));
+        }
+
+        try
+        {
+            var identifier = new LdapDirectoryIdentifier(request.Host, request.Port);
+            var bindIdentity = BuildBindIdentity(request.BindUserName, request.BindUserDomain);
+            if (string.IsNullOrWhiteSpace(bindIdentity))
+            {
+                return Task.FromResult(new LdapValidationResult(false, MissingRequiredFieldsMessage));
+            }
+
+            using var connection = CreateConnection(identifier, request.UseSsl, bindIdentity, request.BindPassword);
+            try
+            {
+                connection.Bind();
+            }
+            catch (LdapException exception)
+            {
+                return Task.FromResult(
+                    new LdapValidationResult(false, LdapBindFailureMessageResolver.ResolveForServiceAccountBind(exception)));
+            }
+
+            var baseDn = request.BaseDn.Trim();
+            var baseResult = TryResolveLdapSearchBase(connection, baseDn, BaseDnCouldNotBeResolvedMessage);
+            if (!baseResult.IsValid)
+            {
+                return Task.FromResult(baseResult);
+            }
+
+            var userSearchBase = string.IsNullOrWhiteSpace(request.UserSearchBase) ? string.Empty : request.UserSearchBase.Trim();
+            if (!string.IsNullOrWhiteSpace(userSearchBase))
+            {
+                var userBaseResult = TryResolveLdapSearchBase(connection, userSearchBase, UserSearchBaseCouldNotBeResolvedMessage);
+                if (!userBaseResult.IsValid)
+                {
+                    return Task.FromResult(userBaseResult);
+                }
+            }
+
+            return Task.FromResult(new LdapValidationResult(true, BindValidationSucceededMessage));
+        }
+        catch
+        {
+            return Task.FromResult(new LdapValidationResult(false, LdapBindFailureMessageResolver.ValidationFailedMessage));
         }
     }
 
@@ -81,9 +142,10 @@ public sealed class LdapService : ILdapService
             {
                 serviceConnection.Bind();
             }
-            catch (LdapException)
+            catch (LdapException exception)
             {
-                return Task.FromResult(new LdapValidationResult(false, ServiceAccountBindFailedMessage));
+                return Task.FromResult(
+                    new LdapValidationResult(false, LdapBindFailureMessageResolver.ResolveForServiceAccountBind(exception)));
             }
 
             var escapedUserName = EscapeLdapFilterValue(request.TestUserName);
@@ -105,7 +167,7 @@ public sealed class LdapService : ILdapService
             }
             catch (LdapException)
             {
-                return Task.FromResult(new LdapValidationResult(false, ValidationFailedMessage));
+                return Task.FromResult(new LdapValidationResult(false, LdapBindFailureMessageResolver.ValidationFailedMessage));
             }
 
             if (searchResponse.Entries.Count == 0)
@@ -132,7 +194,7 @@ public sealed class LdapService : ILdapService
         }
         catch
         {
-            return Task.FromResult(new LdapValidationResult(false, ValidationFailedMessage));
+            return Task.FromResult(new LdapValidationResult(false, LdapBindFailureMessageResolver.ValidationFailedMessage));
         }
     }
 
@@ -647,6 +709,33 @@ public sealed class LdapService : ILdapService
             .Replace("(", "\\28", StringComparison.Ordinal)
             .Replace(")", "\\29", StringComparison.Ordinal)
             .Replace("\0", "\\00", StringComparison.Ordinal);
+    }
+
+    private static LdapValidationResult TryResolveLdapSearchBase(LdapConnection connection, string distinguishedName, string failureMessage)
+    {
+        try
+        {
+            var searchRequest = new SearchRequest(
+                distinguishedName,
+                "(objectClass=*)",
+                SearchScope.Base,
+                "distinguishedName")
+            {
+                SizeLimit = 1
+            };
+
+            var searchResponse = (SearchResponse)connection.SendRequest(searchRequest);
+            if (searchResponse.ResultCode != ResultCode.Success || searchResponse.Entries.Count == 0)
+            {
+                return new LdapValidationResult(false, failureMessage);
+            }
+
+            return new LdapValidationResult(true, BindValidationSucceededMessage);
+        }
+        catch (LdapException)
+        {
+            return new LdapValidationResult(false, failureMessage);
+        }
     }
 
     private static string BuildBindIdentity(string bindUserName, string? bindUserDomain)

@@ -1,6 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <InternalsVisibleTo Include="SasPortal.UnitTests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\SasPortal.Application\SasPortal.Application.csproj" />
     <ProjectReference Include="..\SasPortal.Domain\SasPortal.Domain.csproj" />
   </ItemGroup>

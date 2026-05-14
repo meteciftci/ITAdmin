@@ -6,13 +6,16 @@ namespace SasPortal.UnitTests.Fakes;
 public sealed class FakeLdapService : ILdapService
 {
     public int ValidateBindCallCount { get; private set; }
+    public int ValidateSearchBasesCallCount { get; private set; }
     public int ValidateCallCount { get; private set; }
     public int GetUserProfileCallCount { get; private set; }
     public LdapBindValidationRequest? LastValidateBindRequest { get; private set; }
+    public LdapSearchBasesValidationRequest? LastValidateSearchBasesRequest { get; private set; }
     public LdapValidationRequest? LastValidateRequest { get; private set; }
     public LdapUserProfileRequest? LastGetUserProfileRequest { get; private set; }
 
     public LdapValidationResult ValidateBindResult { get; set; } = new(true, "bind ok");
+    public LdapValidationResult ValidateSearchBasesResult { get; set; } = new(true, "LDAP bind validation succeeded.");
     public LdapValidationResult ValidateResult { get; set; } = new(true, "full ok");
     public LdapUserProfile? UserProfileResult { get; set; }
     public LdapUserProfile? UserProfileByObjectIdResult { get; set; }
@@ -24,6 +27,15 @@ public sealed class FakeLdapService : ILdapService
         ValidateBindCallCount++;
         LastValidateBindRequest = request;
         return Task.FromResult(ValidateBindResult);
+    }
+
+    public Task<LdapValidationResult> ValidateSearchBasesAsync(
+        LdapSearchBasesValidationRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateSearchBasesCallCount++;
+        LastValidateSearchBasesRequest = request;
+        return Task.FromResult(ValidateSearchBasesResult);
     }
 
     public Task<LdapValidationResult> ValidateAsync(LdapValidationRequest request, CancellationToken cancellationToken = default)
