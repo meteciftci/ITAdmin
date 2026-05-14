@@ -26,19 +26,14 @@ import { LdapSettingsForm } from "@/features/settings/components/LdapSettingsFor
 import { SessionSecuritySettingsForm } from "@/features/settings/components/SessionSecuritySettingsForm";
 import {
   AUTH_SESSION_OPTIONS_QUERY_KEY,
-  BRANDING_APPLICATION_NAME_KEY,
-  BRANDING_BROWSER_TITLE_KEY,
-  BRANDING_FAVICON_URL_KEY,
-  BRANDING_FORGOT_PASSWORD_URL_KEY,
-  BRANDING_LOGO_URL_KEY,
   DEFAULT_SESSION_SECURITY,
   DEFAULT_TAB,
   MAX_FAVICON_BYTES,
   MAX_LOGO_BYTES,
-  SETTING_VALUE_TYPE_STRING,
   SETTINGS_QUERY_KEY,
   type SettingsTabValue,
 } from "@/features/settings/settings-constants";
+import { useBrandingSettingsForm } from "@/features/settings/hooks/useBrandingSettingsForm";
 import { useDirectorySettingsForm } from "@/features/settings/hooks/useDirectorySettingsForm";
 import { useLdapSettingsForm } from "@/features/settings/hooks/useLdapSettingsForm";
 import { sessionSecurityFingerprint } from "@/features/settings/settings-utils";
@@ -79,9 +74,24 @@ export function SettingsPage() {
     buildDirectoryPayload,
   } = useDirectorySettingsForm();
 
+  const {
+    brandingApplicationName,
+    brandingBrowserTitle,
+    forgotPasswordUrl,
+    forgotPasswordUrlError,
+    brandingError,
+    hydrateFromBranding,
+    updateApplicationName,
+    updateBrowserTitle,
+    updateForgotPasswordUrl,
+    clearBrandingError,
+    clearForgotPasswordUrlError,
+    validateBrandingInput,
+    validateForgotPasswordUrlInput,
+    buildBrandingPayload,
+  } = useBrandingSettingsForm({ t });
+
   const [activeTab, setActiveTab] = useState<SettingsTabValue>(DEFAULT_TAB);
-  const [brandingApplicationName, setBrandingApplicationName] = useState("SAS Portal v2");
-  const [brandingBrowserTitle, setBrandingBrowserTitle] = useState("SAS Portal v2");
   const [brandingLogoUrl, setBrandingLogoUrl] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
@@ -90,9 +100,6 @@ export function SettingsPage() {
   const [faviconFile, setFaviconFile] = useState<File | null>(null);
   const [faviconPreviewUrl, setFaviconPreviewUrl] = useState<string | null>(null);
   const [selectedFaviconFileName, setSelectedFaviconFileName] = useState<string | null>(null);
-  const [forgotPasswordUrl, setForgotPasswordUrl] = useState("");
-  const [forgotPasswordUrlError, setForgotPasswordUrlError] = useState<string | undefined>(undefined);
-  const [brandingError, setBrandingError] = useState<string | undefined>(undefined);
 
   const settingsQuery = useQuery({
     queryKey: SETTINGS_QUERY_KEY,
@@ -108,8 +115,7 @@ export function SettingsPage() {
     /* eslint-disable react-hooks/set-state-in-effect -- bulk hydrate local UI from settings query snapshot */
     hydrateFromSettings(ldap);
     hydrateFromApplicationSettings(settingsQuery.data.applicationSettings);
-    setBrandingApplicationName(settingsQuery.data.branding.applicationName ?? "SAS Portal v2");
-    setBrandingBrowserTitle(settingsQuery.data.branding.browserTitle ?? "SAS Portal v2");
+    hydrateFromBranding(settingsQuery.data.branding);
     setBrandingLogoUrl(settingsQuery.data.branding.logoUrl ?? null);
     setLogoFile(null);
     setLogoPreviewUrl(null);
@@ -118,11 +124,8 @@ export function SettingsPage() {
     setFaviconFile(null);
     setFaviconPreviewUrl(null);
     setSelectedFaviconFileName(null);
-    setForgotPasswordUrl(settingsQuery.data.branding.forgotPasswordUrl ?? "");
-    setForgotPasswordUrlError(undefined);
-    setBrandingError(undefined);
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, [settingsQuery.data, hydrateFromApplicationSettings, hydrateFromSettings]);
+  }, [settingsQuery.data, hydrateFromApplicationSettings, hydrateFromBranding, hydrateFromSettings]);
 
   useEffect(() => {
     return () => {
@@ -176,8 +179,8 @@ export function SettingsPage() {
       setFaviconFile(null);
       setFaviconPreviewUrl(null);
       setSelectedFaviconFileName(null);
-      setBrandingError(undefined);
-      setForgotPasswordUrlError(undefined);
+      clearBrandingError();
+      clearForgotPasswordUrlError();
       toast.success(t("settings:application.messages.saveSuccess"));
     },
     onError: (error) => {
@@ -279,36 +282,6 @@ export function SettingsPage() {
     }
 
     return t(mappedKey);
-  };
-
-  const validateBrandingInput = (): boolean => {
-    if (brandingApplicationName.trim().length > 100) {
-      setBrandingError(t("settings:application.validation.applicationNameMax"));
-      return false;
-    }
-
-    if (brandingBrowserTitle.trim().length > 100) {
-      setBrandingError(t("settings:application.validation.browserTitleMax"));
-      return false;
-    }
-
-    return true;
-  };
-
-  const validateForgotPasswordUrlInput = (): boolean => {
-    const trimmed = forgotPasswordUrl.trim();
-    if (!trimmed) {
-      setForgotPasswordUrlError(undefined);
-      return true;
-    }
-
-    if (!/^https?:\/\//i.test(trimmed) || trimmed.length > 500) {
-      setForgotPasswordUrlError(t("settings:application.validation.forgotPasswordUrlInvalid"));
-      return false;
-    }
-
-    setForgotPasswordUrlError(undefined);
-    return true;
   };
 
   const validateLogoFile = async (file: File): Promise<boolean> => {
@@ -427,7 +400,7 @@ export function SettingsPage() {
 
   const handleBrandingSave = async () => {
     if (!canUpdate) return;
-    setBrandingError(undefined);
+    clearBrandingError();
     if (!validateBrandingInput()) return;
     if (!validateForgotPasswordUrlInput()) return;
 
@@ -453,37 +426,9 @@ export function SettingsPage() {
       }
     }
 
-    const trimmedForgotPasswordUrl = forgotPasswordUrl.trim();
-
-    updateBrandingMutation.mutate({
-      items: [
-        {
-          key: BRANDING_APPLICATION_NAME_KEY,
-          value: brandingApplicationName.trim() || "SAS Portal v2",
-          valueType: SETTING_VALUE_TYPE_STRING,
-        },
-        {
-          key: BRANDING_BROWSER_TITLE_KEY,
-          value: brandingBrowserTitle.trim() || "SAS Portal v2",
-          valueType: SETTING_VALUE_TYPE_STRING,
-        },
-        {
-          key: BRANDING_LOGO_URL_KEY,
-          value: logoUrlToPersist,
-          valueType: SETTING_VALUE_TYPE_STRING,
-        },
-        {
-          key: BRANDING_FAVICON_URL_KEY,
-          value: faviconUrlToPersist,
-          valueType: SETTING_VALUE_TYPE_STRING,
-        },
-        {
-          key: BRANDING_FORGOT_PASSWORD_URL_KEY,
-          value: trimmedForgotPasswordUrl || null,
-          valueType: SETTING_VALUE_TYPE_STRING,
-        },
-      ],
-    });
+    updateBrandingMutation.mutate(
+      buildBrandingPayload({ logoUrlToPersist, faviconUrlToPersist }),
+    );
   };
 
   const handleDirectorySave = () => {
@@ -561,20 +506,11 @@ export function SettingsPage() {
               isSaving={updateBrandingMutation.isPending}
               errorMessage={brandingError}
               forgotPasswordUrlError={forgotPasswordUrlError}
-              onApplicationNameChange={(value) => {
-                setBrandingError(undefined);
-                setBrandingApplicationName(value);
-              }}
-              onBrowserTitleChange={(value) => {
-                setBrandingError(undefined);
-                setBrandingBrowserTitle(value);
-              }}
+              onApplicationNameChange={updateApplicationName}
+              onBrowserTitleChange={updateBrowserTitle}
               onSelectLogo={handleLogoSelect}
               onSelectFavicon={handleFaviconSelect}
-              onForgotPasswordUrlChange={(value) => {
-                setForgotPasswordUrlError(undefined);
-                setForgotPasswordUrl(value);
-              }}
+              onForgotPasswordUrlChange={updateForgotPasswordUrl}
               onSave={() => void handleBrandingSave()}
             />
           </SectionCard>
