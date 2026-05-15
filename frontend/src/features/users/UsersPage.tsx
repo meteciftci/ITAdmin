@@ -273,6 +273,7 @@ export function UsersPage() {
       />
 
       <AssignRolesDialog
+        key={selectedUserForRoles?.id ?? "assign-roles-closed"}
         open={Boolean(selectedUserForRoles)}
         user={selectedUserForRoles}
         onOpenChange={(open) => {

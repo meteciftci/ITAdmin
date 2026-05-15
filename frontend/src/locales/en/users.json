@@ -82,6 +82,7 @@
     },
     "assignRoles": {
       "title": "Assign Roles",
+      "titleWithUser": "Assign Roles — {{name}}",
       "description": "Select roles for the user and save.",
       "save": "Save",
       "saving": "Saving...",

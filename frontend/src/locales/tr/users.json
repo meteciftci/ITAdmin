@@ -82,6 +82,7 @@
     },
     "assignRoles": {
       "title": "Rol Ata",
+      "titleWithUser": "Rol Ata — {{name}}",
       "description": "Kullanıcı için roller seçin ve kaydedin.",
       "save": "Kaydet",
       "saving": "Kaydediliyor...",
