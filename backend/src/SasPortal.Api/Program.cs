@@ -8,6 +8,7 @@ using SasPortal.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using SasPortal.Api.Security;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using System.Text;
@@ -88,13 +89,21 @@ try
     Log.Information("Starting SAS Portal API");
     app.Run();
 }
-catch (HostAbortedException)
+catch (HostAbortedException) when (EF.IsDesignTime)
 {
-    // Expected during EF Core design-time operations.
+    // Expected during EF Core design-time operations (dotnet ef).
+}
+catch (HostAbortedException exception)
+{
+    Console.Error.WriteLine(exception);
+    Log.Fatal(exception, "SAS Portal API host was aborted");
+    Environment.ExitCode = 1;
 }
 catch (Exception exception)
 {
+    Console.Error.WriteLine(exception);
     Log.Fatal(exception, "SAS Portal API terminated unexpectedly");
+    Environment.ExitCode = 1;
 }
 finally
 {

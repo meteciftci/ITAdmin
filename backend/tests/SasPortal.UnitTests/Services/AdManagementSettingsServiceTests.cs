@@ -186,15 +186,27 @@ public sealed class AdManagementSettingsServiceTests
         var result = await service.UpdateSettingsAsync(request);
         Assert.True(result.IsSuccess);
 
-        var audit = Assert.Single(dbContext.AuditLogs.Where(x => x.EntityName == "AdManagementSettings"));
+        var audit = Assert.Single(dbContext.AuditLogs.Where(x =>
+            x.EntityName == "AdManagementSettings" && x.Action == "Update"));
         Assert.NotNull(audit.Description);
         Assert.DoesNotContain("topsecret-token", audit.Description!, StringComparison.Ordinal);
 
-        var op = Assert.Single(dbContext.AdOperationLogs);
-        Assert.Equal("SettingsUpdated", op.OperationType);
+        var op = Assert.Single(dbContext.AdOperationLogs.Where(x => x.OperationType == "SettingsUpdated"));
         Assert.Equal("Succeeded", op.Status);
         Assert.NotNull(op.RequestSummaryJson);
         Assert.DoesNotContain("topsecret-token", op.RequestSummaryJson!, StringComparison.Ordinal);
+
+        foreach (var entry in dbContext.AuditLogs)
+        {
+            Assert.NotNull(entry.Description);
+            Assert.DoesNotContain("topsecret-token", entry.Description!, StringComparison.Ordinal);
+        }
+
+        foreach (var entry in dbContext.AdOperationLogs)
+        {
+            Assert.DoesNotContain("topsecret-token", entry.RequestSummaryJson ?? string.Empty, StringComparison.Ordinal);
+            Assert.DoesNotContain("topsecret-token", entry.ErrorMessage ?? string.Empty, StringComparison.Ordinal);
+        }
     }
 
     [Fact]
@@ -241,6 +253,9 @@ public sealed class AdManagementSettingsServiceTests
             isEnabled: true,
             serviceAccountPassword: "validation-secret-pwd"));
 
+        dbContext.AuditLogs.RemoveRange(dbContext.AuditLogs);
+        dbContext.AdOperationLogs.RemoveRange(dbContext.AdOperationLogs);
+        await dbContext.SaveChangesAsync();
         dbContext.ChangeTracker.Clear();
 
         var checkedAt = new DateTimeOffset(2026, 5, 15, 12, 0, 0, TimeSpan.Zero);
@@ -292,6 +307,9 @@ public sealed class AdManagementSettingsServiceTests
             isEnabled: true,
             serviceAccountPassword: "super-secret-password"));
 
+        dbContext.AuditLogs.RemoveRange(dbContext.AuditLogs);
+        dbContext.AdOperationLogs.RemoveRange(dbContext.AdOperationLogs);
+        await dbContext.SaveChangesAsync();
         dbContext.ChangeTracker.Clear();
 
         var checkedAt = new DateTimeOffset(2026, 5, 15, 12, 5, 0, TimeSpan.Zero);
@@ -360,6 +378,168 @@ public sealed class AdManagementSettingsServiceTests
         Assert.Single(dbContext.AdOperationLogs.Where(x => x.OperationType == "SettingsValidated"));
     }
 
+    [Fact]
+    public async Task UpdateSettingsAsync_WhenIsEnabledFalse_DoesNotInvokeValidation()
+    {
+        await using var dbContext = CreateDbContext();
+        var validator = new FakeAdManagementValidationService();
+        var service = CreateService(dbContext, validator);
+
+        var request = CreateRequest(isEnabled: false, serviceAccountPassword: null);
+
+        var result = await service.UpdateSettingsAsync(request);
+
+        Assert.True(result.IsSuccess);
+        Assert.Null(result.Validation);
+        Assert.Equal(0, validator.InvocationCount);
+
+        var stored = await dbContext.AdManagementSettings.SingleAsync();
+        Assert.False(stored.IsEnabled);
+
+        Assert.Empty(dbContext.AdOperationLogs.Where(x => x.OperationType == "SettingsValidated"));
+        Assert.Single(dbContext.AdOperationLogs.Where(x => x.OperationType == "SettingsUpdated"));
+    }
+
+    [Fact]
+    public async Task UpdateSettingsAsync_WhenIsEnabledTrueAndValidationFails_DoesNotPersistSettings()
+    {
+        await using var dbContext = CreateDbContext();
+        var validator = new FakeAdManagementValidationService
+        {
+            NextResult = new AdManagementValidationResult(
+                IsValid: false,
+                Message: "AD yönetim servis hesabı ile bağlantı kurulamadı.",
+                CheckedAt: DateTimeOffset.UtcNow,
+                Details: new List<AdManagementValidationDetail>
+                {
+                    new("serviceAccountBind", "Failed", "AD yönetim servis hesabı ile bağlantı kurulamadı."),
+                })
+        };
+        var service = CreateService(dbContext, validator);
+
+        var request = CreateRequest(
+            isEnabled: true,
+            serviceAccountPassword: "super-secret-password",
+            preferredDomainControllers: new[] { "dc01.corp.local" });
+
+        var result = await service.UpdateSettingsAsync(request);
+
+        Assert.False(result.IsSuccess);
+        Assert.NotNull(result.Validation);
+        Assert.False(result.Validation!.IsValid);
+        Assert.Null(result.Settings);
+        Assert.Equal(1, validator.InvocationCount);
+
+        Assert.False(dbContext.AdManagementSettings.Any());
+
+        var op = await dbContext.AdOperationLogs.SingleAsync(x => x.OperationType == "SettingsValidated");
+        Assert.Equal("Failed", op.Status);
+        Assert.Equal("dc01.corp.local", op.DomainController);
+        Assert.NotNull(op.RequestSummaryJson);
+        Assert.DoesNotContain("super-secret-password", op.RequestSummaryJson!, StringComparison.Ordinal);
+        Assert.DoesNotContain("super-secret-password", op.ErrorMessage ?? string.Empty, StringComparison.Ordinal);
+
+        Assert.Empty(dbContext.AdOperationLogs.Where(x => x.OperationType == "SettingsUpdated"));
+
+        var audit = await dbContext.AuditLogs.SingleAsync(x =>
+            x.EntityName == "AdManagementSettings" && x.Action == "Validate");
+        Assert.Contains("validation failed", audit.Description!, StringComparison.Ordinal);
+        Assert.DoesNotContain("super-secret-password", audit.Description!, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task UpdateSettingsAsync_WhenIsEnabledTrueAndValidationSucceeds_PersistsAndLogsBothOperations()
+    {
+        await using var dbContext = CreateDbContext();
+        var checkedAt = new DateTimeOffset(2026, 5, 15, 15, 0, 0, TimeSpan.Zero);
+        var validator = new FakeAdManagementValidationService
+        {
+            NextResult = new AdManagementValidationResult(
+                IsValid: true,
+                Message: "ok",
+                CheckedAt: checkedAt,
+                Details: new List<AdManagementValidationDetail>
+                {
+                    new("serviceAccountBind", "Ok", null),
+                })
+        };
+        var service = CreateService(dbContext, validator);
+
+        var request = CreateRequest(
+            isEnabled: true,
+            serviceAccountPassword: "another-secret",
+            preferredDomainControllers: new[] { "dc01.corp.local" });
+
+        var result = await service.UpdateSettingsAsync(request);
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Validation);
+        Assert.True(result.Validation!.IsValid);
+        Assert.NotNull(result.Settings);
+        Assert.Equal(1, validator.InvocationCount);
+        Assert.NotNull(validator.LastConnection);
+        Assert.Equal("CORP", validator.LastConnection!.NetbiosDomainName);
+        Assert.Equal("another-secret", validator.LastConnection!.ServiceAccountPassword);
+
+        var stored = await dbContext.AdManagementSettings.SingleAsync();
+        Assert.True(stored.IsEnabled);
+        Assert.Equal("Ok", stored.LastValidationStatus);
+        Assert.Equal(checkedAt.UtcDateTime, stored.LastValidatedAt);
+        Assert.Equal("ok", stored.LastValidationMessage);
+
+        Assert.Single(dbContext.AdOperationLogs.Where(x => x.OperationType == "SettingsValidated"));
+        Assert.Single(dbContext.AdOperationLogs.Where(x => x.OperationType == "SettingsUpdated"));
+    }
+
+    [Fact]
+    public async Task UpdateSettingsAsync_WhenValidationFails_ResponseDoesNotIncludePassword()
+    {
+        await using var dbContext = CreateDbContext();
+        var failingMessage = "AD yönetim servis hesabı ile bağlantı kurulamadı.";
+        var validator = new FakeAdManagementValidationService
+        {
+            NextResult = new AdManagementValidationResult(
+                IsValid: false,
+                Message: failingMessage,
+                CheckedAt: DateTimeOffset.UtcNow,
+                Details: new List<AdManagementValidationDetail>
+                {
+                    new("serviceAccountBind", "Failed", failingMessage),
+                })
+        };
+        var service = CreateService(dbContext, validator);
+
+        var request = CreateRequest(
+            isEnabled: true,
+            serviceAccountPassword: "leak-check-password");
+
+        var result = await service.UpdateSettingsAsync(request);
+
+        Assert.False(result.IsSuccess);
+
+        var serialized = System.Text.Json.JsonSerializer.Serialize(result);
+        Assert.DoesNotContain("leak-check-password", serialized, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task UpdateSettingsAsync_PassesNormalizedNetbiosToValidation()
+    {
+        await using var dbContext = CreateDbContext();
+        var validator = new FakeAdManagementValidationService();
+        var service = CreateService(dbContext, validator);
+
+        var request = CreateRequest(
+            isEnabled: true,
+            serviceAccountUserName: "svc",
+            serviceAccountPassword: "ok-secret");
+
+        await service.UpdateSettingsAsync(request);
+
+        Assert.NotNull(validator.LastConnection);
+        Assert.Equal("CORP", validator.LastConnection!.NetbiosDomainName);
+        Assert.Equal("svc", validator.LastConnection!.ServiceAccountUserName);
+    }
+
     private static AppDbContext CreateDbContext()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
@@ -368,11 +548,14 @@ public sealed class AdManagementSettingsServiceTests
         return new AppDbContext(options);
     }
 
-    private static AdManagementSettingsService CreateService(AppDbContext context) =>
+    private static AdManagementSettingsService CreateService(
+        AppDbContext context,
+        FakeAdManagementValidationService? validationService = null) =>
         new(
             context,
             new FakeSecretProtector(),
-            new AdOperationLogService(context));
+            new AdOperationLogService(context),
+            validationService ?? new FakeAdManagementValidationService());
 
     private static AdManagementValidationRequest CreateValidationRequest() =>
         new(

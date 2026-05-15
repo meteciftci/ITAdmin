@@ -1,13 +1,13 @@
 using System.DirectoryServices.Protocols;
 using System.Net;
 using SasPortal.Application.Abstractions.Services;
+using SasPortal.Application.Common.AdManagement;
 using SasPortal.Application.Common.Constants;
 using SasPortal.Application.Common.Models;
 
 namespace SasPortal.Infrastructure.Services;
 
-public sealed class AdManagementValidationService(
-    IAdManagementSettingsService settingsService) : IAdManagementValidationService
+public sealed class AdManagementValidationService : IAdManagementValidationService
 {
     private const string MissingRequiredSettings = "AD yönetim ayarları eksik. Lütfen önce gerekli alanları kaydedin.";
     private const string ServiceAccountBindFailed = "AD yönetim servis hesabı ile bağlantı kurulamadı.";
@@ -19,19 +19,18 @@ public sealed class AdManagementValidationService(
     private const string PreferredDcUnreachable = "Tercih edilen DC erişilemedi.";
     private const string ValidationSucceeded = "AD yönetim ayarları doğrulandı.";
 
-    public async Task<AdManagementValidationResult> ValidateAsync(
+    public Task<AdManagementValidationResult> ValidateConnectionAsync(
+        AdManagementConnectionParameters connection,
         AdManagementValidationRequest request,
         CancellationToken cancellationToken = default)
     {
         _ = request;
+        cancellationToken.ThrowIfCancellationRequested();
 
         var checkedAt = DateTimeOffset.UtcNow;
         var details = new List<AdManagementValidationDetail>();
 
-        var connection = await settingsService.GetConnectionParametersAsync(cancellationToken);
-
-        if (connection is null
-            || string.IsNullOrWhiteSpace(connection.DomainFqdn)
+        if (string.IsNullOrWhiteSpace(connection.DomainFqdn)
             || string.IsNullOrWhiteSpace(connection.BaseDn)
             || string.IsNullOrWhiteSpace(connection.UsersRootOu)
             || string.IsNullOrWhiteSpace(connection.ServiceAccountUserName)
@@ -41,8 +40,16 @@ public sealed class AdManagementValidationService(
                 "serviceAccountBind",
                 AdManagementValidationStatuses.Failed,
                 MissingRequiredSettings));
-            return new AdManagementValidationResult(false, MissingRequiredSettings, checkedAt, details);
+            return Task.FromResult(new AdManagementValidationResult(
+                false,
+                MissingRequiredSettings,
+                checkedAt,
+                details));
         }
+
+        var bindIdentity = AdServiceAccountBindIdentity.Build(
+            connection.ServiceAccountUserName,
+            connection.NetbiosDomainName);
 
         var primaryHost = ResolvePrimaryHost(connection);
         var port = connection.LdapPort;
@@ -54,7 +61,7 @@ public sealed class AdManagementValidationService(
                 primaryHost,
                 port,
                 connection.UseSsl,
-                connection.ServiceAccountUserName!,
+                bindIdentity,
                 connection.ServiceAccountPassword!);
         }
         catch
@@ -68,7 +75,11 @@ public sealed class AdManagementValidationService(
                 "serviceAccountBind",
                 AdManagementValidationStatuses.Failed,
                 ServiceAccountBindFailed));
-            return new AdManagementValidationResult(false, ServiceAccountBindFailed, checkedAt, details);
+            return Task.FromResult(new AdManagementValidationResult(
+                false,
+                ServiceAccountBindFailed,
+                checkedAt,
+                details));
         }
 
         using (primaryConnection)
@@ -84,7 +95,11 @@ public sealed class AdManagementValidationService(
                     "baseDn",
                     AdManagementValidationStatuses.Failed,
                     BaseDnNotResolved));
-                return new AdManagementValidationResult(false, BaseDnNotResolved, checkedAt, details);
+                return Task.FromResult(new AdManagementValidationResult(
+                    false,
+                    BaseDnNotResolved,
+                    checkedAt,
+                    details));
             }
 
             details.Add(new AdManagementValidationDetail(
@@ -98,7 +113,11 @@ public sealed class AdManagementValidationService(
                     "usersRootOu",
                     AdManagementValidationStatuses.Failed,
                     UsersRootOuNotResolved));
-                return new AdManagementValidationResult(false, UsersRootOuNotResolved, checkedAt, details);
+                return Task.FromResult(new AdManagementValidationResult(
+                    false,
+                    UsersRootOuNotResolved,
+                    checkedAt,
+                    details));
             }
 
             details.Add(new AdManagementValidationDetail(
@@ -114,7 +133,11 @@ public sealed class AdManagementValidationService(
                         "disabledUsersOu",
                         AdManagementValidationStatuses.Failed,
                         DisabledUsersOuNotResolved));
-                    return new AdManagementValidationResult(false, DisabledUsersOuNotResolved, checkedAt, details);
+                    return Task.FromResult(new AdManagementValidationResult(
+                        false,
+                        DisabledUsersOuNotResolved,
+                        checkedAt,
+                        details));
                 }
 
                 details.Add(new AdManagementValidationDetail(
@@ -131,7 +154,11 @@ public sealed class AdManagementValidationService(
                         "groupsSearchBase",
                         AdManagementValidationStatuses.Failed,
                         GroupsSearchBaseNotResolved));
-                    return new AdManagementValidationResult(false, GroupsSearchBaseNotResolved, checkedAt, details);
+                    return Task.FromResult(new AdManagementValidationResult(
+                        false,
+                        GroupsSearchBaseNotResolved,
+                        checkedAt,
+                        details));
                 }
 
                 details.Add(new AdManagementValidationDetail(
@@ -148,7 +175,11 @@ public sealed class AdManagementValidationService(
                         "computersSearchBase",
                         AdManagementValidationStatuses.Failed,
                         ComputersSearchBaseNotResolved));
-                    return new AdManagementValidationResult(false, ComputersSearchBaseNotResolved, checkedAt, details);
+                    return Task.FromResult(new AdManagementValidationResult(
+                        false,
+                        ComputersSearchBaseNotResolved,
+                        checkedAt,
+                        details));
                 }
 
                 details.Add(new AdManagementValidationDetail(
@@ -172,7 +203,7 @@ public sealed class AdManagementValidationService(
                     dc,
                     port,
                     connection.UseSsl,
-                    connection.ServiceAccountUserName!,
+                    bindIdentity,
                     connection.ServiceAccountPassword!);
             }
             catch
@@ -186,7 +217,11 @@ public sealed class AdManagementValidationService(
                     $"preferredDomainController:{dc}",
                     AdManagementValidationStatuses.Failed,
                     PreferredDcUnreachable));
-                return new AdManagementValidationResult(false, PreferredDcUnreachable, checkedAt, details);
+                return Task.FromResult(new AdManagementValidationResult(
+                    false,
+                    PreferredDcUnreachable,
+                    checkedAt,
+                    details));
             }
 
             using (dcConnection)
@@ -198,7 +233,11 @@ public sealed class AdManagementValidationService(
             }
         }
 
-        return new AdManagementValidationResult(true, ValidationSucceeded, checkedAt, details);
+        return Task.FromResult(new AdManagementValidationResult(
+            true,
+            ValidationSucceeded,
+            checkedAt,
+            details));
     }
 
     private static string ResolvePrimaryHost(AdManagementConnectionParameters connection)

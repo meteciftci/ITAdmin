@@ -12,7 +12,8 @@ namespace SasPortal.Persistence.Services;
 public sealed class AdManagementSettingsService(
     AppDbContext context,
     ISecretProtector secretProtector,
-    IAdOperationLogService adOperationLogService) : IAdManagementSettingsService
+    IAdOperationLogService adOperationLogService,
+    IAdManagementValidationService validationService) : IAdManagementSettingsService
 {
     private const int AuditDescriptionMaxLength = 2000;
     private const int AuditIpAddressMaxLength = 64;
@@ -90,6 +91,58 @@ public sealed class AdManagementSettingsService(
             }
         }
 
+        AdManagementValidationResult? validationResult = null;
+        if (request.IsEnabled)
+        {
+            var effectivePassword = ResolveCandidateServiceAccountPassword(
+                providedPassword,
+                entity?.EncryptedServiceAccountPassword,
+                request.ClearServiceAccountPassword);
+
+            var candidate = new AdManagementConnectionParameters(
+                DomainFqdn: domainFqdn,
+                NetbiosDomainName: netbios,
+                BaseDn: baseDn,
+                UsersRootOu: usersRootOu,
+                DisabledUsersOu: disabledUsersOu,
+                GroupsSearchBase: groupsSearchBase,
+                ComputersSearchBase: computersSearchBase,
+                PreferredDomainControllers: preferredControllers,
+                UseSsl: request.UseSsl,
+                LdapPort: request.LdapPort,
+                ServiceAccountUserName: serviceAccountUserName,
+                ServiceAccountPassword: effectivePassword);
+
+            var validationRequest = new AdManagementValidationRequest(
+                request.ActorUserId,
+                request.ActorUserName,
+                request.ActorIpAddress,
+                request.ActorUserAgent);
+
+            validationResult = await validationService.ValidateConnectionAsync(
+                candidate,
+                validationRequest,
+                cancellationToken);
+
+            if (!validationResult.IsValid)
+            {
+                await WriteValidationLogsAsync(
+                    validationResult,
+                    validationRequest,
+                    ResolvePrimaryDomainController(candidate),
+                    settingsEntity: null,
+                    cancellationToken);
+
+                await context.SaveChangesAsync(cancellationToken);
+
+                return new UpdateAdManagementSettingsResult(
+                    false,
+                    validationResult.Message,
+                    null,
+                    validationResult);
+            }
+        }
+
         var isNew = entity is null;
         entity ??= new AdManagementSettings
         {
@@ -139,6 +192,22 @@ public sealed class AdManagementSettingsService(
             entity.UpdatedBy = actor;
         }
 
+        if (validationResult is not null)
+        {
+            var validationRequestForLog = new AdManagementValidationRequest(
+                request.ActorUserId,
+                request.ActorUserName,
+                request.ActorIpAddress,
+                request.ActorUserAgent);
+
+            await WriteValidationLogsAsync(
+                validationResult,
+                validationRequestForLog,
+                primaryDomainController: ResolvePrimaryHostFromPreferred(preferredControllers, domainFqdn),
+                settingsEntity: entity,
+                cancellationToken);
+        }
+
         var auditDescription = TruncateAuditDescription(
             $"AD management settings updated. Enabled: {entity.IsEnabled}. Password changed: {passwordChanged}.");
 
@@ -175,7 +244,122 @@ public sealed class AdManagementSettingsService(
         await context.SaveChangesAsync(cancellationToken);
 
         var fresh = await GetSettingsAsync(cancellationToken);
-        return new UpdateAdManagementSettingsResult(true, "AD management settings updated.", fresh);
+        return new UpdateAdManagementSettingsResult(
+            true,
+            "AD management settings updated.",
+            fresh,
+            validationResult);
+    }
+
+    private string? ResolveCandidateServiceAccountPassword(
+        string? providedPassword,
+        string? encryptedStoredPassword,
+        bool clearServiceAccountPassword)
+    {
+        if (clearServiceAccountPassword)
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(providedPassword))
+        {
+            return providedPassword;
+        }
+
+        if (string.IsNullOrWhiteSpace(encryptedStoredPassword))
+        {
+            return null;
+        }
+
+        try
+        {
+            return secretProtector.Unprotect(encryptedStoredPassword);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string? ResolvePrimaryDomainController(AdManagementConnectionParameters candidate)
+    {
+        if (candidate.PreferredDomainControllers.Count > 0
+            && !string.IsNullOrWhiteSpace(candidate.PreferredDomainControllers[0]))
+        {
+            return candidate.PreferredDomainControllers[0];
+        }
+
+        return string.IsNullOrWhiteSpace(candidate.DomainFqdn) ? null : candidate.DomainFqdn;
+    }
+
+    private static string? ResolvePrimaryHostFromPreferred(
+        IReadOnlyList<string> preferredControllers,
+        string? domainFqdn)
+    {
+        if (preferredControllers.Count > 0 && !string.IsNullOrWhiteSpace(preferredControllers[0]))
+        {
+            return preferredControllers[0];
+        }
+
+        return string.IsNullOrWhiteSpace(domainFqdn) ? null : domainFqdn;
+    }
+
+    private async Task WriteValidationLogsAsync(
+        AdManagementValidationResult result,
+        AdManagementValidationRequest request,
+        string? primaryDomainController,
+        AdManagementSettings? settingsEntity,
+        CancellationToken cancellationToken)
+    {
+        if (settingsEntity is not null)
+        {
+            settingsEntity.LastValidatedAt = result.CheckedAt.UtcDateTime;
+            settingsEntity.LastValidationStatus = result.IsValid
+                ? AdManagementValidationStatuses.Ok
+                : AdManagementValidationStatuses.Failed;
+            settingsEntity.LastValidationMessage = string.IsNullOrWhiteSpace(result.Message)
+                ? null
+                : (result.Message.Length > 2000 ? result.Message[..2000] : result.Message);
+        }
+
+        var safeMessage = SanitizeForLog(result.Message);
+        var auditDescription = TruncateAuditDescription(
+            result.IsValid
+                ? "AD management settings validation succeeded."
+                : $"AD management settings validation failed: {safeMessage}.");
+
+        await context.AuditLogs.AddAsync(
+            new AuditLog
+            {
+                Action = "Validate",
+                EntityName = "AdManagementSettings",
+                EntityId = AdManagementTargetObjectTypes.AdManagementSettings,
+                Description = auditDescription,
+                ActorUserId = request.ActorUserId,
+                ActorUserName = request.ActorUserName,
+                IpAddress = TruncateNullable(request.ActorIpAddress, AuditIpAddressMaxLength),
+                UserAgent = TruncateNullable(request.ActorUserAgent, AuditUserAgentMaxLength),
+                CreatedAt = result.CheckedAt
+            },
+            cancellationToken);
+
+        await adOperationLogService.WriteAsync(
+            new AdOperationLogEntry
+            {
+                OperationType = AdManagementOperationTypes.SettingsValidated,
+                Status = result.IsValid
+                    ? AdManagementOperationStatuses.Succeeded
+                    : AdManagementOperationStatuses.Failed,
+                TargetObjectType = AdManagementTargetObjectTypes.AdManagementSettings,
+                ErrorMessage = result.IsValid ? null : safeMessage,
+                DomainController = NormalizeNullable(primaryDomainController),
+                RequestSummaryJson = BuildValidationSummary(result),
+                ActorUserId = request.ActorUserId,
+                ActorUserName = request.ActorUserName,
+                IpAddress = request.ActorIpAddress,
+                UserAgent = request.ActorUserAgent
+            },
+            cancellationToken);
     }
 
     public async Task<AdManagementConnectionParameters?> GetConnectionParametersAsync(
@@ -206,6 +390,7 @@ public sealed class AdManagementSettingsService(
 
         return new AdManagementConnectionParameters(
             entity.DomainFqdn,
+            entity.NetbiosDomainName,
             entity.BaseDn,
             entity.UsersRootOu,
             entity.DisabledUsersOu,
@@ -228,56 +413,11 @@ public sealed class AdManagementSettingsService(
             .OrderByDescending(x => x.UpdatedAt ?? x.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
 
-        if (entity is not null)
-        {
-            entity.LastValidatedAt = result.CheckedAt.UtcDateTime;
-            entity.LastValidationStatus = result.IsValid
-                ? AdManagementValidationStatuses.Ok
-                : AdManagementValidationStatuses.Failed;
-            entity.LastValidationMessage = string.IsNullOrWhiteSpace(result.Message)
-                ? null
-                : (result.Message.Length > 2000 ? result.Message[..2000] : result.Message);
-        }
-
-        var now = result.CheckedAt;
-        var safeMessage = SanitizeForLog(result.Message);
-
-        var auditDescription = TruncateAuditDescription(
-            result.IsValid
-                ? "AD management settings validation succeeded."
-                : $"AD management settings validation failed: {safeMessage}.");
-
-        await context.AuditLogs.AddAsync(
-            new AuditLog
-            {
-                Action = "Validate",
-                EntityName = "AdManagementSettings",
-                EntityId = AdManagementTargetObjectTypes.AdManagementSettings,
-                Description = auditDescription,
-                ActorUserId = request.ActorUserId,
-                ActorUserName = request.ActorUserName,
-                IpAddress = TruncateNullable(request.ActorIpAddress, AuditIpAddressMaxLength),
-                UserAgent = TruncateNullable(request.ActorUserAgent, AuditUserAgentMaxLength),
-                CreatedAt = now
-            },
-            cancellationToken);
-
-        await adOperationLogService.WriteAsync(
-            new AdOperationLogEntry
-            {
-                OperationType = AdManagementOperationTypes.SettingsValidated,
-                Status = result.IsValid
-                    ? AdManagementOperationStatuses.Succeeded
-                    : AdManagementOperationStatuses.Failed,
-                TargetObjectType = AdManagementTargetObjectTypes.AdManagementSettings,
-                ErrorMessage = result.IsValid ? null : safeMessage,
-                DomainController = NormalizeNullable(primaryDomainController),
-                RequestSummaryJson = BuildValidationSummary(result),
-                ActorUserId = request.ActorUserId,
-                ActorUserName = request.ActorUserName,
-                IpAddress = request.ActorIpAddress,
-                UserAgent = request.ActorUserAgent
-            },
+        await WriteValidationLogsAsync(
+            result,
+            request,
+            primaryDomainController,
+            entity,
             cancellationToken);
 
         await context.SaveChangesAsync(cancellationToken);

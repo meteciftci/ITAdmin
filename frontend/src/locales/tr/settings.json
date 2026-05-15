@@ -143,6 +143,7 @@
           "useSsl": "SSL / LDAPS",
           "useSslHelp": "LDAPS kullan.",
           "serviceAccountUserName": "Yetkili kullanıcı adı",
+          "serviceAccountUserNameHelp": "DOMAIN\\kullanici, kullanici@domain.local veya sadece kullanici formatında girilebilir. Sadece kullanıcı adı girilirse NetBIOS domain adı ile tamamlanır.",
           "serviceAccountPassword": "Yetkili kullanıcı parolası",
           "powerShellHealthEnabled": "PowerShell sağlık kontrolleri",
           "powerShellHealthEnabledHelp": "İleride sağlık kontrollerinde PowerShell kullanılmasına izin ver.",
@@ -159,8 +160,17 @@
         "messages": {
           "saveSuccess": "AD yönetim ayarları kaydedildi.",
           "saveFailed": "AD yönetim ayarları kaydedilemedi.",
+          "saveValidationFailed": "Bağlantı doğrulanamadı. Ayarlar kaydedilmedi.",
           "validateSuccess": "AD yönetim bağlantısı doğrulandı.",
           "validateFailed": "AD yönetim bağlantısı doğrulanamadı."
+        },
+        "validationDetails": {
+          "title": "Doğrulama detayları",
+          "status": {
+            "Ok": "Başarılı",
+            "Failed": "Başarısız",
+            "Skipped": "Atlandı"
+          }
         }
       },
       "mappings": {

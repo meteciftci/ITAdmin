@@ -143,6 +143,7 @@
           "useSsl": "SSL / LDAPS",
           "useSslHelp": "Use LDAPS.",
           "serviceAccountUserName": "Service account user name",
+          "serviceAccountUserNameHelp": "You can enter DOMAIN\\user, user@domain.local, or just user. If only the user name is entered, the NetBIOS domain name is used.",
           "serviceAccountPassword": "Service account password",
           "powerShellHealthEnabled": "PowerShell health checks",
           "powerShellHealthEnabledHelp": "Allow future health checks to use PowerShell.",
@@ -159,8 +160,17 @@
         "messages": {
           "saveSuccess": "AD management settings saved.",
           "saveFailed": "AD management settings could not be saved.",
+          "saveValidationFailed": "Connection validation failed. Settings were not saved.",
           "validateSuccess": "AD management connection validated.",
           "validateFailed": "AD management connection could not be validated."
+        },
+        "validationDetails": {
+          "title": "Validation details",
+          "status": {
+            "Ok": "Ok",
+            "Failed": "Failed",
+            "Skipped": "Skipped"
+          }
         }
       },
       "mappings": {

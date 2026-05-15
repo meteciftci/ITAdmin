@@ -4,7 +4,8 @@ namespace SasPortal.Application.Abstractions.Services;
 
 public interface IAdManagementValidationService
 {
-    Task<AdManagementValidationResult> ValidateAsync(
+    Task<AdManagementValidationResult> ValidateConnectionAsync(
+        AdManagementConnectionParameters connection,
         AdManagementValidationRequest request,
         CancellationToken cancellationToken = default);
 }

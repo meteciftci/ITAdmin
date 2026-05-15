@@ -2,6 +2,7 @@ namespace SasPortal.Application.Common.Models;
 
 public sealed record AdManagementConnectionParameters(
     string? DomainFqdn,
+    string? NetbiosDomainName,
     string? BaseDn,
     string? UsersRootOu,
     string? DisabledUsersOu,

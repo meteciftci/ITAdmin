@@ -58,6 +58,15 @@ public sealed class AdManagementController(
 
         if (!result.IsSuccess || result.Settings is null)
         {
+            if (result.Validation is not null)
+            {
+                return BadRequest(new
+                {
+                    message = result.Message,
+                    validation = MapValidation(result.Validation)
+                });
+            }
+
             return BadRequest(new { message = result.Message });
         }
 
@@ -78,7 +87,12 @@ public sealed class AdManagementController(
         var connection = await settingsService.GetConnectionParametersAsync(cancellationToken);
         var primaryDc = ResolvePrimaryDomainController(connection);
 
-        var result = await validationService.ValidateAsync(validationRequest, cancellationToken);
+        var result = connection is null
+            ? BuildMissingConnectionValidationResult()
+            : await validationService.ValidateConnectionAsync(
+                connection,
+                validationRequest,
+                cancellationToken);
 
         await settingsService.RecordValidationResultAsync(
             result,
@@ -107,6 +121,19 @@ public sealed class AdManagementController(
         }
 
         return string.IsNullOrWhiteSpace(connection.DomainFqdn) ? null : connection.DomainFqdn;
+    }
+
+    private static AppModels.AdManagementValidationResult BuildMissingConnectionValidationResult()
+    {
+        const string message = "AD yönetim ayarları eksik. Lütfen önce gerekli alanları kaydedin.";
+        return new AppModels.AdManagementValidationResult(
+            false,
+            message,
+            DateTimeOffset.UtcNow,
+            new List<AppModels.AdManagementValidationDetail>
+            {
+                new("serviceAccountBind", AdManagementValidationStatuses.Failed, message),
+            });
     }
 
     [HttpGet("attribute-mappings")]

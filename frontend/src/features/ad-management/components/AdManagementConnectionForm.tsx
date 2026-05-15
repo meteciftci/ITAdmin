@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type {
   AdManagementSettings,
+  AdManagementValidationResult,
   UpdateAdManagementSettingsRequest,
 } from "@/features/ad-management/types";
 
@@ -36,6 +37,8 @@ type Props = {
   readOnly: boolean;
   isSaving: boolean;
   isValidating: boolean;
+  saveValidationError: AdManagementValidationResult | null;
+  saveErrorMessage: string | null;
   onSave: (payload: UpdateAdManagementSettingsRequest) => void;
   onValidate: () => void;
 };
@@ -88,6 +91,8 @@ export function AdManagementConnectionForm({
   readOnly,
   isSaving,
   isValidating,
+  saveValidationError,
+  saveErrorMessage,
   onSave,
   onValidate,
 }: Props) {
@@ -275,14 +280,21 @@ export function AdManagementConnectionForm({
           </div>
         </div>
 
-        <FieldText
-          id="ad-mgmt-service-account"
-          label={t("settings:adManagement.connection.fields.serviceAccountUserName")}
-          value={values.serviceAccountUserName}
-          onChange={(value) => update("serviceAccountUserName", value)}
-          readOnly={readOnly}
-          placeholder="svc_ad_mgmt"
-        />
+        <div className="space-y-1.5">
+          <Label htmlFor="ad-mgmt-service-account">
+            {t("settings:adManagement.connection.fields.serviceAccountUserName")}
+          </Label>
+          <Input
+            id="ad-mgmt-service-account"
+            value={values.serviceAccountUserName}
+            onChange={(event) => update("serviceAccountUserName", event.target.value)}
+            readOnly={readOnly}
+            placeholder="svc_ad_mgmt"
+          />
+          <p className="text-xs text-muted-foreground">
+            {t("settings:adManagement.connection.fields.serviceAccountUserNameHelp")}
+          </p>
+        </div>
 
         <div className="space-y-1.5">
           <Label htmlFor="ad-mgmt-service-password">
@@ -365,6 +377,45 @@ export function AdManagementConnectionForm({
             message: settings.lastValidationMessage ?? "-",
           })}
         </p>
+      ) : null}
+
+      {saveValidationError && !saveValidationError.isValid ? (
+        <div className="space-y-2 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-xs">
+          <p className="font-medium text-destructive">
+            {saveErrorMessage ??
+              t("settings:adManagement.connection.messages.saveValidationFailed")}
+          </p>
+          <p className="text-destructive">{saveValidationError.message}</p>
+          {saveValidationError.details.length > 0 ? (
+            <div>
+              <p className="font-medium text-foreground">
+                {t("settings:adManagement.connection.validationDetails.title")}
+              </p>
+              <ul className="mt-1 space-y-1">
+                {saveValidationError.details.map((detail) => (
+                  <li
+                    key={`${detail.key}-${detail.status}`}
+                    className="flex items-start gap-2"
+                  >
+                    <span className="font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
+                      {t(`settings:adManagement.connection.validationDetails.status.${detail.status}`, {
+                        defaultValue: detail.status,
+                      })}
+                    </span>
+                    <span className="flex-1">
+                      <span className="font-medium">{detail.key}</span>
+                      {detail.message ? (
+                        <span className="ml-1 text-muted-foreground">
+                          - {detail.message}
+                        </span>
+                      ) : null}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
       ) : null}
 
       {!readOnly ? (
