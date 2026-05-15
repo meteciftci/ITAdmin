@@ -81,7 +81,13 @@ const attemptRefresh = async (): Promise<RefreshTokenResponse | null> => {
 
         return response.data;
       })
-      .catch(() => null)
+      .catch((error: unknown) => {
+        if (axios.isAxiosError(error) && error.response?.status === 401) {
+          useAuthStore.getState().clearAuth();
+        }
+
+        return null;
+      })
       .finally(() => {
         refreshPromise = null;
       });

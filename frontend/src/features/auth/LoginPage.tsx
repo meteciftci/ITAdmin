@@ -63,6 +63,7 @@ export function LoginPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
+  const accessToken = useAuthStore((state) => state.accessToken);
   const setTokens = useAuthStore((state) => state.setTokens);
   const setUser = useAuthStore((state) => state.setUser);
   const clearAuth = useAuthStore((state) => state.clearAuth);
@@ -88,6 +89,12 @@ export function LoginPage() {
     // We only care about cleaning up the router state once on mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (accessToken) {
+      navigate("/home", { replace: true });
+    }
+  }, [accessToken, navigate]);
   const readiness = useReadinessStatus();
   const sessionOptionsQuery = useQuery({
     queryKey: ["auth", "session-options"],

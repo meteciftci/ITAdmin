@@ -49,6 +49,31 @@ const emptyTokens = {
   accessTokenExpiresAt: null,
 };
 
+export function isValidStorageMode(value: unknown): value is AuthStorageMode {
+  return value === "session" || value === "persistent";
+}
+
+/** Parses an ISO-8601 / date string to epoch ms, or null if invalid. */
+export function parseExpiry(value: unknown): number | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const parsed = Date.parse(trimmed);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+/** True when the value is a valid expiry instant strictly in the future. */
+export function isFutureExpiry(value: unknown): boolean {
+  const parsed = parseExpiry(value);
+  return parsed !== null && parsed > Date.now();
+}
+
 function clearLegacyKeys(): void {
   if (typeof window === "undefined") {
     return;
@@ -75,25 +100,39 @@ function removeBothAuthKeys(): void {
   }
 }
 
-function parseSnapshot(raw: string): StoredAuthSnapshot | null {
+function parseStoredAuthSnapshot(
+  raw: string,
+  expectedStorageMode: AuthStorageMode,
+): StoredAuthSnapshot | null {
   try {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
-    if (
-      !parsed ||
-      typeof parsed !== "object" ||
-      (parsed.storageMode !== "session" && parsed.storageMode !== "persistent")
-    ) {
+    if (!parsed || typeof parsed !== "object") {
+      return null;
+    }
+
+    if (!isValidStorageMode(parsed.storageMode) || parsed.storageMode !== expectedStorageMode) {
+      return null;
+    }
+
+    const accessToken = typeof parsed.accessToken === "string" ? parsed.accessToken : null;
+    const accessTokenExpiresAt =
+      typeof parsed.accessTokenExpiresAt === "string" ? parsed.accessTokenExpiresAt : null;
+
+    if (accessToken) {
+      if (!accessTokenExpiresAt || !isFutureExpiry(accessTokenExpiresAt)) {
+        return null;
+      }
+    } else {
       return null;
     }
 
     return {
-      accessToken: typeof parsed.accessToken === "string" ? parsed.accessToken : null,
-      accessTokenExpiresAt:
-        typeof parsed.accessTokenExpiresAt === "string" ? parsed.accessTokenExpiresAt : null,
+      accessToken,
+      accessTokenExpiresAt,
       user: (parsed.user ?? null) as CurrentUser | null,
-      isAuthenticated: Boolean(parsed.accessToken),
+      isAuthenticated: true,
       rememberMe: Boolean(parsed.rememberMe),
-      storageMode: parsed.storageMode as AuthStorageMode,
+      storageMode: parsed.storageMode,
       updatedAt: typeof parsed.updatedAt === "number" ? parsed.updatedAt : 0,
     };
   } catch {
@@ -122,8 +161,9 @@ function readBootstrapFromStorage(): Pick<
   try {
     const sessionRaw = window.sessionStorage.getItem(AUTH_SESSION_STORAGE_KEY);
     if (sessionRaw) {
-      const parsed = parseSnapshot(sessionRaw);
-      if (parsed?.accessToken && parsed.storageMode === "session") {
+      const parsed = parseStoredAuthSnapshot(sessionRaw, "session");
+      if (parsed) {
+        rewriteSanitizedPersistedAuth(parsed);
         return {
           accessToken: parsed.accessToken,
           accessTokenExpiresAt: parsed.accessTokenExpiresAt,
@@ -133,12 +173,15 @@ function readBootstrapFromStorage(): Pick<
           storageMode: "session",
         };
       }
+
+      window.sessionStorage.removeItem(AUTH_SESSION_STORAGE_KEY);
     }
 
     const persistentRaw = window.localStorage.getItem(AUTH_PERSISTENT_STORAGE_KEY);
     if (persistentRaw) {
-      const parsed = parseSnapshot(persistentRaw);
-      if (parsed?.accessToken && parsed.storageMode === "persistent") {
+      const parsed = parseStoredAuthSnapshot(persistentRaw, "persistent");
+      if (parsed) {
+        rewriteSanitizedPersistedAuth(parsed);
         return {
           accessToken: parsed.accessToken,
           accessTokenExpiresAt: parsed.accessTokenExpiresAt,
@@ -148,6 +191,8 @@ function readBootstrapFromStorage(): Pick<
           storageMode: "persistent",
         };
       }
+
+      window.localStorage.removeItem(AUTH_PERSISTENT_STORAGE_KEY);
     }
   } catch {
     return base;
@@ -201,6 +246,17 @@ function persistAuthSnapshot(state: {
   } catch {
     // ignore quota / private mode
   }
+}
+
+function rewriteSanitizedPersistedAuth(snapshot: StoredAuthSnapshot): void {
+  persistAuthSnapshot({
+    accessToken: snapshot.accessToken,
+    accessTokenExpiresAt: snapshot.accessTokenExpiresAt,
+    user: snapshot.user,
+    isAuthenticated: snapshot.isAuthenticated,
+    rememberMe: snapshot.rememberMe,
+    storageMode: snapshot.storageMode,
+  });
 }
 
 const boot = readBootstrapFromStorage();

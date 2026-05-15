@@ -12,6 +12,7 @@ import { ServiceUnavailableState } from "@/components/common/ServiceUnavailableS
 import { Skeleton } from "@/components/ui/skeleton";
 import { getCurrentUser } from "@/features/auth/api";
 import { useAuthStore } from "@/features/auth/auth-store";
+import { useBootstrapSession } from "@/features/auth/hooks/useBootstrapSession";
 import { getReadinessStatus, getSyntheticReadinessForAxiosError } from "@/features/health/api";
 
 type RequireAuthProps = {
@@ -44,6 +45,7 @@ function AuthMeBootstrapFailure({
 export function RequireAuth({ children }: RequireAuthProps) {
   const { t } = useTranslation(["common"]);
   const queryClient = useQueryClient();
+  const bootstrap = useBootstrapSession();
   const accessToken = useAuthStore((state) => state.accessToken);
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
@@ -52,7 +54,7 @@ export function RequireAuth({ children }: RequireAuthProps) {
   const meQuery = useQuery({
     queryKey: ["auth", "me"],
     queryFn: getCurrentUser,
-    enabled: Boolean(accessToken) && !user,
+    enabled: bootstrap.status === "authenticated" && Boolean(accessToken) && !user,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -69,7 +71,17 @@ export function RequireAuth({ children }: RequireAuthProps) {
     }
   }, [user?.preferredLanguage, meQuery.data?.preferredLanguage]);
 
-  if (!accessToken) {
+  if (bootstrap.status === "pending") {
+    return (
+      <div className="space-y-4 p-6">
+        <p className="text-sm text-muted-foreground">{t("loading")}</p>
+        <Skeleton className="h-8 w-1/3" />
+        <Skeleton className="h-40 w-full" />
+      </div>
+    );
+  }
+
+  if (bootstrap.status === "unauthenticated" || !accessToken) {
     return <Navigate to="/login" replace />;
   }
 
