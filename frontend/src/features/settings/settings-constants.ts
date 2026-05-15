@@ -1,7 +1,6 @@
 import type { SessionSecuritySettings } from "@/features/settings/types";
 
 export const SETTINGS_QUERY_KEY = ["settings", "overview"] as const;
-export const AUTH_SESSION_OPTIONS_QUERY_KEY = ["auth", "session-options"] as const;
 
 export const DIRECTORY_NATIONAL_ID_ATTRIBUTE_KEY = "Directory:NationalIdAttribute";
 export const BRANDING_APPLICATION_NAME_KEY = "Branding:ApplicationName";

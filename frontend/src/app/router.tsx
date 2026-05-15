@@ -1,20 +1,64 @@
-import { createBrowserRouter, Navigate } from "react-router-dom";
+/* eslint-disable react-refresh/only-export-components --
+ * Router config: lazy() component declarations and a Suspense wrapper coexist with
+ * the non-component `router` export. Fast refresh does not apply to this module.
+ */
+import { lazy, Suspense, type ReactNode } from "react";
+import { createBrowserRouter } from "react-router-dom";
 
 import { RootRedirect } from "@/app/RootRedirect";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { RequireAuth } from "@/features/auth/RequireAuth";
 import { RequirePermission } from "@/features/auth/RequirePermission";
-import { AuditLogsPage } from "@/features/audit-logs/AuditLogsPage";
-import { HomePage } from "@/features/home/HomePage";
-import { PermissionsPage } from "@/features/permissions/PermissionsPage";
-import { RolesPage } from "@/features/roles/RolesPage";
-import { SecurityLogsPage } from "@/features/security-logs/SecurityLogsPage";
 import { SetupRequiredPage } from "@/features/setup/SetupRequiredPage";
-import { SettingsPage } from "@/features/settings/SettingsPage";
-import { UsersPage } from "@/features/users/UsersPage";
-import { ErrorPage } from "@/pages/ErrorPage";
-import { NotFoundPage } from "@/pages/NotFoundPage";
+
+const HomePage = lazy(() =>
+  import("@/features/home/HomePage").then((module) => ({ default: module.HomePage })),
+);
+const AuditLogsPage = lazy(() =>
+  import("@/features/audit-logs/AuditLogsPage").then((module) => ({
+    default: module.AuditLogsPage,
+  })),
+);
+const SecurityLogsPage = lazy(() =>
+  import("@/features/security-logs/SecurityLogsPage").then((module) => ({
+    default: module.SecurityLogsPage,
+  })),
+);
+const PermissionsPage = lazy(() =>
+  import("@/features/permissions/PermissionsPage").then((module) => ({
+    default: module.PermissionsPage,
+  })),
+);
+const RolesPage = lazy(() =>
+  import("@/features/roles/RolesPage").then((module) => ({ default: module.RolesPage })),
+);
+const UsersPage = lazy(() =>
+  import("@/features/users/UsersPage").then((module) => ({ default: module.UsersPage })),
+);
+const SettingsPage = lazy(() =>
+  import("@/features/settings/SettingsPage").then((module) => ({
+    default: module.SettingsPage,
+  })),
+);
+const ErrorPage = lazy(() =>
+  import("@/pages/ErrorPage").then((module) => ({ default: module.ErrorPage })),
+);
+const NotFoundPage = lazy(() =>
+  import("@/pages/NotFoundPage").then((module) => ({ default: module.NotFoundPage })),
+);
+
+function RouteFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">
+      Loading...
+    </div>
+  );
+}
+
+function LazyRoute({ children }: { children: ReactNode }) {
+  return <Suspense fallback={<RouteFallback />}>{children}</Suspense>;
+}
 
 export const router = createBrowserRouter([
   {
@@ -34,7 +78,9 @@ export const router = createBrowserRouter([
     element: (
       <RequireAuth>
         <AppLayout>
-          <ErrorPage />
+          <LazyRoute>
+            <ErrorPage />
+          </LazyRoute>
         </AppLayout>
       </RequireAuth>
     ),
@@ -44,16 +90,10 @@ export const router = createBrowserRouter([
     element: (
       <RequireAuth>
         <AppLayout>
-          <HomePage />
+          <LazyRoute>
+            <HomePage />
+          </LazyRoute>
         </AppLayout>
-      </RequireAuth>
-    ),
-  },
-  {
-    path: "/dashboard",
-    element: (
-      <RequireAuth>
-        <Navigate to="/home" replace />
       </RequireAuth>
     ),
   },
@@ -63,7 +103,9 @@ export const router = createBrowserRouter([
       <RequireAuth>
         <RequirePermission permission="AuditLogs.View">
           <AppLayout>
-            <AuditLogsPage />
+            <LazyRoute>
+              <AuditLogsPage />
+            </LazyRoute>
           </AppLayout>
         </RequirePermission>
       </RequireAuth>
@@ -75,7 +117,9 @@ export const router = createBrowserRouter([
       <RequireAuth>
         <RequirePermission permission="SecurityLogs.View">
           <AppLayout>
-            <SecurityLogsPage />
+            <LazyRoute>
+              <SecurityLogsPage />
+            </LazyRoute>
           </AppLayout>
         </RequirePermission>
       </RequireAuth>
@@ -87,7 +131,9 @@ export const router = createBrowserRouter([
       <RequireAuth>
         <RequirePermission permission="Permissions.View">
           <AppLayout>
-            <PermissionsPage />
+            <LazyRoute>
+              <PermissionsPage />
+            </LazyRoute>
           </AppLayout>
         </RequirePermission>
       </RequireAuth>
@@ -99,7 +145,9 @@ export const router = createBrowserRouter([
       <RequireAuth>
         <RequirePermission permission="Roles.View">
           <AppLayout>
-            <RolesPage />
+            <LazyRoute>
+              <RolesPage />
+            </LazyRoute>
           </AppLayout>
         </RequirePermission>
       </RequireAuth>
@@ -111,7 +159,9 @@ export const router = createBrowserRouter([
       <RequireAuth>
         <RequirePermission permission="Users.View">
           <AppLayout>
-            <UsersPage />
+            <LazyRoute>
+              <UsersPage />
+            </LazyRoute>
           </AppLayout>
         </RequirePermission>
       </RequireAuth>
@@ -123,7 +173,9 @@ export const router = createBrowserRouter([
       <RequireAuth>
         <RequirePermission permission="Settings.View">
           <AppLayout>
-            <SettingsPage />
+            <LazyRoute>
+              <SettingsPage />
+            </LazyRoute>
           </AppLayout>
         </RequirePermission>
       </RequireAuth>
@@ -131,6 +183,10 @@ export const router = createBrowserRouter([
   },
   {
     path: "*",
-    element: <NotFoundPage />,
+    element: (
+      <LazyRoute>
+        <NotFoundPage />
+      </LazyRoute>
+    ),
   },
 ]);

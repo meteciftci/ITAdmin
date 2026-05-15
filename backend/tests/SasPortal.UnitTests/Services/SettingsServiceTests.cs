@@ -517,6 +517,78 @@ public sealed class SettingsServiceTests
             StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData("Directory:NationalIdAttribute", "employeeId", "LDAP attribute name that stores the national identity value.")]
+    [InlineData("Branding:ApplicationName", "SAS Portal", "Application display name.")]
+    [InlineData("Branding:BrowserTitle", "Portal", "Browser title shown in the tab.")]
+    [InlineData("Branding:LogoUrl", "/uploads/branding/logo.png", "Application branding logo URL.")]
+    [InlineData("Branding:FaviconUrl", "/uploads/branding/favicon.png", "Application branding favicon URL.")]
+    [InlineData("Branding:ForgotPasswordUrl", "https://reset.example.com", "External forgot password URL shown on the login page.")]
+    public async Task UpdateApplicationSettingsAsync_Create_UsesKeySpecificDescription(
+        string key,
+        string value,
+        string expectedDescription)
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext);
+        var request = new UpdateApplicationSettingsRequest(
+            new[]
+            {
+                new UpdateApplicationSettingRequest(key, value, SettingValueType.String)
+            },
+            Guid.NewGuid(),
+            "tester",
+            "127.0.0.1",
+            "xunit");
+
+        var result = await service.UpdateApplicationSettingsAsync(request);
+
+        Assert.True(result.IsSuccess);
+        var setting = Assert.Single(dbContext.ApplicationSettings);
+        Assert.Equal(key, setting.Key);
+        Assert.Equal(expectedDescription, setting.Description);
+    }
+
+    [Fact]
+    public async Task UpdateApplicationSettingsAsync_Update_HealsIncorrectBrandingDescription()
+    {
+        await using var dbContext = CreateDbContext();
+        await dbContext.ApplicationSettings.AddAsync(new ApplicationSetting
+        {
+            Key = "Branding:LogoUrl",
+            Value = "/uploads/branding/old.png",
+            ValueType = SettingValueType.String,
+            Description = "LDAP attribute name that stores the national identity value.",
+            IsEncrypted = false,
+            IsSystem = true,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "seed"
+        });
+        await dbContext.SaveChangesAsync();
+
+        var service = CreateService(dbContext);
+        var request = new UpdateApplicationSettingsRequest(
+            new[]
+            {
+                new UpdateApplicationSettingRequest(
+                    "Branding:LogoUrl",
+                    "/uploads/branding/new.png",
+                    SettingValueType.String)
+            },
+            Guid.NewGuid(),
+            "tester",
+            "127.0.0.1",
+            "xunit");
+
+        var result = await service.UpdateApplicationSettingsAsync(request);
+
+        Assert.True(result.IsSuccess);
+        var setting = Assert.Single(dbContext.ApplicationSettings);
+        Assert.Equal("Application branding logo URL.", setting.Description);
+        Assert.Equal("/uploads/branding/new.png", setting.Value);
+    }
+
     [Fact]
     public async Task UpdateApplicationSettingsAsync_RejectsSensitiveSuffixKey_BeforeWritingValue()
     {

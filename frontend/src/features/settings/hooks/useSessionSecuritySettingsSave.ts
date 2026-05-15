@@ -3,11 +3,9 @@ import type { TFunction } from "i18next";
 import { useCallback } from "react";
 import { toast } from "sonner";
 
+import { AUTH_SESSION_OPTIONS_QUERY_KEY } from "@/features/auth/query-keys";
 import { updateSessionSecuritySettings } from "@/features/settings/api";
-import {
-  AUTH_SESSION_OPTIONS_QUERY_KEY,
-  SETTINGS_QUERY_KEY,
-} from "@/features/settings/settings-constants";
+import { SETTINGS_QUERY_KEY } from "@/features/settings/settings-constants";
 import type { SessionSecuritySettings } from "@/features/settings/types";
 import { getApiErrorMessage } from "@/lib/api-error";
 

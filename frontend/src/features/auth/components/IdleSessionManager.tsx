@@ -13,6 +13,7 @@ import {
 } from "@/features/auth/api";
 import { useAuthStore } from "@/features/auth/auth-store";
 import { IdleTimeoutDialog } from "@/features/auth/components/IdleTimeoutDialog";
+import { AUTH_SESSION_OPTIONS_QUERY_KEY } from "@/features/auth/query-keys";
 
 const ACTIVITY_THROTTLE_MS = 15_000;
 const TICK_INTERVAL_MS = 1_000;
@@ -60,7 +61,7 @@ export function IdleSessionManager() {
   const clearAuth = useAuthStore((state) => state.clearAuth);
 
   const sessionOptionsQuery = useQuery({
-    queryKey: ["auth", "session-options"],
+    queryKey: AUTH_SESSION_OPTIONS_QUERY_KEY,
     queryFn: getAuthSessionOptions,
     enabled: isAuthenticated,
     staleTime: 5 * 60 * 1000,

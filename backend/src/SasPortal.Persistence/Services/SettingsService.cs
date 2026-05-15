@@ -382,6 +382,8 @@ public sealed class SettingsService(
             // encrypted can never leak into audit, even if the incoming write flips IsEncrypted.
             var wasEncrypted = setting?.IsEncrypted ?? false;
 
+            var description = ResolveApplicationSettingDescription(key);
+
             if (setting is null)
             {
                 setting = new ApplicationSetting
@@ -389,7 +391,7 @@ public sealed class SettingsService(
                     Key = key,
                     Value = newValue,
                     ValueType = item.ValueType,
-                    Description = "LDAP attribute name that stores the national identity value.",
+                    Description = description,
                     IsEncrypted = false,
                     IsSystem = true,
                     IsActive = true,
@@ -403,6 +405,8 @@ public sealed class SettingsService(
             {
                 setting.Value = newValue;
                 setting.ValueType = item.ValueType;
+                // Self-heal description in case a previous write stored an incorrect value.
+                setting.Description = description;
                 setting.IsEncrypted = false;
                 setting.IsSystem = true;
                 setting.IsActive = true;
@@ -1043,6 +1047,17 @@ public sealed class SettingsService(
         }
     }
 
+
+    private static string ResolveApplicationSettingDescription(string key) => key switch
+    {
+        NationalIdApplicationSettingKey => "LDAP attribute name that stores the national identity value.",
+        BrandingApplicationNameKey => "Application display name.",
+        BrandingBrowserTitleKey => "Browser title shown in the tab.",
+        BrandingLogoUrlKey => "Application branding logo URL.",
+        BrandingFaviconUrlKey => "Application branding favicon URL.",
+        BrandingForgotPasswordUrlKey => "External forgot password URL shown on the login page.",
+        _ => string.Empty
+    };
 
     private static bool IsSensitiveApplicationSetting(string key, bool isEncrypted)
     {

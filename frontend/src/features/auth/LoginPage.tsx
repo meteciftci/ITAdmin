@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getAuthSessionOptions, getCurrentUser, login } from "@/features/auth/api";
 import { useAuthStore } from "@/features/auth/auth-store";
+import { AUTH_SESSION_OPTIONS_QUERY_KEY } from "@/features/auth/query-keys";
 import { PublicLanguageSwitcher } from "@/features/auth/PublicLanguageSwitcher";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { i18n, normalizeLanguage } from "@/app/i18n";
@@ -96,7 +97,7 @@ export function LoginPage() {
   }, [isAuthenticated, navigate]);
   const readiness = useReadinessStatus();
   const sessionOptionsQuery = useQuery({
-    queryKey: ["auth", "session-options"],
+    queryKey: AUTH_SESSION_OPTIONS_QUERY_KEY,
     queryFn: getAuthSessionOptions,
     retry: false,
   });
