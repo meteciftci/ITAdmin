@@ -77,6 +77,7 @@ try
     }
 
     app.UseHttpsRedirection();
+    app.UseDefaultFiles();
     app.UseStaticFiles();
 
     app.UseAuthentication();
@@ -85,6 +86,32 @@ try
 
     app.MapControllers();
     app.MapHealthChecks("/health");
+
+    app.MapFallback(async context =>
+    {
+        if (context.Request.Path.StartsWithSegments("/api"))
+        {
+            context.Response.StatusCode = StatusCodes.Status404NotFound;
+            return;
+        }
+
+        var webRootPath = app.Environment.WebRootPath;
+        if (string.IsNullOrWhiteSpace(webRootPath))
+        {
+            context.Response.StatusCode = StatusCodes.Status404NotFound;
+            return;
+        }
+
+        var indexPath = Path.Combine(webRootPath, "index.html");
+        if (!File.Exists(indexPath))
+        {
+            context.Response.StatusCode = StatusCodes.Status404NotFound;
+            return;
+        }
+
+        context.Response.ContentType = "text/html; charset=utf-8";
+        await context.Response.SendFileAsync(indexPath);
+    });
 
     Log.Information("Starting SAS Portal API");
     app.Run();
