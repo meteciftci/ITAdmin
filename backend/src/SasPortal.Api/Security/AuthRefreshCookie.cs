@@ -3,9 +3,9 @@ using Microsoft.AspNetCore.Http;
 namespace SasPortal.Api.Security;
 
 /// <summary>
-/// HttpOnly refresh token cookie for <c>/api/auth/*</c> endpoints.
-/// Access token remains JSON + Bearer; this cookie is additive for future clients that send credentials.
-/// Cross-origin SPA deployments will require CORS with credentials and a CSRF strategy in a later phase.
+/// HttpOnly refresh token cookie scoped to <c>/api/auth/*</c>. SAS Portal uses full cookie auth:
+/// both the access and refresh tokens are delivered exclusively as HttpOnly cookies and the
+/// <c>Authorization: Bearer</c> header is not accepted (see <see cref="JwtBearerCookieTokenResolver"/>).
 /// <see cref="CookieOptions"/> does not model "essential" consent flags; those apply when using cookie policy middleware.
 /// </summary>
 public static class AuthRefreshCookie
