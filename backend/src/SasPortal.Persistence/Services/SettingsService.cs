@@ -29,8 +29,10 @@ public sealed class SettingsService(
     private const int BrandingTextMaxLength = 100;
     private const int BrandingUrlMaxLength = 500;
     private const int AuditDescriptionMaxLength = 2000;
+    private const int AuditSettingValueMaxLength = 256;
     private const int AuditIpAddressMaxLength = 64;
     private const int AuditUserAgentMaxLength = 1024;
+    private const string AuditSettingMissingValue = "<none>";
 
     private static readonly HashSet<string> UpdatableApplicationSettingKeys = new(StringComparer.Ordinal)
     {
@@ -40,6 +42,18 @@ public sealed class SettingsService(
         BrandingLogoUrlKey,
         BrandingFaviconUrlKey,
         BrandingForgotPasswordUrlKey
+    };
+
+    // Defense-in-depth: future settings whose key contains any of these tokens are treated
+    // as secrets and their values are never written to audit logs.
+    private static readonly string[] SensitiveApplicationSettingKeyTokens =
+    {
+        "password",
+        "secret",
+        "token",
+        "credential",
+        "apikey",
+        "privatekey"
     };
 
     public async Task<SettingsOverview> GetSettingsAsync(CancellationToken cancellationToken = default)
@@ -362,12 +376,18 @@ public sealed class SettingsService(
             var setting = await context.ApplicationSettings
                 .FirstOrDefaultAsync(x => x.Key == key && !x.IsDeleted, cancellationToken);
 
+            var oldValue = NormalizeNullable(setting?.Value);
+            var newValue = NormalizeNullable(item.Value);
+            // Sensitivity is captured from the persisted state so that values previously stored as
+            // encrypted can never leak into audit, even if the incoming write flips IsEncrypted.
+            var wasEncrypted = setting?.IsEncrypted ?? false;
+
             if (setting is null)
             {
                 setting = new ApplicationSetting
                 {
                     Key = key,
-                    Value = NormalizeNullable(item.Value),
+                    Value = newValue,
                     ValueType = item.ValueType,
                     Description = "LDAP attribute name that stores the national identity value.",
                     IsEncrypted = false,
@@ -381,7 +401,7 @@ public sealed class SettingsService(
             }
             else
             {
-                setting.Value = NormalizeNullable(item.Value);
+                setting.Value = newValue;
                 setting.ValueType = item.ValueType;
                 setting.IsEncrypted = false;
                 setting.IsSystem = true;
@@ -390,13 +410,21 @@ public sealed class SettingsService(
                 setting.UpdatedBy = request.ActorUserName ?? "system";
             }
 
+            if (string.Equals(oldValue, newValue, StringComparison.Ordinal))
+            {
+                // No effective change; skip audit so the log does not grow with no-op writes.
+                continue;
+            }
+
+            var isSensitive = IsSensitiveApplicationSetting(key, wasEncrypted);
+
             await context.AuditLogs.AddAsync(
                 new AuditLog
                 {
                     Action = "Update",
                     EntityName = "ApplicationSetting",
                     EntityId = key,
-                    Description = TruncateAuditDescription($"Application setting updated: {key}. Value changed."),
+                    Description = BuildApplicationSettingAuditDescription(key, oldValue, newValue, isSensitive),
                     ActorUserId = request.ActorUserId,
                     ActorUserName = request.ActorUserName,
                     IpAddress = TruncateAuditIpAddress(request.ActorIpAddress),
@@ -1015,6 +1043,66 @@ public sealed class SettingsService(
         }
     }
 
+
+    private static bool IsSensitiveApplicationSetting(string key, bool isEncrypted)
+    {
+        if (isEncrypted)
+        {
+            return true;
+        }
+
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            return false;
+        }
+
+        // Sensitivity is based on the last key segment's suffix so non-secret keys that merely
+        // mention a secret-related word (e.g. "Branding:ForgotPasswordUrl") are not misclassified.
+        var separatorIndex = key.LastIndexOf(':');
+        var lastSegment = separatorIndex >= 0 && separatorIndex + 1 < key.Length
+            ? key[(separatorIndex + 1)..]
+            : key;
+
+        foreach (var token in SensitiveApplicationSettingKeyTokens)
+        {
+            if (lastSegment.EndsWith(token, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static string FormatAuditSettingValue(string? value)
+    {
+        var normalized = NormalizeNullable(value);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return AuditSettingMissingValue;
+        }
+
+        return normalized.Length <= AuditSettingValueMaxLength
+            ? normalized
+            : $"{normalized[..(AuditSettingValueMaxLength - 3)]}...";
+    }
+
+    private static string BuildApplicationSettingAuditDescription(
+        string key,
+        string? oldValue,
+        string? newValue,
+        bool isSensitive)
+    {
+        if (isSensitive)
+        {
+            return TruncateAuditDescription($"Application setting updated: {key}. Value changed.");
+        }
+
+        var oldFormatted = FormatAuditSettingValue(oldValue);
+        var newFormatted = FormatAuditSettingValue(newValue);
+        return TruncateAuditDescription(
+            $"Application setting updated: {key}. Value: {oldFormatted} -> {newFormatted}.");
+    }
 
     private static string TruncateAuditDescription(string description) =>
         description.Length <= AuditDescriptionMaxLength

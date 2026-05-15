@@ -159,7 +159,7 @@ public sealed class SettingsServiceTests
     }
 
     [Fact]
-    public async Task UpdateApplicationSettingsAsync_UpsertsNationalIdAttribute_AndWritesSafeAudit()
+    public async Task UpdateApplicationSettingsAsync_UpsertsNationalIdAttribute_AndWritesDiffAudit()
     {
         await using var dbContext = CreateDbContext();
         var service = CreateService(dbContext);
@@ -184,8 +184,72 @@ public sealed class SettingsServiceTests
 
         var audit = Assert.Single(dbContext.AuditLogs.Where(x => x.EntityName == "ApplicationSetting"));
         Assert.NotNull(audit.Description);
-        Assert.DoesNotContain("employeeId", audit.Description!, StringComparison.Ordinal);
-        Assert.Contains("Value changed.", audit.Description!, StringComparison.Ordinal);
+        Assert.Contains("Directory:NationalIdAttribute", audit.Description!, StringComparison.Ordinal);
+        Assert.Contains("Value: <none> -> employeeId.", audit.Description!, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task UpdateApplicationSettingsAsync_NationalIdAttribute_IncludesPreviousValueInAudit()
+    {
+        await using var dbContext = CreateDbContext();
+        await dbContext.ApplicationSettings.AddAsync(new ApplicationSetting
+        {
+            Key = "Directory:NationalIdAttribute",
+            Value = "sAMAccountName",
+            ValueType = SettingValueType.String,
+            IsEncrypted = false,
+            IsSystem = true,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "seed"
+        });
+        await dbContext.SaveChangesAsync();
+
+        var service = CreateService(dbContext);
+        var request = new UpdateApplicationSettingsRequest(
+            new[]
+            {
+                new UpdateApplicationSettingRequest("Directory:NationalIdAttribute", "employeeId", SettingValueType.String)
+            },
+            Guid.NewGuid(),
+            "tester",
+            "127.0.0.1",
+            "xunit");
+
+        var result = await service.UpdateApplicationSettingsAsync(request);
+
+        Assert.True(result.IsSuccess);
+        var audit = Assert.Single(dbContext.AuditLogs.Where(x => x.EntityName == "ApplicationSetting"));
+        Assert.NotNull(audit.Description);
+        Assert.Contains("Value: sAMAccountName -> employeeId.", audit.Description!, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task UpdateApplicationSettingsAsync_UnchangedValue_DoesNotWriteAudit()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext);
+        var request = new UpdateApplicationSettingsRequest(
+            new[]
+            {
+                new UpdateApplicationSettingRequest("Directory:NationalIdAttribute", "employeeId", SettingValueType.String)
+            },
+            Guid.NewGuid(),
+            "tester",
+            "127.0.0.1",
+            "xunit");
+
+        var first = await service.UpdateApplicationSettingsAsync(request);
+        Assert.True(first.IsSuccess);
+        Assert.Single(dbContext.AuditLogs.Where(x => x.EntityName == "ApplicationSetting"));
+
+        var second = await service.UpdateApplicationSettingsAsync(request);
+        Assert.True(second.IsSuccess);
+
+        var audits = await dbContext.AuditLogs
+            .Where(x => x.EntityName == "ApplicationSetting")
+            .ToListAsync();
+        Assert.Single(audits);
     }
 
     [Fact]
@@ -346,14 +410,27 @@ public sealed class SettingsServiceTests
     }
 
     [Fact]
-    public async Task UpdateApplicationSettingsAsync_BrandingAuditDescription_DoesNotContainValue()
+    public async Task UpdateApplicationSettingsAsync_BrandingApplicationName_AuditIncludesOldAndNewValue()
     {
         await using var dbContext = CreateDbContext();
+        await dbContext.ApplicationSettings.AddAsync(new ApplicationSetting
+        {
+            Key = "Branding:ApplicationName",
+            Value = "SAS Portal v2",
+            ValueType = SettingValueType.String,
+            IsEncrypted = false,
+            IsSystem = true,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "seed"
+        });
+        await dbContext.SaveChangesAsync();
+
         var service = CreateService(dbContext);
         var request = new UpdateApplicationSettingsRequest(
             new[]
             {
-                new UpdateApplicationSettingRequest("Branding:ApplicationName", "SAS Secret Portal Name", SettingValueType.String)
+                new UpdateApplicationSettingRequest("Branding:ApplicationName", "SAS Portal", SettingValueType.String)
             },
             Guid.NewGuid(),
             "tester",
@@ -365,8 +442,142 @@ public sealed class SettingsServiceTests
         Assert.True(result.IsSuccess);
         var audit = Assert.Single(dbContext.AuditLogs.Where(x => x.EntityName == "ApplicationSetting"));
         Assert.NotNull(audit.Description);
-        Assert.DoesNotContain("SAS Secret Portal Name", audit.Description!, StringComparison.Ordinal);
         Assert.Contains("Branding:ApplicationName", audit.Description!, StringComparison.Ordinal);
+        Assert.Contains("Value: SAS Portal v2 -> SAS Portal.", audit.Description!, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task UpdateApplicationSettingsAsync_BrandingFaviconUrl_AuditIncludesOldAndNewValue()
+    {
+        await using var dbContext = CreateDbContext();
+        await dbContext.ApplicationSettings.AddAsync(new ApplicationSetting
+        {
+            Key = "Branding:FaviconUrl",
+            Value = "/favicon.svg",
+            ValueType = SettingValueType.String,
+            IsEncrypted = false,
+            IsSystem = true,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "seed"
+        });
+        await dbContext.SaveChangesAsync();
+
+        var service = CreateService(dbContext);
+        var request = new UpdateApplicationSettingsRequest(
+            new[]
+            {
+                new UpdateApplicationSettingRequest(
+                    "Branding:FaviconUrl",
+                    "/uploads/branding/favicon.ico",
+                    SettingValueType.String)
+            },
+            Guid.NewGuid(),
+            "tester",
+            "127.0.0.1",
+            "xunit");
+
+        var result = await service.UpdateApplicationSettingsAsync(request);
+
+        Assert.True(result.IsSuccess);
+        var audit = Assert.Single(dbContext.AuditLogs.Where(x => x.EntityName == "ApplicationSetting"));
+        Assert.NotNull(audit.Description);
+        Assert.Contains(
+            "Value: /favicon.svg -> /uploads/branding/favicon.ico.",
+            audit.Description!,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task UpdateApplicationSettingsAsync_BrandingForgotPasswordUrl_AuditIncludesNewValueFromNone()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext);
+        var request = new UpdateApplicationSettingsRequest(
+            new[]
+            {
+                new UpdateApplicationSettingRequest(
+                    "Branding:ForgotPasswordUrl",
+                    "https://reset.example.com",
+                    SettingValueType.String)
+            },
+            Guid.NewGuid(),
+            "tester",
+            "127.0.0.1",
+            "xunit");
+
+        var result = await service.UpdateApplicationSettingsAsync(request);
+
+        Assert.True(result.IsSuccess);
+        var audit = Assert.Single(dbContext.AuditLogs.Where(x => x.EntityName == "ApplicationSetting"));
+        Assert.NotNull(audit.Description);
+        Assert.Contains(
+            "Value: <none> -> https://reset.example.com.",
+            audit.Description!,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task UpdateApplicationSettingsAsync_RejectsSensitiveSuffixKey_BeforeWritingValue()
+    {
+        // Defense-in-depth: even if a future sensitive key (e.g. "Smtp:Password") is mistakenly
+        // submitted through this endpoint, the allowlist must reject it so its value is never
+        // persisted nor audited. This protects the audit formatter from receiving secrets.
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext);
+        var request = new UpdateApplicationSettingsRequest(
+            new[]
+            {
+                new UpdateApplicationSettingRequest("Smtp:Password", "super-secret", SettingValueType.String)
+            },
+            Guid.NewGuid(),
+            "tester",
+            "127.0.0.1",
+            "xunit");
+
+        var result = await service.UpdateApplicationSettingsAsync(request);
+
+        Assert.False(result.IsSuccess);
+        Assert.Empty(dbContext.ApplicationSettings);
+        Assert.Empty(dbContext.AuditLogs);
+    }
+
+    [Fact]
+    public async Task UpdateApplicationSettingsAsync_EncryptedSetting_DoesNotLeakValueIntoAudit()
+    {
+        await using var dbContext = CreateDbContext();
+        await dbContext.ApplicationSettings.AddAsync(new ApplicationSetting
+        {
+            Key = "Branding:ApplicationName",
+            Value = "protected:legacy",
+            ValueType = SettingValueType.String,
+            IsEncrypted = true,
+            IsSystem = true,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "seed"
+        });
+        await dbContext.SaveChangesAsync();
+
+        var service = CreateService(dbContext);
+        var request = new UpdateApplicationSettingsRequest(
+            new[]
+            {
+                new UpdateApplicationSettingRequest("Branding:ApplicationName", "SAS Portal", SettingValueType.String)
+            },
+            Guid.NewGuid(),
+            "tester",
+            "127.0.0.1",
+            "xunit");
+
+        var result = await service.UpdateApplicationSettingsAsync(request);
+
+        Assert.True(result.IsSuccess);
+        var audit = Assert.Single(dbContext.AuditLogs.Where(x => x.EntityName == "ApplicationSetting"));
+        Assert.NotNull(audit.Description);
+        Assert.DoesNotContain("protected:legacy", audit.Description!, StringComparison.Ordinal);
+        Assert.DoesNotContain("SAS Portal", audit.Description!, StringComparison.Ordinal);
+        Assert.Contains("Value changed.", audit.Description!, StringComparison.Ordinal);
     }
 
     [Fact]
