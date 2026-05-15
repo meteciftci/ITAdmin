@@ -62,9 +62,7 @@ public sealed class SetupController(ISetupService setupService, ILdapService lda
                     request.Ldap.NationalIdAttribute),
                 new AppModels.CompleteSetupAdminUser(
                     request.Admin.UserName,
-                    request.Admin.Password,
-                    request.Admin.DisplayName,
-                    request.Admin.Email)),
+                    request.Admin.Password)),
             cancellationToken);
 
         var response = new CompleteSetupResponse(result.IsCompleted, result.Message);

@@ -1,6 +1,7 @@
 using System.Collections;
 using System.DirectoryServices.Protocols;
 using System.Net;
+using System.Net.Sockets;
 using System.Text;
 using SasPortal.Application.Abstractions.Services;
 using SasPortal.Application.Common.Models;
@@ -9,6 +10,11 @@ namespace SasPortal.Infrastructure.Services;
 
 public sealed class LdapService : ILdapService
 {
+    private static readonly TimeSpan LdapOperationTimeout = TimeSpan.FromSeconds(10);
+
+    private const string LdapOperationTimedOutMessage =
+        "LDAP operation timed out. Verify host, port, SSL settings, and network connectivity.";
+
     private const string MissingRequiredFieldsMessage = "Required LDAP fields are missing.";
     private const string ValidationSucceededMessage = "LDAP validation succeeded.";
     private const string DirectoryUserNotFoundMessage = "Directory user could not be found.";
@@ -43,10 +49,22 @@ public sealed class LdapService : ILdapService
             connection.Bind();
             return Task.FromResult(new LdapValidationResult(true, BindValidationSucceededMessage));
         }
+        catch (LdapException exception) when (IsLikelyConnectionOrLdapTimeout(exception))
+        {
+            return Task.FromResult(new LdapValidationResult(false, LdapOperationTimedOutMessage));
+        }
         catch (LdapException exception)
         {
             return Task.FromResult(
                 new LdapValidationResult(false, LdapBindFailureMessageResolver.ResolveForServiceAccountBind(exception)));
+        }
+        catch (SocketException exception) when (exception.SocketErrorCode == SocketError.TimedOut)
+        {
+            return Task.FromResult(new LdapValidationResult(false, LdapOperationTimedOutMessage));
+        }
+        catch (TimeoutException)
+        {
+            return Task.FromResult(new LdapValidationResult(false, LdapOperationTimedOutMessage));
         }
         catch
         {
@@ -83,6 +101,10 @@ public sealed class LdapService : ILdapService
             {
                 connection.Bind();
             }
+            catch (LdapException exception) when (IsLikelyConnectionOrLdapTimeout(exception))
+            {
+                return Task.FromResult(new LdapValidationResult(false, LdapOperationTimedOutMessage));
+            }
             catch (LdapException exception)
             {
                 return Task.FromResult(
@@ -107,6 +129,10 @@ public sealed class LdapService : ILdapService
             }
 
             return Task.FromResult(new LdapValidationResult(true, BindValidationSucceededMessage));
+        }
+        catch (Exception exception) when (IsLikelyLdapNetworkTimeout(exception))
+        {
+            return Task.FromResult(new LdapValidationResult(false, LdapOperationTimedOutMessage));
         }
         catch
         {
@@ -142,6 +168,10 @@ public sealed class LdapService : ILdapService
             {
                 serviceConnection.Bind();
             }
+            catch (LdapException exception) when (IsLikelyConnectionOrLdapTimeout(exception))
+            {
+                return Task.FromResult(new LdapValidationResult(false, LdapOperationTimedOutMessage));
+            }
             catch (LdapException exception)
             {
                 return Task.FromResult(
@@ -158,12 +188,19 @@ public sealed class LdapService : ILdapService
                 SearchScope.Subtree,
                 "distinguishedName",
                 "cn",
-                "mail");
+                "mail")
+            {
+                TimeLimit = LdapOperationTimeout
+            };
 
             SearchResponse searchResponse;
             try
             {
                 searchResponse = (SearchResponse)serviceConnection.SendRequest(searchRequest);
+            }
+            catch (LdapException exception) when (IsLikelyConnectionOrLdapTimeout(exception))
+            {
+                return Task.FromResult(new LdapValidationResult(false, LdapOperationTimedOutMessage));
             }
             catch (LdapException)
             {
@@ -187,10 +224,18 @@ public sealed class LdapService : ILdapService
                 userConnection.Bind();
                 return Task.FromResult(new LdapValidationResult(true, ValidationSucceededMessage));
             }
+            catch (LdapException exception) when (IsLikelyConnectionOrLdapTimeout(exception))
+            {
+                return Task.FromResult(new LdapValidationResult(false, LdapOperationTimedOutMessage));
+            }
             catch (LdapException)
             {
                 return Task.FromResult(new LdapValidationResult(false, DirectoryUserBindFailedMessage));
             }
+        }
+        catch (Exception exception) when (IsLikelyLdapNetworkTimeout(exception))
+        {
+            return Task.FromResult(new LdapValidationResult(false, LdapOperationTimedOutMessage));
         }
         catch
         {
@@ -256,7 +301,10 @@ public sealed class LdapService : ILdapService
                 searchBase,
                 searchFilter,
                 SearchScope.Subtree,
-                attributeNames.ToArray());
+                attributeNames.ToArray())
+            {
+                TimeLimit = LdapOperationTimeout
+            };
 
             SearchResponse searchResponse;
             try
@@ -314,6 +362,10 @@ public sealed class LdapService : ILdapService
 
             return Task.FromResult<LdapUserProfile?>(
                 new LdapUserProfile(directoryObjectId, resolvedUserName, displayName, email, nationalId));
+        }
+        catch (Exception exception) when (IsLikelyLdapNetworkTimeout(exception))
+        {
+            return Task.FromResult<LdapUserProfile?>(null);
         }
         catch
         {
@@ -390,7 +442,10 @@ public sealed class LdapService : ILdapService
                 searchBase,
                 searchFilter,
                 SearchScope.Subtree,
-                attributeNames.ToArray());
+                attributeNames.ToArray())
+            {
+                TimeLimit = LdapOperationTimeout
+            };
 
             SearchResponse searchResponse;
             try
@@ -457,6 +512,10 @@ public sealed class LdapService : ILdapService
 
             return Task.FromResult<LdapUserProfile?>(
                 new LdapUserProfile(directoryObjectId, resolvedUserName, displayName, email, nationalId));
+        }
+        catch (Exception exception) when (IsLikelyLdapNetworkTimeout(exception))
+        {
+            return Task.FromResult<LdapUserProfile?>(null);
         }
         catch
         {
@@ -535,7 +594,8 @@ public sealed class LdapService : ILdapService
                 SearchScope.Subtree,
                 attributeNames.ToArray())
             {
-                SizeLimit = Math.Min(500, Math.Max(request.MaxResults * 5, request.MaxResults))
+                SizeLimit = Math.Min(500, Math.Max(request.MaxResults * 5, request.MaxResults)),
+                TimeLimit = LdapOperationTimeout
             };
 
             SearchResponse searchResponse;
@@ -610,6 +670,10 @@ public sealed class LdapService : ILdapService
 
             return Task.FromResult<IReadOnlyCollection<LdapUserLookupItem>>(collected);
         }
+        catch (Exception exception) when (IsLikelyLdapNetworkTimeout(exception))
+        {
+            return Task.FromResult<IReadOnlyCollection<LdapUserLookupItem>>(Array.Empty<LdapUserLookupItem>());
+        }
         catch
         {
             return Task.FromResult<IReadOnlyCollection<LdapUserLookupItem>>(Array.Empty<LdapUserLookupItem>());
@@ -664,6 +728,34 @@ public sealed class LdapService : ILdapService
     private static string? NormalizeNationalIdCandidate(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
+    private static bool IsLikelyConnectionOrLdapTimeout(LdapException exception)
+    {
+        var code = exception.ErrorCode;
+        if (code == (int)ResultCode.TimeLimitExceeded)
+        {
+            return true;
+        }
+
+        if (code == (int)ResultCode.Unavailable || code == (int)ResultCode.Busy)
+        {
+            return true;
+        }
+
+        // LDAP_SERVER_DOWN (81) — not exposed on ResultCode on all targets.
+        return code == 81;
+    }
+
+    private static bool IsLikelyLdapNetworkTimeout(Exception exception)
+    {
+        return exception switch
+        {
+            LdapException ldap => IsLikelyConnectionOrLdapTimeout(ldap),
+            SocketException socket => socket.SocketErrorCode == SocketError.TimedOut,
+            TimeoutException => true,
+            _ => false,
+        };
+    }
+
     private static LdapConnection CreateConnection(
         LdapDirectoryIdentifier identifier,
         bool useSsl,
@@ -677,6 +769,7 @@ public sealed class LdapService : ILdapService
         };
 
         connection.SessionOptions.ProtocolVersion = 3;
+        connection.Timeout = LdapOperationTimeout;
         if (useSsl)
         {
             connection.SessionOptions.SecureSocketLayer = true;
@@ -721,7 +814,8 @@ public sealed class LdapService : ILdapService
                 SearchScope.Base,
                 "distinguishedName")
             {
-                SizeLimit = 1
+                SizeLimit = 1,
+                TimeLimit = LdapOperationTimeout
             };
 
             var searchResponse = (SearchResponse)connection.SendRequest(searchRequest);
@@ -731,6 +825,10 @@ public sealed class LdapService : ILdapService
             }
 
             return new LdapValidationResult(true, BindValidationSucceededMessage);
+        }
+        catch (LdapException exception) when (IsLikelyConnectionOrLdapTimeout(exception))
+        {
+            return new LdapValidationResult(false, LdapOperationTimedOutMessage);
         }
         catch (LdapException)
         {

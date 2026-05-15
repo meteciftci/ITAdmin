@@ -11,6 +11,7 @@ import trPermissions from "@/locales/tr/permissions.json";
 import trRoles from "@/locales/tr/roles.json";
 import trSecurityLogs from "@/locales/tr/securityLogs.json";
 import trSettings from "@/locales/tr/settings.json";
+import trSetup from "@/locales/tr/setup.json";
 import trUsers from "@/locales/tr/users.json";
 
 import enAuth from "@/locales/en/auth.json";
@@ -23,6 +24,7 @@ import enPermissions from "@/locales/en/permissions.json";
 import enRoles from "@/locales/en/roles.json";
 import enSecurityLogs from "@/locales/en/securityLogs.json";
 import enSettings from "@/locales/en/settings.json";
+import enSetup from "@/locales/en/setup.json";
 import enUsers from "@/locales/en/users.json";
 
 export type SupportedLanguage = "tr" | "en";
@@ -45,6 +47,7 @@ const resources = {
     permissions: trPermissions.permissions,
     securityLogs: trSecurityLogs.securityLogs,
     settings: trSettings.settings,
+    setup: trSetup.setup,
   },
   en: {
     common: enCommon.common,
@@ -58,6 +61,7 @@ const resources = {
     permissions: enPermissions.permissions,
     securityLogs: enSecurityLogs.securityLogs,
     settings: enSettings.settings,
+    setup: enSetup.setup,
   },
 } as const;
 
@@ -78,6 +82,7 @@ void i18n.use(initReactI18next).init({
     "auditLogs",
     "securityLogs",
     "settings",
+    "setup",
   ],
   defaultNS: "common",
 });

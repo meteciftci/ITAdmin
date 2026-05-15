@@ -19,6 +19,7 @@ public sealed class FakeLdapService : ILdapService
     public LdapValidationResult ValidateResult { get; set; } = new(true, "full ok");
     public LdapUserProfile? UserProfileResult { get; set; }
     public LdapUserProfile? UserProfileByObjectIdResult { get; set; }
+    public Func<LdapUserProfileRequest, LdapUserProfile?>? ResolveUserProfile { get; set; }
     public Exception? ValidateException { get; set; }
     public Exception? GetUserProfileException { get; set; }
 
@@ -59,6 +60,11 @@ public sealed class FakeLdapService : ILdapService
         if (GetUserProfileException is not null)
         {
             throw GetUserProfileException;
+        }
+
+        if (ResolveUserProfile is not null)
+        {
+            return Task.FromResult(ResolveUserProfile(request));
         }
 
         return Task.FromResult(UserProfileResult);

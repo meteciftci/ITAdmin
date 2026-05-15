@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using SasPortal.Application.Abstractions.Security;
 using SasPortal.Application.Abstractions.Services;
 using SasPortal.Application.Common.Models;
@@ -15,7 +16,8 @@ public sealed class SetupService(
     AppDbContext context,
     ILdapService ldapService,
     ISecretProtector secretProtector,
-    IConfiguration configuration) : ISetupService
+    IConfiguration configuration,
+    ILogger<SetupService> logger) : ISetupService
 {
     private const string SuperAdminRoleCode = "SuperAdmin";
     private const string AdministratorRoleCode = "Administrator";
@@ -23,6 +25,9 @@ public sealed class SetupService(
     private const string SetupActor = "setup";
     private const string ActiveDirectoryDirectorySource = "ActiveDirectory";
     private const string NationalIdApplicationSettingKey = "Directory:NationalIdAttribute";
+
+    internal const string DirectoryUserProfileCouldNotBeLoadedMessage =
+        "Directory user profile could not be loaded. Check the administrator user name, User Search Base, and User Search Filter.";
 
     private static readonly (string Module, string Code, string Description)[] DefaultPermissions =
     [
@@ -79,8 +84,7 @@ public sealed class SetupService(
             string.IsNullOrWhiteSpace(request.Ldap.BindPassword) ||
             request.Ldap.Port <= 0 ||
             string.IsNullOrWhiteSpace(request.Admin.UserName) ||
-            string.IsNullOrWhiteSpace(request.Admin.Password) ||
-            string.IsNullOrWhiteSpace(request.Admin.DisplayName))
+            string.IsNullOrWhiteSpace(request.Admin.Password))
         {
             return new CompleteSetupResult(false, "Invalid setup request.");
         }
@@ -106,6 +110,9 @@ public sealed class SetupService(
             return new CompleteSetupResult(false, "Setup has already been completed.");
         }
 
+        logger.LogInformation("Setup complete started.");
+        logger.LogInformation("Setup LDAP validation started.");
+
         var ldapResult = await ldapService.ValidateAsync(
             new LdapValidationRequest
             {
@@ -123,32 +130,50 @@ public sealed class SetupService(
             },
             cancellationToken);
 
+        logger.LogInformation("Setup LDAP validation completed. IsValid={IsValid}", ldapResult.IsValid);
+
         if (!ldapResult.IsValid)
         {
+            logger.LogWarning("Setup failed.");
             return new CompleteSetupResult(false, ldapResult.Message);
         }
 
-        var ldapProfile = await ldapService.GetUserProfileAsync(
-            new LdapUserProfileRequest(
-                Host: request.Ldap.Host,
-                Port: request.Ldap.Port,
-                UseSsl: request.Ldap.UseSsl,
-                BaseDn: request.Ldap.BaseDn,
-                UserSearchBase: request.Ldap.UserSearchBase,
-                UserSearchFilter: request.Ldap.UserSearchFilter,
-                BindUserName: request.Ldap.BindUserName,
-                BindUserDomain: request.Ldap.BindUserDomain,
-                BindPassword: request.Ldap.BindPassword,
-                UserName: request.Admin.UserName,
-                NationalIdAttribute:
-                string.IsNullOrWhiteSpace(request.Ldap.NationalIdAttribute)
-                    ? null
-                    : request.Ldap.NationalIdAttribute.Trim()),
-            cancellationToken);
+        logger.LogInformation("Setup LDAP profile lookup started.");
+
+        var nationalIdAttribute = string.IsNullOrWhiteSpace(request.Ldap.NationalIdAttribute)
+            ? null
+            : request.Ldap.NationalIdAttribute.Trim();
+
+        LdapUserProfile? ldapProfile = null;
+        foreach (var candidateUserName in BuildLdapUserNameCandidates(request.Admin.UserName))
+        {
+            ldapProfile = await ldapService.GetUserProfileAsync(
+                new LdapUserProfileRequest(
+                    Host: request.Ldap.Host,
+                    Port: request.Ldap.Port,
+                    UseSsl: request.Ldap.UseSsl,
+                    BaseDn: request.Ldap.BaseDn,
+                    UserSearchBase: request.Ldap.UserSearchBase,
+                    UserSearchFilter: request.Ldap.UserSearchFilter,
+                    BindUserName: request.Ldap.BindUserName,
+                    BindUserDomain: request.Ldap.BindUserDomain,
+                    BindPassword: request.Ldap.BindPassword,
+                    UserName: candidateUserName,
+                    NationalIdAttribute: nationalIdAttribute),
+                cancellationToken);
+
+            if (ldapProfile is not null)
+            {
+                break;
+            }
+        }
+
+        logger.LogInformation("Setup LDAP profile lookup completed. Found={Found}", ldapProfile is not null);
 
         if (ldapProfile is null)
         {
-            return new CompleteSetupResult(false, "Directory user profile could not be loaded.");
+            logger.LogWarning("Setup failed.");
+            return new CompleteSetupResult(false, DirectoryUserProfileCouldNotBeLoadedMessage);
         }
 
         var usernameConflictExists = await context.PortalUsers.AnyAsync(
@@ -158,10 +183,14 @@ public sealed class SetupService(
 
         if (usernameConflictExists)
         {
+            logger.LogWarning("Setup failed.");
             return new CompleteSetupResult(false, "A portal user with the same user name already exists.");
         }
 
+        var displayName = ResolveDisplayName(ldapProfile);
+
         await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+        logger.LogInformation("Setup transaction started.");
 
         try
         {
@@ -361,8 +390,8 @@ public sealed class SetupService(
                         ldapProfile.NationalId is not null ? secretProtector.Protect(ldapProfile.NationalId) : null,
                     NationalIdMasked = ldapProfile.NationalId is not null ? MaskNationalId(ldapProfile.NationalId) : null,
                     UserName = ldapProfile.UserName,
-                    DisplayName = ldapProfile.DisplayName,
-                    Email = ldapProfile.Email ?? request.Admin.Email,
+                    DisplayName = displayName,
+                    Email = ldapProfile.Email,
                     IsActive = true,
                     CreatedAt = now,
                     CreatedBy = SetupActor
@@ -380,8 +409,8 @@ public sealed class SetupService(
                 }
 
                 adminUser.UserName = ldapProfile.UserName;
-                adminUser.DisplayName = ldapProfile.DisplayName;
-                adminUser.Email = ldapProfile.Email ?? request.Admin.Email;
+                adminUser.DisplayName = displayName;
+                adminUser.Email = ldapProfile.Email;
                 adminUser.IsActive = true;
                 adminUser.UpdatedAt = now;
                 adminUser.UpdatedBy = SetupActor;
@@ -489,13 +518,62 @@ public sealed class SetupService(
             await context.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
 
+            logger.LogInformation("Setup completed successfully.");
             return new CompleteSetupResult(true, "Setup completed successfully.");
         }
-        catch
+        catch (Exception exception)
         {
             await transaction.RollbackAsync(cancellationToken);
+            logger.LogWarning(exception, "Setup failed.");
             return new CompleteSetupResult(false, "Setup could not be completed.");
         }
+    }
+
+    internal static IReadOnlyList<string> BuildLdapUserNameCandidates(string userName)
+    {
+        var trimmed = userName.Trim();
+        if (trimmed.Length == 0)
+        {
+            return Array.Empty<string>();
+        }
+
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var result = new List<string>();
+
+        void AddCandidate(string candidate)
+        {
+            var c = candidate.Trim();
+            if (c.Length == 0 || seen.Contains(c))
+            {
+                return;
+            }
+
+            seen.Add(c);
+            result.Add(c);
+        }
+
+        AddCandidate(trimmed);
+
+        var slashIdx = trimmed.LastIndexOf('\\');
+        if (slashIdx >= 0 && slashIdx < trimmed.Length - 1)
+        {
+            AddCandidate(trimmed[(slashIdx + 1)..]);
+        }
+
+        var atIdx = trimmed.IndexOf('@');
+        if (atIdx > 0)
+        {
+            AddCandidate(trimmed[..atIdx]);
+        }
+
+        return result;
+    }
+
+    private static string ResolveDisplayName(LdapUserProfile ldapProfile)
+    {
+        return string.IsNullOrWhiteSpace(ldapProfile.DisplayName)
+            ? ldapProfile.UserName
+            : ldapProfile.DisplayName;
     }
 
     private static string? MaskNationalId(string? value)

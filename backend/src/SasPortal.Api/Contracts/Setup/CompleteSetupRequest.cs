@@ -20,6 +20,4 @@ public sealed record CompleteSetupLdapSettingsRequest(
 
 public sealed record CompleteSetupAdminUserRequest(
     string UserName,
-    string Password,
-    string DisplayName,
-    string? Email);
+    string Password);

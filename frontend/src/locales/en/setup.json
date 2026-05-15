@@ -1,0 +1,51 @@
+{
+  "setup": {
+    "title": "SAS Portal Initial Setup",
+    "description": "Verify the LDAP connection and define the first administrator user to continue.",
+    "redirecting": "Redirecting...",
+    "sections": {
+      "setupKey": "Setup key",
+      "ldap": "LDAP connection settings",
+      "admin": "First administrator user"
+    },
+    "fields": {
+      "setupKey": "Setup key",
+      "name": "Name",
+      "host": "Host",
+      "port": "Port",
+      "useSsl": "Use SSL",
+      "baseDn": "Base DN",
+      "userSearchBase": "User search base",
+      "userSearchFilter": "User search filter",
+      "bindUserName": "Bind user name",
+      "bindUserDomain": "Bind user domain",
+      "bindPassword": "Bind password",
+      "nationalIdAttribute": "National ID attribute",
+      "adminUserName": "User name",
+      "adminPassword": "Password"
+    },
+    "helpers": {
+      "host": "e.g. dc01.domain.local",
+      "bindUserName": "DOMAIN\\user or user@domain.local format is recommended.",
+      "bindUserDomain": "Optional. Enter if bind user domain is stored separately.",
+      "userSearchFilter": "{0} is replaced with the user name.",
+      "ldapSslPort": "If you do not have an LDAPS certificate, use SSL off with port 389. For LDAPS, use SSL on with port 636.",
+      "adminCredentials": "This user is validated against LDAP and becomes the portal SuperAdmin after setup. Display name and email are loaded from the AD profile."
+    },
+    "actions": {
+      "complete": "Complete setup",
+      "submitting": "Completing setup..."
+    },
+    "messages": {
+      "completeSuccess": "Setup completed successfully.",
+      "completeFailed": "Setup could not be completed.",
+      "directoryUserNotFoundHint": "The administrator user could not be found in AD. Try the user name as sAMAccountName, DOMAIN\\user, or user@domain and check the User Search Filter setting.",
+      "directoryUserProfileHint": "The administrator user's AD profile could not be loaded. Check the user name, User Search Base, and User Search Filter settings.",
+      "ldapTimeoutHint": "The setup request timed out or the LDAP server did not respond. Check the LDAP server, network connectivity, SSL, and User Search settings."
+    },
+    "validation": {
+      "required": "Required field",
+      "invalidPort": "Enter a valid port"
+    }
+  }
+}
