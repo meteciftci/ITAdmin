@@ -46,10 +46,6 @@ public sealed class AuthController(IAuthService authService, ISettingsService se
         var response = new LoginResponse(
             result.IsSuccess,
             result.Message,
-            result.AccessToken,
-            result.RefreshToken,
-            result.AccessTokenExpiresAt,
-            result.RefreshTokenExpiresAt,
             result.ErrorCode);
 
         if (result.IsSuccess)
@@ -103,10 +99,6 @@ public sealed class AuthController(IAuthService authService, ISettingsService se
         var response = new RefreshTokenResponse(
             result.IsSuccess,
             result.Message,
-            result.AccessToken,
-            result.RefreshToken,
-            result.AccessTokenExpiresAt,
-            result.RefreshTokenExpiresAt,
             result.ErrorCode);
 
         if (result.IsSuccess)

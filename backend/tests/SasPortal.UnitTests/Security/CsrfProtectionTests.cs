@@ -27,6 +27,87 @@ public sealed class CsrfProtectionTests
         Assert.False(CsrfProtection.IsValidHeaderAndCookieMatch(" ", " "));
     }
 
+    [Theory]
+    [InlineData("/api/auth/login", true)]
+    [InlineData("/api/auth/refresh", true)]
+    [InlineData("/api/auth/logout", true)]
+    [InlineData("/API/AUTH/LOGIN", true)]
+    [InlineData("/api/auth/me", false)]
+    [InlineData("/api/users", false)]
+    [InlineData("/", false)]
+    public void IsExemptPath_matches_only_lifecycle_endpoints(string path, bool expected)
+    {
+        Assert.Equal(expected, CsrfProtection.IsExemptPath(new PathString(path)));
+    }
+
+    [Fact]
+    public void HasBearerAuthorization_only_when_authorization_starts_with_bearer()
+    {
+        var withBearer = new DefaultHttpContext();
+        withBearer.Request.Headers.Authorization = "Bearer abc";
+
+        var withBasic = new DefaultHttpContext();
+        withBasic.Request.Headers.Authorization = "Basic abc";
+
+        var noHeader = new DefaultHttpContext();
+
+        Assert.True(CsrfProtection.HasBearerAuthorization(withBearer.Request));
+        Assert.False(CsrfProtection.HasBearerAuthorization(withBasic.Request));
+        Assert.False(CsrfProtection.HasBearerAuthorization(noHeader.Request));
+    }
+
+    [Fact]
+    public void ShouldValidateRequest_false_for_safe_methods()
+    {
+        var ctx = BuildCookieAuthedRequest("GET", "/api/users");
+        Assert.False(CsrfProtection.ShouldValidateRequest(ctx.Request));
+    }
+
+    [Fact]
+    public void ShouldValidateRequest_false_when_path_outside_api()
+    {
+        var ctx = BuildCookieAuthedRequest("POST", "/health");
+        Assert.False(CsrfProtection.ShouldValidateRequest(ctx.Request));
+    }
+
+    [Fact]
+    public void ShouldValidateRequest_false_for_exempt_auth_endpoints()
+    {
+        Assert.False(CsrfProtection.ShouldValidateRequest(
+            BuildCookieAuthedRequest("POST", "/api/auth/login").Request));
+        Assert.False(CsrfProtection.ShouldValidateRequest(
+            BuildCookieAuthedRequest("POST", "/api/auth/refresh").Request));
+        Assert.False(CsrfProtection.ShouldValidateRequest(
+            BuildCookieAuthedRequest("POST", "/api/auth/logout").Request));
+    }
+
+    [Fact]
+    public void ShouldValidateRequest_false_when_bearer_authorization_present()
+    {
+        var ctx = BuildCookieAuthedRequest("POST", "/api/users");
+        ctx.Request.Headers.Authorization = "Bearer token";
+
+        Assert.False(CsrfProtection.ShouldValidateRequest(ctx.Request));
+    }
+
+    [Fact]
+    public void ShouldValidateRequest_false_when_no_access_cookie_and_no_bearer()
+    {
+        var ctx = new DefaultHttpContext();
+        ctx.Request.Method = "POST";
+        ctx.Request.Path = "/api/users";
+        ctx.Request.Cookies = new FakeRequestCookieCollection();
+
+        Assert.False(CsrfProtection.ShouldValidateRequest(ctx.Request));
+    }
+
+    [Fact]
+    public void ShouldValidateRequest_true_for_unsafe_cookie_authed_api_request()
+    {
+        var ctx = BuildCookieAuthedRequest("POST", "/api/users");
+        Assert.True(CsrfProtection.ShouldValidateRequest(ctx.Request));
+    }
+
     [Fact]
     public void TryValidateRequest_false_when_header_missing()
     {
@@ -47,5 +128,19 @@ public sealed class CsrfProtectionTests
                 { [AuthCsrfCookie.CookieName] = "shared-value" });
 
         Assert.True(CsrfProtection.TryValidateRequest(ctx.Request));
+    }
+
+    private static DefaultHttpContext BuildCookieAuthedRequest(string method, string path)
+    {
+        var ctx = new DefaultHttpContext();
+        ctx.Request.Method = method;
+        ctx.Request.Path = path;
+        ctx.Request.Cookies = new FakeRequestCookieCollection(
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                [AuthAccessCookie.CookieName] = "access-jwt",
+            });
+
+        return ctx;
     }
 }

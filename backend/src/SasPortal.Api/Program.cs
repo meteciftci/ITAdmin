@@ -79,6 +79,7 @@ try
     app.UseStaticFiles();
 
     app.UseAuthentication();
+    app.UseCsrfProtection();
     app.UseAuthorization();
 
     app.MapControllers();

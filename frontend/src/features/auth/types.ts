@@ -11,23 +11,17 @@ export type AuthSessionOptions = {
   accessTokenMinutes: number;
 };
 
+// Raw tokens are not part of the API response anymore: the backend delivers them only as
+// HttpOnly cookies. The login/refresh JSON payload now only carries UI-relevant signals.
 export type LoginResponse = {
   isSuccess: boolean;
   message: string;
-  accessToken: string;
-  refreshToken: string;
-  accessTokenExpiresAt: string;
-  refreshTokenExpiresAt: string;
   errorCode?: string | null;
 };
 
 export type RefreshTokenResponse = {
   isSuccess: boolean;
   message: string;
-  accessToken: string;
-  refreshToken: string;
-  accessTokenExpiresAt: string;
-  refreshTokenExpiresAt: string;
   errorCode?: string | null;
 };
 
