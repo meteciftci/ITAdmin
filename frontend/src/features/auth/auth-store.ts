@@ -3,7 +3,7 @@ import { create } from "zustand";
 import type { CurrentUser } from "@/features/auth/types";
 
 /** Persisted access session; refresh token lives in HttpOnly cookie only. */
-export type AccessTokenPayload = {
+type AccessTokenPayload = {
   accessToken: string;
   accessTokenExpiresAt: string;
 };
@@ -27,8 +27,8 @@ type StoredAuthSnapshot = {
  */
 const LEGACY_AUTH_STORAGE_KEY = "sasportal-auth";
 
-export const AUTH_SESSION_STORAGE_KEY = "sasportal-auth-session";
-export const AUTH_PERSISTENT_STORAGE_KEY = "sasportal-auth-persistent";
+const AUTH_SESSION_STORAGE_KEY = "sasportal-auth-session";
+const AUTH_PERSISTENT_STORAGE_KEY = "sasportal-auth-persistent";
 
 type AuthState = {
   accessToken: string | null;
@@ -49,12 +49,12 @@ const emptyTokens = {
   accessTokenExpiresAt: null,
 };
 
-export function isValidStorageMode(value: unknown): value is AuthStorageMode {
+function isValidStorageMode(value: unknown): value is AuthStorageMode {
   return value === "session" || value === "persistent";
 }
 
 /** Parses an ISO-8601 / date string to epoch ms, or null if invalid. */
-export function parseExpiry(value: unknown): number | null {
+function parseExpiry(value: unknown): number | null {
   if (typeof value !== "string") {
     return null;
   }

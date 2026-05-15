@@ -1,6 +1,5 @@
 import type { FormEvent } from "react";
 import axios from "axios";
-import { useQueryClient } from "@tanstack/react-query";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ServiceUnavailableState } from "@/components/common/ServiceUnavailableState";
 import { Button } from "@/components/ui/button";
@@ -22,7 +21,7 @@ import { i18n, normalizeLanguage } from "@/app/i18n";
 import { useBrandingSettings } from "@/hooks/useBrandingSettings";
 import { useReadinessStatus } from "@/hooks/useReadinessStatus";
 import { resolveApiAssetUrl } from "@/lib/api-client";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";

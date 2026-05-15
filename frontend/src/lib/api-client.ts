@@ -1,11 +1,22 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 
-import { useAuthStore } from "@/features/auth/auth-store";
+import { isFutureExpiry, useAuthStore } from "@/features/auth/auth-store";
 import type { RefreshTokenResponse } from "@/features/auth/types";
 
 type RetryableRequestConfig = InternalAxiosRequestConfig & { _retry?: boolean };
 
 const authPaths = ["/auth/login", "/auth/refresh", "/auth/logout"];
+
+const urlLooksLikeAuthPath = (requestUrl: string | undefined): boolean => {
+  if (!requestUrl) {
+    return false;
+  }
+
+  return authPaths.some((path) => {
+    const withoutLeadingSlash = path.replace(/^\//, "");
+    return requestUrl.includes(path) || requestUrl.endsWith(withoutLeadingSlash);
+  });
+};
 
 export const apiClient = axios.create({
   baseURL: "/api",
@@ -71,10 +82,15 @@ const attemptRefresh = async (): Promise<RefreshTokenResponse | null> => {
           return null;
         }
 
+        const { accessToken, accessTokenExpiresAt } = response.data;
+        if (!accessToken?.trim() || !isFutureExpiry(accessTokenExpiresAt)) {
+          return null;
+        }
+
         useAuthStore.getState().setTokens(
           {
-            accessToken: response.data.accessToken,
-            accessTokenExpiresAt: response.data.accessTokenExpiresAt,
+            accessToken,
+            accessTokenExpiresAt,
           },
           useAuthStore.getState().rememberMe,
         );
@@ -101,7 +117,7 @@ apiClient.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest = error.config as RetryableRequestConfig | undefined;
     const requestUrl = originalRequest?.url ?? "";
-    const isAuthRequest = authPaths.some((path) => requestUrl.includes(path));
+    const isAuthRequest = urlLooksLikeAuthPath(requestUrl);
 
     if (
       error.response?.status !== 401 ||

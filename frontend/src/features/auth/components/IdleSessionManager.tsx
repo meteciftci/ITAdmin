@@ -11,7 +11,7 @@ import {
   logout as logoutApi,
   refreshToken as refreshTokenApi,
 } from "@/features/auth/api";
-import { useAuthStore } from "@/features/auth/auth-store";
+import { isFutureExpiry, useAuthStore } from "@/features/auth/auth-store";
 import { IdleTimeoutDialog } from "@/features/auth/components/IdleTimeoutDialog";
 
 const ACTIVITY_THROTTLE_MS = 15_000;
@@ -37,7 +37,11 @@ const attemptIdleRefresh = async (
   try {
     const response = await refreshTokenApi();
 
-    if (response.isSuccess && response.accessToken) {
+    if (
+      response.isSuccess &&
+      response.accessToken?.trim() &&
+      isFutureExpiry(response.accessTokenExpiresAt)
+    ) {
       setTokens(
         {
           accessToken: response.accessToken,

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { refreshToken } from "@/features/auth/api";
-import { useAuthStore } from "@/features/auth/auth-store";
+import { isFutureExpiry, useAuthStore } from "@/features/auth/auth-store";
 
 export type UseBootstrapSessionResult =
   | { status: "authenticated" }
@@ -23,7 +23,12 @@ export function useBootstrapSession(): UseBootstrapSessionResult {
     queryFn: async (): Promise<"authenticated" | "unauthenticated"> => {
       try {
         const data = await refreshToken();
-        if (!data.isSuccess || !data.accessToken) {
+        if (!data.isSuccess || !data.accessToken?.trim()) {
+          clearAuth();
+          return "unauthenticated";
+        }
+
+        if (!isFutureExpiry(data.accessTokenExpiresAt)) {
           clearAuth();
           return "unauthenticated";
         }
