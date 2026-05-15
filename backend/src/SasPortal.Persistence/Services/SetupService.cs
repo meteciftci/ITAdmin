@@ -42,6 +42,9 @@ public sealed class SetupService(
         ("SecurityLogs", "SecurityLogs.View", "View security logs."),
         ("Settings", "Settings.View", "View settings."),
         ("Settings", "Settings.Update", "Update settings."),
+        ("AdManagement", "AdManagement.Settings.View", "View AD management settings."),
+        ("AdManagement", "AdManagement.Settings.Update", "Update AD management settings."),
+        ("AdOperationLogs", "AdOperationLogs.View", "View AD operation logs."),
         ("Setup", "Setup.Manage", "Manage setup.")
     ];
 

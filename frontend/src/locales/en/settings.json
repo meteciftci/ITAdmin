@@ -123,6 +123,126 @@
         "saveFailed": "AD settings could not be saved."
       }
     },
+    "adManagement": {
+      "connection": {
+        "title": "Connection and Service Account",
+        "description": "Configure the domain, OUs, and service account that the AD Management module uses.",
+        "fields": {
+          "isEnabled": "Module enabled",
+          "domainFqdn": "Domain FQDN",
+          "netbiosDomainName": "NetBIOS domain name",
+          "defaultNamingContext": "Default naming context",
+          "baseDn": "Base DN",
+          "usersRootOu": "Users root OU",
+          "disabledUsersOu": "Disabled users OU",
+          "groupsSearchBase": "Groups search base",
+          "computersSearchBase": "Computers search base",
+          "preferredDomainControllers": "Preferred domain controllers",
+          "preferredDomainControllersHelp": "Enter one DC FQDN or host name per line.",
+          "ldapPort": "LDAP port",
+          "useSsl": "SSL / LDAPS",
+          "useSslHelp": "Use LDAPS.",
+          "serviceAccountUserName": "Service account user name",
+          "serviceAccountPassword": "Service account password",
+          "powerShellHealthEnabled": "PowerShell health checks",
+          "powerShellHealthEnabledHelp": "Allow future health checks to use PowerShell.",
+          "powerShellTimeoutSeconds": "PowerShell timeout (sec)"
+        },
+        "passwordStored": "A password is already stored.",
+        "passwordKeepHint": "Leaving the password field empty keeps the existing password.",
+        "clearPassword": "Clear stored password",
+        "actions": {
+          "save": "Save AD settings",
+          "test": "Test connection"
+        },
+        "lastValidation": "Last validation: {{status}} - {{message}}",
+        "messages": {
+          "saveSuccess": "AD management settings saved.",
+          "saveFailed": "AD management settings could not be saved.",
+          "validateSuccess": "AD management connection validated.",
+          "validateFailed": "AD management connection could not be validated."
+        }
+      },
+      "mappings": {
+        "title": "Attribute mappings",
+        "description": "Manage logical fields, AD attributes, and masking/validation behavior.",
+        "actions": {
+          "create": "Add new mapping",
+          "edit": "Edit",
+          "delete": "Delete"
+        },
+        "empty": {
+          "title": "No attribute mappings yet.",
+          "description": "Add the first mapping to configure AD user fields."
+        },
+        "table": {
+          "displayName": "Display name",
+          "logicalField": "Logical field",
+          "attributeName": "AD attribute",
+          "isEnabled": "Enabled",
+          "isEditable": "Editable",
+          "isSensitive": "Sensitive",
+          "validationType": "Validation type",
+          "maskingStrategy": "Masking strategy",
+          "sortOrder": "Order",
+          "actions": "Actions"
+        },
+        "fields": {
+          "logicalField": "Logical field",
+          "logicalFieldHelp": "Set on create and cannot be changed afterwards. Example: mobilePhone.",
+          "displayName": "Display name",
+          "attributeName": "AD attribute",
+          "attributeNameHelp": "Attribute name in Active Directory. Example: extensionAttribute1.",
+          "isEnabled": "Enabled",
+          "isEditable": "Editable",
+          "isSensitive": "Sensitive data",
+          "validationType": "Validation type",
+          "maskingStrategy": "Masking strategy",
+          "sortOrder": "Order"
+        },
+        "validation": {
+          "logicalFieldRequired": "Logical field is required.",
+          "logicalFieldInvalid": "Logical field must start with a lowercase letter and contain only letters and digits.",
+          "displayNameRequired": "Display name is required.",
+          "attributeNameRequired": "AD attribute name is required.",
+          "attributeNameInvalid": "AD attribute name is not valid. Example: extensionAttribute1."
+        },
+        "validationTypes": {
+          "None": "None",
+          "NationalId": "National ID",
+          "Phone": "Phone",
+          "Email": "Email",
+          "Text": "Text",
+          "Number": "Number"
+        },
+        "maskingStrategies": {
+          "None": "No masking",
+          "Last4": "Last 4 digits",
+          "Phone": "Phone",
+          "Email": "Email",
+          "Hidden": "Fully hidden"
+        },
+        "create": {
+          "title": "New attribute mapping"
+        },
+        "edit": {
+          "title": "Edit attribute mapping"
+        },
+        "delete": {
+          "title": "Delete attribute mapping",
+          "description": "Mapping {{displayName}} ({{logicalField}}) will be deleted.",
+          "irreversible": "This action cannot be undone."
+        },
+        "messages": {
+          "createSuccess": "Attribute mapping created.",
+          "createFailed": "Attribute mapping could not be created.",
+          "updateSuccess": "Attribute mapping updated.",
+          "updateFailed": "Attribute mapping could not be updated.",
+          "deleteSuccess": "Attribute mapping deleted.",
+          "deleteFailed": "Attribute mapping could not be deleted."
+        }
+      }
+    },
     "sessionSecurity": {
       "title": "Session Security",
       "description": "Manage token lifetimes, idle timeout, and remember me behavior.",

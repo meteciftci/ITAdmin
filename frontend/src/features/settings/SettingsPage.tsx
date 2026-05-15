@@ -6,14 +6,12 @@ import { LoadingState } from "@/components/common/LoadingState";
 import { SectionCard } from "@/components/common/SectionCard";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AdManagementSettingsTab } from "@/features/ad-management/AdManagementSettingsTab";
 import { useAuthStore } from "@/features/auth/auth-store";
 import { getSettings } from "@/features/settings/api";
 import {
   ApplicationSettingsForm,
 } from "@/features/settings/components/ApplicationSettingsForm";
-import {
-  DirectorySettingsForm,
-} from "@/features/settings/components/DirectorySettingsForm";
 import { LdapSettingsForm } from "@/features/settings/components/LdapSettingsForm";
 import { SessionSecuritySettingsForm } from "@/features/settings/components/SessionSecuritySettingsForm";
 import {
@@ -25,8 +23,6 @@ import {
 import { useBrandingAssetSettingsForm } from "@/features/settings/hooks/useBrandingAssetSettingsForm";
 import { useBrandingSettingsForm } from "@/features/settings/hooks/useBrandingSettingsForm";
 import { useBrandingSettingsSave } from "@/features/settings/hooks/useBrandingSettingsSave";
-import { useDirectorySettingsForm } from "@/features/settings/hooks/useDirectorySettingsForm";
-import { useDirectorySettingsSave } from "@/features/settings/hooks/useDirectorySettingsSave";
 import { useLdapSettingsForm } from "@/features/settings/hooks/useLdapSettingsForm";
 import { useLdapSettingsSave } from "@/features/settings/hooks/useLdapSettingsSave";
 import { useSessionSecuritySettingsSave } from "@/features/settings/hooks/useSessionSecuritySettingsSave";
@@ -62,22 +58,6 @@ export function SettingsPage() {
     buildLdapPayload,
     buildLdapValidatePayload,
     clearBindPasswordAfterSave,
-  });
-
-  const {
-    nationalIdAttribute,
-    directoryError,
-    hydrateFromApplicationSettings,
-    updateNationalIdAttribute,
-    clearDirectoryError,
-    buildDirectoryPayload,
-  } = useDirectorySettingsForm();
-
-  const { saveDirectorySettings, isSavingDirectory } = useDirectorySettingsSave({
-    t,
-    canUpdate,
-    buildDirectoryPayload,
-    clearDirectoryError,
   });
 
   const {
@@ -147,13 +127,11 @@ export function SettingsPage() {
     const ldap = settingsQuery.data.ldap;
 
     hydrateFromSettings(ldap);
-    hydrateFromApplicationSettings(settingsQuery.data.applicationSettings);
     hydrateFromBranding(settingsQuery.data.branding);
     hydrateAssetUrlsFromBranding(settingsQuery.data.branding);
   }, [
     settingsQuery.data,
     hydrateAssetUrlsFromBranding,
-    hydrateFromApplicationSettings,
     hydrateFromBranding,
     hydrateFromSettings,
   ]);
@@ -266,17 +244,7 @@ export function SettingsPage() {
 
         <TabsContent value="directory">
           <SectionCard>
-            <DirectorySettingsForm
-              nationalIdAttribute={nationalIdAttribute}
-              readOnly={isReadOnly}
-              isSaving={isSavingDirectory}
-              errorMessage={directoryError}
-              onNationalIdAttributeChange={(value) => {
-                clearDirectoryError();
-                updateNationalIdAttribute(value);
-              }}
-              onSave={saveDirectorySettings}
-            />
+            <AdManagementSettingsTab readOnly={isReadOnly} />
           </SectionCard>
         </TabsContent>
       </Tabs>

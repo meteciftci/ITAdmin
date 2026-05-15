@@ -20,6 +20,9 @@ public class AppDbContext : DbContext
     public DbSet<SecurityLog> SecurityLogs => Set<SecurityLog>();
     public DbSet<ApplicationSetting> ApplicationSettings => Set<ApplicationSetting>();
     public DbSet<LdapSetting> LdapSettings => Set<LdapSetting>();
+    public DbSet<AdManagementSettings> AdManagementSettings => Set<AdManagementSettings>();
+    public DbSet<AdAttributeMapping> AdAttributeMappings => Set<AdAttributeMapping>();
+    public DbSet<AdOperationLog> AdOperationLogs => Set<AdOperationLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

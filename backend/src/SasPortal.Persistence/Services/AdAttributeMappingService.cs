@@ -1,0 +1,395 @@
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using Microsoft.EntityFrameworkCore;
+using SasPortal.Application.Abstractions.Services;
+using SasPortal.Application.Common.Constants;
+using SasPortal.Application.Common.Models;
+using SasPortal.Domain.Entities;
+using SasPortal.Persistence.Context;
+
+namespace SasPortal.Persistence.Services;
+
+public sealed class AdAttributeMappingService(
+    AppDbContext context,
+    IAdOperationLogService adOperationLogService) : IAdAttributeMappingService
+{
+    private const int AuditDescriptionMaxLength = 2000;
+    private const int AuditIpAddressMaxLength = 64;
+    private const int AuditUserAgentMaxLength = 1024;
+    private const int DisplayNameMaxLength = 150;
+
+    internal static readonly Regex LogicalFieldRegex = new("^[a-z][a-zA-Z0-9]{1,63}$", RegexOptions.Compiled);
+    internal static readonly Regex AttributeNameRegex = new("^[A-Za-z][A-Za-z0-9_-]{0,63}$", RegexOptions.Compiled);
+
+    internal static readonly HashSet<string> AllowedValidationTypes = new(StringComparer.Ordinal)
+    {
+        "None",
+        "NationalId",
+        "Phone",
+        "Email",
+        "Text",
+        "Number"
+    };
+
+    internal static readonly HashSet<string> AllowedMaskingStrategies = new(StringComparer.Ordinal)
+    {
+        "None",
+        "Last4",
+        "Phone",
+        "Email",
+        "Hidden"
+    };
+
+    public async Task<IReadOnlyList<AdAttributeMappingItem>> GetMappingsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        return await context.AdAttributeMappings
+            .AsNoTracking()
+            .OrderBy(x => x.SortOrder)
+            .ThenBy(x => x.LogicalField)
+            .Select(x => new AdAttributeMappingItem(
+                x.Id,
+                x.LogicalField,
+                x.DisplayName,
+                x.AttributeName,
+                x.IsEnabled,
+                x.IsEditable,
+                x.IsSensitive,
+                x.ValidationType,
+                x.MaskingStrategy,
+                x.SortOrder))
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<AdAttributeMappingResult> CreateAsync(
+        CreateAdAttributeMappingRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var logicalField = NormalizeNullable(request.LogicalField);
+        var displayName = NormalizeNullable(request.DisplayName);
+        var attributeName = NormalizeNullable(request.AttributeName);
+
+        if (string.IsNullOrWhiteSpace(logicalField) || !LogicalFieldRegex.IsMatch(logicalField))
+        {
+            return new AdAttributeMappingResult(false, "Logical field is invalid.", null);
+        }
+
+        if (string.IsNullOrWhiteSpace(displayName))
+        {
+            return new AdAttributeMappingResult(false, "Display name is required.", null);
+        }
+
+        if (displayName.Length > DisplayNameMaxLength)
+        {
+            return new AdAttributeMappingResult(
+                false,
+                $"Display name must be at most {DisplayNameMaxLength} characters.",
+                null);
+        }
+
+        if (string.IsNullOrWhiteSpace(attributeName) || !AttributeNameRegex.IsMatch(attributeName))
+        {
+            return new AdAttributeMappingResult(false, "Attribute name is invalid.", null);
+        }
+
+        var validationType = NormalizeOrDefault(request.ValidationType, "None");
+        var maskingStrategy = NormalizeOrDefault(request.MaskingStrategy, "None");
+
+        if (!AllowedValidationTypes.Contains(validationType))
+        {
+            return new AdAttributeMappingResult(false, "Validation type is invalid.", null);
+        }
+
+        if (!AllowedMaskingStrategies.Contains(maskingStrategy))
+        {
+            return new AdAttributeMappingResult(false, "Masking strategy is invalid.", null);
+        }
+
+        var duplicate = await context.AdAttributeMappings
+            .AnyAsync(x => x.LogicalField == logicalField, cancellationToken);
+
+        if (duplicate)
+        {
+            return new AdAttributeMappingResult(
+                false,
+                $"An attribute mapping with logical field '{logicalField}' already exists.",
+                null);
+        }
+
+        var now = DateTime.UtcNow;
+        var entity = new AdAttributeMapping
+        {
+            LogicalField = logicalField,
+            DisplayName = displayName,
+            AttributeName = attributeName,
+            IsEnabled = request.IsEnabled,
+            IsEditable = request.IsEditable,
+            IsSensitive = request.IsSensitive,
+            ValidationType = validationType,
+            MaskingStrategy = maskingStrategy,
+            SortOrder = request.SortOrder,
+            CreatedAt = now,
+            CreatedBy = request.ActorUserName ?? "system"
+        };
+
+        await context.AdAttributeMappings.AddAsync(entity, cancellationToken);
+
+        var description = TruncateAuditDescription(
+            $"AD attribute mapping created: {entity.LogicalField}. Attribute: {entity.AttributeName}.");
+
+        await context.AuditLogs.AddAsync(
+            new AuditLog
+            {
+                Action = "Create",
+                EntityName = "AdAttributeMapping",
+                EntityId = entity.Id.ToString(),
+                Description = description,
+                ActorUserId = request.ActorUserId,
+                ActorUserName = request.ActorUserName,
+                IpAddress = TruncateNullable(request.ActorIpAddress, AuditIpAddressMaxLength),
+                UserAgent = TruncateNullable(request.ActorUserAgent, AuditUserAgentMaxLength),
+                CreatedAt = new DateTimeOffset(now, TimeSpan.Zero)
+            },
+            cancellationToken);
+
+        await adOperationLogService.WriteAsync(
+            new AdOperationLogEntry
+            {
+                OperationType = AdManagementOperationTypes.AttributeMappingCreated,
+                Status = AdManagementOperationStatuses.Succeeded,
+                TargetObjectType = AdManagementTargetObjectTypes.AdAttributeMapping,
+                RequestSummaryJson = BuildMappingSummary(entity),
+                ActorUserId = request.ActorUserId,
+                ActorUserName = request.ActorUserName,
+                IpAddress = request.ActorIpAddress,
+                UserAgent = request.ActorUserAgent
+            },
+            cancellationToken);
+
+        await context.SaveChangesAsync(cancellationToken);
+
+        return new AdAttributeMappingResult(
+            true,
+            "AD attribute mapping created.",
+            MapToItem(entity));
+    }
+
+    public async Task<AdAttributeMappingResult> UpdateAsync(
+        UpdateAdAttributeMappingRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var entity = await context.AdAttributeMappings
+            .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken);
+
+        if (entity is null)
+        {
+            return new AdAttributeMappingResult(false, "Attribute mapping was not found.", null);
+        }
+
+        var displayName = NormalizeNullable(request.DisplayName);
+        var attributeName = NormalizeNullable(request.AttributeName);
+
+        if (string.IsNullOrWhiteSpace(displayName))
+        {
+            return new AdAttributeMappingResult(false, "Display name is required.", null);
+        }
+
+        if (displayName.Length > DisplayNameMaxLength)
+        {
+            return new AdAttributeMappingResult(
+                false,
+                $"Display name must be at most {DisplayNameMaxLength} characters.",
+                null);
+        }
+
+        if (string.IsNullOrWhiteSpace(attributeName) || !AttributeNameRegex.IsMatch(attributeName))
+        {
+            return new AdAttributeMappingResult(false, "Attribute name is invalid.", null);
+        }
+
+        var validationType = NormalizeOrDefault(request.ValidationType, "None");
+        var maskingStrategy = NormalizeOrDefault(request.MaskingStrategy, "None");
+
+        if (!AllowedValidationTypes.Contains(validationType))
+        {
+            return new AdAttributeMappingResult(false, "Validation type is invalid.", null);
+        }
+
+        if (!AllowedMaskingStrategies.Contains(maskingStrategy))
+        {
+            return new AdAttributeMappingResult(false, "Masking strategy is invalid.", null);
+        }
+
+        var now = DateTime.UtcNow;
+        var oldAttributeName = entity.AttributeName;
+
+        entity.DisplayName = displayName;
+        entity.AttributeName = attributeName;
+        entity.IsEnabled = request.IsEnabled;
+        entity.IsEditable = request.IsEditable;
+        entity.IsSensitive = request.IsSensitive;
+        entity.ValidationType = validationType;
+        entity.MaskingStrategy = maskingStrategy;
+        entity.SortOrder = request.SortOrder;
+        entity.UpdatedAt = now;
+        entity.UpdatedBy = request.ActorUserName ?? "system";
+
+        var description = string.Equals(oldAttributeName, attributeName, StringComparison.Ordinal)
+            ? $"AD attribute mapping updated: {entity.LogicalField}. Attribute: {entity.AttributeName}."
+            : $"AD attribute mapping updated: {entity.LogicalField}. Attribute: {oldAttributeName} -> {entity.AttributeName}.";
+
+        await context.AuditLogs.AddAsync(
+            new AuditLog
+            {
+                Action = "Update",
+                EntityName = "AdAttributeMapping",
+                EntityId = entity.Id.ToString(),
+                Description = TruncateAuditDescription(description),
+                ActorUserId = request.ActorUserId,
+                ActorUserName = request.ActorUserName,
+                IpAddress = TruncateNullable(request.ActorIpAddress, AuditIpAddressMaxLength),
+                UserAgent = TruncateNullable(request.ActorUserAgent, AuditUserAgentMaxLength),
+                CreatedAt = new DateTimeOffset(now, TimeSpan.Zero)
+            },
+            cancellationToken);
+
+        await adOperationLogService.WriteAsync(
+            new AdOperationLogEntry
+            {
+                OperationType = AdManagementOperationTypes.AttributeMappingUpdated,
+                Status = AdManagementOperationStatuses.Succeeded,
+                TargetObjectType = AdManagementTargetObjectTypes.AdAttributeMapping,
+                RequestSummaryJson = BuildMappingSummary(entity),
+                ActorUserId = request.ActorUserId,
+                ActorUserName = request.ActorUserName,
+                IpAddress = request.ActorIpAddress,
+                UserAgent = request.ActorUserAgent
+            },
+            cancellationToken);
+
+        await context.SaveChangesAsync(cancellationToken);
+
+        return new AdAttributeMappingResult(
+            true,
+            "AD attribute mapping updated.",
+            MapToItem(entity));
+    }
+
+    public async Task<AdAttributeMappingResult> DeleteAsync(
+        DeleteAdAttributeMappingRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var entity = await context.AdAttributeMappings
+            .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken);
+
+        if (entity is null)
+        {
+            return new AdAttributeMappingResult(false, "Attribute mapping was not found.", null);
+        }
+
+        var now = DateTime.UtcNow;
+        var snapshot = MapToItem(entity);
+
+        context.AdAttributeMappings.Remove(entity);
+
+        var description = TruncateAuditDescription(
+            $"AD attribute mapping deleted: {entity.LogicalField}.");
+
+        await context.AuditLogs.AddAsync(
+            new AuditLog
+            {
+                Action = "Delete",
+                EntityName = "AdAttributeMapping",
+                EntityId = entity.Id.ToString(),
+                Description = description,
+                ActorUserId = request.ActorUserId,
+                ActorUserName = request.ActorUserName,
+                IpAddress = TruncateNullable(request.ActorIpAddress, AuditIpAddressMaxLength),
+                UserAgent = TruncateNullable(request.ActorUserAgent, AuditUserAgentMaxLength),
+                CreatedAt = new DateTimeOffset(now, TimeSpan.Zero)
+            },
+            cancellationToken);
+
+        await adOperationLogService.WriteAsync(
+            new AdOperationLogEntry
+            {
+                OperationType = AdManagementOperationTypes.AttributeMappingDeleted,
+                Status = AdManagementOperationStatuses.Succeeded,
+                TargetObjectType = AdManagementTargetObjectTypes.AdAttributeMapping,
+                BeforeSnapshotJson = BuildMappingSummary(entity),
+                ActorUserId = request.ActorUserId,
+                ActorUserName = request.ActorUserName,
+                IpAddress = request.ActorIpAddress,
+                UserAgent = request.ActorUserAgent
+            },
+            cancellationToken);
+
+        await context.SaveChangesAsync(cancellationToken);
+
+        return new AdAttributeMappingResult(true, "AD attribute mapping deleted.", snapshot);
+    }
+
+    private static AdAttributeMappingItem MapToItem(AdAttributeMapping entity) =>
+        new(
+            entity.Id,
+            entity.LogicalField,
+            entity.DisplayName,
+            entity.AttributeName,
+            entity.IsEnabled,
+            entity.IsEditable,
+            entity.IsSensitive,
+            entity.ValidationType,
+            entity.MaskingStrategy,
+            entity.SortOrder);
+
+    private static string BuildMappingSummary(AdAttributeMapping entity)
+    {
+        var summary = new
+        {
+            id = entity.Id,
+            logicalField = entity.LogicalField,
+            displayName = entity.DisplayName,
+            attributeName = entity.AttributeName,
+            isEnabled = entity.IsEnabled,
+            isEditable = entity.IsEditable,
+            isSensitive = entity.IsSensitive,
+            validationType = entity.ValidationType,
+            maskingStrategy = entity.MaskingStrategy,
+            sortOrder = entity.SortOrder
+        };
+
+        return JsonSerializer.Serialize(summary);
+    }
+
+    private static string? NormalizeNullable(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        return value.Trim();
+    }
+
+    private static string NormalizeOrDefault(string? value, string fallback)
+    {
+        var trimmed = NormalizeNullable(value);
+        return string.IsNullOrWhiteSpace(trimmed) ? fallback : trimmed;
+    }
+
+    private static string? TruncateNullable(string? value, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var trimmed = value.Trim();
+        return trimmed.Length <= maxLength ? trimmed : trimmed[..maxLength];
+    }
+
+    private static string TruncateAuditDescription(string description) =>
+        description.Length <= AuditDescriptionMaxLength
+            ? description
+            : description[..AuditDescriptionMaxLength];
+}

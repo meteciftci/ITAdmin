@@ -1,0 +1,16 @@
+namespace SasPortal.Application.Common.Models;
+
+public sealed record UpdateAdAttributeMappingRequest(
+    Guid Id,
+    string DisplayName,
+    string AttributeName,
+    bool IsEnabled,
+    bool IsEditable,
+    bool IsSensitive,
+    string ValidationType,
+    string MaskingStrategy,
+    int SortOrder,
+    Guid? ActorUserId,
+    string? ActorUserName,
+    string? ActorIpAddress,
+    string? ActorUserAgent);

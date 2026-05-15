@@ -1,0 +1,30 @@
+namespace SasPortal.Application.Common.Constants;
+
+public static class AdManagementOperationTypes
+{
+    public const string SettingsUpdated = "SettingsUpdated";
+    public const string SettingsValidated = "SettingsValidated";
+    public const string AttributeMappingCreated = "AttributeMappingCreated";
+    public const string AttributeMappingUpdated = "AttributeMappingUpdated";
+    public const string AttributeMappingDeleted = "AttributeMappingDeleted";
+}
+
+public static class AdManagementOperationStatuses
+{
+    public const string Succeeded = "Succeeded";
+    public const string Failed = "Failed";
+    public const string Skipped = "Skipped";
+}
+
+public static class AdManagementValidationStatuses
+{
+    public const string Ok = "Ok";
+    public const string Failed = "Failed";
+    public const string Skipped = "Skipped";
+}
+
+public static class AdManagementTargetObjectTypes
+{
+    public const string AdAttributeMapping = "AdAttributeMapping";
+    public const string AdManagementSettings = "AdManagementSettings";
+}

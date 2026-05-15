@@ -1,0 +1,22 @@
+namespace SasPortal.Api.Contracts.AdManagement;
+
+public sealed record AdManagementSettingsResponse(
+    bool IsEnabled,
+    string? DomainFqdn,
+    string? NetbiosDomainName,
+    string? DefaultNamingContext,
+    string? BaseDn,
+    string? UsersRootOu,
+    string? DisabledUsersOu,
+    string? GroupsSearchBase,
+    string? ComputersSearchBase,
+    IReadOnlyList<string> PreferredDomainControllers,
+    bool UseSsl,
+    int LdapPort,
+    string? ServiceAccountUserName,
+    bool HasServiceAccountPassword,
+    bool PowerShellHealthEnabled,
+    int PowerShellTimeoutSeconds,
+    DateTime? LastValidatedAt,
+    string? LastValidationStatus,
+    string? LastValidationMessage);

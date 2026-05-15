@@ -123,6 +123,127 @@
         "saveFailed": "AD ayarları kaydedilemedi."
       }
     },
+    "adManagement": {
+      "connection": {
+        "title": "Bağlantı ve Yetkili Hesap",
+        "description": "Active Directory yönetim modülünün kullanacağı domain, OU ve servis hesabı bilgilerini yapılandırın.",
+        "fields": {
+          "isEnabled": "Modül aktif",
+          "domainFqdn": "Domain FQDN",
+          "netbiosDomainName": "NetBIOS domain adı",
+          "defaultNamingContext": "Default naming context",
+          "baseDn": "Base DN",
+          "usersRootOu": "Kullanıcılar root OU",
+          "disabledUsersOu": "Pasif kullanıcılar OU",
+          "groupsSearchBase": "Gruplar arama base",
+          "computersSearchBase": "Bilgisayarlar arama base",
+          "preferredDomainControllers": "Tercih edilen DC'ler",
+          "preferredDomainControllersHelp": "Her satıra bir DC FQDN veya host adı girin.",
+          "ldapPort": "LDAP portu",
+          "useSsl": "SSL / LDAPS",
+          "useSslHelp": "LDAPS kullan.",
+          "serviceAccountUserName": "Yetkili kullanıcı adı",
+          "serviceAccountPassword": "Yetkili kullanıcı parolası",
+          "powerShellHealthEnabled": "PowerShell sağlık kontrolleri",
+          "powerShellHealthEnabledHelp": "İleride sağlık kontrollerinde PowerShell kullanılmasına izin ver.",
+          "powerShellTimeoutSeconds": "PowerShell zaman aşımı (sn)"
+        },
+        "passwordStored": "Kayıtlı parola var.",
+        "passwordKeepHint": "Parola alanı boş bırakılırsa mevcut parola korunur.",
+        "clearPassword": "Mevcut parolayı temizle",
+        "actions": {
+          "save": "AD ayarlarını kaydet",
+          "test": "Bağlantıyı test et"
+        },
+        "lastValidation": "Son doğrulama: {{status}} - {{message}}",
+        "messages": {
+          "saveSuccess": "AD yönetim ayarları kaydedildi.",
+          "saveFailed": "AD yönetim ayarları kaydedilemedi.",
+          "validateSuccess": "AD yönetim bağlantısı doğrulandı.",
+          "validateFailed": "AD yönetim bağlantısı doğrulanamadı."
+        }
+      },
+      "mappings": {
+        "title": "Attribute eşleştirmeleri",
+        "description": "Logical field, AD attribute ve maskeleme/validasyon davranışını yönetin.",
+        "actions": {
+          "create": "Yeni eşleştirme ekle",
+          "edit": "Düzenle",
+          "delete": "Sil"
+        },
+        "empty": {
+          "title": "Henüz attribute eşleştirmesi yok.",
+          "description": "İlk eşleştirmeyi ekleyerek AD kullanıcı alanlarını yapılandırın."
+        },
+        "table": {
+          "displayName": "Alan adı",
+          "logicalField": "Logical field",
+          "attributeName": "AD attribute",
+          "isEnabled": "Aktif",
+          "isEditable": "Düzenlenebilir",
+          "isSensitive": "Hassas veri",
+          "validationType": "Validasyon tipi",
+          "maskingStrategy": "Maskeleme yöntemi",
+          "sortOrder": "Sıra",
+          "actions": "İşlemler"
+        },
+        "fields": {
+          "logicalField": "Logical field",
+          "logicalField Help": "Oluşturma sırasında girilir, sonradan değiştirilemez. Örn: mobilePhone.",
+          "logicalFieldHelp": "Oluşturma sırasında girilir, sonradan değiştirilemez. Örn: mobilePhone.",
+          "displayName": "Alan adı",
+          "attributeName": "AD attribute",
+          "attributeNameHelp": "Active Directory üzerindeki attribute adı. Örn: extensionAttribute1.",
+          "isEnabled": "Aktif",
+          "isEditable": "Düzenlenebilir",
+          "isSensitive": "Hassas veri",
+          "validationType": "Validasyon tipi",
+          "maskingStrategy": "Maskeleme yöntemi",
+          "sortOrder": "Sıra"
+        },
+        "validation": {
+          "logicalFieldRequired": "Logical field zorunludur.",
+          "logicalFieldInvalid": "Logical field küçük harfle başlamalı, yalnızca harf/rakam içermelidir.",
+          "displayNameRequired": "Alan adı zorunludur.",
+          "attributeNameRequired": "AD attribute adı zorunludur.",
+          "attributeNameInvalid": "AD attribute adı geçerli değil. Örn: extensionAttribute1."
+        },
+        "validationTypes": {
+          "None": "Yok",
+          "NationalId": "T.C. Kimlik No",
+          "Phone": "Telefon",
+          "Email": "E-posta",
+          "Text": "Metin",
+          "Number": "Sayı"
+        },
+        "maskingStrategies": {
+          "None": "Maskeleme yok",
+          "Last4": "Son 4 hane",
+          "Phone": "Telefon",
+          "Email": "E-posta",
+          "Hidden": "Tamamen gizli"
+        },
+        "create": {
+          "title": "Yeni attribute eşleştirmesi"
+        },
+        "edit": {
+          "title": "Attribute eşleştirmesini düzenle"
+        },
+        "delete": {
+          "title": "Attribute eşleştirmesini sil",
+          "description": "{{displayName}} ({{logicalField}}) eşleştirmesi silinecek.",
+          "irreversible": "Bu işlem geri alınamaz."
+        },
+        "messages": {
+          "createSuccess": "Attribute eşleştirmesi oluşturuldu.",
+          "createFailed": "Attribute eşleştirmesi oluşturulamadı.",
+          "updateSuccess": "Attribute eşleştirmesi güncellendi.",
+          "updateFailed": "Attribute eşleştirmesi güncellenemedi.",
+          "deleteSuccess": "Attribute eşleştirmesi silindi.",
+          "deleteFailed": "Attribute eşleştirmesi silinemedi."
+        }
+      }
+    },
     "sessionSecurity": {
       "title": "Oturum Güvenliği",
       "description": "Token sürelerini, boşta kalma zaman aşımını ve beni hatırla davranışını yönetin.",

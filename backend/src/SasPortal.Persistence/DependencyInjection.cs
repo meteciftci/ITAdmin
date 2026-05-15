@@ -29,6 +29,9 @@ public static class DependencyInjection
         services.AddScoped<ISecurityLogService, SecurityLogService>();
         services.AddScoped<ISettingsService, SettingsService>();
         services.AddScoped<IReadinessService, ReadinessService>();
+        services.AddScoped<IAdOperationLogService, AdOperationLogService>();
+        services.AddScoped<IAdManagementSettingsService, AdManagementSettingsService>();
+        services.AddScoped<IAdAttributeMappingService, AdAttributeMappingService>();
 
         return services;
     }

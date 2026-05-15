@@ -1,0 +1,24 @@
+namespace SasPortal.Application.Common.Models;
+
+public sealed record UpdateAdManagementSettingsRequest(
+    bool IsEnabled,
+    string? DomainFqdn,
+    string? NetbiosDomainName,
+    string? DefaultNamingContext,
+    string? BaseDn,
+    string? UsersRootOu,
+    string? DisabledUsersOu,
+    string? GroupsSearchBase,
+    string? ComputersSearchBase,
+    IReadOnlyList<string>? PreferredDomainControllers,
+    bool UseSsl,
+    int LdapPort,
+    string? ServiceAccountUserName,
+    string? ServiceAccountPassword,
+    bool ClearServiceAccountPassword,
+    bool PowerShellHealthEnabled,
+    int PowerShellTimeoutSeconds,
+    Guid? ActorUserId,
+    string? ActorUserName,
+    string? ActorIpAddress,
+    string? ActorUserAgent);
