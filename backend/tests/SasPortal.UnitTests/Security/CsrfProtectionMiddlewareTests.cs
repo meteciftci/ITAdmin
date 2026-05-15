@@ -57,16 +57,38 @@ public sealed class CsrfProtectionMiddlewareTests
     }
 
     [Fact]
-    public async Task Bearer_authed_request_bypasses_csrf()
+    public async Task Bearer_header_does_not_bypass_csrf_when_cookie_present()
     {
+        // Full cookie-auth: a Bearer header must not give the request a free pass.
         var (next, calls) = NextSpy();
         var middleware = new CsrfProtectionMiddleware(next);
-        var ctx = BuildCookieAuthedContext("POST", "/api/users");
+        var ctx = BuildCookieAuthedContext("POST", "/api/users", csrfCookie: "shared");
         ctx.Request.Headers.Authorization = "Bearer abc";
+        ctx.Response.Body = new MemoryStream();
+
+        await middleware.InvokeAsync(ctx);
+
+        Assert.Equal(0, calls.Count);
+        Assert.Equal(StatusCodes.Status403Forbidden, ctx.Response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Bearer_header_without_access_cookie_passes_to_auth_layer()
+    {
+        // No access cookie means there is no cookie-auth session to protect; let the
+        // authentication pipeline decide (it will reject with 401).
+        var (next, calls) = NextSpy();
+        var middleware = new CsrfProtectionMiddleware(next);
+        var ctx = new DefaultHttpContext();
+        ctx.Request.Method = "POST";
+        ctx.Request.Path = "/api/users";
+        ctx.Request.Headers.Authorization = "Bearer abc";
+        ctx.Request.Cookies = new FakeRequestCookieCollection();
 
         await middleware.InvokeAsync(ctx);
 
         Assert.Equal(1, calls.Count);
+        Assert.NotEqual(StatusCodes.Status403Forbidden, ctx.Response.StatusCode);
     }
 
     [Fact]

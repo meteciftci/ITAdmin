@@ -3,8 +3,8 @@ using Microsoft.AspNetCore.Http;
 namespace SasPortal.Api.Security;
 
 /// <summary>
-/// HttpOnly access token cookie scoped to <c>/api</c> for cookie-based JWT delivery.
-/// Bearer Authorization header remains the primary path for the current SPA; this cookie is additive.
+/// HttpOnly access token cookie scoped to <c>/api</c>. This cookie is the sole transport
+/// for the JWT access token; the <c>Authorization: Bearer</c> header is not accepted.
 /// </summary>
 public static class AuthAccessCookie
 {

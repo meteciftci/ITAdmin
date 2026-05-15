@@ -7,8 +7,9 @@ namespace SasPortal.Api.Security;
 /// <summary>
 /// Double-submit CSRF validation helpers used by <see cref="CsrfProtectionMiddleware"/>.
 /// Cookie-authenticated unsafe requests under <c>/api</c> must carry <see cref="HeaderName"/>
-/// matching <see cref="AuthCsrfCookie.CookieName"/>; Bearer-authenticated and auth-lifecycle
-/// endpoints are intentionally exempt (see <see cref="IsExemptPath"/>).
+/// matching <see cref="AuthCsrfCookie.CookieName"/>. Auth-lifecycle endpoints
+/// (see <see cref="IsExemptPath"/>) are intentionally exempt. The <c>Authorization</c>
+/// header has no effect on CSRF enforcement: SAS Portal uses full cookie auth.
 /// </summary>
 public static class CsrfProtection
 {
@@ -50,17 +51,6 @@ public static class CsrfProtection
     }
 
     /// <summary>
-    /// Returns <c>true</c> when the request authenticates via <c>Authorization: Bearer …</c>.
-    /// Bearer credentials are not auto-attached by the browser, so CSRF is unnecessary.
-    /// </summary>
-    public static bool HasBearerAuthorization(HttpRequest request)
-    {
-        var authorization = request.Headers.Authorization.ToString();
-        return !string.IsNullOrEmpty(authorization)
-            && authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase);
-    }
-
-    /// <summary>
     /// Returns <c>true</c> when the request carries the access-token cookie that the browser
     /// attaches automatically and therefore needs CSRF protection.
     /// </summary>
@@ -71,6 +61,11 @@ public static class CsrfProtection
     /// <summary>
     /// Decides whether the middleware must validate the CSRF token for this request.
     /// </summary>
+    /// <remarks>
+    /// Validation is required only for cookie-authenticated unsafe requests under <c>/api</c>
+    /// that are not on the auth-lifecycle allow list. Requests without the access cookie are
+    /// left to the authentication layer to reject with 401.
+    /// </remarks>
     public static bool ShouldValidateRequest(HttpRequest request)
     {
         if (!IsUnsafeMethod(request.Method))
@@ -84,11 +79,6 @@ public static class CsrfProtection
         }
 
         if (IsExemptPath(request.Path))
-        {
-            return false;
-        }
-
-        if (HasBearerAuthorization(request))
         {
             return false;
         }

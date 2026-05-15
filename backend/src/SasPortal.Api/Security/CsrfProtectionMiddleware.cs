@@ -6,8 +6,9 @@ namespace SasPortal.Api.Security;
 
 /// <summary>
 /// Enforces double-submit CSRF validation for cookie-authenticated unsafe requests under <c>/api</c>.
-/// Bearer-authenticated requests, safe HTTP methods, auth-lifecycle endpoints and requests that do
-/// not carry the access-token cookie are bypassed so 401/403 decisions remain with the auth pipeline.
+/// Safe HTTP methods, auth-lifecycle endpoints (login, refresh, logout) and requests that do not
+/// carry the access-token cookie are bypassed so 401/403 decisions remain with the auth pipeline.
+/// The <c>Authorization</c> header has no effect on CSRF enforcement: SAS Portal is cookie-only.
 /// </summary>
 public sealed class CsrfProtectionMiddleware
 {

@@ -4,23 +4,19 @@ using Microsoft.AspNetCore.Http;
 namespace SasPortal.Api.Security;
 
 /// <summary>
-/// Uses the access-token cookie when there is no <c>Authorization: Bearer …</c> header so hybrid auth keeps working.
-/// Precedence: Bearer header (default handler), then <see cref="AuthAccessCookie"/>.
+/// Resolves the JWT used by JwtBearer authentication exclusively from the
+/// <see cref="AuthAccessCookie"/> HttpOnly cookie. The <c>Authorization</c> header
+/// is intentionally ignored: SAS Portal uses full cookie auth and does not accept
+/// Bearer tokens.
 /// </summary>
 public static class JwtBearerCookieTokenResolver
 {
     /// <summary>
-    /// Returns the raw JWT from the access cookie when the request does not carry a Bearer authorization value.
+    /// Returns the raw JWT carried by the access-token cookie, or <c>null</c> when
+    /// the cookie is absent or empty.
     /// </summary>
-    public static string? TryGetAccessTokenFromCookieWhenNoBearerHeader(HttpRequest request, string accessCookieName)
+    public static string? TryGetAccessTokenFromCookie(HttpRequest request, string accessCookieName)
     {
-        var authorization = request.Headers.Authorization.ToString();
-        if (!string.IsNullOrEmpty(authorization) &&
-            authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-        {
-            return null;
-        }
-
         if (request.Cookies.TryGetValue(accessCookieName, out var cookieValue) &&
             !string.IsNullOrWhiteSpace(cookieValue))
         {
@@ -30,9 +26,13 @@ public static class JwtBearerCookieTokenResolver
         return null;
     }
 
+    /// <summary>
+    /// JwtBearer <c>OnMessageReceived</c> hook that always reads the access token from
+    /// the cookie and ignores any <c>Authorization</c> header sent by the client.
+    /// </summary>
     public static Task OnMessageReceived(MessageReceivedContext context)
     {
-        var token = TryGetAccessTokenFromCookieWhenNoBearerHeader(
+        var token = TryGetAccessTokenFromCookie(
             context.Request,
             AuthAccessCookie.CookieName);
         if (token is not null)

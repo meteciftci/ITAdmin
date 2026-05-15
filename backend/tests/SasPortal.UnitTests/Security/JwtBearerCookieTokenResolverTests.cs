@@ -11,14 +11,26 @@ public sealed class JwtBearerCookieTokenResolverTests
     private const string CookieName = "sasportal.access_token";
 
     [Fact]
-    public void TryGet_when_bearer_header_present_returns_null_even_if_cookie_exists()
+    public void TryGet_when_cookie_present_returns_cookie_value()
     {
         var ctx = new DefaultHttpContext();
-        ctx.Request.Headers.Authorization = "Bearer header-jwt";
         ctx.Request.Cookies = new FakeRequestCookieCollection(
-            new Dictionary<string, string>(StringComparer.Ordinal) { [CookieName] = "cookie-jwt" });
+            new Dictionary<string, string>(StringComparer.Ordinal) { [CookieName] = "from-cookie" });
 
-        var token = JwtBearerCookieTokenResolver.TryGetAccessTokenFromCookieWhenNoBearerHeader(
+        var token = JwtBearerCookieTokenResolver.TryGetAccessTokenFromCookie(
+            ctx.Request,
+            CookieName);
+
+        Assert.Equal("from-cookie", token);
+    }
+
+    [Fact]
+    public void TryGet_when_cookie_missing_returns_null()
+    {
+        var ctx = new DefaultHttpContext();
+        ctx.Request.Cookies = new FakeRequestCookieCollection();
+
+        var token = JwtBearerCookieTokenResolver.TryGetAccessTokenFromCookie(
             ctx.Request,
             CookieName);
 
@@ -26,36 +38,38 @@ public sealed class JwtBearerCookieTokenResolverTests
     }
 
     [Fact]
-    public void TryGet_when_no_authorization_header_uses_cookie_token()
+    public void TryGet_ignores_bearer_authorization_header_and_uses_cookie()
     {
+        // Full cookie-auth: Authorization header is not consulted, the cookie wins.
         var ctx = new DefaultHttpContext();
+        ctx.Request.Headers.Authorization = "Bearer header-jwt";
         ctx.Request.Cookies = new FakeRequestCookieCollection(
-            new Dictionary<string, string>(StringComparer.Ordinal) { [CookieName] = "from-cookie" });
+            new Dictionary<string, string>(StringComparer.Ordinal) { [CookieName] = "cookie-jwt" });
 
-        var token = JwtBearerCookieTokenResolver.TryGetAccessTokenFromCookieWhenNoBearerHeader(
+        var token = JwtBearerCookieTokenResolver.TryGetAccessTokenFromCookie(
             ctx.Request,
             CookieName);
 
-        Assert.Equal("from-cookie", token);
+        Assert.Equal("cookie-jwt", token);
     }
 
     [Fact]
-    public void TryGet_when_non_bearer_authorization_uses_cookie()
+    public void TryGet_ignores_bearer_authorization_header_when_cookie_missing()
     {
+        // A Bearer header alone must not authenticate the request.
         var ctx = new DefaultHttpContext();
-        ctx.Request.Headers.Authorization = "Basic dGVzdA==";
-        ctx.Request.Cookies = new FakeRequestCookieCollection(
-            new Dictionary<string, string>(StringComparer.Ordinal) { [CookieName] = "from-cookie" });
+        ctx.Request.Headers.Authorization = "Bearer header-jwt";
+        ctx.Request.Cookies = new FakeRequestCookieCollection();
 
-        var token = JwtBearerCookieTokenResolver.TryGetAccessTokenFromCookieWhenNoBearerHeader(
+        var token = JwtBearerCookieTokenResolver.TryGetAccessTokenFromCookie(
             ctx.Request,
             CookieName);
 
-        Assert.Equal("from-cookie", token);
+        Assert.Null(token);
     }
 
     [Fact]
-    public async Task OnMessageReceived_assigns_token_from_access_cookie_when_no_bearer_header()
+    public async Task OnMessageReceived_assigns_token_from_access_cookie()
     {
         var ctx = new DefaultHttpContext();
         ctx.Request.Cookies = new FakeRequestCookieCollection(
@@ -75,13 +89,50 @@ public sealed class JwtBearerCookieTokenResolverTests
     }
 
     [Fact]
-    public async Task OnMessageReceived_does_not_set_token_when_bearer_header_present()
+    public async Task OnMessageReceived_does_not_set_token_when_cookie_missing()
+    {
+        var ctx = new DefaultHttpContext();
+        ctx.Request.Cookies = new FakeRequestCookieCollection();
+
+        var scheme = new AuthenticationScheme(
+            JwtBearerDefaults.AuthenticationScheme,
+            JwtBearerDefaults.AuthenticationScheme,
+            typeof(JwtBearerHandler));
+
+        var messageContext = new MessageReceivedContext(ctx, scheme, new JwtBearerOptions());
+
+        await JwtBearerCookieTokenResolver.OnMessageReceived(messageContext);
+
+        Assert.Null(messageContext.Token);
+    }
+
+    [Fact]
+    public async Task OnMessageReceived_ignores_bearer_header_and_uses_cookie()
     {
         var ctx = new DefaultHttpContext();
         ctx.Request.Headers.Authorization = "Bearer from-header";
         ctx.Request.Cookies = new FakeRequestCookieCollection(
             new Dictionary<string, string>(StringComparer.Ordinal)
-                { [AuthAccessCookie.CookieName] = "from-cookie-should-not-be-used" });
+                { [AuthAccessCookie.CookieName] = "jwt-from-cookie" });
+
+        var scheme = new AuthenticationScheme(
+            JwtBearerDefaults.AuthenticationScheme,
+            JwtBearerDefaults.AuthenticationScheme,
+            typeof(JwtBearerHandler));
+
+        var messageContext = new MessageReceivedContext(ctx, scheme, new JwtBearerOptions());
+
+        await JwtBearerCookieTokenResolver.OnMessageReceived(messageContext);
+
+        Assert.Equal("jwt-from-cookie", messageContext.Token);
+    }
+
+    [Fact]
+    public async Task OnMessageReceived_does_not_set_token_when_only_bearer_header_present()
+    {
+        var ctx = new DefaultHttpContext();
+        ctx.Request.Headers.Authorization = "Bearer from-header";
+        ctx.Request.Cookies = new FakeRequestCookieCollection();
 
         var scheme = new AuthenticationScheme(
             JwtBearerDefaults.AuthenticationScheme,

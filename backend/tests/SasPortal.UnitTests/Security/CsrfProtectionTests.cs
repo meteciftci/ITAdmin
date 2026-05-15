@@ -41,22 +41,6 @@ public sealed class CsrfProtectionTests
     }
 
     [Fact]
-    public void HasBearerAuthorization_only_when_authorization_starts_with_bearer()
-    {
-        var withBearer = new DefaultHttpContext();
-        withBearer.Request.Headers.Authorization = "Bearer abc";
-
-        var withBasic = new DefaultHttpContext();
-        withBasic.Request.Headers.Authorization = "Basic abc";
-
-        var noHeader = new DefaultHttpContext();
-
-        Assert.True(CsrfProtection.HasBearerAuthorization(withBearer.Request));
-        Assert.False(CsrfProtection.HasBearerAuthorization(withBasic.Request));
-        Assert.False(CsrfProtection.HasBearerAuthorization(noHeader.Request));
-    }
-
-    [Fact]
     public void ShouldValidateRequest_false_for_safe_methods()
     {
         var ctx = BuildCookieAuthedRequest("GET", "/api/users");
@@ -82,16 +66,31 @@ public sealed class CsrfProtectionTests
     }
 
     [Fact]
-    public void ShouldValidateRequest_false_when_bearer_authorization_present()
+    public void ShouldValidateRequest_true_when_bearer_header_present_with_access_cookie()
     {
+        // Bearer header must not bypass CSRF: enforcement follows the access cookie only.
         var ctx = BuildCookieAuthedRequest("POST", "/api/users");
         ctx.Request.Headers.Authorization = "Bearer token";
+
+        Assert.True(CsrfProtection.ShouldValidateRequest(ctx.Request));
+    }
+
+    [Fact]
+    public void ShouldValidateRequest_false_when_no_access_cookie_even_if_bearer_header_present()
+    {
+        // Without the access cookie there is no cookie-authenticated session to protect.
+        // Leave the request to the authentication layer, which will reject it as 401.
+        var ctx = new DefaultHttpContext();
+        ctx.Request.Method = "POST";
+        ctx.Request.Path = "/api/users";
+        ctx.Request.Headers.Authorization = "Bearer token";
+        ctx.Request.Cookies = new FakeRequestCookieCollection();
 
         Assert.False(CsrfProtection.ShouldValidateRequest(ctx.Request));
     }
 
     [Fact]
-    public void ShouldValidateRequest_false_when_no_access_cookie_and_no_bearer()
+    public void ShouldValidateRequest_false_when_no_access_cookie_and_no_authorization()
     {
         var ctx = new DefaultHttpContext();
         ctx.Request.Method = "POST";
