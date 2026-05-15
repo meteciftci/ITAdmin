@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import type { DateRange } from "react-day-picker";
@@ -17,10 +17,50 @@ import { MultiSelectFilter } from "@/components/common/MultiSelectFilter";
 import { SectionCard } from "@/components/common/SectionCard";
 import { TablePagination } from "@/components/common/TablePagination";
 import { Badge } from "@/components/ui/badge";
+import type { BadgeVariants } from "@/components/ui/badge-variants";
 import { Button } from "@/components/ui/button";
 import { getAuditLogFilterOptions, getAuditLogs } from "@/features/audit-logs/api";
 import type { AuditLogListItem } from "@/features/audit-logs/types";
 import { createApiErrorRouteState, getErrorRoutePath } from "@/lib/route-error";
+
+const MIN_SEARCH_LENGTH = 3;
+
+type AuditActionBadgeVariant = NonNullable<BadgeVariants["variant"]>;
+
+function renderOptionalText(value: string | null | undefined): ReactNode {
+  if (!value) {
+    return <span className="text-muted-foreground">-</span>;
+  }
+  return value;
+}
+
+function getAuditActionBadgeVariant(action: string | null | undefined): AuditActionBadgeVariant {
+  if (!action) {
+    return "secondary";
+  }
+  const normalized = action.toLowerCase();
+  if (
+    normalized.startsWith("delete") ||
+    normalized.startsWith("remove") ||
+    normalized.startsWith("revoke") ||
+    normalized.startsWith("disable") ||
+    normalized.startsWith("unassign")
+  ) {
+    return "destructive";
+  }
+  if (
+    normalized.startsWith("create") ||
+    normalized.startsWith("add") ||
+    normalized.startsWith("assign") ||
+    normalized.startsWith("enable")
+  ) {
+    return "success";
+  }
+  if (normalized.startsWith("login") || normalized.startsWith("logout")) {
+    return "outline";
+  }
+  return "secondary";
+}
 
 export function AuditLogsPage() {
   const { t, i18n } = useTranslation(["auditLogs", "common"]);
@@ -40,7 +80,21 @@ export function AuditLogsPage() {
   const debouncedSearch = useDebouncedValue(search, 400);
   const normalizedSearch = debouncedSearch.trim();
   const effectiveSearch =
-    normalizedSearch.length >= 3 ? normalizedSearch : undefined;
+    normalizedSearch.length >= MIN_SEARCH_LENGTH ? normalizedSearch : undefined;
+
+  const trimmedSearch = search.trim();
+  const isSearchActive = trimmedSearch.length > 0;
+  const isActionFilterActive = selectedActions.length > 0;
+  const isEntityFilterActive = selectedEntityNames.length > 0;
+  const isDateRangeActive = Boolean(dateRange?.from || dateRange?.to);
+  const activeFilterCount =
+    (isSearchActive ? 1 : 0) +
+    (isActionFilterActive ? 1 : 0) +
+    (isEntityFilterActive ? 1 : 0) +
+    (isDateRangeActive ? 1 : 0);
+  const hasActiveFilters = activeFilterCount > 0;
+  const showMinSearchHint =
+    trimmedSearch.length > 0 && trimmedSearch.length < MIN_SEARCH_LENGTH;
 
   const auditLogsQuery = useQuery({
     queryKey: [
@@ -94,6 +148,13 @@ export function AuditLogsPage() {
     setDateRange(value);
     setPageNumber(1);
   };
+  const handleClearAllFilters = () => {
+    setSearch("");
+    setSelectedActions([]);
+    setSelectedEntityNames([]);
+    setDateRange(undefined);
+    setPageNumber(1);
+  };
 
   if (auditLogsQuery.isError) {
     const routeState = createApiErrorRouteState(auditLogsQuery.error, {
@@ -115,9 +176,16 @@ export function AuditLogsPage() {
             onSearchChange={handleSearchChange}
             searchPlaceholder={t("auditLogs:filters.searchPlaceholder")}
             actions={
-              <Button variant="outline" onClick={handleRefresh}>
-                {t("common:actions.refresh")}
-              </Button>
+              <>
+                {hasActiveFilters ? (
+                  <Button variant="ghost" onClick={handleClearAllFilters}>
+                    {t("auditLogs:filters.clearAll")}
+                  </Button>
+                ) : null}
+                <Button variant="outline" onClick={handleRefresh}>
+                  {t("common:actions.refresh")}
+                </Button>
+              </>
             }
           >
             <MultiSelectFilter
@@ -146,6 +214,19 @@ export function AuditLogsPage() {
               locale={calendarLocale}
             />
           </DataToolbar>
+
+          {hasActiveFilters || showMinSearchHint ? (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+              {hasActiveFilters ? (
+                <span>
+                  {t("auditLogs:filters.activeCount", { count: activeFilterCount })}
+                </span>
+              ) : null}
+              {showMinSearchHint ? (
+                <span>{t("auditLogs:filters.minSearchLengthHint")}</span>
+              ) : null}
+            </div>
+          ) : null}
 
           {auditLogsQuery.isLoading ? <LoadingState /> : null}
 
@@ -178,17 +259,39 @@ export function AuditLogsPage() {
                         <DateTimeText value={logItem.createdAt} />
                       </td>
                       <td className="px-3 py-2">
-                        <Badge variant="secondary">{logItem.action}</Badge>
+                        <Badge variant={getAuditActionBadgeVariant(logItem.action)}>
+                          {logItem.action}
+                        </Badge>
                       </td>
                       <td className="px-3 py-2">
                         <CodeBadge>{logItem.entityName}</CodeBadge>
                       </td>
-                      <td className="px-3 py-2">{logItem.entityId || "-"}</td>
-                      <td className="max-w-96 px-3 py-2">
-                        <span className="line-clamp-2">{logItem.description || "-"}</span>
+                      <td className="max-w-48 px-3 py-2">
+                        {logItem.entityId ? (
+                          <span
+                            className="block truncate font-mono text-xs"
+                            title={logItem.entityId}
+                          >
+                            {logItem.entityId}
+                          </span>
+                        ) : (
+                          renderOptionalText(logItem.entityId)
+                        )}
                       </td>
-                      <td className="px-3 py-2">{logItem.actorUserName || "-"}</td>
-                      <td className="px-3 py-2">{logItem.ipAddress || "-"}</td>
+                      <td className="max-w-96 px-3 py-2">
+                        {logItem.description ? (
+                          <span
+                            className="line-clamp-2 text-foreground"
+                            title={logItem.description}
+                          >
+                            {logItem.description}
+                          </span>
+                        ) : (
+                          renderOptionalText(logItem.description)
+                        )}
+                      </td>
+                      <td className="px-3 py-2">{renderOptionalText(logItem.actorUserName)}</td>
+                      <td className="px-3 py-2">{renderOptionalText(logItem.ipAddress)}</td>
                       <td className="px-3 py-2">
                         <Button
                           type="button"
@@ -230,14 +333,20 @@ export function AuditLogsPage() {
         rows={[
           {
             label: t("auditLogs:detail.createdAt"),
-            value: selectedAuditLog ? <DateTimeText value={selectedAuditLog.createdAt} /> : "-",
+            value: selectedAuditLog ? (
+              <DateTimeText value={selectedAuditLog.createdAt} />
+            ) : (
+              renderOptionalText(null)
+            ),
           },
           {
             label: t("auditLogs:detail.action"),
             value: selectedAuditLog ? (
-              <Badge variant="secondary">{selectedAuditLog.action}</Badge>
+              <Badge variant={getAuditActionBadgeVariant(selectedAuditLog.action)}>
+                {selectedAuditLog.action}
+              </Badge>
             ) : (
-              "-"
+              renderOptionalText(null)
             ),
           },
           {
@@ -245,39 +354,43 @@ export function AuditLogsPage() {
             value: selectedAuditLog?.entityName ? (
               <CodeBadge>{selectedAuditLog.entityName}</CodeBadge>
             ) : (
-              "-"
+              renderOptionalText(null)
             ),
           },
           {
             label: t("auditLogs:detail.entityId"),
             value: selectedAuditLog?.entityId ? (
-              <span className="font-mono text-xs md:text-sm">{selectedAuditLog.entityId}</span>
+              <span className="break-all font-mono text-xs md:text-sm">
+                {selectedAuditLog.entityId}
+              </span>
             ) : (
-              "-"
+              renderOptionalText(null)
             ),
           },
           {
             label: t("auditLogs:detail.actorUserId"),
             value: selectedAuditLog?.actorUserId ? (
-              <span className="font-mono text-xs md:text-sm">{selectedAuditLog.actorUserId}</span>
+              <span className="break-all font-mono text-xs md:text-sm">
+                {selectedAuditLog.actorUserId}
+              </span>
             ) : (
-              "-"
+              renderOptionalText(null)
             ),
           },
           {
             label: t("auditLogs:detail.actorUserName"),
-            value: selectedAuditLog?.actorUserName || "-",
+            value: renderOptionalText(selectedAuditLog?.actorUserName),
           },
           {
             label: t("auditLogs:detail.ipAddress"),
-            value: selectedAuditLog?.ipAddress || "-",
+            value: renderOptionalText(selectedAuditLog?.ipAddress),
           },
           {
             label: t("auditLogs:detail.userAgent"),
-            value: selectedAuditLog?.userAgent || "-",
+            value: renderOptionalText(selectedAuditLog?.userAgent),
           },
         ]}
-        description={selectedAuditLog?.description}
+        description={selectedAuditLog?.description ?? undefined}
         descriptionLabel={t("auditLogs:detail.description")}
         closeLabel={t("common:actions.close")}
       />

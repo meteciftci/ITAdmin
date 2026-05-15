@@ -13,7 +13,10 @@
       "clearSelection": "Clear selection",
       "noOptions": "No options found",
       "dateRangePlaceholder": "Select date range",
-      "clearDateRange": "Clear"
+      "clearDateRange": "Clear",
+      "clearAll": "Clear filters",
+      "activeCount": "Active filters: {{count}}",
+      "minSearchLengthHint": "Enter at least 3 characters to search."
     },
     "table": {
       "createdAt": "Created At",
