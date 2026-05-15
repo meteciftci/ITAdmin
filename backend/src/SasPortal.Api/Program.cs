@@ -7,6 +7,7 @@ using SasPortal.Infrastructure;
 using SasPortal.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using SasPortal.Api.Security;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using System.Text;
@@ -50,6 +51,10 @@ try
                 ValidIssuer = jwtOptions.Issuer,
                 ValidAudience = jwtOptions.Audience,
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Key))
+            };
+            options.Events = new JwtBearerEvents
+            {
+                OnMessageReceived = JwtBearerCookieTokenResolver.OnMessageReceived,
             };
         });
 

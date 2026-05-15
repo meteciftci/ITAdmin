@@ -54,14 +54,13 @@ public sealed class AuthController(IAuthService authService, ISettingsService se
 
         if (result.IsSuccess)
         {
-            if (!string.IsNullOrWhiteSpace(result.RefreshToken) && result.RefreshTokenExpiresAt is { } refreshExpiresAt)
-            {
-                AuthRefreshCookie.Append(
-                    Response.Cookies,
-                    Request,
-                    result.RefreshToken,
-                    new DateTimeOffset(refreshExpiresAt, TimeSpan.Zero));
-            }
+            AuthSessionCookies.ApplySuccessfulAuthenticationCookies(
+                Response.Cookies,
+                Request,
+                result.AccessToken,
+                result.AccessTokenExpiresAt,
+                result.RefreshToken,
+                result.RefreshTokenExpiresAt);
 
             return Ok(response);
         }
@@ -112,19 +111,18 @@ public sealed class AuthController(IAuthService authService, ISettingsService se
 
         if (result.IsSuccess)
         {
-            if (!string.IsNullOrWhiteSpace(result.RefreshToken) && result.RefreshTokenExpiresAt is { } refreshExpiresAt)
-            {
-                AuthRefreshCookie.Append(
-                    Response.Cookies,
-                    Request,
-                    result.RefreshToken,
-                    new DateTimeOffset(refreshExpiresAt, TimeSpan.Zero));
-            }
+            AuthSessionCookies.ApplySuccessfulAuthenticationCookies(
+                Response.Cookies,
+                Request,
+                result.AccessToken,
+                result.AccessTokenExpiresAt,
+                result.RefreshToken,
+                result.RefreshTokenExpiresAt);
 
             return Ok(response);
         }
 
-        AuthRefreshCookie.Delete(Response.Cookies, Request);
+        AuthSessionCookies.ClearAuthenticationCookies(Response.Cookies, Request);
         return Unauthorized(response);
     }
 
@@ -151,7 +149,7 @@ public sealed class AuthController(IAuthService authService, ISettingsService se
         }
         finally
         {
-            AuthRefreshCookie.Delete(Response.Cookies, Request);
+            AuthSessionCookies.ClearAuthenticationCookies(Response.Cookies, Request);
         }
 
         var response = new LogoutResponse(

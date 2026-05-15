@@ -10,7 +10,7 @@ namespace SasPortal.Api.Security;
 /// </summary>
 public static class AuthRefreshCookie
 {
-    public const string CookieName = "sasportal.refresh_token";
+    public const string CookieName = AuthCookieNames.RefreshToken;
 
     /// <summary>
     /// Scoped to auth API routes so the cookie is not sent to unrelated paths.
