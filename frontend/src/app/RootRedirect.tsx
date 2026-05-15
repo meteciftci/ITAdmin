@@ -7,7 +7,7 @@ import { getSetupStatus } from "@/features/setup/api";
 
 export function RootRedirect() {
   const { t } = useTranslation(["common"]);
-  const accessToken = useAuthStore((state) => state.accessToken);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const setupQuery = useQuery({
     queryKey: ["setup", "status"],
     queryFn: getSetupStatus,
@@ -21,7 +21,7 @@ export function RootRedirect() {
     return <Navigate to="/setup" replace />;
   }
 
-  if (!accessToken) {
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 

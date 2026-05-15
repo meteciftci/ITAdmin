@@ -18,10 +18,10 @@ export function RequirePermission({
 }: RequirePermissionProps) {
   const { t } = useTranslation(["common"]);
   const location = useLocation();
-  const accessToken = useAuthStore((state) => state.accessToken);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const user = useAuthStore((state) => state.user);
 
-  if (!accessToken) {
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 

@@ -11,7 +11,7 @@ import {
   logout as logoutApi,
   refreshToken as refreshTokenApi,
 } from "@/features/auth/api";
-import { isFutureExpiry, useAuthStore } from "@/features/auth/auth-store";
+import { useAuthStore } from "@/features/auth/auth-store";
 import { IdleTimeoutDialog } from "@/features/auth/components/IdleTimeoutDialog";
 
 const ACTIVITY_THROTTLE_MS = 15_000;
@@ -30,25 +30,11 @@ type RefreshOutcome =
   | { kind: "expired" }
   | { kind: "transient" };
 
-const attemptIdleRefresh = async (
-  setTokens: ReturnType<typeof useAuthStore.getState>["setTokens"],
-  rememberMe: boolean,
-): Promise<RefreshOutcome> => {
+const attemptIdleRefresh = async (): Promise<RefreshOutcome> => {
   try {
     const response = await refreshTokenApi();
 
-    if (
-      response.isSuccess &&
-      response.accessToken?.trim() &&
-      isFutureExpiry(response.accessTokenExpiresAt)
-    ) {
-      setTokens(
-        {
-          accessToken: response.accessToken,
-          accessTokenExpiresAt: response.accessTokenExpiresAt,
-        },
-        rememberMe,
-      );
+    if (response.isSuccess) {
       return { kind: "success" };
     }
 
@@ -71,14 +57,12 @@ export function IdleSessionManager() {
   const navigate = useNavigate();
 
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const accessToken = useAuthStore((state) => state.accessToken);
   const clearAuth = useAuthStore((state) => state.clearAuth);
-  const setTokens = useAuthStore((state) => state.setTokens);
 
   const sessionOptionsQuery = useQuery({
     queryKey: ["auth", "session-options"],
     queryFn: getAuthSessionOptions,
-    enabled: Boolean(accessToken),
+    enabled: isAuthenticated,
     staleTime: 5 * 60 * 1000,
     retry: 1,
     refetchOnWindowFocus: true,
@@ -150,12 +134,10 @@ export function IdleSessionManager() {
       return;
     }
 
-    const currentRememberMe = useAuthStore.getState().rememberMe;
-
     isExtendingRef.current = true;
     setIsExtending(true);
 
-    const outcome = await attemptIdleRefresh(setTokens, currentRememberMe);
+    const outcome = await attemptIdleRefresh();
 
     isExtendingRef.current = false;
     setIsExtending(false);
@@ -174,30 +156,24 @@ export function IdleSessionManager() {
     }
 
     await expireSession();
-  }, [expireSession, setTokens, t]);
+  }, [expireSession, t]);
 
   useEffect(() => {
     if (!isAuthenticated) {
       return;
     }
 
-    // The auth-store is our external system: each new access token represents a fresh session
-    // (initial login or refresh). Resetting refs (not React state) syncs the idle bookkeeping
-    // with that source of truth without triggering extra renders.
     const now = Date.now();
     lastActivityAtRef.current = now;
     lastActivityWriteRef.current = now;
     isExpiredRef.current = false;
-  }, [isAuthenticated, accessToken]);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (!isAuthenticated) {
       return;
     }
 
-    // Session policy can be changed from Settings while the user is signed in.
-    // Treat the refetched policy as fresh activity so the active session adopts the
-    // new timeout values without requiring a browser refresh or re-login.
     const now = Date.now();
     lastActivityAtRef.current = now;
     lastActivityWriteRef.current = now;

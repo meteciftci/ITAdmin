@@ -10,7 +10,7 @@ import { useTranslation } from "react-i18next";
 export function NotFoundPage() {
   const { t } = useTranslation(["errors", "common"]);
   const navigate = useNavigate();
-  const accessToken = useAuthStore((state) => state.accessToken);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   const content = (
     <main className="mx-auto flex w-full max-w-2xl items-center justify-center p-4 md:p-6">
@@ -30,7 +30,7 @@ export function NotFoundPage() {
     </main>
   );
 
-  if (accessToken) {
+  if (isAuthenticated) {
     return <AppLayout>{content}</AppLayout>;
   }
 

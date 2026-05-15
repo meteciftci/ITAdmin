@@ -2,76 +2,33 @@ import { create } from "zustand";
 
 import type { CurrentUser } from "@/features/auth/types";
 
-/** Persisted access session; refresh token lives in HttpOnly cookie only. */
-type AccessTokenPayload = {
-  accessToken: string;
-  accessTokenExpiresAt: string;
-};
-
 export type AuthStorageMode = "session" | "persistent";
 
-type StoredAuthSnapshot = {
-  accessToken: string | null;
-  accessTokenExpiresAt: string | null;
-  user: CurrentUser | null;
-  isAuthenticated: boolean;
+type StoredAuthPreferences = {
   rememberMe: boolean;
   storageMode: AuthStorageMode;
   updatedAt: number;
 };
 
-/**
- * Legacy Zustand persist key: tokens lived in localStorage only, so closing the browser
- * still restored the session. For security we intentionally remove this key on load so
- * users re-authenticate once under the session vs persistent storage split.
- */
 const LEGACY_AUTH_STORAGE_KEY = "sasportal-auth";
 
 const AUTH_SESSION_STORAGE_KEY = "sasportal-auth-session";
 const AUTH_PERSISTENT_STORAGE_KEY = "sasportal-auth-persistent";
 
 type AuthState = {
-  accessToken: string | null;
-  accessTokenExpiresAt: string | null;
   user: CurrentUser | null;
   isAuthenticated: boolean;
   rememberMe: boolean;
   storageMode: AuthStorageMode | null;
-  setTokens: (tokens: AccessTokenPayload, rememberMe: boolean) => void;
+  setAuthenticated: (rememberMe: boolean) => void;
   setUser: (user: CurrentUser | null) => void;
   updateUser: (patch: Partial<CurrentUser>) => void;
   clearAuth: () => void;
   hydrateAuthFromStorage: () => void;
 };
 
-const emptyTokens = {
-  accessToken: null,
-  accessTokenExpiresAt: null,
-};
-
 function isValidStorageMode(value: unknown): value is AuthStorageMode {
   return value === "session" || value === "persistent";
-}
-
-/** Parses an ISO-8601 / date string to epoch ms, or null if invalid. */
-function parseExpiry(value: unknown): number | null {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
-  }
-
-  const parsed = Date.parse(trimmed);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-/** True when the value is a valid expiry instant strictly in the future. */
-export function isFutureExpiry(value: unknown): boolean {
-  const parsed = parseExpiry(value);
-  return parsed !== null && parsed > Date.now();
 }
 
 function clearLegacyKeys(): void {
@@ -100,10 +57,7 @@ function removeBothAuthKeys(): void {
   }
 }
 
-function parseStoredAuthSnapshot(
-  raw: string,
-  expectedStorageMode: AuthStorageMode,
-): StoredAuthSnapshot | null {
+function parseStoredPreferences(raw: string, expectedStorageMode: AuthStorageMode): StoredAuthPreferences | null {
   try {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     if (!parsed || typeof parsed !== "object") {
@@ -114,23 +68,11 @@ function parseStoredAuthSnapshot(
       return null;
     }
 
-    const accessToken = typeof parsed.accessToken === "string" ? parsed.accessToken : null;
-    const accessTokenExpiresAt =
-      typeof parsed.accessTokenExpiresAt === "string" ? parsed.accessTokenExpiresAt : null;
-
-    if (accessToken) {
-      if (!accessTokenExpiresAt || !isFutureExpiry(accessTokenExpiresAt)) {
-        return null;
-      }
-    } else {
+    if ("accessToken" in parsed || "accessTokenExpiresAt" in parsed || "refreshToken" in parsed) {
       return null;
     }
 
     return {
-      accessToken,
-      accessTokenExpiresAt,
-      user: (parsed.user ?? null) as CurrentUser | null,
-      isAuthenticated: true,
       rememberMe: Boolean(parsed.rememberMe),
       storageMode: parsed.storageMode,
       updatedAt: typeof parsed.updatedAt === "number" ? parsed.updatedAt : 0,
@@ -140,14 +82,37 @@ function parseStoredAuthSnapshot(
   }
 }
 
-function readBootstrapFromStorage(): Pick<
-  AuthState,
-  "accessToken" | "accessTokenExpiresAt" | "user" | "isAuthenticated" | "rememberMe" | "storageMode"
-> {
+function persistPreferences(preferences: StoredAuthPreferences): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const targetStorage =
+    preferences.storageMode === "persistent" ? window.localStorage : window.sessionStorage;
+  const targetKey =
+    preferences.storageMode === "persistent" ? AUTH_PERSISTENT_STORAGE_KEY : AUTH_SESSION_STORAGE_KEY;
+  const otherStorage =
+    preferences.storageMode === "persistent" ? window.sessionStorage : window.localStorage;
+  const otherKey =
+    preferences.storageMode === "persistent" ? AUTH_SESSION_STORAGE_KEY : AUTH_PERSISTENT_STORAGE_KEY;
+
+  try {
+    otherStorage.removeItem(otherKey);
+    targetStorage.setItem(
+      targetKey,
+      JSON.stringify({
+        rememberMe: preferences.rememberMe,
+        storageMode: preferences.storageMode,
+        updatedAt: Date.now(),
+      }),
+    );
+  } catch {
+    // ignore quota / private mode
+  }
+}
+
+function readPreferencesFromStorage(): Pick<AuthState, "rememberMe" | "storageMode"> {
   const base = {
-    ...emptyTokens,
-    user: null,
-    isAuthenticated: false,
     rememberMe: false,
     storageMode: null as AuthStorageMode | null,
   };
@@ -161,37 +126,21 @@ function readBootstrapFromStorage(): Pick<
   try {
     const sessionRaw = window.sessionStorage.getItem(AUTH_SESSION_STORAGE_KEY);
     if (sessionRaw) {
-      const parsed = parseStoredAuthSnapshot(sessionRaw, "session");
+      const parsed = parseStoredPreferences(sessionRaw, "session");
       if (parsed) {
-        rewriteSanitizedPersistedAuth(parsed);
-        return {
-          accessToken: parsed.accessToken,
-          accessTokenExpiresAt: parsed.accessTokenExpiresAt,
-          user: parsed.user,
-          isAuthenticated: parsed.isAuthenticated,
-          rememberMe: parsed.rememberMe,
-          storageMode: "session",
-        };
+        persistPreferences(parsed);
+        return { rememberMe: parsed.rememberMe, storageMode: "session" };
       }
-
       window.sessionStorage.removeItem(AUTH_SESSION_STORAGE_KEY);
     }
 
     const persistentRaw = window.localStorage.getItem(AUTH_PERSISTENT_STORAGE_KEY);
     if (persistentRaw) {
-      const parsed = parseStoredAuthSnapshot(persistentRaw, "persistent");
+      const parsed = parseStoredPreferences(persistentRaw, "persistent");
       if (parsed) {
-        rewriteSanitizedPersistedAuth(parsed);
-        return {
-          accessToken: parsed.accessToken,
-          accessTokenExpiresAt: parsed.accessTokenExpiresAt,
-          user: parsed.user,
-          isAuthenticated: parsed.isAuthenticated,
-          rememberMe: parsed.rememberMe,
-          storageMode: "persistent",
-        };
+        persistPreferences(parsed);
+        return { rememberMe: parsed.rememberMe, storageMode: "persistent" };
       }
-
       window.localStorage.removeItem(AUTH_PERSISTENT_STORAGE_KEY);
     }
   } catch {
@@ -201,114 +150,32 @@ function readBootstrapFromStorage(): Pick<
   return base;
 }
 
-function toSnapshot(state: {
-  accessToken: string | null;
-  accessTokenExpiresAt: string | null;
-  user: CurrentUser | null;
-  isAuthenticated: boolean;
-  rememberMe: boolean;
-  storageMode: AuthStorageMode;
-}): StoredAuthSnapshot {
-  return {
-    accessToken: state.accessToken,
-    accessTokenExpiresAt: state.accessTokenExpiresAt,
-    user: state.user,
-    isAuthenticated: state.isAuthenticated,
-    rememberMe: state.rememberMe,
-    storageMode: state.storageMode,
-    updatedAt: Date.now(),
-  };
-}
-
-function persistAuthSnapshot(state: {
-  accessToken: string | null;
-  accessTokenExpiresAt: string | null;
-  user: CurrentUser | null;
-  isAuthenticated: boolean;
-  rememberMe: boolean;
-  storageMode: AuthStorageMode;
-}): void {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  const snapshot = toSnapshot(state);
-  const targetStorage = state.storageMode === "persistent" ? window.localStorage : window.sessionStorage;
-  const targetKey =
-    state.storageMode === "persistent" ? AUTH_PERSISTENT_STORAGE_KEY : AUTH_SESSION_STORAGE_KEY;
-  const otherStorage = state.storageMode === "persistent" ? window.sessionStorage : window.localStorage;
-  const otherKey =
-    state.storageMode === "persistent" ? AUTH_SESSION_STORAGE_KEY : AUTH_PERSISTENT_STORAGE_KEY;
-
-  try {
-    otherStorage.removeItem(otherKey);
-    targetStorage.setItem(targetKey, JSON.stringify(snapshot));
-  } catch {
-    // ignore quota / private mode
-  }
-}
-
-function rewriteSanitizedPersistedAuth(snapshot: StoredAuthSnapshot): void {
-  persistAuthSnapshot({
-    accessToken: snapshot.accessToken,
-    accessTokenExpiresAt: snapshot.accessTokenExpiresAt,
-    user: snapshot.user,
-    isAuthenticated: snapshot.isAuthenticated,
-    rememberMe: snapshot.rememberMe,
-    storageMode: snapshot.storageMode,
-  });
-}
-
-const boot = readBootstrapFromStorage();
+const bootPreferences = readPreferencesFromStorage();
 
 export const useAuthStore = create<AuthState>((set) => ({
-  ...boot,
-  setTokens: (tokens, rememberMe) =>
-    set((state) => {
+  user: null,
+  isAuthenticated: false,
+  rememberMe: bootPreferences.rememberMe,
+  storageMode: bootPreferences.storageMode,
+  setAuthenticated: (rememberMe) =>
+    set(() => {
       const storageMode: AuthStorageMode = rememberMe ? "persistent" : "session";
-      const next = {
-        ...state,
-        accessToken: tokens.accessToken,
-        accessTokenExpiresAt: tokens.accessTokenExpiresAt,
+      persistPreferences({ rememberMe, storageMode, updatedAt: Date.now() });
+      return {
+        isAuthenticated: true,
         rememberMe,
         storageMode,
-        isAuthenticated: Boolean(tokens.accessToken),
       };
-      persistAuthSnapshot(next);
-      return next;
     }),
-  setUser: (user) =>
-    set((state) => {
-      const next = { ...state, user };
-      if (state.storageMode && state.accessToken) {
-        persistAuthSnapshot({
-          ...next,
-          rememberMe: state.rememberMe,
-          storageMode: state.storageMode,
-        });
-      }
-
-      return next;
-    }),
+  setUser: (user) => set({ user }),
   updateUser: (patch) =>
-    set((state) => {
-      const nextUser = state.user ? { ...state.user, ...patch } : state.user;
-      const next = { ...state, user: nextUser };
-      if (state.storageMode && state.accessToken) {
-        persistAuthSnapshot({
-          ...next,
-          rememberMe: state.rememberMe,
-          storageMode: state.storageMode,
-        });
-      }
-
-      return next;
-    }),
+    set((state) => ({
+      user: state.user ? { ...state.user, ...patch } : state.user,
+    })),
   clearAuth: () => {
     removeBothAuthKeys();
     clearLegacyKeys();
     set({
-      ...emptyTokens,
       user: null,
       isAuthenticated: false,
       rememberMe: false,
@@ -317,7 +184,9 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
   hydrateAuthFromStorage: () => {
     set(() => ({
-      ...readBootstrapFromStorage(),
+      ...readPreferencesFromStorage(),
+      user: null,
+      isAuthenticated: false,
     }));
   },
 }));

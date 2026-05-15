@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 import axios from "axios";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -10,7 +10,6 @@ import { i18n, normalizeLanguage } from "@/app/i18n";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ServiceUnavailableState } from "@/components/common/ServiceUnavailableState";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getCurrentUser } from "@/features/auth/api";
 import { useAuthStore } from "@/features/auth/auth-store";
 import { useBootstrapSession } from "@/features/auth/hooks/useBootstrapSession";
 import { getReadinessStatus, getSyntheticReadinessForAxiosError } from "@/features/health/api";
@@ -19,85 +18,64 @@ type RequireAuthProps = {
   children: ReactNode;
 };
 
-const isAuthSessionFailure = (error: unknown): boolean =>
-  axios.isAxiosError(error) && error.response?.status === 401;
-
-type AuthMeBootstrapFailureProps = {
-  meError: unknown;
+type AuthBootstrapFailureProps = {
+  error: unknown;
   isRetrying: boolean;
   onRetry: () => void;
 };
 
-function AuthMeBootstrapFailure({
-  meError,
-  isRetrying,
-  onRetry,
-}: AuthMeBootstrapFailureProps) {
+function AuthBootstrapFailure({ error, isRetrying, onRetry }: AuthBootstrapFailureProps) {
   return (
     <ServiceUnavailableState
-      readiness={getSyntheticReadinessForAxiosError(meError)}
+      readiness={getSyntheticReadinessForAxiosError(error)}
       isLoading={isRetrying}
       onRetry={onRetry}
     />
   );
 }
 
-export function RequireAuth({ children }: RequireAuthProps) {
+function AuthLoadingState() {
   const { t } = useTranslation(["common"]);
+
+  return (
+    <div className="space-y-4 p-6">
+      <p className="text-sm text-muted-foreground">{t("loading")}</p>
+      <Skeleton className="h-8 w-1/3" />
+      <Skeleton className="h-40 w-full" />
+    </div>
+  );
+}
+
+export function RequireAuth({ children }: RequireAuthProps) {
   const queryClient = useQueryClient();
   const bootstrap = useBootstrapSession();
-  const accessToken = useAuthStore((state) => state.accessToken);
   const user = useAuthStore((state) => state.user);
-  const setUser = useAuthStore((state) => state.setUser);
   const clearAuth = useAuthStore((state) => state.clearAuth);
 
-  const meQuery = useQuery({
-    queryKey: ["auth", "me"],
-    queryFn: getCurrentUser,
-    enabled: bootstrap.status === "authenticated" && Boolean(accessToken) && !user,
-    staleTime: 5 * 60 * 1000,
-  });
-
   useEffect(() => {
-    if (meQuery.isSuccess && !user) {
-      setUser(meQuery.data);
-    }
-  }, [meQuery.isSuccess, meQuery.data, user, setUser]);
-
-  useEffect(() => {
-    const value = user?.preferredLanguage ?? meQuery.data?.preferredLanguage;
+    const value = user?.preferredLanguage;
     if (value) {
       void i18n.changeLanguage(normalizeLanguage(value));
     }
-  }, [user?.preferredLanguage, meQuery.data?.preferredLanguage]);
+  }, [user?.preferredLanguage]);
 
   if (bootstrap.status === "pending") {
-    return (
-      <div className="space-y-4 p-6">
-        <p className="text-sm text-muted-foreground">{t("loading")}</p>
-        <Skeleton className="h-8 w-1/3" />
-        <Skeleton className="h-40 w-full" />
-      </div>
-    );
+    return <AuthLoadingState />;
   }
 
-  if (bootstrap.status === "unauthenticated" || !accessToken) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (meQuery.isError) {
-    if (isAuthSessionFailure(meQuery.error)) {
+  if (bootstrap.status === "error") {
+    if (axios.isAxiosError(bootstrap.error) && bootstrap.error.response?.status === 401) {
       clearAuth();
       return <Navigate to="/login" replace />;
     }
 
     return (
       <AppLayout>
-        <AuthMeBootstrapFailure
-          meError={meQuery.error}
-          isRetrying={meQuery.isFetching}
+        <AuthBootstrapFailure
+          error={bootstrap.error}
+          isRetrying={false}
           onRetry={() => {
-            void meQuery.refetch();
+            void queryClient.invalidateQueries({ queryKey: ["auth", "bootstrap"] });
             void queryClient.fetchQuery({
               queryKey: ["health", "readiness"],
               queryFn: getReadinessStatus,
@@ -108,14 +86,12 @@ export function RequireAuth({ children }: RequireAuthProps) {
     );
   }
 
-  if (meQuery.isLoading) {
-    return (
-      <div className="space-y-4 p-6">
-        <p className="text-sm text-muted-foreground">{t("loading")}</p>
-        <Skeleton className="h-8 w-1/3" />
-        <Skeleton className="h-40 w-full" />
-      </div>
-    );
+  if (bootstrap.status === "unauthenticated") {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (!user) {
+    return <AuthLoadingState />;
   }
 
   return <>{children}</>;

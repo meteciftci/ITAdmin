@@ -62,8 +62,8 @@ export function LoginPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
-  const accessToken = useAuthStore((state) => state.accessToken);
-  const setTokens = useAuthStore((state) => state.setTokens);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const setAuthenticated = useAuthStore((state) => state.setAuthenticated);
   const setUser = useAuthStore((state) => state.setUser);
   const clearAuth = useAuthStore((state) => state.clearAuth);
 
@@ -90,10 +90,10 @@ export function LoginPage() {
   }, []);
 
   useEffect(() => {
-    if (accessToken) {
+    if (isAuthenticated) {
       navigate("/home", { replace: true });
     }
-  }, [accessToken, navigate]);
+  }, [isAuthenticated, navigate]);
   const readiness = useReadinessStatus();
   const sessionOptionsQuery = useQuery({
     queryKey: ["auth", "session-options"],
@@ -158,16 +158,9 @@ export function LoginPage() {
         throw new Error(response.message || t("login.error"));
       }
 
-      setTokens(
-        {
-          accessToken: response.accessToken,
-          accessTokenExpiresAt: response.accessTokenExpiresAt,
-        },
-        effectiveRememberMe,
-      );
-
       const currentUser = await getCurrentUser();
       setUser(currentUser);
+      setAuthenticated(effectiveRememberMe);
       await i18n.changeLanguage(normalizeLanguage(currentUser.preferredLanguage));
     },
     onSuccess: () => {

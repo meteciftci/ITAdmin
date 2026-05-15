@@ -1,7 +1,8 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 
-import { isFutureExpiry, useAuthStore } from "@/features/auth/auth-store";
+import { useAuthStore } from "@/features/auth/auth-store";
 import type { RefreshTokenResponse } from "@/features/auth/types";
+import { applyCsrfHeader } from "@/lib/csrf";
 
 type RetryableRequestConfig = InternalAxiosRequestConfig & { _retry?: boolean };
 
@@ -63,46 +64,28 @@ export const resolveApiAssetUrl = (pathOrUrl?: string | null): string | null => 
 };
 
 apiClient.interceptors.request.use((config) => {
-  const accessToken = useAuthStore.getState().accessToken;
-  if (accessToken) {
-    config.headers.Authorization = `Bearer ${accessToken}`;
-  }
-
+  applyCsrfHeader(config);
   return config;
 });
 
-let refreshPromise: Promise<RefreshTokenResponse | null> | null = null;
+refreshClient.interceptors.request.use((config) => {
+  applyCsrfHeader(config);
+  return config;
+});
 
-const attemptRefresh = async (): Promise<RefreshTokenResponse | null> => {
+let refreshPromise: Promise<boolean> | null = null;
+
+const attemptRefresh = async (): Promise<boolean> => {
   if (!refreshPromise) {
     refreshPromise = refreshClient
       .post<RefreshTokenResponse>("/auth/refresh", undefined)
-      .then((response) => {
-        if (!response.data.isSuccess) {
-          return null;
-        }
-
-        const { accessToken, accessTokenExpiresAt } = response.data;
-        if (!accessToken?.trim() || !isFutureExpiry(accessTokenExpiresAt)) {
-          return null;
-        }
-
-        useAuthStore.getState().setTokens(
-          {
-            accessToken,
-            accessTokenExpiresAt,
-          },
-          useAuthStore.getState().rememberMe,
-        );
-
-        return response.data;
-      })
+      .then((response) => response.data.isSuccess === true)
       .catch((error: unknown) => {
         if (axios.isAxiosError(error) && error.response?.status === 401) {
           useAuthStore.getState().clearAuth();
         }
 
-        return null;
+        return false;
       })
       .finally(() => {
         refreshPromise = null;
@@ -140,7 +123,6 @@ apiClient.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    originalRequest.headers.Authorization = `Bearer ${refreshed.accessToken}`;
     return apiClient(originalRequest);
   },
 );

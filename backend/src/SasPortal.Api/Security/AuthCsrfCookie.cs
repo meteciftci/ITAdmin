@@ -10,7 +10,7 @@ public static class AuthCsrfCookie
 {
     public const string CookieName = AuthCookieNames.CsrfToken;
 
-    public const string CookiePath = "/api";
+    public const string CookiePath = "/";
 
     public static CookieOptions CreateOptions(HttpRequest request, DateTimeOffset? expiresUtc)
     {
