@@ -77,7 +77,8 @@
         "browserTitle": "Tarayıcı başlığı",
         "logo": "Logo",
         "favicon": "Favicon",
-        "forgotPasswordUrl": "Şifremi unuttum bağlantısı"
+        "forgotPasswordUrl": "Şifremi unuttum bağlantısı",
+        "footerText": "Footer metni"
       },
       "logoPreview": "Logo önizlemesi",
       "faviconPreview": "Favicon önizlemesi",
@@ -91,7 +92,8 @@
       },
       "help": {
         "logoFileTypes": "PNG, JPG veya JPEG",
-        "faviconFileTypes": "PNG, JPG, JPEG veya ICO"
+        "faviconFileTypes": "PNG, JPG, JPEG veya ICO",
+        "footerText": "Alt bilgi alanında ortalı gösterilecek metin."
       },
       "validation": {
         "applicationNameMax": "Uygulama adı en fazla 100 karakter olmalı.",
@@ -102,7 +104,8 @@
         "faviconType": "Favicon dosyası PNG, JPG, JPEG veya ICO formatında olmalıdır.",
         "faviconSize": "Favicon boyutu en fazla 512 KB olmalı.",
         "faviconDimensions": "Favicon görseli 16x16 ile 512x512 piksel arasında olmalı.",
-        "forgotPasswordUrlInvalid": "Geçerli bir http/https bağlantısı girin."
+        "forgotPasswordUrlInvalid": "Geçerli bir http/https bağlantısı girin.",
+        "footerTextMax": "Footer metni en fazla 200 karakter olmalı."
       },
       "messages": {
         "saveSuccess": "Uygulama ayarı kaydedildi.",

@@ -346,7 +346,8 @@ public sealed class SettingsController(
             branding.BrowserTitle,
             branding.LogoUrl,
             branding.FaviconUrl,
-            branding.ForgotPasswordUrl);
+            branding.ForgotPasswordUrl,
+            branding.FooterText);
 
     private static bool IsAllowedLogoExtension(string extension) =>
         extension is ".png" or ".jpg" or ".jpeg";

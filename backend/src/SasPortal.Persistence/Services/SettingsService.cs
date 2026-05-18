@@ -23,10 +23,12 @@ public sealed class SettingsService(
     private const string BrandingLogoUrlKey = "Branding:LogoUrl";
     private const string BrandingFaviconUrlKey = "Branding:FaviconUrl";
     private const string BrandingForgotPasswordUrlKey = "Branding:ForgotPasswordUrl";
+    private const string BrandingFooterTextKey = "Branding:FooterText";
     private const string DefaultBrandingApplicationName = "SAS Portal v2";
     private const string DefaultBrandingBrowserTitle = "SAS Portal v2";
     private const string DefaultBrandingFaviconUrl = "/favicon.svg";
     private const int BrandingTextMaxLength = 100;
+    private const int BrandingFooterTextMaxLength = 200;
     private const int BrandingUrlMaxLength = 500;
     private const int AuditDescriptionMaxLength = 2000;
     private const int AuditSettingValueMaxLength = 256;
@@ -41,7 +43,8 @@ public sealed class SettingsService(
         BrandingBrowserTitleKey,
         BrandingLogoUrlKey,
         BrandingFaviconUrlKey,
-        BrandingForgotPasswordUrlKey
+        BrandingForgotPasswordUrlKey,
+        BrandingFooterTextKey
     };
 
     // Defense-in-depth: future settings whose key contains any of these tokens are treated
@@ -93,7 +96,8 @@ public sealed class SettingsService(
                 || x.Key == BrandingBrowserTitleKey
                 || x.Key == BrandingLogoUrlKey
                 || x.Key == BrandingFaviconUrlKey
-                || x.Key == BrandingForgotPasswordUrlKey)
+                || x.Key == BrandingForgotPasswordUrlKey
+                || x.Key == BrandingFooterTextKey)
             .Select(x => new ApplicationSettingItem(
                 x.Key,
                 x.IsEncrypted ? null : x.Value,
@@ -360,7 +364,8 @@ public sealed class SettingsService(
                 || key == BrandingBrowserTitleKey
                 || key == BrandingLogoUrlKey
                 || key == BrandingFaviconUrlKey
-                || key == BrandingForgotPasswordUrlKey)
+                || key == BrandingForgotPasswordUrlKey
+                || key == BrandingFooterTextKey)
             {
                 if (item.ValueType != SettingValueType.String)
                 {
@@ -911,7 +916,29 @@ public sealed class SettingsService(
         var logoUrl = ResolveBrandingAssetUrl(map, BrandingLogoUrlKey, fallback: null, allowRelative: true);
         var faviconUrl = ResolveBrandingAssetUrl(map, BrandingFaviconUrlKey, fallback: DefaultBrandingFaviconUrl, allowRelative: true);
         var forgotPasswordUrl = ResolveBrandingAssetUrl(map, BrandingForgotPasswordUrlKey, fallback: null, allowRelative: false);
-        return new BrandingSettings(applicationName, browserTitle, logoUrl, faviconUrl, forgotPasswordUrl);
+        var footerText = ResolveBrandingFooterText(map);
+        return new BrandingSettings(applicationName, browserTitle, logoUrl, faviconUrl, forgotPasswordUrl, footerText);
+    }
+
+    private static string ResolveDefaultBrandingFooterText() =>
+        string.Create(CultureInfo.InvariantCulture, $"© {DateTime.UtcNow.Year} SAS Portal");
+
+    private static string ResolveBrandingFooterText(IReadOnlyDictionary<string, string?> map)
+    {
+        if (!map.TryGetValue(BrandingFooterTextKey, out var value))
+        {
+            return ResolveDefaultBrandingFooterText();
+        }
+
+        var normalized = NormalizeNullable(value);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return ResolveDefaultBrandingFooterText();
+        }
+
+        return normalized.Length > BrandingFooterTextMaxLength
+            ? normalized[..BrandingFooterTextMaxLength]
+            : normalized;
     }
 
     private static string ResolveBrandingText(
@@ -961,6 +988,18 @@ public sealed class SettingsService(
             if (normalized is not null && normalized.Length > BrandingTextMaxLength)
             {
                 message = $"{key} must be at most {BrandingTextMaxLength} characters.";
+                return false;
+            }
+
+            message = string.Empty;
+            return true;
+        }
+
+        if (key == BrandingFooterTextKey)
+        {
+            if (normalized is not null && normalized.Length > BrandingFooterTextMaxLength)
+            {
+                message = $"{key} must be at most {BrandingFooterTextMaxLength} characters.";
                 return false;
             }
 
@@ -1056,6 +1095,7 @@ public sealed class SettingsService(
         BrandingLogoUrlKey => "Application branding logo URL.",
         BrandingFaviconUrlKey => "Application branding favicon URL.",
         BrandingForgotPasswordUrlKey => "External forgot password URL shown on the login page.",
+        BrandingFooterTextKey => "Footer text shown centered at the bottom of the application layout.",
         _ => string.Empty
     };
 

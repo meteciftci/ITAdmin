@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { getBrandingSettings } from "@/features/settings/api";
 import type { BrandingSettings } from "@/features/settings/types";
+import { getDefaultBrandingFooterText } from "@/lib/branding-footer";
 
 export const BRANDING_QUERY_KEY = ["settings", "branding"] as const;
 
@@ -11,6 +12,7 @@ const DEFAULT_BRANDING: BrandingSettings = {
   logoUrl: null,
   faviconUrl: "/favicon.svg",
   forgotPasswordUrl: null,
+  footerText: getDefaultBrandingFooterText(),
 };
 
 export function useBrandingSettings() {

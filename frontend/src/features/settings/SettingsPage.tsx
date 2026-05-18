@@ -95,12 +95,14 @@ export function SettingsPage() {
     brandingApplicationName,
     brandingBrowserTitle,
     forgotPasswordUrl,
+    footerText,
     forgotPasswordUrlError,
     brandingError,
     hydrateFromBranding,
     updateApplicationName,
     updateBrowserTitle,
     updateForgotPasswordUrl,
+    updateFooterText,
     clearBrandingError,
     clearForgotPasswordUrlError,
     validateBrandingInput,
@@ -157,7 +159,7 @@ export function SettingsPage() {
     const ldap = settingsQuery.data.ldap;
 
     hydrateFromSettings(ldap);
-    hydrateFromBranding(settingsQuery.data.branding);
+    hydrateFromBranding(settingsQuery.data.branding, settingsQuery.data.applicationSettings);
     hydrateAssetUrlsFromBranding(settingsQuery.data.branding);
   }, [
     settingsQuery.data,
@@ -266,6 +268,7 @@ export function SettingsPage() {
                   currentFaviconUrl={brandingFaviconUrl}
                   selectedFaviconFileName={selectedFaviconFileName}
                   forgotPasswordUrl={forgotPasswordUrl}
+                  footerText={footerText}
                   readOnly={isSystemReadOnly}
                   isSaving={isSavingBranding}
                   errorMessage={brandingError}
@@ -275,6 +278,7 @@ export function SettingsPage() {
                   onSelectLogo={handleLogoSelect}
                   onSelectFavicon={handleFaviconSelect}
                   onForgotPasswordUrlChange={updateForgotPasswordUrl}
+                  onFooterTextChange={updateFooterText}
                   onSave={() => void saveBrandingSettings()}
                 />
               </SectionCard>

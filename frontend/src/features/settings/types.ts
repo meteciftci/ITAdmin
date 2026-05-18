@@ -22,6 +22,7 @@ export type BrandingSettings = {
   logoUrl: string | null;
   faviconUrl: string | null;
   forgotPasswordUrl: string | null;
+  footerText: string;
 };
 
 export type BrandingLogoUploadResponse = {

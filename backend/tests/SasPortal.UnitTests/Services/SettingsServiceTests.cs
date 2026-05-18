@@ -265,6 +265,79 @@ public sealed class SettingsServiceTests
         Assert.Null(branding.LogoUrl);
         Assert.Equal("/favicon.svg", branding.FaviconUrl);
         Assert.Null(branding.ForgotPasswordUrl);
+        Assert.Equal($"© {DateTime.UtcNow.Year} SAS Portal", branding.FooterText);
+    }
+
+    [Fact]
+    public async Task GetBrandingSettingsAsync_FooterText_ReturnsFallback_WhenStoredEmptyOrWhitespace()
+    {
+        await using var dbContext = CreateDbContext();
+        await dbContext.ApplicationSettings.AddAsync(
+            new ApplicationSetting
+            {
+                Key = "Branding:FooterText",
+                Value = "   ",
+                ValueType = SettingValueType.String,
+                IsEncrypted = false,
+                IsSystem = true,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = "seed"
+            });
+        await dbContext.SaveChangesAsync();
+
+        var service = CreateService(dbContext);
+        var branding = await service.GetBrandingSettingsAsync();
+
+        Assert.Equal($"© {DateTime.UtcNow.Year} SAS Portal", branding.FooterText);
+    }
+
+    [Fact]
+    public async Task GetBrandingSettingsAsync_FooterText_ReturnsPersistedValue_WhenConfigured()
+    {
+        await using var dbContext = CreateDbContext();
+        await dbContext.ApplicationSettings.AddAsync(
+            new ApplicationSetting
+            {
+                Key = "Branding:FooterText",
+                Value = "© 2026 Muğla Büyükşehir Belediyesi - SAS Portal",
+                ValueType = SettingValueType.String,
+                IsEncrypted = false,
+                IsSystem = true,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = "seed"
+            });
+        await dbContext.SaveChangesAsync();
+
+        var service = CreateService(dbContext);
+        var branding = await service.GetBrandingSettingsAsync();
+
+        Assert.Equal("© 2026 Muğla Büyükşehir Belediyesi - SAS Portal", branding.FooterText);
+    }
+
+    [Fact]
+    public async Task UpdateApplicationSettingsAsync_RejectsFooterText_WhenExceedsMaxLength()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext);
+
+        var result = await service.UpdateApplicationSettingsAsync(
+            new UpdateApplicationSettingsRequest(
+                [
+                    new UpdateApplicationSettingRequest(
+                        "Branding:FooterText",
+                        new string('x', 201),
+                        SettingValueType.String)
+                ],
+                Guid.NewGuid(),
+                "admin",
+                null,
+                null),
+            CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("200", result.Message!, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -524,6 +597,7 @@ public sealed class SettingsServiceTests
     [InlineData("Branding:LogoUrl", "/uploads/branding/logo.png", "Application branding logo URL.")]
     [InlineData("Branding:FaviconUrl", "/uploads/branding/favicon.png", "Application branding favicon URL.")]
     [InlineData("Branding:ForgotPasswordUrl", "https://reset.example.com", "External forgot password URL shown on the login page.")]
+    [InlineData("Branding:FooterText", "© 2026 SAS Portal", "Footer text shown centered at the bottom of the application layout.")]
     public async Task UpdateApplicationSettingsAsync_Create_UsesKeySpecificDescription(
         string key,
         string value,

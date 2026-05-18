@@ -77,7 +77,8 @@
         "browserTitle": "Browser title",
         "logo": "Logo",
         "favicon": "Favicon",
-        "forgotPasswordUrl": "Forgot password URL"
+        "forgotPasswordUrl": "Forgot password URL",
+        "footerText": "Footer text"
       },
       "logoPreview": "Logo preview",
       "faviconPreview": "Favicon preview",
@@ -91,7 +92,8 @@
       },
       "help": {
         "logoFileTypes": "PNG, JPG, or JPEG",
-        "faviconFileTypes": "PNG, JPG, JPEG, or ICO"
+        "faviconFileTypes": "PNG, JPG, JPEG, or ICO",
+        "footerText": "Text shown centered in the footer."
       },
       "validation": {
         "applicationNameMax": "Application name must be at most 100 characters.",
@@ -102,7 +104,8 @@
         "faviconType": "Favicon file must be PNG, JPG, JPEG, or ICO.",
         "faviconSize": "Favicon must be 512 KB or smaller.",
         "faviconDimensions": "Favicon image must be between 16x16 and 512x512 pixels.",
-        "forgotPasswordUrlInvalid": "Enter a valid http/https URL."
+        "forgotPasswordUrlInvalid": "Enter a valid http/https URL.",
+        "footerTextMax": "Footer text must be at most 200 characters."
       },
       "messages": {
         "saveSuccess": "Application setting updated.",

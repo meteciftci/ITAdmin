@@ -5,4 +5,5 @@ public sealed record BrandingSettingsResponse(
     string BrowserTitle,
     string? LogoUrl,
     string? FaviconUrl,
-    string? ForgotPasswordUrl);
+    string? ForgotPasswordUrl,
+    string FooterText);

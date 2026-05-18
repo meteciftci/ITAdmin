@@ -8,6 +8,8 @@ export const BRANDING_BROWSER_TITLE_KEY = "Branding:BrowserTitle";
 export const BRANDING_LOGO_URL_KEY = "Branding:LogoUrl";
 export const BRANDING_FAVICON_URL_KEY = "Branding:FaviconUrl";
 export const BRANDING_FORGOT_PASSWORD_URL_KEY = "Branding:ForgotPasswordUrl";
+export const BRANDING_FOOTER_TEXT_KEY = "Branding:FooterText";
+export const BRANDING_FOOTER_TEXT_MAX_LENGTH = 200;
 
 export const SETTING_VALUE_TYPE_STRING = 1;
 export const MAX_LOGO_BYTES = 2 * 1024 * 1024;

@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { BRANDING_FOOTER_TEXT_MAX_LENGTH } from "@/features/settings/settings-constants";
 import { resolveApiAssetUrl } from "@/lib/api-client";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -39,6 +40,7 @@ type ApplicationSettingsFormProps = {
   currentFaviconUrl: string | null;
   selectedFaviconFileName: string | null;
   forgotPasswordUrl: string;
+  footerText: string;
   readOnly: boolean;
   isSaving: boolean;
   errorMessage?: string;
@@ -48,6 +50,7 @@ type ApplicationSettingsFormProps = {
   onSelectLogo: (file: File | null) => void;
   onSelectFavicon: (file: File | null) => void;
   onForgotPasswordUrlChange: (value: string) => void;
+  onFooterTextChange: (value: string) => void;
   onSave: () => void;
 };
 
@@ -61,6 +64,7 @@ export function ApplicationSettingsForm({
   currentFaviconUrl,
   selectedFaviconFileName,
   forgotPasswordUrl,
+  footerText,
   readOnly,
   isSaving,
   errorMessage,
@@ -70,6 +74,7 @@ export function ApplicationSettingsForm({
   onSelectLogo,
   onSelectFavicon,
   onForgotPasswordUrlChange,
+  onFooterTextChange,
   onSave,
 }: ApplicationSettingsFormProps) {
   const { t } = useTranslation(["settings", "common"]);
@@ -114,6 +119,16 @@ export function ApplicationSettingsForm({
           {forgotPasswordUrlError ? (
             <p className="text-xs text-destructive">{forgotPasswordUrlError}</p>
           ) : null}
+        </div>
+        <div className="space-y-1.5 md:col-span-2">
+          <Label>{t("settings:application.fields.footerText")}</Label>
+          <Input
+            value={footerText}
+            onChange={(event) => onFooterTextChange(event.target.value)}
+            readOnly={readOnly}
+            maxLength={BRANDING_FOOTER_TEXT_MAX_LENGTH}
+          />
+          <p className="text-xs text-muted-foreground">{t("settings:application.help.footerText")}</p>
         </div>
       </div>
 
