@@ -40,6 +40,10 @@ public class AdAttributeMappingConfiguration : IEntityTypeConfiguration<AdAttrib
             .HasColumnName("is_sensitive")
             .HasDefaultValue(false);
 
+        builder.Property(x => x.IsSearchable)
+            .HasColumnName("is_searchable")
+            .HasDefaultValue(false);
+
         builder.Property(x => x.ValidationType)
             .HasColumnName("validation_type")
             .HasMaxLength(32)

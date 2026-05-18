@@ -10,6 +10,7 @@ public class AdAttributeMapping : AuditableEntity
     public bool IsEnabled { get; set; } = true;
     public bool IsEditable { get; set; } = true;
     public bool IsSensitive { get; set; }
+    public bool IsSearchable { get; set; }
     public string ValidationType { get; set; } = "None";
     public string MaskingStrategy { get; set; } = "None";
     public int SortOrder { get; set; }

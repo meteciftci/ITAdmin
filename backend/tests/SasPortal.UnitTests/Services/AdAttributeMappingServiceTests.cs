@@ -33,6 +33,7 @@ public sealed class AdAttributeMappingServiceTests
 
         var stored = await dbContext.AdAttributeMappings.SingleAsync();
         Assert.Equal("mobilePhone", stored.LogicalField);
+        Assert.False(stored.IsSearchable);
 
         var audit = Assert.Single(dbContext.AuditLogs.Where(x => x.EntityName == "AdAttributeMapping"));
         Assert.Equal("Create", audit.Action);
@@ -89,6 +90,72 @@ public sealed class AdAttributeMappingServiceTests
     }
 
     [Fact]
+    public async Task CreateAsync_WhenSensitiveTrue_ForcesIsSearchableFalse()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext);
+
+        var result = await service.CreateAsync(
+            CreateRequest("nationalId", "T.C. Kimlik No", "tcno", isSensitive: true, isSearchable: true));
+
+        Assert.True(result.IsSuccess);
+        var stored = await dbContext.AdAttributeMappings.SingleAsync();
+        Assert.True(stored.IsSensitive);
+        Assert.False(stored.IsSearchable);
+        Assert.False(result.Mapping!.IsSearchable);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WhenNotSensitive_ForcesMaskingStrategyNone()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext);
+
+        var result = await service.CreateAsync(
+            CreateRequest("mobilePhone", "Cep Telefonu", "mobile", maskingStrategy: "Phone"));
+
+        Assert.True(result.IsSuccess);
+        var stored = await dbContext.AdAttributeMappings.SingleAsync();
+        Assert.False(stored.IsSensitive);
+        Assert.Equal("None", stored.MaskingStrategy);
+        Assert.Equal("None", result.Mapping!.MaskingStrategy);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WhenSensitiveTrue_AndMaskingNone_UsesHidden()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext);
+
+        var result = await service.CreateAsync(
+            CreateRequest(
+                "nationalId",
+                "T.C. Kimlik No",
+                "tcno",
+                isSensitive: true,
+                maskingStrategy: "None"));
+
+        Assert.True(result.IsSuccess);
+        var stored = await dbContext.AdAttributeMappings.SingleAsync();
+        Assert.Equal("Hidden", stored.MaskingStrategy);
+        Assert.Equal("Hidden", result.Mapping!.MaskingStrategy);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WhenSearchableTrue_PersistsIsSearchable()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext);
+
+        var result = await service.CreateAsync(
+            CreateRequest("mobilePhone", "Cep Telefonu", "extensionAttribute1", isSearchable: true));
+
+        Assert.True(result.IsSuccess);
+        var stored = await dbContext.AdAttributeMappings.SingleAsync();
+        Assert.True(stored.IsSearchable);
+    }
+
+    [Fact]
     public async Task UpdateAsync_DoesNotChangeLogicalField_AndLogs()
     {
         await using var dbContext = CreateDbContext();
@@ -106,6 +173,7 @@ public sealed class AdAttributeMappingServiceTests
             IsEnabled: false,
             IsEditable: false,
             IsSensitive: true,
+            IsSearchable: true,
             ValidationType: "Phone",
             MaskingStrategy: "Phone",
             SortOrder: 5,
@@ -123,6 +191,7 @@ public sealed class AdAttributeMappingServiceTests
         Assert.Equal("telephoneNumber", entity.AttributeName);
         Assert.False(entity.IsEnabled);
         Assert.True(entity.IsSensitive);
+        Assert.False(entity.IsSearchable);
         Assert.Equal("Phone", entity.ValidationType);
         Assert.Equal("Phone", entity.MaskingStrategy);
         Assert.Equal(5, entity.SortOrder);
@@ -195,16 +264,20 @@ public sealed class AdAttributeMappingServiceTests
     private static CreateAdAttributeMappingRequest CreateRequest(
         string logicalField,
         string displayName,
-        string attributeName) =>
+        string attributeName,
+        bool isSensitive = false,
+        bool isSearchable = false,
+        string maskingStrategy = "None") =>
         new(
             LogicalField: logicalField,
             DisplayName: displayName,
             AttributeName: attributeName,
             IsEnabled: true,
             IsEditable: true,
-            IsSensitive: false,
+            IsSensitive: isSensitive,
+            IsSearchable: isSearchable,
             ValidationType: "None",
-            MaskingStrategy: "None",
+            MaskingStrategy: maskingStrategy,
             SortOrder: 0,
             ActorUserId: Guid.NewGuid(),
             ActorUserName: "tester",

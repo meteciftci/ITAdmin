@@ -1,0 +1,74 @@
+{
+  "adManagement": {
+    "moduleTitle": "AD Management",
+    "users": {
+      "title": "AD Users",
+      "description": "Browse and search Active Directory users.",
+      "searchPlaceholder": "Search users...",
+      "filters": {
+        "active": "Active",
+        "disabled": "Disabled",
+        "all": "All"
+      },
+      "table": {
+        "displayName": "Display name",
+        "username": "User name",
+        "upn": "UPN",
+        "email": "Email",
+        "department": "Department",
+        "status": "Status",
+        "locked": "Locked",
+        "lastLogon": "Last logon",
+        "actions": "Actions"
+      },
+      "status": {
+        "enabled": "Active",
+        "disabled": "Disabled",
+        "locked": "Locked",
+        "unlocked": "Not locked"
+      },
+      "actions": {
+        "detail": "Detail",
+        "refresh": "Refresh"
+      },
+      "empty": {
+        "searchRequiredTitle": "Search required",
+        "searchRequired": "Enter at least 2 characters to search AD users.",
+        "title": "No users found",
+        "description": "No AD users match the current filters."
+      },
+      "errors": {
+        "loadFailed": "AD users could not be loaded.",
+        "detailFailed": "User detail could not be loaded.",
+        "notFound": "User not found."
+      },
+      "pagination": {
+        "page": "Page {{pageNumber}}",
+        "previous": "Previous",
+        "next": "Next"
+      },
+      "detail": {
+        "dialogTitle": "User detail",
+        "displayName": "Display name",
+        "username": "User name",
+        "upn": "UPN",
+        "email": "Email",
+        "givenName": "Given name",
+        "surname": "Surname",
+        "department": "Department",
+        "status": "Status",
+        "locked": "Lock status",
+        "created": "Created",
+        "changed": "Changed",
+        "lastLogon": "Last logon",
+        "passwordLastSet": "Password last set",
+        "groups": "Group memberships",
+        "mappedAttributes": "Mapped attributes",
+        "sections": {
+          "basic": "Basic information",
+          "accountStatus": "Account status"
+        }
+      }
+    }
+  }
+}

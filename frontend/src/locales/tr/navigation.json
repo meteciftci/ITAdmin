@@ -2,12 +2,15 @@
   "navigation": {
     "groups": {
       "main": "Ana",
+      "modules": "Modüller",
       "administration": "Yönetim",
       "monitoring": "İzleme",
       "system": "Sistem"
     },
     "items": {
       "home": "Anasayfa",
+      "adManagement": "AD Yönetim",
+      "adManagementUsers": "Kullanıcılar",
       "users": "Kullanıcılar",
       "roles": "Roller",
       "permissions": "İzinler",

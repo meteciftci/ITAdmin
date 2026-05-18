@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Navigate } from "react-router-dom";
 
@@ -16,8 +16,9 @@ import { LdapSettingsForm } from "@/features/settings/components/LdapSettingsFor
 import { SessionSecuritySettingsForm } from "@/features/settings/components/SessionSecuritySettingsForm";
 import {
   DEFAULT_SESSION_SECURITY,
-  DEFAULT_TAB,
   SETTINGS_QUERY_KEY,
+  isSettingsTabVisible,
+  resolveDefaultSettingsTab,
   type SettingsTabValue,
 } from "@/features/settings/settings-constants";
 import { useBrandingAssetSettingsForm } from "@/features/settings/hooks/useBrandingAssetSettingsForm";
@@ -34,8 +35,38 @@ import { useTranslation } from "react-i18next";
 export function SettingsPage() {
   const { t } = useTranslation(["settings", "common"]);
   const currentUser = useAuthStore((state) => state.user);
-  const canUpdate = canAccess(currentUser, "Settings.Update");
-  const isReadOnly = !canUpdate;
+  const canViewSystemSettings = canAccess(currentUser, "Settings.View");
+  const canViewAdManagementSettings = canAccess(currentUser, "AdManagement.Settings.View");
+  const canUpdateSystemSettings = canAccess(currentUser, "Settings.Update");
+  const canUpdateAdManagementSettings = canAccess(currentUser, "AdManagement.Settings.Update");
+  const isSystemReadOnly = !canUpdateSystemSettings;
+
+  const defaultTab = useMemo(
+    () => resolveDefaultSettingsTab(canViewSystemSettings, canViewAdManagementSettings),
+    [canViewAdManagementSettings, canViewSystemSettings],
+  );
+
+  const [activeTab, setActiveTab] = useState<SettingsTabValue>(defaultTab);
+
+  const visibleTab = useMemo(() => {
+    if (isSettingsTabVisible(activeTab, canViewSystemSettings, canViewAdManagementSettings)) {
+      return activeTab;
+    }
+
+    return defaultTab;
+  }, [activeTab, canViewAdManagementSettings, canViewSystemSettings, defaultTab]);
+
+  const handleTabChange = useCallback(
+    (value: string) => {
+      const nextTab = value as SettingsTabValue;
+      if (!isSettingsTabVisible(nextTab, canViewSystemSettings, canViewAdManagementSettings)) {
+        return;
+      }
+
+      setActiveTab(nextTab);
+    },
+    [canViewAdManagementSettings, canViewSystemSettings],
+  );
 
   const {
     ldapForm,
@@ -52,7 +83,7 @@ export function SettingsPage() {
 
   const { saveLdapSettings, canSaveLdap, isSavingLdap } = useLdapSettingsSave({
     t,
-    canUpdate,
+    canUpdate: canUpdateSystemSettings,
     ldapFormIsMinimumValid,
     validateLdapForm,
     buildLdapPayload,
@@ -94,7 +125,7 @@ export function SettingsPage() {
 
   const { saveBrandingSettings, isSavingBranding } = useBrandingSettingsSave({
     t,
-    canUpdate,
+    canUpdate: canUpdateSystemSettings,
     brandingLogoUrl,
     brandingFaviconUrl,
     logoFile,
@@ -110,14 +141,13 @@ export function SettingsPage() {
   const { saveSessionSecuritySettings, isSavingSessionSecurity } =
     useSessionSecuritySettingsSave({
       t,
-      canUpdate,
+      canUpdate: canUpdateSystemSettings,
     });
-
-  const [activeTab, setActiveTab] = useState<SettingsTabValue>(DEFAULT_TAB);
 
   const settingsQuery = useQuery({
     queryKey: SETTINGS_QUERY_KEY,
     queryFn: getSettings,
+    enabled: canViewSystemSettings,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
@@ -136,16 +166,39 @@ export function SettingsPage() {
     hydrateFromSettings,
   ]);
 
+  const visibleTabCount = useMemo(() => {
+    let count = 0;
+    if (canViewSystemSettings) count += 3;
+    if (canViewAdManagementSettings) count += 1;
+    return count;
+  }, [canViewAdManagementSettings, canViewSystemSettings]);
+
+  const tabsListClassName = useMemo(() => {
+    if (visibleTabCount <= 1) {
+      return "grid w-full grid-cols-1";
+    }
+
+    if (visibleTabCount === 2) {
+      return "grid w-full grid-cols-1 sm:grid-cols-2";
+    }
+
+    if (visibleTabCount === 3) {
+      return "grid w-full grid-cols-1 sm:grid-cols-3";
+    }
+
+    return "grid w-full grid-cols-1 sm:grid-cols-4";
+  }, [visibleTabCount]);
+
   const refreshAction = useMemo(
     () => (
-      <Button variant="outline" onClick={() => settingsQuery.refetch()}>
+      <Button variant="outline" onClick={() => void settingsQuery.refetch()}>
         {t("common:actions.refresh")}
       </Button>
     ),
     [settingsQuery, t],
   );
 
-  if (settingsQuery.isError) {
+  if (canViewSystemSettings && settingsQuery.isError) {
     const routeState = createApiErrorRouteState(settingsQuery.error, {
       fromPath: "/settings",
       retryPath: "/settings",
@@ -156,7 +209,7 @@ export function SettingsPage() {
     );
   }
 
-  if (settingsQuery.isLoading) {
+  if (canViewSystemSettings && settingsQuery.isLoading) {
     return (
       <section className="space-y-4">
         <div className="flex justify-end">{refreshAction}</div>
@@ -167,86 +220,108 @@ export function SettingsPage() {
 
   return (
     <section className="space-y-4">
-      <div className="flex justify-end">{refreshAction}</div>
+      {canViewSystemSettings ? (
+        <div className="flex justify-end">{refreshAction}</div>
+      ) : null}
 
-      {isReadOnly ? (
+      {canViewSystemSettings && isSystemReadOnly ? (
         <p className="rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground">
           {t("settings:readOnlyNotice")}
         </p>
       ) : null}
 
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as SettingsTabValue)}>
-        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-4">
-          <TabsTrigger value="branding">{t("settings:tabs.branding")}</TabsTrigger>
-          <TabsTrigger value="sessionSecurity">{t("settings:tabs.sessionSecurity")}</TabsTrigger>
-          <TabsTrigger value="ldap">{t("settings:tabs.ldap")}</TabsTrigger>
-          <TabsTrigger value="directory">{t("settings:tabs.directory")}</TabsTrigger>
+      {canViewAdManagementSettings && !canUpdateAdManagementSettings ? (
+        <p className="rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground">
+          {t("settings:adManagement.readOnlyNotice")}
+        </p>
+      ) : null}
+
+      <Tabs value={visibleTab} onValueChange={handleTabChange}>
+        <TabsList className={tabsListClassName}>
+          {canViewSystemSettings ? (
+            <>
+              <TabsTrigger value="branding">{t("settings:tabs.branding")}</TabsTrigger>
+              <TabsTrigger value="sessionSecurity">
+                {t("settings:tabs.sessionSecurity")}
+              </TabsTrigger>
+              <TabsTrigger value="ldap">{t("settings:tabs.ldap")}</TabsTrigger>
+            </>
+          ) : null}
+          {canViewAdManagementSettings ? (
+            <TabsTrigger value="directory">{t("settings:tabs.directory")}</TabsTrigger>
+          ) : null}
         </TabsList>
 
-        <TabsContent value="branding">
-          <SectionCard>
-            <ApplicationSettingsForm
-              applicationName={brandingApplicationName}
-              browserTitle={brandingBrowserTitle}
-              selectedLogoPreviewUrl={logoPreviewUrl}
-              currentLogoUrl={brandingLogoUrl}
-              selectedLogoFileName={selectedLogoFileName}
-              selectedFaviconPreviewUrl={faviconPreviewUrl}
-              currentFaviconUrl={brandingFaviconUrl}
-              selectedFaviconFileName={selectedFaviconFileName}
-              forgotPasswordUrl={forgotPasswordUrl}
-              readOnly={isReadOnly}
-              isSaving={isSavingBranding}
-              errorMessage={brandingError}
-              forgotPasswordUrlError={forgotPasswordUrlError}
-              onApplicationNameChange={updateApplicationName}
-              onBrowserTitleChange={updateBrowserTitle}
-              onSelectLogo={handleLogoSelect}
-              onSelectFavicon={handleFaviconSelect}
-              onForgotPasswordUrlChange={updateForgotPasswordUrl}
-              onSave={() => void saveBrandingSettings()}
-            />
-          </SectionCard>
-        </TabsContent>
+        {canViewSystemSettings ? (
+          <>
+            <TabsContent value="branding">
+              <SectionCard>
+                <ApplicationSettingsForm
+                  applicationName={brandingApplicationName}
+                  browserTitle={brandingBrowserTitle}
+                  selectedLogoPreviewUrl={logoPreviewUrl}
+                  currentLogoUrl={brandingLogoUrl}
+                  selectedLogoFileName={selectedLogoFileName}
+                  selectedFaviconPreviewUrl={faviconPreviewUrl}
+                  currentFaviconUrl={brandingFaviconUrl}
+                  selectedFaviconFileName={selectedFaviconFileName}
+                  forgotPasswordUrl={forgotPasswordUrl}
+                  readOnly={isSystemReadOnly}
+                  isSaving={isSavingBranding}
+                  errorMessage={brandingError}
+                  forgotPasswordUrlError={forgotPasswordUrlError}
+                  onApplicationNameChange={updateApplicationName}
+                  onBrowserTitleChange={updateBrowserTitle}
+                  onSelectLogo={handleLogoSelect}
+                  onSelectFavicon={handleFaviconSelect}
+                  onForgotPasswordUrlChange={updateForgotPasswordUrl}
+                  onSave={() => void saveBrandingSettings()}
+                />
+              </SectionCard>
+            </TabsContent>
 
-        <TabsContent value="sessionSecurity">
-          <SectionCard>
-            {settingsQuery.data ? (
-              <SessionSecuritySettingsForm
-                key={sessionSecurityFingerprint(
-                  settingsQuery.data.sessionSecurity ?? DEFAULT_SESSION_SECURITY,
-                )}
-                initialValues={
-                  settingsQuery.data.sessionSecurity ?? DEFAULT_SESSION_SECURITY
-                }
-                readOnly={isReadOnly}
-                isSaving={isSavingSessionSecurity}
-                onSubmit={saveSessionSecuritySettings}
-              />
-            ) : null}
-          </SectionCard>
-        </TabsContent>
+            <TabsContent value="sessionSecurity">
+              <SectionCard>
+                {settingsQuery.data ? (
+                  <SessionSecuritySettingsForm
+                    key={sessionSecurityFingerprint(
+                      settingsQuery.data.sessionSecurity ?? DEFAULT_SESSION_SECURITY,
+                    )}
+                    initialValues={
+                      settingsQuery.data.sessionSecurity ?? DEFAULT_SESSION_SECURITY
+                    }
+                    readOnly={isSystemReadOnly}
+                    isSaving={isSavingSessionSecurity}
+                    onSubmit={saveSessionSecuritySettings}
+                  />
+                ) : null}
+              </SectionCard>
+            </TabsContent>
 
-        <TabsContent value="ldap">
-          <SectionCard>
-            <LdapSettingsForm
-              values={ldapForm}
-              fieldErrors={ldapFieldErrors}
-              hasBindPassword={hasBindPassword}
-              readOnly={isReadOnly}
-              savePending={isSavingLdap}
-              canSave={canSaveLdap}
-              onChange={updateField}
-              onSave={saveLdapSettings}
-            />
-          </SectionCard>
-        </TabsContent>
+            <TabsContent value="ldap">
+              <SectionCard>
+                <LdapSettingsForm
+                  values={ldapForm}
+                  fieldErrors={ldapFieldErrors}
+                  hasBindPassword={hasBindPassword}
+                  readOnly={isSystemReadOnly}
+                  savePending={isSavingLdap}
+                  canSave={canSaveLdap}
+                  onChange={updateField}
+                  onSave={saveLdapSettings}
+                />
+              </SectionCard>
+            </TabsContent>
+          </>
+        ) : null}
 
-        <TabsContent value="directory">
-          <SectionCard>
-            <AdManagementSettingsTab readOnly={isReadOnly} />
-          </SectionCard>
-        </TabsContent>
+        {canViewAdManagementSettings ? (
+          <TabsContent value="directory">
+            <SectionCard>
+              <AdManagementSettingsTab readOnly={!canUpdateAdManagementSettings} />
+            </SectionCard>
+          </TabsContent>
+        ) : null}
       </Tabs>
     </section>
   );

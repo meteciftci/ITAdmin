@@ -28,3 +28,12 @@ export const canAccess = (
 ): boolean => {
   return hasPermission(user, permissionCode);
 };
+
+export const canAccessAny = (
+  user: CurrentUser | null,
+  permissionCodes: readonly string[],
+): boolean => {
+  if (!user) return false;
+  if (user.isSuperAdmin) return true;
+  return permissionCodes.some((code) => user.permissions.includes(code));
+};

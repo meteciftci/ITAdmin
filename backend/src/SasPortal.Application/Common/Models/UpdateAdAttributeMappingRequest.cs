@@ -7,6 +7,7 @@ public sealed record UpdateAdAttributeMappingRequest(
     bool IsEnabled,
     bool IsEditable,
     bool IsSensitive,
+    bool IsSearchable,
     string ValidationType,
     string MaskingStrategy,
     int SortOrder,

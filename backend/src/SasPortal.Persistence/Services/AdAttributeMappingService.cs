@@ -55,6 +55,7 @@ public sealed class AdAttributeMappingService(
                 x.IsEnabled,
                 x.IsEditable,
                 x.IsSensitive,
+                x.IsSearchable,
                 x.ValidationType,
                 x.MaskingStrategy,
                 x.SortOrder))
@@ -93,16 +94,11 @@ public sealed class AdAttributeMappingService(
         }
 
         var validationType = NormalizeOrDefault(request.ValidationType, "None");
-        var maskingStrategy = NormalizeOrDefault(request.MaskingStrategy, "None");
+        var maskingStrategy = ResolveMaskingStrategy(request.IsSensitive, request.MaskingStrategy);
 
         if (!AllowedValidationTypes.Contains(validationType))
         {
             return new AdAttributeMappingResult(false, "Validation type is invalid.", null);
-        }
-
-        if (!AllowedMaskingStrategies.Contains(maskingStrategy))
-        {
-            return new AdAttributeMappingResult(false, "Masking strategy is invalid.", null);
         }
 
         var duplicate = await context.AdAttributeMappings
@@ -125,6 +121,7 @@ public sealed class AdAttributeMappingService(
             IsEnabled = request.IsEnabled,
             IsEditable = request.IsEditable,
             IsSensitive = request.IsSensitive,
+            IsSearchable = ResolveIsSearchable(request.IsSensitive, request.IsSearchable),
             ValidationType = validationType,
             MaskingStrategy = maskingStrategy,
             SortOrder = request.SortOrder,
@@ -208,16 +205,11 @@ public sealed class AdAttributeMappingService(
         }
 
         var validationType = NormalizeOrDefault(request.ValidationType, "None");
-        var maskingStrategy = NormalizeOrDefault(request.MaskingStrategy, "None");
+        var maskingStrategy = ResolveMaskingStrategy(request.IsSensitive, request.MaskingStrategy);
 
         if (!AllowedValidationTypes.Contains(validationType))
         {
             return new AdAttributeMappingResult(false, "Validation type is invalid.", null);
-        }
-
-        if (!AllowedMaskingStrategies.Contains(maskingStrategy))
-        {
-            return new AdAttributeMappingResult(false, "Masking strategy is invalid.", null);
         }
 
         var now = DateTime.UtcNow;
@@ -228,6 +220,7 @@ public sealed class AdAttributeMappingService(
         entity.IsEnabled = request.IsEnabled;
         entity.IsEditable = request.IsEditable;
         entity.IsSensitive = request.IsSensitive;
+        entity.IsSearchable = ResolveIsSearchable(request.IsSensitive, request.IsSearchable);
         entity.ValidationType = validationType;
         entity.MaskingStrategy = maskingStrategy;
         entity.SortOrder = request.SortOrder;
@@ -329,6 +322,26 @@ public sealed class AdAttributeMappingService(
         return new AdAttributeMappingResult(true, "AD attribute mapping deleted.", snapshot);
     }
 
+    private static bool ResolveIsSearchable(bool isSensitive, bool isSearchable) =>
+        isSensitive ? false : isSearchable;
+
+    internal static string ResolveMaskingStrategy(bool isSensitive, string? maskingStrategy)
+    {
+        if (!isSensitive)
+        {
+            return "None";
+        }
+
+        var normalized = NormalizeOrDefault(maskingStrategy, "Hidden");
+        if (!AllowedMaskingStrategies.Contains(normalized)
+            || string.Equals(normalized, "None", StringComparison.Ordinal))
+        {
+            return "Hidden";
+        }
+
+        return normalized;
+    }
+
     private static AdAttributeMappingItem MapToItem(AdAttributeMapping entity) =>
         new(
             entity.Id,
@@ -338,6 +351,7 @@ public sealed class AdAttributeMappingService(
             entity.IsEnabled,
             entity.IsEditable,
             entity.IsSensitive,
+            entity.IsSearchable,
             entity.ValidationType,
             entity.MaskingStrategy,
             entity.SortOrder);
@@ -353,6 +367,7 @@ public sealed class AdAttributeMappingService(
             isEnabled = entity.IsEnabled,
             isEditable = entity.IsEditable,
             isSensitive = entity.IsSensitive,
+            isSearchable = entity.IsSearchable,
             validationType = entity.ValidationType,
             maskingStrategy = entity.MaskingStrategy,
             sortOrder = entity.SortOrder

@@ -124,6 +124,7 @@
       }
     },
     "adManagement": {
+      "readOnlyNotice": "AD Yönetim ayarlarını görüntüleyebilirsiniz. Güncelleme yapmak için ek yetki gerekir.",
       "connection": {
         "title": "Bağlantı ve Yetkili Hesap",
         "description": "Active Directory yönetim modülünün kullanacağı domain, OU ve servis hesabı bilgilerini yapılandırın.",
@@ -181,6 +182,9 @@
           "isEnabled": "Aktif",
           "isEditable": "Düzenlenebilir",
           "isSensitive": "Hassas veri",
+          "isSearchable": "Aranabilir",
+          "isSearchableHelp": "Bu alan AD kullanıcı aramasına dahil edilir.",
+          "isSearchableSensitiveDisabled": "Hassas veri alanları aranabilir yapılamaz.",
           "validationType": "Validasyon tipi",
           "maskingStrategy": "Maskeleme yöntemi",
           "sortOrder": "Sıra",
@@ -189,15 +193,22 @@
         "fields": {
           "logicalField": "Logical field",
           "logicalField Help": "Oluşturma sırasında girilir, sonradan değiştirilemez. Örn: mobilePhone.",
-          "logicalFieldHelp": "Oluşturma sırasında girilir, sonradan değiştirilemez. Örn: mobilePhone.",
+          "logicalFieldHelp": "Sistem içi anahtar. Oluşturulduktan sonra değiştirilmez.",
+          "displayNameHelp": "Kullanıcı arayüzünde gösterilecek ad.",
           "displayName": "Alan adı",
           "attributeName": "AD attribute",
-          "attributeNameHelp": "Active Directory üzerindeki attribute adı. Örn: extensionAttribute1.",
+          "attributeNameHelp": "LDAP attribute display name yazın. Örn: employeeNumber, extensionAttribute1, mobile.",
           "isEnabled": "Aktif",
           "isEditable": "Düzenlenebilir",
           "isSensitive": "Hassas veri",
+          "isSearchable": "Aranabilir",
+          "isSearchableHelp": "Bu alan AD kullanıcı aramasına dahil edilir.",
+          "isSearchableSensitiveDisabled": "Hassas veri alanları aranabilir yapılamaz.",
+          "isSensitiveHelp": "Hassas veri işaretlenirse değerler detay ekranında maskelenir ve aramaya dahil edilemez.",
           "validationType": "Validasyon tipi",
+          "validationTypeHelp": "Bu kural kullanıcı oluşturma/düzenleme işlemlerinde uygulanacaktır.",
           "maskingStrategy": "Maskeleme yöntemi",
+          "maskingStrategyHelp": "Maskeleme sadece hassas veri alanlarında uygulanır.",
           "sortOrder": "Sıra"
         },
         "validation": {

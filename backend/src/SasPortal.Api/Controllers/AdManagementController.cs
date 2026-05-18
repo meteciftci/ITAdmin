@@ -15,7 +15,8 @@ namespace SasPortal.Api.Controllers;
 public sealed class AdManagementController(
     IAdManagementSettingsService settingsService,
     IAdAttributeMappingService attributeMappingService,
-    IAdManagementValidationService validationService) : ControllerBase
+    IAdManagementValidationService validationService,
+    IAdUserDirectoryService adUserDirectoryService) : ControllerBase
 {
     [HttpGet("settings")]
     [RequirePermission(AdManagementPermissions.SettingsView)]
@@ -136,6 +137,52 @@ public sealed class AdManagementController(
             });
     }
 
+    [HttpGet("users")]
+    [RequirePermission(AdManagementPermissions.UsersView)]
+    public async Task<ActionResult<AdUserSearchResponse>> SearchUsers(
+        [FromQuery] string? search,
+        [FromQuery] string? status,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var statusFilter = ParseUserStatusFilter(status);
+        var result = await adUserDirectoryService.SearchUsersAsync(
+            new AppModels.AdUserSearchQuery(search, statusFilter, pageNumber, pageSize),
+            cancellationToken);
+
+        if (!result.IsSuccess || result.Page is null)
+        {
+            return MapDirectoryFailure(result.Message, result.FailureKind);
+        }
+
+        return Ok(new AdUserSearchResponse(
+            result.Page.Items.Select(MapUserListItem).ToList(),
+            result.Page.PageNumber,
+            result.Page.PageSize,
+            result.Page.HasNextPage));
+    }
+
+    [HttpGet("users/{id}")]
+    [RequirePermission(AdManagementPermissions.UsersView)]
+    public async Task<ActionResult<AdUserDetailResponse>> GetUserById(
+        [FromRoute] string id,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Guid.TryParse(id, out var objectGuid))
+        {
+            return BadRequest(new { message = "Geçersiz kullanıcı kimliği." });
+        }
+
+        var result = await adUserDirectoryService.GetUserByIdAsync(objectGuid, cancellationToken);
+        if (!result.IsSuccess || result.User is null)
+        {
+            return MapDirectoryFailure(result.Message, result.FailureKind);
+        }
+
+        return Ok(MapUserDetail(result.User));
+    }
+
     [HttpGet("attribute-mappings")]
     [RequirePermission(AdManagementPermissions.SettingsView)]
     public async Task<ActionResult<IReadOnlyList<AdAttributeMappingResponse>>> GetMappings(
@@ -159,6 +206,7 @@ public sealed class AdManagementController(
                 request.IsEnabled,
                 request.IsEditable,
                 request.IsSensitive,
+                request.IsSearchable,
                 request.ValidationType,
                 request.MaskingStrategy,
                 request.SortOrder,
@@ -191,6 +239,7 @@ public sealed class AdManagementController(
                 request.IsEnabled,
                 request.IsEditable,
                 request.IsSensitive,
+                request.IsSearchable,
                 request.ValidationType,
                 request.MaskingStrategy,
                 request.SortOrder,
@@ -262,6 +311,7 @@ public sealed class AdManagementController(
             item.IsEnabled,
             item.IsEditable,
             item.IsSensitive,
+            item.IsSearchable,
             item.ValidationType,
             item.MaskingStrategy,
             item.SortOrder);
@@ -274,6 +324,78 @@ public sealed class AdManagementController(
             result.Details
                 .Select(d => new AdManagementValidationDetailResponse(d.Key, d.Status, d.Message))
                 .ToList());
+
+    private static AppModels.AdUserStatusFilter ParseUserStatusFilter(string? status) =>
+        status?.Trim().ToLowerInvariant() switch
+        {
+            "disabled" => AppModels.AdUserStatusFilter.Disabled,
+            "all" => AppModels.AdUserStatusFilter.All,
+            _ => AppModels.AdUserStatusFilter.Active,
+        };
+
+    private ActionResult MapDirectoryFailure(string message, AppModels.AdDirectoryFailureKind? failureKind) =>
+        failureKind switch
+        {
+            AppModels.AdDirectoryFailureKind.NotFound => NotFound(new { message }),
+            AppModels.AdDirectoryFailureKind.InvalidRequest => BadRequest(new { message }),
+            AppModels.AdDirectoryFailureKind.ConnectionFailed => StatusCode(
+                StatusCodes.Status503ServiceUnavailable,
+                new { message }),
+            _ => BadRequest(new { message }),
+        };
+
+    private static AdUserListItemResponse MapUserListItem(AppModels.AdUserListItem item) =>
+        new(
+            item.Id,
+            item.DistinguishedName,
+            item.SamAccountName,
+            item.UserPrincipalName,
+            item.DisplayName,
+            item.Mail,
+            item.Department,
+            item.IsEnabled,
+            item.IsLockedOut,
+            item.WhenCreated,
+            item.WhenChanged,
+            item.LastLogonAt);
+
+    private static AdUserDetailResponse MapUserDetail(AppModels.AdUserDetail item) =>
+        new(
+            item.Id,
+            item.SamAccountName,
+            item.UserPrincipalName,
+            item.DisplayName,
+            item.Mail,
+            item.GivenName,
+            item.Surname,
+            item.Department,
+            item.IsEnabled,
+            item.IsLockedOut,
+            item.PasswordLastSetAt,
+            item.LastLogonAt,
+            item.WhenCreated,
+            item.WhenChanged,
+            item.Groups
+                .Select(MapGroupMembership)
+                .ToList(),
+            item.MappedAttributes
+                .Select(MapMappedAttribute)
+                .ToList());
+
+    private static AdUserGroupMembershipResponse MapGroupMembership(AppModels.AdUserGroupMembership item) =>
+        new(item.Name, item.DistinguishedName);
+
+    private static MappedAdUserAttributeResponse MapMappedAttribute(AppModels.MappedAdUserAttribute item) =>
+        new(
+            item.LogicalField,
+            item.DisplayName,
+            item.AdAttribute,
+            item.Value,
+            item.IsSensitive,
+            item.MaskingStrategy,
+            item.IsEditable,
+            item.IsSearchable,
+            item.SortOrder);
 
     private static string? ResolveActorUserName(ClaimsPrincipal principal)
     {

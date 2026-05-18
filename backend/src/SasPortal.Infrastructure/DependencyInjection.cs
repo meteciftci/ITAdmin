@@ -19,6 +19,7 @@ public static class DependencyInjection
         services.AddScoped<ILdapService, LdapService>();
         services.AddScoped<ITokenService, JwtTokenService>();
         services.AddScoped<IAdManagementValidationService, AdManagementValidationService>();
+        services.AddScoped<IAdUserDirectoryService, AdUserDirectoryService>();
 
         return services;
     }

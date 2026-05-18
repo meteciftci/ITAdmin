@@ -12,6 +12,7 @@ import trRoles from "@/locales/tr/roles.json";
 import trSecurityLogs from "@/locales/tr/securityLogs.json";
 import trSettings from "@/locales/tr/settings.json";
 import trSetup from "@/locales/tr/setup.json";
+import trAdManagement from "@/locales/tr/adManagement.json";
 import trUsers from "@/locales/tr/users.json";
 
 import enAuth from "@/locales/en/auth.json";
@@ -25,6 +26,7 @@ import enRoles from "@/locales/en/roles.json";
 import enSecurityLogs from "@/locales/en/securityLogs.json";
 import enSettings from "@/locales/en/settings.json";
 import enSetup from "@/locales/en/setup.json";
+import enAdManagement from "@/locales/en/adManagement.json";
 import enUsers from "@/locales/en/users.json";
 
 export type SupportedLanguage = "tr" | "en";
@@ -43,6 +45,7 @@ const resources = {
     home: trHome.home,
     errors: trErrors.errors,
     users: trUsers.users,
+    adManagement: trAdManagement.adManagement,
     roles: trRoles.roles,
     permissions: trPermissions.permissions,
     securityLogs: trSecurityLogs.securityLogs,
@@ -57,6 +60,7 @@ const resources = {
     home: enHome.home,
     errors: enErrors.errors,
     users: enUsers.users,
+    adManagement: enAdManagement.adManagement,
     roles: enRoles.roles,
     permissions: enPermissions.permissions,
     securityLogs: enSecurityLogs.securityLogs,
@@ -77,6 +81,7 @@ void i18n.use(initReactI18next).init({
     "home",
     "errors",
     "users",
+    "adManagement",
     "roles",
     "permissions",
     "auditLogs",

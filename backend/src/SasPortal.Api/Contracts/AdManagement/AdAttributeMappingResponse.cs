@@ -8,6 +8,7 @@ public sealed record AdAttributeMappingResponse(
     bool IsEnabled,
     bool IsEditable,
     bool IsSensitive,
+    bool IsSearchable,
     string ValidationType,
     string MaskingStrategy,
     int SortOrder);

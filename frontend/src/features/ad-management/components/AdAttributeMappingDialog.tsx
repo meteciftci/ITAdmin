@@ -29,6 +29,7 @@ export type AdAttributeMappingDialogFormState = {
   isEnabled: boolean;
   isEditable: boolean;
   isSensitive: boolean;
+  isSearchable: boolean;
   validationType: string;
   maskingStrategy: string;
   sortOrder: number;
@@ -55,6 +56,7 @@ function buildInitialState(
       isEnabled: true,
       isEditable: true,
       isSensitive: false,
+      isSearchable: false,
       validationType: "None",
       maskingStrategy: "None",
       sortOrder: 0,
@@ -68,6 +70,7 @@ function buildInitialState(
     isEnabled: initialValue.isEnabled,
     isEditable: initialValue.isEditable,
     isSensitive: initialValue.isSensitive,
+    isSearchable: initialValue.isSearchable,
     validationType: initialValue.validationType,
     maskingStrategy: initialValue.maskingStrategy,
     sortOrder: initialValue.sortOrder,
@@ -150,7 +153,17 @@ function DialogContents({
     field: K,
     value: AdAttributeMappingDialogFormState[K],
   ) {
-    setState((prev) => ({ ...prev, [field]: value }));
+    setState((prev) => {
+      const next = { ...prev, [field]: value };
+      if (field === "isSensitive") {
+        if (value === true) {
+          next.isSearchable = false;
+        } else {
+          next.maskingStrategy = "None";
+        }
+      }
+      return next;
+    });
     setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
   }
 
@@ -199,7 +212,11 @@ function DialogContents({
               />
               {fieldErrors.displayName ? (
                 <p className="text-xs text-destructive">{fieldErrors.displayName}</p>
-              ) : null}
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  {t("settings:adManagement.mappings.fields.displayNameHelp")}
+                </p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -255,6 +272,9 @@ function DialogContents({
                   </option>
                 ))}
               </Select>
+              <p className="text-xs text-muted-foreground">
+                {t("settings:adManagement.mappings.fields.validationTypeHelp")}
+              </p>
             </div>
 
             <div className="space-y-1.5">
@@ -264,6 +284,7 @@ function DialogContents({
               <Select
                 id="ad-mapping-masking-strategy"
                 value={state.maskingStrategy}
+                disabled={!state.isSensitive}
                 onChange={(event) => updateField("maskingStrategy", event.target.value)}
               >
                 {AD_MASKING_STRATEGIES.map((value) => (
@@ -272,10 +293,13 @@ function DialogContents({
                   </option>
                 ))}
               </Select>
+              <p className="text-xs text-muted-foreground">
+                {t("settings:adManagement.mappings.fields.maskingStrategyHelp")}
+              </p>
             </div>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
             <ToggleField
               id="ad-mapping-is-enabled"
               label={t("settings:adManagement.mappings.fields.isEnabled")}
@@ -288,12 +312,31 @@ function DialogContents({
               checked={state.isEditable}
               onChange={(checked) => updateField("isEditable", checked)}
             />
-            <ToggleField
-              id="ad-mapping-is-sensitive"
-              label={t("settings:adManagement.mappings.fields.isSensitive")}
-              checked={state.isSensitive}
-              onChange={(checked) => updateField("isSensitive", checked)}
-            />
+            <div className="space-y-1">
+              <ToggleField
+                id="ad-mapping-is-sensitive"
+                label={t("settings:adManagement.mappings.fields.isSensitive")}
+                checked={state.isSensitive}
+                onChange={(checked) => updateField("isSensitive", checked)}
+              />
+              <p className="text-xs text-muted-foreground">
+                {t("settings:adManagement.mappings.fields.isSensitiveHelp")}
+              </p>
+            </div>
+            <div className="space-y-1 md:col-span-2 lg:col-span-1">
+              <ToggleField
+                id="ad-mapping-is-searchable"
+                label={t("settings:adManagement.mappings.fields.isSearchable")}
+                checked={state.isSearchable}
+                disabled={state.isSensitive}
+                onChange={(checked) => updateField("isSearchable", checked)}
+              />
+              <p className="text-xs text-muted-foreground">
+                {state.isSensitive
+                  ? t("settings:adManagement.mappings.fields.isSearchableSensitiveDisabled")
+                  : t("settings:adManagement.mappings.fields.isSearchableHelp")}
+              </p>
+            </div>
           </div>
         </div>
         <DialogFooter>
@@ -313,11 +356,13 @@ function ToggleField({
   id,
   label,
   checked,
+  disabled = false,
   onChange,
 }: {
   id: string;
   label: string;
   checked: boolean;
+  disabled?: boolean;
   onChange: (value: boolean) => void;
 }) {
   return (
@@ -325,9 +370,13 @@ function ToggleField({
       <Checkbox
         id={id}
         checked={checked}
+        disabled={disabled}
         onChange={(event) => onChange(event.target.checked)}
       />
-      <label htmlFor={id} className="cursor-pointer text-sm">
+      <label
+        htmlFor={id}
+        className={disabled ? "text-sm text-muted-foreground" : "cursor-pointer text-sm"}
+      >
         {label}
       </label>
     </div>

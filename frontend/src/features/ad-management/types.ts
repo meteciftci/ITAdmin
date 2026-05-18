@@ -48,6 +48,7 @@ export type AdAttributeMapping = {
   isEnabled: boolean;
   isEditable: boolean;
   isSensitive: boolean;
+  isSearchable: boolean;
   validationType: string;
   maskingStrategy: string;
   sortOrder: number;
@@ -60,6 +61,7 @@ export type CreateAdAttributeMappingRequest = {
   isEnabled: boolean;
   isEditable: boolean;
   isSensitive: boolean;
+  isSearchable: boolean;
   validationType: string;
   maskingStrategy: string;
   sortOrder: number;
@@ -71,6 +73,7 @@ export type UpdateAdAttributeMappingRequest = {
   isEnabled: boolean;
   isEditable: boolean;
   isSensitive: boolean;
+  isSearchable: boolean;
   validationType: string;
   maskingStrategy: string;
   sortOrder: number;
@@ -112,3 +115,70 @@ export type AdMaskingStrategy = (typeof AD_MASKING_STRATEGIES)[number];
 
 export const AD_LOGICAL_FIELD_REGEX = /^[a-z][a-zA-Z0-9]{1,63}$/;
 export const AD_ATTRIBUTE_NAME_REGEX = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
+
+export type AdUserStatusFilter = "active" | "disabled" | "all";
+
+export type AdUserListItem = {
+  id: string;
+  distinguishedName: string;
+  samAccountName: string | null;
+  userPrincipalName: string | null;
+  displayName: string | null;
+  mail: string | null;
+  department: string | null;
+  isEnabled: boolean;
+  isLockedOut: boolean;
+  whenCreated: string | null;
+  whenChanged: string | null;
+  lastLogonAt: string | null;
+};
+
+export type AdUserSearchResponse = {
+  items: AdUserListItem[];
+  pageNumber: number;
+  pageSize: number;
+  hasNextPage: boolean;
+};
+
+export type AdUserGroupMembership = {
+  name: string;
+  distinguishedName: string;
+};
+
+export type MappedAdUserAttribute = {
+  logicalField: string;
+  displayName: string;
+  adAttribute: string;
+  value: string[] | null;
+  isSensitive: boolean;
+  maskingStrategy: string | null;
+  isEditable: boolean;
+  isSearchable: boolean;
+  sortOrder: number;
+};
+
+export type AdUserDetail = {
+  id: string;
+  samAccountName: string | null;
+  userPrincipalName: string | null;
+  displayName: string | null;
+  mail: string | null;
+  givenName: string | null;
+  surname: string | null;
+  department: string | null;
+  isEnabled: boolean;
+  isLockedOut: boolean;
+  passwordLastSetAt: string | null;
+  lastLogonAt: string | null;
+  whenCreated: string | null;
+  whenChanged: string | null;
+  groups: AdUserGroupMembership[];
+  mappedAttributes: MappedAdUserAttribute[];
+};
+
+export type GetAdUsersParams = {
+  search?: string;
+  status?: AdUserStatusFilter;
+  pageNumber?: number;
+  pageSize?: number;
+};

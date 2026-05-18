@@ -9,6 +9,7 @@ import { RootRedirect } from "@/app/RootRedirect";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { RequireAuth } from "@/features/auth/RequireAuth";
+import { RequireAnyPermission } from "@/features/auth/RequireAnyPermission";
 import { RequirePermission } from "@/features/auth/RequirePermission";
 import { SetupRequiredPage } from "@/features/setup/SetupRequiredPage";
 
@@ -39,6 +40,11 @@ const UsersPage = lazy(() =>
 const SettingsPage = lazy(() =>
   import("@/features/settings/SettingsPage").then((module) => ({
     default: module.SettingsPage,
+  })),
+);
+const AdUsersPage = lazy(() =>
+  import("@/features/ad-management/AdUsersPage").then((module) => ({
+    default: module.AdUsersPage,
   })),
 );
 const ErrorPage = lazy(() =>
@@ -171,10 +177,26 @@ export const router = createBrowserRouter([
     path: "/settings",
     element: (
       <RequireAuth>
-        <RequirePermission permission="Settings.View">
+        <RequireAnyPermission
+          permissions={["Settings.View", "AdManagement.Settings.View"]}
+        >
           <AppLayout>
             <LazyRoute>
               <SettingsPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequireAnyPermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/ad-management/users",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission="AdManagement.Users.View">
+          <AppLayout>
+            <LazyRoute>
+              <AdUsersPage />
             </LazyRoute>
           </AppLayout>
         </RequirePermission>

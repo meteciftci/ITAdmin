@@ -124,6 +124,7 @@
       }
     },
     "adManagement": {
+      "readOnlyNotice": "You can view AD management settings. Additional permission is required to update them.",
       "connection": {
         "title": "Connection and Service Account",
         "description": "Configure the domain, OUs, and service account that the AD Management module uses.",
@@ -188,15 +189,22 @@
         },
         "fields": {
           "logicalField": "Logical field",
-          "logicalFieldHelp": "Set on create and cannot be changed afterwards. Example: mobilePhone.",
+          "logicalFieldHelp": "Internal system key. Cannot be changed after creation.",
+          "displayNameHelp": "Display name shown in the user interface.",
           "displayName": "Display name",
           "attributeName": "AD attribute",
-          "attributeNameHelp": "Attribute name in Active Directory. Example: extensionAttribute1.",
+          "attributeNameHelp": "Enter the LDAP attribute display name. Example: employeeNumber, extensionAttribute1, mobile.",
           "isEnabled": "Enabled",
           "isEditable": "Editable",
           "isSensitive": "Sensitive data",
+          "isSearchable": "Searchable",
+          "isSearchableHelp": "Include this field in AD user search.",
+          "isSearchableSensitiveDisabled": "Sensitive fields cannot be made searchable.",
+          "isSensitiveHelp": "When marked sensitive, values are masked in details and cannot be included in search.",
           "validationType": "Validation type",
+          "validationTypeHelp": "This rule will be applied during user create/update operations.",
           "maskingStrategy": "Masking strategy",
+          "maskingStrategyHelp": "Masking is only applied to sensitive fields.",
           "sortOrder": "Order"
         },
         "validation": {

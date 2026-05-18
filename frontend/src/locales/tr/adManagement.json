@@ -1,0 +1,74 @@
+{
+  "adManagement": {
+    "moduleTitle": "AD Yönetim",
+    "users": {
+      "title": "AD Kullanıcıları",
+      "description": "Active Directory kullanıcılarını görüntüleyin ve arayın.",
+      "searchPlaceholder": "Kullanıcı ara...",
+      "filters": {
+        "active": "Aktif",
+        "disabled": "Pasif",
+        "all": "Tümü"
+      },
+      "table": {
+        "displayName": "Görünen ad",
+        "username": "Kullanıcı adı",
+        "upn": "UPN",
+        "email": "E-posta",
+        "department": "Departman",
+        "status": "Durum",
+        "locked": "Kilitli",
+        "lastLogon": "Son oturum",
+        "actions": "İşlemler"
+      },
+      "status": {
+        "enabled": "Aktif",
+        "disabled": "Pasif",
+        "locked": "Kilitli",
+        "unlocked": "Kilitli değil"
+      },
+      "actions": {
+        "detail": "Detay",
+        "refresh": "Yenile"
+      },
+      "empty": {
+        "searchRequiredTitle": "Arama gerekli",
+        "searchRequired": "AD kullanıcısı aramak için en az 2 karakter girin.",
+        "title": "Kullanıcı bulunamadı",
+        "description": "Mevcut filtrelere uygun AD kullanıcısı bulunamadı."
+      },
+      "errors": {
+        "loadFailed": "AD kullanıcıları yüklenemedi.",
+        "detailFailed": "Kullanıcı detayı yüklenemedi.",
+        "notFound": "Kullanıcı bulunamadı."
+      },
+      "pagination": {
+        "page": "Sayfa {{pageNumber}}",
+        "previous": "Önceki",
+        "next": "Sonraki"
+      },
+      "detail": {
+        "dialogTitle": "Kullanıcı detayı",
+        "displayName": "Görünen ad",
+        "username": "Kullanıcı adı",
+        "upn": "UPN",
+        "email": "E-posta",
+        "givenName": "Ad",
+        "surname": "Soyad",
+        "department": "Departman",
+        "status": "Durum",
+        "locked": "Kilit durumu",
+        "created": "Oluşturulma",
+        "changed": "Değiştirilme",
+        "lastLogon": "Son oturum",
+        "passwordLastSet": "Şifre son değiştirme",
+        "groups": "Grup üyelikleri",
+        "mappedAttributes": "Eşleştirilmiş attribute'lar",
+        "sections": {
+          "basic": "Temel bilgiler",
+          "accountStatus": "Hesap durumu"
+        }
+      }
+    }
+  }
+}

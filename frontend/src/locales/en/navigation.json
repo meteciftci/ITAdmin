@@ -2,12 +2,15 @@
   "navigation": {
     "groups": {
       "main": "Main",
+      "modules": "Modules",
       "administration": "Administration",
       "monitoring": "Monitoring",
       "system": "System"
     },
     "items": {
       "home": "Home",
+      "adManagement": "AD Management",
+      "adManagementUsers": "Users",
       "users": "Users",
       "roles": "Roles",
       "permissions": "Permissions",

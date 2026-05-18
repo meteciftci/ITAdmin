@@ -7,6 +7,7 @@ import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import {
   AD_MANAGEMENT_MAPPINGS_QUERY_KEY,
   AD_MANAGEMENT_SETTINGS_QUERY_KEY,
+  invalidateAdManagementUserQueries,
   createAdAttributeMapping,
   deleteAdAttributeMapping,
   getAdAttributeMappings,
@@ -118,6 +119,7 @@ export function AdManagementSettingsTab({ readOnly }: Props) {
       await queryClient.invalidateQueries({
         queryKey: AD_MANAGEMENT_MAPPINGS_QUERY_KEY,
       });
+      await invalidateAdManagementUserQueries(queryClient);
       toast.success(t("settings:adManagement.mappings.messages.createSuccess"));
       setDialog({ open: false, mode: "create", initial: null, errorMessage: null });
     },
@@ -141,6 +143,7 @@ export function AdManagementSettingsTab({ readOnly }: Props) {
         isEnabled: vars.payload.isEnabled,
         isEditable: vars.payload.isEditable,
         isSensitive: vars.payload.isSensitive,
+        isSearchable: vars.payload.isSearchable,
         validationType: vars.payload.validationType,
         maskingStrategy: vars.payload.maskingStrategy,
         sortOrder: vars.payload.sortOrder,
@@ -149,6 +152,7 @@ export function AdManagementSettingsTab({ readOnly }: Props) {
       await queryClient.invalidateQueries({
         queryKey: AD_MANAGEMENT_MAPPINGS_QUERY_KEY,
       });
+      await invalidateAdManagementUserQueries(queryClient);
       toast.success(t("settings:adManagement.mappings.messages.updateSuccess"));
       setDialog({ open: false, mode: "edit", initial: null, errorMessage: null });
     },
@@ -167,6 +171,7 @@ export function AdManagementSettingsTab({ readOnly }: Props) {
       await queryClient.invalidateQueries({
         queryKey: AD_MANAGEMENT_MAPPINGS_QUERY_KEY,
       });
+      await invalidateAdManagementUserQueries(queryClient);
       toast.success(t("settings:adManagement.mappings.messages.deleteSuccess"));
       setDeleteState({ open: false, mapping: null });
     },
@@ -216,6 +221,7 @@ export function AdManagementSettingsTab({ readOnly }: Props) {
         isEnabled: value.isEnabled,
         isEditable: value.isEditable,
         isSensitive: value.isSensitive,
+        isSearchable: value.isSearchable,
         validationType: value.validationType,
         maskingStrategy: value.maskingStrategy,
         sortOrder: value.sortOrder,
