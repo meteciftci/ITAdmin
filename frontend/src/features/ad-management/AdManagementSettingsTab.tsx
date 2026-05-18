@@ -13,69 +13,17 @@ import {
   getAdManagementSettings,
   updateAdAttributeMapping,
   updateAdManagementSettings,
-  validateAdManagementSettings,
 } from "@/features/ad-management/api";
+import { getAdManagementSaveErrorMessage } from "@/features/ad-management/ad-management-save-error";
 import { AdAttributeMappingDialog, type AdAttributeMappingDialogFormState } from "@/features/ad-management/components/AdAttributeMappingDialog";
 import { AdAttributeMappingsSection } from "@/features/ad-management/components/AdAttributeMappingsSection";
 import { AdManagementConnectionForm } from "@/features/ad-management/components/AdManagementConnectionForm";
 import type {
   AdAttributeMapping,
   AdManagementSettings,
-  AdManagementValidationResult,
   UpdateAdManagementSettingsRequest,
 } from "@/features/ad-management/types";
 import { getApiErrorMessage } from "@/lib/api-error";
-import { AxiosError } from "axios";
-
-function extractValidationFromError(
-  error: unknown,
-): AdManagementValidationResult | null {
-  if (!(error instanceof AxiosError)) {
-    return null;
-  }
-  const data = error.response?.data;
-  if (!data || typeof data !== "object") {
-    return null;
-  }
-  const raw = (data as { validation?: unknown }).validation;
-  if (!raw || typeof raw !== "object") {
-    return null;
-  }
-  const candidate = raw as Partial<AdManagementValidationResult> & {
-    details?: unknown;
-  };
-  if (
-    typeof candidate.isValid !== "boolean" ||
-    typeof candidate.message !== "string" ||
-    typeof candidate.checkedAt !== "string" ||
-    !Array.isArray(candidate.details)
-  ) {
-    return null;
-  }
-  return {
-    isValid: candidate.isValid,
-    message: candidate.message,
-    checkedAt: candidate.checkedAt,
-    details: candidate.details
-      .map((item) => {
-        if (!item || typeof item !== "object") return null;
-        const detail = item as Record<string, unknown>;
-        if (
-          typeof detail.key !== "string" ||
-          typeof detail.status !== "string"
-        ) {
-          return null;
-        }
-        return {
-          key: detail.key,
-          status: detail.status,
-          message:
-            typeof detail.message === "string" ? detail.message : null,
-        };
-      })
-      .filter((d): d is AdManagementValidationResult["details"][number] => d !== null),
-  };
-}
 
 function buildSettingsKey(settings: AdManagementSettings | undefined): string {
   if (!settings) return "no-settings";
@@ -133,58 +81,20 @@ export function AdManagementSettingsTab({ readOnly }: Props) {
     refetchOnWindowFocus: false,
   });
 
-  const [saveValidationError, setSaveValidationError] =
-    useState<AdManagementValidationResult | null>(null);
-  const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null);
-
   const updateSettingsMutation = useMutation({
     mutationFn: (payload: UpdateAdManagementSettingsRequest) =>
       updateAdManagementSettings(payload),
-    onMutate: () => {
-      setSaveValidationError(null);
-      setSaveErrorMessage(null);
-    },
     onSuccess: async () => {
-      setSaveValidationError(null);
-      setSaveErrorMessage(null);
       await queryClient.invalidateQueries({
         queryKey: AD_MANAGEMENT_SETTINGS_QUERY_KEY,
       });
       toast.success(t("settings:adManagement.connection.messages.saveSuccess"));
     },
     onError: (error: unknown) => {
-      const validation = extractValidationFromError(error);
-      const fallback = validation
-        ? t("settings:adManagement.connection.messages.saveValidationFailed")
-        : t("settings:adManagement.connection.messages.saveFailed");
-      const message = getApiErrorMessage(error, fallback);
-      setSaveValidationError(validation);
-      setSaveErrorMessage(message);
-      toast.error(message);
-    },
-  });
-
-  const validateMutation = useMutation({
-    mutationFn: validateAdManagementSettings,
-    onSuccess: async (result) => {
-      await queryClient.invalidateQueries({
-        queryKey: AD_MANAGEMENT_SETTINGS_QUERY_KEY,
-      });
-      if (result.isValid) {
-        toast.success(t("settings:adManagement.connection.messages.validateSuccess"), {
-          description: result.message,
-        });
-      } else {
-        toast.error(t("settings:adManagement.connection.messages.validateFailed"), {
-          description: result.message,
-        });
-      }
-    },
-    onError: (error: unknown) => {
       toast.error(
-        getApiErrorMessage(
+        getAdManagementSaveErrorMessage(
           error,
-          t("settings:adManagement.connection.messages.validateFailed"),
+          t("settings:adManagement.connection.messages.saveFailed"),
         ),
       );
     },
@@ -344,11 +254,7 @@ export function AdManagementSettingsTab({ readOnly }: Props) {
           settings={settingsQuery.data}
           readOnly={readOnly}
           isSaving={updateSettingsMutation.isPending}
-          isValidating={validateMutation.isPending}
-          saveValidationError={saveValidationError}
-          saveErrorMessage={saveErrorMessage}
           onSave={(payload) => updateSettingsMutation.mutate(payload)}
-          onValidate={() => validateMutation.mutate()}
         />
       </section>
 

@@ -153,24 +153,13 @@
         "passwordKeepHint": "Leaving the password field empty keeps the existing password.",
         "clearPassword": "Clear stored password",
         "actions": {
-          "save": "Save AD settings",
-          "test": "Test connection"
+          "save": "Save AD settings"
         },
         "lastValidation": "Last validation: {{status}} - {{message}}",
         "messages": {
           "saveSuccess": "AD management settings saved.",
           "saveFailed": "AD management settings could not be saved.",
-          "saveValidationFailed": "Connection validation failed. Settings were not saved.",
-          "validateSuccess": "AD management connection validated.",
-          "validateFailed": "AD management connection could not be validated."
-        },
-        "validationDetails": {
-          "title": "Validation details",
-          "status": {
-            "Ok": "Ok",
-            "Failed": "Failed",
-            "Skipped": "Skipped"
-          }
+          "requiredFieldsMissing": "Required AD management fields are missing."
         }
       },
       "mappings": {

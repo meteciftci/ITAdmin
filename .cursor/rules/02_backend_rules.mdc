@@ -4,7 +4,7 @@ globs:
   - "backend/**/*.cs"
   - "backend/**/*.csproj"
   - "backend/**/*.json"
-alwaysApply: false
+alwaysApply: true
 ---
 
 # SASPortal Backend Rules
@@ -252,7 +252,15 @@ Response `PagedResult<T>` olmalıdır.
 - Connection string production'da güvenli sağlanır.
 - Şifre, token, API key, connection string password loglanmaz.
 
-## 21. Anti-Patternler
+## 21. AD Management Settings Validation Standardı
+
+- AD Management aktifken bağlantı için kritik DN ve domain alanları backend tarafında zorunlu doğrulanmalıdır.
+- Frontend validation güvenlik veya veri bütünlüğü kaynağı kabul edilmez.
+- `DomainFqdn`, `NetbiosDomainName`, `DefaultNamingContext`, `BaseDn`, `UsersRootOu`, `DisabledUsersOu` ve servis hesabı bilgileri backend save akışında doğrulanmalıdır.
+- Validation mesajları kullanıcı dostu olmalı; şifre, secret veya stack trace içermemelidir.
+- Tercih edilen DC doğrulaması korunmalı; `DomainFqdn` yanlışsa preferred DC doğru olsa bile kayıt başarısız olmalıdır.
+
+## 22. Anti-Patternler
 
 Yapma:
 

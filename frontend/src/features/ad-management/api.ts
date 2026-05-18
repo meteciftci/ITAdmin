@@ -3,7 +3,6 @@ import { apiClient } from "@/lib/api-client";
 import type {
   AdAttributeMapping,
   AdManagementSettings,
-  AdManagementValidationResult,
   CreateAdAttributeMappingRequest,
   UpdateAdAttributeMappingRequest,
   UpdateAdManagementSettingsRequest,
@@ -35,15 +34,6 @@ export const updateAdManagementSettings = async (
   );
   return data;
 };
-
-export const validateAdManagementSettings =
-  async (): Promise<AdManagementValidationResult> => {
-    const { data } = await apiClient.post<AdManagementValidationResult>(
-      "/ad-management/settings/validate",
-      {},
-    );
-    return data;
-  };
 
 export const getAdAttributeMappings = async (): Promise<AdAttributeMapping[]> => {
   const { data } = await apiClient.get<AdAttributeMapping[]>(

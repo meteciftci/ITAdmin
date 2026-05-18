@@ -22,6 +22,8 @@ public sealed class AdManagementSettingsService(
     private const int LdapPortMax = 65535;
     private const int PowerShellTimeoutMin = 5;
     private const int PowerShellTimeoutMax = 300;
+    private const string MissingRequiredFieldsMessage =
+        "AD yönetim ayarları için zorunlu alanlar eksik.";
 
     public async Task<AdManagementSettingsModel> GetSettingsAsync(CancellationToken cancellationToken = default)
     {
@@ -70,13 +72,16 @@ public sealed class AdManagementSettingsService(
         if (request.IsEnabled)
         {
             if (string.IsNullOrWhiteSpace(domainFqdn) ||
+                string.IsNullOrWhiteSpace(netbios) ||
+                string.IsNullOrWhiteSpace(defaultNc) ||
                 string.IsNullOrWhiteSpace(baseDn) ||
                 string.IsNullOrWhiteSpace(usersRootOu) ||
+                string.IsNullOrWhiteSpace(disabledUsersOu) ||
                 string.IsNullOrWhiteSpace(serviceAccountUserName))
             {
                 return new UpdateAdManagementSettingsResult(
                     false,
-                    "Required AD management fields are missing.",
+                    MissingRequiredFieldsMessage,
                     null);
             }
 
@@ -102,6 +107,7 @@ public sealed class AdManagementSettingsService(
             var candidate = new AdManagementConnectionParameters(
                 DomainFqdn: domainFqdn,
                 NetbiosDomainName: netbios,
+                DefaultNamingContext: defaultNc,
                 BaseDn: baseDn,
                 UsersRootOu: usersRootOu,
                 DisabledUsersOu: disabledUsersOu,
@@ -391,6 +397,7 @@ public sealed class AdManagementSettingsService(
         return new AdManagementConnectionParameters(
             entity.DomainFqdn,
             entity.NetbiosDomainName,
+            entity.DefaultNamingContext,
             entity.BaseDn,
             entity.UsersRootOu,
             entity.DisabledUsersOu,

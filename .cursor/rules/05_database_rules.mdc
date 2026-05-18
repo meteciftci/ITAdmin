@@ -4,7 +4,7 @@ globs:
   - "backend/src/Sas.Domain/**/*.cs"
   - "backend/src/Sas.Persistence/**/*.cs"
   - "backend/src/Sas.Application/**/*.cs"
-alwaysApply: false
+alwaysApply: true
 ---
 
 # SASPortal Database Rules

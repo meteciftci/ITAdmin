@@ -153,24 +153,13 @@
         "passwordKeepHint": "Parola alanı boş bırakılırsa mevcut parola korunur.",
         "clearPassword": "Mevcut parolayı temizle",
         "actions": {
-          "save": "AD ayarlarını kaydet",
-          "test": "Bağlantıyı test et"
+          "save": "AD ayarlarını kaydet"
         },
         "lastValidation": "Son doğrulama: {{status}} - {{message}}",
         "messages": {
           "saveSuccess": "AD yönetim ayarları kaydedildi.",
           "saveFailed": "AD yönetim ayarları kaydedilemedi.",
-          "saveValidationFailed": "Bağlantı doğrulanamadı. Ayarlar kaydedilmedi.",
-          "validateSuccess": "AD yönetim bağlantısı doğrulandı.",
-          "validateFailed": "AD yönetim bağlantısı doğrulanamadı."
-        },
-        "validationDetails": {
-          "title": "Doğrulama detayları",
-          "status": {
-            "Ok": "Başarılı",
-            "Failed": "Başarısız",
-            "Skipped": "Atlandı"
-          }
+          "requiredFieldsMissing": "AD yönetim ayarları için zorunlu alanlar eksik."
         }
       },
       "mappings": {

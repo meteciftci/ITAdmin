@@ -169,8 +169,84 @@ public sealed class AdManagementSettingsServiceTests
         var result = await service.UpdateSettingsAsync(request);
 
         Assert.False(result.IsSuccess);
-        Assert.Contains("Required", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("zorunlu alanlar eksik", result.Message, StringComparison.Ordinal);
         Assert.Empty(dbContext.AdManagementSettings);
+    }
+
+    [Theory]
+    [InlineData(null, "CORP", "DC=corp,DC=example,DC=com", "DC=corp,DC=example,DC=com", "OU=Users,DC=corp,DC=example,DC=com", "OU=Disabled,DC=corp,DC=example,DC=com")]
+    [InlineData("corp.example.com", null, "DC=corp,DC=example,DC=com", "DC=corp,DC=example,DC=com", "OU=Users,DC=corp,DC=example,DC=com", "OU=Disabled,DC=corp,DC=example,DC=com")]
+    [InlineData("corp.example.com", "CORP", null, "DC=corp,DC=example,DC=com", "OU=Users,DC=corp,DC=example,DC=com", "OU=Disabled,DC=corp,DC=example,DC=com")]
+    [InlineData("corp.example.com", "CORP", "DC=corp,DC=example,DC=com", "DC=corp,DC=example,DC=com", "OU=Users,DC=corp,DC=example,DC=com", null)]
+    public async Task UpdateSettingsAsync_WhenEnabled_RequiresAllMandatoryConnectionFields(
+        string? domainFqdn,
+        string? netbiosDomainName,
+        string? defaultNamingContext,
+        string? baseDn,
+        string? usersRootOu,
+        string? disabledUsersOu)
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext);
+
+        var request = CreateRequest(
+            isEnabled: true,
+            domainFqdn: domainFqdn,
+            netbiosDomainName: netbiosDomainName,
+            defaultNamingContext: defaultNamingContext,
+            baseDn: baseDn,
+            usersRootOu: usersRootOu,
+            disabledUsersOu: disabledUsersOu,
+            serviceAccountPassword: "secret");
+
+        var result = await service.UpdateSettingsAsync(request);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("zorunlu alanlar eksik", result.Message, StringComparison.Ordinal);
+        Assert.Empty(dbContext.AdManagementSettings);
+        Assert.Equal(0, dbContext.AdOperationLogs.Count(x => x.OperationType == "SettingsValidated"));
+    }
+
+    [Fact]
+    public async Task UpdateSettingsAsync_WhenIsEnabledFalse_AllowsMissingConnectionFields()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext);
+
+        var request = CreateRequest(
+            isEnabled: false,
+            domainFqdn: null,
+            netbiosDomainName: null,
+            defaultNamingContext: null,
+            baseDn: null,
+            usersRootOu: null,
+            disabledUsersOu: null,
+            serviceAccountPassword: null);
+
+        var result = await service.UpdateSettingsAsync(request);
+
+        Assert.True(result.IsSuccess);
+        Assert.Single(dbContext.AdManagementSettings);
+    }
+
+    [Fact]
+    public async Task UpdateSettingsAsync_WhenEnabled_PassesDefaultNamingContextToValidation()
+    {
+        await using var dbContext = CreateDbContext();
+        var validator = new FakeAdManagementValidationService();
+        var service = CreateService(dbContext, validator);
+
+        var request = CreateRequest(
+            isEnabled: true,
+            serviceAccountPassword: "secret",
+            defaultNamingContext: "DC=corp,DC=example,DC=com",
+            disabledUsersOu: "OU=Disabled,DC=corp,DC=example,DC=com");
+
+        await service.UpdateSettingsAsync(request);
+
+        Assert.NotNull(validator.LastConnection);
+        Assert.Equal("DC=corp,DC=example,DC=com", validator.LastConnection!.DefaultNamingContext);
+        Assert.Equal("OU=Disabled,DC=corp,DC=example,DC=com", validator.LastConnection.DisabledUsersOu);
     }
 
     [Fact]
@@ -567,8 +643,11 @@ public sealed class AdManagementSettingsServiceTests
     private static UpdateAdManagementSettingsRequest CreateRequest(
         bool isEnabled = false,
         string? domainFqdn = "corp.example.com",
+        string? netbiosDomainName = "CORP",
+        string? defaultNamingContext = "DC=corp,DC=example,DC=com",
         string? baseDn = "DC=corp,DC=example,DC=com",
         string? usersRootOu = "OU=Users,DC=corp,DC=example,DC=com",
+        string? disabledUsersOu = "OU=Disabled,DC=corp,DC=example,DC=com",
         string? serviceAccountUserName = "svc_ad",
         string? serviceAccountPassword = null,
         bool clearServiceAccountPassword = false,
@@ -578,11 +657,11 @@ public sealed class AdManagementSettingsServiceTests
         new(
             IsEnabled: isEnabled,
             DomainFqdn: domainFqdn,
-            NetbiosDomainName: "CORP",
-            DefaultNamingContext: null,
+            NetbiosDomainName: netbiosDomainName,
+            DefaultNamingContext: defaultNamingContext,
             BaseDn: baseDn,
             UsersRootOu: usersRootOu,
-            DisabledUsersOu: null,
+            DisabledUsersOu: disabledUsersOu,
             GroupsSearchBase: null,
             ComputersSearchBase: null,
             PreferredDomainControllers: preferredDomainControllers,

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -8,7 +9,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type {
   AdManagementSettings,
-  AdManagementValidationResult,
   UpdateAdManagementSettingsRequest,
 } from "@/features/ad-management/types";
 
@@ -36,11 +36,7 @@ type Props = {
   settings: AdManagementSettings | undefined;
   readOnly: boolean;
   isSaving: boolean;
-  isValidating: boolean;
-  saveValidationError: AdManagementValidationResult | null;
-  saveErrorMessage: string | null;
   onSave: (payload: UpdateAdManagementSettingsRequest) => void;
-  onValidate: () => void;
 };
 
 function buildInitialValues(
@@ -90,11 +86,7 @@ export function AdManagementConnectionForm({
   settings,
   readOnly,
   isSaving,
-  isValidating,
-  saveValidationError,
-  saveErrorMessage,
   onSave,
-  onValidate,
 }: Props) {
   const { t } = useTranslation(["settings", "common"]);
   const [values, setValues] = useState<AdManagementConnectionFormValues>(
@@ -112,8 +104,47 @@ export function AdManagementConnectionForm({
     if (!Number.isFinite(timeout) || timeout < 5 || timeout > 300) {
       return false;
     }
+
+    if (!values.isEnabled) {
+      return true;
+    }
+
+    const requiredFields = [
+      values.domainFqdn,
+      values.netbiosDomainName,
+      values.defaultNamingContext,
+      values.baseDn,
+      values.usersRootOu,
+      values.disabledUsersOu,
+      values.serviceAccountUserName,
+    ];
+    if (requiredFields.some((field) => field.trim().length === 0)) {
+      return false;
+    }
+
+    const hasServicePassword =
+      values.serviceAccountPassword.trim().length > 0 ||
+      (hasPassword && !values.clearServiceAccountPassword);
+    if (!hasServicePassword) {
+      return false;
+    }
+
     return true;
-  }, [values.ldapPort, values.powerShellTimeoutSeconds]);
+  }, [
+    hasPassword,
+    values.baseDn,
+    values.defaultNamingContext,
+    values.disabledUsersOu,
+    values.domainFqdn,
+    values.isEnabled,
+    values.ldapPort,
+    values.netbiosDomainName,
+    values.powerShellTimeoutSeconds,
+    values.serviceAccountPassword,
+    values.serviceAccountUserName,
+    values.usersRootOu,
+    values.clearServiceAccountPassword,
+  ]);
 
   function update<K extends keyof AdManagementConnectionFormValues>(
     field: K,
@@ -123,7 +154,12 @@ export function AdManagementConnectionForm({
   }
 
   function handleSave() {
-    if (!canSubmit) return;
+    if (!canSubmit) {
+      if (values.isEnabled) {
+        toast.error(t("settings:adManagement.connection.messages.requiredFieldsMissing"));
+      }
+      return;
+    }
 
     const ldapPort = Number.parseInt(values.ldapPort, 10);
     const timeout = Number.parseInt(values.powerShellTimeoutSeconds, 10);
@@ -379,54 +415,8 @@ export function AdManagementConnectionForm({
         </p>
       ) : null}
 
-      {saveValidationError && !saveValidationError.isValid ? (
-        <div className="space-y-2 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-xs">
-          <p className="font-medium text-destructive">
-            {saveErrorMessage ??
-              t("settings:adManagement.connection.messages.saveValidationFailed")}
-          </p>
-          <p className="text-destructive">{saveValidationError.message}</p>
-          {saveValidationError.details.length > 0 ? (
-            <div>
-              <p className="font-medium text-foreground">
-                {t("settings:adManagement.connection.validationDetails.title")}
-              </p>
-              <ul className="mt-1 space-y-1">
-                {saveValidationError.details.map((detail) => (
-                  <li
-                    key={`${detail.key}-${detail.status}`}
-                    className="flex items-start gap-2"
-                  >
-                    <span className="font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
-                      {t(`settings:adManagement.connection.validationDetails.status.${detail.status}`, {
-                        defaultValue: detail.status,
-                      })}
-                    </span>
-                    <span className="flex-1">
-                      <span className="font-medium">{detail.key}</span>
-                      {detail.message ? (
-                        <span className="ml-1 text-muted-foreground">
-                          - {detail.message}
-                        </span>
-                      ) : null}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-
       {!readOnly ? (
         <div className="flex flex-wrap justify-end gap-2">
-          <Button
-            variant="outline"
-            onClick={onValidate}
-            disabled={isValidating || isSaving}
-          >
-            {t("settings:adManagement.connection.actions.test")}
-          </Button>
           <Button onClick={handleSave} disabled={!canSubmit || isSaving}>
             {t("settings:adManagement.connection.actions.save")}
           </Button>

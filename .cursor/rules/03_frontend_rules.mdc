@@ -2,7 +2,7 @@
 description: SASPortal frontend kodu için React, TypeScript, routing, auth, API client, TanStack Query, form, tablo ve UI kuralları.
 globs:
   - "frontend/**/*.{ts,tsx,css,json}"
-alwaysApply: false
+alwaysApply: true
 ---
 
 # SASPortal Frontend Rules
@@ -610,6 +610,19 @@ Permissions.View
 ```
 
 SuperAdmin için permission bypass sadece merkezi `canAccess` helper üzerinden yapılır.
+
+### Settings Form / Backend Validation UX Standardı
+
+- Settings formlarında backend servis, bağlantı, kayıt veya validation hataları inline teknik detay bloğu olarak gösterilmez.
+- Form içinde sadece alan bazlı frontend validation hataları ilgili input yanında gösterilebilir.
+- Backend validation, servis bağlantısı ve kayıt hataları toast ile gösterilir.
+- Aynı hata mesajı ekranda birden fazla yerde tekrar edilmez.
+- Backend response içindeki validation details teknik amaçlıdır; kullanıcı formunda liste halinde gösterilmez.
+- Eğer backend save endpoint'i zaten validation yapıyorsa frontend'de ayrı "Bağlantıyı test et" / "Doğrula" butonu eklenmez.
+- Kullanıcı tek "Kaydet" aksiyonu ile ilerler.
+- Kaydet işlemi validation başarısızsa kayıt yapmaz ve kullanıcıya tek, net toast mesajı gösterir.
+- Ayrı test/doğrula butonu ancak açık ürün kararı varsa eklenir.
+- Settings form footer'larında gereksiz çift aksiyon butonu oluşturulmaz.
 
 ### Hata Gösterim Standardı
 

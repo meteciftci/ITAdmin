@@ -2,7 +2,7 @@
 description: SASPortal frontend için çok dil, translation key, dil tercihi ve tarih formatlama kuralları.
 globs:
   - "frontend/**/*.{ts,tsx,json}"
-alwaysApply: false
+alwaysApply: true
 ---
 
 # SASPortal Frontend i18n Rules

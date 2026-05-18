@@ -4,7 +4,7 @@ globs:
   - "backend/src/**/*.cs"
   - "frontend/src/modules/logs/**/*.{ts,tsx}"
   - "frontend/src/lib/**/*.{ts,tsx}"
-alwaysApply: false
+alwaysApply: true
 ---
 
 # SASPortal Logging & Audit Rules

@@ -9,9 +9,14 @@ namespace SasPortal.Infrastructure.Services;
 
 public sealed class AdManagementValidationService : IAdManagementValidationService
 {
-    private const string MissingRequiredSettings = "AD yönetim ayarları eksik. Lütfen önce gerekli alanları kaydedin.";
-    private const string ServiceAccountBindFailed = "AD yönetim servis hesabı ile bağlantı kurulamadı.";
+    private const string MissingRequiredSettings =
+        "AD yönetim ayarları için zorunlu alanlar eksik.";
+    private const string ServiceAccountBindFailed =
+        "AD yönetim servis hesabı ile bağlantı kurulamadı. NetBIOS domain adı, servis hesabı kullanıcı adı veya parola hatalı olabilir.";
+    private const string DomainFqdnUnreachable =
+        "Domain FQDN erişilemedi veya doğrulanamadı.";
     private const string BaseDnNotResolved = "Base DN çözümlenemedi.";
+    private const string DefaultNamingContextNotResolved = "Default naming context çözümlenemedi.";
     private const string UsersRootOuNotResolved = "Users root OU çözümlenemedi.";
     private const string DisabledUsersOuNotResolved = "Pasif kullanıcılar OU çözümlenemedi.";
     private const string GroupsSearchBaseNotResolved = "Gruplar arama base çözümlenemedi.";
@@ -31,8 +36,11 @@ public sealed class AdManagementValidationService : IAdManagementValidationServi
         var details = new List<AdManagementValidationDetail>();
 
         if (string.IsNullOrWhiteSpace(connection.DomainFqdn)
+            || string.IsNullOrWhiteSpace(connection.NetbiosDomainName)
+            || string.IsNullOrWhiteSpace(connection.DefaultNamingContext)
             || string.IsNullOrWhiteSpace(connection.BaseDn)
             || string.IsNullOrWhiteSpace(connection.UsersRootOu)
+            || string.IsNullOrWhiteSpace(connection.DisabledUsersOu)
             || string.IsNullOrWhiteSpace(connection.ServiceAccountUserName)
             || string.IsNullOrWhiteSpace(connection.ServiceAccountPassword))
         {
@@ -53,6 +61,7 @@ public sealed class AdManagementValidationService : IAdManagementValidationServi
 
         var primaryHost = ResolvePrimaryHost(connection);
         var port = connection.LdapPort;
+        var password = connection.ServiceAccountPassword!;
 
         LdapConnection? primaryConnection = null;
         try
@@ -62,7 +71,7 @@ public sealed class AdManagementValidationService : IAdManagementValidationServi
                 port,
                 connection.UseSsl,
                 bindIdentity,
-                connection.ServiceAccountPassword!);
+                password);
         }
         catch
         {
@@ -107,6 +116,24 @@ public sealed class AdManagementValidationService : IAdManagementValidationServi
                 AdManagementValidationStatuses.Ok,
                 null));
 
+            if (!TryResolveBase(primaryConnection, connection.DefaultNamingContext!))
+            {
+                details.Add(new AdManagementValidationDetail(
+                    "defaultNamingContext",
+                    AdManagementValidationStatuses.Failed,
+                    DefaultNamingContextNotResolved));
+                return Task.FromResult(new AdManagementValidationResult(
+                    false,
+                    DefaultNamingContextNotResolved,
+                    checkedAt,
+                    details));
+            }
+
+            details.Add(new AdManagementValidationDetail(
+                "defaultNamingContext",
+                AdManagementValidationStatuses.Ok,
+                null));
+
             if (!TryResolveBase(primaryConnection, connection.UsersRootOu!))
             {
                 details.Add(new AdManagementValidationDetail(
@@ -125,26 +152,23 @@ public sealed class AdManagementValidationService : IAdManagementValidationServi
                 AdManagementValidationStatuses.Ok,
                 null));
 
-            if (!string.IsNullOrWhiteSpace(connection.DisabledUsersOu))
+            if (!TryResolveBase(primaryConnection, connection.DisabledUsersOu!))
             {
-                if (!TryResolveBase(primaryConnection, connection.DisabledUsersOu!))
-                {
-                    details.Add(new AdManagementValidationDetail(
-                        "disabledUsersOu",
-                        AdManagementValidationStatuses.Failed,
-                        DisabledUsersOuNotResolved));
-                    return Task.FromResult(new AdManagementValidationResult(
-                        false,
-                        DisabledUsersOuNotResolved,
-                        checkedAt,
-                        details));
-                }
-
                 details.Add(new AdManagementValidationDetail(
                     "disabledUsersOu",
-                    AdManagementValidationStatuses.Ok,
-                    null));
+                    AdManagementValidationStatuses.Failed,
+                    DisabledUsersOuNotResolved));
+                return Task.FromResult(new AdManagementValidationResult(
+                    false,
+                    DisabledUsersOuNotResolved,
+                    checkedAt,
+                    details));
             }
+
+            details.Add(new AdManagementValidationDetail(
+                "disabledUsersOu",
+                AdManagementValidationStatuses.Ok,
+                null));
 
             if (!string.IsNullOrWhiteSpace(connection.GroupsSearchBase))
             {
@@ -189,6 +213,19 @@ public sealed class AdManagementValidationService : IAdManagementValidationServi
             }
         }
 
+        if (!TryValidateDomainFqdnHost(
+                connection.DomainFqdn!,
+                port,
+                connection.UseSsl,
+                bindIdentity,
+                password,
+                details,
+                checkedAt,
+                out var domainFqdnFailure))
+        {
+            return Task.FromResult(domainFqdnFailure!);
+        }
+
         foreach (var dc in connection.PreferredDomainControllers)
         {
             if (string.IsNullOrWhiteSpace(dc))
@@ -204,7 +241,7 @@ public sealed class AdManagementValidationService : IAdManagementValidationServi
                     port,
                     connection.UseSsl,
                     bindIdentity,
-                    connection.ServiceAccountPassword!);
+                    password);
             }
             catch
             {
@@ -238,6 +275,50 @@ public sealed class AdManagementValidationService : IAdManagementValidationServi
             ValidationSucceeded,
             checkedAt,
             details));
+    }
+
+    private static bool TryValidateDomainFqdnHost(
+        string domainFqdn,
+        int port,
+        bool useSsl,
+        string bindIdentity,
+        string password,
+        List<AdManagementValidationDetail> details,
+        DateTimeOffset checkedAt,
+        out AdManagementValidationResult? failure)
+    {
+        failure = null;
+
+        LdapConnection? domainConnection = null;
+        try
+        {
+            domainConnection = TryBind(domainFqdn, port, useSsl, bindIdentity, password);
+        }
+        catch
+        {
+            // Swallow; reflected via null result.
+        }
+
+        if (domainConnection is null)
+        {
+            details.Add(new AdManagementValidationDetail(
+                "domainFqdn",
+                AdManagementValidationStatuses.Failed,
+                DomainFqdnUnreachable));
+            failure = new AdManagementValidationResult(
+                false,
+                DomainFqdnUnreachable,
+                checkedAt,
+                details);
+            return false;
+        }
+
+        domainConnection.Dispose();
+        details.Add(new AdManagementValidationDetail(
+            "domainFqdn",
+            AdManagementValidationStatuses.Ok,
+            null));
+        return true;
     }
 
     private static string ResolvePrimaryHost(AdManagementConnectionParameters connection)
