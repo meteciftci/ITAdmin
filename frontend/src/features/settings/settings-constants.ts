@@ -15,35 +15,9 @@ export const SETTING_VALUE_TYPE_STRING = 1;
 export const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 export const MAX_FAVICON_BYTES = 512 * 1024;
 
-export type SettingsTabValue = "ldap" | "branding" | "directory" | "sessionSecurity";
-export const DEFAULT_TAB: SettingsTabValue = "branding";
+export type ApplicationSettingsTabValue = "ldap" | "branding" | "sessionSecurity";
 
-export function resolveDefaultSettingsTab(
-  canViewSystemSettings: boolean,
-  canViewAdManagementSettings: boolean,
-): SettingsTabValue {
-  if (canViewSystemSettings) {
-    return DEFAULT_TAB;
-  }
-
-  if (canViewAdManagementSettings) {
-    return "directory";
-  }
-
-  return DEFAULT_TAB;
-}
-
-export function isSettingsTabVisible(
-  tab: SettingsTabValue,
-  canViewSystemSettings: boolean,
-  canViewAdManagementSettings: boolean,
-): boolean {
-  if (tab === "directory") {
-    return canViewAdManagementSettings;
-  }
-
-  return canViewSystemSettings;
-}
+export const DEFAULT_APPLICATION_SETTINGS_TAB: ApplicationSettingsTabValue = "branding";
 
 export const DEFAULT_SESSION_SECURITY: SessionSecuritySettings = {
   accessTokenMinutes: 30,

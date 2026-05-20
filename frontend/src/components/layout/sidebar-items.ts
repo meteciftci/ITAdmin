@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  Boxes,
   ClipboardList,
   House,
   KeyRound,
@@ -151,11 +152,25 @@ export const getSidebarGroups = (user: CurrentUser | null): SidebarGroup[] => [
     labelKey: "groups.system",
     items: [
       {
-        kind: "link",
+        kind: "collapsible",
         titleKey: "items.settings",
-        to: "/settings",
+        routePrefix: "/settings",
         icon: SlidersHorizontal,
         visible: canAccessAny(user, ["Settings.View", "AdManagement.Settings.View"]),
+        children: [
+          {
+            titleKey: "items.applicationSettings",
+            to: "/settings/application",
+            icon: SlidersHorizontal,
+            visible: canAccess(user, "Settings.View"),
+          },
+          {
+            titleKey: "items.moduleSettings",
+            to: "/settings/modules",
+            icon: Boxes,
+            visible: canAccess(user, "AdManagement.Settings.View"),
+          },
+        ],
       },
     ],
   },

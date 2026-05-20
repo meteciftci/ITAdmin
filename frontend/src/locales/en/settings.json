@@ -1,18 +1,35 @@
 {
   "settings": {
-    "title": "Settings",
-    "description": "Manage LDAP and application settings.",
     "readOnlyNotice": "You can view this page. Additional permission is required to update settings.",
+    "pages": {
+      "application": {
+        "title": "Application Settings",
+        "description": "Manage application identity, session security, and LDAP settings."
+      },
+      "modules": {
+        "title": "Module Settings",
+        "description": "Open connection and configuration settings for installed modules."
+      },
+      "adManagement": {
+        "title": "AD Management Settings",
+        "description": "Connection, service account, and attribute mapping settings for the AD Management module."
+      }
+    },
+    "modulesHub": {
+      "adManagement": {
+        "title": "AD Management",
+        "description": "Domain connection, service account, and attribute mapping settings.",
+        "badge": "Active",
+        "openSettings": "Open settings"
+      },
+      "emptyTitle": "There are no module settings you can view."
+    },
     "actions": {
       "save": "Save"
-    },
-    "errors": {
-      "loadFailed": "Settings could not be loaded."
     },
     "tabs": {
       "ldap": "LDAP Settings",
       "branding": "Application Branding",
-      "directory": "AD Management",
       "sessionSecurity": "Session Security"
     },
     "validation": {
@@ -127,6 +144,10 @@
       }
     },
     "adManagement": {
+      "pageTabs": {
+        "connection": "Connection and Service Account",
+        "attributeMapping": "Attribute Mapping"
+      },
       "readOnlyNotice": "You can view AD management settings. Additional permission is required to update them.",
       "connection": {
         "title": "Connection and Service Account",

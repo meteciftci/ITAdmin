@@ -17,6 +17,9 @@
       "auditLogs": "Audit Logs",
       "securityLogs": "Security Logs",
       "settings": "Settings",
+      "applicationSettings": "Application Settings",
+      "moduleSettings": "Module Settings",
+      "adManagementSettings": "AD Management Settings",
       "error": "Error"
     }
   }

@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AD_MANAGEMENT_MAPPINGS_QUERY_KEY,
   AD_MANAGEMENT_SETTINGS_QUERY_KEY,
@@ -66,9 +67,17 @@ type Props = {
   readOnly: boolean;
 };
 
+type AdManagementInnerTab = "connection" | "mappings";
+
 export function AdManagementSettingsTab({ readOnly }: Props) {
   const { t } = useTranslation(["settings", "common"]);
   const queryClient = useQueryClient();
+
+  const [activeTab, setActiveTab] = useState<AdManagementInnerTab>("connection");
+
+  const handleTabChange = useCallback((value: string) => {
+    setActiveTab(value as AdManagementInnerTab);
+  }, []);
 
   const settingsQuery = useQuery({
     queryKey: AD_MANAGEMENT_SETTINGS_QUERY_KEY,
@@ -247,33 +256,41 @@ export function AdManagementSettingsTab({ readOnly }: Props) {
   }
 
   return (
-    <div className="space-y-8">
-      <section className="space-y-2">
-        <h2 className="text-sm font-semibold">
-          {t("settings:adManagement.connection.title")}
-        </h2>
-        <p className="text-xs text-muted-foreground">
-          {t("settings:adManagement.connection.description")}
-        </p>
-        <AdManagementConnectionForm
-          key={buildSettingsKey(settingsQuery.data)}
-          settings={settingsQuery.data}
-          readOnly={readOnly}
-          isSaving={updateSettingsMutation.isPending}
-          onSave={(payload) => updateSettingsMutation.mutate(payload)}
-        />
-      </section>
+    <div className="space-y-6">
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
+        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2">
+          <TabsTrigger value="connection">
+            {t("settings:adManagement.pageTabs.connection")}
+          </TabsTrigger>
+          <TabsTrigger value="mappings">
+            {t("settings:adManagement.pageTabs.attributeMapping")}
+          </TabsTrigger>
+        </TabsList>
 
-      <section className="space-y-2">
-        <AdAttributeMappingsSection
-          mappings={mappingsQuery.data ?? []}
-          readOnly={readOnly}
-          isLoading={mappingsQuery.isLoading}
-          onCreate={openCreateDialog}
-          onEdit={openEditDialog}
-          onDelete={openDeleteDialog}
-        />
-      </section>
+        <TabsContent value="connection" className="space-y-2 pt-4">
+          <p className="text-xs text-muted-foreground">
+            {t("settings:adManagement.connection.description")}
+          </p>
+          <AdManagementConnectionForm
+            key={buildSettingsKey(settingsQuery.data)}
+            settings={settingsQuery.data}
+            readOnly={readOnly}
+            isSaving={updateSettingsMutation.isPending}
+            onSave={(payload) => updateSettingsMutation.mutate(payload)}
+          />
+        </TabsContent>
+
+        <TabsContent value="mappings" className="pt-4">
+          <AdAttributeMappingsSection
+            mappings={mappingsQuery.data ?? []}
+            readOnly={readOnly}
+            isLoading={mappingsQuery.isLoading}
+            onCreate={openCreateDialog}
+            onEdit={openEditDialog}
+            onDelete={openDeleteDialog}
+          />
+        </TabsContent>
+      </Tabs>
 
       <AdAttributeMappingDialog
         open={dialog.open}

@@ -37,9 +37,24 @@ const RolesPage = lazy(() =>
 const UsersPage = lazy(() =>
   import("@/features/users/UsersPage").then((module) => ({ default: module.UsersPage })),
 );
-const SettingsPage = lazy(() =>
-  import("@/features/settings/SettingsPage").then((module) => ({
-    default: module.SettingsPage,
+const SettingsRedirectPage = lazy(() =>
+  import("@/features/settings/SettingsRedirectPage").then((module) => ({
+    default: module.SettingsRedirectPage,
+  })),
+);
+const ApplicationSettingsPage = lazy(() =>
+  import("@/features/settings/ApplicationSettingsPage").then((module) => ({
+    default: module.ApplicationSettingsPage,
+  })),
+);
+const ModuleSettingsPage = lazy(() =>
+  import("@/features/settings/ModuleSettingsPage").then((module) => ({
+    default: module.ModuleSettingsPage,
+  })),
+);
+const AdManagementSettingsPage = lazy(() =>
+  import("@/features/ad-management/AdManagementSettingsPage").then((module) => ({
+    default: module.AdManagementSettingsPage,
   })),
 );
 const AdUsersPage = lazy(() =>
@@ -182,10 +197,52 @@ export const router = createBrowserRouter([
         >
           <AppLayout>
             <LazyRoute>
-              <SettingsPage />
+              <SettingsRedirectPage />
             </LazyRoute>
           </AppLayout>
         </RequireAnyPermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/settings/application",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission="Settings.View">
+          <AppLayout>
+            <LazyRoute>
+              <ApplicationSettingsPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/settings/modules",
+    element: (
+      <RequireAuth>
+        <RequireAnyPermission permissions={["AdManagement.Settings.View"]}>
+          <AppLayout>
+            <LazyRoute>
+              <ModuleSettingsPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequireAnyPermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/settings/modules/ad-management",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission="AdManagement.Settings.View">
+          <AppLayout>
+            <LazyRoute>
+              <AdManagementSettingsPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
       </RequireAuth>
     ),
   },

@@ -17,6 +17,9 @@
       "auditLogs": "Audit Logları",
       "securityLogs": "Security Logları",
       "settings": "Ayarlar",
+      "applicationSettings": "Uygulama Ayarları",
+      "moduleSettings": "Modül Ayarları",
+      "adManagementSettings": "AD Yönetim Ayarları",
       "error": "Hata"
     }
   }

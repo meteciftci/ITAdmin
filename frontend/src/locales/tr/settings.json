@@ -1,18 +1,35 @@
 {
   "settings": {
-    "title": "Ayarlar",
-    "description": "LDAP ve uygulama ayarlarını yönetin.",
     "readOnlyNotice": "Bu sayfayı görüntüleme yetkiniz var. Güncelleme yapmak için ek yetki gerekir.",
+    "pages": {
+      "application": {
+        "title": "Uygulama Ayarları",
+        "description": "Uygulama kimliği, oturum güvenliği ve LDAP ayarlarını yönetin."
+      },
+      "modules": {
+        "title": "Modül Ayarları",
+        "description": "Kurulu modüllerin bağlantı ve yapılandırma ayarlarına buradan erişin."
+      },
+      "adManagement": {
+        "title": "AD Yönetim Ayarları",
+        "description": "AD Yönetim modülü bağlantı, yetkili hesap ve attribute mapping ayarları."
+      }
+    },
+    "modulesHub": {
+      "adManagement": {
+        "title": "AD Yönetim",
+        "description": "Domain bağlantısı, yetkili hesap ve attribute mapping ayarları.",
+        "badge": "Aktif",
+        "openSettings": "Ayarları Aç"
+      },
+      "emptyTitle": "Görüntüleyebileceğiniz modül ayarı bulunmuyor."
+    },
     "actions": {
       "save": "Kaydet"
-    },
-    "errors": {
-      "loadFailed": "Ayarlar yüklenemedi."
     },
     "tabs": {
       "ldap": "LDAP Ayarları",
       "branding": "Uygulama Kimliği",
-      "directory": "AD Yönetim Modülü",
       "sessionSecurity": "Oturum Güvenliği"
     },
     "validation": {
@@ -127,6 +144,10 @@
       }
     },
     "adManagement": {
+      "pageTabs": {
+        "connection": "Bağlantı ve Yetkili Hesap",
+        "attributeMapping": "Attribute Mapping"
+      },
       "readOnlyNotice": "AD Yönetim ayarlarını görüntüleyebilirsiniz. Güncelleme yapmak için ek yetki gerekir.",
       "connection": {
         "title": "Bağlantı ve Yetkili Hesap",
