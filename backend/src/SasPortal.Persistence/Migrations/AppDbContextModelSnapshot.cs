@@ -149,6 +149,11 @@ namespace SasPortal.Persistence.Migrations
                         .HasColumnType("character varying(500)")
                         .HasColumnName("default_naming_context");
 
+                    b.Property<string>("DefaultUserCreationUpnSuffix")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)")
+                        .HasColumnName("default_user_creation_upn_suffix");
+
                     b.Property<string>("DisabledUsersOu")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)")

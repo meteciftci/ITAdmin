@@ -4,6 +4,8 @@ export type BreadcrumbItem = {
 };
 
 const breadcrumbItems: BreadcrumbItem[] = [
+  { to: "/ad-management/users/create", titleKey: "items.adManagementUsersCreate" },
+  { to: "/ad-management/users", titleKey: "items.adManagementUsers" },
   { to: "/settings/modules/ad-management", titleKey: "items.adManagementSettings" },
   { to: "/settings/application", titleKey: "items.applicationSettings" },
   { to: "/settings/modules", titleKey: "items.moduleSettings" },

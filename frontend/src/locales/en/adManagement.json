@@ -1,6 +1,17 @@
 {
   "adManagement": {
     "moduleTitle": "AD Management",
+    "moduleState": {
+      "goToSettings": "Go to AD Management settings",
+      "notConfigured": {
+        "title": "AD Management module is not configured",
+        "description": "Configure AD Management settings before using this module."
+      },
+      "disabled": {
+        "title": "AD Management module is disabled",
+        "description": "Enable the module in AD Management settings before using it."
+      }
+    },
     "users": {
       "title": "AD Users",
       "description": "Browse and search Active Directory users.",
@@ -29,7 +40,58 @@
       },
       "actions": {
         "detail": "Detail",
-        "refresh": "Refresh"
+        "refresh": "Refresh",
+        "create": "Create User"
+      },
+      "create": {
+        "pageTitle": "Create AD user",
+        "pageDescription": "Create a new user account in AD.",
+        "sections": {
+          "basic": "Basic Information",
+          "account": "Account Information",
+          "accountOrganization": "Account and Organization",
+          "mappedAttributes": "Mapped Attributes"
+        },
+        "cards": {
+          "accountStatus": "Account status",
+          "passwordPolicy": "Password policy",
+          "organizationalUnit": "Organizational unit"
+        },
+        "fields": {
+          "givenName": "First name",
+          "surname": "Last name",
+          "department": "Department",
+          "username": "User name",
+          "upnSuffix": "UPN suffix",
+          "upnSuffixHelp": "Select the UPN suffix used when creating the user.",
+          "upnPreview": "UPN preview",
+          "initialPassword": "Initial password",
+          "isEnabled": "Create account as enabled",
+          "mustChangePasswordAtNextLogon": "Change password at next logon",
+          "ou": "OU",
+          "ouSearch": "Search OU",
+          "ouPlaceholder": "Select OU"
+        },
+        "actions": {
+          "submit": "Create user",
+          "goToSettings": "Go to AD Management settings"
+        },
+        "warnings": {
+          "ldapsRequired": "Creating a user requires setting an initial password, so LDAPS is required. If SSL is not enabled in AD Management settings, user creation is disabled."
+        },
+        "messages": {
+          "created": "User created.",
+          "createFailed": "User could not be created."
+        },
+        "errors": {
+          "ouLoadFailed": "Organizational units could not be loaded.",
+          "ouRequired": "OU selection is required.",
+          "upnSuffixLoadFailed": "UPN suffix list could not be loaded.",
+          "upnSuffixRequired": "UPN suffix is required."
+        },
+        "empty": {
+          "ouNotFound": "No OU found."
+        }
       },
       "empty": {
         "searchRequiredTitle": "Search required",

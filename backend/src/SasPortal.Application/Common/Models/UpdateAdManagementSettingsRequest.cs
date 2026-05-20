@@ -3,6 +3,7 @@ namespace SasPortal.Application.Common.Models;
 public sealed record UpdateAdManagementSettingsRequest(
     bool IsEnabled,
     string? DomainFqdn,
+    string? DefaultUserCreationUpnSuffix,
     string? NetbiosDomainName,
     string? DefaultNamingContext,
     string? BaseDn,

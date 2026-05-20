@@ -50,6 +50,7 @@ public sealed class SetupService(
         ("AdManagement", "AdManagement.Settings.View", "View AD management settings."),
         ("AdManagement", "AdManagement.Settings.Update", "Update AD management settings."),
         ("AdManagement", "AdManagement.Users.View", "View AD management directory users."),
+        ("AdManagement", "AdManagement.Users.Create", "Create AD management directory users."),
         ("AdOperationLogs", "AdOperationLogs.View", "View AD operation logs."),
         ("Setup", "Setup.Manage", "Manage setup.")
     ];

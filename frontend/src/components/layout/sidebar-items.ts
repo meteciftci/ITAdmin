@@ -53,6 +53,12 @@ export function isSidebarCollapsibleItem(item: SidebarGroupItem): item is Sideba
   return item.kind === "collapsible";
 }
 
+export type AdManagementModuleSidebarState = {
+  isConfigured: boolean;
+  isEnabled: boolean;
+  isLoading?: boolean;
+};
+
 export function getVisibleSidebarGroupItems(items: SidebarGroupItem[]): SidebarGroupItem[] {
   return items
     .map((item) => {
@@ -70,7 +76,25 @@ export function getVisibleSidebarGroupItems(items: SidebarGroupItem[]): SidebarG
     .filter((item): item is SidebarGroupItem => item !== null);
 }
 
-export const getSidebarGroups = (user: CurrentUser | null): SidebarGroup[] => [
+function isAdManagementOperationsVisible(
+  user: CurrentUser | null,
+  moduleState?: AdManagementModuleSidebarState,
+): boolean {
+  if (!canAccess(user, "AdManagement.Users.View")) {
+    return false;
+  }
+
+  if (!moduleState || moduleState.isLoading) {
+    return false;
+  }
+
+  return moduleState.isConfigured && moduleState.isEnabled;
+}
+
+export const getSidebarGroups = (
+  user: CurrentUser | null,
+  adManagementModule?: AdManagementModuleSidebarState,
+): SidebarGroup[] => [
   {
     labelKey: "groups.main",
     items: [
@@ -91,13 +115,13 @@ export const getSidebarGroups = (user: CurrentUser | null): SidebarGroup[] => [
         titleKey: "items.adManagement",
         routePrefix: "/ad-management",
         icon: Network,
-        visible: canAccess(user, "AdManagement.Users.View"),
+        visible: isAdManagementOperationsVisible(user, adManagementModule),
         children: [
           {
             titleKey: "items.adManagementUsers",
             to: "/ad-management/users",
             icon: Users,
-            visible: canAccess(user, "AdManagement.Users.View"),
+            visible: isAdManagementOperationsVisible(user, adManagementModule),
           },
         ],
       },

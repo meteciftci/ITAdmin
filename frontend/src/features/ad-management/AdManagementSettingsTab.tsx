@@ -20,6 +20,7 @@ import { getAdManagementSaveErrorMessage } from "@/features/ad-management/ad-man
 import { AdAttributeMappingDialog, type AdAttributeMappingDialogFormState } from "@/features/ad-management/components/AdAttributeMappingDialog";
 import { AdAttributeMappingsSection } from "@/features/ad-management/components/AdAttributeMappingsSection";
 import { AdManagementConnectionForm } from "@/features/ad-management/components/AdManagementConnectionForm";
+import { AdUserCreationDefaultsForm } from "@/features/ad-management/components/AdUserCreationDefaultsForm";
 import type {
   AdAttributeMapping,
   AdManagementSettings,
@@ -32,6 +33,7 @@ function buildSettingsKey(settings: AdManagementSettings | undefined): string {
   return [
     settings.isEnabled,
     settings.domainFqdn,
+    settings.defaultUserCreationUpnSuffix,
     settings.netbiosDomainName,
     settings.defaultNamingContext,
     settings.baseDn,
@@ -67,7 +69,7 @@ type Props = {
   readOnly: boolean;
 };
 
-type AdManagementInnerTab = "connection" | "mappings";
+type AdManagementInnerTab = "connection" | "mappings" | "userCreationDefaults";
 
 export function AdManagementSettingsTab({ readOnly }: Props) {
   const { t } = useTranslation(["settings", "common"]);
@@ -258,12 +260,15 @@ export function AdManagementSettingsTab({ readOnly }: Props) {
   return (
     <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2">
+        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3">
           <TabsTrigger value="connection">
             {t("settings:adManagement.pageTabs.connection")}
           </TabsTrigger>
           <TabsTrigger value="mappings">
             {t("settings:adManagement.pageTabs.attributeMapping")}
+          </TabsTrigger>
+          <TabsTrigger value="userCreationDefaults">
+            {t("settings:adManagement.pageTabs.userCreationDefaults")}
           </TabsTrigger>
         </TabsList>
 
@@ -273,6 +278,16 @@ export function AdManagementSettingsTab({ readOnly }: Props) {
           </p>
           <AdManagementConnectionForm
             key={buildSettingsKey(settingsQuery.data)}
+            settings={settingsQuery.data}
+            readOnly={readOnly}
+            isSaving={updateSettingsMutation.isPending}
+            onSave={(payload) => updateSettingsMutation.mutate(payload)}
+          />
+        </TabsContent>
+
+        <TabsContent value="userCreationDefaults" className="pt-4">
+          <AdUserCreationDefaultsForm
+            key={`${buildSettingsKey(settingsQuery.data)}::defaults`}
             settings={settingsQuery.data}
             readOnly={readOnly}
             isSaving={updateSettingsMutation.isPending}

@@ -1,6 +1,17 @@
 {
   "adManagement": {
     "moduleTitle": "AD Yönetim",
+    "moduleState": {
+      "goToSettings": "AD Yönetim ayarlarına git",
+      "notConfigured": {
+        "title": "AD Yönetim modülü yapılandırılmamış",
+        "description": "Bu modülü kullanmak için önce AD Yönetim ayarlarını yapılandırın."
+      },
+      "disabled": {
+        "title": "AD Yönetim modülü pasif",
+        "description": "Bu modül pasif durumda. Kullanmak için AD Yönetim ayarlarından modülü aktif hale getirin."
+      }
+    },
     "users": {
       "title": "AD Kullanıcıları",
       "description": "Active Directory kullanıcılarını görüntüleyin ve arayın.",
@@ -29,7 +40,58 @@
       },
       "actions": {
         "detail": "Detay",
-        "refresh": "Yenile"
+        "refresh": "Yenile",
+        "create": "Kullanıcı Oluştur"
+      },
+      "create": {
+        "pageTitle": "AD kullanıcısı oluştur",
+        "pageDescription": "AD üzerinde yeni kullanıcı hesabı oluşturun.",
+        "sections": {
+          "basic": "Temel Bilgiler",
+          "account": "Hesap Bilgileri",
+          "accountOrganization": "Hesap ve Organizasyon",
+          "mappedAttributes": "Eşleştirilmiş Attribute'lar"
+        },
+        "cards": {
+          "accountStatus": "Hesap durumu",
+          "passwordPolicy": "Parola politikası",
+          "organizationalUnit": "Organizasyon birimi"
+        },
+        "fields": {
+          "givenName": "Ad",
+          "surname": "Soyad",
+          "department": "Departman",
+          "username": "Kullanıcı adı",
+          "upnSuffix": "UPN suffix",
+          "upnSuffixHelp": "Kullanıcı oluştururken kullanılacak UPN suffix'i seçin.",
+          "upnPreview": "UPN önizleme",
+          "initialPassword": "İlk parola",
+          "isEnabled": "Hesap aktif oluşturulsun",
+          "mustChangePasswordAtNextLogon": "İlk girişte şifre değiştirsin",
+          "ou": "OU",
+          "ouSearch": "OU ara",
+          "ouPlaceholder": "OU seçin"
+        },
+        "actions": {
+          "submit": "Kullanıcı oluştur",
+          "goToSettings": "AD Yönetim ayarlarına git"
+        },
+        "warnings": {
+          "ldapsRequired": "Kullanıcı oluşturma sırasında parola atanacağı için LDAPS bağlantısı gereklidir. AD Yönetim ayarlarında SSL etkin değilse kullanıcı oluşturulamaz."
+        },
+        "messages": {
+          "created": "Kullanıcı oluşturuldu.",
+          "createFailed": "Kullanıcı oluşturulamadı."
+        },
+        "errors": {
+          "ouLoadFailed": "OU listesi yüklenemedi.",
+          "ouRequired": "OU seçimi zorunludur.",
+          "upnSuffixLoadFailed": "UPN suffix listesi yüklenemedi.",
+          "upnSuffixRequired": "UPN suffix seçimi zorunludur."
+        },
+        "empty": {
+          "ouNotFound": "OU bulunamadı."
+        }
       },
       "empty": {
         "searchRequiredTitle": "Arama gerekli",

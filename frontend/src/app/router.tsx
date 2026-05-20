@@ -62,6 +62,11 @@ const AdUsersPage = lazy(() =>
     default: module.AdUsersPage,
   })),
 );
+const AdCreateUserPage = lazy(() =>
+  import("@/features/ad-management/AdCreateUserPage").then((module) => ({
+    default: module.AdCreateUserPage,
+  })),
+);
 const ErrorPage = lazy(() =>
   import("@/pages/ErrorPage").then((module) => ({ default: module.ErrorPage })),
 );
@@ -254,6 +259,20 @@ export const router = createBrowserRouter([
           <AppLayout>
             <LazyRoute>
               <AdUsersPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/ad-management/users/create",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission="AdManagement.Users.Create">
+          <AppLayout>
+            <LazyRoute>
+              <AdCreateUserPage />
             </LazyRoute>
           </AppLayout>
         </RequirePermission>

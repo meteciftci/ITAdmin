@@ -5,5 +5,6 @@ public static class AdManagementPermissions
     public const string SettingsView = "AdManagement.Settings.View";
     public const string SettingsUpdate = "AdManagement.Settings.Update";
     public const string UsersView = "AdManagement.Users.View";
+    public const string UsersCreate = "AdManagement.Users.Create";
     public const string OperationLogsView = "AdOperationLogs.View";
 }

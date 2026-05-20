@@ -1,8 +1,10 @@
 namespace SasPortal.Application.Common.Models;
 
 public sealed record AdManagementSettingsModel(
+    bool IsConfigured,
     bool IsEnabled,
     string? DomainFqdn,
+    string? DefaultUserCreationUpnSuffix,
     string? NetbiosDomainName,
     string? DefaultNamingContext,
     string? BaseDn,

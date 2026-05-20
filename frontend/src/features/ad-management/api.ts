@@ -5,9 +5,13 @@ import { apiClient } from "@/lib/api-client";
 import type {
   AdAttributeMapping,
   AdManagementSettings,
+  AdOrganizationalUnitSearchResponse,
+  AdUpnSuffixesResponse,
   AdUserDetail,
   AdUserSearchResponse,
   CreateAdAttributeMappingRequest,
+  CreateAdUserRequest,
+  CreateAdUserResponse,
   GetAdUsersParams,
   UpdateAdAttributeMappingRequest,
   UpdateAdManagementSettingsRequest,
@@ -24,6 +28,8 @@ export const AD_MANAGEMENT_MAPPINGS_QUERY_KEY = [
 ] as const;
 
 export const AD_MANAGEMENT_USERS_QUERY_KEY = ["ad-management", "users"] as const;
+
+export const AD_UPN_SUFFIXES_QUERY_KEY = ["ad-management", "upn-suffixes"] as const;
 
 export async function invalidateAdManagementUserQueries(
   queryClient: QueryClient,
@@ -98,5 +104,36 @@ export const getAdUsers = async (
 
 export const getAdUserById = async (id: string): Promise<AdUserDetail> => {
   const { data } = await apiClient.get<AdUserDetail>(`/ad-management/users/${id}`);
+  return data;
+};
+
+export const searchOrganizationalUnits = async (params: {
+  search?: string;
+  pageSize?: number;
+}): Promise<AdOrganizationalUnitSearchResponse> => {
+  const { data } = await apiClient.get<AdOrganizationalUnitSearchResponse>(
+    "/ad-management/organizational-units",
+    {
+      params: {
+        search: params.search,
+        pageSize: params.pageSize ?? 50,
+      },
+    },
+  );
+  return data;
+};
+
+export const getAdUpnSuffixes = async (): Promise<AdUpnSuffixesResponse> => {
+  const { data } = await apiClient.get<AdUpnSuffixesResponse>("/ad-management/upn-suffixes");
+  return data;
+};
+
+export const createAdUser = async (
+  payload: CreateAdUserRequest,
+): Promise<CreateAdUserResponse> => {
+  const { data } = await apiClient.post<CreateAdUserResponse>(
+    "/ad-management/users",
+    payload,
+  );
   return data;
 };

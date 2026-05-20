@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using SasPortal.Application.Abstractions.Security;
 using SasPortal.Application.Abstractions.Services;
 using SasPortal.Application.Common.Constants;
+using SasPortal.Application.Common.AdManagement;
 using SasPortal.Application.Common.Models;
 using SasPortal.Domain.Entities;
 using SasPortal.Persistence.Context;
@@ -158,6 +159,8 @@ public sealed class AdManagementSettingsService(
 
         entity.IsEnabled = request.IsEnabled;
         entity.DomainFqdn = domainFqdn;
+        entity.DefaultUserCreationUpnSuffix = NormalizeDefaultUserCreationUpnSuffix(
+            request.DefaultUserCreationUpnSuffix);
         entity.NetbiosDomainName = netbios;
         entity.DefaultNamingContext = defaultNc;
         entity.BaseDn = baseDn;
@@ -435,8 +438,10 @@ public sealed class AdManagementSettingsService(
         if (entity is null)
         {
             return new AdManagementSettingsModel(
+                IsConfigured: false,
                 IsEnabled: false,
                 DomainFqdn: null,
+                DefaultUserCreationUpnSuffix: null,
                 NetbiosDomainName: null,
                 DefaultNamingContext: null,
                 BaseDn: null,
@@ -457,8 +462,10 @@ public sealed class AdManagementSettingsService(
         }
 
         return new AdManagementSettingsModel(
+            IsConfigured: true,
             IsEnabled: entity.IsEnabled,
             DomainFqdn: entity.DomainFqdn,
+            DefaultUserCreationUpnSuffix: entity.DefaultUserCreationUpnSuffix,
             NetbiosDomainName: entity.NetbiosDomainName,
             DefaultNamingContext: entity.DefaultNamingContext,
             BaseDn: entity.BaseDn,
@@ -492,9 +499,25 @@ public sealed class AdManagementSettingsService(
             return false;
         }
 
+        if (!string.IsNullOrWhiteSpace(request.DefaultUserCreationUpnSuffix))
+        {
+            var normalized = AdDefaultUpnSuffixNormalizer.Normalize(request.DefaultUserCreationUpnSuffix);
+            if (string.IsNullOrWhiteSpace(normalized)
+                || !AdDefaultUpnSuffixNormalizer.IsValidFormat(normalized))
+            {
+                message = "Default user creation UPN suffix must be a valid domain suffix.";
+                return false;
+            }
+        }
+
         message = string.Empty;
         return true;
     }
+
+    private static string? NormalizeDefaultUserCreationUpnSuffix(string? value) =>
+        string.IsNullOrWhiteSpace(value)
+            ? null
+            : AdDefaultUpnSuffixNormalizer.Normalize(value);
 
     internal static List<string> NormalizePreferredDomainControllers(IReadOnlyList<string>? values)
     {

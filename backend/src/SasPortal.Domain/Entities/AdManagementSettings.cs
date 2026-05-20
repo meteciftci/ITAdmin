@@ -6,6 +6,7 @@ public class AdManagementSettings : AuditableEntity
 {
     public bool IsEnabled { get; set; }
     public string? DomainFqdn { get; set; }
+    public string? DefaultUserCreationUpnSuffix { get; set; }
     public string? NetbiosDomainName { get; set; }
     public string? DefaultNamingContext { get; set; }
     public string? BaseDn { get; set; }

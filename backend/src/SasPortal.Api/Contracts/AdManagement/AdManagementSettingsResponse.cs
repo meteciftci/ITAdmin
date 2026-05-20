@@ -1,8 +1,10 @@
 namespace SasPortal.Api.Contracts.AdManagement;
 
 public sealed record AdManagementSettingsResponse(
+    bool IsConfigured,
     bool IsEnabled,
     string? DomainFqdn,
+    string? DefaultUserCreationUpnSuffix,
     string? NetbiosDomainName,
     string? DefaultNamingContext,
     string? BaseDn,

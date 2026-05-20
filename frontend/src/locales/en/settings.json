@@ -19,8 +19,29 @@
       "adManagement": {
         "title": "AD Management",
         "description": "Domain connection, service account, and attribute mapping settings.",
-        "badge": "Active",
-        "openSettings": "Open settings"
+        "openSettings": "Open settings",
+        "status": {
+          "loading": {
+            "badge": "Loading",
+            "description": "Loading module status."
+          },
+          "error": {
+            "badge": "Status unavailable",
+            "description": "Module status could not be loaded."
+          },
+          "notConfigured": {
+            "badge": "Not configured",
+            "description": "Module settings have not been configured yet."
+          },
+          "disabled": {
+            "badge": "Disabled",
+            "description": "The module is configured but currently disabled."
+          },
+          "active": {
+            "badge": "Active",
+            "description": "Domain connection, service account, and attribute mapping settings."
+          }
+        }
       },
       "emptyTitle": "There are no module settings you can view."
     },
@@ -146,14 +167,35 @@
     "adManagement": {
       "pageTabs": {
         "connection": "Connection and Service Account",
-        "attributeMapping": "Attribute Mapping"
+        "attributeMapping": "Attribute Mapping",
+        "userCreationDefaults": "User Creation Defaults"
+      },
+      "userCreationDefaults": {
+        "title": "User Creation Defaults",
+        "description": "Configure default values for the AD user creation screen.",
+        "fields": {
+          "defaultUpnSuffix": "Default UPN suffix",
+          "defaultUpnSuffixHelp": "The UPN suffix selected by default on the create user screen.",
+          "none": "Not selected"
+        },
+        "actions": {
+          "save": "Save defaults"
+        },
+        "warnings": {
+          "connectionRequired": "Save AD connection settings before selecting user creation defaults.",
+          "savedSuffixMissingFromAd": "The saved default suffix was not returned by AD."
+        },
+        "errors": {
+          "suffixListLoadFailed": "UPN suffix list could not be loaded."
+        }
       },
       "readOnlyNotice": "You can view AD management settings. Additional permission is required to update them.",
       "connection": {
         "title": "Connection and Service Account",
         "description": "Configure the domain, OUs, and service account that the AD Management module uses.",
         "fields": {
-          "isEnabled": "Module enabled",
+          "isEnabled": "AD Management module enabled",
+          "isEnabledHelp": "When disabled, operation menus are hidden; settings remain accessible.",
           "domainFqdn": "Domain FQDN",
           "netbiosDomainName": "NetBIOS domain name",
           "defaultNamingContext": "Default naming context",

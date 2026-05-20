@@ -21,6 +21,10 @@ public class AdManagementSettingsConfiguration : IEntityTypeConfiguration<AdMana
             .HasColumnName("domain_fqdn")
             .HasMaxLength(250);
 
+        builder.Property(x => x.DefaultUserCreationUpnSuffix)
+            .HasColumnName("default_user_creation_upn_suffix")
+            .HasMaxLength(250);
+
         builder.Property(x => x.NetbiosDomainName)
             .HasColumnName("netbios_domain_name")
             .HasMaxLength(64);

@@ -1,6 +1,8 @@
 export type AdManagementSettings = {
+  isConfigured: boolean;
   isEnabled: boolean;
   domainFqdn: string | null;
+  defaultUserCreationUpnSuffix: string | null;
   netbiosDomainName: string | null;
   defaultNamingContext: string | null;
   baseDn: string | null;
@@ -23,6 +25,7 @@ export type AdManagementSettings = {
 export type UpdateAdManagementSettingsRequest = {
   isEnabled: boolean;
   domainFqdn: string | null;
+  defaultUserCreationUpnSuffix: string | null;
   netbiosDomainName: string | null;
   defaultNamingContext: string | null;
   baseDn: string | null;
@@ -38,6 +41,60 @@ export type UpdateAdManagementSettingsRequest = {
   clearServiceAccountPassword: boolean;
   powerShellHealthEnabled: boolean;
   powerShellTimeoutSeconds: number;
+};
+
+export type AdOrganizationalUnitListItem = {
+  distinguishedName: string;
+  name: string | null;
+  displayName: string | null;
+  ou: string | null;
+  label: string;
+};
+
+export type AdOrganizationalUnitSearchResponse = {
+  items: AdOrganizationalUnitListItem[];
+  hasMore: boolean;
+};
+
+export type CreateAdUserMappedAttributeRequest = {
+  logicalField: string;
+  value: string | string[] | null;
+};
+
+export type CreateAdUserRequest = {
+  givenName: string;
+  surname: string;
+  department?: string | null;
+  samAccountName?: string | null;
+  upnSuffix: string;
+  targetOuDistinguishedName: string;
+  initialPassword: string;
+  isEnabled: boolean;
+  mustChangePasswordAtNextLogon: boolean;
+  mappedAttributes: CreateAdUserMappedAttributeRequest[];
+};
+
+export type AdUpnSuffixItem = {
+  value: string;
+  source: string;
+};
+
+export type AdUpnSuffixesResponse = {
+  items: AdUpnSuffixItem[];
+  warning?: string | null;
+};
+
+export type CreateAdUserResponse = {
+  id: string;
+  distinguishedName: string;
+  cn: string;
+  samAccountName: string;
+  userPrincipalName: string;
+  displayName: string;
+  isEnabled: boolean;
+  message: string;
+  namingCollisionResolved: boolean;
+  generatedSuffix: number | null;
 };
 
 export type AdAttributeMapping = {

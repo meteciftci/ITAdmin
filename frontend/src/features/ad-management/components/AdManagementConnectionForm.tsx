@@ -4,9 +4,11 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { buildUpdateAdManagementSettingsPayload } from "@/features/ad-management/ad-management-settings-payload";
 import type {
   AdManagementSettings,
   UpdateAdManagementSettingsRequest,
@@ -164,43 +166,72 @@ export function AdManagementConnectionForm({
     const ldapPort = Number.parseInt(values.ldapPort, 10);
     const timeout = Number.parseInt(values.powerShellTimeoutSeconds, 10);
 
-    const payload: UpdateAdManagementSettingsRequest = {
-      isEnabled: values.isEnabled,
-      domainFqdn: emptyToNull(values.domainFqdn),
-      netbiosDomainName: emptyToNull(values.netbiosDomainName),
-      defaultNamingContext: emptyToNull(values.defaultNamingContext),
-      baseDn: emptyToNull(values.baseDn),
-      usersRootOu: emptyToNull(values.usersRootOu),
-      disabledUsersOu: emptyToNull(values.disabledUsersOu),
-      groupsSearchBase: emptyToNull(values.groupsSearchBase),
-      computersSearchBase: emptyToNull(values.computersSearchBase),
-      preferredDomainControllers: parsePreferredDcs(values.preferredDomainControllers),
-      useSsl: values.useSsl,
-      ldapPort,
-      serviceAccountUserName: emptyToNull(values.serviceAccountUserName),
-      serviceAccountPassword: values.serviceAccountPassword.trim().length === 0
-        ? null
-        : values.serviceAccountPassword,
-      clearServiceAccountPassword: values.clearServiceAccountPassword,
-      powerShellHealthEnabled: values.powerShellHealthEnabled,
-      powerShellTimeoutSeconds: timeout,
+    const baseSettings: AdManagementSettings = settings ?? {
+      isConfigured: false,
+      isEnabled: false,
+      domainFqdn: null,
+      defaultUserCreationUpnSuffix: null,
+      netbiosDomainName: null,
+      defaultNamingContext: null,
+      baseDn: null,
+      usersRootOu: null,
+      disabledUsersOu: null,
+      groupsSearchBase: null,
+      computersSearchBase: null,
+      preferredDomainControllers: [],
+      useSsl: true,
+      ldapPort: 636,
+      serviceAccountUserName: null,
+      hasServiceAccountPassword: false,
+      powerShellHealthEnabled: false,
+      powerShellTimeoutSeconds: 30,
+      lastValidatedAt: null,
+      lastValidationStatus: null,
+      lastValidationMessage: null,
     };
 
-    onSave(payload);
+    onSave(
+      buildUpdateAdManagementSettingsPayload(baseSettings, {
+        isEnabled: values.isEnabled,
+        domainFqdn: emptyToNull(values.domainFqdn),
+        netbiosDomainName: emptyToNull(values.netbiosDomainName),
+        defaultNamingContext: emptyToNull(values.defaultNamingContext),
+        baseDn: emptyToNull(values.baseDn),
+        usersRootOu: emptyToNull(values.usersRootOu),
+        disabledUsersOu: emptyToNull(values.disabledUsersOu),
+        groupsSearchBase: emptyToNull(values.groupsSearchBase),
+        computersSearchBase: emptyToNull(values.computersSearchBase),
+        preferredDomainControllers: parsePreferredDcs(values.preferredDomainControllers),
+        useSsl: values.useSsl,
+        ldapPort,
+        serviceAccountUserName: emptyToNull(values.serviceAccountUserName),
+        serviceAccountPassword: values.serviceAccountPassword.trim().length === 0
+          ? null
+          : values.serviceAccountPassword,
+        clearServiceAccountPassword: values.clearServiceAccountPassword,
+        powerShellHealthEnabled: values.powerShellHealthEnabled,
+        powerShellTimeoutSeconds: timeout,
+      }),
+    );
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Checkbox
-          id="ad-mgmt-is-enabled"
-          checked={values.isEnabled}
-          onChange={(event) => update("isEnabled", event.target.checked)}
-          disabled={readOnly}
-        />
-        <label htmlFor="ad-mgmt-is-enabled" className="cursor-pointer text-sm">
-          {t("settings:adManagement.connection.fields.isEnabled")}
-        </label>
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-3">
+          <Switch
+            id="ad-mgmt-is-enabled"
+            checked={values.isEnabled}
+            onCheckedChange={(checked) => update("isEnabled", checked)}
+            disabled={readOnly}
+          />
+          <label htmlFor="ad-mgmt-is-enabled" className="cursor-pointer text-sm font-medium">
+            {t("settings:adManagement.connection.fields.isEnabled")}
+          </label>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {t("settings:adManagement.connection.fields.isEnabledHelp")}
+        </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -433,6 +464,7 @@ function FieldText({
   onChange,
   readOnly,
   placeholder,
+  helpText,
 }: {
   id: string;
   label: string;
@@ -440,6 +472,7 @@ function FieldText({
   onChange: (value: string) => void;
   readOnly: boolean;
   placeholder?: string;
+  helpText?: string;
 }) {
   return (
     <div className="space-y-1.5">
@@ -451,6 +484,9 @@ function FieldText({
         readOnly={readOnly}
         placeholder={placeholder}
       />
+      {helpText ? (
+        <p className="text-xs text-muted-foreground">{helpText}</p>
+      ) : null}
     </div>
   );
 }

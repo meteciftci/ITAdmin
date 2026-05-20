@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
 import { EmptyState } from "@/components/common/EmptyState";
@@ -13,14 +14,67 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AD_MANAGEMENT_SETTINGS_QUERY_KEY,
+  getAdManagementSettings,
+} from "@/features/ad-management/api";
 import { useAuthStore } from "@/features/auth/auth-store";
 import { canAccess } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
+
+type AdManagementCardStatus = "loading" | "error" | "notConfigured" | "disabled" | "active";
+
+function resolveAdManagementCardStatus(
+  isLoading: boolean,
+  isError: boolean,
+  isConfigured: boolean,
+  isEnabled: boolean,
+): AdManagementCardStatus {
+  if (isLoading) {
+    return "loading";
+  }
+
+  if (isError) {
+    return "error";
+  }
+
+  if (!isConfigured) {
+    return "notConfigured";
+  }
+
+  if (!isEnabled) {
+    return "disabled";
+  }
+
+  return "active";
+}
 
 export function ModuleSettingsPage() {
   const { t } = useTranslation(["settings", "common"]);
   const user = useAuthStore((state) => state.user);
   const canViewAdManagementSettings = canAccess(user, "AdManagement.Settings.View");
+
+  const adManagementSettingsQuery = useQuery({
+    queryKey: AD_MANAGEMENT_SETTINGS_QUERY_KEY,
+    queryFn: getAdManagementSettings,
+    enabled: canViewAdManagementSettings,
+    staleTime: 60_000,
+  });
+
+  const cardStatus = resolveAdManagementCardStatus(
+    adManagementSettingsQuery.isLoading,
+    adManagementSettingsQuery.isError,
+    adManagementSettingsQuery.data?.isConfigured ?? false,
+    adManagementSettingsQuery.data?.isEnabled ?? false,
+  );
+
+  const badgeVariant =
+    cardStatus === "active"
+      ? "default"
+      : cardStatus === "disabled"
+        ? "secondary"
+        : "outline";
 
   const cards = (
     <>
@@ -31,10 +85,20 @@ export function ModuleSettingsPage() {
               <CardTitle className="text-lg">
                 {t("settings:modulesHub.adManagement.title")}
               </CardTitle>
-              <Badge variant="secondary">{t("settings:modulesHub.adManagement.badge")}</Badge>
+              {cardStatus === "loading" ? (
+                <Skeleton className="h-5 w-24" />
+              ) : (
+                <Badge variant={badgeVariant}>
+                  {t(`settings:modulesHub.adManagement.status.${cardStatus}.badge`)}
+                </Badge>
+              )}
             </div>
             <CardDescription>
-              {t("settings:modulesHub.adManagement.description")}
+              {cardStatus === "loading" ? (
+                <Skeleton className="h-4 w-full max-w-md" />
+              ) : (
+                t(`settings:modulesHub.adManagement.status.${cardStatus}.description`)
+              )}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex-1" />

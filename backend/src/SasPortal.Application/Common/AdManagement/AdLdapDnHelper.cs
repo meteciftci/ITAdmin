@@ -96,6 +96,92 @@ public static class AdLdapDnHelper
         return parts.ToArray();
     }
 
+    public static string? ConvertNamingContextToDnsSuffix(string? namingContext)
+    {
+        if (string.IsNullOrWhiteSpace(namingContext))
+        {
+            return null;
+        }
+
+        var labels = new List<string>();
+        foreach (var component in SplitDnComponents(namingContext.Trim()))
+        {
+            var trimmed = component.Trim();
+            if (!trimmed.StartsWith("DC=", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var value = UnescapeDnValue(trimmed[3..]);
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                labels.Add(value);
+            }
+        }
+
+        return labels.Count == 0 ? null : string.Join('.', labels).ToLowerInvariant();
+    }
+
+    public static bool IsEqualOrDescendantOf(string? childDistinguishedName, string? ancestorDistinguishedName)
+    {
+        if (string.IsNullOrWhiteSpace(childDistinguishedName) || string.IsNullOrWhiteSpace(ancestorDistinguishedName))
+        {
+            return false;
+        }
+
+        var child = NormalizeDn(childDistinguishedName);
+        var ancestor = NormalizeDn(ancestorDistinguishedName);
+        return child.Equals(ancestor, StringComparison.OrdinalIgnoreCase)
+            || child.EndsWith($",{ancestor}", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static string BuildUserDistinguishedName(string commonName, string parentDistinguishedName)
+    {
+        var escapedCn = EscapeDnComponent(commonName);
+        return $"CN={escapedCn},{parentDistinguishedName.Trim()}";
+    }
+
+    public static string EscapeDnComponent(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var requiresQuotes = value.Any(static ch => ",=+<>#;\"\\".Contains(ch))
+            || value.StartsWith(' ')
+            || value.EndsWith(' ');
+
+        var builder = new StringBuilder(value.Length + 8);
+        if (requiresQuotes)
+        {
+            builder.Append('"');
+        }
+
+        foreach (var character in value)
+        {
+            if (",=+<>#;\"\\".Contains(character))
+            {
+                builder.Append('\\');
+            }
+
+            builder.Append(character);
+        }
+
+        if (requiresQuotes)
+        {
+            builder.Append('"');
+        }
+
+        return builder.ToString();
+    }
+
+    private static string NormalizeDn(string distinguishedName) =>
+        string.Join(
+            ",",
+            SplitDnComponents(distinguishedName.Trim())
+                .Select(static component => component.Trim()));
+
     internal static string UnescapeDnValue(string value)
     {
         var builder = new StringBuilder(value.Length);

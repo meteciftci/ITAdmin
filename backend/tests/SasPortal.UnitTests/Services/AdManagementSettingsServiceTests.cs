@@ -16,6 +16,7 @@ public sealed class AdManagementSettingsServiceTests
 
         var result = await service.GetSettingsAsync();
 
+        Assert.False(result.IsConfigured);
         Assert.False(result.IsEnabled);
         Assert.True(result.UseSsl);
         Assert.Equal(636, result.LdapPort);
@@ -624,6 +625,78 @@ public sealed class AdManagementSettingsServiceTests
         return new AppDbContext(options);
     }
 
+    [Fact]
+    public async Task UpdateSettingsAsync_PersistsNormalizedDefaultUserCreationUpnSuffix()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext);
+
+        var request = CreateRequest(
+            isEnabled: false,
+            defaultUserCreationUpnSuffix: "@Mugla.Bel.TR");
+
+        var result = await service.UpdateSettingsAsync(request);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("mugla.bel.tr", result.Settings!.DefaultUserCreationUpnSuffix);
+
+        var stored = await dbContext.AdManagementSettings.SingleAsync();
+        Assert.Equal("mugla.bel.tr", stored.DefaultUserCreationUpnSuffix);
+    }
+
+    [Fact]
+    public async Task UpdateSettingsAsync_RejectsInvalidDefaultUserCreationUpnSuffix()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext);
+
+        var result = await service.UpdateSettingsAsync(
+            CreateRequest(isEnabled: false, defaultUserCreationUpnSuffix: "not a valid suffix"));
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("UPN suffix", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.False(dbContext.AdManagementSettings.Any());
+    }
+
+    [Fact]
+    public async Task GetSettingsAsync_ReturnsDefaultUserCreationUpnSuffix()
+    {
+        await using var dbContext = CreateDbContext();
+        dbContext.AdManagementSettings.Add(new SasPortal.Domain.Entities.AdManagementSettings
+        {
+            IsEnabled = true,
+            DomainFqdn = "corp.example.com",
+            DefaultUserCreationUpnSuffix = "corp.example.com",
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "seed",
+        });
+        await dbContext.SaveChangesAsync();
+
+        var service = CreateService(dbContext);
+        var result = await service.GetSettingsAsync();
+
+        Assert.Equal("corp.example.com", result.DefaultUserCreationUpnSuffix);
+    }
+
+    [Fact]
+    public async Task GetSettingsAsync_WhenRecordExists_ReturnsIsConfiguredTrue()
+    {
+        await using var dbContext = CreateDbContext();
+        dbContext.AdManagementSettings.Add(new SasPortal.Domain.Entities.AdManagementSettings
+        {
+            IsEnabled = false,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "seed",
+        });
+        await dbContext.SaveChangesAsync();
+
+        var service = CreateService(dbContext);
+        var result = await service.GetSettingsAsync();
+
+        Assert.True(result.IsConfigured);
+        Assert.False(result.IsEnabled);
+    }
+
     private static AdManagementSettingsService CreateService(
         AppDbContext context,
         FakeAdManagementValidationService? validationService = null) =>
@@ -643,6 +716,7 @@ public sealed class AdManagementSettingsServiceTests
     private static UpdateAdManagementSettingsRequest CreateRequest(
         bool isEnabled = false,
         string? domainFqdn = "corp.example.com",
+        string? defaultUserCreationUpnSuffix = null,
         string? netbiosDomainName = "CORP",
         string? defaultNamingContext = "DC=corp,DC=example,DC=com",
         string? baseDn = "DC=corp,DC=example,DC=com",
@@ -657,6 +731,7 @@ public sealed class AdManagementSettingsServiceTests
         new(
             IsEnabled: isEnabled,
             DomainFqdn: domainFqdn,
+            DefaultUserCreationUpnSuffix: defaultUserCreationUpnSuffix,
             NetbiosDomainName: netbiosDomainName,
             DefaultNamingContext: defaultNamingContext,
             BaseDn: baseDn,

@@ -11,6 +11,7 @@
       "home": "Anasayfa",
       "adManagement": "AD Yönetim",
       "adManagementUsers": "Kullanıcılar",
+      "adManagementUsersCreate": "AD kullanıcısı oluştur",
       "users": "Kullanıcılar",
       "roles": "Roller",
       "permissions": "İzinler",

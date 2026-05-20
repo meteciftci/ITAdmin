@@ -11,6 +11,7 @@
       "home": "Home",
       "adManagement": "AD Management",
       "adManagementUsers": "Users",
+      "adManagementUsersCreate": "Create AD user",
       "users": "Users",
       "roles": "Roles",
       "permissions": "Permissions",

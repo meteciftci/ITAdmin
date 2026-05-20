@@ -7,9 +7,11 @@ using SasPortal.Application.Common.Models;
 
 namespace SasPortal.Infrastructure.Services;
 
-public sealed class AdUserDirectoryService(
+public sealed partial class AdUserDirectoryService(
     IAdManagementSettingsService settingsService,
-    IAdAttributeMappingService attributeMappingService) : IAdUserDirectoryService
+    IAdAttributeMappingService attributeMappingService,
+    IAdOperationLogService adOperationLogService,
+    IAuditLogWriter auditLogWriter) : IAdUserDirectoryService
 {
     private const string AdManagementDisabledMessage = "AD yönetim modülü etkin değil.";
     private const string AdManagementNotConfiguredMessage =

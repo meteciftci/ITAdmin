@@ -19,8 +19,29 @@
       "adManagement": {
         "title": "AD Yönetim",
         "description": "Domain bağlantısı, yetkili hesap ve attribute mapping ayarları.",
-        "badge": "Aktif",
-        "openSettings": "Ayarları Aç"
+        "openSettings": "Ayarları Aç",
+        "status": {
+          "loading": {
+            "badge": "Yükleniyor",
+            "description": "Modül durumu yükleniyor."
+          },
+          "error": {
+            "badge": "Durum okunamadı",
+            "description": "Modül durumu şu anda okunamıyor."
+          },
+          "notConfigured": {
+            "badge": "Yapılandırılmadı",
+            "description": "Modül ayarları henüz yapılandırılmadı."
+          },
+          "disabled": {
+            "badge": "Pasif",
+            "description": "Modül yapılandırıldı ancak pasif durumda."
+          },
+          "active": {
+            "badge": "Aktif",
+            "description": "Domain bağlantısı, yetkili hesap ve attribute mapping ayarları."
+          }
+        }
       },
       "emptyTitle": "Görüntüleyebileceğiniz modül ayarı bulunmuyor."
     },
@@ -146,14 +167,35 @@
     "adManagement": {
       "pageTabs": {
         "connection": "Bağlantı ve Yetkili Hesap",
-        "attributeMapping": "Attribute Mapping"
+        "attributeMapping": "Attribute Eşleştirme",
+        "userCreationDefaults": "Kullanıcı Oluşturma Varsayılanları"
+      },
+      "userCreationDefaults": {
+        "title": "Kullanıcı Oluşturma Varsayılanları",
+        "description": "AD kullanıcı oluşturma ekranı için varsayılan değerleri yapılandırın.",
+        "fields": {
+          "defaultUpnSuffix": "Varsayılan UPN suffix",
+          "defaultUpnSuffixHelp": "Kullanıcı oluşturma ekranında varsayılan seçili gelecek UPN suffix.",
+          "none": "Seçilmedi"
+        },
+        "actions": {
+          "save": "Varsayılanları kaydet"
+        },
+        "warnings": {
+          "connectionRequired": "Kullanıcı oluşturma varsayılanlarını seçmek için önce AD bağlantı ayarlarını kaydedin.",
+          "savedSuffixMissingFromAd": "Kayıtlı varsayılan suffix AD listesinden gelmedi."
+        },
+        "errors": {
+          "suffixListLoadFailed": "UPN suffix listesi yüklenemedi."
+        }
       },
       "readOnlyNotice": "AD Yönetim ayarlarını görüntüleyebilirsiniz. Güncelleme yapmak için ek yetki gerekir.",
       "connection": {
         "title": "Bağlantı ve Yetkili Hesap",
         "description": "Active Directory yönetim modülünün kullanacağı domain, OU ve servis hesabı bilgilerini yapılandırın.",
         "fields": {
-          "isEnabled": "Modül aktif",
+          "isEnabled": "AD Yönetim modülü aktif",
+          "isEnabledHelp": "Modül pasifken operasyon menüleri gizlenir; ayarlar erişilebilir kalır.",
           "domainFqdn": "Domain FQDN",
           "netbiosDomainName": "NetBIOS domain adı",
           "defaultNamingContext": "Default naming context",

@@ -11,4 +11,14 @@ public interface IAdUserDirectoryService
     Task<AdUserDirectoryDetailResult> GetUserByIdAsync(
         Guid id,
         CancellationToken cancellationToken = default);
+
+    Task<AdOrganizationalUnitSearchResult> SearchOrganizationalUnitsAsync(
+        AdOrganizationalUnitSearchQuery query,
+        CancellationToken cancellationToken = default);
+
+    Task<CreateAdUserResult> CreateUserAsync(
+        CreateAdUserRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<AdUpnSuffixesResult> GetUpnSuffixesAsync(CancellationToken cancellationToken = default);
 }

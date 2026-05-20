@@ -1,9 +1,12 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Navigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
+import { useAuthStore } from "@/features/auth/auth-store";
 import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
+import { canAccess } from "@/lib/permissions";
 import { DataToolbar } from "@/components/common/DataToolbar";
 import { DateTimeText } from "@/components/common/DateTimeText";
 import { EmptyState } from "@/components/common/EmptyState";
@@ -24,15 +27,21 @@ import {
 import { AdAccountStatusBadge } from "@/features/ad-management/components/AdAccountStatusBadge";
 import { AdDirectoryPagination } from "@/features/ad-management/components/AdDirectoryPagination";
 import { AdLockStatusBadge } from "@/features/ad-management/components/AdLockStatusBadge";
+import { AdManagementModuleStateGuard } from "@/features/ad-management/components/AdManagementModuleStateGuard";
 import { AdUserDetailDialog } from "@/features/ad-management/components/AdUserDetailDialog";
+import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useAdManagementModuleStatus";
 import type { AdUserListItem, AdUserStatusFilter } from "@/features/ad-management/types";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { createApiErrorRouteState, getErrorRoutePath } from "@/lib/route-error";
+import { cn } from "@/lib/utils";
 
 const MIN_SEARCH_LENGTH = 2;
 
 export function AdUsersPage() {
   const { t } = useTranslation(["adManagement", "common", "errors"]);
+  const currentUser = useAuthStore((state) => state.user);
+  const moduleStatus = useAdManagementModuleStatus();
+  const canCreateUser = canAccess(currentUser, "AdManagement.Users.Create");
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<AdUserStatusFilter>("all");
@@ -61,13 +70,13 @@ export function AdUsersPage() {
         pageNumber,
         pageSize,
       }),
-    enabled: canSearch,
+    enabled: moduleStatus.isOperational && canSearch,
   });
 
   const userDetailQuery = useQuery({
     queryKey: [...AD_MANAGEMENT_USERS_QUERY_KEY, "detail", selectedUserId],
     queryFn: () => getAdUserById(selectedUserId!),
-    enabled: Boolean(selectedUserId),
+    enabled: moduleStatus.isOperational && Boolean(selectedUserId),
     staleTime: 0,
     refetchOnMount: "always",
   });
@@ -94,7 +103,7 @@ export function AdUsersPage() {
     setSelectedUserId(user.id);
   };
 
-  if (usersQuery.isError) {
+  if (moduleStatus.isOperational && usersQuery.isError) {
     const routeState = createApiErrorRouteState(usersQuery.error, {
       fromPath: "/ad-management/users",
       retryPath: "/ad-management/users",
@@ -106,6 +115,7 @@ export function AdUsersPage() {
   }
 
   return (
+    <AdManagementModuleStateGuard>
     <section className="space-y-4">
       <SectionCard
         title={t("adManagement:users.title")}
@@ -117,9 +127,19 @@ export function AdUsersPage() {
             onSearchChange={handleSearchChange}
             searchPlaceholder={t("adManagement:users.searchPlaceholder")}
             actions={
-              <Button variant="outline" onClick={handleRefresh} disabled={!canSearch}>
-                {t("common:actions.refresh")}
-              </Button>
+              <>
+                {canCreateUser ? (
+                  <Link
+                    to="/ad-management/users/create"
+                    className={cn(buttonVariants({ variant: "default" }))}
+                  >
+                    {t("adManagement:users.actions.create")}
+                  </Link>
+                ) : null}
+                <Button variant="outline" onClick={handleRefresh} disabled={!canSearch}>
+                  {t("common:actions.refresh")}
+                </Button>
+              </>
             }
           >
             <div className="flex flex-wrap items-center gap-2">
@@ -246,6 +266,8 @@ export function AdUsersPage() {
           }
         }}
       />
+
     </section>
+    </AdManagementModuleStateGuard>
   );
 }

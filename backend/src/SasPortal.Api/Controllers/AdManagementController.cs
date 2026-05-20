@@ -36,6 +36,7 @@ public sealed class AdManagementController(
             new AppModels.UpdateAdManagementSettingsRequest(
                 request.IsEnabled,
                 request.DomainFqdn,
+                request.DefaultUserCreationUpnSuffix,
                 request.NetbiosDomainName,
                 request.DefaultNamingContext,
                 request.BaseDn,
@@ -163,6 +164,101 @@ public sealed class AdManagementController(
             result.Page.HasNextPage));
     }
 
+    [HttpGet("upn-suffixes")]
+    [RequireAnyPermission(
+        AdManagementPermissions.UsersCreate,
+        AdManagementPermissions.SettingsView)]
+    public async Task<ActionResult<AdUpnSuffixesResponse>> GetUpnSuffixes(
+        CancellationToken cancellationToken = default)
+    {
+        var result = await adUserDirectoryService.GetUpnSuffixesAsync(cancellationToken);
+        if (!result.IsSuccess || result.Items is null)
+        {
+            return MapDirectoryFailure(result.Message, result.FailureKind);
+        }
+
+        return Ok(new AdUpnSuffixesResponse(
+            result.Items
+                .Select(item => new AdUpnSuffixItemResponse(item.Value, item.Source))
+                .ToList(),
+            result.Warning));
+    }
+
+    [HttpGet("organizational-units")]
+    [RequirePermission(AdManagementPermissions.UsersCreate)]
+    public async Task<ActionResult<AdOrganizationalUnitSearchResponse>> SearchOrganizationalUnits(
+        [FromQuery] string? search,
+        [FromQuery] int pageSize = 50,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await adUserDirectoryService.SearchOrganizationalUnitsAsync(
+            new AppModels.AdOrganizationalUnitSearchQuery(search, pageSize),
+            cancellationToken);
+
+        if (!result.IsSuccess || result.Page is null)
+        {
+            return MapDirectoryFailure(result.Message, result.FailureKind);
+        }
+
+        return Ok(new AdOrganizationalUnitSearchResponse(
+            result.Page.Items
+                .Select(item => new AdOrganizationalUnitListItemResponse(
+                    item.DistinguishedName,
+                    item.Name,
+                    item.DisplayName,
+                    item.Ou,
+                    item.Label))
+                .ToList(),
+            result.Page.HasMore));
+    }
+
+    [HttpPost("users")]
+    [RequirePermission(AdManagementPermissions.UsersCreate)]
+    public async Task<ActionResult<CreateAdUserResponse>> CreateUser(
+        [FromBody] CreateAdUserRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await adUserDirectoryService.CreateUserAsync(
+            new AppModels.CreateAdUserRequest(
+                request.GivenName,
+                request.Surname,
+                request.Department,
+                request.SamAccountName,
+                request.UpnSuffix,
+                request.TargetOuDistinguishedName,
+                request.InitialPassword,
+                request.IsEnabled,
+                request.MustChangePasswordAtNextLogon,
+                request.MappedAttributes
+                    .Select(item => new AppModels.CreateAdUserMappedAttributeRequest(
+                        item.LogicalField,
+                        item.Value))
+                    .ToList(),
+                ResolveActorUserId(User),
+                ResolveActorUserName(User),
+                ResolveIpAddress(),
+                ResolveUserAgent()),
+            cancellationToken);
+
+        if (!result.IsSuccess || result.User is null)
+        {
+            return MapDirectoryFailure(result.Message, result.FailureKind);
+        }
+
+        var user = result.User;
+        return Ok(new CreateAdUserResponse(
+            user.Id,
+            user.DistinguishedName,
+            user.Cn,
+            user.SamAccountName,
+            user.UserPrincipalName,
+            user.DisplayName,
+            user.IsEnabled,
+            user.Message,
+            user.NamingCollisionResolved,
+            user.GeneratedSuffix));
+    }
+
     [HttpGet("users/{id}")]
     [RequirePermission(AdManagementPermissions.UsersView)]
     public async Task<ActionResult<AdUserDetailResponse>> GetUserById(
@@ -282,8 +378,10 @@ public sealed class AdManagementController(
 
     private static AdManagementSettingsResponse MapSettings(AppModels.AdManagementSettingsModel settings) =>
         new(
+            settings.IsConfigured,
             settings.IsEnabled,
             settings.DomainFqdn,
+            settings.DefaultUserCreationUpnSuffix,
             settings.NetbiosDomainName,
             settings.DefaultNamingContext,
             settings.BaseDn,

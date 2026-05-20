@@ -22,6 +22,17 @@ public sealed class PermissionAuthorizationPolicyProvider : DefaultAuthorization
             return policy;
         }
 
+        if (policyName.StartsWith(RequireAnyPermissionAttribute.PolicyPrefix, StringComparison.Ordinal))
+        {
+            var permissions = policyName[RequireAnyPermissionAttribute.PolicyPrefix.Length..]
+                .Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            var policy = new AuthorizationPolicyBuilder()
+                .RequireAuthenticatedUser()
+                .AddRequirements(new AnyPermissionRequirement(permissions))
+                .Build();
+            return policy;
+        }
+
         return await base.GetPolicyAsync(policyName).ConfigureAwait(false);
     }
 }

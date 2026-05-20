@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -14,9 +15,14 @@ import {
 import { Tooltip } from "@/components/ui/tooltip";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { Separator } from "@/components/ui/separator";
+import {
+  AD_MANAGEMENT_SETTINGS_QUERY_KEY,
+  getAdManagementSettings,
+} from "@/features/ad-management/api";
 import { useAuthStore } from "@/features/auth/auth-store";
 import { useBrandingSettings } from "@/hooks/useBrandingSettings";
 import { resolveApiAssetUrl } from "@/lib/api-client";
+import { canAccess } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
 function isRouteActive(pathname: string, to: string) {
@@ -38,7 +44,19 @@ export function AppSidebar() {
     setMobileSidebarOpen,
   } = useLayoutShell();
 
-  const groups = getSidebarGroups(user);
+  const canViewAdOperations = canAccess(user, "AdManagement.Users.View");
+  const adManagementSettingsQuery = useQuery({
+    queryKey: AD_MANAGEMENT_SETTINGS_QUERY_KEY,
+    queryFn: getAdManagementSettings,
+    enabled: canViewAdOperations,
+    staleTime: 60_000,
+  });
+
+  const groups = getSidebarGroups(user, {
+    isConfigured: adManagementSettingsQuery.data?.isConfigured ?? false,
+    isEnabled: adManagementSettingsQuery.data?.isEnabled ?? false,
+    isLoading: adManagementSettingsQuery.isLoading,
+  });
   const { data: branding } = useBrandingSettings();
   const appName = branding.applicationName || "SAS Portal v2";
   const resolvedLogoUrl = resolveApiAssetUrl(branding.logoUrl);

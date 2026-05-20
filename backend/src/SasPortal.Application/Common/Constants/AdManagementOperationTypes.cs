@@ -7,6 +7,12 @@ public static class AdManagementOperationTypes
     public const string AttributeMappingCreated = "AttributeMappingCreated";
     public const string AttributeMappingUpdated = "AttributeMappingUpdated";
     public const string AttributeMappingDeleted = "AttributeMappingDeleted";
+    public const string CreateUser = "CreateUser";
+}
+
+public static class AdManagementTargetUserTypes
+{
+    public const string AdUser = "AdUser";
 }
 
 public static class AdManagementOperationStatuses
