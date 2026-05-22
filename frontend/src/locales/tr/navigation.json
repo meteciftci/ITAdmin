@@ -17,9 +17,11 @@
       "permissions": "İzinler",
       "auditLogs": "Audit Logları",
       "securityLogs": "Security Logları",
+      "notificationOutbox": "Bildirim Kuyruğu",
       "settings": "Ayarlar",
       "applicationSettings": "Uygulama Ayarları",
       "notificationProviders": "Bildirim Sağlayıcıları",
+      "notificationTemplates": "Bildirim Şablonları",
       "moduleSettings": "Modül Ayarları",
       "adManagementSettings": "AD Yönetim Ayarları",
       "error": "Hata"

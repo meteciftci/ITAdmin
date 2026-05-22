@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   Boxes,
   ClipboardList,
+  Inbox,
   House,
   KeyRound,
   Network,
@@ -170,6 +171,13 @@ export const getSidebarGroups = (
         icon: ShieldAlert,
         visible: canAccess(user, "SecurityLogs.View"),
       },
+      {
+        kind: "link",
+        titleKey: "items.notificationOutbox",
+        to: "/notification-outbox",
+        icon: Inbox,
+        visible: canAccess(user, "NotificationOutbox.View"),
+      },
     ],
   },
   {
@@ -183,6 +191,7 @@ export const getSidebarGroups = (
         visible: canAccessAny(user, [
           "Settings.View",
           "NotificationProviders.View",
+          "NotificationTemplates.View",
           "AdManagement.Settings.View",
         ]),
         children: [
@@ -197,6 +206,12 @@ export const getSidebarGroups = (
             to: "/settings/notification-providers",
             icon: SlidersHorizontal,
             visible: canAccess(user, "NotificationProviders.View"),
+          },
+          {
+            titleKey: "items.notificationTemplates",
+            to: "/settings/notification-templates",
+            icon: SlidersHorizontal,
+            visible: canAccess(user, "NotificationTemplates.View"),
           },
           {
             titleKey: "items.moduleSettings",

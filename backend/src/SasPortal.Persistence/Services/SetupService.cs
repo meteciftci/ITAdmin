@@ -55,6 +55,11 @@ public sealed class SetupService(
         ("NotificationProviders", "NotificationProviders.View", "View notification provider settings."),
         ("NotificationProviders", "NotificationProviders.Update", "Update notification provider settings."),
         ("NotificationProviders", "NotificationProviders.Test", "Send notification provider test messages."),
+        ("NotificationOutbox", "NotificationOutbox.View", "View notification outbox."),
+        ("NotificationOutbox", "NotificationOutbox.Retry", "Retry notification outbox items."),
+        ("NotificationOutbox", "NotificationOutbox.Cancel", "Cancel notification outbox items."),
+        ("NotificationTemplates", "NotificationTemplates.View", "View notification templates."),
+        ("NotificationTemplates", "NotificationTemplates.Update", "Update notification templates."),
         ("Setup", "Setup.Manage", "Manage setup.")
     ];
 

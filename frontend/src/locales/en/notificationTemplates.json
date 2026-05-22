@@ -1,0 +1,50 @@
+{
+  "notificationTemplates": {
+    "title": "Notification Templates",
+    "description": "Manage module and event based SMS/email templates.",
+    "readOnlyNotice": "You only have view access on this screen. Update permission is required to make changes.",
+    "sections": {
+      "list": "Template list"
+    },
+    "channels": {
+      "email": "Email"
+    },
+    "columns": {
+      "module": "Module",
+      "event": "Event",
+      "channel": "Channel",
+      "name": "Name",
+      "status": "Status",
+      "updatedAt": "Updated",
+      "actions": "Actions"
+    },
+    "fields": {
+      "moduleKey": "Module",
+      "eventKey": "Event",
+      "channel": "Channel",
+      "name": "Name",
+      "isEnabled": "Template active",
+      "subjectTemplate": "Subject template",
+      "bodyTemplate": "Body template",
+      "description": "Description",
+      "variablesHint": "Variables can be used in {{variableName}} format."
+    },
+    "actions": {
+      "add": "New template",
+      "edit": "Edit"
+    },
+    "dialog": {
+      "createTitle": "Create template",
+      "editTitle": "Edit template"
+    },
+    "empty": {
+      "title": "No templates found"
+    },
+    "messages": {
+      "createSuccess": "Template created.",
+      "updateSuccess": "Template updated.",
+      "saveFailed": "Could not save template.",
+      "loadFailed": "Could not load template."
+    }
+  }
+}

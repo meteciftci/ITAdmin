@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SasPortal.Application.Abstractions.Services;
+using SasPortal.Application.Common.Options;
 using SasPortal.Persistence.Context;
 using SasPortal.Persistence.Services;
 
@@ -35,6 +36,10 @@ public static class DependencyInjection
         services.AddScoped<IAdAttributeMappingService, AdAttributeMappingService>();
         services.AddScoped<INotificationProviderSettingsService, NotificationProviderSettingsService>();
         services.AddScoped<INotificationSender, NotificationSender>();
+        services.AddScoped<INotificationOutboxService, NotificationOutboxService>();
+        services.AddScoped<INotificationTemplateService, NotificationTemplateService>();
+        services.AddScoped<INotificationOutboxBatchProcessor, NotificationOutboxBatchProcessor>();
+        services.Configure<NotificationOutboxOptions>(configuration.GetSection(NotificationOutboxOptions.SectionName));
 
         return services;
     }

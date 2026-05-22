@@ -1,0 +1,50 @@
+{
+  "notificationTemplates": {
+    "title": "Bildirim Şablonları",
+    "description": "Modül ve olay bazlı SMS/e-posta şablonlarını yönetin.",
+    "readOnlyNotice": "Bu ekranda yalnızca görüntüleme yetkiniz var. Değişiklik yapmak için güncelleme yetkisi gerekir.",
+    "sections": {
+      "list": "Şablon listesi"
+    },
+    "channels": {
+      "email": "E-posta"
+    },
+    "columns": {
+      "module": "Modül",
+      "event": "Olay",
+      "channel": "Kanal",
+      "name": "Ad",
+      "status": "Durum",
+      "updatedAt": "Güncellenme",
+      "actions": "İşlemler"
+    },
+    "fields": {
+      "moduleKey": "Modül",
+      "eventKey": "Olay",
+      "channel": "Kanal",
+      "name": "Ad",
+      "isEnabled": "Şablon aktif",
+      "subjectTemplate": "Konu şablonu",
+      "bodyTemplate": "Gövde şablonu",
+      "description": "Açıklama",
+      "variablesHint": "Değişkenler {{degiskenAdi}} formatında kullanılabilir."
+    },
+    "actions": {
+      "add": "Yeni şablon",
+      "edit": "Düzenle"
+    },
+    "dialog": {
+      "createTitle": "Şablon oluştur",
+      "editTitle": "Şablon düzenle"
+    },
+    "empty": {
+      "title": "Şablon bulunamadı"
+    },
+    "messages": {
+      "createSuccess": "Şablon oluşturuldu.",
+      "updateSuccess": "Şablon güncellendi.",
+      "saveFailed": "Şablon kaydedilemedi.",
+      "loadFailed": "Şablon yüklenemedi."
+    }
+  }
+}

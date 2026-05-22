@@ -1,0 +1,63 @@
+{
+  "notificationOutbox": {
+    "title": "Bildirim Kuyruğu",
+    "description": "Kuyruğa alınan SMS ve e-posta bildirimlerinin durumunu izleyin.",
+    "sections": {
+      "list": "Kuyruk kayıtları"
+    },
+    "filters": {
+      "channelAll": "Tüm kanallar",
+      "statusAll": "Tüm durumlar",
+      "searchPlaceholder": "Alıcı veya konu ara (en az 3 karakter)"
+    },
+    "channels": {
+      "sms": "SMS",
+      "email": "E-posta"
+    },
+    "statuses": {
+      "pending": "Bekliyor",
+      "processing": "İşleniyor",
+      "sent": "Gönderildi",
+      "failed": "Başarısız",
+      "cancelled": "İptal edildi"
+    },
+    "columns": {
+      "createdAt": "Tarih",
+      "channel": "Kanal",
+      "provider": "Sağlayıcı",
+      "recipient": "Alıcı",
+      "subject": "Konu",
+      "status": "Durum",
+      "attempts": "Deneme",
+      "nextAttempt": "Sonraki deneme",
+      "related": "İlişkili",
+      "actions": "İşlemler"
+    },
+    "actions": {
+      "detail": "Detay",
+      "retry": "Yeniden dene",
+      "cancel": "İptal et"
+    },
+    "confirm": {
+      "retryTitle": "Bildirimi yeniden kuyruğa al",
+      "retryDescription": "Bu bildirim yeniden gönderim için kuyruğa alınacak.",
+      "cancelTitle": "Bildirimi iptal et",
+      "cancelDescription": "Bu bildirim iptal edilecek ve gönderilmeyecek."
+    },
+    "detail": {
+      "title": "Bildirim detayı",
+      "body": "Mesaj önizlemesi",
+      "lastError": "Son hata",
+      "providerSummary": "Sağlayıcı özeti"
+    },
+    "empty": {
+      "title": "Kuyrukta kayıt bulunamadı"
+    },
+    "messages": {
+      "retrySuccess": "Bildirim yeniden kuyruğa alındı.",
+      "retryFailed": "Bildirim yeniden kuyruğa alınamadı.",
+      "cancelSuccess": "Bildirim iptal edildi.",
+      "cancelFailed": "Bildirim iptal edilemedi."
+    }
+  }
+}

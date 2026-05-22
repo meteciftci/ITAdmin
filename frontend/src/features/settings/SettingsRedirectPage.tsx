@@ -16,6 +16,10 @@ export function SettingsRedirectPage() {
     return <Navigate to="/settings/notification-providers" replace />;
   }
 
+  if (canAccess(user, "NotificationTemplates.View")) {
+    return <Navigate to="/settings/notification-templates" replace />;
+  }
+
   if (canAccess(user, "AdManagement.Settings.View")) {
     return <Navigate to="/settings/modules/ad-management" replace />;
   }

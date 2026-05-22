@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using SasPortal.Api.Authorization;
 using SasPortal.Api.Extensions;
+using SasPortal.Api.HostedServices;
 using SasPortal.Application;
 using SasPortal.Application.Common.Models;
 using SasPortal.Infrastructure;
@@ -66,6 +67,7 @@ try
     // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
     builder.Services.AddOpenApi();
     builder.Services.AddHealthChecks();
+    builder.Services.AddHostedService<NotificationOutboxWorker>();
 
     var app = builder.Build();
 

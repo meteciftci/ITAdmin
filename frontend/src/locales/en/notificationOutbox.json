@@ -1,0 +1,63 @@
+{
+  "notificationOutbox": {
+    "title": "Notification Queue",
+    "description": "Monitor queued SMS and email notifications.",
+    "sections": {
+      "list": "Queue items"
+    },
+    "filters": {
+      "channelAll": "All channels",
+      "statusAll": "All statuses",
+      "searchPlaceholder": "Search recipient or subject (min 3 characters)"
+    },
+    "channels": {
+      "sms": "SMS",
+      "email": "Email"
+    },
+    "statuses": {
+      "pending": "Pending",
+      "processing": "Processing",
+      "sent": "Sent",
+      "failed": "Failed",
+      "cancelled": "Cancelled"
+    },
+    "columns": {
+      "createdAt": "Date",
+      "channel": "Channel",
+      "provider": "Provider",
+      "recipient": "Recipient",
+      "subject": "Subject",
+      "status": "Status",
+      "attempts": "Attempts",
+      "nextAttempt": "Next attempt",
+      "related": "Related",
+      "actions": "Actions"
+    },
+    "actions": {
+      "detail": "Details",
+      "retry": "Retry",
+      "cancel": "Cancel"
+    },
+    "confirm": {
+      "retryTitle": "Requeue notification",
+      "retryDescription": "This notification will be queued for sending again.",
+      "cancelTitle": "Cancel notification",
+      "cancelDescription": "This notification will be cancelled and will not be sent."
+    },
+    "detail": {
+      "title": "Notification details",
+      "body": "Message preview",
+      "lastError": "Last error",
+      "providerSummary": "Provider summary"
+    },
+    "empty": {
+      "title": "No queue items found"
+    },
+    "messages": {
+      "retrySuccess": "Notification requeued.",
+      "retryFailed": "Could not requeue notification.",
+      "cancelSuccess": "Notification cancelled.",
+      "cancelFailed": "Could not cancel notification."
+    }
+  }
+}

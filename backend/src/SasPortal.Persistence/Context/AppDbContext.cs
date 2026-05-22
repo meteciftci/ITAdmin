@@ -24,6 +24,8 @@ public class AppDbContext : DbContext
     public DbSet<AdAttributeMapping> AdAttributeMappings => Set<AdAttributeMapping>();
     public DbSet<AdOperationLog> AdOperationLogs => Set<AdOperationLog>();
     public DbSet<NotificationProviderSettings> NotificationProviderSettings => Set<NotificationProviderSettings>();
+    public DbSet<NotificationTemplate> NotificationTemplates => Set<NotificationTemplate>();
+    public DbSet<NotificationOutbox> NotificationOutboxItems => Set<NotificationOutbox>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

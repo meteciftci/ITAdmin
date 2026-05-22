@@ -57,6 +57,16 @@ const NotificationProvidersPage = lazy(() =>
     default: module.NotificationProvidersPage,
   })),
 );
+const NotificationOutboxPage = lazy(() =>
+  import("@/features/notification-outbox/NotificationOutboxPage").then((module) => ({
+    default: module.NotificationOutboxPage,
+  })),
+);
+const NotificationTemplatesPage = lazy(() =>
+  import("@/features/notification-templates/NotificationTemplatesPage").then((module) => ({
+    default: module.NotificationTemplatesPage,
+  })),
+);
 const AdManagementSettingsPage = lazy(() =>
   import("@/features/ad-management/AdManagementSettingsPage").then((module) => ({
     default: module.AdManagementSettingsPage,
@@ -157,6 +167,20 @@ export const router = createBrowserRouter([
     ),
   },
   {
+    path: "/notification-outbox",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission="NotificationOutbox.View">
+          <AppLayout>
+            <LazyRoute>
+              <NotificationOutboxPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
     path: "/permissions",
     element: (
       <RequireAuth>
@@ -206,6 +230,7 @@ export const router = createBrowserRouter([
           permissions={[
             "Settings.View",
             "NotificationProviders.View",
+            "NotificationTemplates.View",
             "AdManagement.Settings.View",
           ]}
         >
@@ -240,6 +265,20 @@ export const router = createBrowserRouter([
           <AppLayout>
             <LazyRoute>
               <NotificationProvidersPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/settings/notification-templates",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission="NotificationTemplates.View">
+          <AppLayout>
+            <LazyRoute>
+              <NotificationTemplatesPage />
             </LazyRoute>
           </AppLayout>
         </RequirePermission>
