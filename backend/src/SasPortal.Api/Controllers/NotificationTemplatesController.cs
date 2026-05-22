@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SasPortal.Api.Authorization;
 using SasPortal.Api.Contracts.NotificationTemplates;
+using SasPortal.Application.Abstractions.Notifications;
 using SasPortal.Application.Abstractions.Services;
 using SasPortal.Application.Common.Constants;
 using AppModels = SasPortal.Application.Common.Models.Notifications;
@@ -12,8 +13,26 @@ namespace SasPortal.Api.Controllers;
 [ApiController]
 [Route("api/notification-templates")]
 [Authorize]
-public sealed class NotificationTemplatesController(INotificationTemplateService templateService) : ControllerBase
+public sealed class NotificationTemplatesController(
+    INotificationTemplateService templateService,
+    INotificationTemplateCatalogProvider catalogProvider) : ControllerBase
 {
+    [HttpGet("catalog")]
+    [RequirePermission(NotificationTemplatePermissions.View)]
+    public ActionResult<NotificationTemplateCatalogResponse> GetCatalog()
+    {
+        var catalog = catalogProvider.GetCatalog();
+        return Ok(new NotificationTemplateCatalogResponse(
+            catalog.Modules.Select(module => new NotificationTemplateCatalogModuleResponse(
+                module.Key,
+                module.Events.Select(evt => new NotificationTemplateCatalogEventResponse(
+                    evt.Key,
+                    evt.SupportedChannels,
+                    evt.Variables.Select(variable => new NotificationTemplateCatalogVariableResponse(
+                        variable.Key,
+                        variable.Example)).ToList())).ToList())).ToList()));
+    }
+
     [HttpGet]
     [RequirePermission(NotificationTemplatePermissions.View)]
     public async Task<ActionResult<IReadOnlyList<NotificationTemplateListItemResponse>>> GetList(

@@ -1,0 +1,118 @@
+{
+  "notificationSettings": {
+    "title": "Bildirim Ayarları",
+    "description": "Bildirim sağlayıcılarını ve mesaj şablonlarını yönetin.",
+    "tabs": {
+      "providers": "Sağlayıcılar",
+      "templates": "Şablonlar"
+    },
+    "channels": {
+      "sms": "SMS",
+      "email": "E-posta"
+    },
+    "sections": {
+      "general": "Genel Bilgiler",
+      "content": "Şablon İçeriği",
+      "variables": "Kullanılabilir Değişkenler"
+    },
+    "fields": {
+      "module": "Modül",
+      "event": "Olay",
+      "channel": "Kanal",
+      "templateName": "Şablon adı",
+      "isEnabled": "Şablon aktif",
+      "subjectTemplate": "Konu şablonu",
+      "bodyTemplate": "Gövde şablonu",
+      "description": "Açıklama"
+    },
+    "placeholders": {
+      "selectModule": "Modül seçin",
+      "selectEvent": "Olay seçin",
+      "selectChannel": "Kanal seçin"
+    },
+    "actions": {
+      "cancel": "Vazgeç"
+    },
+    "templates": {
+      "createTitle": "Yeni Bildirim Şablonu",
+      "editTitle": "Bildirim Şablonunu Düzenle",
+      "catalogMismatch": "Bu şablonun modül/olay bilgisi katalogda bulunamadı.",
+      "actions": {
+        "add": "Yeni Şablon",
+        "edit": "Düzenle"
+      },
+      "messages": {
+        "createSuccess": "Şablon oluşturuldu.",
+        "updateSuccess": "Şablon güncellendi.",
+        "saveFailed": "Şablon kaydedilemedi."
+      }
+    },
+    "variables": {
+      "formatHint": "Değişkenleri {{degiskenAdi}} formatında kullanın.",
+      "unknownHint": "Bilinmeyen değişkenler gönderim sırasında boş değer olarak işlenir.",
+      "selectEventFirst": "Değişkenleri görmek için olay seçin.",
+      "empty": "Seçilen olay için değişken tanımlı değil.",
+      "copy": "Kopyala",
+      "copied": "Değişken kopyalandı.",
+      "copyFailed": "Değişken kopyalanamadı.",
+      "example": "Örnek"
+    },
+    "catalog": {
+      "modules": {
+        "System": "Sistem",
+        "AdManagement": "AD Yönetim"
+      },
+      "events": {
+        "System": {
+          "GenericNotification": "Genel Bildirim"
+        },
+        "AdManagement": {
+          "UserCreated": "Kullanıcı oluşturuldu",
+          "UserDisabled": "Kullanıcı pasife alındı",
+          "PasswordReset": "Parola sıfırlandı"
+        }
+      },
+      "variables": {
+        "applicationName": {
+          "label": "Uygulama adı",
+          "description": "Portal uygulama adı",
+          "example": "SAS-Portal"
+        },
+        "operationDate": {
+          "label": "İşlem tarihi",
+          "description": "İşlemin gerçekleştiği tarih/saat"
+        },
+        "message": {
+          "label": "Mesaj",
+          "description": "Serbest metin mesaj içeriği"
+        },
+        "actorName": {
+          "label": "İşlemi yapan kullanıcı",
+          "description": "İşlemi gerçekleştiren kullanıcı adı"
+        },
+        "displayName": {
+          "label": "Kullanıcının görünen adı",
+          "description": "AD görünen adı",
+          "example": "Çağrı IŞIK"
+        },
+        "username": {
+          "label": "Kullanıcı adı",
+          "description": "SamAccountName veya kullanıcı adı",
+          "example": "cagri.isik"
+        },
+        "upn": {
+          "label": "Kullanıcı UPN bilgisi",
+          "description": "User Principal Name"
+        },
+        "department": {
+          "label": "Departman",
+          "description": "Kullanıcı departman bilgisi"
+        },
+        "helpDeskPhone": {
+          "label": "Yardım masası telefonu",
+          "description": "Destek hattı telefon numarası"
+        }
+      }
+    }
+  }
+}

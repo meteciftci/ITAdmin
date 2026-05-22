@@ -3,7 +3,7 @@
  * the non-component `router` export. Fast refresh does not apply to this module.
  */
 import { lazy, Suspense, type ReactNode } from "react";
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 
 import { RootRedirect } from "@/app/RootRedirect";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -52,19 +52,29 @@ const ModuleSettingsPage = lazy(() =>
     default: module.ModuleSettingsPage,
   })),
 );
-const NotificationProvidersPage = lazy(() =>
-  import("@/features/notification-providers/NotificationProvidersPage").then((module) => ({
-    default: module.NotificationProvidersPage,
-  })),
-);
 const NotificationOutboxPage = lazy(() =>
   import("@/features/notification-outbox/NotificationOutboxPage").then((module) => ({
     default: module.NotificationOutboxPage,
   })),
 );
-const NotificationTemplatesPage = lazy(() =>
-  import("@/features/notification-templates/NotificationTemplatesPage").then((module) => ({
-    default: module.NotificationTemplatesPage,
+const NotificationSettingsRedirectPage = lazy(() =>
+  import("@/features/notification-settings/NotificationSettingsRedirectPage").then((module) => ({
+    default: module.NotificationSettingsRedirectPage,
+  })),
+);
+const NotificationSettingsProvidersPage = lazy(() =>
+  import("@/features/notification-settings/NotificationSettingsPage").then((module) => ({
+    default: module.NotificationSettingsPage,
+  })),
+);
+const NotificationSettingsTemplatesPage = lazy(() =>
+  import("@/features/notification-settings/NotificationSettingsPage").then((module) => ({
+    default: module.NotificationSettingsPage,
+  })),
+);
+const NotificationTemplateFormPage = lazy(() =>
+  import("@/features/notification-settings/NotificationTemplateFormPage").then((module) => ({
+    default: module.NotificationTemplateFormPage,
   })),
 );
 const AdManagementSettingsPage = lazy(() =>
@@ -261,13 +271,7 @@ export const router = createBrowserRouter([
     path: "/settings/notification-providers",
     element: (
       <RequireAuth>
-        <RequirePermission permission="NotificationProviders.View">
-          <AppLayout>
-            <LazyRoute>
-              <NotificationProvidersPage />
-            </LazyRoute>
-          </AppLayout>
-        </RequirePermission>
+        <Navigate to="/settings/notifications/providers" replace />
       </RequireAuth>
     ),
   },
@@ -275,10 +279,76 @@ export const router = createBrowserRouter([
     path: "/settings/notification-templates",
     element: (
       <RequireAuth>
+        <Navigate to="/settings/notifications/templates" replace />
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/settings/notifications",
+    element: (
+      <RequireAuth>
+        <RequireAnyPermission
+          permissions={["NotificationProviders.View", "NotificationTemplates.View"]}
+        >
+          <AppLayout>
+            <LazyRoute>
+              <NotificationSettingsRedirectPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequireAnyPermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/settings/notifications/providers",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission="NotificationProviders.View">
+          <AppLayout>
+            <LazyRoute>
+              <NotificationSettingsProvidersPage activeTab="providers" />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/settings/notifications/templates",
+    element: (
+      <RequireAuth>
         <RequirePermission permission="NotificationTemplates.View">
           <AppLayout>
             <LazyRoute>
-              <NotificationTemplatesPage />
+              <NotificationSettingsTemplatesPage activeTab="templates" />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/settings/notifications/templates/create",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission="NotificationTemplates.Update">
+          <AppLayout>
+            <LazyRoute>
+              <NotificationTemplateFormPage mode="create" />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/settings/notifications/templates/:id/edit",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission="NotificationTemplates.Update">
+          <AppLayout>
+            <LazyRoute>
+              <NotificationTemplateFormPage mode="edit" />
             </LazyRoute>
           </AppLayout>
         </RequirePermission>

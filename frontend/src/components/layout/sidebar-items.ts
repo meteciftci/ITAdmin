@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  BellRing,
   Boxes,
   ClipboardList,
   Inbox,
@@ -202,16 +203,13 @@ export const getSidebarGroups = (
             visible: canAccess(user, "Settings.View"),
           },
           {
-            titleKey: "items.notificationProviders",
-            to: "/settings/notification-providers",
-            icon: SlidersHorizontal,
-            visible: canAccess(user, "NotificationProviders.View"),
-          },
-          {
-            titleKey: "items.notificationTemplates",
-            to: "/settings/notification-templates",
-            icon: SlidersHorizontal,
-            visible: canAccess(user, "NotificationTemplates.View"),
+            titleKey: "items.notificationSettings",
+            to: "/settings/notifications",
+            icon: BellRing,
+            visible: canAccessAny(user, [
+              "NotificationProviders.View",
+              "NotificationTemplates.View",
+            ]),
           },
           {
             titleKey: "items.moduleSettings",

@@ -1,0 +1,118 @@
+{
+  "notificationSettings": {
+    "title": "Notification Settings",
+    "description": "Manage notification providers and message templates.",
+    "tabs": {
+      "providers": "Providers",
+      "templates": "Templates"
+    },
+    "channels": {
+      "sms": "SMS",
+      "email": "Email"
+    },
+    "sections": {
+      "general": "General Information",
+      "content": "Template Content",
+      "variables": "Available Variables"
+    },
+    "fields": {
+      "module": "Module",
+      "event": "Event",
+      "channel": "Channel",
+      "templateName": "Template name",
+      "isEnabled": "Template active",
+      "subjectTemplate": "Subject template",
+      "bodyTemplate": "Body template",
+      "description": "Description"
+    },
+    "placeholders": {
+      "selectModule": "Select module",
+      "selectEvent": "Select event",
+      "selectChannel": "Select channel"
+    },
+    "actions": {
+      "cancel": "Cancel"
+    },
+    "templates": {
+      "createTitle": "New Notification Template",
+      "editTitle": "Edit Notification Template",
+      "catalogMismatch": "This template's module/event information was not found in the catalog.",
+      "actions": {
+        "add": "New Template",
+        "edit": "Edit"
+      },
+      "messages": {
+        "createSuccess": "Template created.",
+        "updateSuccess": "Template updated.",
+        "saveFailed": "Could not save template."
+      }
+    },
+    "variables": {
+      "formatHint": "Use variables in {{variableName}} format.",
+      "unknownHint": "Unknown variables are rendered as empty values during sending.",
+      "selectEventFirst": "Select an event to see variables.",
+      "empty": "No variables are defined for the selected event.",
+      "copy": "Copy",
+      "copied": "Variable copied.",
+      "copyFailed": "Could not copy variable.",
+      "example": "Example"
+    },
+    "catalog": {
+      "modules": {
+        "System": "System",
+        "AdManagement": "AD Management"
+      },
+      "events": {
+        "System": {
+          "GenericNotification": "Generic Notification"
+        },
+        "AdManagement": {
+          "UserCreated": "User created",
+          "UserDisabled": "User disabled",
+          "PasswordReset": "Password reset"
+        }
+      },
+      "variables": {
+        "applicationName": {
+          "label": "Application name",
+          "description": "Portal application name",
+          "example": "SAS-Portal"
+        },
+        "operationDate": {
+          "label": "Operation date",
+          "description": "Date/time when the operation occurred"
+        },
+        "message": {
+          "label": "Message",
+          "description": "Free-text message content"
+        },
+        "actorName": {
+          "label": "Actor name",
+          "description": "User who performed the action"
+        },
+        "displayName": {
+          "label": "Display name",
+          "description": "AD display name",
+          "example": "John Doe"
+        },
+        "username": {
+          "label": "Username",
+          "description": "SamAccountName or username",
+          "example": "john.doe"
+        },
+        "upn": {
+          "label": "User UPN",
+          "description": "User Principal Name"
+        },
+        "department": {
+          "label": "Department",
+          "description": "User department"
+        },
+        "helpDeskPhone": {
+          "label": "Help desk phone",
+          "description": "Support line phone number"
+        }
+      }
+    }
+  }
+}

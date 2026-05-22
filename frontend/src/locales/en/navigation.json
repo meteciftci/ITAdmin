@@ -20,8 +20,7 @@
       "notificationOutbox": "Notification Queue",
       "settings": "Settings",
       "applicationSettings": "Application Settings",
-      "notificationProviders": "Notification Providers",
-      "notificationTemplates": "Notification Templates",
+      "notificationSettings": "Notification Settings",
       "moduleSettings": "Module Settings",
       "adManagementSettings": "AD Management Settings",
       "error": "Error"

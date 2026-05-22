@@ -20,8 +20,7 @@
       "notificationOutbox": "Bildirim Kuyruğu",
       "settings": "Ayarlar",
       "applicationSettings": "Uygulama Ayarları",
-      "notificationProviders": "Bildirim Sağlayıcıları",
-      "notificationTemplates": "Bildirim Şablonları",
+      "notificationSettings": "Bildirim Ayarları",
       "moduleSettings": "Modül Ayarları",
       "adManagementSettings": "AD Yönetim Ayarları",
       "error": "Hata"

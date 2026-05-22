@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using SasPortal.Application.Abstractions.Notifications;
 using SasPortal.Application.Abstractions.Services;
 using SasPortal.Application.Common.Audit;
 using SasPortal.Application.Common.Constants;
@@ -8,7 +9,9 @@ using SasPortal.Persistence.Context;
 
 namespace SasPortal.Persistence.Services;
 
-public sealed class NotificationTemplateService(AppDbContext context) : INotificationTemplateService
+public sealed class NotificationTemplateService(
+    AppDbContext context,
+    INotificationTemplateCatalogProvider catalogProvider) : INotificationTemplateService
 {
     private const int AuditIpAddressMaxLength = 64;
     private const int AuditUserAgentMaxLength = 1024;
@@ -77,7 +80,7 @@ public sealed class NotificationTemplateService(AppDbContext context) : INotific
 
         var moduleKey = request.ModuleKey.Trim();
         var eventKey = request.EventKey.Trim();
-        var channel = request.Channel.Trim();
+        var channel = NormalizeChannel(request.Channel);
 
         var exists = await context.NotificationTemplates
             .AnyAsync(
@@ -147,7 +150,7 @@ public sealed class NotificationTemplateService(AppDbContext context) : INotific
 
         var moduleKey = request.ModuleKey.Trim();
         var eventKey = request.EventKey.Trim();
-        var channel = request.Channel.Trim();
+        var channel = NormalizeChannel(request.Channel);
 
         var duplicate = await context.NotificationTemplates
             .AnyAsync(
@@ -192,7 +195,7 @@ public sealed class NotificationTemplateService(AppDbContext context) : INotific
         return new NotificationTemplateOperationResult(true, "Notification template updated.", Map(entity));
     }
 
-    private static string? ValidateRequest(
+    private string? ValidateRequest(
         string moduleKey,
         string eventKey,
         string channel,
@@ -208,17 +211,29 @@ public sealed class NotificationTemplateService(AppDbContext context) : INotific
             return "Module, event, channel, name and body template are required.";
         }
 
-        if (!IsValidChannel(channel))
+        var normalizedChannel = NormalizeChannel(channel);
+
+        if (!IsValidChannel(normalizedChannel))
         {
             return "Notification channel is invalid.";
         }
 
-        return null;
+        return catalogProvider.ValidateTemplateKeys(
+            moduleKey.Trim(),
+            eventKey.Trim(),
+            normalizedChannel);
     }
 
     private static bool IsValidChannel(string channel) =>
         string.Equals(channel, NotificationChannels.Sms, StringComparison.OrdinalIgnoreCase)
         || string.Equals(channel, NotificationChannels.Email, StringComparison.OrdinalIgnoreCase);
+
+    private static string NormalizeChannel(string channel) =>
+        string.Equals(channel, NotificationChannels.Sms, StringComparison.OrdinalIgnoreCase)
+            ? NotificationChannels.Sms
+            : string.Equals(channel, NotificationChannels.Email, StringComparison.OrdinalIgnoreCase)
+                ? NotificationChannels.Email
+                : channel.Trim();
 
     private static List<AuditFieldChange> BuildTemplateAuditChanges(
         TemplateSnapshot before,
