@@ -1,0 +1,26 @@
+namespace SasPortal.Application.Common.Models.Notifications;
+
+public sealed record SmsProviderSettingsResponse(
+    string Channel,
+    string ProviderKey,
+    bool IsEnabled,
+    string? DisplayName,
+    string? Sender,
+    int TimeoutSeconds,
+    string? EndpointUrl,
+    string Method,
+    string ContentType,
+    string AuthType,
+    string? ApiKeyName,
+    IReadOnlyList<NotificationKeyValuePair> Headers,
+    IReadOnlyList<NotificationKeyValuePair> QueryParameters,
+    string? BodyTemplate,
+    IReadOnlyList<int> SuccessStatusCodes,
+    string? SuccessBodyContains,
+    string TurkishCharacterMode,
+    bool HasBasicPassword,
+    bool HasBearerToken,
+    bool HasApiKey,
+    DateTimeOffset? LastValidatedAt,
+    string? LastValidationStatus,
+    string? LastValidationMessage);

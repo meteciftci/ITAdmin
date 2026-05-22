@@ -1,0 +1,105 @@
+{
+  "notificationProviders": {
+    "title": "Notification Providers",
+    "description": "Configure SMS and email providers.",
+    "readOnlyNotice": "You have view-only access on this screen. Update permission is required to make changes.",
+    "tabs": {
+      "sms": "SMS",
+      "email": "Email"
+    },
+    "fields": {
+      "active": "Active",
+      "provider": "Provider",
+      "displayName": "Display name",
+      "timeoutSeconds": "Timeout (sec)"
+    },
+    "secrets": {
+      "storedPlaceholder": "A stored secret exists. Enter a new value to change it."
+    },
+    "common": {
+      "noEntries": "No entries yet.",
+      "addEntry": "Add row",
+      "removeEntry": "Remove row",
+      "keyPlaceholder": "Key",
+      "valuePlaceholder": "Value"
+    },
+    "sms": {
+      "sectionTitle": "SMS Provider",
+      "sectionDescription": "Configure SMS delivery via Custom HTTP.",
+      "providerName": "Custom HTTP",
+      "httpSection": "HTTP Settings",
+      "authSection": "Authentication",
+      "requestSection": "Request",
+      "testSection": "Test SMS",
+      "fields": {
+        "sender": "Sender ID",
+        "endpointUrl": "Endpoint URL",
+        "method": "Method",
+        "contentType": "Content-Type",
+        "authType": "Auth Type",
+        "basicUserName": "Username",
+        "basicPassword": "Password",
+        "bearerToken": "Token",
+        "apiKeyName": "API key name",
+        "apiKeyValue": "API key value",
+        "headers": "Headers",
+        "queryParameters": "Query parameters",
+        "bodyTemplate": "Body template",
+        "successStatusCodes": "Success status codes",
+        "successBodyContains": "Success body contains",
+        "turkishCharacterMode": "Turkish character mode",
+        "testPhoneNumber": "Test phone number",
+        "testMessage": "Test message"
+      },
+      "authTypes": {
+        "none": "None",
+        "basic": "Basic",
+        "bearer": "Bearer Token",
+        "apiKeyHeader": "API Key (Header)",
+        "apiKeyQuery": "API Key (Query)"
+      },
+      "turkishModes": {
+        "preserve": "Preserve",
+        "transliterate": "Transliterate to ASCII"
+      },
+      "actions": {
+        "test": "Send Test SMS"
+      },
+      "messages": {
+        "saveSuccess": "SMS provider settings saved.",
+        "saveFailed": "SMS provider settings could not be saved.",
+        "loadFailed": "SMS provider settings could not be loaded.",
+        "testFailed": "Test SMS could not be sent.",
+        "saveBeforeTest": "Save settings before sending a test."
+      }
+    },
+    "email": {
+      "sectionTitle": "Email Provider",
+      "sectionDescription": "Configure email delivery via SMTP.",
+      "providerName": "SMTP",
+      "testSection": "Test Email",
+      "fields": {
+        "host": "SMTP host",
+        "port": "Port",
+        "useSsl": "SSL/TLS",
+        "userName": "Username",
+        "password": "Password",
+        "fromAddress": "From address",
+        "fromDisplayName": "From display name",
+        "testRecipientEmail": "Test recipient email",
+        "testSubject": "Test subject",
+        "testBody": "Test body"
+      },
+      "actions": {
+        "test": "Send Test Email"
+      },
+      "messages": {
+        "saveSuccess": "Email provider settings saved.",
+        "saveFailed": "Email provider settings could not be saved.",
+        "loadFailed": "Email provider settings could not be loaded.",
+        "testFailed": "Test email could not be sent.",
+        "saveBeforeTest": "Save settings before sending a test."
+      }
+    }
+  }
+}

@@ -52,6 +52,9 @@ public sealed class SetupService(
         ("AdManagement", "AdManagement.Users.View", "View AD management directory users."),
         ("AdManagement", "AdManagement.Users.Create", "Create AD management directory users."),
         ("AdOperationLogs", "AdOperationLogs.View", "View AD operation logs."),
+        ("NotificationProviders", "NotificationProviders.View", "View notification provider settings."),
+        ("NotificationProviders", "NotificationProviders.Update", "Update notification provider settings."),
+        ("NotificationProviders", "NotificationProviders.Test", "Send notification provider test messages."),
         ("Setup", "Setup.Manage", "Manage setup.")
     ];
 

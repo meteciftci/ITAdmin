@@ -180,13 +180,23 @@ export const getSidebarGroups = (
         titleKey: "items.settings",
         routePrefix: "/settings",
         icon: SlidersHorizontal,
-        visible: canAccessAny(user, ["Settings.View", "AdManagement.Settings.View"]),
+        visible: canAccessAny(user, [
+          "Settings.View",
+          "NotificationProviders.View",
+          "AdManagement.Settings.View",
+        ]),
         children: [
           {
             titleKey: "items.applicationSettings",
             to: "/settings/application",
             icon: SlidersHorizontal,
             visible: canAccess(user, "Settings.View"),
+          },
+          {
+            titleKey: "items.notificationProviders",
+            to: "/settings/notification-providers",
+            icon: SlidersHorizontal,
+            visible: canAccess(user, "NotificationProviders.View"),
           },
           {
             titleKey: "items.moduleSettings",

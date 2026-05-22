@@ -23,6 +23,7 @@ public class AppDbContext : DbContext
     public DbSet<AdManagementSettings> AdManagementSettings => Set<AdManagementSettings>();
     public DbSet<AdAttributeMapping> AdAttributeMappings => Set<AdAttributeMapping>();
     public DbSet<AdOperationLog> AdOperationLogs => Set<AdOperationLog>();
+    public DbSet<NotificationProviderSettings> NotificationProviderSettings => Set<NotificationProviderSettings>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

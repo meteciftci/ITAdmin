@@ -1,0 +1,26 @@
+namespace SasPortal.Application.Common.Models.Notifications;
+
+public sealed record UpdateSmsProviderSettingsRequest(
+    bool IsEnabled,
+    string? DisplayName,
+    string? Sender,
+    int TimeoutSeconds,
+    string EndpointUrl,
+    string Method,
+    string ContentType,
+    string AuthType,
+    string? ApiKeyName,
+    string? BasicUserName,
+    string? BasicPassword,
+    string? BearerToken,
+    string? ApiKeyValue,
+    IReadOnlyList<NotificationKeyValuePair> Headers,
+    IReadOnlyList<NotificationKeyValuePair> QueryParameters,
+    string? BodyTemplate,
+    IReadOnlyList<int> SuccessStatusCodes,
+    string? SuccessBodyContains,
+    string TurkishCharacterMode,
+    Guid? ActorUserId,
+    string? ActorUserName,
+    string? ActorIpAddress,
+    string? ActorUserAgent);

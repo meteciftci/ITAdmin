@@ -52,6 +52,11 @@ const ModuleSettingsPage = lazy(() =>
     default: module.ModuleSettingsPage,
   })),
 );
+const NotificationProvidersPage = lazy(() =>
+  import("@/features/notification-providers/NotificationProvidersPage").then((module) => ({
+    default: module.NotificationProvidersPage,
+  })),
+);
 const AdManagementSettingsPage = lazy(() =>
   import("@/features/ad-management/AdManagementSettingsPage").then((module) => ({
     default: module.AdManagementSettingsPage,
@@ -198,7 +203,11 @@ export const router = createBrowserRouter([
     element: (
       <RequireAuth>
         <RequireAnyPermission
-          permissions={["Settings.View", "AdManagement.Settings.View"]}
+          permissions={[
+            "Settings.View",
+            "NotificationProviders.View",
+            "AdManagement.Settings.View",
+          ]}
         >
           <AppLayout>
             <LazyRoute>
@@ -217,6 +226,20 @@ export const router = createBrowserRouter([
           <AppLayout>
             <LazyRoute>
               <ApplicationSettingsPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/settings/notification-providers",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission="NotificationProviders.View">
+          <AppLayout>
+            <LazyRoute>
+              <NotificationProvidersPage />
             </LazyRoute>
           </AppLayout>
         </RequirePermission>

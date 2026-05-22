@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using SasPortal.Application.Abstractions.Notifications;
 using SasPortal.Application.Abstractions.Security;
 using SasPortal.Application.Abstractions.Services;
+using SasPortal.Infrastructure.Notifications.Email;
+using SasPortal.Infrastructure.Notifications.Sms;
 using SasPortal.Infrastructure.Security;
 using SasPortal.Infrastructure.Services;
 
@@ -15,11 +18,18 @@ public static class DependencyInjection
         services.AddDataProtection()
             .SetApplicationName("SAS Portal");
 
+        services.AddHttpClient("NotificationProviders");
+
         services.AddScoped<ISecretProtector, SecretProtector>();
         services.AddScoped<ILdapService, LdapService>();
         services.AddScoped<ITokenService, JwtTokenService>();
         services.AddScoped<IAdManagementValidationService, AdManagementValidationService>();
         services.AddScoped<IAdUserDirectoryService, AdUserDirectoryService>();
+
+        services.AddScoped<ISmsProviderAdapter, CustomHttpSmsAdapter>();
+        services.AddScoped<IEmailProviderAdapter, SmtpEmailProviderAdapter>();
+        services.AddScoped<ISmsProviderRegistry, SmsProviderRegistry>();
+        services.AddScoped<IEmailProviderRegistry, EmailProviderRegistry>();
 
         return services;
     }

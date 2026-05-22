@@ -1,0 +1,105 @@
+{
+  "notificationProviders": {
+    "title": "Bildirim Sağlayıcıları",
+    "description": "SMS ve e-posta sağlayıcılarını yapılandırın.",
+    "readOnlyNotice": "Bu ekranda yalnızca görüntüleme yetkiniz var. Değişiklik yapmak için güncelleme yetkisi gerekir.",
+    "tabs": {
+      "sms": "SMS",
+      "email": "E-posta"
+    },
+    "fields": {
+      "active": "Aktif",
+      "provider": "Sağlayıcı",
+      "displayName": "Görünen ad",
+      "timeoutSeconds": "Zaman aşımı (sn)"
+    },
+    "secrets": {
+      "storedPlaceholder": "Kayıtlı secret mevcut. Değiştirmek için yeni değer girin."
+    },
+    "common": {
+      "noEntries": "Henüz kayıt yok.",
+      "addEntry": "Satır ekle",
+      "removeEntry": "Satırı kaldır",
+      "keyPlaceholder": "Anahtar",
+      "valuePlaceholder": "Değer"
+    },
+    "sms": {
+      "sectionTitle": "SMS Sağlayıcısı",
+      "sectionDescription": "Custom HTTP üzerinden SMS gönderimini yapılandırın.",
+      "providerName": "Custom HTTP",
+      "httpSection": "HTTP Ayarları",
+      "authSection": "Kimlik Doğrulama",
+      "requestSection": "İstek",
+      "testSection": "Test SMS",
+      "fields": {
+        "sender": "Gönderici başlığı",
+        "endpointUrl": "Endpoint URL",
+        "method": "Method",
+        "contentType": "Content-Type",
+        "authType": "Auth Type",
+        "basicUserName": "Kullanıcı adı",
+        "basicPassword": "Şifre",
+        "bearerToken": "Token",
+        "apiKeyName": "API key adı",
+        "apiKeyValue": "API key değeri",
+        "headers": "Headers",
+        "queryParameters": "Query parameters",
+        "bodyTemplate": "Body template",
+        "successStatusCodes": "Başarılı status kodları",
+        "successBodyContains": "Başarılı body içeriği",
+        "turkishCharacterMode": "Türkçe karakter modu",
+        "testPhoneNumber": "Test telefon numarası",
+        "testMessage": "Test mesajı"
+      },
+      "authTypes": {
+        "none": "Yok",
+        "basic": "Basic",
+        "bearer": "Bearer Token",
+        "apiKeyHeader": "API Key (Header)",
+        "apiKeyQuery": "API Key (Query)"
+      },
+      "turkishModes": {
+        "preserve": "Koru",
+        "transliterate": "ASCII'ye çevir"
+      },
+      "actions": {
+        "test": "Test SMS Gönder"
+      },
+      "messages": {
+        "saveSuccess": "SMS sağlayıcı ayarları kaydedildi.",
+        "saveFailed": "SMS sağlayıcı ayarları kaydedilemedi.",
+        "loadFailed": "SMS sağlayıcı ayarları yüklenemedi.",
+        "testFailed": "Test SMS gönderilemedi.",
+        "saveBeforeTest": "Test göndermeden önce ayarları kaydedin."
+      }
+    },
+    "email": {
+      "sectionTitle": "E-posta Sağlayıcısı",
+      "sectionDescription": "SMTP üzerinden e-posta gönderimini yapılandırın.",
+      "providerName": "SMTP",
+      "testSection": "Test E-posta",
+      "fields": {
+        "host": "SMTP host",
+        "port": "Port",
+        "useSsl": "SSL/TLS",
+        "userName": "Kullanıcı adı",
+        "password": "Şifre",
+        "fromAddress": "From address",
+        "fromDisplayName": "From display name",
+        "testRecipientEmail": "Test alıcı e-posta",
+        "testSubject": "Test konu",
+        "testBody": "Test mesaj"
+      },
+      "actions": {
+        "test": "Test E-posta Gönder"
+      },
+      "messages": {
+        "saveSuccess": "E-posta sağlayıcı ayarları kaydedildi.",
+        "saveFailed": "E-posta sağlayıcı ayarları kaydedilemedi.",
+        "loadFailed": "E-posta sağlayıcı ayarları yüklenemedi.",
+        "testFailed": "Test e-posta gönderilemedi.",
+        "saveBeforeTest": "Test göndermeden önce ayarları kaydedin."
+      }
+    }
+  }
+}

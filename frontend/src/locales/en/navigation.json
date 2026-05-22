@@ -19,6 +19,7 @@
       "securityLogs": "Security Logs",
       "settings": "Settings",
       "applicationSettings": "Application Settings",
+      "notificationProviders": "Notification Providers",
       "moduleSettings": "Module Settings",
       "adManagementSettings": "AD Management Settings",
       "error": "Error"

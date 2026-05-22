@@ -14,6 +14,7 @@ import trSettings from "@/locales/tr/settings.json";
 import trSetup from "@/locales/tr/setup.json";
 import trAdManagement from "@/locales/tr/adManagement.json";
 import trUsers from "@/locales/tr/users.json";
+import trNotificationProviders from "@/locales/tr/notificationProviders.json";
 
 import enAuth from "@/locales/en/auth.json";
 import enAuditLogs from "@/locales/en/auditLogs.json";
@@ -28,6 +29,7 @@ import enSettings from "@/locales/en/settings.json";
 import enSetup from "@/locales/en/setup.json";
 import enAdManagement from "@/locales/en/adManagement.json";
 import enUsers from "@/locales/en/users.json";
+import enNotificationProviders from "@/locales/en/notificationProviders.json";
 
 export type SupportedLanguage = "tr" | "en";
 
@@ -51,6 +53,7 @@ const resources = {
     securityLogs: trSecurityLogs.securityLogs,
     settings: trSettings.settings,
     setup: trSetup.setup,
+    notificationProviders: trNotificationProviders.notificationProviders,
   },
   en: {
     common: enCommon.common,
@@ -66,6 +69,7 @@ const resources = {
     securityLogs: enSecurityLogs.securityLogs,
     settings: enSettings.settings,
     setup: enSetup.setup,
+    notificationProviders: enNotificationProviders.notificationProviders,
   },
 } as const;
 
@@ -88,6 +92,7 @@ void i18n.use(initReactI18next).init({
     "securityLogs",
     "settings",
     "setup",
+    "notificationProviders",
   ],
   defaultNS: "common",
 });

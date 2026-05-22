@@ -33,6 +33,8 @@ public static class DependencyInjection
         services.AddScoped<IAdOperationLogService, AdOperationLogService>();
         services.AddScoped<IAdManagementSettingsService, AdManagementSettingsService>();
         services.AddScoped<IAdAttributeMappingService, AdAttributeMappingService>();
+        services.AddScoped<INotificationProviderSettingsService, NotificationProviderSettingsService>();
+        services.AddScoped<INotificationSender, NotificationSender>();
 
         return services;
     }
