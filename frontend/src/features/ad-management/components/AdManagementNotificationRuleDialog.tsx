@@ -1,4 +1,11 @@
-import { useMemo, useState } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
@@ -25,6 +32,10 @@ import {
 } from "@/features/ad-management/types";
 
 export type NotificationRuleDialogMode = "create" | "edit";
+
+export type NotificationRuleDialogFormHandle = {
+  submit: () => void;
+};
 
 type Props = {
   open: boolean;
@@ -97,14 +108,13 @@ function buildInitialForm(
 
 type RuleDialogFormProps = Omit<Props, "open" | "onOpenChange">;
 
-function AdManagementNotificationRuleDialogForm({
-  mode,
-  initialRule,
-  existingRules,
-  mappings,
-  readOnly,
-  onSubmit,
-}: RuleDialogFormProps) {
+const AdManagementNotificationRuleDialogForm = forwardRef<
+  NotificationRuleDialogFormHandle,
+  RuleDialogFormProps
+>(function AdManagementNotificationRuleDialogForm(
+  { mode, initialRule, existingRules, mappings, readOnly, onSubmit },
+  ref,
+) {
   const { t } = useTranslation(["settings", "common"]);
   const [form, setForm] = useState<FormState>(() => buildInitialForm(mode, initialRule));
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -168,7 +178,7 @@ function AdManagementNotificationRuleDialogForm({
     },
   ];
 
-  function validate(): string | null {
+  const validate = useCallback((): string | null => {
     if (!form.eventKey || !form.channel) {
       return t("settings:adManagement.notifications.validation.requiredFields");
     }
@@ -178,10 +188,7 @@ function AdManagementNotificationRuleDialogForm({
         return false;
       }
 
-      return (
-        rule.eventKey === form.eventKey
-        && rule.channel === form.channel
-      );
+      return rule.eventKey === form.eventKey && rule.channel === form.channel;
     });
 
     if (duplicate) {
@@ -197,14 +204,16 @@ function AdManagementNotificationRuleDialogForm({
     }
 
     return null;
-  }
+  }, [existingRules, form, initialRule, mode, t]);
 
-  function handleSubmit() {
+  const handleSubmit = useCallback(() => {
     const validationError = validate();
     if (validationError) {
       setErrorMessage(validationError);
       return;
     }
+
+    setErrorMessage(null);
 
     const recipientSource = buildRecipientSource(form.recipientType, form.recipientValue);
 
@@ -215,129 +224,145 @@ function AdManagementNotificationRuleDialogForm({
       isEnabled: form.isEnabled,
       recipientSource,
     });
-  }
+  }, [form, initialRule, mode, onSubmit, validate]);
+
+  useImperativeHandle(ref, () => ({ submit: handleSubmit }), [handleSubmit]);
 
   return (
-    <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>{t("settings:adManagement.notifications.fields.event")}</Label>
-            <Select
-              value={form.eventKey}
-              disabled={readOnly || mode === "edit"}
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, eventKey: event.target.value }))}
-            >
-              <option value="">{t("settings:adManagement.notifications.fields.selectEvent")}</option>
-              {eventOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </Select>
-          </div>
+    <div className="space-y-5 px-6 py-5">
+      <div className="space-y-2">
+        <Label>{t("settings:adManagement.notifications.fields.event")}</Label>
+        <Select
+          value={form.eventKey}
+          disabled={readOnly || mode === "edit"}
+          onChange={(event) => {
+            setErrorMessage(null);
+            setForm((prev) => ({ ...prev, eventKey: event.target.value }));
+          }}
+        >
+          <option value="">{t("settings:adManagement.notifications.fields.selectEvent")}</option>
+          {eventOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </Select>
+      </div>
 
-          <div className="space-y-2">
-            <Label>{t("settings:adManagement.notifications.fields.channel")}</Label>
-            <Select
-              value={form.channel}
-              disabled={readOnly || mode === "edit"}
-              onChange={(event) =>
-                setForm((prev) => ({
-                  ...prev,
-                  channel: event.target.value,
-                  recipientType: "",
-                  recipientValue: "",
-                }))}
-            >
-              <option value="">{t("settings:adManagement.notifications.fields.selectChannel")}</option>
-              <option value={AD_NOTIFICATION_CHANNELS.sms}>
-                {t("settings:adManagement.notifications.channels.sms")}
+      <div className="space-y-2">
+        <Label>{t("settings:adManagement.notifications.fields.channel")}</Label>
+        <Select
+          value={form.channel}
+          disabled={readOnly || mode === "edit"}
+          onChange={(event) => {
+            setErrorMessage(null);
+            setForm((prev) => ({
+              ...prev,
+              channel: event.target.value,
+              recipientType: "",
+              recipientValue: "",
+            }));
+          }}
+        >
+          <option value="">{t("settings:adManagement.notifications.fields.selectChannel")}</option>
+          <option value={AD_NOTIFICATION_CHANNELS.sms}>
+            {t("settings:adManagement.notifications.channels.sms")}
+          </option>
+          <option value={AD_NOTIFICATION_CHANNELS.email}>
+            {t("settings:adManagement.notifications.channels.email")}
+          </option>
+        </Select>
+      </div>
+
+      {form.channel ? (
+        <div className="space-y-2">
+          <Label>{t("settings:adManagement.notifications.fields.recipientSourceType")}</Label>
+          <Select
+            value={form.recipientType}
+            disabled={readOnly}
+            onChange={(event) => {
+              setErrorMessage(null);
+              setForm((prev) => ({
+                ...prev,
+                recipientType: event.target.value,
+                recipientValue: recipientNeedsValue(event.target.value)
+                  ? prev.recipientValue
+                  : "",
+              }));
+            }}
+          >
+            <option value="">{t("settings:adManagement.notifications.fields.selectSource")}</option>
+            {recipientTypeOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
               </option>
-              <option value={AD_NOTIFICATION_CHANNELS.email}>
-                {t("settings:adManagement.notifications.channels.email")}
-              </option>
-            </Select>
-          </div>
-
-          {form.channel ? (
-            <div className="space-y-2">
-              <Label>{t("settings:adManagement.notifications.fields.recipientSourceType")}</Label>
-              <Select
-                value={form.recipientType}
-                disabled={readOnly}
-                onChange={(event) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    recipientType: event.target.value,
-                    recipientValue: recipientNeedsValue(event.target.value)
-                      ? prev.recipientValue
-                      : "",
-                  }))}
-              >
-                <option value="">{t("settings:adManagement.notifications.fields.selectSource")}</option>
-                {recipientTypeOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          ) : null}
-
-          {form.recipientType === AD_NOTIFICATION_RECIPIENT_SOURCE_TYPES.mappedAttribute ? (
-            <div className="space-y-2">
-              <Label>{t("settings:adManagement.notifications.fields.mappedAttribute")}</Label>
-              <Select
-                value={form.recipientValue}
-                disabled={readOnly}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, recipientValue: event.target.value }))}
-              >
-                <option value="">{t("settings:adManagement.notifications.fields.selectMappedAttribute")}</option>
-                {enabledMappings.map((mapping) => (
-                  <option key={mapping.id} value={mapping.id}>
-                    {mapping.displayName}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          ) : null}
-
-          {form.recipientType === AD_NOTIFICATION_RECIPIENT_SOURCE_TYPES.adAttribute ? (
-            <div className="space-y-2">
-              <Label>{t("settings:adManagement.notifications.fields.adAttribute")}</Label>
-              <Input
-                value={form.recipientValue}
-                disabled={readOnly}
-                placeholder={t("settings:adManagement.notifications.placeholders.adAttribute")}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, recipientValue: event.target.value }))}
-              />
-            </div>
-          ) : null}
-
-          <div className="flex items-center justify-between gap-4">
-            <Label htmlFor="rule-enabled">{t("settings:adManagement.notifications.fields.status")}</Label>
-            <Switch
-              id="rule-enabled"
-              checked={form.isEnabled}
-              disabled={readOnly}
-              onCheckedChange={(checked) => setForm((prev) => ({ ...prev, isEnabled: checked }))}
-            />
-          </div>
-
-          {errorMessage ? <p className="text-sm text-destructive">{errorMessage}</p> : null}
-
-      {!readOnly ? (
-        <div className="flex justify-end">
-          <Button type="button" onClick={handleSubmit}>
-            {t("common:actions.save")}
-          </Button>
+            ))}
+          </Select>
         </div>
+      ) : null}
+
+      {form.recipientType === AD_NOTIFICATION_RECIPIENT_SOURCE_TYPES.mappedAttribute ? (
+        <div className="space-y-2">
+          <Label>{t("settings:adManagement.notifications.fields.mappedAttribute")}</Label>
+          <Select
+            value={form.recipientValue}
+            disabled={readOnly}
+            onChange={(event) => {
+              setErrorMessage(null);
+              setForm((prev) => ({ ...prev, recipientValue: event.target.value }));
+            }}
+          >
+            <option value="">{t("settings:adManagement.notifications.fields.selectMappedAttribute")}</option>
+            {enabledMappings.map((mapping) => (
+              <option key={mapping.id} value={mapping.id}>
+                {mapping.displayName}
+              </option>
+            ))}
+          </Select>
+        </div>
+      ) : null}
+
+      {form.recipientType === AD_NOTIFICATION_RECIPIENT_SOURCE_TYPES.adAttribute ? (
+        <div className="space-y-2">
+          <Label>{t("settings:adManagement.notifications.fields.adAttribute")}</Label>
+          <Input
+            value={form.recipientValue}
+            disabled={readOnly}
+            placeholder={t("settings:adManagement.notifications.placeholders.adAttribute")}
+            onChange={(event) => {
+              setErrorMessage(null);
+              setForm((prev) => ({ ...prev, recipientValue: event.target.value }));
+            }}
+          />
+        </div>
+      ) : null}
+
+      <div className="flex items-center justify-between gap-4 rounded-md border bg-muted/20 px-4 py-3">
+        <Label htmlFor="rule-enabled" className="cursor-pointer">
+          {t("settings:adManagement.notifications.fields.status")}
+        </Label>
+        <Switch
+          id="rule-enabled"
+          checked={form.isEnabled}
+          disabled={readOnly}
+          onCheckedChange={(checked) => {
+            setErrorMessage(null);
+            setForm((prev) => ({ ...prev, isEnabled: checked }));
+          }}
+        />
+      </div>
+
+      {errorMessage ? (
+        <p
+          className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+          role="alert"
+        >
+          {errorMessage}
+        </p>
       ) : null}
     </div>
   );
-}
+});
 
 export function AdManagementNotificationRuleDialog({
   open,
@@ -351,6 +376,7 @@ export function AdManagementNotificationRuleDialog({
 }: Props) {
   const { t } = useTranslation(["settings", "common"]);
   const formKey = open ? `${mode}-${initialRule?.id ?? "create"}` : "closed";
+  const formRef = useRef<NotificationRuleDialogFormHandle>(null);
 
   if (!open) {
     return null;
@@ -358,8 +384,11 @@ export function AdManagementNotificationRuleDialog({
 
   return (
     <Dialog open={open}>
-      <DialogContent className="max-w-lg" onOpenChange={onOpenChange}>
-        <DialogHeader>
+      <DialogContent
+        className="max-w-lg overflow-hidden p-0"
+        onOpenChange={onOpenChange}
+      >
+        <DialogHeader className="space-y-1 border-b px-6 pt-6 pb-4">
           <DialogTitle>
             {mode === "create"
               ? t("settings:adManagement.notifications.actions.add")
@@ -368,6 +397,7 @@ export function AdManagementNotificationRuleDialog({
         </DialogHeader>
 
         <AdManagementNotificationRuleDialogForm
+          ref={formRef}
           key={formKey}
           mode={mode}
           initialRule={initialRule}
@@ -380,10 +410,15 @@ export function AdManagementNotificationRuleDialog({
           }}
         />
 
-        <DialogFooter>
+        <DialogFooter className="gap-2 border-t px-6 py-4">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            {t("common:actions.cancel")}
+            {readOnly ? t("common:actions.close") : t("common:actions.cancel")}
           </Button>
+          {!readOnly ? (
+            <Button type="button" onClick={() => formRef.current?.submit()}>
+              {t("common:actions.save")}
+            </Button>
+          ) : null}
         </DialogFooter>
       </DialogContent>
     </Dialog>
