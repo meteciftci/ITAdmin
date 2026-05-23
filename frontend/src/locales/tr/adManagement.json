@@ -44,7 +44,8 @@
         "create": "Kullanıcı Oluştur",
         "enable": "Hesabı aktife al",
         "disable": "Hesabı pasife al",
-        "unlock": "Kilidi aç"
+        "unlock": "Kilidi aç",
+        "manageGroups": "Grup üyeliklerini yönet"
       },
       "confirm": {
         "enableTitle": "Kullanıcı hesabı aktife alınacak",
@@ -127,6 +128,53 @@
         "page": "Sayfa {{pageNumber}}",
         "previous": "Önceki",
         "next": "Sonraki"
+      },
+      "groups": {
+        "pageTitle": "Grup Üyelikleri",
+        "pageHeading": "AD grup üyelikleri",
+        "pageDescription": "Kullanıcının doğrudan üye olduğu AD gruplarını yönetin.",
+        "sections": {
+          "userSummary": "Kullanıcı özeti",
+          "addGroup": "Grup ekle",
+          "addGroupDescription": "Kullanıcıyı eklemek istediğiniz AD grubunu arayın ve seçin.",
+          "currentMemberships": "Mevcut grup üyelikleri",
+          "currentMembershipsDescription": "Kullanıcının doğrudan üye olduğu gruplar."
+        },
+        "fields": {
+          "searchGroup": "Grup ara",
+          "searchGroupPlaceholder": "Grup adı veya sAMAccountName ile arayın",
+          "selectGroup": "Grup seç"
+        },
+        "table": {
+          "groupName": "Grup adı",
+          "samAccountName": "sAMAccountName",
+          "description": "Açıklama",
+          "distinguishedName": "Distinguished Name"
+        },
+        "actions": {
+          "addToGroup": "Gruba ekle",
+          "removeFromGroup": "Gruptan çıkar"
+        },
+        "confirm": {
+          "removeTitle": "Grup üyeliği kaldırılacak",
+          "removeDescription": "Kullanıcı bu AD grubundan çıkarılacak. Devam etmek istiyor musunuz?",
+          "removeConfirm": "Kaldır"
+        },
+        "messages": {
+          "alreadyMember": "Kullanıcı bu gruba zaten üye.",
+          "membershipAdded": "Grup üyeliği eklendi.",
+          "membershipRemoved": "Grup üyeliği kaldırıldı.",
+          "operationFailed": "İşlem başarısız oldu."
+        },
+        "empty": {
+          "searchMinLength": "En az 2 karakter girin.",
+          "groupNotFound": "Grup bulunamadı.",
+          "noMembershipsTitle": "Grup üyeliği yok",
+          "noMembershipsDescription": "Bu kullanıcının doğrudan üye olduğu bir AD grubu bulunamadı."
+        },
+        "errors": {
+          "loadFailed": "Grup üyelikleri yüklenemedi."
+        }
       },
       "detail": {
         "dialogTitle": "Kullanıcı detayı",

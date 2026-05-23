@@ -297,3 +297,43 @@ export type AdUserAccountOperationResponse = {
 };
 
 export type AdUserAccountConfirmAction = "enable" | "disable" | "unlock";
+
+export type AdUserGroupMembershipItem = {
+  distinguishedName: string;
+  name: string;
+  samAccountName: string | null;
+  description: string | null;
+  isDirect: boolean;
+};
+
+export type AdUserGroupMembershipResponse = {
+  userId: string;
+  displayName: string | null;
+  samAccountName: string | null;
+  userPrincipalName: string | null;
+  distinguishedName: string | null;
+  groups: AdUserGroupMembershipItem[];
+};
+
+export type AdGroupSearchItem = {
+  distinguishedName: string;
+  name: string;
+  samAccountName: string | null;
+  description: string | null;
+};
+
+export type AdGroupSearchResponse = {
+  items: AdGroupSearchItem[];
+};
+
+export type AdUserGroupOperationResponse = {
+  success: boolean;
+  message: string;
+  userId: string;
+  groupDistinguishedName: string;
+  groupName: string | null;
+};
+
+export type AdUserGroupMutationRequest = {
+  groupDistinguishedName: string;
+};

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -62,6 +62,8 @@ export function AdUsersPage() {
   const canEnableUser = canAccess(currentUser, "AdManagement.Users.Enable");
   const canDisableUser = canAccess(currentUser, "AdManagement.Users.Disable");
   const canUnlockUser = canAccess(currentUser, "AdManagement.Users.Unlock");
+  const canManageGroups = canAccess(currentUser, "AdManagement.Users.Groups.View");
+  const navigate = useNavigate();
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<AdUserStatusFilter>("all");
@@ -330,6 +332,15 @@ export function AdUsersPage() {
                           <DropdownMenuItem onClick={() => openDetail(user)}>
                             {t("adManagement:users.actions.detail")}
                           </DropdownMenuItem>
+                          {canManageGroups ? (
+                            <DropdownMenuItem
+                              onClick={() =>
+                                navigate(`/ad-management/users/${user.id}/groups`)
+                              }
+                            >
+                              {t("adManagement:users.actions.manageGroups")}
+                            </DropdownMenuItem>
+                          ) : null}
                           {canDisableUser && user.isEnabled ? (
                             <DropdownMenuItem
                               onClick={() =>

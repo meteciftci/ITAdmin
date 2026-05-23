@@ -44,7 +44,8 @@
         "create": "Create User",
         "enable": "Enable account",
         "disable": "Disable account",
-        "unlock": "Unlock account"
+        "unlock": "Unlock account",
+        "manageGroups": "Manage group memberships"
       },
       "confirm": {
         "enableTitle": "User account will be enabled",
@@ -127,6 +128,53 @@
         "page": "Page {{pageNumber}}",
         "previous": "Previous",
         "next": "Next"
+      },
+      "groups": {
+        "pageTitle": "Group Memberships",
+        "pageHeading": "AD group memberships",
+        "pageDescription": "Manage the AD groups the user is directly assigned to.",
+        "sections": {
+          "userSummary": "User summary",
+          "addGroup": "Add group",
+          "addGroupDescription": "Search and select the AD group you want to add the user to.",
+          "currentMemberships": "Current group memberships",
+          "currentMembershipsDescription": "Groups the user is directly a member of."
+        },
+        "fields": {
+          "searchGroup": "Search group",
+          "searchGroupPlaceholder": "Search by group name or sAMAccountName",
+          "selectGroup": "Select group"
+        },
+        "table": {
+          "groupName": "Group name",
+          "samAccountName": "sAMAccountName",
+          "description": "Description",
+          "distinguishedName": "Distinguished Name"
+        },
+        "actions": {
+          "addToGroup": "Add to group",
+          "removeFromGroup": "Remove from group"
+        },
+        "confirm": {
+          "removeTitle": "Group membership will be removed",
+          "removeDescription": "The user will be removed from this AD group. Do you want to continue?",
+          "removeConfirm": "Remove"
+        },
+        "messages": {
+          "alreadyMember": "The user is already a member of this group.",
+          "membershipAdded": "Group membership added.",
+          "membershipRemoved": "Group membership removed.",
+          "operationFailed": "The operation failed."
+        },
+        "empty": {
+          "searchMinLength": "Enter at least 2 characters.",
+          "groupNotFound": "No group found.",
+          "noMembershipsTitle": "No group memberships",
+          "noMembershipsDescription": "No direct AD group memberships were found for this user."
+        },
+        "errors": {
+          "loadFailed": "Group memberships could not be loaded."
+        }
       },
       "detail": {
         "dialogTitle": "User detail",

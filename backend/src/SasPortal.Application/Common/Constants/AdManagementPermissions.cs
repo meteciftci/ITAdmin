@@ -9,5 +9,8 @@ public static class AdManagementPermissions
     public const string UsersEnable = "AdManagement.Users.Enable";
     public const string UsersDisable = "AdManagement.Users.Disable";
     public const string UsersUnlock = "AdManagement.Users.Unlock";
+    public const string UsersGroupsView = "AdManagement.Users.Groups.View";
+    public const string UsersGroupsAdd = "AdManagement.Users.Groups.Add";
+    public const string UsersGroupsRemove = "AdManagement.Users.Groups.Remove";
     public const string OperationLogsView = "AdOperationLogs.View";
 }

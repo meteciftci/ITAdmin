@@ -1,6 +1,12 @@
 import type { ReactNode } from "react";
 import { useMemo } from "react";
+import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+
+import { useAuthStore } from "@/features/auth/auth-store";
+import { buttonVariants } from "@/components/ui/button-variants";
+import { canAccess } from "@/lib/permissions";
+import { cn } from "@/lib/utils";
 
 import { DetailDialog } from "@/components/common/DetailDialog";
 import { DateTimeText } from "@/components/common/DateTimeText";
@@ -37,6 +43,8 @@ function formatMappedValue(attribute: MappedAdUserAttribute): string {
 
 export function AdUserDetailDialog({ user, open, onOpenChange }: Props) {
   const { t } = useTranslation(["adManagement", "common"]);
+  const currentUser = useAuthStore((state) => state.user);
+  const canManageGroups = canAccess(currentUser, "AdManagement.Users.Groups.View");
 
   const mappedAttributes = useMemo(
     () =>
@@ -117,7 +125,18 @@ export function AdUserDetailDialog({ user, open, onOpenChange }: Props) {
           <Separator />
 
           <section className="space-y-2">
-            <SectionTitle>{t("adManagement:users.detail.groups")}</SectionTitle>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <SectionTitle>{t("adManagement:users.detail.groups")}</SectionTitle>
+              {canManageGroups ? (
+                <Link
+                  to={`/ad-management/users/${user.id}/groups`}
+                  className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+                  onClick={() => onOpenChange(false)}
+                >
+                  {t("adManagement:users.actions.manageGroups")}
+                </Link>
+              ) : null}
+            </div>
             {user.groups.length > 0 ? (
               <div className="flex max-h-40 flex-wrap gap-2 overflow-y-auto rounded-md border bg-muted/20 p-2">
                 {user.groups.map((group) => (

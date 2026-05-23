@@ -12,6 +12,7 @@
       "adManagement": "AD Management",
       "adManagementUsers": "Users",
       "adManagementUsersCreate": "Create AD user",
+      "adManagementUserGroups": "Group Memberships",
       "users": "Users",
       "roles": "Roles",
       "permissions": "Permissions",

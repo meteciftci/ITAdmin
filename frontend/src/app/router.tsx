@@ -92,6 +92,11 @@ const AdCreateUserPage = lazy(() =>
     default: module.AdCreateUserPage,
   })),
 );
+const AdUserGroupsPage = lazy(() =>
+  import("@/features/ad-management/AdUserGroupsPage").then((module) => ({
+    default: module.AdUserGroupsPage,
+  })),
+);
 const ErrorPage = lazy(() =>
   import("@/pages/ErrorPage").then((module) => ({ default: module.ErrorPage })),
 );
@@ -405,6 +410,20 @@ export const router = createBrowserRouter([
           <AppLayout>
             <LazyRoute>
               <AdCreateUserPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/ad-management/users/:id/groups",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission="AdManagement.Users.Groups.View">
+          <AppLayout>
+            <LazyRoute>
+              <AdUserGroupsPage />
             </LazyRoute>
           </AppLayout>
         </RequirePermission>

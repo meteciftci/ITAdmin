@@ -12,6 +12,10 @@ import type {
   AdUserSearchResponse,
   CreateAdAttributeMappingRequest,
   AdUserAccountOperationResponse,
+  AdUserGroupMembershipResponse,
+  AdUserGroupMutationRequest,
+  AdUserGroupOperationResponse,
+  AdGroupSearchResponse,
   CreateAdUserRequest,
   CreateAdUserResponse,
   GetAdUsersParams,
@@ -32,6 +36,12 @@ export const AD_MANAGEMENT_MAPPINGS_QUERY_KEY = [
 export const AD_MANAGEMENT_USERS_QUERY_KEY = ["ad-management", "users"] as const;
 
 export const AD_UPN_SUFFIXES_QUERY_KEY = ["ad-management", "upn-suffixes"] as const;
+
+export const AD_MANAGEMENT_USER_GROUPS_QUERY_KEY = [
+  "ad-management",
+  "users",
+  "groups",
+] as const;
 
 export async function invalidateAdManagementUserQueries(
   queryClient: QueryClient,
@@ -170,3 +180,51 @@ export const unlockAdUser = async (
   );
   return data;
 };
+
+export const getAdUserGroups = async (
+  userId: string,
+): Promise<AdUserGroupMembershipResponse> => {
+  const { data } = await apiClient.get<AdUserGroupMembershipResponse>(
+    `/ad-management/users/${userId}/groups`,
+  );
+  return data;
+};
+
+export const searchAdGroups = async (query: string): Promise<AdGroupSearchResponse> => {
+  const { data } = await apiClient.get<AdGroupSearchResponse>("/ad-management/groups/search", {
+    params: { query },
+  });
+  return data;
+};
+
+export const addAdUserToGroup = async (
+  userId: string,
+  payload: AdUserGroupMutationRequest,
+): Promise<AdUserGroupOperationResponse> => {
+  const { data } = await apiClient.post<AdUserGroupOperationResponse>(
+    `/ad-management/users/${userId}/groups`,
+    payload,
+  );
+  return data;
+};
+
+export const removeAdUserFromGroup = async (
+  userId: string,
+  payload: AdUserGroupMutationRequest,
+): Promise<AdUserGroupOperationResponse> => {
+  const { data } = await apiClient.delete<AdUserGroupOperationResponse>(
+    `/ad-management/users/${userId}/groups`,
+    { data: payload },
+  );
+  return data;
+};
+
+export async function invalidateAdUserGroupsQuery(
+  queryClient: QueryClient,
+  userId: string,
+): Promise<void> {
+  await queryClient.invalidateQueries({
+    queryKey: [...AD_MANAGEMENT_USER_GROUPS_QUERY_KEY, userId],
+  });
+  await invalidateAdManagementUserQueries(queryClient);
+}
