@@ -31,6 +31,16 @@ public sealed class AdLdapValueConverterTests
     }
 
     [Theory]
+    [InlineData(512, false, true)]
+    [InlineData(514, true, false)]
+    [InlineData(512, true, false)]
+    public void ApplyAccountDisabledFlag_TogglesDisabledBit(int userAccountControl, bool disabled, bool expectedEnabled)
+    {
+        var updated = AdLdapValueConverter.ApplyAccountDisabledFlag(userAccountControl, disabled);
+        Assert.Equal(expectedEnabled, AdLdapValueConverter.IsAccountEnabled(updated));
+    }
+
+    [Theory]
     [InlineData(0L, false)]
     [InlineData(1L, true)]
     [InlineData(null, false)]

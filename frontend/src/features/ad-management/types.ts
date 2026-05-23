@@ -272,3 +272,16 @@ export type GetAdUsersParams = {
   pageNumber?: number;
   pageSize?: number;
 };
+
+export type AdUserAccountOperationResponse = {
+  success: boolean;
+  message: string;
+  userId: string;
+  samAccountName: string | null;
+  userPrincipalName: string | null;
+  distinguishedName: string | null;
+  isEnabled: boolean | null;
+  isLockedOut: boolean | null;
+};
+
+export type AdUserAccountConfirmAction = "enable" | "disable" | "unlock";

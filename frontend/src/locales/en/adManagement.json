@@ -41,7 +41,24 @@
       "actions": {
         "detail": "Detail",
         "refresh": "Refresh",
-        "create": "Create User"
+        "create": "Create User",
+        "enable": "Enable account",
+        "disable": "Disable account",
+        "unlock": "Unlock account"
+      },
+      "confirm": {
+        "enableTitle": "User account will be enabled",
+        "disableTitle": "User account will be disabled",
+        "unlockTitle": "User account will be unlocked",
+        "enableDescription": "This action enables the user's AD account. Do you want to continue?",
+        "disableDescription": "This action disables the user's AD account. Do you want to continue?",
+        "unlockDescription": "This action unlocks the user's AD account lock. Do you want to continue?"
+      },
+      "messages": {
+        "enabled": "User account has been enabled.",
+        "disabled": "User account has been disabled.",
+        "unlocked": "User account has been unlocked.",
+        "operationFailed": "The operation failed."
       },
       "create": {
         "pageTitle": "Create AD user",

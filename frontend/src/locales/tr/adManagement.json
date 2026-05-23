@@ -41,7 +41,24 @@
       "actions": {
         "detail": "Detay",
         "refresh": "Yenile",
-        "create": "Kullanıcı Oluştur"
+        "create": "Kullanıcı Oluştur",
+        "enable": "Hesabı aktife al",
+        "disable": "Hesabı pasife al",
+        "unlock": "Kilidi aç"
+      },
+      "confirm": {
+        "enableTitle": "Kullanıcı hesabı aktife alınacak",
+        "disableTitle": "Kullanıcı hesabı pasife alınacak",
+        "unlockTitle": "Kullanıcı kilidi açılacak",
+        "enableDescription": "Bu işlem kullanıcının AD hesabını aktife alır. Devam etmek istiyor musunuz?",
+        "disableDescription": "Bu işlem kullanıcının AD hesabını pasife alır. Devam etmek istiyor musunuz?",
+        "unlockDescription": "Bu işlem kullanıcının AD hesap kilidini açar. Devam etmek istiyor musunuz?"
+      },
+      "messages": {
+        "enabled": "Kullanıcı hesabı aktife alındı.",
+        "disabled": "Kullanıcı hesabı pasife alındı.",
+        "unlocked": "Kullanıcı kilidi açıldı.",
+        "operationFailed": "İşlem başarısız oldu."
       },
       "create": {
         "pageTitle": "AD kullanıcısı oluştur",

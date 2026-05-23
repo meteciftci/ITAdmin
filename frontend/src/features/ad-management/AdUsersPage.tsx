@@ -1,12 +1,14 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 import { useAuthStore } from "@/features/auth/auth-store";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { canAccess } from "@/lib/permissions";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { DataToolbar } from "@/components/common/DataToolbar";
 import { DateTimeText } from "@/components/common/DateTimeText";
 import { EmptyState } from "@/components/common/EmptyState";
@@ -21,8 +23,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   AD_MANAGEMENT_USERS_QUERY_KEY,
+  disableAdUser,
+  enableAdUser,
   getAdUserById,
   getAdUsers,
+  invalidateAdManagementUserQueries,
+  unlockAdUser,
 } from "@/features/ad-management/api";
 import { AdAccountStatusBadge } from "@/features/ad-management/components/AdAccountStatusBadge";
 import { AdDirectoryPagination } from "@/features/ad-management/components/AdDirectoryPagination";
@@ -30,24 +36,39 @@ import { AdLockStatusBadge } from "@/features/ad-management/components/AdLockSta
 import { AdManagementModuleStateGuard } from "@/features/ad-management/components/AdManagementModuleStateGuard";
 import { AdUserDetailDialog } from "@/features/ad-management/components/AdUserDetailDialog";
 import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useAdManagementModuleStatus";
-import type { AdUserListItem, AdUserStatusFilter } from "@/features/ad-management/types";
+import type {
+  AdUserAccountConfirmAction,
+  AdUserListItem,
+  AdUserStatusFilter,
+} from "@/features/ad-management/types";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { createApiErrorRouteState, getErrorRoutePath } from "@/lib/route-error";
 import { cn } from "@/lib/utils";
+
+type AccountConfirmTarget = {
+  user: AdUserListItem;
+  action: AdUserAccountConfirmAction;
+};
 
 const MIN_SEARCH_LENGTH = 2;
 
 export function AdUsersPage() {
   const { t } = useTranslation(["adManagement", "common", "errors"]);
+  const queryClient = useQueryClient();
   const currentUser = useAuthStore((state) => state.user);
   const moduleStatus = useAdManagementModuleStatus();
   const canCreateUser = canAccess(currentUser, "AdManagement.Users.Create");
+  const canEnableUser = canAccess(currentUser, "AdManagement.Users.Enable");
+  const canDisableUser = canAccess(currentUser, "AdManagement.Users.Disable");
+  const canUnlockUser = canAccess(currentUser, "AdManagement.Users.Unlock");
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<AdUserStatusFilter>("all");
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [confirmTarget, setConfirmTarget] = useState<AccountConfirmTarget | null>(null);
 
   const debouncedSearch = useDebouncedValue(search, 400);
   const normalizedSearch = debouncedSearch.trim();
@@ -83,6 +104,53 @@ export function AdUsersPage() {
 
   const users = useMemo(() => usersQuery.data?.items ?? [], [usersQuery.data]);
 
+  const accountOperationMutation = useMutation({
+    mutationFn: async ({
+      userId,
+      action,
+    }: {
+      userId: string;
+      action: AdUserAccountConfirmAction;
+    }) => {
+      if (action === "enable") {
+        return enableAdUser(userId);
+      }
+
+      if (action === "disable") {
+        return disableAdUser(userId);
+      }
+
+      return unlockAdUser(userId);
+    },
+    onSuccess: async (response, variables) => {
+      if (!response.success) {
+        toast.error(response.message || t("adManagement:users.messages.operationFailed"));
+        return;
+      }
+
+      await invalidateAdManagementUserQueries(queryClient);
+      if (selectedUserId === variables.userId) {
+        await queryClient.invalidateQueries({
+          queryKey: [...AD_MANAGEMENT_USERS_QUERY_KEY, "detail", variables.userId],
+        });
+      }
+
+      const message =
+        variables.action === "enable"
+          ? t("adManagement:users.messages.enabled")
+          : variables.action === "disable"
+            ? t("adManagement:users.messages.disabled")
+            : t("adManagement:users.messages.unlocked");
+      toast.success(response.message || message);
+      setConfirmTarget(null);
+    },
+    onError: (error) => {
+      toast.error(
+        getApiErrorMessage(error, t("adManagement:users.messages.operationFailed")),
+      );
+    },
+  });
+
   const handleSearchChange = (value: string) => {
     setSearch(value);
     setPageNumber(1);
@@ -102,6 +170,34 @@ export function AdUsersPage() {
   const openDetail = (user: AdUserListItem) => {
     setSelectedUserId(user.id);
   };
+
+  const confirmCopy = useMemo(() => {
+    if (!confirmTarget) {
+      return { title: "", description: "", variant: "default" as const };
+    }
+
+    if (confirmTarget.action === "disable") {
+      return {
+        title: t("adManagement:users.confirm.disableTitle"),
+        description: t("adManagement:users.confirm.disableDescription"),
+        variant: "danger" as const,
+      };
+    }
+
+    if (confirmTarget.action === "enable") {
+      return {
+        title: t("adManagement:users.confirm.enableTitle"),
+        description: t("adManagement:users.confirm.enableDescription"),
+        variant: "default" as const,
+      };
+    }
+
+    return {
+      title: t("adManagement:users.confirm.unlockTitle"),
+      description: t("adManagement:users.confirm.unlockDescription"),
+      variant: "default" as const,
+    };
+  }, [confirmTarget, t]);
 
   if (moduleStatus.isOperational && usersQuery.isError) {
     const routeState = createApiErrorRouteState(usersQuery.error, {
@@ -234,6 +330,33 @@ export function AdUsersPage() {
                           <DropdownMenuItem onClick={() => openDetail(user)}>
                             {t("adManagement:users.actions.detail")}
                           </DropdownMenuItem>
+                          {canDisableUser && user.isEnabled ? (
+                            <DropdownMenuItem
+                              onClick={() =>
+                                setConfirmTarget({ user, action: "disable" })
+                              }
+                            >
+                              {t("adManagement:users.actions.disable")}
+                            </DropdownMenuItem>
+                          ) : null}
+                          {canEnableUser && !user.isEnabled ? (
+                            <DropdownMenuItem
+                              onClick={() =>
+                                setConfirmTarget({ user, action: "enable" })
+                              }
+                            >
+                              {t("adManagement:users.actions.enable")}
+                            </DropdownMenuItem>
+                          ) : null}
+                          {canUnlockUser && user.isLockedOut ? (
+                            <DropdownMenuItem
+                              onClick={() =>
+                                setConfirmTarget({ user, action: "unlock" })
+                              }
+                            >
+                              {t("adManagement:users.actions.unlock")}
+                            </DropdownMenuItem>
+                          ) : null}
                         </RowActions>
                       </td>
                     </tr>
@@ -264,6 +387,31 @@ export function AdUsersPage() {
           if (!open) {
             setSelectedUserId(null);
           }
+        }}
+      />
+
+      <ConfirmDialog
+        open={Boolean(confirmTarget)}
+        title={confirmCopy.title}
+        description={confirmCopy.description}
+        confirmText={t("common:actions.confirm")}
+        cancelText={t("common:actions.cancel")}
+        variant={confirmCopy.variant}
+        isLoading={accountOperationMutation.isPending}
+        onOpenChange={(open) => {
+          if (!open) {
+            setConfirmTarget(null);
+          }
+        }}
+        onConfirm={() => {
+          if (!confirmTarget) {
+            return;
+          }
+
+          accountOperationMutation.mutate({
+            userId: confirmTarget.user.id,
+            action: confirmTarget.action,
+          });
         }}
       />
 

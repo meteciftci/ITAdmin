@@ -24,7 +24,9 @@ public static class DependencyInjection
         services.AddScoped<ILdapService, LdapService>();
         services.AddScoped<ITokenService, JwtTokenService>();
         services.AddScoped<IAdManagementValidationService, AdManagementValidationService>();
-        services.AddScoped<IAdUserDirectoryService, AdUserDirectoryService>();
+        services.AddScoped<AdUserDirectoryService>();
+        services.AddScoped<IAdUserDirectoryService>(sp => sp.GetRequiredService<AdUserDirectoryService>());
+        services.AddScoped<IAdUserAccountOperationService>(sp => sp.GetRequiredService<AdUserDirectoryService>());
 
         services.AddScoped<ISmsProviderAdapter, CustomHttpSmsAdapter>();
         services.AddScoped<IEmailProviderAdapter, SmtpEmailProviderAdapter>();

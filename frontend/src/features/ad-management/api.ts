@@ -11,6 +11,7 @@ import type {
   AdUserDetail,
   AdUserSearchResponse,
   CreateAdAttributeMappingRequest,
+  AdUserAccountOperationResponse,
   CreateAdUserRequest,
   CreateAdUserResponse,
   GetAdUsersParams,
@@ -139,6 +140,33 @@ export const createAdUser = async (
   const { data } = await apiClient.post<CreateAdUserResponse>(
     "/ad-management/users",
     payload,
+  );
+  return data;
+};
+
+export const enableAdUser = async (
+  userId: string,
+): Promise<AdUserAccountOperationResponse> => {
+  const { data } = await apiClient.post<AdUserAccountOperationResponse>(
+    `/ad-management/users/${userId}/enable`,
+  );
+  return data;
+};
+
+export const disableAdUser = async (
+  userId: string,
+): Promise<AdUserAccountOperationResponse> => {
+  const { data } = await apiClient.post<AdUserAccountOperationResponse>(
+    `/ad-management/users/${userId}/disable`,
+  );
+  return data;
+};
+
+export const unlockAdUser = async (
+  userId: string,
+): Promise<AdUserAccountOperationResponse> => {
+  const { data } = await apiClient.post<AdUserAccountOperationResponse>(
+    `/ad-management/users/${userId}/unlock`,
   );
   return data;
 };

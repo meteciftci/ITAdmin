@@ -17,7 +17,8 @@ public sealed class AdManagementController(
     IAdManagementSettingsService settingsService,
     IAdAttributeMappingService attributeMappingService,
     IAdManagementValidationService validationService,
-    IAdUserDirectoryService adUserDirectoryService) : ControllerBase
+    IAdUserDirectoryService adUserDirectoryService,
+    IAdUserAccountOperationService adUserAccountOperationService) : ControllerBase
 {
     [HttpGet("settings")]
     [RequirePermission(AdManagementPermissions.SettingsView)]
@@ -267,6 +268,27 @@ public sealed class AdManagementController(
                     user.NotificationSummary.Messages)));
     }
 
+    [HttpPost("users/{id}/enable")]
+    [RequirePermission(AdManagementPermissions.UsersEnable)]
+    public async Task<ActionResult<AdUserAccountOperationResponse>> EnableUser(
+        [FromRoute] string id,
+        CancellationToken cancellationToken = default) =>
+        await ExecuteAccountOperationAsync(id, adUserAccountOperationService.EnableAsync, cancellationToken);
+
+    [HttpPost("users/{id}/disable")]
+    [RequirePermission(AdManagementPermissions.UsersDisable)]
+    public async Task<ActionResult<AdUserAccountOperationResponse>> DisableUser(
+        [FromRoute] string id,
+        CancellationToken cancellationToken = default) =>
+        await ExecuteAccountOperationAsync(id, adUserAccountOperationService.DisableAsync, cancellationToken);
+
+    [HttpPost("users/{id}/unlock")]
+    [RequirePermission(AdManagementPermissions.UsersUnlock)]
+    public async Task<ActionResult<AdUserAccountOperationResponse>> UnlockUser(
+        [FromRoute] string id,
+        CancellationToken cancellationToken = default) =>
+        await ExecuteAccountOperationAsync(id, adUserAccountOperationService.UnlockAsync, cancellationToken);
+
     [HttpGet("users/{id}")]
     [RequirePermission(AdManagementPermissions.UsersView)]
     public async Task<ActionResult<AdUserDetailResponse>> GetUserById(
@@ -494,6 +516,64 @@ public sealed class AdManagementController(
             "all" => AppModels.AdUserStatusFilter.All,
             _ => AppModels.AdUserStatusFilter.Active,
         };
+
+    private async Task<ActionResult<AdUserAccountOperationResponse>> ExecuteAccountOperationAsync(
+        string id,
+        Func<AppModels.AdUserAccountOperationRequest, CancellationToken, Task<AppModels.AdUserAccountOperationResult>> operation,
+        CancellationToken cancellationToken)
+    {
+        if (!Guid.TryParse(id, out var objectGuid))
+        {
+            return BadRequest(new AdUserAccountOperationResponse(
+                false,
+                "Geçersiz kullanıcı kimliği.",
+                id,
+                null,
+                null,
+                null,
+                null,
+                null));
+        }
+
+        var result = await operation(
+            new AppModels.AdUserAccountOperationRequest(
+                objectGuid,
+                ResolveActorUserId(User),
+                ResolveActorUserName(User),
+                ResolveIpAddress(),
+                ResolveUserAgent()),
+            cancellationToken);
+
+        var response = MapAccountOperationResponse(result);
+        if (result.IsSuccess)
+        {
+            return Ok(response);
+        }
+
+        return result.FailureKind switch
+        {
+            AppModels.AdDirectoryFailureKind.NotFound => NotFound(response),
+            AppModels.AdDirectoryFailureKind.ConnectionFailed => StatusCode(
+                StatusCodes.Status503ServiceUnavailable,
+                response),
+            AppModels.AdDirectoryFailureKind.Disabled
+                or AppModels.AdDirectoryFailureKind.NotConfigured
+                or AppModels.AdDirectoryFailureKind.MissingPassword => BadRequest(response),
+            _ => BadRequest(response),
+        };
+    }
+
+    private static AdUserAccountOperationResponse MapAccountOperationResponse(
+        AppModels.AdUserAccountOperationResult result) =>
+        new(
+            result.IsSuccess,
+            result.Message,
+            result.UserId ?? string.Empty,
+            result.SamAccountName,
+            result.UserPrincipalName,
+            result.DistinguishedName,
+            result.IsEnabled,
+            result.IsLockedOut);
 
     private ActionResult MapDirectoryFailure(string message, AppModels.AdDirectoryFailureKind? failureKind) =>
         failureKind switch

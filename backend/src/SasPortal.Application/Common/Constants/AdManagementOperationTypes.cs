@@ -8,6 +8,9 @@ public static class AdManagementOperationTypes
     public const string AttributeMappingUpdated = "AttributeMappingUpdated";
     public const string AttributeMappingDeleted = "AttributeMappingDeleted";
     public const string CreateUser = "CreateUser";
+    public const string UserEnable = "UserEnable";
+    public const string UserDisable = "UserDisable";
+    public const string UserUnlock = "UserUnlock";
 }
 
 public static class AdManagementTargetUserTypes

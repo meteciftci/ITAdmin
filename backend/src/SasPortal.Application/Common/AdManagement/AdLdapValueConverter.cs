@@ -4,10 +4,19 @@ namespace SasPortal.Application.Common.AdManagement;
 
 public static class AdLdapValueConverter
 {
-    private const int UserAccountControlDisabledFlag = 0x0002;
+    public const int UserAccountControlDisabledFlag = 0x0002;
+    private const int UserAccountControlNormalAccountFlag = 0x0200;
 
     public static bool IsAccountEnabled(int? userAccountControl) =>
         userAccountControl is null || (userAccountControl.Value & UserAccountControlDisabledFlag) == 0;
+
+    public static int ApplyAccountDisabledFlag(int? userAccountControl, bool disabled)
+    {
+        var current = userAccountControl ?? UserAccountControlNormalAccountFlag;
+        return disabled
+            ? current | UserAccountControlDisabledFlag
+            : current & ~UserAccountControlDisabledFlag;
+    }
 
     public static bool IsAccountLockedOut(long? lockoutTime) =>
         lockoutTime is > 0;
