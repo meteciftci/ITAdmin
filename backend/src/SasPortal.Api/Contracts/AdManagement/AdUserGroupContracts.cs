@@ -2,6 +2,7 @@ namespace SasPortal.Api.Contracts.AdManagement;
 
 public sealed record AdUserGroupMembershipItemResponse(
     string DistinguishedName,
+    string? DisplayName,
     string Name,
     string? SamAccountName,
     string? Description,
@@ -17,6 +18,7 @@ public sealed record AdUserDirectGroupMembershipsResponse(
 
 public sealed record AdGroupSearchItemResponse(
     string DistinguishedName,
+    string? DisplayName,
     string Name,
     string? SamAccountName,
     string? Description);

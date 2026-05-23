@@ -27,6 +27,7 @@ public sealed record RemoveAdUserFromGroupRequest(
 
 public sealed record AdUserGroupMembershipItem(
     string DistinguishedName,
+    string? DisplayName,
     string Name,
     string? SamAccountName,
     string? Description,
@@ -45,6 +46,7 @@ public sealed record AdUserGroupMembershipResult(
 
 public sealed record AdGroupSearchItem(
     string DistinguishedName,
+    string? DisplayName,
     string Name,
     string? SamAccountName,
     string? Description);

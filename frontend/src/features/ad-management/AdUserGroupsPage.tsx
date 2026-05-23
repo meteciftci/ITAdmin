@@ -20,6 +20,10 @@ import {
   invalidateAdUserGroupsQuery,
   removeAdUserFromGroup,
 } from "@/features/ad-management/api";
+import {
+  formatAdGroupSelectionPrimaryLabel,
+  formatAdGroupTableDisplayName,
+} from "@/features/ad-management/ad-group-display";
 import { AdGroupSearchCombobox } from "@/features/ad-management/components/AdGroupSearchCombobox";
 import { AdManagementModuleStateGuard } from "@/features/ad-management/components/AdManagementModuleStateGuard";
 import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useAdManagementModuleStatus";
@@ -177,8 +181,13 @@ export function AdUserGroupsPage() {
                   />
                   {selectedGroup ? (
                     <div className="rounded-md border bg-muted/20 p-3 text-sm">
-                      <p className="font-medium">{selectedGroup.name}</p>
-                      <p className="mt-1 font-mono text-xs text-muted-foreground">
+                      <p className="font-medium">
+                        {formatAdGroupSelectionPrimaryLabel(selectedGroup)}
+                      </p>
+                      <p
+                        className="mt-1 break-all font-mono text-xs text-muted-foreground"
+                        title={selectedGroup.distinguishedName}
+                      >
                         {selectedGroup.distinguishedName}
                       </p>
                     </div>
@@ -210,9 +219,9 @@ export function AdUserGroupsPage() {
                   description={t("adManagement:users.groups.empty.noMembershipsDescription")}
                 />
               ) : (
-                <div className="overflow-x-auto rounded-md border">
-                  <table className="w-full min-w-[48rem] text-sm">
-                    <thead className="bg-muted/40 text-left">
+                <div className="overflow-x-auto rounded-lg border bg-card">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-muted/50 text-left">
                       <tr>
                         <th className="px-3 py-2 font-medium">
                           {t("adManagement:users.groups.table.groupName")}
@@ -227,7 +236,7 @@ export function AdUserGroupsPage() {
                           {t("adManagement:users.groups.table.distinguishedName")}
                         </th>
                         {canRemoveGroup ? (
-                          <th className="px-3 py-2 font-medium">
+                          <th className="w-0 px-3 py-2 font-medium whitespace-nowrap">
                             {t("adManagement:users.table.actions")}
                           </th>
                         ) : null}
@@ -235,17 +244,30 @@ export function AdUserGroupsPage() {
                     </thead>
                     <tbody>
                       {userSummary.groups.map((group) => (
-                        <tr key={group.distinguishedName} className="border-t align-top">
-                          <td className="px-3 py-2">{group.name}</td>
+                        <tr
+                          key={group.distinguishedName}
+                          className="border-t align-top hover:bg-muted/20"
+                        >
+                          <td className="px-3 py-2 font-medium">
+                            {formatAdGroupTableDisplayName(group.displayName)}
+                          </td>
                           <td className="px-3 py-2">{group.samAccountName || "-"}</td>
-                          <td className="max-w-xs px-3 py-2">{group.description || "-"}</td>
-                          <td className="max-w-md px-3 py-2">
-                            <span className="font-mono text-xs text-muted-foreground">
+                          <td
+                            className="max-w-xs truncate px-3 py-2"
+                            title={group.description || undefined}
+                          >
+                            {group.description || "-"}
+                          </td>
+                          <td className="max-w-[28rem] px-3 py-2">
+                            <span
+                              className="block truncate font-mono text-xs text-muted-foreground"
+                              title={group.distinguishedName}
+                            >
                               {group.distinguishedName}
                             </span>
                           </td>
                           {canRemoveGroup ? (
-                            <td className="px-3 py-2">
+                            <td className="w-0 shrink-0 px-3 py-2 whitespace-nowrap">
                               <Button
                                 type="button"
                                 variant="destructive"

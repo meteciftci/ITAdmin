@@ -337,6 +337,7 @@ public sealed class AdManagementController(
             result.Items?
                 .Select(item => new AdGroupSearchItemResponse(
                     item.DistinguishedName,
+                    item.DisplayName,
                     item.Name,
                     item.SamAccountName,
                     item.Description))
@@ -681,6 +682,7 @@ public sealed class AdManagementController(
             result.Groups?
                 .Select(group => new AdUserGroupMembershipItemResponse(
                     group.DistinguishedName,
+                    group.DisplayName,
                     group.Name,
                     group.SamAccountName,
                     group.Description,

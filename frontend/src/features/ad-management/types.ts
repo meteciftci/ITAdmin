@@ -300,6 +300,7 @@ export type AdUserAccountConfirmAction = "enable" | "disable" | "unlock";
 
 export type AdUserGroupMembershipItem = {
   distinguishedName: string;
+  displayName: string | null;
   name: string;
   samAccountName: string | null;
   description: string | null;
@@ -317,6 +318,7 @@ export type AdUserGroupMembershipResponse = {
 
 export type AdGroupSearchItem = {
   distinguishedName: string;
+  displayName: string | null;
   name: string;
   samAccountName: string | null;
   description: string | null;

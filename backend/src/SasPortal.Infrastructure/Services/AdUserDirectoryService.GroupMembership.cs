@@ -178,6 +178,7 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
                 filter,
                 SearchScope.Subtree,
                 "distinguishedName",
+                "displayName",
                 "cn",
                 "name",
                 "sAMAccountName",
@@ -209,7 +210,7 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
             }
 
             var sorted = items
-                .OrderBy(static item => item.Name, StringComparer.OrdinalIgnoreCase)
+                .OrderBy(static item => item, GroupSearchItemComparer.Instance)
                 .ToList();
 
             return new AdGroupSearchResult(true, string.Empty, sorted);
@@ -575,6 +576,7 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
             {
                 items.Add(new AdUserGroupMembershipItem(
                     groupInfo.DistinguishedName,
+                    groupInfo.DisplayName,
                     groupInfo.Name,
                     groupInfo.SamAccountName,
                     groupInfo.Description,
@@ -585,6 +587,7 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
             var fallbackName = AdLdapDnHelper.ParseCommonNameFromDistinguishedName(groupDn) ?? groupDn;
             items.Add(new AdUserGroupMembershipItem(
                 groupDn,
+                null,
                 fallbackName,
                 null,
                 null,
@@ -592,7 +595,7 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
         }
 
         return items
-            .OrderBy(static item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(static item => item, GroupMembershipItemComparer.Instance)
             .ToList();
     }
 
@@ -668,6 +671,7 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
             "(objectClass=group)",
             SearchScope.Base,
             "distinguishedName",
+            "displayName",
             "cn",
             "name",
             "sAMAccountName",
@@ -713,6 +717,7 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
 
         groupInfo = new AdGroupDirectoryInfo(
             distinguishedName,
+            GetFirstString(entry, "displayName"),
             name,
             GetFirstString(entry, "sAMAccountName"),
             GetFirstString(entry, "description"));
@@ -730,11 +735,71 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
 
         item = new AdGroupSearchItem(
             groupInfo.DistinguishedName,
+            groupInfo.DisplayName,
             groupInfo.Name,
             groupInfo.SamAccountName,
             groupInfo.Description);
 
         return true;
+    }
+
+    private static string ResolveGroupSortKey(string? displayName, string? samAccountName, string name)
+    {
+        if (!string.IsNullOrWhiteSpace(displayName))
+        {
+            return displayName.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(samAccountName))
+        {
+            return samAccountName.Trim();
+        }
+
+        return name;
+    }
+
+    private sealed class GroupMembershipItemComparer : IComparer<AdUserGroupMembershipItem>
+    {
+        public static GroupMembershipItemComparer Instance { get; } = new();
+
+        public int Compare(AdUserGroupMembershipItem? left, AdUserGroupMembershipItem? right)
+        {
+            if (left is null || right is null)
+            {
+                return 0;
+            }
+
+            var comparison = string.Compare(
+                ResolveGroupSortKey(left.DisplayName, left.SamAccountName, left.Name),
+                ResolveGroupSortKey(right.DisplayName, right.SamAccountName, right.Name),
+                StringComparison.OrdinalIgnoreCase);
+
+            return comparison != 0
+                ? comparison
+                : string.Compare(left.Name, right.Name, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    private sealed class GroupSearchItemComparer : IComparer<AdGroupSearchItem>
+    {
+        public static GroupSearchItemComparer Instance { get; } = new();
+
+        public int Compare(AdGroupSearchItem? left, AdGroupSearchItem? right)
+        {
+            if (left is null || right is null)
+            {
+                return 0;
+            }
+
+            var comparison = string.Compare(
+                ResolveGroupSortKey(left.DisplayName, left.SamAccountName, left.Name),
+                ResolveGroupSortKey(right.DisplayName, right.SamAccountName, right.Name),
+                StringComparison.OrdinalIgnoreCase);
+
+            return comparison != 0
+                ? comparison
+                : string.Compare(left.Name, right.Name, StringComparison.OrdinalIgnoreCase);
+        }
     }
 
     private static string? ResolveGroupsSearchBase(AdManagementConnectionParameters connection) =>
@@ -773,6 +838,7 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
 
     private sealed record AdGroupDirectoryInfo(
         string DistinguishedName,
+        string? DisplayName,
         string Name,
         string? SamAccountName,
         string? Description);

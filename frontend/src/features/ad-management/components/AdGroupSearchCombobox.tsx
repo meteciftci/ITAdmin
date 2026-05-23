@@ -6,6 +6,10 @@ import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  formatAdGroupSelectionPrimaryLabel,
+  formatAdGroupSelectionSecondaryLabel,
+} from "@/features/ad-management/ad-group-display";
 import { searchAdGroups } from "@/features/ad-management/api";
 import type { AdGroupSearchItem } from "@/features/ad-management/types";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
@@ -41,6 +45,14 @@ export function AdGroupSearchCombobox({
 
   const items = useMemo(() => groupsQuery.data?.items ?? [], [groupsQuery.data]);
 
+  const triggerLabel = useMemo(() => {
+    if (!value) {
+      return "";
+    }
+
+    return formatAdGroupSelectionPrimaryLabel(value);
+  }, [value]);
+
   function handleSelect(item: AdGroupSearchItem) {
     if (disabledGroupDns.has(item.distinguishedName)) {
       return;
@@ -68,16 +80,19 @@ export function AdGroupSearchCombobox({
               <span
                 className={cn(
                   "min-w-0 flex-1 truncate",
-                  !value && "text-muted-foreground",
+                  !triggerLabel && "text-muted-foreground",
                 )}
               >
-                {value?.name || t("adManagement:users.groups.fields.selectGroup")}
+                {triggerLabel || t("adManagement:users.groups.fields.selectGroup")}
               </span>
               <ChevronDown className="ml-2 size-4 shrink-0 opacity-60" />
             </button>
           </PopoverTrigger>
         </div>
-        <PopoverContent className="min-w-[20rem] p-2 sm:min-w-[28rem]" align="start">
+        <PopoverContent
+          className="w-[var(--radix-popover-trigger-width)] p-2"
+          align="start"
+        >
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
@@ -102,6 +117,9 @@ export function AdGroupSearchCombobox({
             {canSearch && !groupsQuery.isLoading
               ? items.map((item) => {
                   const isMember = disabledGroupDns.has(item.distinguishedName);
+                  const primaryLabel = formatAdGroupSelectionPrimaryLabel(item);
+                  const secondaryLabel = formatAdGroupSelectionSecondaryLabel(item);
+
                   return (
                     <button
                       key={item.distinguishedName}
@@ -109,17 +127,27 @@ export function AdGroupSearchCombobox({
                       disabled={isMember}
                       onClick={() => handleSelect(item)}
                       className={cn(
-                        "flex w-full flex-col gap-0.5 rounded-md px-2 py-2 text-left text-sm",
+                        "flex w-full min-w-0 flex-col gap-0.5 rounded-md px-2 py-2 text-left text-sm",
                         isMember
                           ? "cursor-not-allowed opacity-50"
                           : "hover:bg-muted/60",
                       )}
                     >
-                      <span className="font-medium">{item.name}</span>
-                      {item.description ? (
-                        <span className="text-xs text-muted-foreground">{item.description}</span>
+                      <span className="truncate font-medium">{primaryLabel}</span>
+                      {secondaryLabel ? (
+                        <span className="truncate text-xs text-muted-foreground">
+                          {secondaryLabel}
+                        </span>
                       ) : null}
-                      <span className="font-mono text-xs text-muted-foreground">
+                      {item.description ? (
+                        <span className="truncate text-xs text-muted-foreground">
+                          {item.description}
+                        </span>
+                      ) : null}
+                      <span
+                        className="truncate font-mono text-xs text-muted-foreground"
+                        title={item.distinguishedName}
+                      >
                         {item.distinguishedName}
                       </span>
                       {isMember ? (
