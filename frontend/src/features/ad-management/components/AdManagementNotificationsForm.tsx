@@ -1,11 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import {
   buildUpdateAdManagementSettingsPayload,
@@ -15,34 +11,57 @@ import {
   AD_MANAGEMENT_MAPPINGS_QUERY_KEY,
   getAdAttributeMappings,
 } from "@/features/ad-management/api";
+import {
+  AdManagementNotificationRuleDialog,
+  type NotificationRuleDialogMode,
+} from "@/features/ad-management/components/AdManagementNotificationRuleDialog";
 import type {
-  AdAttributeMapping,
-  AdManagementNotificationRecipientSource,
+  AdManagementNotificationRule,
   AdManagementNotificationSettings,
   AdManagementSettings,
-  AdManagementUserCreatedNotificationSettings,
   UpdateAdManagementSettingsRequest,
 } from "@/features/ad-management/types";
-import { AD_NOTIFICATION_RECIPIENT_SOURCE_TYPES } from "@/features/ad-management/types";
+import { AD_NOTIFICATION_CHANNELS } from "@/features/ad-management/types";
 import {
   NOTIFICATION_TEMPLATES_QUERY_KEY,
   getNotificationTemplates,
 } from "@/features/notification-templates/api";
+import type { NotificationTemplateListItem } from "@/features/notification-templates/types";
 
 type Props = {
   settings: AdManagementSettings | undefined;
   readOnly: boolean;
   isSaving: boolean;
-  onSave: (payload: UpdateAdManagementSettingsRequest) => void;
+  onSave: (
+    payload: UpdateAdManagementSettingsRequest,
+    meta: { successMessage: string },
+  ) => void;
 };
 
 type TemplateReadiness = "ready" | "missing" | "passive";
 
+type DialogState = {
+  open: boolean;
+  mode: NotificationRuleDialogMode;
+  rule: AdManagementNotificationRule | null;
+};
+
+function cloneRules(settings: AdManagementNotificationSettings | undefined): AdManagementNotificationRule[] {
+  const base = settings ?? defaultAdManagementNotificationSettings();
+  return base.rules.map((rule) => ({
+    ...rule,
+    recipientSource: rule.recipientSource ? { ...rule.recipientSource } : null,
+  }));
+}
+
 function resolveTemplateReadiness(
-  templates: { channel: string; isEnabled: boolean }[],
-  channel: "Sms" | "Email",
+  templates: NotificationTemplateListItem[],
+  eventKey: string,
+  channel: string,
 ): TemplateReadiness {
-  const match = templates.find((item) => item.channel === channel);
+  const match = templates.find(
+    (item) => item.eventKey === eventKey && item.channel === channel,
+  );
   if (!match) {
     return "missing";
   }
@@ -50,21 +69,34 @@ function resolveTemplateReadiness(
   return match.isEnabled ? "ready" : "passive";
 }
 
-function cloneNotificationSettings(
-  settings: AdManagementNotificationSettings | undefined,
-): AdManagementNotificationSettings {
-  const base = settings ?? defaultAdManagementNotificationSettings();
-  return {
-    userCreated: {
-      ...base.userCreated,
-      smsRecipientSource: base.userCreated.smsRecipientSource
-        ? { ...base.userCreated.smsRecipientSource }
-        : null,
-      emailRecipientSource: base.userCreated.emailRecipientSource
-        ? { ...base.userCreated.emailRecipientSource }
-        : null,
-    },
-  };
+function formatRecipientSourceLabel(
+  rule: AdManagementNotificationRule,
+  mappings: { id: string; displayName: string }[],
+  t: (key: string) => string,
+): string {
+  const source = rule.recipientSource;
+  if (!source?.type) {
+    return "—";
+  }
+
+  if (source.type === "MappedAttribute" && source.value) {
+    const mapping = mappings.find((item) => item.id === source.value);
+    return mapping?.displayName ?? source.value;
+  }
+
+  if (source.type === "AdAttribute" && source.value) {
+    return `${t("settings:adManagement.notifications.recipientTypes.adAttribute")}: ${source.value}`;
+  }
+
+  if (source.type === "UserPrincipalName") {
+    return t("settings:adManagement.notifications.recipientTypes.userPrincipalName");
+  }
+
+  if (source.type === "MailAttribute") {
+    return t("settings:adManagement.notifications.recipientTypes.mailAttribute");
+  }
+
+  return source.type;
 }
 
 export function AdManagementNotificationsForm({
@@ -74,9 +106,14 @@ export function AdManagementNotificationsForm({
   onSave,
 }: Props) {
   const { t } = useTranslation(["settings", "common"]);
-  const [notificationSettings, setNotificationSettings] = useState(() =>
-    cloneNotificationSettings(settings?.notificationSettings),
+  const [rules, setRules] = useState<AdManagementNotificationRule[]>(() =>
+    cloneRules(settings?.notificationSettings),
   );
+  const [dialog, setDialog] = useState<DialogState>({
+    open: false,
+    mode: "create",
+    rule: null,
+  });
 
   const mappingsQuery = useQuery({
     queryKey: AD_MANAGEMENT_MAPPINGS_QUERY_KEY,
@@ -84,334 +121,67 @@ export function AdManagementNotificationsForm({
   });
 
   const templatesQuery = useQuery({
-    queryKey: [...NOTIFICATION_TEMPLATES_QUERY_KEY, "AdManagement", "UserCreated"],
-    queryFn: () =>
-      getNotificationTemplates({
-        moduleKey: "AdManagement",
-        eventKey: "UserCreated",
-      }),
+    queryKey: [...NOTIFICATION_TEMPLATES_QUERY_KEY, "AdManagement"],
+    queryFn: () => getNotificationTemplates({ moduleKey: "AdManagement" }),
   });
 
-  const enabledMappings = useMemo(
-    () => (mappingsQuery.data ?? []).filter((mapping) => mapping.isEnabled),
-    [mappingsQuery.data],
+  const templates = templatesQuery.data ?? [];
+  const mappings = mappingsQuery.data ?? [];
+
+  const eventLabel = useMemo(
+    () =>
+      ({
+        UserCreated: t("settings:adManagement.notifications.events.userCreated.label"),
+        UserEnabled: t("settings:adManagement.notifications.events.userEnabled.label"),
+        UserDisabled: t("settings:adManagement.notifications.events.userDisabled.label"),
+        UserUnlocked: t("settings:adManagement.notifications.events.userUnlocked.label"),
+      }) as Record<string, string>,
+    [t],
   );
 
-  const userCreated = notificationSettings.userCreated;
-  const channelsDisabled = !userCreated.isEnabled || readOnly;
-
-  const smsTemplateStatus = resolveTemplateReadiness(templatesQuery.data ?? [], "Sms");
-  const emailTemplateStatus = resolveTemplateReadiness(templatesQuery.data ?? [], "Email");
-
-  function updateUserCreated(
-    patch: Partial<AdManagementUserCreatedNotificationSettings>,
-  ) {
-    setNotificationSettings((prev) => ({
-      userCreated: {
-        ...prev.userCreated,
-        ...patch,
-      },
-    }));
-  }
-
-  function updateRecipientSource(
-    channel: "sms" | "email",
-    source: AdManagementNotificationRecipientSource | null,
-  ) {
-    if (channel === "sms") {
-      updateUserCreated({ smsRecipientSource: source });
-      return;
-    }
-
-    updateUserCreated({ emailRecipientSource: source });
-  }
-
-  function handleNotificationEnabledChange(checked: boolean) {
-    updateUserCreated({
-      isEnabled: checked,
-      ...(checked
-        ? {}
-        : {
-            smsEnabled: false,
-            emailEnabled: false,
-          }),
-    });
-  }
-
-  function validateBeforeSave(): string | null {
-    if (!userCreated.isEnabled) {
-      return null;
-    }
-
-    if (!userCreated.smsEnabled && !userCreated.emailEnabled) {
-      return t("settings:adManagement.notifications.validation.channelRequired");
-    }
-
-    if (userCreated.smsEnabled && !userCreated.smsRecipientSource?.type) {
-      return t("settings:adManagement.notifications.validation.smsRecipientRequired");
-    }
-
-    if (userCreated.emailEnabled && !userCreated.emailRecipientSource?.type) {
-      return t("settings:adManagement.notifications.validation.emailRecipientRequired");
-    }
-
-    return null;
-  }
-
-  function handleSave() {
+  function persistRules(nextRules: AdManagementNotificationRule[], successMessage: string) {
     if (!settings || readOnly) {
-      return;
-    }
-
-    const validationError = validateBeforeSave();
-    if (validationError) {
       return;
     }
 
     onSave(
       buildUpdateAdManagementSettingsPayload(settings, {
-        notificationSettings,
+        notificationSettings: { rules: nextRules },
       }),
+      { successMessage },
     );
   }
 
-  const validationError = validateBeforeSave();
+  function handleRuleSubmit(rule: AdManagementNotificationRule) {
+    const nextRules =
+      dialog.mode === "edit"
+        ? rules.map((item) => (item.id === rule.id ? rule : item))
+        : [...rules, rule];
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-base font-medium">
-          {t("settings:adManagement.notifications.events.userCreated.title")}
-        </h3>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {t("settings:adManagement.notifications.events.userCreated.description")}
-        </p>
-      </div>
-
-      <div className="space-y-4 rounded-md border p-4">
-        <div className="flex items-center justify-between gap-4">
-          <div className="space-y-0.5">
-            <Label htmlFor="notification-enabled">
-              {t("settings:adManagement.notifications.fields.notificationEnabled")}
-            </Label>
-          </div>
-          <Switch
-            id="notification-enabled"
-            checked={userCreated.isEnabled}
-            disabled={readOnly}
-            onCheckedChange={handleNotificationEnabledChange}
-          />
-        </div>
-
-        <div className="flex items-center justify-between gap-4">
-          <Label htmlFor="sms-enabled">{t("settings:adManagement.notifications.fields.sms")}</Label>
-          <Switch
-            id="sms-enabled"
-            checked={userCreated.smsEnabled}
-            disabled={channelsDisabled}
-            onCheckedChange={(checked) => updateUserCreated({ smsEnabled: checked })}
-          />
-        </div>
-
-        {userCreated.smsEnabled ? (
-          <RecipientSourceFields
-            channel="sms"
-            source={userCreated.smsRecipientSource}
-            mappings={enabledMappings}
-            disabled={channelsDisabled}
-            onChange={(source) => updateRecipientSource("sms", source)}
-          />
-        ) : null}
-
-        <div className="flex items-center justify-between gap-4">
-          <Label htmlFor="email-enabled">
-            {t("settings:adManagement.notifications.fields.email")}
-          </Label>
-          <Switch
-            id="email-enabled"
-            checked={userCreated.emailEnabled}
-            disabled={channelsDisabled}
-            onCheckedChange={(checked) => updateUserCreated({ emailEnabled: checked })}
-          />
-        </div>
-
-        {userCreated.emailEnabled ? (
-          <RecipientSourceFields
-            channel="email"
-            source={userCreated.emailRecipientSource}
-            mappings={enabledMappings}
-            disabled={channelsDisabled}
-            onChange={(source) => updateRecipientSource("email", source)}
-          />
-        ) : null}
-
-        <TemplateStatusSummary
-          smsStatus={smsTemplateStatus}
-          emailStatus={emailTemplateStatus}
-        />
-
-        {userCreated.isEnabled && (smsTemplateStatus === "missing" || emailTemplateStatus === "missing") ? (
-          <p className="text-xs text-muted-foreground">
-            {t("settings:adManagement.notifications.warnings.missingTemplate")}
-          </p>
-        ) : null}
-      </div>
-
-      {validationError && userCreated.isEnabled ? (
-        <p className="text-sm text-destructive">{validationError}</p>
-      ) : null}
-
-      {!readOnly ? (
-        <div className="flex justify-end">
-          <Button type="button" disabled={isSaving} onClick={handleSave}>
-            {t("settings:adManagement.notifications.actions.save")}
-          </Button>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-type RecipientSourceFieldsProps = {
-  channel: "sms" | "email";
-  source: AdManagementNotificationRecipientSource | null;
-  mappings: AdAttributeMapping[];
-  disabled: boolean;
-  onChange: (source: AdManagementNotificationRecipientSource | null) => void;
-};
-
-function RecipientSourceFields({
-  channel,
-  source,
-  mappings,
-  disabled,
-  onChange,
-}: RecipientSourceFieldsProps) {
-  const { t } = useTranslation(["settings"]);
-
-  const typeOptions =
-    channel === "sms"
-      ? [
-          {
-            value: AD_NOTIFICATION_RECIPIENT_SOURCE_TYPES.mappedAttribute,
-            label: t("settings:adManagement.notifications.recipientTypes.mappedAttribute"),
-          },
-          {
-            value: AD_NOTIFICATION_RECIPIENT_SOURCE_TYPES.adAttribute,
-            label: t("settings:adManagement.notifications.recipientTypes.adAttribute"),
-          },
-        ]
-      : [
-          {
-            value: AD_NOTIFICATION_RECIPIENT_SOURCE_TYPES.userPrincipalName,
-            label: t("settings:adManagement.notifications.recipientTypes.userPrincipalName"),
-          },
-          {
-            value: AD_NOTIFICATION_RECIPIENT_SOURCE_TYPES.mailAttribute,
-            label: t("settings:adManagement.notifications.recipientTypes.mailAttribute"),
-          },
-          {
-            value: AD_NOTIFICATION_RECIPIENT_SOURCE_TYPES.mappedAttribute,
-            label: t("settings:adManagement.notifications.recipientTypes.mappedAttribute"),
-          },
-          {
-            value: AD_NOTIFICATION_RECIPIENT_SOURCE_TYPES.adAttribute,
-            label: t("settings:adManagement.notifications.recipientTypes.adAttribute"),
-          },
-        ];
-
-  const selectedType = source?.type ?? "";
-
-  function handleTypeChange(nextType: string) {
-    if (!nextType) {
-      onChange(null);
-      return;
-    }
-
-    const needsValue =
-      nextType === AD_NOTIFICATION_RECIPIENT_SOURCE_TYPES.mappedAttribute
-      || nextType === AD_NOTIFICATION_RECIPIENT_SOURCE_TYPES.adAttribute;
-
-    onChange({
-      type: nextType,
-      value: needsValue ? source?.value ?? "" : null,
-    });
+    setRules(nextRules);
+    persistRules(
+      nextRules,
+      dialog.mode === "edit"
+        ? t("settings:adManagement.notifications.messages.ruleUpdated")
+        : t("settings:adManagement.notifications.messages.ruleAdded"),
+    );
   }
 
-  return (
-    <div className="space-y-3 rounded-md border border-dashed p-3">
-      <div className="space-y-2">
-        <Label>
-          {channel === "sms"
-            ? t("settings:adManagement.notifications.fields.smsRecipientSource")
-            : t("settings:adManagement.notifications.fields.emailRecipientSource")}
-        </Label>
-        <Select
-          value={selectedType}
-          disabled={disabled}
-          onChange={(event) => handleTypeChange(event.target.value)}
-        >
-          <option value="">{t("settings:adManagement.notifications.fields.selectSource")}</option>
-          {typeOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </Select>
-      </div>
+  function handleToggleEnabled(rule: AdManagementNotificationRule, enabled: boolean) {
+    const nextRules = rules.map((item) =>
+      item.id === rule.id ? { ...item, isEnabled: enabled } : item,
+    );
+    setRules(nextRules);
+    persistRules(nextRules, t("settings:adManagement.notifications.messages.ruleUpdated"));
+  }
 
-      {selectedType === AD_NOTIFICATION_RECIPIENT_SOURCE_TYPES.mappedAttribute ? (
-        <div className="space-y-2">
-          <Label>{t("settings:adManagement.notifications.fields.mappedAttribute")}</Label>
-          <Select
-            value={source?.value ?? ""}
-            disabled={disabled}
-            onChange={(event) =>
-              onChange({
-                type: selectedType,
-                value: event.target.value,
-              })
-            }
-          >
-            <option value="">{t("settings:adManagement.notifications.fields.selectMappedAttribute")}</option>
-            {mappings.map((mapping) => (
-              <option key={mapping.id} value={mapping.id}>
-                {mapping.displayName}
-              </option>
-            ))}
-          </Select>
-        </div>
-      ) : null}
+  function handleRemove(rule: AdManagementNotificationRule) {
+    const nextRules = rules.filter((item) => item.id !== rule.id);
+    setRules(nextRules);
+    persistRules(nextRules, t("settings:adManagement.notifications.messages.ruleRemoved"));
+  }
 
-      {selectedType === AD_NOTIFICATION_RECIPIENT_SOURCE_TYPES.adAttribute ? (
-        <div className="space-y-2">
-          <Label>{t("settings:adManagement.notifications.fields.adAttribute")}</Label>
-          <Input
-            value={source?.value ?? ""}
-            disabled={disabled}
-            placeholder={t("settings:adManagement.notifications.placeholders.adAttribute")}
-            onChange={(event) =>
-              onChange({
-                type: selectedType,
-                value: event.target.value,
-              })
-            }
-          />
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-type TemplateStatusSummaryProps = {
-  smsStatus: TemplateReadiness;
-  emailStatus: TemplateReadiness;
-};
-
-function TemplateStatusSummary({ smsStatus, emailStatus }: TemplateStatusSummaryProps) {
-  const { t } = useTranslation(["settings"]);
-
-  function label(status: TemplateReadiness): string {
+  function templateStatusLabel(status: TemplateReadiness): string {
     if (status === "ready") {
       return t("settings:adManagement.notifications.templateStatus.ready");
     }
@@ -423,17 +193,122 @@ function TemplateStatusSummary({ smsStatus, emailStatus }: TemplateStatusSummary
     return t("settings:adManagement.notifications.templateStatus.missing");
   }
 
+  function channelLabel(channel: string): string {
+    return channel === AD_NOTIFICATION_CHANNELS.email
+      ? t("settings:adManagement.notifications.channels.email")
+      : t("settings:adManagement.notifications.channels.sms");
+  }
+
   return (
-    <div className="space-y-2 rounded-md bg-muted/30 p-3 text-sm">
-      <p className="font-medium">
-        {t("settings:adManagement.notifications.fields.templateStatus")}
-      </p>
-      <p>
-        {t("settings:adManagement.notifications.fields.smsTemplate")}: {label(smsStatus)}
-      </p>
-      <p>
-        {t("settings:adManagement.notifications.fields.emailTemplate")}: {label(emailStatus)}
-      </p>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-base font-medium">
+          {t("settings:adManagement.notifications.rulesTitle")}
+        </h3>
+        {!readOnly ? (
+          <Button
+            type="button"
+            onClick={() => setDialog({ open: true, mode: "create", rule: null })}
+          >
+            {t("settings:adManagement.notifications.actions.add")}
+          </Button>
+        ) : null}
+      </div>
+
+      {rules.length === 0 ? (
+        <div className="rounded-md border border-dashed px-3 py-6 text-center text-sm text-muted-foreground">
+          {t("settings:adManagement.notifications.empty")}
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-md border">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
+              <tr>
+                <th className="px-3 py-2 text-left">
+                  {t("settings:adManagement.notifications.fields.event")}
+                </th>
+                <th className="px-3 py-2 text-left">
+                  {t("settings:adManagement.notifications.fields.channel")}
+                </th>
+                <th className="px-3 py-2 text-left">
+                  {t("settings:adManagement.notifications.fields.recipientSource")}
+                </th>
+                <th className="px-3 py-2 text-left">
+                  {t("settings:adManagement.notifications.fields.templateStatus")}
+                </th>
+                <th className="px-3 py-2 text-left">
+                  {t("settings:adManagement.notifications.fields.status")}
+                </th>
+                <th className="px-3 py-2 text-right">
+                  {t("settings:adManagement.notifications.fields.actions")}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {rules.map((rule) => {
+                const templateStatus = resolveTemplateReadiness(
+                  templates,
+                  rule.eventKey,
+                  rule.channel,
+                );
+
+                return (
+                  <tr key={rule.id} className="border-t">
+                    <td className="px-3 py-2">{eventLabel[rule.eventKey] ?? rule.eventKey}</td>
+                    <td className="px-3 py-2">{channelLabel(rule.channel)}</td>
+                    <td className="px-3 py-2">
+                      {formatRecipientSourceLabel(rule, mappings, t)}
+                    </td>
+                    <td className="px-3 py-2">{templateStatusLabel(templateStatus)}</td>
+                    <td className="px-3 py-2">
+                      <Switch
+                        checked={rule.isEnabled}
+                        disabled={readOnly || isSaving}
+                        onCheckedChange={(checked) => handleToggleEnabled(rule, checked)}
+                        aria-label={t("settings:adManagement.notifications.fields.status")}
+                      />
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={readOnly || isSaving}
+                          onClick={() =>
+                            setDialog({ open: true, mode: "edit", rule })}
+                        >
+                          {t("settings:adManagement.notifications.actions.edit")}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={readOnly || isSaving}
+                          onClick={() => handleRemove(rule)}
+                        >
+                          {t("settings:adManagement.notifications.actions.remove")}
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <AdManagementNotificationRuleDialog
+        open={dialog.open}
+        mode={dialog.mode}
+        initialRule={dialog.rule}
+        existingRules={rules}
+        mappings={mappings}
+        readOnly={readOnly}
+        onOpenChange={(open) => setDialog((prev) => ({ ...prev, open }))}
+        onSubmit={handleRuleSubmit}
+      />
     </div>
   );
 }

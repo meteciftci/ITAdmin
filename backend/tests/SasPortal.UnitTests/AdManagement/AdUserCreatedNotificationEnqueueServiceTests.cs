@@ -12,7 +12,7 @@ using SasPortal.Persistence.Services;
 
 namespace SasPortal.UnitTests.AdManagement;
 
-public sealed class AdUserCreatedNotificationEnqueueServiceTests
+public sealed class AdManagementNotificationEnqueueServiceTests
 {
     [Fact]
     public async Task EnqueueUserCreated_DisabledSettings_DoesNotQueue()
@@ -90,7 +90,7 @@ public sealed class AdUserCreatedNotificationEnqueueServiceTests
         Assert.Equal(NotificationChannels.Email, outbox.Requests[0].Channel);
     }
 
-    private static AdUserCreatedNotificationEnqueueService CreateService(
+    private static AdManagementNotificationEnqueueService CreateService(
         AppDbContext dbContext,
         INotificationOutboxService outbox) =>
         new(
@@ -174,17 +174,21 @@ public sealed class AdUserCreatedNotificationEnqueueServiceTests
     {
         var notificationSettings = new AdManagementNotificationSettings
         {
-            UserCreated = new AdManagementUserCreatedNotificationSettings
-            {
-                IsEnabled = true,
-                SmsEnabled = true,
-                EmailEnabled = false,
-                SmsRecipientSource = new AdManagementNotificationRecipientSource
+            Rules =
+            [
+                new AdManagementNotificationRule
                 {
-                    Type = AdManagementNotificationRecipientSourceTypes.MappedAttribute,
-                    Value = mappingId,
+                    Id = Guid.NewGuid(),
+                    EventKey = AdManagementNotificationEventKeys.UserCreated,
+                    Channel = NotificationChannels.Sms,
+                    IsEnabled = true,
+                    RecipientSource = new AdManagementNotificationRecipientSource
+                    {
+                        Type = AdManagementNotificationRecipientSourceTypes.MappedAttribute,
+                        Value = mappingId,
+                    },
                 },
-            },
+            ],
         };
 
         var settings = new AdManagementSettings
@@ -203,16 +207,20 @@ public sealed class AdUserCreatedNotificationEnqueueServiceTests
     {
         var notificationSettings = new AdManagementNotificationSettings
         {
-            UserCreated = new AdManagementUserCreatedNotificationSettings
-            {
-                IsEnabled = true,
-                SmsEnabled = false,
-                EmailEnabled = true,
-                EmailRecipientSource = new AdManagementNotificationRecipientSource
+            Rules =
+            [
+                new AdManagementNotificationRule
                 {
-                    Type = AdManagementNotificationRecipientSourceTypes.UserPrincipalName,
+                    Id = Guid.NewGuid(),
+                    EventKey = AdManagementNotificationEventKeys.UserCreated,
+                    Channel = NotificationChannels.Email,
+                    IsEnabled = true,
+                    RecipientSource = new AdManagementNotificationRecipientSource
+                    {
+                        Type = AdManagementNotificationRecipientSourceTypes.UserPrincipalName,
+                    },
                 },
-            },
+            ],
         };
 
         var settings = new AdManagementSettings

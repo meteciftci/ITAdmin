@@ -1,63 +1,131 @@
 using SasPortal.Application.Common.AdManagement;
+using SasPortal.Application.Common.Constants;
 
 namespace SasPortal.UnitTests.AdManagement;
 
 public sealed class AdManagementNotificationSettingsTests
 {
     [Fact]
-    public void Deserialize_NullJson_ReturnsDisabledDefaults()
+    public void Deserialize_NullJson_ReturnsEmptyRules()
     {
         var settings = AdManagementNotificationSettingsSerializer.Deserialize(null);
 
-        Assert.False(settings.UserCreated.IsEnabled);
-        Assert.False(settings.UserCreated.SmsEnabled);
-        Assert.False(settings.UserCreated.EmailEnabled);
+        Assert.Empty(settings.Rules);
     }
 
     [Fact]
-    public void SerializeDeserialize_PreservesUserCreatedSettings()
+    public void Deserialize_LegacyUserCreated_MigratesToRules()
+    {
+        var legacyJson =
+            """
+            {
+              "userCreated": {
+                "isEnabled": true,
+                "smsEnabled": true,
+                "emailEnabled": false,
+                "smsRecipientSource": {
+                  "type": "MappedAttribute",
+                  "value": "mapping-id"
+                }
+              }
+            }
+            """;
+
+        var settings = AdManagementNotificationSettingsSerializer.Deserialize(legacyJson);
+
+        Assert.Single(settings.Rules);
+        Assert.Equal(AdManagementNotificationEventKeys.UserCreated, settings.Rules[0].EventKey);
+        Assert.Equal(NotificationChannels.Sms, settings.Rules[0].Channel);
+        Assert.True(settings.Rules[0].IsEnabled);
+    }
+
+    [Fact]
+    public void SerializeDeserialize_PreservesRules()
     {
         var original = new AdManagementNotificationSettings
         {
-            UserCreated = new AdManagementUserCreatedNotificationSettings
-            {
-                IsEnabled = true,
-                SmsEnabled = true,
-                EmailEnabled = false,
-                SmsRecipientSource = new AdManagementNotificationRecipientSource
+            Rules =
+            [
+                new AdManagementNotificationRule
                 {
-                    Type = AdManagementNotificationRecipientSourceTypes.MappedAttribute,
-                    Value = "mapping-id",
+                    Id = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"),
+                    EventKey = AdManagementNotificationEventKeys.UserUnlocked,
+                    Channel = NotificationChannels.Sms,
+                    IsEnabled = true,
+                    RecipientSource = new AdManagementNotificationRecipientSource
+                    {
+                        Type = AdManagementNotificationRecipientSourceTypes.AdAttribute,
+                        Value = "mobile",
+                    },
                 },
-            },
+            ],
         };
 
         var json = AdManagementNotificationSettingsSerializer.Serialize(original);
         var restored = AdManagementNotificationSettingsSerializer.Deserialize(json);
 
-        Assert.True(restored.UserCreated.IsEnabled);
-        Assert.True(restored.UserCreated.SmsEnabled);
-        Assert.False(restored.UserCreated.EmailEnabled);
-        Assert.Equal(
-            AdManagementNotificationRecipientSourceTypes.MappedAttribute,
-            restored.UserCreated.SmsRecipientSource?.Type);
+        Assert.Single(restored.Rules);
+        Assert.Equal(AdManagementNotificationEventKeys.UserUnlocked, restored.Rules[0].EventKey);
+        Assert.Equal("mobile", restored.Rules[0].RecipientSource?.Value);
     }
 
     [Fact]
-    public void Validate_EnabledWithoutChannel_ReturnsError()
+    public void Validate_DuplicateEventChannel_ReturnsError()
     {
         var settings = new AdManagementNotificationSettings
         {
-            UserCreated = new AdManagementUserCreatedNotificationSettings
-            {
-                IsEnabled = true,
-                SmsEnabled = false,
-                EmailEnabled = false,
-            },
+            Rules =
+            [
+                CreateRule(AdManagementNotificationEventKeys.UserCreated, NotificationChannels.Sms),
+                CreateRule(AdManagementNotificationEventKeys.UserCreated, NotificationChannels.Sms),
+            ],
         };
 
         var error = AdManagementNotificationSettingsValidator.Validate(settings);
 
         Assert.NotNull(error);
+        Assert.Contains("Aynı olay ve kanal", error, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Validate_MissingRecipient_ReturnsError()
+    {
+        var settings = new AdManagementNotificationSettings
+        {
+            Rules =
+            [
+                new AdManagementNotificationRule
+                {
+                    Id = Guid.NewGuid(),
+                    EventKey = AdManagementNotificationEventKeys.UserEnabled,
+                    Channel = NotificationChannels.Email,
+                    IsEnabled = true,
+                    RecipientSource = null,
+                },
+            ],
+        };
+
+        var error = AdManagementNotificationSettingsValidator.Validate(settings);
+
+        Assert.NotNull(error);
+    }
+
+    private static AdManagementNotificationRule CreateRule(string eventKey, string channel)
+    {
+        var isSms = string.Equals(channel, NotificationChannels.Sms, StringComparison.OrdinalIgnoreCase);
+        return new AdManagementNotificationRule
+        {
+            Id = Guid.NewGuid(),
+            EventKey = eventKey,
+            Channel = channel,
+            IsEnabled = true,
+            RecipientSource = new AdManagementNotificationRecipientSource
+            {
+                Type = isSms
+                    ? AdManagementNotificationRecipientSourceTypes.MappedAttribute
+                    : AdManagementNotificationRecipientSourceTypes.UserPrincipalName,
+                Value = isSms ? "mapping-id" : null,
+            },
+        };
     }
 }

@@ -1,40 +1,43 @@
+using SasPortal.Application.Common.Constants;
+
 namespace SasPortal.Application.Common.AdManagement;
 
 public static class AdManagementNotificationSettingsValidator
 {
     public static string? Validate(AdManagementNotificationSettings settings)
     {
-        var userCreated = settings.UserCreated ?? AdManagementUserCreatedNotificationSettings.Disabled;
+        var rules = settings.Rules ?? [];
+        var seenKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        if (!userCreated.IsEnabled)
+        foreach (var rule in rules)
         {
-            return null;
-        }
-
-        if (!userCreated.SmsEnabled && !userCreated.EmailEnabled)
-        {
-            return "Kullanıcı oluşturuldu bildirimi için en az bir kanal seçilmelidir.";
-        }
-
-        if (userCreated.SmsEnabled)
-        {
-            var smsError = ValidateRecipientSource(
-                userCreated.SmsRecipientSource,
-                smsChannel: true);
-            if (smsError is not null)
+            var eventKey = rule.EventKey?.Trim() ?? string.Empty;
+            if (!AdManagementNotificationEventKeys.All.Contains(eventKey))
             {
-                return smsError;
+                return "Bildirim olayı geçersiz.";
+            }
+
+            var channel = rule.Channel?.Trim() ?? string.Empty;
+            if (!string.Equals(channel, NotificationChannels.Sms, StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(channel, NotificationChannels.Email, StringComparison.OrdinalIgnoreCase))
+            {
+                return "Bildirim kanalı geçersiz.";
+            }
+
+            var duplicateKey = $"{eventKey}|{channel}";
+            if (!seenKeys.Add(duplicateKey))
+            {
+                return "Aynı olay ve kanal için zaten bildirim kuralı var.";
             }
         }
 
-        if (userCreated.EmailEnabled)
+        foreach (var rule in rules)
         {
-            var emailError = ValidateRecipientSource(
-                userCreated.EmailRecipientSource,
-                smsChannel: false);
-            if (emailError is not null)
+            var channel = rule.Channel.Trim();
+            var recipientError = ValidateRecipientSource(rule.RecipientSource, channel);
+            if (recipientError is not null)
             {
-                return emailError;
+                return recipientError;
             }
         }
 
@@ -43,18 +46,17 @@ public static class AdManagementNotificationSettingsValidator
 
     private static string? ValidateRecipientSource(
         AdManagementNotificationRecipientSource? source,
-        bool smsChannel)
+        string channel)
     {
         if (source is null || string.IsNullOrWhiteSpace(source.Type))
         {
-            return smsChannel
-                ? "SMS alıcı kaynağı zorunludur."
-                : "E-posta alıcı kaynağı zorunludur.";
+            return "Alıcı kaynağı zorunludur.";
         }
 
         var type = source.Type.Trim();
+        var isSms = string.Equals(channel, NotificationChannels.Sms, StringComparison.OrdinalIgnoreCase);
 
-        if (smsChannel)
+        if (isSms)
         {
             if (type is not AdManagementNotificationRecipientSourceTypes.MappedAttribute
                 and not AdManagementNotificationRecipientSourceTypes.AdAttribute)

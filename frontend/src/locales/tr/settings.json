@@ -172,19 +172,26 @@
         "notifications": "Bildirimler"
       },
       "notifications": {
+        "rulesTitle": "Bildirim Kuralları",
+        "empty": "Henüz bildirim kuralı tanımlanmadı.",
         "fields": {
-          "notificationEnabled": "Bildirim aktif",
-          "sms": "SMS",
-          "email": "E-posta",
-          "smsRecipientSource": "SMS alıcı kaynağı",
-          "emailRecipientSource": "E-posta alıcı kaynağı",
+          "event": "Olay",
+          "channel": "Kanal",
+          "recipientSource": "Alıcı Kaynağı",
+          "recipientSourceType": "Alıcı kaynağı tipi",
+          "templateStatus": "Şablon Durumu",
+          "status": "Durum",
+          "actions": "İşlemler",
           "mappedAttribute": "Mapped attribute",
           "adAttribute": "AD attribute",
           "selectSource": "Kaynak seçin",
           "selectMappedAttribute": "Alan seçin",
-          "templateStatus": "Şablon durumu",
-          "smsTemplate": "SMS şablonu",
-          "emailTemplate": "E-posta şablonu"
+          "selectEvent": "Olay seçin",
+          "selectChannel": "Kanal seçin"
+        },
+        "channels": {
+          "sms": "SMS",
+          "email": "E-posta"
         },
         "recipientTypes": {
           "mappedAttribute": "Mapped attribute",
@@ -197,8 +204,16 @@
         },
         "events": {
           "userCreated": {
-            "title": "Kullanıcı oluşturuldu",
-            "description": "Yeni AD kullanıcısı oluşturulduğunda bilgilendirme bildirimi kuyruğa alınır."
+            "label": "Kullanıcı oluşturuldu"
+          },
+          "userEnabled": {
+            "label": "Kullanıcı aktife alındı"
+          },
+          "userDisabled": {
+            "label": "Kullanıcı pasife alındı"
+          },
+          "userUnlocked": {
+            "label": "Kullanıcı kilidi açıldı"
           }
         },
         "templateStatus": {
@@ -206,19 +221,25 @@
           "missing": "Şablon yok",
           "passive": "Pasif"
         },
-        "warnings": {
-          "missingTemplate": "Aktif SMS şablonu bulunamazsa kullanıcı oluşturma işlemi etkilenmez; bildirim kuyruğa alınmaz."
+        "status": {
+          "active": "Aktif",
+          "passive": "Pasif"
         },
         "validation": {
-          "channelRequired": "Bildirim aktifken en az bir kanal seçilmelidir.",
-          "smsRecipientRequired": "SMS açıkken SMS alıcı kaynağı zorunludur.",
-          "emailRecipientRequired": "E-posta açıkken e-posta alıcı kaynağı zorunludur."
+          "duplicateRule": "Aynı olay ve kanal için zaten bildirim kuralı var.",
+          "recipientRequired": "Alıcı kaynağı zorunludur.",
+          "recipientValueRequired": "Alıcı kaynağı değeri zorunludur.",
+          "requiredFields": "Olay ve kanal seçilmelidir."
         },
         "actions": {
-          "save": "Bildirim ayarlarını kaydet"
+          "add": "Bildirim Ekle",
+          "edit": "Düzenle",
+          "remove": "Kaldır"
         },
         "messages": {
-          "saveSuccess": "Bildirim ayarları kaydedildi.",
+          "ruleAdded": "Bildirim kuralı eklendi.",
+          "ruleUpdated": "Bildirim kuralı güncellendi.",
+          "ruleRemoved": "Bildirim kuralı kaldırıldı.",
           "saveFailed": "Bildirim ayarları kaydedilemedi."
         }
       },
@@ -239,6 +260,9 @@
         },
         "errors": {
           "suffixListLoadFailed": "UPN suffix listesi yüklenemedi."
+        },
+        "messages": {
+          "saveSuccess": "Kullanıcı oluşturma varsayılanları kaydedildi."
         }
       },
       "readOnlyNotice": "AD Yönetim ayarlarını görüntüleyebilirsiniz. Güncelleme yapmak için ek yetki gerekir.",

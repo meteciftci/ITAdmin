@@ -441,14 +441,16 @@ public sealed class AdManagementController(
 
         return new AdManagementNotificationSettings
         {
-            UserCreated = new AdManagementUserCreatedNotificationSettings
-            {
-                IsEnabled = request.UserCreated.IsEnabled,
-                SmsEnabled = request.UserCreated.SmsEnabled,
-                EmailEnabled = request.UserCreated.EmailEnabled,
-                SmsRecipientSource = MapRecipientSourceRequest(request.UserCreated.SmsRecipientSource),
-                EmailRecipientSource = MapRecipientSourceRequest(request.UserCreated.EmailRecipientSource),
-            },
+            Rules = request.Rules
+                .Select(rule => new AdManagementNotificationRule
+                {
+                    Id = rule.Id == Guid.Empty ? Guid.NewGuid() : rule.Id,
+                    EventKey = rule.EventKey.Trim(),
+                    Channel = rule.Channel.Trim(),
+                    IsEnabled = rule.IsEnabled,
+                    RecipientSource = MapRecipientSourceRequest(rule.RecipientSource),
+                })
+                .ToList(),
         };
     }
 
@@ -466,14 +468,16 @@ public sealed class AdManagementController(
         AdManagementNotificationSettings settings) =>
         new()
         {
-            UserCreated = new AdManagementUserCreatedNotificationSettingsResponse
-            {
-                IsEnabled = settings.UserCreated.IsEnabled,
-                SmsEnabled = settings.UserCreated.SmsEnabled,
-                EmailEnabled = settings.UserCreated.EmailEnabled,
-                SmsRecipientSource = MapRecipientSourceResponse(settings.UserCreated.SmsRecipientSource),
-                EmailRecipientSource = MapRecipientSourceResponse(settings.UserCreated.EmailRecipientSource),
-            },
+            Rules = settings.Rules
+                .Select(rule => new AdManagementNotificationRuleResponse
+                {
+                    Id = rule.Id,
+                    EventKey = rule.EventKey,
+                    Channel = rule.Channel,
+                    IsEnabled = rule.IsEnabled,
+                    RecipientSource = MapRecipientSourceResponse(rule.RecipientSource),
+                })
+                .ToList(),
         };
 
     private static AdManagementNotificationRecipientSourceResponse? MapRecipientSourceResponse(

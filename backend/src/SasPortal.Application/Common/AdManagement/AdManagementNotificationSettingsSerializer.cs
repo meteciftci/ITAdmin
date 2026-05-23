@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using SasPortal.Application.Common.Constants;
 
 namespace SasPortal.Application.Common.AdManagement;
 
@@ -21,8 +22,18 @@ public static class AdManagementNotificationSettingsSerializer
 
         try
         {
-            var parsed = JsonSerializer.Deserialize<AdManagementNotificationSettings>(json, JsonOptions);
-            return Normalize(parsed ?? CreateDefault());
+            var dto = JsonSerializer.Deserialize<AdManagementNotificationSettingsJsonDto>(json, JsonOptions);
+            if (dto is null)
+            {
+                return CreateDefault();
+            }
+
+            if (dto.Rules is { Count: > 0 })
+            {
+                return Normalize(new AdManagementNotificationSettings { Rules = dto.Rules });
+            }
+
+            return Normalize(MigrateFromLegacyUserCreated(dto.UserCreated));
         }
         catch
         {
@@ -34,19 +45,78 @@ public static class AdManagementNotificationSettingsSerializer
         JsonSerializer.Serialize(Normalize(settings), JsonOptions);
 
     public static AdManagementNotificationSettings CreateDefault() =>
+        new() { Rules = [] };
+
+    private static AdManagementNotificationSettings MigrateFromLegacyUserCreated(
+        AdManagementUserCreatedNotificationSettings? userCreated)
+    {
+        var rules = new List<AdManagementNotificationRule>();
+        if (userCreated is null || !userCreated.IsEnabled)
+        {
+            return new AdManagementNotificationSettings { Rules = rules };
+        }
+
+        if (userCreated.SmsEnabled)
+        {
+            rules.Add(CreateLegacyRule(
+                AdManagementNotificationEventKeys.UserCreated,
+                NotificationChannels.Sms,
+                userCreated.SmsRecipientSource));
+        }
+
+        if (userCreated.EmailEnabled)
+        {
+            rules.Add(CreateLegacyRule(
+                AdManagementNotificationEventKeys.UserCreated,
+                NotificationChannels.Email,
+                userCreated.EmailRecipientSource));
+        }
+
+        return new AdManagementNotificationSettings { Rules = rules };
+    }
+
+    private static AdManagementNotificationRule CreateLegacyRule(
+        string eventKey,
+        string channel,
+        AdManagementNotificationRecipientSource? recipientSource) =>
         new()
         {
-            UserCreated = AdManagementUserCreatedNotificationSettings.Disabled,
+            Id = Guid.NewGuid(),
+            EventKey = eventKey,
+            Channel = channel,
+            IsEnabled = true,
+            RecipientSource = recipientSource is null
+                ? null
+                : new AdManagementNotificationRecipientSource
+                {
+                    Type = recipientSource.Type.Trim(),
+                    Value = string.IsNullOrWhiteSpace(recipientSource.Value)
+                        ? null
+                        : recipientSource.Value.Trim(),
+                },
         };
 
     private static AdManagementNotificationSettings Normalize(AdManagementNotificationSettings settings)
     {
-        settings.UserCreated ??= AdManagementUserCreatedNotificationSettings.Disabled;
+        settings.Rules ??= [];
 
-        if (!settings.UserCreated.IsEnabled)
+        foreach (var rule in settings.Rules)
         {
-            settings.UserCreated.SmsEnabled = false;
-            settings.UserCreated.EmailEnabled = false;
+            if (rule.Id == Guid.Empty)
+            {
+                rule.Id = Guid.NewGuid();
+            }
+
+            rule.EventKey = rule.EventKey.Trim();
+            rule.Channel = rule.Channel.Trim();
+
+            if (rule.RecipientSource is not null)
+            {
+                rule.RecipientSource.Type = rule.RecipientSource.Type.Trim();
+                rule.RecipientSource.Value = string.IsNullOrWhiteSpace(rule.RecipientSource.Value)
+                    ? null
+                    : rule.RecipientSource.Value.Trim();
+            }
         }
 
         return settings;

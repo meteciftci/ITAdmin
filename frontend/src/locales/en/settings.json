@@ -172,19 +172,26 @@
         "notifications": "Notifications"
       },
       "notifications": {
+        "rulesTitle": "Notification Rules",
+        "empty": "No notification rules defined yet.",
         "fields": {
-          "notificationEnabled": "Notifications enabled",
-          "sms": "SMS",
-          "email": "Email",
-          "smsRecipientSource": "SMS recipient source",
-          "emailRecipientSource": "Email recipient source",
+          "event": "Event",
+          "channel": "Channel",
+          "recipientSource": "Recipient Source",
+          "recipientSourceType": "Recipient source type",
+          "templateStatus": "Template Status",
+          "status": "Status",
+          "actions": "Actions",
           "mappedAttribute": "Mapped attribute",
           "adAttribute": "AD attribute",
           "selectSource": "Select source",
           "selectMappedAttribute": "Select field",
-          "templateStatus": "Template status",
-          "smsTemplate": "SMS template",
-          "emailTemplate": "Email template"
+          "selectEvent": "Select event",
+          "selectChannel": "Select channel"
+        },
+        "channels": {
+          "sms": "SMS",
+          "email": "Email"
         },
         "recipientTypes": {
           "mappedAttribute": "Mapped attribute",
@@ -197,8 +204,16 @@
         },
         "events": {
           "userCreated": {
-            "title": "User created",
-            "description": "Queues a notification when a new AD user is created."
+            "label": "User created"
+          },
+          "userEnabled": {
+            "label": "User enabled"
+          },
+          "userDisabled": {
+            "label": "User disabled"
+          },
+          "userUnlocked": {
+            "label": "User unlocked"
           }
         },
         "templateStatus": {
@@ -206,19 +221,25 @@
           "missing": "No template",
           "passive": "Passive"
         },
-        "warnings": {
-          "missingTemplate": "If no active SMS template is found, user creation is not affected; no notification is queued."
+        "status": {
+          "active": "Active",
+          "passive": "Passive"
         },
         "validation": {
-          "channelRequired": "At least one channel must be selected when notifications are enabled.",
-          "smsRecipientRequired": "SMS recipient source is required when SMS is enabled.",
-          "emailRecipientRequired": "Email recipient source is required when email is enabled."
+          "duplicateRule": "A notification rule already exists for this event and channel.",
+          "recipientRequired": "Recipient source is required.",
+          "recipientValueRequired": "Recipient source value is required.",
+          "requiredFields": "Event and channel must be selected."
         },
         "actions": {
-          "save": "Save notification settings"
+          "add": "Add Notification",
+          "edit": "Edit",
+          "remove": "Remove"
         },
         "messages": {
-          "saveSuccess": "Notification settings saved.",
+          "ruleAdded": "Notification rule added.",
+          "ruleUpdated": "Notification rule updated.",
+          "ruleRemoved": "Notification rule removed.",
           "saveFailed": "Notification settings could not be saved."
         }
       },
@@ -239,6 +260,9 @@
         },
         "errors": {
           "suffixListLoadFailed": "UPN suffix list could not be loaded."
+        },
+        "messages": {
+          "saveSuccess": "User creation defaults saved."
         }
       },
       "readOnlyNotice": "You can view AD management settings. Additional permission is required to update them.",

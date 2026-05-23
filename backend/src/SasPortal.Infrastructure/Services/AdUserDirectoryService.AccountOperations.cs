@@ -105,6 +105,7 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
                     context.Connection,
                     beforeState,
                     beforeState,
+                    notificationEventKey: null,
                     cancellationToken);
             }
 
@@ -134,6 +135,10 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
                     cancellationToken);
             }
 
+            var notificationEventKey = disabled
+                ? AdManagementNotificationEventKeys.UserDisabled
+                : AdManagementNotificationEventKeys.UserEnabled;
+
             return await CompleteAccountOperationAsync(
                 request,
                 operationType,
@@ -143,6 +148,7 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
                 context.Connection,
                 beforeState,
                 afterState,
+                notificationEventKey,
                 cancellationToken);
         }
         catch (LdapException ex)
@@ -238,6 +244,7 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
                     context.Connection,
                     beforeState,
                     beforeState,
+                    notificationEventKey: null,
                     cancellationToken);
             }
 
@@ -269,6 +276,7 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
                 context.Connection,
                 beforeState,
                 afterState,
+                AdManagementNotificationEventKeys.UserUnlocked,
                 cancellationToken);
         }
         catch (LdapException ex)
@@ -401,8 +409,20 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
         AdManagementConnectionParameters connection,
         AdUserAccountState beforeState,
         AdUserAccountState afterState,
+        string? notificationEventKey,
         CancellationToken cancellationToken)
     {
+        AdManagementNotificationSummary? notificationSummary = null;
+        if (!string.IsNullOrWhiteSpace(notificationEventKey))
+        {
+            notificationSummary = await TryEnqueueAccountOperationNotificationAsync(
+                notificationEventKey,
+                request,
+                connection,
+                afterState,
+                cancellationToken);
+        }
+
         await WriteAccountOperationLogsAsync(
             request,
             operationType,
@@ -411,6 +431,7 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
             beforeState,
             afterState,
             null,
+            notificationSummary,
             cancellationToken);
 
         await auditLogWriter.WriteAsync(
@@ -456,6 +477,7 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
             null,
             null,
             message,
+            null,
             cancellationToken);
 
         if (!string.IsNullOrWhiteSpace(auditDescription))
@@ -490,6 +512,7 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
         AdUserAccountState? beforeState,
         AdUserAccountState? afterState,
         string? errorMessage,
+        AdManagementNotificationSummary? notificationSummary,
         CancellationToken cancellationToken)
     {
         var beforeSnapshot = beforeState is null
@@ -516,6 +539,9 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
                 isEnabled = afterState.IsEnabled,
                 isLockedOut = afterState.IsLockedOut,
                 userAccountControl = afterState.UserAccountControl,
+                notifications = notificationSummary is null
+                    ? null
+                    : FormatNotificationLogSummary(notificationSummary),
             });
 
         await adOperationLogService.WriteAsync(
@@ -543,6 +569,127 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
         string.IsNullOrWhiteSpace(exception.Message) || exception.Message.Contains("ldap", StringComparison.OrdinalIgnoreCase)
             ? AccountOperationFailedMessage
             : AccountOperationFailedMessage;
+
+    private async Task<AdManagementNotificationSummary?> TryEnqueueAccountOperationNotificationAsync(
+        string eventKey,
+        AdUserAccountOperationRequest request,
+        AdManagementConnectionParameters connection,
+        AdUserAccountState afterState,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var connectionResult = await ResolveConnectionAsync(cancellationToken);
+            if (!connectionResult.IsSuccess || connectionResult.Context is null)
+            {
+                return null;
+            }
+
+            var mappings = await attributeMappingService.GetMappingsAsync(cancellationToken);
+            var activeMappings = mappings.Where(static mapping => mapping.IsEnabled).ToList();
+            var searchBase = ResolveDetailSearchBase(connectionResult.Context.Connection);
+            if (string.IsNullOrWhiteSpace(searchBase))
+            {
+                return null;
+            }
+
+            using var ldapConnection = CreateBoundConnection(connectionResult.Context);
+            if (!TryLoadUserNotificationContext(
+                    ldapConnection,
+                    searchBase,
+                    Guid.Parse(afterState.UserId),
+                    activeMappings,
+                    out var userContext))
+            {
+                return null;
+            }
+
+            var contextWithActor = userContext with { ActorUserName = request.ActorUserName };
+
+            return await notificationEnqueueService.EnqueueAccountOperationAsync(
+                new AdManagementAccountOperationNotificationRequest(eventKey, contextWithActor),
+                cancellationToken);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static bool TryLoadUserNotificationContext(
+        LdapConnection ldapConnection,
+        string searchBase,
+        Guid objectGuid,
+        IReadOnlyList<AdAttributeMappingItem> activeMappings,
+        out AdManagementNotificationUserContext userContext)
+    {
+        userContext = null!;
+        var guidFilter = AdLdapFilterHelper.FormatObjectGuidFilter(objectGuid);
+        var filter =
+            $"(&(objectCategory=person)(objectClass=user)(!(isDeleted=TRUE))(objectGUID={guidFilter}))";
+
+        var ldapAttributes = AdLdapAttributeCatalog.BuildDetailLdapAttributeNames(activeMappings);
+        var searchRequest = new SearchRequest(
+            searchBase,
+            filter,
+            SearchScope.Subtree,
+            ldapAttributes)
+        {
+            SizeLimit = 2,
+            TimeLimit = LdapOperationTimeout,
+        };
+
+        var response = (SearchResponse)ldapConnection.SendRequest(searchRequest);
+        if (response.ResultCode != ResultCode.Success || response.Entries.Count == 0)
+        {
+            return false;
+        }
+
+        if (!TryMapDetailItem(response.Entries[0], activeMappings, out var detail))
+        {
+            return false;
+        }
+
+        var attributeValues = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var mappedValues = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var mapped in detail.MappedAttributes)
+        {
+            var value = mapped.Value?.FirstOrDefault(static item => !string.IsNullOrWhiteSpace(item))?.Trim();
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                continue;
+            }
+
+            mappedValues[mapped.LogicalField] = value;
+            if (!string.IsNullOrWhiteSpace(mapped.AdAttribute))
+            {
+                attributeValues[mapped.AdAttribute.Trim()] = value;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(detail.Mail))
+        {
+            attributeValues["mail"] = detail.Mail;
+        }
+
+        userContext = new AdManagementNotificationUserContext(
+            detail.Id,
+            detail.SamAccountName,
+            detail.UserPrincipalName,
+            detail.DisplayName,
+            detail.Mail,
+            detail.Department,
+            mappedValues,
+            attributeValues,
+            activeMappings,
+            ActorUserName: null);
+
+        return true;
+    }
+
+    private static string FormatNotificationLogSummary(AdManagementNotificationSummary summary) =>
+        $"Notifications: {summary.QueuedCount} queued, {summary.SkippedCount} skipped.";
 
     private sealed record AdUserAccountState(
         string UserId,

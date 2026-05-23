@@ -6,18 +6,18 @@ public sealed record AdManagementNotificationRecipientSourceRequest
     public string? Value { get; init; }
 }
 
-public sealed record AdManagementUserCreatedNotificationSettingsRequest
+public sealed record AdManagementNotificationRuleRequest
 {
+    public Guid Id { get; init; }
+    public string EventKey { get; init; } = string.Empty;
+    public string Channel { get; init; } = string.Empty;
     public bool IsEnabled { get; init; }
-    public bool SmsEnabled { get; init; }
-    public bool EmailEnabled { get; init; }
-    public AdManagementNotificationRecipientSourceRequest? SmsRecipientSource { get; init; }
-    public AdManagementNotificationRecipientSourceRequest? EmailRecipientSource { get; init; }
+    public AdManagementNotificationRecipientSourceRequest? RecipientSource { get; init; }
 }
 
 public sealed record AdManagementNotificationSettingsRequest
 {
-    public AdManagementUserCreatedNotificationSettingsRequest UserCreated { get; init; } = new();
+    public IReadOnlyList<AdManagementNotificationRuleRequest> Rules { get; init; } = [];
 }
 
 public sealed record AdManagementNotificationRecipientSourceResponse
@@ -26,16 +26,16 @@ public sealed record AdManagementNotificationRecipientSourceResponse
     public string? Value { get; init; }
 }
 
-public sealed record AdManagementUserCreatedNotificationSettingsResponse
+public sealed record AdManagementNotificationRuleResponse
 {
+    public Guid Id { get; init; }
+    public string EventKey { get; init; } = string.Empty;
+    public string Channel { get; init; } = string.Empty;
     public bool IsEnabled { get; init; }
-    public bool SmsEnabled { get; init; }
-    public bool EmailEnabled { get; init; }
-    public AdManagementNotificationRecipientSourceResponse? SmsRecipientSource { get; init; }
-    public AdManagementNotificationRecipientSourceResponse? EmailRecipientSource { get; init; }
+    public AdManagementNotificationRecipientSourceResponse? RecipientSource { get; init; }
 }
 
 public sealed record AdManagementNotificationSettingsResponse
 {
-    public AdManagementUserCreatedNotificationSettingsResponse UserCreated { get; init; } = new();
+    public IReadOnlyList<AdManagementNotificationRuleResponse> Rules { get; init; } = [];
 }

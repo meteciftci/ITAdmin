@@ -74,24 +74,19 @@ public sealed class StaticNotificationTemplateCatalogProvider : INotificationTem
                     new NotificationTemplateCatalogEvent(
                         "UserCreated",
                         [NotificationChannels.Sms, NotificationChannels.Email],
-                        Variables(
-                            "displayName",
-                            "username",
-                            "upn",
-                            "department",
-                            "helpDeskPhone",
-                            "applicationName",
-                            "operationDate")),
+                        AdManagementEventVariables()),
+                    new NotificationTemplateCatalogEvent(
+                        "UserEnabled",
+                        [NotificationChannels.Sms, NotificationChannels.Email],
+                        AdManagementEventVariables()),
                     new NotificationTemplateCatalogEvent(
                         "UserDisabled",
                         [NotificationChannels.Sms, NotificationChannels.Email],
-                        Variables(
-                            "displayName",
-                            "username",
-                            "upn",
-                            "operationDate",
-                            "actorName",
-                            "applicationName")),
+                        AdManagementEventVariables()),
+                    new NotificationTemplateCatalogEvent(
+                        "UserUnlocked",
+                        [NotificationChannels.Sms, NotificationChannels.Email],
+                        AdManagementEventVariables()),
                     new NotificationTemplateCatalogEvent(
                         "PasswordReset",
                         [NotificationChannels.Sms, NotificationChannels.Email],
@@ -107,4 +102,15 @@ public sealed class StaticNotificationTemplateCatalogProvider : INotificationTem
 
     private static IReadOnlyList<NotificationTemplateCatalogVariable> Variables(params string[] keys) =>
         keys.Select(key => new NotificationTemplateCatalogVariable(key)).ToArray();
+
+    private static IReadOnlyList<NotificationTemplateCatalogVariable> AdManagementEventVariables() =>
+        Variables(
+            "displayName",
+            "username",
+            "upn",
+            "department",
+            "helpDeskPhone",
+            "applicationName",
+            "operationDate",
+            "actorName");
 }

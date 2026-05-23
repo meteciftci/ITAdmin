@@ -101,7 +101,6 @@ export function AdManagementSettingsTab({ readOnly }: Props) {
       await queryClient.invalidateQueries({
         queryKey: AD_MANAGEMENT_SETTINGS_QUERY_KEY,
       });
-      toast.success(t("settings:adManagement.connection.messages.saveSuccess"));
     },
     onError: (error: unknown) => {
       toast.error(
@@ -112,6 +111,17 @@ export function AdManagementSettingsTab({ readOnly }: Props) {
       );
     },
   });
+
+  const saveSettings = (
+    payload: UpdateAdManagementSettingsRequest,
+    successMessage: string,
+  ) => {
+    updateSettingsMutation.mutate(payload, {
+      onSuccess: () => {
+        toast.success(successMessage);
+      },
+    });
+  };
 
   const [dialog, setDialog] = useState<DialogState>({
     open: false,
@@ -285,7 +295,11 @@ export function AdManagementSettingsTab({ readOnly }: Props) {
             settings={settingsQuery.data}
             readOnly={readOnly}
             isSaving={updateSettingsMutation.isPending}
-            onSave={(payload) => updateSettingsMutation.mutate(payload)}
+            onSave={(payload) =>
+              saveSettings(
+                payload,
+                t("settings:adManagement.connection.messages.saveSuccess"),
+              )}
           />
         </TabsContent>
 
@@ -295,7 +309,11 @@ export function AdManagementSettingsTab({ readOnly }: Props) {
             settings={settingsQuery.data}
             readOnly={readOnly}
             isSaving={updateSettingsMutation.isPending}
-            onSave={(payload) => updateSettingsMutation.mutate(payload)}
+            onSave={(payload) =>
+              saveSettings(
+                payload,
+                t("settings:adManagement.userCreationDefaults.messages.saveSuccess"),
+              )}
           />
         </TabsContent>
 
@@ -305,7 +323,7 @@ export function AdManagementSettingsTab({ readOnly }: Props) {
             settings={settingsQuery.data}
             readOnly={readOnly}
             isSaving={updateSettingsMutation.isPending}
-            onSave={(payload) => updateSettingsMutation.mutate(payload)}
+            onSave={(payload, meta) => saveSettings(payload, meta.successMessage)}
           />
         </TabsContent>
 

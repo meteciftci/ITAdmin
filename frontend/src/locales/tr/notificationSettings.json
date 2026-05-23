@@ -68,7 +68,9 @@
         },
         "AdManagement": {
           "UserCreated": "Kullanıcı oluşturuldu",
+          "UserEnabled": "Kullanıcı aktife alındı",
           "UserDisabled": "Kullanıcı pasife alındı",
+          "UserUnlocked": "Kullanıcı kilidi açıldı",
           "PasswordReset": "Parola sıfırlandı"
         }
       },

@@ -3,17 +3,29 @@ export type AdManagementNotificationRecipientSource = {
   value: string | null;
 };
 
-export type AdManagementUserCreatedNotificationSettings = {
+export type AdManagementNotificationRule = {
+  id: string;
+  eventKey: string;
+  channel: string;
   isEnabled: boolean;
-  smsEnabled: boolean;
-  emailEnabled: boolean;
-  smsRecipientSource: AdManagementNotificationRecipientSource | null;
-  emailRecipientSource: AdManagementNotificationRecipientSource | null;
+  recipientSource: AdManagementNotificationRecipientSource | null;
 };
 
 export type AdManagementNotificationSettings = {
-  userCreated: AdManagementUserCreatedNotificationSettings;
+  rules: AdManagementNotificationRule[];
 };
+
+export const AD_NOTIFICATION_EVENT_KEYS = {
+  userCreated: "UserCreated",
+  userEnabled: "UserEnabled",
+  userDisabled: "UserDisabled",
+  userUnlocked: "UserUnlocked",
+} as const;
+
+export const AD_NOTIFICATION_CHANNELS = {
+  sms: "Sms",
+  email: "Email",
+} as const;
 
 export const AD_NOTIFICATION_RECIPIENT_SOURCE_TYPES = {
   mappedAttribute: "MappedAttribute",

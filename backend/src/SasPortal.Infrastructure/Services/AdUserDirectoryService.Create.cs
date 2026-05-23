@@ -638,7 +638,7 @@ public sealed partial class AdUserDirectoryService
         CreateAdUserRequest request,
         CreateAdUserResponse response,
         AdManagementConnectionParameters connection,
-        AdUserCreatedNotificationSummary notificationSummary,
+        AdManagementNotificationSummary notificationSummary,
         CancellationToken cancellationToken)
     {
         var summary = JsonSerializer.Serialize(new
@@ -652,12 +652,7 @@ public sealed partial class AdUserDirectoryService
             mustChangePasswordAtNextLogon = request.MustChangePasswordAtNextLogon,
             namingCollisionResolved = response.NamingCollisionResolved,
             generatedSuffix = response.GeneratedSuffix,
-            notifications = new
-            {
-                queuedCount = notificationSummary.QueuedCount,
-                skippedCount = notificationSummary.SkippedCount,
-                messages = notificationSummary.Messages,
-            },
+            notifications = FormatNotificationLogSummary(notificationSummary),
         });
 
         await adOperationLogService.WriteAsync(

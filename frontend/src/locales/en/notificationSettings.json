@@ -68,7 +68,9 @@
         },
         "AdManagement": {
           "UserCreated": "User created",
+          "UserEnabled": "User enabled",
           "UserDisabled": "User disabled",
+          "UserUnlocked": "User unlocked",
           "PasswordReset": "Password reset"
         }
       },

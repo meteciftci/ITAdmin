@@ -234,9 +234,15 @@ public sealed class AdManagementSettingsService(
         var notificationAuditChanges = BuildNotificationSettingsAuditChanges(
             beforeNotificationSettings,
             notificationSettings);
+        var notificationRulesSummary = AdManagementNotificationSettingsAuditBuilder.BuildRulesChangeSummary(
+            beforeNotificationSettings,
+            notificationSettings);
+        var auditPrefix = string.IsNullOrWhiteSpace(notificationRulesSummary)
+            ? $"AD management settings updated. Enabled: {entity.IsEnabled}. Password changed: {passwordChanged}."
+            : $"AD management settings updated. Enabled: {entity.IsEnabled}. Password changed: {passwordChanged}. {notificationRulesSummary.TrimEnd('.', ' ')}.";
         var auditDescription = TruncateAuditDescription(
             AuditChangeSummaryBuilder.BuildUpdateDescription(
-                $"AD management settings updated. Enabled: {entity.IsEnabled}. Password changed: {passwordChanged}.",
+                auditPrefix,
                 notificationAuditChanges));
 
         await context.AuditLogs.AddAsync(
@@ -511,48 +517,25 @@ public sealed class AdManagementSettingsService(
         AdManagementNotificationSettings before,
         AdManagementNotificationSettings after)
     {
-        var changes = new List<AuditFieldChange>
+        var summary = AdManagementNotificationSettingsAuditBuilder.BuildRulesChangeSummary(before, after);
+        if (string.IsNullOrWhiteSpace(summary))
         {
-            AuditChangeSummaryBuilder.PublicField(
-                "UserCreatedNotificationsEnabled",
-                before.UserCreated.IsEnabled.ToString(),
-                after.UserCreated.IsEnabled.ToString()),
-            AuditChangeSummaryBuilder.PublicField(
-                "UserCreatedSmsEnabled",
-                before.UserCreated.SmsEnabled.ToString(),
-                after.UserCreated.SmsEnabled.ToString()),
-            AuditChangeSummaryBuilder.PublicField(
-                "UserCreatedEmailEnabled",
-                before.UserCreated.EmailEnabled.ToString(),
-                after.UserCreated.EmailEnabled.ToString()),
-            AuditChangeSummaryBuilder.PublicField(
-                "UserCreatedSmsRecipientSource",
-                FormatRecipientSource(before.UserCreated.SmsRecipientSource),
-                FormatRecipientSource(after.UserCreated.SmsRecipientSource)),
-            AuditChangeSummaryBuilder.PublicField(
-                "UserCreatedEmailRecipientSource",
-                FormatRecipientSource(before.UserCreated.EmailRecipientSource),
-                FormatRecipientSource(after.UserCreated.EmailRecipientSource)),
-        };
-
-        return changes
-            .Where(change =>
-                change.IsSensitive
-                || change.DisplayMode is AuditChangeDisplayMode.ChangedOnly or AuditChangeDisplayMode.Cleared
-                || !string.Equals(change.OldValue, change.NewValue, StringComparison.Ordinal))
-            .ToList();
-    }
-
-    private static string? FormatRecipientSource(AdManagementNotificationRecipientSource? source)
-    {
-        if (source is null || string.IsNullOrWhiteSpace(source.Type))
-        {
-            return null;
+            return [];
         }
 
-        return string.IsNullOrWhiteSpace(source.Value)
-            ? source.Type.Trim()
-            : $"{source.Type.Trim()}:{source.Value.Trim()}";
+        return
+        [
+            AuditChangeSummaryBuilder.PublicField(
+                "NotificationRules",
+                FormatRuleCount(before),
+                FormatRuleCount(after)),
+        ];
+    }
+
+    private static string FormatRuleCount(AdManagementNotificationSettings settings)
+    {
+        var enabled = settings.Rules.Count(rule => rule.IsEnabled);
+        return $"{settings.Rules.Count} rules ({enabled} enabled)";
     }
 
     private static bool ValidateUpdateRequest(UpdateAdManagementSettingsRequest request, out string message)
