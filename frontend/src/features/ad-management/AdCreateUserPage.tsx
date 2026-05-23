@@ -122,9 +122,21 @@ export function AdCreateUserPage() {
     mutationFn: createAdUser,
     onSuccess: async (response) => {
       await invalidateAdManagementUserQueries(queryClient);
-      toast.success(
-        response.message || t("adManagement:users.create.messages.created"),
-      );
+      const baseMessage =
+        response.message || t("adManagement:users.create.messages.created");
+      if ((response.notificationSummary?.queuedCount ?? 0) > 0) {
+        toast.success(
+          `${baseMessage} ${t("adManagement:users.create.messages.notificationQueued")}`,
+        );
+      } else if (
+        (response.notificationSummary?.skippedCount ?? 0) > 0
+        && (response.notificationSummary?.messages.length ?? 0) > 0
+      ) {
+        toast.success(baseMessage);
+        toast.message(t("adManagement:users.create.messages.notificationNotQueued"));
+      } else {
+        toast.success(baseMessage);
+      }
       navigate("/ad-management/users");
     },
     onError: (error) => {

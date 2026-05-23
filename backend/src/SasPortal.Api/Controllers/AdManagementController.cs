@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using SasPortal.Api.Authorization;
 using SasPortal.Api.Contracts.AdManagement;
 using SasPortal.Application.Abstractions.Services;
+using SasPortal.Application.Common.AdManagement;
 using SasPortal.Application.Common.Constants;
 using AppModels = SasPortal.Application.Common.Models;
 
@@ -52,6 +53,7 @@ public sealed class AdManagementController(
                 request.ClearServiceAccountPassword,
                 request.PowerShellHealthEnabled,
                 request.PowerShellTimeoutSeconds,
+                MapNotificationSettingsRequest(request.NotificationSettings),
                 ResolveActorUserId(User),
                 ResolveActorUserName(User),
                 ResolveIpAddress(),
@@ -256,7 +258,13 @@ public sealed class AdManagementController(
             user.IsEnabled,
             user.Message,
             user.NamingCollisionResolved,
-            user.GeneratedSuffix));
+            user.GeneratedSuffix,
+            user.NotificationSummary is null
+                ? null
+                : new AdUserCreatedNotificationSummaryResponse(
+                    user.NotificationSummary.QueuedCount,
+                    user.NotificationSummary.SkippedCount,
+                    user.NotificationSummary.Messages)));
     }
 
     [HttpGet("users/{id}")]
@@ -398,7 +406,63 @@ public sealed class AdManagementController(
             settings.PowerShellTimeoutSeconds,
             settings.LastValidatedAt,
             settings.LastValidationStatus,
-            settings.LastValidationMessage);
+            settings.LastValidationMessage,
+            MapNotificationSettingsResponse(settings.NotificationSettings));
+
+    private static AdManagementNotificationSettings MapNotificationSettingsRequest(
+        AdManagementNotificationSettingsRequest? request)
+    {
+        if (request is null)
+        {
+            return AdManagementNotificationSettingsSerializer.CreateDefault();
+        }
+
+        return new AdManagementNotificationSettings
+        {
+            UserCreated = new AdManagementUserCreatedNotificationSettings
+            {
+                IsEnabled = request.UserCreated.IsEnabled,
+                SmsEnabled = request.UserCreated.SmsEnabled,
+                EmailEnabled = request.UserCreated.EmailEnabled,
+                SmsRecipientSource = MapRecipientSourceRequest(request.UserCreated.SmsRecipientSource),
+                EmailRecipientSource = MapRecipientSourceRequest(request.UserCreated.EmailRecipientSource),
+            },
+        };
+    }
+
+    private static AdManagementNotificationRecipientSource? MapRecipientSourceRequest(
+        AdManagementNotificationRecipientSourceRequest? source) =>
+        source is null || string.IsNullOrWhiteSpace(source.Type)
+            ? null
+            : new AdManagementNotificationRecipientSource
+            {
+                Type = source.Type.Trim(),
+                Value = string.IsNullOrWhiteSpace(source.Value) ? null : source.Value.Trim(),
+            };
+
+    private static AdManagementNotificationSettingsResponse MapNotificationSettingsResponse(
+        AdManagementNotificationSettings settings) =>
+        new()
+        {
+            UserCreated = new AdManagementUserCreatedNotificationSettingsResponse
+            {
+                IsEnabled = settings.UserCreated.IsEnabled,
+                SmsEnabled = settings.UserCreated.SmsEnabled,
+                EmailEnabled = settings.UserCreated.EmailEnabled,
+                SmsRecipientSource = MapRecipientSourceResponse(settings.UserCreated.SmsRecipientSource),
+                EmailRecipientSource = MapRecipientSourceResponse(settings.UserCreated.EmailRecipientSource),
+            },
+        };
+
+    private static AdManagementNotificationRecipientSourceResponse? MapRecipientSourceResponse(
+        AdManagementNotificationRecipientSource? source) =>
+        source is null || string.IsNullOrWhiteSpace(source.Type)
+            ? null
+            : new AdManagementNotificationRecipientSourceResponse
+            {
+                Type = source.Type,
+                Value = source.Value,
+            };
 
     private static AdAttributeMappingResponse MapMapping(AppModels.AdAttributeMappingItem item) =>
         new(

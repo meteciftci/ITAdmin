@@ -1,5 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 
+import { defaultAdManagementNotificationSettings } from "@/features/ad-management/ad-management-settings-payload";
 import { apiClient } from "@/lib/api-client";
 
 import type {
@@ -43,7 +44,11 @@ export const getAdManagementSettings = async (): Promise<AdManagementSettings> =
   const { data } = await apiClient.get<AdManagementSettings>(
     "/ad-management/settings",
   );
-  return data;
+  return {
+    ...data,
+    notificationSettings:
+      data.notificationSettings ?? defaultAdManagementNotificationSettings(),
+  };
 };
 
 export const updateAdManagementSettings = async (

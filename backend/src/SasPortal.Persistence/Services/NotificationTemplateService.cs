@@ -195,6 +195,59 @@ public sealed class NotificationTemplateService(
         return new NotificationTemplateOperationResult(true, "Notification template updated.", Map(entity));
     }
 
+    public async Task<NotificationTemplateOperationResult> UpdateStatusAsync(
+        Guid id,
+        UpdateNotificationTemplateStatusRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var entity = await context.NotificationTemplates
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+
+        if (entity is null)
+        {
+            return new NotificationTemplateOperationResult(false, "Notification template was not found.");
+        }
+
+        var beforeEnabled = entity.IsEnabled;
+        if (beforeEnabled == request.IsEnabled)
+        {
+            return new NotificationTemplateOperationResult(
+                true,
+                "Notification template status is unchanged.",
+                Map(entity));
+        }
+
+        entity.IsEnabled = request.IsEnabled;
+        entity.UpdatedAt = DateTimeOffset.UtcNow;
+        entity.UpdatedBy = request.ActorUserName;
+
+        var changes = new List<AuditFieldChange>
+        {
+            AuditChangeSummaryBuilder.PublicField(
+                "IsEnabled",
+                beforeEnabled.ToString(),
+                entity.IsEnabled.ToString()),
+        };
+
+        var description = AuditChangeSummaryBuilder.BuildUpdateDescription(
+            $"Notification template status updated. Module: {entity.ModuleKey}. Event: {entity.EventKey}. Channel: {entity.Channel}.",
+            changes);
+
+        await WriteAuditAsync(
+            "Update",
+            entity,
+            description,
+            request.ActorUserId,
+            request.ActorUserName,
+            request.ActorIpAddress,
+            request.ActorUserAgent,
+            cancellationToken);
+
+        await context.SaveChangesAsync(cancellationToken);
+
+        return new NotificationTemplateOperationResult(true, "Notification template status updated.", Map(entity));
+    }
+
     private string? ValidateRequest(
         string moduleKey,
         string eventKey,

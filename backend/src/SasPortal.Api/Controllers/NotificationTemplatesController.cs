@@ -6,6 +6,7 @@ using SasPortal.Api.Contracts.NotificationTemplates;
 using SasPortal.Application.Abstractions.Notifications;
 using SasPortal.Application.Abstractions.Services;
 using SasPortal.Application.Common.Constants;
+using AppNotificationModels = SasPortal.Application.Common.Models.Notifications;
 using AppModels = SasPortal.Application.Common.Models.Notifications;
 
 namespace SasPortal.Api.Controllers;
@@ -119,6 +120,36 @@ public sealed class NotificationTemplatesController(
 
         if (!result.IsSuccess || result.Template is null)
         {
+            return BadRequest(new { message = result.Message });
+        }
+
+        return Ok(Map(result.Template));
+    }
+
+    [HttpPatch("{id:guid}/status")]
+    [RequirePermission(NotificationTemplatePermissions.Update)]
+    public async Task<ActionResult<NotificationTemplateResponse>> UpdateStatus(
+        Guid id,
+        [FromBody] UpdateNotificationTemplateStatusRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await templateService.UpdateStatusAsync(
+            id,
+            new AppNotificationModels.UpdateNotificationTemplateStatusRequest(
+                request.IsEnabled,
+                ResolveActorUserId(User),
+                ResolveActorUserName(User),
+                ResolveIpAddress(),
+                ResolveUserAgent()),
+            cancellationToken);
+
+        if (!result.IsSuccess || result.Template is null)
+        {
+            if (string.Equals(result.Message, "Notification template was not found.", StringComparison.Ordinal))
+            {
+                return NotFound(new { message = result.Message });
+            }
+
             return BadRequest(new { message = result.Message });
         }
 

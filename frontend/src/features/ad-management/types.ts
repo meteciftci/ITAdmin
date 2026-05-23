@@ -1,3 +1,27 @@
+export type AdManagementNotificationRecipientSource = {
+  type: string;
+  value: string | null;
+};
+
+export type AdManagementUserCreatedNotificationSettings = {
+  isEnabled: boolean;
+  smsEnabled: boolean;
+  emailEnabled: boolean;
+  smsRecipientSource: AdManagementNotificationRecipientSource | null;
+  emailRecipientSource: AdManagementNotificationRecipientSource | null;
+};
+
+export type AdManagementNotificationSettings = {
+  userCreated: AdManagementUserCreatedNotificationSettings;
+};
+
+export const AD_NOTIFICATION_RECIPIENT_SOURCE_TYPES = {
+  mappedAttribute: "MappedAttribute",
+  adAttribute: "AdAttribute",
+  userPrincipalName: "UserPrincipalName",
+  mailAttribute: "MailAttribute",
+} as const;
+
 export type AdManagementSettings = {
   isConfigured: boolean;
   isEnabled: boolean;
@@ -20,6 +44,7 @@ export type AdManagementSettings = {
   lastValidatedAt: string | null;
   lastValidationStatus: string | null;
   lastValidationMessage: string | null;
+  notificationSettings: AdManagementNotificationSettings;
 };
 
 export type UpdateAdManagementSettingsRequest = {
@@ -41,6 +66,7 @@ export type UpdateAdManagementSettingsRequest = {
   clearServiceAccountPassword: boolean;
   powerShellHealthEnabled: boolean;
   powerShellTimeoutSeconds: number;
+  notificationSettings: AdManagementNotificationSettings;
 };
 
 export type AdOrganizationalUnitListItem = {
@@ -84,6 +110,12 @@ export type AdUpnSuffixesResponse = {
   warning?: string | null;
 };
 
+export type AdUserCreatedNotificationSummary = {
+  queuedCount: number;
+  skippedCount: number;
+  messages: string[];
+};
+
 export type CreateAdUserResponse = {
   id: string;
   distinguishedName: string;
@@ -95,6 +127,7 @@ export type CreateAdUserResponse = {
   message: string;
   namingCollisionResolved: boolean;
   generatedSuffix: number | null;
+  notificationSummary: AdUserCreatedNotificationSummary | null;
 };
 
 export type AdAttributeMapping = {

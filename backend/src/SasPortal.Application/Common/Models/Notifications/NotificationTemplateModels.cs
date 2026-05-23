@@ -57,6 +57,13 @@ public sealed record NotificationTemplateListQuery(
     string? EventKey,
     string? Channel);
 
+public sealed record UpdateNotificationTemplateStatusRequest(
+    bool IsEnabled,
+    Guid? ActorUserId,
+    string? ActorUserName,
+    string? ActorIpAddress,
+    string? ActorUserAgent);
+
 public sealed record NotificationTemplateOperationResult(
     bool IsSuccess,
     string Message,

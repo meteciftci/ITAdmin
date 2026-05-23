@@ -31,7 +31,8 @@ public sealed record CreateAdUserResponse(
     bool IsEnabled,
     string Message,
     bool NamingCollisionResolved,
-    int? GeneratedSuffix);
+    int? GeneratedSuffix,
+    AdUserCreatedNotificationSummaryResponse? NotificationSummary);
 
 public sealed record AdOrganizationalUnitListItemResponse(
     string DistinguishedName,

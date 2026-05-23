@@ -20,6 +20,7 @@ import { getAdManagementSaveErrorMessage } from "@/features/ad-management/ad-man
 import { AdAttributeMappingDialog, type AdAttributeMappingDialogFormState } from "@/features/ad-management/components/AdAttributeMappingDialog";
 import { AdAttributeMappingsSection } from "@/features/ad-management/components/AdAttributeMappingsSection";
 import { AdManagementConnectionForm } from "@/features/ad-management/components/AdManagementConnectionForm";
+import { AdManagementNotificationsForm } from "@/features/ad-management/components/AdManagementNotificationsForm";
 import { AdUserCreationDefaultsForm } from "@/features/ad-management/components/AdUserCreationDefaultsForm";
 import type {
   AdAttributeMapping,
@@ -69,7 +70,7 @@ type Props = {
   readOnly: boolean;
 };
 
-type AdManagementInnerTab = "connection" | "mappings" | "userCreationDefaults";
+type AdManagementInnerTab = "connection" | "mappings" | "userCreationDefaults" | "notifications";
 
 export function AdManagementSettingsTab({ readOnly }: Props) {
   const { t } = useTranslation(["settings", "common"]);
@@ -260,7 +261,7 @@ export function AdManagementSettingsTab({ readOnly }: Props) {
   return (
     <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3">
+        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <TabsTrigger value="connection">
             {t("settings:adManagement.pageTabs.connection")}
           </TabsTrigger>
@@ -269,6 +270,9 @@ export function AdManagementSettingsTab({ readOnly }: Props) {
           </TabsTrigger>
           <TabsTrigger value="userCreationDefaults">
             {t("settings:adManagement.pageTabs.userCreationDefaults")}
+          </TabsTrigger>
+          <TabsTrigger value="notifications">
+            {t("settings:adManagement.pageTabs.notifications")}
           </TabsTrigger>
         </TabsList>
 
@@ -288,6 +292,16 @@ export function AdManagementSettingsTab({ readOnly }: Props) {
         <TabsContent value="userCreationDefaults" className="pt-4">
           <AdUserCreationDefaultsForm
             key={`${buildSettingsKey(settingsQuery.data)}::defaults`}
+            settings={settingsQuery.data}
+            readOnly={readOnly}
+            isSaving={updateSettingsMutation.isPending}
+            onSave={(payload) => updateSettingsMutation.mutate(payload)}
+          />
+        </TabsContent>
+
+        <TabsContent value="notifications" className="pt-4">
+          <AdManagementNotificationsForm
+            key={`${buildSettingsKey(settingsQuery.data)}::notifications`}
             settings={settingsQuery.data}
             readOnly={readOnly}
             isSaving={updateSettingsMutation.isPending}

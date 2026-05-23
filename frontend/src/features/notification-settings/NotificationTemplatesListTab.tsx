@@ -6,6 +6,7 @@ import { DateTimeText } from "@/components/common/DateTimeText";
 import { EmptyState } from "@/components/common/EmptyState";
 import { LoadingState } from "@/components/common/LoadingState";
 import { SectionCard } from "@/components/common/SectionCard";
+import { NotificationTemplateStatusSwitch } from "@/features/notification-settings/NotificationTemplateStatusSwitch";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { buttonVariants } from "@/components/ui/button-variants";
 import {
@@ -78,7 +79,15 @@ export function NotificationTemplatesListTab() {
                     <td className="px-3 py-2">{getChannelLabel(t, item.channel)}</td>
                     <td className="px-3 py-2">{item.name}</td>
                     <td className="px-3 py-2">
-                      <StatusBadge isActive={item.isEnabled} />
+                      <div className="flex items-center gap-2">
+                        <NotificationTemplateStatusSwitch
+                          key={`${item.id}-${item.isEnabled}`}
+                          templateId={item.id}
+                          isEnabled={item.isEnabled}
+                          canUpdate={canUpdate}
+                        />
+                        {!canUpdate ? <StatusBadge isActive={item.isEnabled} /> : null}
+                      </div>
                     </td>
                     <td className="px-3 py-2">
                       {item.updatedAt ? <DateTimeText value={item.updatedAt} /> : "-"}

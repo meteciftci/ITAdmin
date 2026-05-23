@@ -90,6 +90,9 @@ public class AdManagementSettingsConfiguration : IEntityTypeConfiguration<AdMana
             .HasColumnName("last_validation_message")
             .HasMaxLength(2000);
 
+        builder.Property(x => x.NotificationSettingsJson)
+            .HasColumnName("notification_settings_json");
+
         builder.Property(x => x.CreatedAt).HasColumnName("created_at");
         builder.Property(x => x.CreatedBy).HasColumnName("created_by");
         builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");

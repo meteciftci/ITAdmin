@@ -18,4 +18,9 @@ public interface INotificationTemplateService
         Guid id,
         UpdateNotificationTemplateRequest request,
         CancellationToken cancellationToken = default);
+
+    Task<NotificationTemplateOperationResult> UpdateStatusAsync(
+        Guid id,
+        UpdateNotificationTemplateStatusRequest request,
+        CancellationToken cancellationToken = default);
 }

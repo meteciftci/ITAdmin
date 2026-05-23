@@ -1,7 +1,18 @@
 import type {
+  AdManagementNotificationSettings,
   AdManagementSettings,
   UpdateAdManagementSettingsRequest,
 } from "@/features/ad-management/types";
+
+export const defaultAdManagementNotificationSettings = (): AdManagementNotificationSettings => ({
+  userCreated: {
+    isEnabled: false,
+    smsEnabled: false,
+    emailEnabled: false,
+    smsRecipientSource: null,
+    emailRecipientSource: null,
+  },
+});
 
 export function buildUpdateAdManagementSettingsPayload(
   settings: AdManagementSettings,
@@ -31,5 +42,9 @@ export function buildUpdateAdManagementSettingsPayload(
       overrides.powerShellHealthEnabled ?? settings.powerShellHealthEnabled,
     powerShellTimeoutSeconds:
       overrides.powerShellTimeoutSeconds ?? settings.powerShellTimeoutSeconds,
+    notificationSettings:
+      overrides.notificationSettings
+      ?? settings.notificationSettings
+      ?? defaultAdManagementNotificationSettings(),
   };
 }

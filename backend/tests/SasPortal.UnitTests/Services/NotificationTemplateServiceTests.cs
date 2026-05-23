@@ -90,6 +90,47 @@ public sealed class NotificationTemplateServiceTests
         Assert.Equal("GenericNotification", result.Template.EventKey);
     }
 
+    [Fact]
+    public async Task UpdateStatusAsync_TogglesIsEnabled_WritesAuditSafeDiff()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = new NotificationTemplateService(dbContext, CatalogProvider);
+
+        var createResult = await service.CreateAsync(
+            new CreateNotificationTemplateRequest(
+                "AdManagement",
+                "UserCreated",
+                NotificationChannels.Sms,
+                "User created SMS",
+                true,
+                null,
+                "Hello {{displayName}}",
+                null,
+                null,
+                "tester",
+                null,
+                null),
+            CancellationToken.None);
+
+        Assert.True(createResult.IsSuccess);
+        Assert.NotNull(createResult.Template);
+
+        var updateResult = await service.UpdateStatusAsync(
+            createResult.Template.Id,
+            new UpdateNotificationTemplateStatusRequest(false, null, "tester", null, null),
+            CancellationToken.None);
+
+        Assert.True(updateResult.IsSuccess);
+        Assert.NotNull(updateResult.Template);
+        Assert.False(updateResult.Template.IsEnabled);
+
+        var audit = await dbContext.AuditLogs
+            .OrderByDescending(x => x.CreatedAt)
+            .FirstAsync();
+        Assert.Contains("IsEnabled", audit.Description, StringComparison.Ordinal);
+        Assert.Contains("false", audit.Description, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static AppDbContext CreateDbContext()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()

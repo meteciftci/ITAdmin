@@ -259,7 +259,7 @@ public sealed partial class AdUserDirectoryService
             var successMessage =
                 $"Kullanıcı oluşturuldu: {resolvedNames.DisplayName} ({resolvedNames.SamAccountName}).";
 
-            var response = new CreateAdUserResponse(
+            var responseWithoutNotifications = new CreateAdUserResponse(
                 createdObjectGuid ?? distinguishedName,
                 distinguishedName,
                 resolvedNames.CommonName,
@@ -271,13 +271,25 @@ public sealed partial class AdUserDirectoryService
                 resolvedNames.NamingCollisionResolved,
                 resolvedNames.GeneratedSuffix);
 
+            var notificationSummary = await notificationEnqueueService.EnqueueUserCreatedAsync(
+                new AdUserCreatedNotificationEnqueueRequest(
+                    request,
+                    responseWithoutNotifications,
+                    mappings,
+                    request.ActorUserName),
+                cancellationToken);
+
+            var response = responseWithoutNotifications with
+            {
+                NotificationSummary = notificationSummary,
+            };
+
             await WriteCreateSuccessLogsAsync(
                 request,
                 response,
                 connection,
+                notificationSummary,
                 cancellationToken);
-
-            // TODO: Trigger optional AD user creation SMS notification after notification settings are implemented.
 
             return new CreateAdUserResult(true, successMessage, response);
         }
@@ -626,6 +638,7 @@ public sealed partial class AdUserDirectoryService
         CreateAdUserRequest request,
         CreateAdUserResponse response,
         AdManagementConnectionParameters connection,
+        AdUserCreatedNotificationSummary notificationSummary,
         CancellationToken cancellationToken)
     {
         var summary = JsonSerializer.Serialize(new
@@ -639,6 +652,12 @@ public sealed partial class AdUserDirectoryService
             mustChangePasswordAtNextLogon = request.MustChangePasswordAtNextLogon,
             namingCollisionResolved = response.NamingCollisionResolved,
             generatedSuffix = response.GeneratedSuffix,
+            notifications = new
+            {
+                queuedCount = notificationSummary.QueuedCount,
+                skippedCount = notificationSummary.SkippedCount,
+                messages = notificationSummary.Messages,
+            },
         });
 
         await adOperationLogService.WriteAsync(

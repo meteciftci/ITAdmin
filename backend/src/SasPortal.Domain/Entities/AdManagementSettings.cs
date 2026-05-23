@@ -24,4 +24,5 @@ public class AdManagementSettings : AuditableEntity
     public DateTime? LastValidatedAt { get; set; }
     public string? LastValidationStatus { get; set; }
     public string? LastValidationMessage { get; set; }
+    public string? NotificationSettingsJson { get; set; }
 }

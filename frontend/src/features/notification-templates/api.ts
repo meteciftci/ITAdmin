@@ -38,3 +38,14 @@ export const updateNotificationTemplate = async (
   const { data } = await apiClient.put<NotificationTemplate>(`/notification-templates/${id}`, payload);
   return data;
 };
+
+export const updateNotificationTemplateStatus = async (
+  id: string,
+  isEnabled: boolean,
+): Promise<NotificationTemplate> => {
+  const { data } = await apiClient.patch<NotificationTemplate>(
+    `/notification-templates/${id}/status`,
+    { isEnabled },
+  );
+  return data;
+};

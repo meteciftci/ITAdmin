@@ -8,7 +8,10 @@ import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { buildUpdateAdManagementSettingsPayload } from "@/features/ad-management/ad-management-settings-payload";
+import {
+  buildUpdateAdManagementSettingsPayload,
+  defaultAdManagementNotificationSettings,
+} from "@/features/ad-management/ad-management-settings-payload";
 import type {
   AdManagementSettings,
   UpdateAdManagementSettingsRequest,
@@ -188,6 +191,7 @@ export function AdManagementConnectionForm({
       lastValidatedAt: null,
       lastValidationStatus: null,
       lastValidationMessage: null,
+      notificationSettings: defaultAdManagementNotificationSettings(),
     };
 
     onSave(

@@ -11,7 +11,8 @@ public sealed partial class AdUserDirectoryService(
     IAdManagementSettingsService settingsService,
     IAdAttributeMappingService attributeMappingService,
     IAdOperationLogService adOperationLogService,
-    IAuditLogWriter auditLogWriter) : IAdUserDirectoryService
+    IAuditLogWriter auditLogWriter,
+    IAdUserCreatedNotificationEnqueueService notificationEnqueueService) : IAdUserDirectoryService
 {
     private const string AdManagementDisabledMessage = "AD yönetim modülü etkin değil.";
     private const string AdManagementNotConfiguredMessage =

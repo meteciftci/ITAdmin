@@ -81,7 +81,9 @@
         },
         "messages": {
           "created": "Kullanıcı oluşturuldu.",
-          "createFailed": "Kullanıcı oluşturulamadı."
+          "createFailed": "Kullanıcı oluşturulamadı.",
+          "notificationQueued": "Bildirim kuyruğa alındı.",
+          "notificationNotQueued": "Bildirim kuyruğa alınamadı. Detaylar işlem loglarında görülebilir."
         },
         "errors": {
           "ouLoadFailed": "OU listesi yüklenemedi.",

@@ -1,3 +1,5 @@
+using SasPortal.Application.Common.AdManagement;
+
 namespace SasPortal.Application.Common.Models;
 
 public sealed record UpdateAdManagementSettingsRequest(
@@ -19,6 +21,7 @@ public sealed record UpdateAdManagementSettingsRequest(
     bool ClearServiceAccountPassword,
     bool PowerShellHealthEnabled,
     int PowerShellTimeoutSeconds,
+    AdManagementNotificationSettings NotificationSettings,
     Guid? ActorUserId,
     string? ActorUserName,
     string? ActorIpAddress,

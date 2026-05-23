@@ -168,7 +168,59 @@
       "pageTabs": {
         "connection": "Connection and Service Account",
         "attributeMapping": "Attribute Mapping",
-        "userCreationDefaults": "User Creation Defaults"
+        "userCreationDefaults": "User Creation Defaults",
+        "notifications": "Notifications"
+      },
+      "notifications": {
+        "fields": {
+          "notificationEnabled": "Notifications enabled",
+          "sms": "SMS",
+          "email": "Email",
+          "smsRecipientSource": "SMS recipient source",
+          "emailRecipientSource": "Email recipient source",
+          "mappedAttribute": "Mapped attribute",
+          "adAttribute": "AD attribute",
+          "selectSource": "Select source",
+          "selectMappedAttribute": "Select field",
+          "templateStatus": "Template status",
+          "smsTemplate": "SMS template",
+          "emailTemplate": "Email template"
+        },
+        "recipientTypes": {
+          "mappedAttribute": "Mapped attribute",
+          "adAttribute": "AD attribute",
+          "userPrincipalName": "UserPrincipalName",
+          "mailAttribute": "mail attribute"
+        },
+        "placeholders": {
+          "adAttribute": "e.g. mobile"
+        },
+        "events": {
+          "userCreated": {
+            "title": "User created",
+            "description": "Queues a notification when a new AD user is created."
+          }
+        },
+        "templateStatus": {
+          "ready": "Ready",
+          "missing": "No template",
+          "passive": "Passive"
+        },
+        "warnings": {
+          "missingTemplate": "If no active SMS template is found, user creation is not affected; no notification is queued."
+        },
+        "validation": {
+          "channelRequired": "At least one channel must be selected when notifications are enabled.",
+          "smsRecipientRequired": "SMS recipient source is required when SMS is enabled.",
+          "emailRecipientRequired": "Email recipient source is required when email is enabled."
+        },
+        "actions": {
+          "save": "Save notification settings"
+        },
+        "messages": {
+          "saveSuccess": "Notification settings saved.",
+          "saveFailed": "Notification settings could not be saved."
+        }
       },
       "userCreationDefaults": {
         "title": "User Creation Defaults",

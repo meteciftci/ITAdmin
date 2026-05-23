@@ -1,3 +1,5 @@
+using SasPortal.Application.Common.AdManagement;
+
 namespace SasPortal.Application.Common.Models;
 
 public sealed record AdManagementSettingsModel(
@@ -21,4 +23,5 @@ public sealed record AdManagementSettingsModel(
     int PowerShellTimeoutSeconds,
     DateTime? LastValidatedAt,
     string? LastValidationStatus,
-    string? LastValidationMessage);
+    string? LastValidationMessage,
+    AdManagementNotificationSettings NotificationSettings);

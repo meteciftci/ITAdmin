@@ -21,4 +21,5 @@ public sealed record AdManagementSettingsResponse(
     int PowerShellTimeoutSeconds,
     DateTime? LastValidatedAt,
     string? LastValidationStatus,
-    string? LastValidationMessage);
+    string? LastValidationMessage,
+    AdManagementNotificationSettingsResponse NotificationSettings);

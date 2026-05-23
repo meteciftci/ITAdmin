@@ -43,6 +43,8 @@
     "messages": {
       "createSuccess": "Şablon oluşturuldu.",
       "updateSuccess": "Şablon güncellendi.",
+      "statusUpdateSuccess": "Şablon durumu güncellendi.",
+      "statusUpdateFailed": "Şablon durumu güncellenemedi.",
       "saveFailed": "Şablon kaydedilemedi.",
       "loadFailed": "Şablon yüklenemedi."
     }

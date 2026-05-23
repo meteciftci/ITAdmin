@@ -168,7 +168,59 @@
       "pageTabs": {
         "connection": "Bağlantı ve Yetkili Hesap",
         "attributeMapping": "Attribute Eşleştirme",
-        "userCreationDefaults": "Kullanıcı Oluşturma Varsayılanları"
+        "userCreationDefaults": "Kullanıcı Oluşturma Varsayılanları",
+        "notifications": "Bildirimler"
+      },
+      "notifications": {
+        "fields": {
+          "notificationEnabled": "Bildirim aktif",
+          "sms": "SMS",
+          "email": "E-posta",
+          "smsRecipientSource": "SMS alıcı kaynağı",
+          "emailRecipientSource": "E-posta alıcı kaynağı",
+          "mappedAttribute": "Mapped attribute",
+          "adAttribute": "AD attribute",
+          "selectSource": "Kaynak seçin",
+          "selectMappedAttribute": "Alan seçin",
+          "templateStatus": "Şablon durumu",
+          "smsTemplate": "SMS şablonu",
+          "emailTemplate": "E-posta şablonu"
+        },
+        "recipientTypes": {
+          "mappedAttribute": "Mapped attribute",
+          "adAttribute": "AD attribute",
+          "userPrincipalName": "UserPrincipalName",
+          "mailAttribute": "mail attribute"
+        },
+        "placeholders": {
+          "adAttribute": "Örn: mobile"
+        },
+        "events": {
+          "userCreated": {
+            "title": "Kullanıcı oluşturuldu",
+            "description": "Yeni AD kullanıcısı oluşturulduğunda bilgilendirme bildirimi kuyruğa alınır."
+          }
+        },
+        "templateStatus": {
+          "ready": "Hazır",
+          "missing": "Şablon yok",
+          "passive": "Pasif"
+        },
+        "warnings": {
+          "missingTemplate": "Aktif SMS şablonu bulunamazsa kullanıcı oluşturma işlemi etkilenmez; bildirim kuyruğa alınmaz."
+        },
+        "validation": {
+          "channelRequired": "Bildirim aktifken en az bir kanal seçilmelidir.",
+          "smsRecipientRequired": "SMS açıkken SMS alıcı kaynağı zorunludur.",
+          "emailRecipientRequired": "E-posta açıkken e-posta alıcı kaynağı zorunludur."
+        },
+        "actions": {
+          "save": "Bildirim ayarlarını kaydet"
+        },
+        "messages": {
+          "saveSuccess": "Bildirim ayarları kaydedildi.",
+          "saveFailed": "Bildirim ayarları kaydedilemedi."
+        }
       },
       "userCreationDefaults": {
         "title": "Kullanıcı Oluşturma Varsayılanları",

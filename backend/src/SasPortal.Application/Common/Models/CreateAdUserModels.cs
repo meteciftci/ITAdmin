@@ -36,7 +36,8 @@ public sealed record CreateAdUserResponse(
     bool IsEnabled,
     string Message,
     bool NamingCollisionResolved,
-    int? GeneratedSuffix);
+    int? GeneratedSuffix,
+    AdUserCreatedNotificationSummary? NotificationSummary = null);
 
 public sealed record AdOrganizationalUnitSearchQuery(
     string? Search,

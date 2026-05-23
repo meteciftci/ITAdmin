@@ -4,6 +4,7 @@ using SasPortal.Application.Abstractions.Security;
 using SasPortal.Application.Abstractions.Services;
 using SasPortal.Application.Common.Constants;
 using SasPortal.Application.Common.AdManagement;
+using SasPortal.Application.Common.Audit;
 using SasPortal.Application.Common.Models;
 using SasPortal.Domain.Entities;
 using SasPortal.Persistence.Context;
@@ -43,6 +44,14 @@ public sealed class AdManagementSettingsService(
         if (!ValidateUpdateRequest(request, out var validationMessage))
         {
             return new UpdateAdManagementSettingsResult(false, validationMessage, null);
+        }
+
+        var notificationSettings = request.NotificationSettings
+            ?? AdManagementNotificationSettingsSerializer.CreateDefault();
+        var notificationValidationError = AdManagementNotificationSettingsValidator.Validate(notificationSettings);
+        if (notificationValidationError is not null)
+        {
+            return new UpdateAdManagementSettingsResult(false, notificationValidationError, null);
         }
 
         var entity = await context.AdManagementSettings
@@ -151,6 +160,10 @@ public sealed class AdManagementSettingsService(
         }
 
         var isNew = entity is null;
+        var beforeNotificationSettings = entity is null
+            ? AdManagementNotificationSettingsSerializer.CreateDefault()
+            : AdManagementNotificationSettingsSerializer.Deserialize(entity.NotificationSettingsJson);
+
         entity ??= new AdManagementSettings
         {
             CreatedAt = now,
@@ -174,6 +187,7 @@ public sealed class AdManagementSettingsService(
         entity.ServiceAccountUserName = serviceAccountUserName;
         entity.PowerShellHealthEnabled = request.PowerShellHealthEnabled;
         entity.PowerShellTimeoutSeconds = request.PowerShellTimeoutSeconds;
+        entity.NotificationSettingsJson = AdManagementNotificationSettingsSerializer.Serialize(notificationSettings);
 
         var passwordChanged = false;
         if (request.ClearServiceAccountPassword)
@@ -217,8 +231,13 @@ public sealed class AdManagementSettingsService(
                 cancellationToken);
         }
 
+        var notificationAuditChanges = BuildNotificationSettingsAuditChanges(
+            beforeNotificationSettings,
+            notificationSettings);
         var auditDescription = TruncateAuditDescription(
-            $"AD management settings updated. Enabled: {entity.IsEnabled}. Password changed: {passwordChanged}.");
+            AuditChangeSummaryBuilder.BuildUpdateDescription(
+                $"AD management settings updated. Enabled: {entity.IsEnabled}. Password changed: {passwordChanged}.",
+                notificationAuditChanges));
 
         await context.AuditLogs.AddAsync(
             new AuditLog
@@ -458,7 +477,8 @@ public sealed class AdManagementSettingsService(
                 PowerShellTimeoutSeconds: 30,
                 LastValidatedAt: null,
                 LastValidationStatus: null,
-                LastValidationMessage: null);
+                LastValidationMessage: null,
+                NotificationSettings: AdManagementNotificationSettingsSerializer.CreateDefault());
         }
 
         return new AdManagementSettingsModel(
@@ -482,7 +502,57 @@ public sealed class AdManagementSettingsService(
             PowerShellTimeoutSeconds: entity.PowerShellTimeoutSeconds,
             LastValidatedAt: entity.LastValidatedAt,
             LastValidationStatus: entity.LastValidationStatus,
-            LastValidationMessage: entity.LastValidationMessage);
+            LastValidationMessage: entity.LastValidationMessage,
+            NotificationSettings: AdManagementNotificationSettingsSerializer.Deserialize(
+                entity.NotificationSettingsJson));
+    }
+
+    internal static List<AuditFieldChange> BuildNotificationSettingsAuditChanges(
+        AdManagementNotificationSettings before,
+        AdManagementNotificationSettings after)
+    {
+        var changes = new List<AuditFieldChange>
+        {
+            AuditChangeSummaryBuilder.PublicField(
+                "UserCreatedNotificationsEnabled",
+                before.UserCreated.IsEnabled.ToString(),
+                after.UserCreated.IsEnabled.ToString()),
+            AuditChangeSummaryBuilder.PublicField(
+                "UserCreatedSmsEnabled",
+                before.UserCreated.SmsEnabled.ToString(),
+                after.UserCreated.SmsEnabled.ToString()),
+            AuditChangeSummaryBuilder.PublicField(
+                "UserCreatedEmailEnabled",
+                before.UserCreated.EmailEnabled.ToString(),
+                after.UserCreated.EmailEnabled.ToString()),
+            AuditChangeSummaryBuilder.PublicField(
+                "UserCreatedSmsRecipientSource",
+                FormatRecipientSource(before.UserCreated.SmsRecipientSource),
+                FormatRecipientSource(after.UserCreated.SmsRecipientSource)),
+            AuditChangeSummaryBuilder.PublicField(
+                "UserCreatedEmailRecipientSource",
+                FormatRecipientSource(before.UserCreated.EmailRecipientSource),
+                FormatRecipientSource(after.UserCreated.EmailRecipientSource)),
+        };
+
+        return changes
+            .Where(change =>
+                change.IsSensitive
+                || change.DisplayMode is AuditChangeDisplayMode.ChangedOnly or AuditChangeDisplayMode.Cleared
+                || !string.Equals(change.OldValue, change.NewValue, StringComparison.Ordinal))
+            .ToList();
+    }
+
+    private static string? FormatRecipientSource(AdManagementNotificationRecipientSource? source)
+    {
+        if (source is null || string.IsNullOrWhiteSpace(source.Type))
+        {
+            return null;
+        }
+
+        return string.IsNullOrWhiteSpace(source.Value)
+            ? source.Type.Trim()
+            : $"{source.Type.Trim()}:{source.Value.Trim()}";
     }
 
     private static bool ValidateUpdateRequest(UpdateAdManagementSettingsRequest request, out string message)

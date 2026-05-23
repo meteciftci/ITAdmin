@@ -20,4 +20,5 @@ public sealed record AdManagementSettingsUpdateRequest
     public bool ClearServiceAccountPassword { get; init; }
     public bool PowerShellHealthEnabled { get; init; }
     public int PowerShellTimeoutSeconds { get; init; } = 30;
+    public AdManagementNotificationSettingsRequest NotificationSettings { get; init; } = new();
 }

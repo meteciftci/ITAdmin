@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using SasPortal.Application.Common.AdManagement;
 using SasPortal.Application.Common.Models;
 using SasPortal.Persistence.Context;
 using SasPortal.Persistence.Services;
@@ -747,6 +748,7 @@ public sealed class AdManagementSettingsServiceTests
             ClearServiceAccountPassword: clearServiceAccountPassword,
             PowerShellHealthEnabled: false,
             PowerShellTimeoutSeconds: powerShellTimeoutSeconds,
+            NotificationSettings: AdManagementNotificationSettingsSerializer.CreateDefault(),
             ActorUserId: Guid.NewGuid(),
             ActorUserName: "tester",
             ActorIpAddress: "127.0.0.1",

@@ -38,6 +38,7 @@ public static class DependencyInjection
         services.AddScoped<INotificationSender, NotificationSender>();
         services.AddScoped<INotificationOutboxService, NotificationOutboxService>();
         services.AddScoped<INotificationTemplateService, NotificationTemplateService>();
+        services.AddScoped<IAdUserCreatedNotificationEnqueueService, AdUserCreatedNotificationEnqueueService>();
         services.AddScoped<INotificationOutboxBatchProcessor, NotificationOutboxBatchProcessor>();
         services.Configure<NotificationOutboxOptions>(configuration.GetSection(NotificationOutboxOptions.SectionName));
 

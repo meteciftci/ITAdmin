@@ -81,7 +81,9 @@
         },
         "messages": {
           "created": "User created.",
-          "createFailed": "User could not be created."
+          "createFailed": "User could not be created.",
+          "notificationQueued": "Notification queued.",
+          "notificationNotQueued": "Notification could not be queued. See operation logs for details."
         },
         "errors": {
           "ouLoadFailed": "Organizational units could not be loaded.",

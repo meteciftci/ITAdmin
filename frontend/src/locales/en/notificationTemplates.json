@@ -43,6 +43,8 @@
     "messages": {
       "createSuccess": "Template created.",
       "updateSuccess": "Template updated.",
+      "statusUpdateSuccess": "Template status updated.",
+      "statusUpdateFailed": "Template status could not be updated.",
       "saveFailed": "Could not save template.",
       "loadFailed": "Could not load template."
     }
