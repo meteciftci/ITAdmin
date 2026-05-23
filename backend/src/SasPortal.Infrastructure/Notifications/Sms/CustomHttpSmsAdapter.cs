@@ -77,7 +77,15 @@ public sealed class CustomHttpSmsAdapter(
 
         try
         {
-            using var httpRequest = BuildHttpRequest(phone, message, settings);
+            var buildResult = TryBuildHttpRequest(phone, message, settings);
+            if (buildResult.Request is null)
+            {
+                logger.LogWarning(
+                    "Custom HTTP SMS request was not sent because the body template rendered invalid JSON.");
+                return new SmsSendResult(false, buildResult.ErrorMessage ?? NotificationTemplateReplacer.InvalidJsonBodyMessage);
+            }
+
+            using var httpRequest = buildResult.Request;
             var client = httpClientFactory.CreateClient("NotificationProviders");
             client.Timeout = TimeSpan.FromSeconds(settings.Public.TimeoutSeconds);
 
@@ -179,11 +187,22 @@ public sealed class CustomHttpSmsAdapter(
         };
     }
 
-    private HttpRequestMessage BuildHttpRequest(
+    private (HttpRequestMessage? Request, string? ErrorMessage) TryBuildHttpRequest(
         string phone,
         string message,
         SmsProviderRuntimeSettings settings)
     {
+        var request = BuildHttpRequest(phone, message, settings, out var errorMessage);
+        return (request, errorMessage);
+    }
+
+    private HttpRequestMessage? BuildHttpRequest(
+        string phone,
+        string message,
+        SmsProviderRuntimeSettings settings,
+        out string? errorMessage)
+    {
+        errorMessage = null;
         var publicSettings = settings.Public;
         var secrets = settings.Secrets;
         var endpoint = publicSettings.EndpointUrl!.Trim();
@@ -210,15 +229,28 @@ public sealed class CustomHttpSmsAdapter(
         var postRequest = new HttpRequestMessage(HttpMethod.Post, endpoint);
         ApplyHeaders(postRequest, publicSettings, secrets, phone, message, settings);
 
-        var body = NotificationTemplateReplacer.Apply(
-            publicSettings.BodyTemplate,
-            phone,
-            message,
-            publicSettings,
-            secrets);
+        var isJsonBody = IsJsonContentType(publicSettings.ContentType);
+        var body = isJsonBody
+            ? NotificationTemplateReplacer.ApplyForJsonBody(
+                publicSettings.BodyTemplate,
+                phone,
+                message,
+                publicSettings,
+                secrets)
+            : NotificationTemplateReplacer.Apply(
+                publicSettings.BodyTemplate,
+                phone,
+                message,
+                publicSettings,
+                secrets);
 
         if (!string.IsNullOrWhiteSpace(body))
         {
+            if (isJsonBody && !NotificationTemplateReplacer.TryParseJsonDocument(body, out errorMessage))
+            {
+                return null;
+            }
+
             postRequest.Content = BuildContent(body, publicSettings.ContentType);
         }
 
@@ -310,6 +342,9 @@ public sealed class CustomHttpSmsAdapter(
 
         return pairs;
     }
+
+    private static bool IsJsonContentType(string? contentType) =>
+        string.Equals(contentType?.Trim(), "application/json", StringComparison.OrdinalIgnoreCase);
 
     private static HttpContent? BuildContent(string body, string contentType)
     {
