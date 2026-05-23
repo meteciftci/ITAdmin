@@ -11,6 +11,9 @@ type TablePaginationProps = {
   onPageChange: (pageNumber: number) => void;
   onPageSizeChange: (pageSize: number) => void;
   pageSizeOptions?: number[];
+  summaryText?: string;
+  showPageSize?: boolean;
+  showSummary?: boolean;
 };
 
 const DEFAULT_PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
@@ -23,6 +26,9 @@ export function TablePagination({
   onPageChange,
   onPageSizeChange,
   pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS,
+  summaryText,
+  showPageSize = true,
+  showSummary = true,
 }: TablePaginationProps) {
   const { t } = useTranslation("common");
 
@@ -33,29 +39,46 @@ export function TablePagination({
 
   return (
     <div className="flex flex-col gap-3 border-t px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-        <span>{t("pagination.totalCount", { count: totalCount })}</span>
-        <span>{t("pagination.pageInfo", { pageNumber: safePageNumber, totalPages: safeTotalPages })}</span>
-      </div>
+      {showSummary ? (
+        <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+          {summaryText ? (
+            <span>{summaryText}</span>
+          ) : (
+            <>
+              <span>{t("pagination.totalCount", { count: totalCount })}</span>
+              <span>
+                {t("pagination.pageInfo", {
+                  pageNumber: safePageNumber,
+                  totalPages: safeTotalPages,
+                })}
+              </span>
+            </>
+          )}
+        </div>
+      ) : (
+        <div />
+      )}
 
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-2">
-          <label className="text-sm text-muted-foreground" htmlFor="table-pagination-page-size">
-            {t("pagination.pageSize")}
-          </label>
-          <Select
-            id="table-pagination-page-size"
-            value={String(pageSize)}
-            onChange={(event) => onPageSizeChange(Number(event.target.value))}
-            className="w-20"
-          >
-            {pageSizeOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </Select>
-        </div>
+        {showPageSize ? (
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-muted-foreground" htmlFor="table-pagination-page-size">
+              {t("pagination.pageSize")}
+            </label>
+            <Select
+              id="table-pagination-page-size"
+              value={String(pageSize)}
+              onChange={(event) => onPageSizeChange(Number(event.target.value))}
+              className="w-20"
+            >
+              {pageSizeOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </Select>
+          </div>
+        ) : null}
 
         <Button variant="outline" size="sm" disabled={isFirstPage} onClick={() => onPageChange(1)}>
           {t("pagination.first")}

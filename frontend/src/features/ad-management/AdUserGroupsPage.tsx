@@ -11,8 +11,11 @@ import { ErrorState } from "@/components/common/ErrorState";
 import { LoadingState } from "@/components/common/LoadingState";
 import { PageHeader } from "@/components/common/PageHeader";
 import { SectionCard } from "@/components/common/SectionCard";
+import { TablePagination } from "@/components/common/TablePagination";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import {
   addAdUserToGroup,
   AD_MANAGEMENT_USER_GROUPS_QUERY_KEY,
@@ -21,6 +24,7 @@ import {
   removeAdUserFromGroup,
 } from "@/features/ad-management/api";
 import {
+  filterAdUserGroupMemberships,
   formatAdGroupSelectionPrimaryLabel,
   formatAdGroupTableDisplayName,
 } from "@/features/ad-management/ad-group-display";
@@ -35,6 +39,9 @@ import { getApiErrorMessage } from "@/lib/api-error";
 import { canAccess } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
+const DEFAULT_MEMBERSHIP_PAGE_SIZE = 10;
+const MEMBERSHIP_PAGE_SIZE_OPTIONS = [10, 25, 50] as const;
+
 export function AdUserGroupsPage() {
   const { t } = useTranslation(["adManagement", "common"]);
   const { id: userId } = useParams<{ id: string }>();
@@ -47,6 +54,9 @@ export function AdUserGroupsPage() {
 
   const [selectedGroup, setSelectedGroup] = useState<AdGroupSearchItem | null>(null);
   const [removeTarget, setRemoveTarget] = useState<AdUserGroupMembershipItem | null>(null);
+  const [membershipSearch, setMembershipSearch] = useState("");
+  const [pageNumber, setPageNumber] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_MEMBERSHIP_PAGE_SIZE);
 
   const groupsQuery = useQuery({
     queryKey: [...AD_MANAGEMENT_USER_GROUPS_QUERY_KEY, userId],
@@ -61,6 +71,27 @@ export function AdUserGroupsPage() {
       ),
     [groupsQuery.data?.groups],
   );
+
+  const allGroups = useMemo(
+    () => groupsQuery.data?.groups ?? [],
+    [groupsQuery.data?.groups],
+  );
+
+  const filteredGroups = useMemo(
+    () => filterAdUserGroupMemberships(allGroups, membershipSearch),
+    [allGroups, membershipSearch],
+  );
+
+  const totalCount = filteredGroups.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const safePageNumber = Math.min(Math.max(pageNumber, 1), totalPages);
+  const rangeStart = totalCount === 0 ? 0 : (safePageNumber - 1) * pageSize + 1;
+  const rangeEnd = totalCount === 0 ? 0 : Math.min(safePageNumber * pageSize, totalCount);
+
+  const paginatedGroups = useMemo(() => {
+    const start = (safePageNumber - 1) * pageSize;
+    return filteredGroups.slice(start, start + pageSize);
+  }, [filteredGroups, pageSize, safePageNumber]);
 
   const addMutation = useMutation({
     mutationFn: (groupDistinguishedName: string) =>
@@ -213,76 +244,146 @@ export function AdUserGroupsPage() {
               title={t("adManagement:users.groups.sections.currentMemberships")}
               description={t("adManagement:users.groups.sections.currentMembershipsDescription")}
             >
-              {userSummary.groups.length === 0 ? (
+              {allGroups.length === 0 ? (
                 <EmptyState
                   title={t("adManagement:users.groups.empty.noMembershipsTitle")}
                   description={t("adManagement:users.groups.empty.noMembershipsDescription")}
                 />
               ) : (
                 <div className="overflow-x-auto rounded-lg border bg-card">
-                  <table className="min-w-full text-sm">
-                    <thead className="bg-muted/50 text-left">
-                      <tr>
-                        <th className="px-3 py-2 font-medium">
-                          {t("adManagement:users.groups.table.groupName")}
-                        </th>
-                        <th className="px-3 py-2 font-medium">
-                          {t("adManagement:users.groups.table.samAccountName")}
-                        </th>
-                        <th className="px-3 py-2 font-medium">
-                          {t("adManagement:users.groups.table.description")}
-                        </th>
-                        <th className="px-3 py-2 font-medium">
-                          {t("adManagement:users.groups.table.distinguishedName")}
-                        </th>
-                        {canRemoveGroup ? (
-                          <th className="w-0 px-3 py-2 font-medium whitespace-nowrap">
-                            {t("adManagement:users.table.actions")}
-                          </th>
-                        ) : null}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {userSummary.groups.map((group) => (
-                        <tr
-                          key={group.distinguishedName}
-                          className="border-t align-top hover:bg-muted/20"
+                  <div className="flex flex-col gap-3 border-b px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+                    <Input
+                      value={membershipSearch}
+                      onChange={(event) => {
+                        setMembershipSearch(event.target.value);
+                        setPageNumber(1);
+                      }}
+                      placeholder={t("adManagement:users.groups.fields.membershipSearchPlaceholder")}
+                      className="sm:max-w-md"
+                    />
+                    <div className="flex flex-wrap items-center gap-3">
+                      {totalCount > 0 ? (
+                        <span className="text-sm text-muted-foreground">
+                          {t("adManagement:users.groups.pagination.rangeInfo", {
+                            start: rangeStart,
+                            end: rangeEnd,
+                            total: totalCount,
+                          })}
+                        </span>
+                      ) : null}
+                      <div className="flex items-center gap-2">
+                        <label
+                          className="text-sm text-muted-foreground"
+                          htmlFor="ad-user-groups-page-size"
                         >
-                          <td className="px-3 py-2 font-medium">
-                            {formatAdGroupTableDisplayName(group.displayName)}
-                          </td>
-                          <td className="px-3 py-2">{group.samAccountName || "-"}</td>
-                          <td
-                            className="max-w-xs truncate px-3 py-2"
-                            title={group.description || undefined}
-                          >
-                            {group.description || "-"}
-                          </td>
-                          <td className="max-w-[28rem] px-3 py-2">
-                            <span
-                              className="block truncate font-mono text-xs text-muted-foreground"
-                              title={group.distinguishedName}
+                          {t("adManagement:users.groups.pagination.pageSize")}
+                        </label>
+                        <Select
+                          id="ad-user-groups-page-size"
+                          value={String(pageSize)}
+                          onChange={(event) => {
+                            setPageSize(Number(event.target.value));
+                            setPageNumber(1);
+                          }}
+                          className="w-20"
+                        >
+                          {MEMBERSHIP_PAGE_SIZE_OPTIONS.map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {filteredGroups.length === 0 ? (
+                    <div className="px-3 py-8">
+                      <EmptyState
+                        title={t("adManagement:users.groups.empty.searchNoResultsTitle")}
+                        description={t("adManagement:users.groups.empty.searchNoResultsDescription")}
+                      />
+                    </div>
+                  ) : (
+                    <>
+                      <table className="min-w-full text-sm">
+                        <thead className="bg-muted/50 text-left">
+                          <tr>
+                            <th className="px-3 py-2 font-medium">
+                              {t("adManagement:users.groups.table.groupName")}
+                            </th>
+                            <th className="px-3 py-2 font-medium">
+                              {t("adManagement:users.groups.table.samAccountName")}
+                            </th>
+                            <th className="px-3 py-2 font-medium">
+                              {t("adManagement:users.groups.table.description")}
+                            </th>
+                            <th className="px-3 py-2 font-medium">
+                              {t("adManagement:users.groups.table.distinguishedName")}
+                            </th>
+                            {canRemoveGroup ? (
+                              <th className="w-0 px-3 py-2 font-medium whitespace-nowrap">
+                                {t("adManagement:users.table.actions")}
+                              </th>
+                            ) : null}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {paginatedGroups.map((group) => (
+                            <tr
+                              key={group.distinguishedName}
+                              className="border-t align-top hover:bg-muted/20"
                             >
-                              {group.distinguishedName}
-                            </span>
-                          </td>
-                          {canRemoveGroup ? (
-                            <td className="w-0 shrink-0 px-3 py-2 whitespace-nowrap">
-                              <Button
-                                type="button"
-                                variant="destructive"
-                                size="sm"
-                                disabled={removeMutation.isPending}
-                                onClick={() => setRemoveTarget(group)}
+                              <td className="px-3 py-2 font-medium">
+                                {formatAdGroupTableDisplayName(group.displayName)}
+                              </td>
+                              <td className="px-3 py-2">{group.samAccountName || "-"}</td>
+                              <td
+                                className="max-w-xs truncate px-3 py-2"
+                                title={group.description || undefined}
                               >
-                                {t("adManagement:users.groups.actions.removeFromGroup")}
-                              </Button>
-                            </td>
-                          ) : null}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                                {group.description || "-"}
+                              </td>
+                              <td className="max-w-[28rem] px-3 py-2">
+                                <span
+                                  className="block truncate font-mono text-xs text-muted-foreground"
+                                  title={group.distinguishedName}
+                                >
+                                  {group.distinguishedName}
+                                </span>
+                              </td>
+                              {canRemoveGroup ? (
+                                <td className="w-0 shrink-0 px-3 py-2 whitespace-nowrap">
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="sm"
+                                    disabled={removeMutation.isPending}
+                                    onClick={() => setRemoveTarget(group)}
+                                  >
+                                    {t("adManagement:users.groups.actions.removeFromGroup")}
+                                  </Button>
+                                </td>
+                              ) : null}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {totalCount > 0 ? (
+                        <TablePagination
+                          pageNumber={safePageNumber}
+                          pageSize={pageSize}
+                          totalCount={totalCount}
+                          totalPages={totalPages}
+                          onPageChange={setPageNumber}
+                          onPageSizeChange={setPageSize}
+                          pageSizeOptions={[...MEMBERSHIP_PAGE_SIZE_OPTIONS]}
+                          showPageSize={false}
+                          showSummary={false}
+                        />
+                      ) : null}
+                    </>
+                  )}
                 </div>
               )}
             </SectionCard>

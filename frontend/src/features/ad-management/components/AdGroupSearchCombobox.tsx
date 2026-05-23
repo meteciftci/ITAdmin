@@ -89,10 +89,7 @@ export function AdGroupSearchCombobox({
             </button>
           </PopoverTrigger>
         </div>
-        <PopoverContent
-          className="w-[var(--radix-popover-trigger-width)] p-2"
-          align="start"
-        >
+        <PopoverContent matchTriggerWidth className="p-2" align="start">
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}

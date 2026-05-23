@@ -107,6 +107,7 @@ export function PopoverTrigger({ asChild, children }: PopoverTriggerProps) {
 type PopoverContentProps = HTMLAttributes<HTMLDivElement> & {
   align?: "start" | "end";
   sideOffset?: number;
+  matchTriggerWidth?: boolean;
 };
 
 export function PopoverContent({
@@ -114,10 +115,15 @@ export function PopoverContent({
   children,
   align = "start",
   sideOffset = 8,
+  matchTriggerWidth = false,
+  style,
   ...props
 }: PopoverContentProps) {
   const { open, setOpen, triggerRef, contentRef } = usePopoverContext();
-  const [position, setPosition] = useState({ top: 0, left: 0 });
+  const [position, setPosition] = useState<{ top: number; left: number; width?: number }>({
+    top: 0,
+    left: 0,
+  });
 
   const updatePosition = useCallback(() => {
     if (!triggerRef.current || !contentRef.current) return;
@@ -127,6 +133,7 @@ export function PopoverContent({
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
     const padding = 8;
+    const contentWidth = matchTriggerWidth ? triggerRect.width : contentRect.width;
 
     const preferredTop = triggerRect.bottom + sideOffset;
     const fallbackTop = triggerRect.top - contentRect.height - sideOffset;
@@ -136,18 +143,24 @@ export function PopoverContent({
         : Math.max(padding, fallbackTop);
 
     const preferredLeft =
-      align === "start" ? triggerRect.left : triggerRect.right - contentRect.width;
+      align === "start" ? triggerRect.left : triggerRect.right - contentWidth;
     const left = Math.min(
       Math.max(padding, preferredLeft),
-      viewportWidth - contentRect.width - padding,
+      viewportWidth - contentWidth - padding,
     );
 
-    setPosition({ top, left });
-  }, [align, contentRef, sideOffset, triggerRef]);
+    setPosition({
+      top,
+      left,
+      width: matchTriggerWidth ? triggerRect.width : undefined,
+    });
+  }, [align, contentRef, matchTriggerWidth, sideOffset, triggerRef]);
 
   useEffect(() => {
     if (!open) return;
+
     updatePosition();
+    const frameId = requestAnimationFrame(() => updatePosition());
 
     const onPointerDown = (event: MouseEvent) => {
       const target = event.target as Node;
@@ -170,6 +183,7 @@ export function PopoverContent({
     document.addEventListener("keydown", onEscape);
 
     return () => {
+      cancelAnimationFrame(frameId);
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, true);
       document.removeEventListener("mousedown", onPointerDown);
@@ -188,7 +202,12 @@ export function PopoverContent({
         "fixed z-50 rounded-lg border border-border bg-popover p-2 text-popover-foreground shadow-md",
         className,
       )}
-      style={{ top: position.top, left: position.left }}
+      style={{
+        ...style,
+        top: position.top,
+        left: position.left,
+        ...(position.width !== undefined ? { width: position.width } : {}),
+      }}
       {...props}
     >
       {children}

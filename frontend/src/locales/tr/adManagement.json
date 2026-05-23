@@ -143,7 +143,12 @@
         "fields": {
           "searchGroup": "Grup ara",
           "searchGroupPlaceholder": "Grup adı veya sAMAccountName ile arayın",
-          "selectGroup": "Grup seç"
+          "selectGroup": "Grup seç",
+          "membershipSearchPlaceholder": "Grup adı, sAMAccountName veya DN ara"
+        },
+        "pagination": {
+          "pageSize": "Sayfa boyutu",
+          "rangeInfo": "{{start}}-{{end}} / {{total}} grup"
         },
         "table": {
           "groupName": "Grup adı",
@@ -169,8 +174,10 @@
         "empty": {
           "searchMinLength": "En az 2 karakter girin.",
           "groupNotFound": "Grup bulunamadı.",
-          "noMembershipsTitle": "Grup üyeliği yok",
-          "noMembershipsDescription": "Bu kullanıcının doğrudan üye olduğu bir AD grubu bulunamadı."
+          "noMembershipsTitle": "Grup üyeliği bulunamadı",
+          "noMembershipsDescription": "Bu kullanıcının doğrudan üye olduğu bir AD grubu bulunamadı.",
+          "searchNoResultsTitle": "Grup üyeliği bulunamadı",
+          "searchNoResultsDescription": "Arama kriterine uygun grup üyeliği bulunamadı."
         },
         "errors": {
           "loadFailed": "Grup üyelikleri yüklenemedi."

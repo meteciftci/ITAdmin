@@ -143,7 +143,12 @@
         "fields": {
           "searchGroup": "Search group",
           "searchGroupPlaceholder": "Search by group name or sAMAccountName",
-          "selectGroup": "Select group"
+          "selectGroup": "Select group",
+          "membershipSearchPlaceholder": "Search by group name, sAMAccountName, or DN"
+        },
+        "pagination": {
+          "pageSize": "Page size",
+          "rangeInfo": "{{start}}-{{end}} of {{total}} groups"
         },
         "table": {
           "groupName": "Group name",
@@ -169,8 +174,10 @@
         "empty": {
           "searchMinLength": "Enter at least 2 characters.",
           "groupNotFound": "No group found.",
-          "noMembershipsTitle": "No group memberships",
-          "noMembershipsDescription": "No direct AD group memberships were found for this user."
+          "noMembershipsTitle": "No group memberships found",
+          "noMembershipsDescription": "No direct AD group memberships were found for this user.",
+          "searchNoResultsTitle": "No group memberships found",
+          "searchNoResultsDescription": "No group memberships match your search."
         },
         "errors": {
           "loadFailed": "Group memberships could not be loaded."

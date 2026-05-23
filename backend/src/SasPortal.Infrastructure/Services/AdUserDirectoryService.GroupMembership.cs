@@ -172,7 +172,7 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
             using var ldapConnection = CreateBoundConnection(connectionResult.Context);
             var escaped = AdLdapFilterHelper.EscapeFilterValue(request.Query!.Trim());
             var filter =
-                $"(&(objectCategory=group)(objectClass=group)(|(cn=*{escaped}*)(name=*{escaped}*)(sAMAccountName=*{escaped}*)))";
+                $"(&(objectCategory=group)(objectClass=group)(|(displayName=*{escaped}*)(cn=*{escaped}*)(name=*{escaped}*)(sAMAccountName=*{escaped}*)))";
             var searchRequest = new SearchRequest(
                 groupsSearchBase,
                 filter,

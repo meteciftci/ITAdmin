@@ -31,3 +31,32 @@ export function formatAdGroupSelectionSecondaryLabel(item: AdGroupLabelSource): 
 
   return null;
 }
+
+export function filterAdUserGroupMemberships<
+  T extends {
+    displayName?: string | null;
+    name: string;
+    samAccountName?: string | null;
+    description?: string | null;
+    distinguishedName: string;
+  },
+>(groups: T[], query: string): T[] {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) {
+    return groups;
+  }
+
+  return groups.filter((group) => {
+    const searchableValues = [
+      group.displayName,
+      group.name,
+      group.samAccountName,
+      group.description,
+      group.distinguishedName,
+    ];
+
+    return searchableValues.some((value) =>
+      value?.toLowerCase().includes(normalizedQuery),
+    );
+  });
+}
