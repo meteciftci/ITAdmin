@@ -6,21 +6,29 @@ import { useQuery } from "@tanstack/react-query";
 import { Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
-import { DataToolbar } from "@/components/common/DataToolbar";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
 import { DateTimeText } from "@/components/common/DateTimeText";
+import {
+  DataTable,
+  DataTablePagination,
+  DataTableToolbar,
+} from "@/components/common/data-table";
+import { useServerDataTable } from "@/components/common/data-table-hooks";
 import { EmptyState } from "@/components/common/EmptyState";
 import { LoadingState } from "@/components/common/LoadingState";
 import { LogDetailDialog } from "@/components/common/LogDetailDialog";
 import { MultiSelectFilter } from "@/components/common/MultiSelectFilter";
 import { SectionCard } from "@/components/common/SectionCard";
-import { TablePagination } from "@/components/common/TablePagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   getSecurityLogFilterOptions,
   getSecurityLogs,
 } from "@/features/security-logs/api";
+import {
+  createSecurityLogColumns,
+  getSeverityBadgeVariant,
+} from "@/features/security-logs/security-log-columns";
 import type { SecurityLogListItem } from "@/features/security-logs/types";
 import { createApiErrorRouteState, getErrorRoutePath } from "@/lib/route-error";
 
@@ -80,6 +88,35 @@ export function SecurityLogsPage() {
   const eventTypeOptions = filterOptionsQuery.data?.eventTypes ?? [];
   const severityOptions = filterOptionsQuery.data?.severities ?? [];
 
+  const activeFilterCount =
+    (selectedEventTypes.length > 0 ? 1 : 0) +
+    (selectedSeverities.length > 0 ? 1 : 0) +
+    (dateRange?.from || dateRange?.to ? 1 : 0);
+
+  const columns = useMemo(
+    () =>
+      createSecurityLogColumns({
+        t,
+        onDetail: setSelectedSecurityLog,
+      }),
+    [t],
+  );
+
+  const table = useServerDataTable({
+    data: securityLogs,
+    columns,
+    pageCount: securityLogsQuery.data?.totalPages ?? 0,
+    pageIndex: pageNumber - 1,
+    pageSize,
+  });
+
+  const handleClearAllFilters = () => {
+    setSelectedEventTypes([]);
+    setSelectedSeverities([]);
+    setDateRange(undefined);
+    setPageNumber(1);
+  };
+
   const handleRefresh = () => {
     securityLogsQuery.refetch();
   };
@@ -115,42 +152,47 @@ export function SecurityLogsPage() {
     <section className="space-y-4">
       <SectionCard title={t("securityLogs:sections.listTitle")}>
         <div className="space-y-4">
-          <DataToolbar
+          <DataTableToolbar
             searchValue={search}
             onSearchChange={handleSearchChange}
             searchPlaceholder={t("securityLogs:filters.searchPlaceholder")}
+            activeFilterCount={activeFilterCount}
+            onClearFilters={handleClearAllFilters}
+            filterContent={
+              <div className="space-y-3">
+                <MultiSelectFilter
+                  placeholder={t("securityLogs:filters.eventTypeFilterPlaceholder")}
+                  options={eventTypeOptions}
+                  selectedValues={selectedEventTypes}
+                  onChange={handleEventTypeFilterChange}
+                  clearLabel={t("securityLogs:filters.clearSelection")}
+                  emptyLabel={t("securityLogs:filters.noOptions")}
+                  searchPlaceholder={t("securityLogs:filters.searchOptions")}
+                />
+                <MultiSelectFilter
+                  placeholder={t("securityLogs:filters.severityFilterPlaceholder")}
+                  options={severityOptions}
+                  selectedValues={selectedSeverities}
+                  onChange={handleSeverityFilterChange}
+                  clearLabel={t("securityLogs:filters.clearSelection")}
+                  emptyLabel={t("securityLogs:filters.noOptions")}
+                  searchPlaceholder={t("securityLogs:filters.searchOptions")}
+                />
+                <DateRangePicker
+                  value={dateRange}
+                  onChange={handleDateRangeChange}
+                  placeholder={t("securityLogs:filters.dateRangePlaceholder")}
+                  clearLabel={t("securityLogs:filters.clearDateRange")}
+                  locale={calendarLocale}
+                />
+              </div>
+            }
             actions={
               <Button variant="outline" onClick={handleRefresh}>
                 {t("common:actions.refresh")}
               </Button>
             }
-          >
-            <MultiSelectFilter
-              placeholder={t("securityLogs:filters.eventTypeFilterPlaceholder")}
-              options={eventTypeOptions}
-              selectedValues={selectedEventTypes}
-              onChange={handleEventTypeFilterChange}
-              clearLabel={t("securityLogs:filters.clearSelection")}
-              emptyLabel={t("securityLogs:filters.noOptions")}
-              searchPlaceholder={t("securityLogs:filters.searchOptions")}
-            />
-            <MultiSelectFilter
-              placeholder={t("securityLogs:filters.severityFilterPlaceholder")}
-              options={severityOptions}
-              selectedValues={selectedSeverities}
-              onChange={handleSeverityFilterChange}
-              clearLabel={t("securityLogs:filters.clearSelection")}
-              emptyLabel={t("securityLogs:filters.noOptions")}
-              searchPlaceholder={t("securityLogs:filters.searchOptions")}
-            />
-            <DateRangePicker
-              value={dateRange}
-              onChange={handleDateRangeChange}
-              placeholder={t("securityLogs:filters.dateRangePlaceholder")}
-              clearLabel={t("securityLogs:filters.clearDateRange")}
-              locale={calendarLocale}
-            />
-          </DataToolbar>
+          />
 
           {securityLogsQuery.isLoading ? <LoadingState /> : null}
 
@@ -162,64 +204,25 @@ export function SecurityLogsPage() {
           ) : null}
 
           {securityLogs.length ? (
-            <div className="overflow-x-auto rounded-lg border bg-card">
-              <table className="min-w-full text-sm">
-                <thead className="bg-muted/50 text-left">
-                  <tr>
-                    <th className="px-3 py-2 font-medium">{t("securityLogs:table.createdAt")}</th>
-                    <th className="px-3 py-2 font-medium">{t("securityLogs:table.eventType")}</th>
-                    <th className="px-3 py-2 font-medium">{t("securityLogs:table.severity")}</th>
-                    <th className="px-3 py-2 font-medium">{t("securityLogs:table.userName")}</th>
-                    <th className="px-3 py-2 font-medium">{t("securityLogs:table.ipAddress")}</th>
-                    <th className="px-3 py-2 font-medium">{t("securityLogs:table.description")}</th>
-                    <th className="px-3 py-2 font-medium">{t("securityLogs:table.actions")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {securityLogs.map((logItem) => (
-                    <tr key={logItem.id} className="border-t align-top hover:bg-muted/20">
-                      <td className="whitespace-nowrap px-3 py-2">
-                        <DateTimeText value={logItem.createdAt} />
-                      </td>
-                      <td className="px-3 py-2">{logItem.eventType}</td>
-                      <td className="px-3 py-2">
-                        <Badge variant={getSeverityBadgeVariant(logItem.severity)}>
-                          {logItem.severity}
-                        </Badge>
-                      </td>
-                      <td className="px-3 py-2">{logItem.userName || "-"}</td>
-                      <td className="px-3 py-2">{logItem.ipAddress || "-"}</td>
-                      <td className="max-w-96 px-3 py-2">
-                        <span className="line-clamp-2">{logItem.description || "-"}</span>
-                      </td>
-                      <td className="px-3 py-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedSecurityLog(logItem)}
-                        >
-                          {t("securityLogs:actions.detail")}
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {securityLogsQuery.data && securityLogsQuery.data.totalCount > 0 ? (
-                <TablePagination
-                  pageNumber={securityLogsQuery.data.pageNumber}
-                  pageSize={securityLogsQuery.data.pageSize}
-                  totalCount={securityLogsQuery.data.totalCount}
-                  totalPages={securityLogsQuery.data.totalPages}
-                  onPageChange={setPageNumber}
-                  onPageSizeChange={(nextPageSize) => {
-                    setPageSize(nextPageSize);
-                    setPageNumber(1);
-                  }}
-                />
-              ) : null}
-            </div>
+            <DataTable
+              table={table}
+              footer={
+                securityLogsQuery.data && securityLogsQuery.data.totalCount > 0 ? (
+                  <DataTablePagination
+                    mode="server"
+                    pageNumber={securityLogsQuery.data.pageNumber}
+                    pageSize={securityLogsQuery.data.pageSize}
+                    totalCount={securityLogsQuery.data.totalCount}
+                    totalPages={securityLogsQuery.data.totalPages}
+                    onPageChange={setPageNumber}
+                    onPageSizeChange={(nextPageSize) => {
+                      setPageSize(nextPageSize);
+                      setPageNumber(1);
+                    }}
+                  />
+                ) : null
+              }
+            />
           ) : null}
         </div>
       </SectionCard>
@@ -306,30 +309,3 @@ function toUtcEndOfLocalDay(value: Date): string {
   return endOfLocalDay.toISOString();
 }
 
-function getSeverityBadgeVariant(
-  severity: string,
-): "default" | "secondary" | "outline" | "info" | "success" | "warning" | "destructive" {
-  const normalizedSeverity = severity.trim().toLocaleLowerCase();
-
-  if (normalizedSeverity === "info") {
-    return "info";
-  }
-
-  if (normalizedSeverity === "low") {
-    return "secondary";
-  }
-
-  if (normalizedSeverity === "warning") {
-    return "warning";
-  }
-
-  if (normalizedSeverity === "error" || normalizedSeverity === "critical" || normalizedSeverity === "high") {
-    return "destructive";
-  }
-
-  if (normalizedSeverity === "success") {
-    return "success";
-  }
-
-  return "secondary";
-}

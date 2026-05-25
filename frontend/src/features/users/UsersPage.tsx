@@ -6,21 +6,17 @@ import { Navigate } from "react-router-dom";
 
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { Button } from "@/components/ui/button";
-import { DateTimeText } from "@/components/common/DateTimeText";
-import { DataToolbar } from "@/components/common/DataToolbar";
+import {
+  DataTable,
+  DataTablePagination,
+  DataTableToolbar,
+} from "@/components/common/data-table";
+import { useServerDataTable } from "@/components/common/data-table-hooks";
 import { EmptyState } from "@/components/common/EmptyState";
 import { LoadingState } from "@/components/common/LoadingState";
-import { RowActions } from "@/components/common/RowActions";
-import { RoleBadgeList } from "@/components/common/RoleBadgeList";
 import { SectionCard } from "@/components/common/SectionCard";
-import { StatusBadge } from "@/components/common/StatusBadge";
-import { TablePagination } from "@/components/common/TablePagination";
-import {
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
 import { Select } from "@/components/ui/select";
+import { createUserColumns } from "@/features/users/user-columns";
 import { useAuthStore } from "@/features/auth/auth-store";
 import { canAccess } from "@/lib/permissions";
 import { getUserById, getUsers, updateUserStatus } from "@/features/users/api";
@@ -107,14 +103,38 @@ export function UsersPage() {
 
   const users = useMemo(() => usersQuery.data?.items ?? [], [usersQuery.data]);
 
+  const handleToggleStatus = (user: UserListItem) => setConfirmTarget(user);
+
+  const columns = useMemo(
+    () =>
+      createUserColumns({
+        t,
+        canUpdate,
+        canAssignRoles,
+        isStatusPending: updateUserStatusMutation.isPending,
+        onDetail: setSelectedUserForDetail,
+        onToggleStatus: handleToggleStatus,
+        onAssignRoles: setSelectedUserForRoles,
+      }),
+    [t, canUpdate, canAssignRoles, updateUserStatusMutation.isPending],
+  );
+
+  const table = useServerDataTable({
+    data: users,
+    columns,
+    pageCount: usersQuery.data?.totalPages ?? 0,
+    pageIndex: pageNumber - 1,
+    pageSize,
+  });
+
+  const activeFilterCount = statusFilter !== "active" ? 1 : 0;
+
   const handleRefresh = () => {
     usersQuery.refetch();
     if (selectedUserForDetail?.id) {
       userDetailQuery.refetch();
     }
   };
-
-  const handleToggleStatus = (user: UserListItem) => setConfirmTarget(user);
   const handleSearchChange = (value: string) => {
     setSearch(value);
     setPageNumber(1);
@@ -147,10 +167,44 @@ export function UsersPage() {
     <section className="space-y-4">
       <SectionCard title={t("users:sections.listTitle")}>
         <div className="space-y-4">
-          <DataToolbar
+          <DataTableToolbar
             searchValue={search}
             onSearchChange={handleSearchChange}
             searchPlaceholder={t("users:search.placeholder")}
+            activeFilterCount={activeFilterCount}
+            onClearFilters={() => {
+              setStatusFilter("active");
+              setPageNumber(1);
+            }}
+            activeFilters={
+              statusFilter !== "active"
+                ? [
+                    {
+                      id: "status",
+                      label: t("users:table.status"),
+                      value: t(`common:status.${statusFilter}`),
+                      onRemove: () => {
+                        setStatusFilter("active");
+                        setPageNumber(1);
+                      },
+                    },
+                  ]
+                : undefined
+            }
+            filterContent={
+              <Select
+                value={statusFilter}
+                onChange={(event) => {
+                  setStatusFilter(event.target.value as StatusFilter);
+                  setPageNumber(1);
+                }}
+                className="w-full"
+              >
+                <option value="active">{t("common:status.active")}</option>
+                <option value="passive">{t("common:status.passive")}</option>
+                <option value="all">{t("common:status.all")}</option>
+              </Select>
+            }
             actions={
               <>
                 <Button variant="outline" onClick={handleRefresh}>
@@ -163,22 +217,7 @@ export function UsersPage() {
                 ) : null}
               </>
             }
-          >
-            <div className="flex flex-wrap items-center gap-2">
-              <Select
-                value={statusFilter}
-                onChange={(event) => {
-                  setStatusFilter(event.target.value as StatusFilter);
-                  setPageNumber(1);
-                }}
-                className="w-full sm:w-40"
-              >
-                <option value="active">{t("common:status.active")}</option>
-                <option value="passive">{t("common:status.passive")}</option>
-                <option value="all">{t("common:status.all")}</option>
-              </Select>
-            </div>
-          </DataToolbar>
+          />
 
           {usersQuery.isLoading ? <LoadingState /> : null}
 
@@ -190,78 +229,25 @@ export function UsersPage() {
           ) : null}
 
           {users.length ? (
-            <div className="overflow-x-auto rounded-lg border bg-card">
-              <table className="min-w-full text-sm">
-                <thead className="bg-muted/50 text-left">
-                  <tr>
-                    <th className="px-3 py-2 font-medium">{t("users:table.displayName")}</th>
-                    <th className="px-3 py-2 font-medium">{t("users:table.userName")}</th>
-                    <th className="px-3 py-2 font-medium">{t("users:table.email")}</th>
-                    <th className="px-3 py-2 font-medium">{t("users:table.nationalIdMasked")}</th>
-                    <th className="px-3 py-2 font-medium">{t("users:table.roles")}</th>
-                    <th className="px-3 py-2 font-medium">{t("users:table.status")}</th>
-                    <th className="px-3 py-2 font-medium">{t("users:table.lastLogin")}</th>
-                    <th className="px-3 py-2 font-medium">{t("users:table.actions")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((user) => (
-                    <tr key={user.id} className="border-t align-top hover:bg-muted/20">
-                      <td className="px-3 py-2">{user.displayName || "-"}</td>
-                      <td className="px-3 py-2">{user.userName}</td>
-                      <td className="max-w-56 truncate px-3 py-2">{user.email || "-"}</td>
-                      <td className="px-3 py-2">{user.nationalIdMasked || "-"}</td>
-                      <td className="px-3 py-2">
-                        <RoleBadgeList roles={user.roles} />
-                      </td>
-                      <td className="px-3 py-2">
-                        <StatusBadge isActive={user.isActive} />
-                      </td>
-                      <td className="px-3 py-2">
-                        <DateTimeText value={user.lastLoginAt} />
-                      </td>
-                      <td className="px-3 py-2">
-                        <RowActions>
-                          <DropdownMenuLabel>{t("common:actions.actions")}</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => setSelectedUserForDetail(user)}>
-                            {t("users:actions.detail")}
-                          </DropdownMenuItem>
-                          {canUpdate ? (
-                            <DropdownMenuItem
-                              disabled={updateUserStatusMutation.isPending}
-                              onClick={() => handleToggleStatus(user)}
-                            >
-                              {user.isActive
-                                ? t("users:actions.deactivate")
-                                : t("users:actions.activate")}
-                            </DropdownMenuItem>
-                          ) : null}
-                          {canAssignRoles ? (
-                            <DropdownMenuItem onClick={() => setSelectedUserForRoles(user)}>
-                              {t("users:actions.assignRoles")}
-                            </DropdownMenuItem>
-                          ) : null}
-                        </RowActions>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {usersQuery.data && usersQuery.data.totalCount > 0 ? (
-                <TablePagination
-                  pageNumber={usersQuery.data.pageNumber}
-                  pageSize={usersQuery.data.pageSize}
-                  totalCount={usersQuery.data.totalCount}
-                  totalPages={usersQuery.data.totalPages}
-                  onPageChange={setPageNumber}
-                  onPageSizeChange={(nextPageSize) => {
-                    setPageSize(nextPageSize);
-                    setPageNumber(1);
-                  }}
-                />
-              ) : null}
-            </div>
+            <DataTable
+              table={table}
+              footer={
+                usersQuery.data && usersQuery.data.totalCount > 0 ? (
+                  <DataTablePagination
+                    mode="server"
+                    pageNumber={usersQuery.data.pageNumber}
+                    pageSize={usersQuery.data.pageSize}
+                    totalCount={usersQuery.data.totalCount}
+                    totalPages={usersQuery.data.totalPages}
+                    onPageChange={setPageNumber}
+                    onPageSizeChange={(nextPageSize) => {
+                      setPageSize(nextPageSize);
+                      setPageNumber(1);
+                    }}
+                  />
+                ) : null
+              }
+            />
           ) : null}
         </div>
       </SectionCard>

@@ -5,22 +5,18 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Navigate } from "react-router-dom";
 
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
-import { CodeBadge } from "@/components/common/CodeBadge";
-import { DataToolbar } from "@/components/common/DataToolbar";
+import {
+  DataTable,
+  DataTablePagination,
+  DataTableToolbar,
+} from "@/components/common/data-table";
+import { useServerDataTable } from "@/components/common/data-table-hooks";
 import { EmptyState } from "@/components/common/EmptyState";
 import { LoadingState } from "@/components/common/LoadingState";
-import { RowActions } from "@/components/common/RowActions";
 import { SectionCard } from "@/components/common/SectionCard";
-import { StatusBadge } from "@/components/common/StatusBadge";
-import { TablePagination } from "@/components/common/TablePagination";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
 import { Select } from "@/components/ui/select";
+import { createRoleColumns } from "@/features/roles/role-columns";
 import { useAuthStore } from "@/features/auth/auth-store";
 import {
   getRoleById,
@@ -120,15 +116,43 @@ export function RolesPage() {
 
   const roles = useMemo(() => rolesQuery.data?.items ?? [], [rolesQuery.data]);
 
+  const handleToggleStatus = (role: RoleListItem) => {
+    if (role.isSystem || !canUpdate) return;
+    setConfirmTarget(role);
+  };
+
+  const columns = useMemo(
+    () =>
+      createRoleColumns({
+        t,
+        canUpdate,
+        canAssignPermissions,
+        canViewPermissions,
+        isStatusPending: updateStatusMutation.isPending,
+        onDetail: setSelectedRoleForDetail,
+        onEdit: setSelectedRoleForEdit,
+        onToggleStatus: handleToggleStatus,
+        onAssignPermissions: setSelectedRoleForPermissions,
+      }),
+    [t, canUpdate, canAssignPermissions, canViewPermissions, updateStatusMutation.isPending, handleToggleStatus],
+  );
+
+  const table = useServerDataTable({
+    data: roles,
+    columns,
+    pageCount: rolesQuery.data?.totalPages ?? 0,
+    pageIndex: pageNumber - 1,
+    pageSize,
+  });
+
+  const activeFilterCount =
+    (statusFilter !== "active" ? 1 : 0) + (typeFilter !== "all" ? 1 : 0);
+
   const handleRefresh = () => {
     rolesQuery.refetch();
     if (selectedRoleForDetail?.id) roleDetailQuery.refetch();
   };
 
-  const handleToggleStatus = (role: RoleListItem) => {
-    if (role.isSystem || !canUpdate) return;
-    setConfirmTarget(role);
-  };
   const handleSearchChange = (value: string) => {
     setSearch(value);
     setPageNumber(1);
@@ -161,10 +185,44 @@ export function RolesPage() {
     <section className="space-y-4">
       <SectionCard title={t("roles:sections.listTitle")}>
         <div className="space-y-4">
-          <DataToolbar
+          <DataTableToolbar
             searchValue={search}
             onSearchChange={handleSearchChange}
             searchPlaceholder={t("roles:search.placeholder")}
+            activeFilterCount={activeFilterCount}
+            onClearFilters={() => {
+              setStatusFilter("active");
+              setTypeFilter("all");
+              setPageNumber(1);
+            }}
+            filterContent={
+              <div className="space-y-3">
+                <Select
+                  value={statusFilter}
+                  onChange={(event) => {
+                    setStatusFilter(event.target.value as StatusFilter);
+                    setPageNumber(1);
+                  }}
+                  className="w-full"
+                >
+                  <option value="active">{t("common:status.active")}</option>
+                  <option value="passive">{t("common:status.passive")}</option>
+                  <option value="all">{t("common:status.all")}</option>
+                </Select>
+                <Select
+                  value={typeFilter}
+                  onChange={(event) => {
+                    setTypeFilter(event.target.value as TypeFilter);
+                    setPageNumber(1);
+                  }}
+                  className="w-full"
+                >
+                  <option value="all">{t("common:status.all")}</option>
+                  <option value="system">{t("roles:type.system")}</option>
+                  <option value="custom">{t("roles:type.custom")}</option>
+                </Select>
+              </div>
+            }
             actions={
               <>
                 <Button variant="outline" onClick={handleRefresh}>
@@ -177,34 +235,7 @@ export function RolesPage() {
                 ) : null}
               </>
             }
-          >
-            <div className="flex flex-wrap items-center gap-2">
-              <Select
-                value={statusFilter}
-                onChange={(event) => {
-                  setStatusFilter(event.target.value as StatusFilter);
-                  setPageNumber(1);
-                }}
-                className="w-full sm:w-40"
-              >
-                <option value="active">{t("common:status.active")}</option>
-                <option value="passive">{t("common:status.passive")}</option>
-                <option value="all">{t("common:status.all")}</option>
-              </Select>
-              <Select
-                value={typeFilter}
-                onChange={(event) => {
-                  setTypeFilter(event.target.value as TypeFilter);
-                  setPageNumber(1);
-                }}
-                className="w-full sm:w-40"
-              >
-                <option value="all">{t("common:status.all")}</option>
-                <option value="system">{t("roles:type.system")}</option>
-                <option value="custom">{t("roles:type.custom")}</option>
-              </Select>
-            </div>
-          </DataToolbar>
+          />
 
           {rolesQuery.isLoading ? <LoadingState /> : null}
 
@@ -216,97 +247,25 @@ export function RolesPage() {
           ) : null}
 
           {roles.length ? (
-            <div className="overflow-x-auto rounded-lg border bg-card">
-              <table className="min-w-full text-sm">
-                <thead className="bg-muted/50 text-left">
-                  <tr>
-                    <th className="px-3 py-2 font-medium">{t("roles:table.name")}</th>
-                    <th className="px-3 py-2 font-medium">{t("roles:table.code")}</th>
-                    <th className="px-3 py-2 font-medium">{t("roles:table.description")}</th>
-                    <th className="px-3 py-2 font-medium">{t("roles:table.type")}</th>
-                    <th className="px-3 py-2 font-medium">{t("roles:table.status")}</th>
-                    <th className="px-3 py-2 font-medium">{t("roles:table.permissionCount")}</th>
-                    <th className="px-3 py-2 font-medium">{t("roles:table.actions")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {roles.map((role) => {
-                    const isSystemRole = role.isSystem;
-                    const canEditRole = canUpdate && !isSystemRole;
-                    const canChangeStatus = canUpdate && !isSystemRole;
-                    const canAssignRolePermissions =
-                      canAssignPermissions && canViewPermissions && !isSystemRole;
-
-                    return (
-                      <tr key={role.id} className="border-t align-top hover:bg-muted/20">
-                        <td className="px-3 py-2">{role.name}</td>
-                        <td className="px-3 py-2">
-                          <CodeBadge>{role.code}</CodeBadge>
-                        </td>
-                        <td className="max-w-70 px-3 py-2">
-                          <span className="line-clamp-2">{role.description || "-"}</span>
-                        </td>
-                        <td className="px-3 py-2">
-                          <Badge variant={isSystemRole ? "warning" : "secondary"}>
-                            {isSystemRole ? t("roles:type.system") : t("roles:type.custom")}
-                          </Badge>
-                        </td>
-                        <td className="px-3 py-2">
-                          <StatusBadge isActive={role.isActive} />
-                        </td>
-                        <td className="px-3 py-2">
-                          <Badge variant="outline">{role.permissionCount}</Badge>
-                        </td>
-                        <td className="px-3 py-2">
-                          <RowActions>
-                            <DropdownMenuLabel>{t("common:actions.actions")}</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => setSelectedRoleForDetail(role)}>
-                              {t("roles:actions.detail")}
-                            </DropdownMenuItem>
-                            {canUpdate && canEditRole ? (
-                              <DropdownMenuItem onClick={() => setSelectedRoleForEdit(role)}>
-                                {t("roles:actions.edit")}
-                              </DropdownMenuItem>
-                            ) : null}
-                            {canUpdate && canChangeStatus ? (
-                              <DropdownMenuItem
-                                disabled={updateStatusMutation.isPending}
-                                onClick={() => handleToggleStatus(role)}
-                              >
-                                {role.isActive
-                                  ? t("roles:actions.deactivate")
-                                  : t("roles:actions.activate")}
-                              </DropdownMenuItem>
-                            ) : null}
-                            {canAssignPermissions && canViewPermissions && canAssignRolePermissions ? (
-                              <DropdownMenuItem
-                                onClick={() => setSelectedRoleForPermissions(role)}
-                              >
-                                {t("roles:actions.assignPermissions")}
-                              </DropdownMenuItem>
-                            ) : null}
-                          </RowActions>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-              {rolesQuery.data && rolesQuery.data.totalCount > 0 ? (
-                <TablePagination
-                  pageNumber={rolesQuery.data.pageNumber}
-                  pageSize={rolesQuery.data.pageSize}
-                  totalCount={rolesQuery.data.totalCount}
-                  totalPages={rolesQuery.data.totalPages}
-                  onPageChange={setPageNumber}
-                  onPageSizeChange={(nextPageSize) => {
-                    setPageSize(nextPageSize);
-                    setPageNumber(1);
-                  }}
-                />
-              ) : null}
-            </div>
+            <DataTable
+              table={table}
+              footer={
+                rolesQuery.data && rolesQuery.data.totalCount > 0 ? (
+                  <DataTablePagination
+                    mode="server"
+                    pageNumber={rolesQuery.data.pageNumber}
+                    pageSize={rolesQuery.data.pageSize}
+                    totalCount={rolesQuery.data.totalCount}
+                    totalPages={rolesQuery.data.totalPages}
+                    onPageChange={setPageNumber}
+                    onPageSizeChange={(nextPageSize) => {
+                      setPageSize(nextPageSize);
+                      setPageNumber(1);
+                    }}
+                  />
+                ) : null
+              }
+            />
           ) : null}
         </div>
       </SectionCard>

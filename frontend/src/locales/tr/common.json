@@ -39,6 +39,15 @@
       "next": "Sonraki",
       "last": "Son"
     },
+    "dataTable": {
+      "filters": "Filtreler",
+      "clearFilters": "Filtreleri temizle",
+      "activeFilters": "Aktif filtreler",
+      "noFilters": "Filtre yok",
+      "search": "Ara",
+      "noResults": "Sonuç bulunamadı",
+      "loading": "Tablo yükleniyor"
+    },
     "loading": "Yükleniyor...",
     "empty": "Kayıt bulunamadı.",
     "error": "Bir hata oluştu.",

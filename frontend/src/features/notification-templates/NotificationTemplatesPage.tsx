@@ -1,15 +1,16 @@
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { DateTimeText } from "@/components/common/DateTimeText";
+import { DataTable } from "@/components/common/data-table";
+import { useClientDataTable } from "@/components/common/data-table-hooks";
 import { EmptyState } from "@/components/common/EmptyState";
 import { LoadingState } from "@/components/common/LoadingState";
 import { PageHeader } from "@/components/common/PageHeader";
 import { SectionCard } from "@/components/common/SectionCard";
-import { StatusBadge } from "@/components/common/StatusBadge";
 import { Button } from "@/components/ui/button";
+import { createNotificationTemplateColumns } from "@/features/notification-templates/notification-template-columns";
 import {
   Dialog,
   DialogContent,
@@ -65,6 +66,8 @@ export function NotificationTemplatesPage() {
     queryFn: () => getNotificationTemplates(),
   });
 
+  const items = listQuery.data ?? [];
+
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (editingId) {
@@ -117,6 +120,22 @@ export function NotificationTemplatesPage() {
     setForm((current) => ({ ...current, [field]: value }));
   };
 
+  const columns = useMemo(
+    () =>
+      createNotificationTemplateColumns({
+        t,
+        canUpdate,
+        onEdit: openEdit,
+      }),
+    [t, canUpdate, openEdit],
+  );
+
+  const table = useClientDataTable({
+    data: items,
+    columns,
+    enablePagination: false,
+  });
+
   return (
     <section className="space-y-4">
       <PageHeader
@@ -145,44 +164,7 @@ export function NotificationTemplatesPage() {
             <EmptyState title={t("notificationTemplates:empty.title")} />
           ) : null}
 
-          {!listQuery.isLoading && (listQuery.data?.length ?? 0) > 0 ? (
-            <div className="overflow-x-auto rounded-md border">
-              <table className="w-full min-w-[720px] text-sm">
-                <thead className="bg-muted/40 text-left">
-                  <tr>
-                    <th className="px-3 py-2">{t("notificationTemplates:columns.module")}</th>
-                    <th className="px-3 py-2">{t("notificationTemplates:columns.event")}</th>
-                    <th className="px-3 py-2">{t("notificationTemplates:columns.channel")}</th>
-                    <th className="px-3 py-2">{t("notificationTemplates:columns.name")}</th>
-                    <th className="px-3 py-2">{t("notificationTemplates:columns.status")}</th>
-                    <th className="px-3 py-2">{t("notificationTemplates:columns.updatedAt")}</th>
-                    <th className="px-3 py-2">{t("notificationTemplates:columns.actions")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {listQuery.data?.map((item) => (
-                    <tr key={item.id} className="border-t">
-                      <td className="px-3 py-2">{item.moduleKey}</td>
-                      <td className="px-3 py-2">{item.eventKey}</td>
-                      <td className="px-3 py-2">{item.channel}</td>
-                      <td className="px-3 py-2">{item.name}</td>
-                      <td className="px-3 py-2">
-                        <StatusBadge isActive={item.isEnabled} />
-                      </td>
-                      <td className="px-3 py-2">
-                        {item.updatedAt ? <DateTimeText value={item.updatedAt} /> : "-"}
-                      </td>
-                      <td className="px-3 py-2">
-                        <Button size="sm" variant="outline" onClick={() => void openEdit(item)}>
-                          {t("notificationTemplates:actions.edit")}
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : null}
+          {!listQuery.isLoading && items.length > 0 ? <DataTable table={table} /> : null}
         </div>
       </SectionCard>
 

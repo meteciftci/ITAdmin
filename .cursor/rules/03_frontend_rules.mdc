@@ -222,26 +222,80 @@ Kurallar:
 - Başarılı işlemde toast göster.
 - Kritik işlemde confirmation dialog kullan.
 
-## 12. TanStack Table Kuralları
+## 12. TanStack Table ve DataTable Standardı
 
-Büyük listelerde TanStack Table kullan.
+Bu projede tablo standardı TanStack Table v8 üzerine kuruludur.
 
-Kullanım alanları:
+Dependency:
+- `@tanstack/react-table` frontend dependency olarak bulunmalıdır.
+- Yeni tablo ekranları raw HTML table ile sıfırdan yazılmaz.
+- Her tablo, ortak DataTable componentleri üzerinden oluşturulur.
 
-```text
-Kullanıcı listesi
-Rol listesi
-İzin listesi
-Audit log listesi
-Security log listesi
-```
+Ortak tablo componentleri:
+- `frontend/src/components/common/data-table.tsx`
+- `DataTable`
+- `DataTableToolbar`
+- `DataTableFilterPanel`
+- `DataTableActiveFilters`
+- `DataTablePagination`
 
-Kurallar:
+TanStack Table kullanım kararları:
 
-- Ortak DataTable componenti kullan.
-- Server-side pagination destekle.
-- Sorting/filtering backend ile uyumlu olsun.
-- Kolon tanımları modül içinde tutulur.
+Server-side listeleme yapılan ekranlarda:
+- `useReactTable` kullanılır.
+- `manualPagination: true` kullanılır.
+- Backend pagination/sorting/filtering davranışı korunur.
+- Pagination state kontrollü tutulur.
+- Query parametreleri mevcut API standardına göre yönetilir.
+
+Client-side listeleme yapılan ekranlarda:
+- `useReactTable` kullanılır.
+- `getCoreRowModel` kullanılır.
+- Gerekirse `getFilteredRowModel` kullanılır.
+- Gerekirse `getPaginationRowModel` kullanılır.
+- Küçük/orta ölçekli, zaten tek response ile gelen listelerde client-side pagination/filtering kullanılabilir.
+
+Kolon tanımları:
+- Kolonlar feature içinde ayrı `*-columns.tsx` dosyasında tutulabilir.
+- Büyük component içinde inline kolon karmaşası yapılmaz.
+- `ColumnDef<T>` tipleri açık yazılır.
+- Aksiyon kolonları standart hizalanır.
+- Teknik değerler `font-mono text-xs text-muted-foreground` standardıyla gösterilir.
+- Uzun metinler `truncate + title` veya kontrollü wrap ile tabloyu bozmayacak şekilde gösterilir.
+
+Görsel tablo standardı:
+- Wrapper: `overflow-hidden rounded-lg border bg-card`
+- Scroll container gerekiyorsa: `overflow-x-auto`
+- Header: `bg-muted/50 text-left`
+- Header cell: `px-3 py-2 font-medium whitespace-nowrap`
+- Row: `border-t align-top hover:bg-muted/20`
+- Cell: `px-3 py-2`
+- Action column: `w-0 whitespace-nowrap text-right`
+
+Toolbar standardı:
+- Search input görünür kalır.
+- Search dışındaki filtreler `DataTableFilterPanel` altında toplanır.
+- Filtreler butonunda aktif filtre sayısı gösterilir.
+- Aktif filtreler gerekirse chip/badge olarak gösterilir.
+- Filtre temizleme davranışı bulunur.
+
+Pagination standardı:
+- Pagination için ortak DataTable pagination componenti kullanılır.
+- Server-side ve client-side pagination aynı görsel standardı kullanır.
+- Page size seçenekleri ekran ihtiyacına göre belirlenir.
+- Varsayılan seçenekler mümkünse `10 / 25 / 50` olur.
+
+State standardı:
+- Loading için `LoadingState`
+- Error için `ErrorState`
+- Empty için `EmptyState`
+- Toast için Sonner
+- Kritik işlemler için `ConfirmDialog`
+
+Yeni tablo içeren promptlarda:
+- TanStack Table standardı kullanılmalıdır.
+- Ortak DataTable componentleri kullanılmalıdır.
+- Raw HTML table yazılmamalıdır.
 
 ## 13. Loading / Error / Empty State Kuralları
 
@@ -557,8 +611,9 @@ All
 
 Tablo/kart ekranlarında loading, empty ve error state standart componentlerle gösterilir.
 
-Büyük listelerde TanStack Table tercih edilebilir.
-Mevcut ekranlarda basit HTML table varsa, büyük refactor istenmedikçe sadece standardize edilir.
+Tüm tablo ekranlarında TanStack Table standardı kullanılır.
+Mevcut raw HTML table kullanımları refactor sırasında ortak DataTable componentlerine taşınır.
+Yeni tablo geliştirmelerinde raw HTML table yazılmaz.
 
 ### Badge Standardı
 

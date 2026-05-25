@@ -5,25 +5,22 @@ import { useQuery } from "@tanstack/react-query";
 import { Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
-import { DataToolbar } from "@/components/common/DataToolbar";
-import { CodeBadge } from "@/components/common/CodeBadge";
+import {
+  DataTable,
+  DataTablePagination,
+  DataTableToolbar,
+} from "@/components/common/data-table";
+import { useServerDataTable } from "@/components/common/data-table-hooks";
 import { EmptyState } from "@/components/common/EmptyState";
 import { LoadingState } from "@/components/common/LoadingState";
 import { SectionCard } from "@/components/common/SectionCard";
-import { StatusBadge } from "@/components/common/StatusBadge";
-import { TablePagination } from "@/components/common/TablePagination";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { getPermissions } from "@/features/permissions/api";
+import { createPermissionColumns } from "@/features/permissions/permission-columns";
 import { createApiErrorRouteState, getErrorRoutePath } from "@/lib/route-error";
 
 type StatusFilter = "active" | "passive" | "all";
-
-const getGroupValue = (permission: {
-  group?: string | null;
-  module?: string | null;
-  category?: string | null;
-}): string => permission.group ?? permission.module ?? permission.category ?? "";
 
 export function PermissionsPage() {
   const { t } = useTranslation(["permissions", "common"]);
@@ -61,9 +58,30 @@ export function PermissionsPage() {
   const showStatusColumn = permissions.some(
     (permission) => typeof permission.isActive === "boolean",
   );
-  const showGroupColumn = permissions.some((permission) =>
-    Boolean(getGroupValue(permission)),
+  const showGroupColumn = permissions.some(
+    (permission) =>
+      Boolean(permission.group ?? permission.module ?? permission.category),
   );
+
+  const columns = useMemo(
+    () =>
+      createPermissionColumns({
+        t,
+        showGroupColumn,
+        showStatusColumn,
+      }),
+    [t, showGroupColumn, showStatusColumn],
+  );
+
+  const table = useServerDataTable({
+    data: permissions,
+    columns,
+    pageCount: permissionsQuery.data?.totalPages ?? 0,
+    pageIndex: pageNumber - 1,
+    pageSize,
+  });
+
+  const activeFilterCount = statusFilter !== "active" ? 1 : 0;
 
   const handleRefresh = () => {
     permissionsQuery.refetch();
@@ -88,29 +106,35 @@ export function PermissionsPage() {
     <section className="space-y-4">
       <SectionCard title={t("permissions:sections.listTitle")}>
         <div className="space-y-4">
-          <DataToolbar
+          <DataTableToolbar
             searchValue={search}
             onSearchChange={handleSearchChange}
             searchPlaceholder={t("permissions:search.placeholder")}
+            activeFilterCount={activeFilterCount}
+            onClearFilters={() => {
+              setStatusFilter("active");
+              setPageNumber(1);
+            }}
+            filterContent={
+              <Select
+                value={statusFilter}
+                onChange={(event) => {
+                  setStatusFilter(event.target.value as StatusFilter);
+                  setPageNumber(1);
+                }}
+                className="w-full"
+              >
+                <option value="active">{t("common:status.active")}</option>
+                <option value="passive">{t("common:status.passive")}</option>
+                <option value="all">{t("common:status.all")}</option>
+              </Select>
+            }
             actions={
               <Button variant="outline" onClick={handleRefresh}>
                 {t("common:actions.refresh")}
               </Button>
             }
-          >
-            <Select
-              value={statusFilter}
-              onChange={(event) => {
-                setStatusFilter(event.target.value as StatusFilter);
-                setPageNumber(1);
-              }}
-              className="w-full sm:w-40"
-            >
-              <option value="active">{t("common:status.active")}</option>
-              <option value="passive">{t("common:status.passive")}</option>
-              <option value="all">{t("common:status.all")}</option>
-            </Select>
-          </DataToolbar>
+          />
 
           {permissionsQuery.isLoading ? <LoadingState /> : null}
 
@@ -122,74 +146,25 @@ export function PermissionsPage() {
           ) : null}
 
           {permissions.length ? (
-            <div className="overflow-x-auto rounded-lg border bg-card">
-              <table className="min-w-full text-sm">
-                <thead className="bg-muted/50 text-left">
-                  <tr>
-                    <th className="px-3 py-2 font-medium">
-                      {t("permissions:table.name")}
-                    </th>
-                    <th className="px-3 py-2 font-medium">
-                      {t("permissions:table.code")}
-                    </th>
-                    <th className="px-3 py-2 font-medium">
-                      {t("permissions:table.description")}
-                    </th>
-                    {showGroupColumn ? (
-                      <th className="px-3 py-2 font-medium">
-                        {t("permissions:table.group")}
-                      </th>
-                    ) : null}
-                    {showStatusColumn ? (
-                      <th className="px-3 py-2 font-medium">
-                        {t("permissions:table.status")}
-                      </th>
-                    ) : null}
-                  </tr>
-                </thead>
-                <tbody>
-                  {permissions.map((permission) => (
-                    <tr
-                      key={permission.id}
-                      className="border-t align-top hover:bg-muted/20"
-                    >
-                      <td className="px-3 py-2">{permission.name}</td>
-                      <td className="px-3 py-2">
-                        <CodeBadge>{permission.code}</CodeBadge>
-                      </td>
-                      <td className="max-w-96 px-3 py-2">
-                        <span className="line-clamp-2">
-                          {permission.description || "-"}
-                        </span>
-                      </td>
-                      {showGroupColumn ? (
-                        <td className="px-3 py-2">
-                          {getGroupValue(permission) || "-"}
-                        </td>
-                      ) : null}
-                      {showStatusColumn ? (
-                        <td className="px-3 py-2">
-                          <StatusBadge isActive={permission.isActive} />
-                        </td>
-                      ) : null}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {permissionsQuery.data && permissionsQuery.data.totalCount > 0 ? (
-                <TablePagination
-                  pageNumber={permissionsQuery.data.pageNumber}
-                  pageSize={permissionsQuery.data.pageSize}
-                  totalCount={permissionsQuery.data.totalCount}
-                  totalPages={permissionsQuery.data.totalPages}
-                  onPageChange={setPageNumber}
-                  onPageSizeChange={(nextPageSize) => {
-                    setPageSize(nextPageSize);
-                    setPageNumber(1);
-                  }}
-                />
-              ) : null}
-            </div>
+            <DataTable
+              table={table}
+              footer={
+                permissionsQuery.data && permissionsQuery.data.totalCount > 0 ? (
+                  <DataTablePagination
+                    mode="server"
+                    pageNumber={permissionsQuery.data.pageNumber}
+                    pageSize={permissionsQuery.data.pageSize}
+                    totalCount={permissionsQuery.data.totalCount}
+                    totalPages={permissionsQuery.data.totalPages}
+                    onPageChange={setPageNumber}
+                    onPageSizeChange={(nextPageSize) => {
+                      setPageSize(nextPageSize);
+                      setPageNumber(1);
+                    }}
+                  />
+                ) : null
+              }
+            />
           ) : null}
         </div>
       </SectionCard>

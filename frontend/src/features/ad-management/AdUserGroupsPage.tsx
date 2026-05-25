@@ -11,11 +11,15 @@ import { ErrorState } from "@/components/common/ErrorState";
 import { LoadingState } from "@/components/common/LoadingState";
 import { PageHeader } from "@/components/common/PageHeader";
 import { SectionCard } from "@/components/common/SectionCard";
-import { TablePagination } from "@/components/common/TablePagination";
+import {
+  DataTable,
+  DataTablePagination,
+  DataTableToolbar,
+} from "@/components/common/data-table";
+import { useServerDataTable } from "@/components/common/data-table-hooks";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
-import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { createAdUserGroupColumns } from "@/features/ad-management/ad-user-groups-columns";
 import {
   addAdUserToGroup,
   AD_MANAGEMENT_USER_GROUPS_QUERY_KEY,
@@ -26,7 +30,6 @@ import {
 import {
   filterAdUserGroupMemberships,
   formatAdGroupSelectionPrimaryLabel,
-  formatAdGroupTableDisplayName,
 } from "@/features/ad-management/ad-group-display";
 import { AdGroupSearchCombobox } from "@/features/ad-management/components/AdGroupSearchCombobox";
 import { AdManagementModuleStateGuard } from "@/features/ad-management/components/AdManagementModuleStateGuard";
@@ -135,6 +138,25 @@ export function AdUserGroupsPage() {
         getApiErrorMessage(error, t("adManagement:users.groups.messages.operationFailed")),
       );
     },
+  });
+
+  const columns = useMemo(
+    () =>
+      createAdUserGroupColumns({
+        t,
+        canRemoveGroup,
+        isRemovePending: removeMutation.isPending,
+        onRemove: setRemoveTarget,
+      }),
+    [t, canRemoveGroup, removeMutation.isPending],
+  );
+
+  const table = useServerDataTable({
+    data: paginatedGroups,
+    columns,
+    pageCount: totalPages,
+    pageIndex: safePageNumber - 1,
+    pageSize,
   });
 
   if (!userId) {
@@ -250,19 +272,19 @@ export function AdUserGroupsPage() {
                   description={t("adManagement:users.groups.empty.noMembershipsDescription")}
                 />
               ) : (
-                <div className="overflow-x-auto rounded-lg border bg-card">
-                  <div className="flex flex-col gap-3 border-b px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-                    <Input
-                      value={membershipSearch}
-                      onChange={(event) => {
-                        setMembershipSearch(event.target.value);
-                        setPageNumber(1);
-                      }}
-                      placeholder={t("adManagement:users.groups.fields.membershipSearchPlaceholder")}
-                      className="sm:max-w-md"
-                    />
-                    <div className="flex flex-wrap items-center gap-3">
-                      {totalCount > 0 ? (
+                <div className="space-y-4">
+                  <DataTableToolbar
+                    searchValue={membershipSearch}
+                    onSearchChange={(value) => {
+                      setMembershipSearch(value);
+                      setPageNumber(1);
+                    }}
+                    searchPlaceholder={t(
+                      "adManagement:users.groups.fields.membershipSearchPlaceholder",
+                    )}
+                    showFiltersButton={false}
+                    toolbarFooter={
+                      totalCount > 0 ? (
                         <span className="text-sm text-muted-foreground">
                           {t("adManagement:users.groups.pagination.rangeInfo", {
                             start: rangeStart,
@@ -270,119 +292,40 @@ export function AdUserGroupsPage() {
                             total: totalCount,
                           })}
                         </span>
-                      ) : null}
-                      <div className="flex items-center gap-2">
-                        <label
-                          className="text-sm text-muted-foreground"
-                          htmlFor="ad-user-groups-page-size"
-                        >
-                          {t("adManagement:users.groups.pagination.pageSize")}
-                        </label>
-                        <Select
-                          id="ad-user-groups-page-size"
-                          value={String(pageSize)}
-                          onChange={(event) => {
-                            setPageSize(Number(event.target.value));
-                            setPageNumber(1);
-                          }}
-                          className="w-20"
-                        >
-                          {MEMBERSHIP_PAGE_SIZE_OPTIONS.map((option) => (
-                            <option key={option} value={option}>
-                              {option}
-                            </option>
-                          ))}
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
+                      ) : null
+                    }
+                  />
 
                   {filteredGroups.length === 0 ? (
-                    <div className="px-3 py-8">
-                      <EmptyState
-                        title={t("adManagement:users.groups.empty.searchNoResultsTitle")}
-                        description={t("adManagement:users.groups.empty.searchNoResultsDescription")}
-                      />
-                    </div>
+                    <EmptyState
+                      title={t("adManagement:users.groups.empty.searchNoResultsTitle")}
+                      description={t(
+                        "adManagement:users.groups.empty.searchNoResultsDescription",
+                      )}
+                    />
                   ) : (
-                    <>
-                      <table className="min-w-full text-sm">
-                        <thead className="bg-muted/50 text-left">
-                          <tr>
-                            <th className="px-3 py-2 font-medium">
-                              {t("adManagement:users.groups.table.groupName")}
-                            </th>
-                            <th className="px-3 py-2 font-medium">
-                              {t("adManagement:users.groups.table.samAccountName")}
-                            </th>
-                            <th className="px-3 py-2 font-medium">
-                              {t("adManagement:users.groups.table.description")}
-                            </th>
-                            <th className="px-3 py-2 font-medium">
-                              {t("adManagement:users.groups.table.distinguishedName")}
-                            </th>
-                            {canRemoveGroup ? (
-                              <th className="w-0 px-3 py-2 font-medium whitespace-nowrap">
-                                {t("adManagement:users.table.actions")}
-                              </th>
-                            ) : null}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {paginatedGroups.map((group) => (
-                            <tr
-                              key={group.distinguishedName}
-                              className="border-t align-top hover:bg-muted/20"
-                            >
-                              <td className="px-3 py-2 font-medium">
-                                {formatAdGroupTableDisplayName(group.displayName)}
-                              </td>
-                              <td className="px-3 py-2">{group.samAccountName || "-"}</td>
-                              <td
-                                className="max-w-xs truncate px-3 py-2"
-                                title={group.description || undefined}
-                              >
-                                {group.description || "-"}
-                              </td>
-                              <td className="max-w-[28rem] px-3 py-2">
-                                <span
-                                  className="block truncate font-mono text-xs text-muted-foreground"
-                                  title={group.distinguishedName}
-                                >
-                                  {group.distinguishedName}
-                                </span>
-                              </td>
-                              {canRemoveGroup ? (
-                                <td className="w-0 shrink-0 px-3 py-2 whitespace-nowrap">
-                                  <Button
-                                    type="button"
-                                    variant="destructive"
-                                    size="sm"
-                                    disabled={removeMutation.isPending}
-                                    onClick={() => setRemoveTarget(group)}
-                                  >
-                                    {t("adManagement:users.groups.actions.removeFromGroup")}
-                                  </Button>
-                                </td>
-                              ) : null}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                      {totalCount > 0 ? (
-                        <TablePagination
-                          pageNumber={safePageNumber}
-                          pageSize={pageSize}
-                          totalCount={totalCount}
-                          totalPages={totalPages}
-                          onPageChange={setPageNumber}
-                          onPageSizeChange={setPageSize}
-                          pageSizeOptions={[...MEMBERSHIP_PAGE_SIZE_OPTIONS]}
-                          showPageSize={false}
-                          showSummary={false}
-                        />
-                      ) : null}
-                    </>
+                    <DataTable
+                      table={table}
+                      footer={
+                        totalCount > 0 ? (
+                          <DataTablePagination
+                            mode="server"
+                            pageNumber={safePageNumber}
+                            pageSize={pageSize}
+                            totalCount={totalCount}
+                            totalPages={totalPages}
+                            onPageChange={setPageNumber}
+                            onPageSizeChange={(nextSize) => {
+                              setPageSize(nextSize);
+                              setPageNumber(1);
+                            }}
+                            pageSizeOptions={[...MEMBERSHIP_PAGE_SIZE_OPTIONS]}
+                            showPageSize
+                            showSummary={false}
+                          />
+                        ) : null
+                      }
+                    />
                   )}
                 </div>
               )}

@@ -1,8 +1,10 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { DataTable } from "@/components/common/data-table";
+import { useClientDataTable } from "@/components/common/data-table-hooks";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
+import { createAdNotificationRuleColumns } from "@/features/ad-management/ad-notification-rule-columns";
 import {
   buildUpdateAdManagementSettingsPayload,
   defaultAdManagementNotificationSettings,
@@ -125,8 +127,8 @@ export function AdManagementNotificationsForm({
     queryFn: () => getNotificationTemplates({ moduleKey: "AdManagement" }),
   });
 
-  const templates = templatesQuery.data ?? [];
-  const mappings = mappingsQuery.data ?? [];
+  const templates = useMemo(() => templatesQuery.data ?? [], [templatesQuery.data]);
+  const mappings = useMemo(() => mappingsQuery.data ?? [], [mappingsQuery.data]);
 
   const eventLabel = useMemo(
     () =>
@@ -199,6 +201,48 @@ export function AdManagementNotificationsForm({
       : t("settings:adManagement.notifications.channels.sms");
   }
 
+  const resolveTemplateReadinessForRule = useCallback(
+    (eventKey: string, channel: string) =>
+      resolveTemplateReadiness(templates, eventKey, channel),
+    [templates],
+  );
+
+  const columns = useMemo(
+    () =>
+      createAdNotificationRuleColumns({
+        t,
+        eventLabel,
+        channelLabel,
+        formatRecipient: (rule) => formatRecipientSourceLabel(rule, mappings, t),
+        templateStatusLabel,
+        resolveTemplateStatus: resolveTemplateReadinessForRule,
+        readOnly,
+        isSaving,
+        onToggleEnabled: handleToggleEnabled,
+        onEdit: (rule) => setDialog({ open: true, mode: "edit", rule }),
+        onRemove: handleRemove,
+      }),
+    [
+      t,
+      eventLabel,
+      channelLabel,
+      readOnly,
+      isSaving,
+      mappings,
+      templates,
+      resolveTemplateReadinessForRule,
+      templateStatusLabel,
+      handleToggleEnabled,
+      handleRemove,
+    ],
+  );
+
+  const table = useClientDataTable({
+    data: rules,
+    columns,
+    enablePagination: false,
+  });
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -220,83 +264,7 @@ export function AdManagementNotificationsForm({
           {t("settings:adManagement.notifications.empty")}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-md border">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
-              <tr>
-                <th className="px-3 py-2 text-left">
-                  {t("settings:adManagement.notifications.fields.event")}
-                </th>
-                <th className="px-3 py-2 text-left">
-                  {t("settings:adManagement.notifications.fields.channel")}
-                </th>
-                <th className="px-3 py-2 text-left">
-                  {t("settings:adManagement.notifications.fields.recipientSource")}
-                </th>
-                <th className="px-3 py-2 text-left">
-                  {t("settings:adManagement.notifications.fields.templateStatus")}
-                </th>
-                <th className="px-3 py-2 text-left">
-                  {t("settings:adManagement.notifications.fields.status")}
-                </th>
-                <th className="px-3 py-2 text-right">
-                  {t("settings:adManagement.notifications.fields.actions")}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {rules.map((rule) => {
-                const templateStatus = resolveTemplateReadiness(
-                  templates,
-                  rule.eventKey,
-                  rule.channel,
-                );
-
-                return (
-                  <tr key={rule.id} className="border-t">
-                    <td className="px-3 py-2">{eventLabel[rule.eventKey] ?? rule.eventKey}</td>
-                    <td className="px-3 py-2">{channelLabel(rule.channel)}</td>
-                    <td className="px-3 py-2">
-                      {formatRecipientSourceLabel(rule, mappings, t)}
-                    </td>
-                    <td className="px-3 py-2">{templateStatusLabel(templateStatus)}</td>
-                    <td className="px-3 py-2">
-                      <Switch
-                        checked={rule.isEnabled}
-                        disabled={readOnly || isSaving}
-                        onCheckedChange={(checked) => handleToggleEnabled(rule, checked)}
-                        aria-label={t("settings:adManagement.notifications.fields.status")}
-                      />
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          disabled={readOnly || isSaving}
-                          onClick={() =>
-                            setDialog({ open: true, mode: "edit", rule })}
-                        >
-                          {t("settings:adManagement.notifications.actions.edit")}
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          disabled={readOnly || isSaving}
-                          onClick={() => handleRemove(rule)}
-                        >
-                          {t("settings:adManagement.notifications.actions.remove")}
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <DataTable table={table} />
       )}
 
       <AdManagementNotificationRuleDialog

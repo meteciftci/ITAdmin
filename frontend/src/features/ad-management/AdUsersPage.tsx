@@ -9,18 +9,17 @@ import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { canAccess } from "@/lib/permissions";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
-import { DataToolbar } from "@/components/common/DataToolbar";
-import { DateTimeText } from "@/components/common/DateTimeText";
+import {
+  DataTable,
+  DataTablePagination,
+  DataTableToolbar,
+} from "@/components/common/data-table";
+import { useServerDataTable } from "@/components/common/data-table-hooks";
 import { EmptyState } from "@/components/common/EmptyState";
 import { LoadingState } from "@/components/common/LoadingState";
-import { RowActions } from "@/components/common/RowActions";
 import { SectionCard } from "@/components/common/SectionCard";
 import { Select } from "@/components/ui/select";
-import {
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
+import { createAdUserColumns } from "@/features/ad-management/ad-users-columns";
 import {
   AD_MANAGEMENT_USERS_QUERY_KEY,
   disableAdUser,
@@ -30,9 +29,6 @@ import {
   invalidateAdManagementUserQueries,
   unlockAdUser,
 } from "@/features/ad-management/api";
-import { AdAccountStatusBadge } from "@/features/ad-management/components/AdAccountStatusBadge";
-import { AdDirectoryPagination } from "@/features/ad-management/components/AdDirectoryPagination";
-import { AdLockStatusBadge } from "@/features/ad-management/components/AdLockStatusBadge";
 import { AdManagementModuleStateGuard } from "@/features/ad-management/components/AdManagementModuleStateGuard";
 import { AdUserDetailDialog } from "@/features/ad-management/components/AdUserDetailDialog";
 import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useAdManagementModuleStatus";
@@ -106,6 +102,40 @@ export function AdUsersPage() {
 
   const users = useMemo(() => usersQuery.data?.items ?? [], [usersQuery.data]);
 
+  const columns = useMemo(
+    () =>
+      createAdUserColumns({
+        t,
+        canManageGroups,
+        canDisableUser,
+        canEnableUser,
+        canUnlockUser,
+        onDetail: (user) => setSelectedUserId(user.id),
+        onManageGroups: (user) => navigate(`/ad-management/users/${user.id}/groups`),
+        onDisable: (user) => setConfirmTarget({ user, action: "disable" }),
+        onEnable: (user) => setConfirmTarget({ user, action: "enable" }),
+        onUnlock: (user) => setConfirmTarget({ user, action: "unlock" }),
+      }),
+    [
+      t,
+      canManageGroups,
+      canDisableUser,
+      canEnableUser,
+      canUnlockUser,
+      navigate,
+    ],
+  );
+
+  const table = useServerDataTable({
+    data: users,
+    columns,
+    pageCount: usersQuery.data?.hasNextPage ? pageNumber + 1 : pageNumber,
+    pageIndex: pageNumber - 1,
+    pageSize,
+  });
+
+  const activeFilterCount = statusFilter !== "all" ? 1 : 0;
+
   const accountOperationMutation = useMutation({
     mutationFn: async ({
       userId,
@@ -169,10 +199,6 @@ export function AdUsersPage() {
     }
   };
 
-  const openDetail = (user: AdUserListItem) => {
-    setSelectedUserId(user.id);
-  };
-
   const confirmCopy = useMemo(() => {
     if (!confirmTarget) {
       return { title: "", description: "", variant: "default" as const };
@@ -220,10 +246,29 @@ export function AdUsersPage() {
         description={t("adManagement:users.description")}
       >
         <div className="space-y-4">
-          <DataToolbar
+          <DataTableToolbar
             searchValue={search}
             onSearchChange={handleSearchChange}
             searchPlaceholder={t("adManagement:users.searchPlaceholder")}
+            activeFilterCount={activeFilterCount}
+            onClearFilters={() => {
+              setStatusFilter("all");
+              setPageNumber(1);
+            }}
+            filterContent={
+              <Select
+                value={statusFilter}
+                onChange={(event) => {
+                  setStatusFilter(event.target.value as AdUserStatusFilter);
+                  setPageNumber(1);
+                }}
+                className="w-full"
+              >
+                <option value="active">{t("adManagement:users.filters.active")}</option>
+                <option value="disabled">{t("adManagement:users.filters.disabled")}</option>
+                <option value="all">{t("adManagement:users.filters.all")}</option>
+              </Select>
+            }
             actions={
               <>
                 {canCreateUser ? (
@@ -239,22 +284,7 @@ export function AdUsersPage() {
                 </Button>
               </>
             }
-          >
-            <div className="flex flex-wrap items-center gap-2">
-              <Select
-                value={statusFilter}
-                onChange={(event) => {
-                  setStatusFilter(event.target.value as AdUserStatusFilter);
-                  setPageNumber(1);
-                }}
-                className="w-full sm:w-40"
-              >
-                <option value="active">{t("adManagement:users.filters.active")}</option>
-                <option value="disabled">{t("adManagement:users.filters.disabled")}</option>
-                <option value="all">{t("adManagement:users.filters.all")}</option>
-              </Select>
-            </div>
-          </DataToolbar>
+          />
 
           {!canSearch ? (
             <EmptyState
@@ -273,120 +303,27 @@ export function AdUsersPage() {
           ) : null}
 
           {canSearch && users.length > 0 ? (
-            <div className="overflow-x-auto rounded-lg border bg-card">
-              <table className="min-w-full text-sm">
-                <thead className="bg-muted/50 text-left">
-                  <tr>
-                    <th className="px-3 py-2 font-medium">
-                      {t("adManagement:users.table.displayName")}
-                    </th>
-                    <th className="px-3 py-2 font-medium">
-                      {t("adManagement:users.table.username")}
-                    </th>
-                    <th className="px-3 py-2 font-medium">
-                      {t("adManagement:users.table.upn")}
-                    </th>
-                    <th className="px-3 py-2 font-medium">
-                      {t("adManagement:users.table.email")}
-                    </th>
-                    <th className="px-3 py-2 font-medium">
-                      {t("adManagement:users.table.department")}
-                    </th>
-                    <th className="px-3 py-2 font-medium">
-                      {t("adManagement:users.table.status")}
-                    </th>
-                    <th className="px-3 py-2 font-medium">
-                      {t("adManagement:users.table.locked")}
-                    </th>
-                    <th className="px-3 py-2 font-medium">
-                      {t("adManagement:users.table.lastLogon")}
-                    </th>
-                    <th className="px-3 py-2 font-medium">
-                      {t("adManagement:users.table.actions")}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((user) => (
-                    <tr key={user.id} className="border-t align-top hover:bg-muted/20">
-                      <td className="px-3 py-2">{user.displayName || "-"}</td>
-                      <td className="px-3 py-2">{user.samAccountName || "-"}</td>
-                      <td className="max-w-48 truncate px-3 py-2">
-                        {user.userPrincipalName || "-"}
-                      </td>
-                      <td className="max-w-48 truncate px-3 py-2">{user.mail || "-"}</td>
-                      <td className="px-3 py-2">{user.department || "-"}</td>
-                      <td className="px-3 py-2">
-                        <AdAccountStatusBadge isEnabled={user.isEnabled} />
-                      </td>
-                      <td className="px-3 py-2">
-                        <AdLockStatusBadge isLockedOut={user.isLockedOut} />
-                      </td>
-                      <td className="px-3 py-2">
-                        <DateTimeText value={user.lastLogonAt} />
-                      </td>
-                      <td className="px-3 py-2">
-                        <RowActions>
-                          <DropdownMenuLabel>{t("common:actions.actions")}</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => openDetail(user)}>
-                            {t("adManagement:users.actions.detail")}
-                          </DropdownMenuItem>
-                          {canManageGroups ? (
-                            <DropdownMenuItem
-                              onClick={() =>
-                                navigate(`/ad-management/users/${user.id}/groups`)
-                              }
-                            >
-                              {t("adManagement:users.actions.manageGroups")}
-                            </DropdownMenuItem>
-                          ) : null}
-                          {canDisableUser && user.isEnabled ? (
-                            <DropdownMenuItem
-                              onClick={() =>
-                                setConfirmTarget({ user, action: "disable" })
-                              }
-                            >
-                              {t("adManagement:users.actions.disable")}
-                            </DropdownMenuItem>
-                          ) : null}
-                          {canEnableUser && !user.isEnabled ? (
-                            <DropdownMenuItem
-                              onClick={() =>
-                                setConfirmTarget({ user, action: "enable" })
-                              }
-                            >
-                              {t("adManagement:users.actions.enable")}
-                            </DropdownMenuItem>
-                          ) : null}
-                          {canUnlockUser && user.isLockedOut ? (
-                            <DropdownMenuItem
-                              onClick={() =>
-                                setConfirmTarget({ user, action: "unlock" })
-                              }
-                            >
-                              {t("adManagement:users.actions.unlock")}
-                            </DropdownMenuItem>
-                          ) : null}
-                        </RowActions>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {usersQuery.data ? (
-                <AdDirectoryPagination
-                  pageNumber={usersQuery.data.pageNumber}
-                  pageSize={usersQuery.data.pageSize}
-                  hasNextPage={usersQuery.data.hasNextPage}
-                  onPageChange={setPageNumber}
-                  onPageSizeChange={(nextPageSize) => {
-                    setPageSize(nextPageSize);
-                    setPageNumber(1);
-                  }}
-                />
-              ) : null}
-            </div>
+            <DataTable
+              table={table}
+              footer={
+                usersQuery.data ? (
+                  <DataTablePagination
+                    mode="directory"
+                    pageNumber={usersQuery.data.pageNumber}
+                    pageSize={usersQuery.data.pageSize}
+                    hasNextPage={usersQuery.data.hasNextPage}
+                    onPageChange={setPageNumber}
+                    onPageSizeChange={(nextPageSize) => {
+                      setPageSize(nextPageSize);
+                      setPageNumber(1);
+                    }}
+                    summaryText={t("adManagement:users.pagination.page", {
+                      pageNumber: usersQuery.data.pageNumber,
+                    })}
+                  />
+                ) : null
+              }
+            />
           ) : null}
         </div>
       </SectionCard>

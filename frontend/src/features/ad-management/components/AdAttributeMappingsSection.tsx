@@ -1,6 +1,10 @@
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
+import { DataTable } from "@/components/common/data-table";
+import { useClientDataTable } from "@/components/common/data-table-hooks";
 import { Button } from "@/components/ui/button";
+import { createAdAttributeMappingColumns } from "@/features/ad-management/ad-attribute-mapping-columns";
 import type { AdAttributeMapping } from "@/features/ad-management/types";
 
 type Props = {
@@ -23,6 +27,23 @@ export function AdAttributeMappingsSection({
   const { t } = useTranslation(["settings", "common"]);
 
   const isEmpty = !isLoading && mappings.length === 0;
+
+  const columns = useMemo(
+    () =>
+      createAdAttributeMappingColumns({
+        t,
+        readOnly,
+        onEdit,
+        onDelete,
+      }),
+    [t, readOnly, onEdit, onDelete],
+  );
+
+  const table = useClientDataTable({
+    data: mappings,
+    columns,
+    enablePagination: false,
+  });
 
   return (
     <div className="space-y-4">
@@ -55,95 +76,7 @@ export function AdAttributeMappingsSection({
         </div>
       ) : null}
 
-      {!isLoading && mappings.length > 0 ? (
-        <div className="overflow-x-auto rounded-md border">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
-              <tr>
-                <th className="px-3 py-2 text-left">
-                  {t("settings:adManagement.mappings.table.displayName")}
-                </th>
-                <th className="px-3 py-2 text-left">
-                  {t("settings:adManagement.mappings.table.logicalField")}
-                </th>
-                <th className="px-3 py-2 text-left">
-                  {t("settings:adManagement.mappings.table.attributeName")}
-                </th>
-                <th className="px-3 py-2 text-left">
-                  {t("settings:adManagement.mappings.table.isEnabled")}
-                </th>
-                <th className="px-3 py-2 text-left">
-                  {t("settings:adManagement.mappings.table.isEditable")}
-                </th>
-                <th className="px-3 py-2 text-left">
-                  {t("settings:adManagement.mappings.table.isSensitive")}
-                </th>
-                <th className="px-3 py-2 text-left">
-                  {t("settings:adManagement.mappings.table.validationType")}
-                </th>
-                <th className="px-3 py-2 text-left">
-                  {t("settings:adManagement.mappings.table.maskingStrategy")}
-                </th>
-                <th className="px-3 py-2 text-left">
-                  {t("settings:adManagement.mappings.table.sortOrder")}
-                </th>
-                <th className="px-3 py-2 text-right">
-                  {t("settings:adManagement.mappings.table.actions")}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {mappings.map((item) => (
-                <tr key={item.id} className="border-t">
-                  <td className="px-3 py-2 font-medium">{item.displayName}</td>
-                  <td className="px-3 py-2">
-                    <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
-                      {item.logicalField}
-                    </code>
-                  </td>
-                  <td className="px-3 py-2">
-                    <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
-                      {item.attributeName}
-                    </code>
-                  </td>
-                  <td className="px-3 py-2">{formatBool(item.isEnabled, t)}</td>
-                  <td className="px-3 py-2">{formatBool(item.isEditable, t)}</td>
-                  <td className="px-3 py-2">{formatBool(item.isSensitive, t)}</td>
-                  <td className="px-3 py-2">
-                    {t(`settings:adManagement.mappings.validationTypes.${item.validationType}`, {
-                      defaultValue: item.validationType,
-                    })}
-                  </td>
-                  <td className="px-3 py-2">
-                    {t(`settings:adManagement.mappings.maskingStrategies.${item.maskingStrategy}`, {
-                      defaultValue: item.maskingStrategy,
-                    })}
-                  </td>
-                  <td className="px-3 py-2">{item.sortOrder}</td>
-                  <td className="px-3 py-2 text-right">
-                    {!readOnly ? (
-                      <div className="flex justify-end gap-2">
-                        <Button variant="outline" onClick={() => onEdit(item)}>
-                          {t("settings:adManagement.mappings.actions.edit")}
-                        </Button>
-                        <Button variant="destructive" onClick={() => onDelete(item)}>
-                          {t("settings:adManagement.mappings.actions.delete")}
-                        </Button>
-                      </div>
-                    ) : null}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : null}
+      {!isLoading && mappings.length > 0 ? <DataTable table={table} /> : null}
     </div>
   );
-}
-
-function formatBool(value: boolean, t: (key: string) => string): string {
-  return value
-    ? t("common:status.active")
-    : t("common:status.passive");
 }

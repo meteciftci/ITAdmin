@@ -39,6 +39,15 @@
       "next": "Next",
       "last": "Last"
     },
+    "dataTable": {
+      "filters": "Filters",
+      "clearFilters": "Clear filters",
+      "activeFilters": "Active filters",
+      "noFilters": "No filters",
+      "search": "Search",
+      "noResults": "No results found",
+      "loading": "Loading table"
+    },
     "loading": "Loading...",
     "empty": "No records found.",
     "error": "Something went wrong.",
