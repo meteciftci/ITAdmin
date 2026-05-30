@@ -16,10 +16,12 @@ import type { AdUserListItem } from "@/features/ad-management/types";
 type CreateAdUserColumnsOptions = {
   t: TFunction;
   canManageGroups: boolean;
+  canUpdateUser: boolean;
   canDisableUser: boolean;
   canEnableUser: boolean;
   canUnlockUser: boolean;
   onDetail: (user: AdUserListItem) => void;
+  onEdit: (user: AdUserListItem) => void;
   onManageGroups: (user: AdUserListItem) => void;
   onDisable: (user: AdUserListItem) => void;
   onEnable: (user: AdUserListItem) => void;
@@ -29,10 +31,12 @@ type CreateAdUserColumnsOptions = {
 export function createAdUserColumns({
   t,
   canManageGroups,
+  canUpdateUser,
   canDisableUser,
   canEnableUser,
   canUnlockUser,
   onDetail,
+  onEdit,
   onManageGroups,
   onDisable,
   onEnable,
@@ -96,6 +100,11 @@ export function createAdUserColumns({
             <DropdownMenuItem onClick={() => onDetail(user)}>
               {t("adManagement:users.actions.detail")}
             </DropdownMenuItem>
+            {canUpdateUser ? (
+              <DropdownMenuItem onClick={() => onEdit(user)}>
+                {t("adManagement:users.actions.edit")}
+              </DropdownMenuItem>
+            ) : null}
             {canManageGroups ? (
               <DropdownMenuItem onClick={() => onManageGroups(user)}>
                 {t("adManagement:users.actions.manageGroups")}

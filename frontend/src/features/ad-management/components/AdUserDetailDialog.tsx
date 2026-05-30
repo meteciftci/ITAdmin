@@ -1,10 +1,12 @@
 import type { ReactNode } from "react";
 import { useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { useAuthStore } from "@/features/auth/auth-store";
+import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
+import { appendReturnTo } from "@/features/ad-management/ad-return-path";
 import { canAccess } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +23,8 @@ const MAX_ATTRIBUTE_VALUE_LENGTH = 500;
 type Props = {
   user: AdUserDetail | null;
   open: boolean;
+  returnTo: string;
+  canUpdateUser: boolean;
   onOpenChange: (open: boolean) => void;
 };
 
@@ -41,8 +45,15 @@ function formatMappedValue(attribute: MappedAdUserAttribute): string {
   return formatAttributeValues(attribute.value);
 }
 
-export function AdUserDetailDialog({ user, open, onOpenChange }: Props) {
+export function AdUserDetailDialog({
+  user,
+  open,
+  returnTo,
+  canUpdateUser,
+  onOpenChange,
+}: Props) {
   const { t } = useTranslation(["adManagement", "common"]);
+  const navigate = useNavigate();
   const currentUser = useAuthStore((state) => state.user);
   const canManageGroups = canAccess(currentUser, "AdManagement.Users.Groups.View");
 
@@ -122,21 +133,40 @@ export function AdUserDetailDialog({ user, open, onOpenChange }: Props) {
             </div>
           </section>
 
+          {(canUpdateUser || canManageGroups) ? (
+            <>
+              <Separator />
+              <section className="flex flex-wrap items-center justify-end gap-2">
+                {canManageGroups ? (
+                  <Link
+                    to={appendReturnTo(`/ad-management/users/${user.id}/groups`, returnTo)}
+                    className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}
+                    onClick={() => onOpenChange(false)}
+                  >
+                    {t("adManagement:users.actions.manageGroups")}
+                  </Link>
+                ) : null}
+                {canUpdateUser ? (
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      onOpenChange(false);
+                      navigate(
+                        appendReturnTo(`/ad-management/users/${user.id}/edit`, returnTo),
+                      );
+                    }}
+                  >
+                    {t("adManagement:users.actions.edit")}
+                  </Button>
+                ) : null}
+              </section>
+            </>
+          ) : null}
+
           <Separator />
 
           <section className="space-y-2">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <SectionTitle>{t("adManagement:users.detail.groups")}</SectionTitle>
-              {canManageGroups ? (
-                <Link
-                  to={`/ad-management/users/${user.id}/groups`}
-                  className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-                  onClick={() => onOpenChange(false)}
-                >
-                  {t("adManagement:users.actions.manageGroups")}
-                </Link>
-              ) : null}
-            </div>
+            <SectionTitle>{t("adManagement:users.detail.groups")}</SectionTitle>
             {user.groups.length > 0 ? (
               <div className="flex max-h-40 flex-wrap gap-2 overflow-y-auto rounded-md border bg-muted/20 p-2">
                 {user.groups.map((group) => (

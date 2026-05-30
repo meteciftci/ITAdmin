@@ -40,12 +40,41 @@
       },
       "actions": {
         "detail": "Detay",
+        "edit": "Düzenle",
         "refresh": "Yenile",
         "create": "Kullanıcı Oluştur",
         "enable": "Hesabı aktife al",
         "disable": "Hesabı pasife al",
         "unlock": "Kilidi aç",
         "manageGroups": "Grup üyeliklerini yönet"
+      },
+      "edit": {
+        "pageTitle": "AD kullanıcısı düzenle",
+        "dialogTitle": "Kullanıcıyı düzenle",
+        "sections": {
+          "basic": "Temel bilgiler",
+          "account": "Hesap bilgileri",
+          "contact": "İletişim bilgileri",
+          "mappedAttributes": "Eşlenen alanlar"
+        },
+        "actions": {
+          "save": "Kaydet",
+          "back": "Geri"
+        },
+        "messages": {
+          "updated": "Kullanıcı başarıyla güncellendi.",
+          "updateFailed": "Kullanıcı güncellenemedi."
+        },
+        "validation": {
+          "givenNameRequired": "Ad zorunludur.",
+          "surnameRequired": "Soyad zorunludur.",
+          "displayNameRequired": "Görünen ad zorunludur.",
+          "samAccountNameRequired": "Kullanıcı adı zorunludur.",
+          "samAccountNameTooLong": "sAMAccountName 20 karakterden uzun olamaz.",
+          "samAccountNameInvalid": "Kullanıcı adı geçersiz karakterler içeriyor.",
+          "upnRequired": "UPN zorunludur.",
+          "upnInvalid": "UPN geçerli formatta olmalıdır."
+        }
       },
       "confirm": {
         "enableTitle": "Kullanıcı hesabı aktife alınacak",

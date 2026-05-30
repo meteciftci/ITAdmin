@@ -21,6 +21,7 @@ import type {
   GetAdUsersParams,
   UpdateAdAttributeMappingRequest,
   UpdateAdManagementSettingsRequest,
+  UpdateAdUserRequest,
 } from "@/features/ad-management/types";
 
 export const AD_MANAGEMENT_SETTINGS_QUERY_KEY = [
@@ -120,6 +121,17 @@ export const getAdUsers = async (
 
 export const getAdUserById = async (id: string): Promise<AdUserDetail> => {
   const { data } = await apiClient.get<AdUserDetail>(`/ad-management/users/${id}`);
+  return data;
+};
+
+export const updateAdUser = async (
+  userId: string,
+  payload: UpdateAdUserRequest,
+): Promise<AdUserDetail> => {
+  const { data } = await apiClient.put<AdUserDetail>(
+    `/ad-management/users/${userId}`,
+    payload,
+  );
   return data;
 };
 

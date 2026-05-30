@@ -40,12 +40,41 @@
       },
       "actions": {
         "detail": "Detail",
+        "edit": "Edit",
         "refresh": "Refresh",
         "create": "Create User",
         "enable": "Enable account",
         "disable": "Disable account",
         "unlock": "Unlock account",
         "manageGroups": "Manage group memberships"
+      },
+      "edit": {
+        "pageTitle": "Edit AD user",
+        "dialogTitle": "Edit user",
+        "sections": {
+          "basic": "Basic information",
+          "account": "Account information",
+          "contact": "Contact information",
+          "mappedAttributes": "Mapped attributes"
+        },
+        "actions": {
+          "save": "Save",
+          "back": "Back"
+        },
+        "messages": {
+          "updated": "User updated successfully.",
+          "updateFailed": "User could not be updated."
+        },
+        "validation": {
+          "givenNameRequired": "Given name is required.",
+          "surnameRequired": "Surname is required.",
+          "displayNameRequired": "Display name is required.",
+          "samAccountNameRequired": "User name is required.",
+          "samAccountNameTooLong": "sAMAccountName cannot be longer than 20 characters.",
+          "samAccountNameInvalid": "User name contains invalid characters.",
+          "upnRequired": "UPN is required.",
+          "upnInvalid": "UPN must be in a valid format."
+        }
       },
       "confirm": {
         "enableTitle": "User account will be enabled",

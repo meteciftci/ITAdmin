@@ -29,6 +29,10 @@ export function getBreadcrumbKeyByPath(pathname: string): string | null {
     return "items.adManagementUserGroups";
   }
 
+  if (/^\/ad-management\/users\/[^/]+\/edit$/.test(pathname)) {
+    return "items.adManagementUsersEdit";
+  }
+
   const exactMatch = breadcrumbItems.find((item) => item.to === pathname);
   if (exactMatch) {
     return exactMatch.titleKey;

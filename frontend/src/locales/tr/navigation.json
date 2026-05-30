@@ -12,6 +12,7 @@
       "adManagement": "AD Yönetim",
       "adManagementUsers": "Kullanıcılar",
       "adManagementUsersCreate": "AD kullanıcısı oluştur",
+      "adManagementUsersEdit": "AD kullanıcısı düzenle",
       "adManagementUserGroups": "Grup Üyelikleri",
       "users": "Kullanıcılar",
       "roles": "Roller",

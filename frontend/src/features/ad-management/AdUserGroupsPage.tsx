@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, Navigate, useParams } from "react-router-dom";
+import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -38,6 +38,7 @@ import type {
   AdGroupSearchItem,
   AdUserGroupMembershipItem,
 } from "@/features/ad-management/types";
+import { resolveSafeReturnPath } from "@/features/ad-management/ad-return-path";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { canAccess } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
@@ -48,6 +49,8 @@ const MEMBERSHIP_PAGE_SIZE_OPTIONS = [10, 25, 50] as const;
 export function AdUserGroupsPage() {
   const { t } = useTranslation(["adManagement", "common"]);
   const { id: userId } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const returnPath = resolveSafeReturnPath(searchParams.get("returnTo"));
   const queryClient = useQueryClient();
   const currentUser = useAuthStore((state) => state.user);
   const moduleStatus = useAdManagementModuleStatus();
@@ -173,7 +176,7 @@ export function AdUserGroupsPage() {
           description={t("adManagement:users.groups.pageDescription")}
           actions={
             <Link
-              to="/ad-management/users"
+              to={returnPath}
               className={cn(buttonVariants({ variant: "outline" }))}
             >
               {t("common:actions.back")}

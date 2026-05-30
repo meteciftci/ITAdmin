@@ -285,6 +285,22 @@ export type GetAdUsersParams = {
   pageSize?: number;
 };
 
+export type UpdateAdUserMappedAttributeRequest = {
+  logicalField: string;
+  value: string | string[] | null;
+};
+
+export type UpdateAdUserRequest = {
+  givenName: string;
+  surname: string;
+  displayName: string;
+  samAccountName: string;
+  userPrincipalName: string;
+  mail?: string | null;
+  department?: string | null;
+  mappedAttributes: UpdateAdUserMappedAttributeRequest[];
+};
+
 export type AdUserAccountOperationResponse = {
   success: boolean;
   message: string;
