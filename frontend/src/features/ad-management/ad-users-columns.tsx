@@ -69,12 +69,14 @@ export function createAdUserColumns({
     {
       id: "status",
       header: () => t("adManagement:users.table.status"),
-      cell: ({ row }) => <AdAccountStatusBadge isEnabled={row.original.isEnabled} />,
-    },
-    {
-      id: "locked",
-      header: () => t("adManagement:users.table.locked"),
-      cell: ({ row }) => <AdLockStatusBadge isLockedOut={row.original.isLockedOut} />,
+      cell: ({ row }) => (
+        <div className="flex flex-wrap items-center gap-2">
+          <AdAccountStatusBadge isEnabled={row.original.isEnabled} />
+          {row.original.isLockedOut ? (
+            <AdLockStatusBadge isLockedOut={row.original.isLockedOut} />
+          ) : null}
+        </div>
+      ),
     },
     {
       id: "lastLogon",
