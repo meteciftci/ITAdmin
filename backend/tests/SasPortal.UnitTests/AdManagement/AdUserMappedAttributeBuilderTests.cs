@@ -99,7 +99,7 @@ public sealed class AdUserMappedAttributeBuilderTests
     }
 
     [Fact]
-    public void Build_SkipsEmptyValues()
+    public void Build_IncludesEnabledMappingWithNullValueWhenAdValueEmpty()
     {
         var mappings = new[]
         {
@@ -117,7 +117,28 @@ public sealed class AdUserMappedAttributeBuilderTests
                 : Array.Empty<string>(),
             mappings);
 
-        Assert.Empty(result);
+        Assert.Single(result);
+        Assert.Null(result[0].Value);
+        Assert.Equal("mobilePhone", result[0].LogicalField);
+        Assert.Equal("Cep Telefonu", result[0].DisplayName);
+        Assert.True(result[0].IsEditable);
+    }
+
+    [Fact]
+    public void Build_IncludesEnabledMappingWithNullValueWhenAttributeMissingInAd()
+    {
+        var mappings = new[]
+        {
+            CreateMapping("pdks", "PDKS", "employeeNumber", isSearchable: false),
+        };
+
+        var result = AdUserMappedAttributeBuilder.Build(
+            _ => Array.Empty<string>(),
+            mappings);
+
+        Assert.Single(result);
+        Assert.Null(result[0].Value);
+        Assert.Equal("pdks", result[0].LogicalField);
     }
 
     [Fact]

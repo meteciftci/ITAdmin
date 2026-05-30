@@ -25,21 +25,24 @@ public static class AdUserMappedAttributeBuilder
                 .Select(static value => value.Trim())
                 .ToList();
 
+            IReadOnlyList<string>? responseValues;
             if (rawValues.Count == 0)
             {
-                continue;
+                responseValues = null;
             }
-
-            var maskedValues = AdAttributeValueMasker.MaskValues(
-                rawValues,
-                mapping.IsSensitive,
-                mapping.MaskingStrategy);
+            else
+            {
+                responseValues = AdAttributeValueMasker.MaskValues(
+                    rawValues,
+                    mapping.IsSensitive,
+                    mapping.MaskingStrategy);
+            }
 
             result.Add(new MappedAdUserAttribute(
                 mapping.LogicalField,
                 mapping.DisplayName,
                 attributeName,
-                maskedValues,
+                responseValues,
                 mapping.IsSensitive,
                 mapping.MaskingStrategy,
                 mapping.IsEditable,

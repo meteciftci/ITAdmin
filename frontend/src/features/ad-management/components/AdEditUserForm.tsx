@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { buildChangedMappedAttributes } from "@/features/ad-management/ad-edit-mapped-attributes";
 import {
   buildDisplayNameFromParts,
   isSamAccountNameValid,
@@ -22,7 +23,6 @@ import {
 import type {
   AdUserDetail,
   MappedAdUserAttribute,
-  UpdateAdUserMappedAttributeRequest,
 } from "@/features/ad-management/types";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { cn } from "@/lib/utils";
@@ -152,13 +152,9 @@ export function AdEditUserForm({ user, returnPath }: Props) {
       return;
     }
 
-    const mappedAttributes: UpdateAdUserMappedAttributeRequest[] = editableMappedAttributes.map(
-      (attribute) => ({
-        logicalField: attribute.logicalField,
-        value: mappedValues[attribute.logicalField]?.trim()
-          ? mappedValues[attribute.logicalField].trim()
-          : null,
-      }),
+    const mappedAttributes = buildChangedMappedAttributes(
+      editableMappedAttributes,
+      mappedValues,
     );
 
     updateMutation.mutate({

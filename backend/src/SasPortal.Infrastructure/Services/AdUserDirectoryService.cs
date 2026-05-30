@@ -1,6 +1,7 @@
 using System.Collections;
 using System.DirectoryServices.Protocols;
 using System.Net;
+using Microsoft.Extensions.Logging;
 using SasPortal.Application.Abstractions.Services;
 using SasPortal.Application.Common.AdManagement;
 using SasPortal.Application.Common.Models;
@@ -12,7 +13,8 @@ public sealed partial class AdUserDirectoryService(
     IAdAttributeMappingService attributeMappingService,
     IAdOperationLogService adOperationLogService,
     IAuditLogWriter auditLogWriter,
-    IAdManagementNotificationEnqueueService notificationEnqueueService) : IAdUserDirectoryService
+    IAdManagementNotificationEnqueueService notificationEnqueueService,
+    ILogger<AdUserDirectoryService> logger) : IAdUserDirectoryService
 {
     private const string AdManagementDisabledMessage = "AD yönetim modülü etkin değil.";
     private const string AdManagementNotConfiguredMessage =

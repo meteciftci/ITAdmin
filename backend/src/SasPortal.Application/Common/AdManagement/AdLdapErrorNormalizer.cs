@@ -38,6 +38,12 @@ public static class AdLdapErrorNormalizer
 
     public static string Normalize(int ldapErrorCode, string? diagnosticMessage = null)
     {
+        var adNormalized = TryNormalizeFromAdDiagnostic(diagnosticMessage);
+        if (adNormalized is not null)
+        {
+            return adNormalized;
+        }
+
         if (IsConnectionFailure(ldapErrorCode, diagnosticMessage))
         {
             return ConnectionFailedMessage;
@@ -85,17 +91,82 @@ public static class AdLdapErrorNormalizer
             || message.Contains("connection", StringComparison.OrdinalIgnoreCase);
     }
 
+    private static string? TryNormalizeFromAdDiagnostic(string? message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return null;
+        }
+
+        if (ContainsAdDiagnostic(message, "0000207D", "name reference is invalid", "invalid dn syntax"))
+        {
+            return InvalidDnSyntaxMessage;
+        }
+
+        if (ContainsAdDiagnostic(message, "0000052D"))
+        {
+            return ConstraintViolationMessage;
+        }
+
+        if (ContainsAdDiagnostic(message, "00002098", "00002089", "insufficient access rights"))
+        {
+            return InsufficientAccessRightsMessage;
+        }
+
+        if (ContainsAdDiagnostic(
+                message,
+                "0000208F",
+                "entry_exists",
+                "entry already exists",
+                "attributeorvalueexists",
+                "already exists",
+                "object already exists"))
+        {
+            return EntryAlreadyExistsMessage;
+        }
+
+        if (ContainsAdDiagnostic(message, "00002056", "unwillingtoperform", "unwilling to perform"))
+        {
+            return UnwillingToPerformMessage;
+        }
+
+        if (ContainsAdDiagnostic(message, "00002030", "nosuchobject", "no such object"))
+        {
+            return NoSuchObjectMessage;
+        }
+
+        return null;
+    }
+
+    private static bool ContainsAdDiagnostic(string? message, params string[] tokens)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return false;
+        }
+
+        foreach (var token in tokens)
+        {
+            if (message.Contains(token, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static bool MatchesAlreadyExists(string? message) =>
-        ContainsAny(message, "entryalreadyexists", "already exists", "attributeorvalueexists");
+        ContainsAny(message, "entryalreadyexists", "already exists", "attributeorvalueexists", "entry_exists");
 
     private static bool MatchesConstraint(string? message) =>
-        ContainsAny(message, "constraintviolation", "constraint violation");
+        ContainsAny(message, "constraintviolation", "constraint violation", "0000052d");
 
     private static bool MatchesInvalidDn(string? message) =>
-        ContainsAny(message, "invaliddnsyntax", "invalid dn", "namingviolation");
+        ContainsAny(message, "invaliddnsyntax", "invalid dn", "namingviolation", "0000207d", "name reference is invalid");
 
     private static bool MatchesInsufficientAccess(string? message) =>
-        ContainsAny(message, "insufficientaccessrights", "insufficient access");
+        ContainsAny(message, "insufficientaccessrights", "insufficient access", "00002098", "00002089");
 
     private static bool MatchesUnwilling(string? message) =>
         ContainsAny(message, "unwillingtoperform", "unwilling to perform");

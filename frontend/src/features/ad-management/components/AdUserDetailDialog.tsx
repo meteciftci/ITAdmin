@@ -4,7 +4,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { useAuthStore } from "@/features/auth/auth-store";
-import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { appendReturnTo } from "@/features/ad-management/ad-return-path";
 import { canAccess } from "@/lib/permissions";
@@ -19,6 +18,23 @@ import { AdLockStatusBadge } from "@/features/ad-management/components/AdLockSta
 import type { AdUserDetail, MappedAdUserAttribute } from "@/features/ad-management/types";
 
 const MAX_ATTRIBUTE_VALUE_LENGTH = 500;
+
+const detailDialogActionButtonClass = cn(
+  buttonVariants({ size: "sm" }),
+  "inline-flex h-8 min-h-8 items-center justify-center px-3 text-sm",
+);
+
+const editUserButtonClass = cn(
+  detailDialogActionButtonClass,
+  "border border-amber-500/30 bg-amber-500/15 text-amber-700 hover:bg-amber-500/25",
+  "dark:bg-amber-500/15 dark:text-amber-300 dark:hover:bg-amber-500/25",
+);
+
+const manageGroupsButtonClass = cn(
+  detailDialogActionButtonClass,
+  "border border-emerald-500/30 bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/25",
+  "dark:bg-emerald-500/15 dark:text-emerald-300 dark:hover:bg-emerald-500/25",
+);
 
 type Props = {
   user: AdUserDetail | null;
@@ -65,12 +81,40 @@ export function AdUserDetailDialog({
     [user],
   );
 
+  const headerActions =
+    user && (canUpdateUser || canManageGroups) ? (
+      <>
+        {canManageGroups ? (
+          <Link
+            to={appendReturnTo(`/ad-management/users/${user.id}/groups`, returnTo)}
+            className={manageGroupsButtonClass}
+            onClick={() => onOpenChange(false)}
+          >
+            {t("adManagement:users.actions.manageGroups")}
+          </Link>
+        ) : null}
+        {canUpdateUser ? (
+          <button
+            type="button"
+            className={editUserButtonClass}
+            onClick={() => {
+              onOpenChange(false);
+              navigate(appendReturnTo(`/ad-management/users/${user.id}/edit`, returnTo));
+            }}
+          >
+            {t("adManagement:users.actions.edit")}
+          </button>
+        ) : null}
+      </>
+    ) : undefined;
+
   return (
     <DetailDialog
       open={open}
       onOpenChange={onOpenChange}
       title={t("adManagement:users.detail.dialogTitle")}
       description={user?.displayName ?? user?.samAccountName ?? undefined}
+      actions={headerActions}
     >
       {user ? (
         <div className="space-y-4 text-sm">
@@ -132,36 +176,6 @@ export function AdUserDetailDialog({
               </DetailField>
             </div>
           </section>
-
-          {(canUpdateUser || canManageGroups) ? (
-            <>
-              <Separator />
-              <section className="flex flex-wrap items-center justify-end gap-2">
-                {canManageGroups ? (
-                  <Link
-                    to={appendReturnTo(`/ad-management/users/${user.id}/groups`, returnTo)}
-                    className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}
-                    onClick={() => onOpenChange(false)}
-                  >
-                    {t("adManagement:users.actions.manageGroups")}
-                  </Link>
-                ) : null}
-                {canUpdateUser ? (
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      onOpenChange(false);
-                      navigate(
-                        appendReturnTo(`/ad-management/users/${user.id}/edit`, returnTo),
-                      );
-                    }}
-                  >
-                    {t("adManagement:users.actions.edit")}
-                  </Button>
-                ) : null}
-              </section>
-            </>
-          ) : null}
 
           <Separator />
 
