@@ -1,5 +1,5 @@
 ---
-description: SASPortal frontend için çok dil, translation key, dil tercihi ve tarih formatlama kuralları.
+description: SASPortal frontend için çok dil, translation key, namespace, enum label, ortak component metinleri, tarih formatlama ve i18n kalite kuralları.
 globs:
   - "frontend/**/*.{ts,tsx,json}"
 alwaysApply: true
@@ -7,45 +7,90 @@ alwaysApply: true
 
 # SASPortal Frontend i18n Rules
 
-Bu kurallar frontend dosyaları üzerinde çalışırken uygulanır.
+Bu kurallar SASPortal frontend dosyaları üzerinde çalışırken uygulanır.
 
-## Genel Amaç
+Amaç; kullanıcıya görünen tüm metinlerin çok dilli, tutarlı, okunabilir, namespace yapısına uygun ve teknik code/enum değerlerinden ayrılmış olmasını sağlamaktır.
 
-SAS Portal v2 çok dilli geliştirilecektir.
+---
 
-Desteklenecek ilk diller:
+## 1. Genel Amaç
 
-- Türkçe: `tr`
-- İngilizce: `en`
+SASPortal çok dilli geliştirilecektir.
 
-## Hardcoded Text Yasağı
+Desteklenen ilk diller:
+
+```text
+tr
+en
+```
+
+Varsayılan dil:
+
+```text
+tr
+```
+
+Kurallar:
+
+* Yeni kullanıcı arayüzü metinleri translation key ile yazılır.
+* Türkçe ve İngilizce karşılıklar birlikte eklenir.
+* Eksik translation key bırakılmaz.
+* Teknik enum/code değerleri kullanıcıya direkt basılmaz.
+* Kullanıcıya görünen metinlerde backend teknik stringlerine güvenilmez.
+
+---
+
+## 2. Hardcoded Text Yasağı
 
 Yeni frontend ekranlarında kullanıcıya görünen metinler hardcoded yazılmamalıdır.
 
-Aşağıdaki metinler translation key üzerinden gelmelidir:
+Translation key üzerinden gelmesi gereken metinler:
 
-- Menü label
-- Sayfa başlığı
-- Sayfa açıklaması
-- Buton metni
-- Tablo kolon adı
-- Badge metni
-- Empty state metni
-- Loading state metni
-- Error state metni
-- Dialog title
-- Dialog description
-- Confirm dialog metinleri
-- Toast mesajları
-- Form validation mesajları
+```text
+Menü label
+Sayfa başlığı
+Sayfa açıklaması
+Buton metni
+Tab adı
+Tablo kolon adı
+Tablo boş durum metni
+Badge metni
+Status label
+Filter label
+Placeholder
+Empty state metni
+Loading state metni
+Error state metni
+Dialog title
+Dialog description
+Confirm dialog metinleri
+Toast mesajları
+Form validation mesajları
+Tooltip metni
+Aria-label, kullanıcıya anlam taşıyorsa
+```
 
 Kullanıcıya görünmeyen teknik constant/string değerler hardcoded olabilir.
 
-## Translation Dosya Yapısı
+Örnek teknik değerler:
 
-Modüler translation dosyaları tercih edilmelidir.
+```text
+UserCreated
+Sms
+Email
+AdManagement
+application/json
+```
 
-Önerilen yapı:
+Bu teknik değerler UI’da gösterilecekse label’a çevrilmelidir.
+
+---
+
+## 3. Translation Dosya Yapısı
+
+Modüler translation dosyaları tercih edilir.
+
+Örnek yapı:
 
 ```text
 frontend/src/locales/tr/common.json
@@ -54,6 +99,11 @@ frontend/src/locales/tr/navigation.json
 frontend/src/locales/tr/users.json
 frontend/src/locales/tr/roles.json
 frontend/src/locales/tr/permissions.json
+frontend/src/locales/tr/settings.json
+frontend/src/locales/tr/adManagement.json
+frontend/src/locales/tr/notifications.json
+frontend/src/locales/tr/auditLogs.json
+frontend/src/locales/tr/securityLogs.json
 
 frontend/src/locales/en/common.json
 frontend/src/locales/en/auth.json
@@ -61,113 +111,441 @@ frontend/src/locales/en/navigation.json
 frontend/src/locales/en/users.json
 frontend/src/locales/en/roles.json
 frontend/src/locales/en/permissions.json
+frontend/src/locales/en/settings.json
+frontend/src/locales/en/adManagement.json
+frontend/src/locales/en/notifications.json
+frontend/src/locales/en/auditLogs.json
+frontend/src/locales/en/securityLogs.json
 ```
 
-Yeni modül eklendiğinde ilgili namespace için ayrı translation dosyası oluşturulabilir.
+Kurallar:
 
-Örnek:
+* Yeni feature için gerekirse ayrı namespace oluşturulur.
+* Aynı namespace hem `tr` hem `en` altında bulunur.
+* TR ve EN key yapısı paralel olmalıdır.
+* Bir dilde olan key diğer dilde eksik bırakılmaz.
+* Ortak metinler feature dosyalarına kopyalanmaz, `common` namespace’e taşınır.
 
-- `frontend/src/locales/tr/auditLogs.json`
-- `frontend/src/locales/en/auditLogs.json`
+---
 
-## Translation Key Standardı
+## 4. Namespace Kararı
 
-Key isimleri okunabilir ve modül bazlı olmalıdır.
+Kullanım:
+
+```text
+common          Genel aksiyonlar, durumlar, tablo, filtre, pagination, evrensel metinler
+navigation      Menü ve route label metinleri
+auth            Login/logout/session metinleri
+users           Local kullanıcı yönetimi
+roles           Rol yönetimi
+permissions     İzin yönetimi
+settings        Genel uygulama ayarları
+adManagement    AD yönetim ekranları
+notifications   Bildirim sağlayıcıları, şablonlar, outbox, notification rules
+auditLogs       Audit log ekranı
+securityLogs    Security log ekranı
+errors          Ortak hata metinleri
+```
+
+Kurallar:
+
+* Feature’a özel metin ilgili feature namespace altında tutulur.
+* Birden fazla feature’da kullanılan metin `common` altına alınır.
+* Navigation metinleri feature namespace’e yazılmaz.
+* Error metinleri çok genel ise `errors` veya `common` altında tutulabilir.
+* Aynı metin farklı namespace’lere kopyalanmaz.
+
+---
+
+## 5. Translation Key Standardı
+
+Key isimleri okunabilir ve hiyerarşik olmalıdır.
 
 Örnekler:
 
-- `common.actions.save`
-- `common.actions.cancel`
-- `common.status.active`
-- `common.status.passive`
-- `navigation.dashboard`
-- `navigation.administration`
-- `users.title`
-- `users.actions.addUser`
-- `roles.messages.roleCreated`
-- `permissions.readOnlyNotice`
+```text
+common.actions.save
+common.actions.cancel
+common.actions.delete
+common.status.active
+common.status.passive
+common.table.filters
+common.table.clearFilters
+navigation.dashboard
+navigation.adManagement
+users.title
+users.actions.addUser
+roles.messages.roleCreated
+adManagement.groups.title
+notifications.templates.createTitle
+auditLogs.filters.dateRangePlaceholder
+```
 
-Aynı metin farklı ekranlarda tekrar ediyorsa `common` namespace kullanılmalıdır.
+Kurallar:
 
-## Dil Tercihi Kaynağı
+* Key isimleri camelCase olmalıdır.
+* Çok uzun key zincirlerinden kaçınılır.
+* Teknik backend property adı doğrudan key olmak zorunda değildir.
+* Aynı anlam için tek ortak key tercih edilir.
+* Key silinirse iki dilde de silinir.
+* Key taşınırsa tüm kullanımlar güncellenir.
 
-Kullanıcı dil tercihi localStorage source of truth olarak saklanmayacaktır.
-Kullanıcı dil tercihi backend DB'de kullanıcı profili üzerinde saklanmalıdır.
+---
+
+## 6. Common Key Standardı
+
+Ortak metinler `common` namespace altında tutulur.
+
+Önerilen ortak alanlar:
+
+```text
+common.actions
+common.status
+common.table
+common.filters
+common.pagination
+common.dialog
+common.form
+common.messages
+common.empty
+common.loading
+common.errors
+```
+
+Örnek ortak keyler:
+
+```text
+common.actions.save
+common.actions.cancel
+common.actions.close
+common.actions.refresh
+common.actions.add
+common.actions.edit
+common.actions.remove
+common.actions.delete
+common.actions.confirm
+common.actions.clear
+common.actions.search
+
+common.table.filters
+common.table.clearFilters
+common.table.activeFilters
+common.table.noResults
+common.table.loading
+common.table.pageSize
+common.table.page
+common.table.nextPage
+common.table.previousPage
+common.table.firstPage
+common.table.lastPage
+```
+
+Kurallar:
+
+* DataTable, filter panel, pagination gibi ortak component metinleri `common` altında olmalıdır.
+* Her feature kendi “Filtreler”, “Sayfa boyutu”, “Sonuç bulunamadı” metnini tekrar etmez.
+* Feature özel empty state varsa feature namespace kullanabilir.
+
+---
+
+## 7. Teknik Enum / Code Label Standardı
+
+Backend’den gelen teknik değerler kullanıcıya direkt gösterilmez.
+
+Örnek teknik değerler:
+
+```text
+UserCreated
+UserEnabled
+UserDisabled
+UserUnlocked
+Sms
+Email
+MappedAttribute
+AdAttribute
+UserPrincipalName
+MailAttribute
+Pending
+Succeeded
+Failed
+Cancelled
+Create
+Update
+Disable
+Enable
+```
+
+Kurallar:
+
+* Teknik değerler label map veya translation key ile kullanıcı metnine çevrilir.
+* Bilinmeyen değer için güvenli fallback gösterilir.
+* Fallback teknik değeri gösterebilir ama mümkünse muted/code formatında gösterilir.
+* Label map feature içinde merkezi tutulur.
+* Aynı enum için farklı ekranlarda farklı label kullanılmaz.
+
+Örnek key yapısı:
+
+```text
+notifications.events.userCreated
+notifications.channels.sms
+notifications.recipientSources.mappedAttribute
+common.status.pending
+auditLogs.actions.update
+```
+
+---
+
+## 8. Tablo i18n Standardı
+
+Tablo kullanan ekranlarda:
+
+* Kolon başlıkları translation key ile gelir.
+* Toolbar search placeholder translation key ile gelir.
+* Filtre label/placeholder translation key ile gelir.
+* Empty state translation key ile gelir.
+* Pagination metinleri common key kullanır.
+* Row action metinleri translation key ile gelir.
+* Status badge label translation key ile gelir.
+
+TanStack column factory pattern kullanılıyorsa:
+
+```ts
+createColumns({ t, ...handlers })
+```
+
+şeklinde translation fonksiyonu dışarıdan alınabilir.
+
+Hardcoded kolon adı yazılmaz.
+
+---
+
+## 9. Form i18n Standardı
+
+Formlarda:
+
+* Label translation key ile gelir.
+* Placeholder translation key ile gelir.
+* Help text translation key ile gelir.
+* Validation mesajı translation key ile gelir.
+* Submit/cancel button text translation key ile gelir.
+* Form error translation key veya güvenli backend message ile gösterilir.
+* Secret field açıklamaları i18n ile gelir.
+
+Backend validation message şimdilik gösterilebilir ama yeni frontend validation hardcoded yazılmaz.
+
+---
+
+## 10. Dialog / Confirm i18n Standardı
+
+Dialoglarda:
+
+* Title translation key ile gelir.
+* Description translation key ile gelir.
+* Footer button metinleri translation key ile gelir.
+* Destructive confirm metinleri net olmalıdır.
+* Close/cancel/save gibi ortak metinlerde `common.actions` kullanılır.
+
+Confirm örneği:
+
+```text
+common.actions.cancel
+common.actions.confirm
+common.actions.remove
+```
+
+Feature özel açıklama ilgili namespace altında tutulur.
+
+---
+
+## 11. Toast i18n Standardı
+
+Toast mesajları translation key ile yazılır.
+
+Kurallar:
+
+* Success toast feature namespace altında olabilir.
+* Genel hata toast `common` veya `errors` altında olabilir.
+* Backend hata mesajı kullanıcı dostu ise gösterilebilir.
+* Raw exception toast olarak gösterilmez.
+* Aynı işlem için farklı ekranlarda farklı başarı metni kullanılmaz.
+
+Örnek:
+
+```text
+adManagement.groups.messages.groupAdded
+notifications.templates.messages.templateUpdated
+common.messages.operationFailed
+```
+
+---
+
+## 12. Date / Time i18n Standardı
+
+Tarih gösterimleri ortak component üzerinden yapılmalıdır.
+
+Kurallar:
+
+* `DateTimeText` gibi ortak component kullanılır.
+* Her ekranda ayrı `toLocaleString` kullanılmaz.
+* Dil aktif i18n language üzerinden belirlenir.
+* Tarih filtrelerinde locale doğru aktarılır.
+* Backend UTC gönderir, frontend locale gösterir.
+* Date range placeholder/metinleri translation key ile gelir.
+
+---
+
+## 13. Dil Tercihi Kaynağı
+
+Kullanıcı dil tercihi backend DB’de kullanıcı profili üzerinde saklanır.
 
 Önerilen backend alanı:
 
-`PortalUser.PreferredLanguage`
+```text
+PortalUser.PreferredLanguage
+```
 
 Desteklenen değerler:
 
-- `tr`
-- `en`
-
-Varsayılan:
-
-- `tr`
-
-Frontend login sonrası `/api/auth/me` response içindeki `preferredLanguage` değerine göre dili ayarlamalıdır.
-
-## Dil Değiştirme
-
-Authenticated kullanıcı dil değiştirdiğinde frontend backend'e preference update isteği göndermelidir.
-
-Önerilen endpoint:
-
-`PATCH /api/auth/me/preferences`
-
-Body:
-
-```json
-{
-  "preferredLanguage": "tr"
-}
+```text
+tr
+en
 ```
 
-veya:
+Kurallar:
 
-```json
-{
-  "preferredLanguage": "en"
-}
-```
+* Login sonrası `/api/auth/me` response içindeki preferredLanguage dikkate alınır.
+* Authenticated kullanıcı dil değiştirdiğinde backend’e preference update isteği gider.
+* Backend başarılı dönerse frontend i18n dili değiştirilir.
+* Backend başarısız olursa kullanıcıya hata gösterilir.
+* LocalStorage source of truth değildir.
 
-Backend başarılı dönerse frontend i18n dilini değiştirmelidir.
-Backend başarısız olursa kullanıcıya hata gösterilmelidir.
+---
 
-## Unauthenticated Sayfalar
+## 14. Unauthenticated Sayfalar
 
 Login/setup gibi unauthenticated sayfalarda varsayılan dil Türkçe olabilir.
-Login öncesi dil localStorage'a zorunlu olarak kaydedilmemelidir.
-Gelecekte public app bootstrap endpoint'i ile default language alınabilir.
 
-## Date/Time Format
+Kurallar:
 
-Tarih gösterimleri `DateTimeText` gibi ortak component üzerinden yapılmalıdır.
-Date formatı aktif dile göre `Intl.DateTimeFormat` ile oluşturulmalıdır.
-Her ekranda ayrı `toLocaleString` kullanımı yapılmamalıdır.
+* Login öncesi dil localStorage’a zorunlu olarak yazılmaz.
+* Public language switch varsa geçici local UI state kullanılabilir.
+* Gelecekte public bootstrap endpoint ile default language alınabilir.
+* Login sonrası kullanıcı tercihi source of truth olur.
 
-## Backend Error Messages
+---
 
-Mevcut backend error message'ları şimdilik gösterilebilir.
-Uzun vadede backend hata response'ları `errorCode + message` formatına taşınabilir.
-Frontend ileride `errorCode` üzerinden translation yapabilecek şekilde tasarlanmalıdır.
+## 15. Backend Error Messages
 
-## Yeni Ekran Geliştirme Kuralı
+Mevcut backend error message’ları şimdilik gösterilebilir.
 
-Yeni frontend ekranı geliştirilirken:
+Kurallar:
 
-- Görünen tüm metinler translation key ile yazılmalıdır.
-- Hem `tr` hem `en` karşılıkları eklenmelidir.
-- Eksik translation key bırakılmamalıdır.
-- Yeni namespace gerekiyorsa hem `tr` hem `en` altında aynı dosya oluşturulmalıdır.
+* Backend hata mesajı raw exception içeriyorsa gösterilmez.
+* Frontend mümkünse user-friendly fallback kullanır.
+* Uzun vadede backend hata response’ları `errorCode + message` formatına taşınabilir.
+* Frontend ileride `errorCode` üzerinden translation yapabilecek şekilde tasarlanır.
+* API error helper standardı bozulmaz.
 
-## Mevcut Ekran Refactor Kuralı
+---
 
-Mevcut Users/Roles gibi ekranlar refactor edilirken:
+## 16. Dynamic Catalog / Event Label Standardı
 
-- Hardcoded metinler translation key'e taşınmalıdır.
-- Alert/confirm davranışları frontend UI standardına göre düzeltilmelidir.
-- Date/time gösterimleri `DateTimeText` üzerinden yapılmalıdır.
-- Permission-aware davranışlar korunmalıdır.
+Template catalog, notification event, provider type gibi dinamik listelerde:
+
+* Backend teknik key dönebilir.
+* Frontend bu key’i label’a çevirir.
+* Bilinmeyen key için güvenli fallback kullanılır.
+* Catalog label çevirileri feature namespace altında tutulur.
+* Event/channel/source gibi değerler kullanıcıya raw basılmaz.
+
+Örnek:
+
+```text
+eventKey: UserCreated -> Kullanıcı oluşturuldu
+channel: Sms -> SMS
+recipientSourceType: MappedAttribute -> Mapped attribute
+```
+
+---
+
+## 17. Eksik Key Kontrol Standardı
+
+Yeni i18n değişikliğinde:
+
+* TR key eklendiyse EN key de eklenir.
+* EN key eklendiyse TR key de eklenir.
+* Key path iki dilde paralel olur.
+* Silinen key iki dilden de temizlenir.
+* Kullanılmayan key temizliği refactor kapsamındaysa yapılır.
+* Build/lint çıktısında i18n hatası varsa düzeltilir.
+
+---
+
+## 18. Mevcut Ekran Refactor Standardı
+
+Mevcut ekran refactor edilirken:
+
+* Hardcoded metinler translation key’e taşınır.
+* Tablo kolonları i18n ile gelir.
+* Filter label/placeholder i18n ile gelir.
+* Confirm dialog i18n ile gelir.
+* Toast i18n ile gelir.
+* Date/time gösterimi ortak component üzerinden yapılır.
+* Permission-aware davranış korunur.
+* Mevcut key yapısı bozulmaz.
+
+---
+
+## 19. Accessibility ve i18n
+
+Kullanıcıya anlam taşıyan accessibility metinleri de i18n kapsamındadır.
+
+Örnekler:
+
+```text
+aria-label
+screen reader only text
+icon-only button label
+dialog close label
+table action label
+```
+
+Kurallar:
+
+* Icon-only butonda anlamlı aria-label bulunur.
+* Aria-label hardcoded yazılmaz.
+* Teknik id/code aria-label olarak kullanılmaz.
+* Dialog title/description erişilebilir olmalıdır.
+
+---
+
+## 20. Anti-Patternler
+
+Yapma:
+
+```text
+Kullanıcıya görünen metni hardcoded yazma.
+TR key ekleyip EN key unutma.
+EN key ekleyip TR key unutma.
+Backend enum/code değerini direkt UI’da gösterme.
+Her feature’da aynı common metni tekrar yazma.
+Tablo kolon adını hardcoded yazma.
+Toast mesajını hardcoded yazma.
+Confirm dialog metnini hardcoded yazma.
+Date/time için her ekranda toLocaleString yazma.
+Eksik key’i görmezden gelme.
+```
+
+---
+
+## 21. Temel İlke
+
+Kullanıcı teknik kod değil, anlaşılır metin görür.
+
+TR ve EN birlikte yürür.
+
+Ortak metin ortak yerde yaşar.
+
+Feature metni feature namespace’inde yaşar.
+
+Hardcoded text küçük görünür ama sonra UI içinde yabani ot gibi çoğalır. Buna izin verme.

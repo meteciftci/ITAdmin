@@ -1,15 +1,22 @@
 ---
-description: SASPortal loglama, AuditLog, SecurityLog, ApplicationLog, CorrelationId, hassas veri ve log ekranı kuralları.
+description: SASPortal loglama, AuditLog, SecurityLog, ApplicationLog, modül operasyon logları, CorrelationId, hassas veri, provider/outbox logları ve log ekranı kuralları.
 globs:
   - "backend/src/**/*.cs"
-  - "frontend/src/modules/logs/**/*.{ts,tsx}"
+  - "frontend/src/features/audit-logs/**/*.{ts,tsx}"
+  - "frontend/src/features/security-logs/**/*.{ts,tsx}"
   - "frontend/src/lib/**/*.{ts,tsx}"
 alwaysApply: true
 ---
 
 # SASPortal Logging & Audit Rules
 
-Bu kurallar loglama, audit, security event, correlation id ve log ekranlarıyla ilgili kod yazılırken uygulanır.
+Bu kurallar SASPortal içinde loglama, audit, security event, correlation id, modül operasyon logları, notification/outbox logları ve log ekranlarıyla ilgili kod yazılırken uygulanır.
+
+Amaç; sistemdeki teknik olayları, güvenlik olaylarını ve kullanıcı aksiyonlarını doğru log türünde, güvenli içerikle ve okunabilir şekilde takip etmektir.
+
+Bu dosya modül özelinde kural yazmaz. Tüm modüller aynı loglama prensiplerine uyar.
+
+---
 
 ## 1. Log Türleri
 
@@ -21,16 +28,22 @@ Temel log türleri:
 ApplicationLog / Serilog
 AuditLog
 SecurityLog
+Modül operasyon logu
 ```
 
-İleride eklenebilecek log türleri:
+Kurallar:
 
-```text
-IntegrationLog
-JobRunLog
-```
+* ApplicationLog teknik olaylar içindir.
+* AuditLog kullanıcı aksiyonları içindir.
+* SecurityLog güvenlik ve oturum olayları içindir.
+* Modül operasyon logu dış sistem veya modül operasyon detayları içindir.
+* Bu log türleri birbirinin yerine kullanılmaz.
+* Audit log yerine sadece Serilog yazılmaz.
+* Security event audit log içine karıştırılmaz.
 
-## 2. ApplicationLog / Serilog
+---
+
+## 2. ApplicationLog / Serilog Standardı
 
 Application log teknik logdur.
 
@@ -40,22 +53,28 @@ Kullanım alanları:
 Exception
 Teknik uyarı
 Performans uyarısı
-Sistem davranışı
-Debug/diagnostic bilgi, environment'a göre
+Background job hatası
+Dış sistem teknik hatası
+Diagnostic bilgi, environment'a göre
 ```
 
 Kurallar:
 
-- Serilog kullanılacaktır.
-- Structured logging kullanılacaktır.
-- Exceptionlar merkezi middleware ile loglanacaktır.
-- CorrelationId loglara eklenmelidir.
-- Hassas veri loglanmaz.
+* Serilog kullanılır.
+* Structured logging kullanılır.
+* Exceptionlar merkezi middleware ile loglanır.
+* CorrelationId loglara eklenir.
+* Hassas veri loglanmaz.
+* Kullanıcıya stack trace dönülmez.
+* Production’da debug seviyesi gereksiz şişirilmez.
 
 Doğru:
 
 ```csharp
-_logger.LogInformation("User {UserId} created by {CreatedByUserId}", userId, currentUserId);
+_logger.LogInformation(
+    "User {UserId} created by {ActorUserId}",
+    userId,
+    actorUserId);
 ```
 
 Yanlış:
@@ -64,9 +83,11 @@ Yanlış:
 _logger.LogInformation("Password is {Password}", password);
 ```
 
-## 3. AuditLog
+---
 
-Audit log, kullanıcı aksiyonlarını izler.
+## 3. AuditLog Standardı
+
+Audit log kullanıcı aksiyonlarını izler.
 
 Temel soru:
 
@@ -74,19 +95,18 @@ Temel soru:
 Kim, ne zaman, hangi işlemi, hangi kayıt üzerinde yaptı?
 ```
 
-AuditLog önerilen alanlar:
+AuditLog önerilen bilgi alanları:
 
 ```text
 id
 correlation_id
-user_id
-username_snapshot
-display_name_snapshot
+actor_user_id
+actor_user_name
 module
 action
-entity_type
+entity_name
 entity_id
-summary
+description
 old_values_json
 new_values_json
 ip_address
@@ -96,17 +116,57 @@ created_at
 
 Kurallar:
 
-- Kritik kullanıcı aksiyonları audit log üretir.
-- Audit log kullanıcı snapshot bilgisi tutar.
-- Audit log hassas veri içermez.
-- Audit log sonradan değiştirilmemelidir.
-- Audit log fiziksel silinmemelidir.
+* Kritik kullanıcı aksiyonları audit log üretir.
+* Audit log kullanıcı snapshot bilgisi tutar.
+* Audit log hassas veri içermez.
+* Audit log sonradan değiştirilmemelidir.
+* Audit log fiziksel silinmemelidir.
+* Audit description kısa, anlaşılır ve kullanıcı dostu olmalıdır.
+* Audit log büyük raw JSON dump alanı değildir.
+* Ayar değişikliklerinde güvenli değişiklik özeti yazılır.
+* Secret değişikliklerinde eski/yeni değer değil, sadece değişti bilgisi yazılır.
 
-## 4. SecurityLog
+---
+
+## 4. Audit Gerektiren İşlemler
+
+Aşağıdaki tür işlemler audit log üretmelidir:
+
+```text
+Kullanıcı oluşturma
+Kullanıcı güncelleme
+Kullanıcı pasife alma
+Kullanıcı aktife alma
+Rol oluşturma
+Rol güncelleme
+Rol pasife alma
+Kullanıcıya rol atama
+Kullanıcıdan rol kaldırma
+Role izin atama
+Rolden izin kaldırma
+Ayar güncelleme
+Bildirim sağlayıcı güncelleme
+Bildirim şablonu oluşturma/güncelleme/pasife alma
+Bildirim kuralı ekleme/güncelleme/kaldırma
+Modül kritik operasyonları
+Dış sistem üzerinde yapılan yönetim aksiyonları
+```
+
+Kurallar:
+
+* Kritik işlem audit logsuz bırakılmaz.
+* Başarısız kritik işlemler de kontrollü şekilde auditlenebilir.
+* Başarısız işlem auditlenirse hata özeti sanitize edilmiş olmalıdır.
+* Audit action değerleri tutarlı kullanılır.
+* Audit module/entity değerleri feature içinde dağınık magic string olarak üretilmez.
+
+---
+
+## 5. SecurityLog Standardı
 
 Security log güvenlik ve oturum olaylarını izler.
 
-SecurityLog önerilen alanlar:
+SecurityLog önerilen bilgi alanları:
 
 ```text
 id
@@ -118,6 +178,7 @@ user_agent
 is_success
 failure_reason
 created_at
+correlation_id
 ```
 
 Security event örnekleri:
@@ -136,57 +197,123 @@ ForbiddenAccess
 
 Kurallar:
 
-- Login denemeleri security log üretir.
-- Refresh token işlemleri security log üretir.
-- Forbidden erişimler security log üretir.
-- Security log içinde şifre/token yazılmaz.
+* Login denemeleri security log üretir.
+* Refresh token işlemleri security log üretir.
+* Forbidden erişimler security log üretir.
+* Security log içinde şifre/token/secret yazılmaz.
+* Security log audit log yerine kullanılmaz.
+* Security event isimleri tutarlı olmalıdır.
 
-## 5. Audit Gerektiren İlk Faz İşlemleri
+---
 
-Aşağıdaki işlemler audit log üretmelidir:
+## 6. Modül Operasyon Logu Standardı
 
-```text
-Kullanıcı oluşturma
-Kullanıcı güncelleme
-Kullanıcı pasife alma
-Kullanıcı aktife alma
-Rol oluşturma
-Rol güncelleme
-Rol pasife alma
-Kullanıcıya rol atama
-Kullanıcıdan rol kaldırma
-Role izin atama
-Rolden izin kaldırma
-Ayar güncelleme
-```
+Bazı modüller dış sistem veya domain operasyonlarını detaylı izlemek için ayrı operasyon logu tutabilir.
 
-## 6. Security Log Gerektiren İlk Faz İşlemleri
-
-Aşağıdaki işlemler security log üretmelidir:
+Örnek kullanım:
 
 ```text
-Başarılı login
-Hatalı AD credential ile login denemesi
-AD doğru ama local kullanıcı yok login denemesi
-Pasif kullanıcı login denemesi
-Logout
-Refresh token oluşturma
-Refresh token yenileme
-Refresh token revoke
-Başarısız refresh token denemesi
-Yetkisiz endpoint erişimi
+AD kullanıcı oluşturma
+AD hesap aktifleştirme/pasifleştirme
+AD kilit açma
+AD grup üyeliği ekleme/çıkarma
+Dış sistem provider testleri
+Notification send attempt
 ```
 
-## 7. CorrelationId Kuralları
+Kurallar:
+
+* Modül operasyon logu açık mimari karar varsa kullanılır.
+* Modül operasyon logu audit log yerine geçmez.
+* Kullanıcı aksiyonu varsa audit log da yazılır.
+* Operasyon logu dış sistem detayını güvenli şekilde tutar.
+* OperationType değerleri merkezi sabitlerden gelir.
+* Success/failure durumu net tutulur.
+* ErrorMessage sanitize edilir.
+* Secret, şifre, token, provider credential, raw request body loglanmaz.
+* Target identity bilgileri minimum gerekli seviyede tutulur.
+
+Örnek güvenli operation detail:
+
+```text
+Operation: UserGroupAdd
+TargetUser: cagri.isik
+Group: VPN Users
+Result: Success
+```
+
+Yanlış:
+
+```text
+RequestBody: { "password": "...", "token": "...", "content": "..." }
+```
+
+---
+
+## 7. Notification / Outbox Log Standardı
+
+Bildirim ve outbox işlemleri özel dikkat ister.
+
+Kurallar:
+
+* Notification outbox payload secret içermez.
+* Provider secret loglanmaz.
+* Rendered full template body loglanmaz.
+* Provider request body loglanmaz.
+* Authorization header loglanmaz.
+* Gerçek recipient düz loglanmaz; gerekiyorsa maskelenir.
+* Provider response sanitize edilmeden loglanmaz.
+* Başarısız gönderimlerde kullanıcı dostu kısa hata saklanır.
+* Retry/cancel işlemleri audit veya operation log standardına göre izlenir.
+* Test send ve worker send aynı masking/escaping/logging standardına uyar.
+
+Masked recipient örnekleri:
+
+```text
++90******1234
+m***@domain.com
+```
+
+---
+
+## 8. Provider / External Integration Log Standardı
+
+Dış sistem entegrasyonlarında:
+
+```text
+AD / LDAP
+SMTP
+SMS provider
+Custom HTTP provider
+REST API provider
+```
+
+Kurallar:
+
+* Endpoint URL loglanabilir, query içindeki secret loglanmaz.
+* Header değerleri loglanmaz veya allow-list ile sınırlanır.
+* Authorization header hiçbir zaman loglanmaz.
+* Basic auth username/password loglanmaz.
+* API key, bearer token, session token loglanmaz.
+* Provider raw error sanitize edilir.
+* Provider stack trace kullanıcıya dönülmez.
+* Provider timeout/cancellation ayrı hata olarak anlaşılır şekilde loglanır.
+* JSON parse hatalarında rendered body komple loglanmaz.
+
+---
+
+## 9. CorrelationId Standardı
 
 Her request bir CorrelationId taşımalıdır.
 
 Kurallar:
 
-- Client `X-Correlation-Id` gönderirse kullanılabilir.
-- Client göndermediyse backend üretir.
-- Response header içinde `X-Correlation-Id` dönülür.
-- ApplicationLog, AuditLog ve SecurityLog aynı CorrelationId'yi kullanır.
+* Client `X-Correlation-Id` gönderirse kullanılabilir.
+* Client göndermediyse backend üretir.
+* Response header içinde `X-Correlation-Id` dönebilir.
+* ApplicationLog, AuditLog ve SecurityLog aynı CorrelationId’yi kullanır.
+* Background job için correlation id yoksa job correlation id üretilebilir.
+* CorrelationId log ekranlarında teknik takip için gösterilebilir.
 
 Header:
 
@@ -194,63 +321,70 @@ Header:
 X-Correlation-Id
 ```
 
-## 8. Hassas Veri Loglama Yasağı
+---
+
+## 10. Hassas Veri Loglama Yasağı
 
 Asla loglanmayacak veriler:
 
 ```text
 Şifre
+AD kullanıcı şifresi
 Access token
 Refresh token
+JWT secret
 API key
 Connection string password
 Credential secret
-AD kullanıcı şifresi
-JWT secret
+Provider secret
 SMS provider token
+SMTP password
+Authorization header
+Cookie header
+CSRF token
 ```
 
-Maskeleme gerekiyorsa:
+Kurallar:
 
-```text
-Tam değer değil, sadece kısmi ve güvenli gösterim yapılabilir.
-```
+* Hassas veri audit log’a yazılmaz.
+* Hassas veri security log’a yazılmaz.
+* Hassas veri operation log’a yazılmaz.
+* Hassas veri Serilog/Application log’a yazılmaz.
+* OldValuesJson/NewValuesJson içinde hassas alan bulunmaz.
+* Masking gerekiyorsa sadece kısmi ve güvenli gösterim yapılır.
 
-Örnek:
+---
 
-```text
-mete.ciftci -> kullanıcı adı loglanabilir
-password -> asla loglanmaz
-refreshToken -> asla loglanmaz
-```
-
-## 9. OldValuesJson / NewValuesJson Kuralları
+## 11. OldValuesJson / NewValuesJson Standardı
 
 AuditLog içinde değişiklik detayları JSON olarak tutulabilir.
 
 Kurallar:
 
-- Sadece değişen alanlar yazılmalıdır.
-- Hassas alanlar yazılmaz.
-- Çok büyük payload yazılmaz.
-- JSON alanları okunabilir isimlerle tutulur.
+* Sadece değişen alanlar yazılır.
+* Hassas alanlar yazılmaz.
+* Çok büyük payload yazılmaz.
+* JSON alanları okunabilir isimlerle tutulur.
+* Secret değişikliği için gerçek değer değil marker yazılır.
+* Null/empty değişimler açık gösterilebilir.
+* Teknik provider body veya template body burada tutulmaz.
 
-Örnek:
+Doğru:
 
 ```json
 {
-  "displayName": {
-    "old": "Mete Ciftci",
-    "new": "Mete Çiftçi"
+  "isEnabled": {
+    "old": false,
+    "new": true
   },
-  "isActive": {
-    "old": true,
-    "new": false
+  "providerPassword": {
+    "old": "[protected]",
+    "new": "[changed]"
   }
 }
 ```
 
-Yasak:
+Yanlış:
 
 ```json
 {
@@ -261,9 +395,11 @@ Yasak:
 }
 ```
 
-## 10. Audit Summary Standardı
+---
 
-Audit summary kısa, anlaşılır ve kullanıcı dostu olmalıdır.
+## 12. Audit Summary / Description Standardı
+
+Audit summary/description kısa, anlaşılır ve kullanıcı dostu olmalıdır.
 
 Örnekler:
 
@@ -272,16 +408,21 @@ Kullanıcı oluşturuldu: mete.ciftci
 Kullanıcı pasife alındı: mete.ciftci
 Rol oluşturuldu: Sistem Yöneticisi
 Kullanıcıya rol atandı: mete.ciftci -> Sistem Yöneticisi
-Rolden izin kaldırıldı: HelpDesk -> Users.Disable
+Bildirim kuralı eklendi: UserCreated / Sms
+AD kullanıcısı gruba eklendi: cagri.isik -> VPN Users
 ```
 
 Kurallar:
 
-- Summary teknik stack trace içermez.
-- Summary hassas veri içermez.
-- Summary log ekranında tek satır okunabilir olmalıdır.
+* Summary teknik stack trace içermez.
+* Summary hassas veri içermez.
+* Summary log ekranında tek satır okunabilir olmalıdır.
+* Summary raw JSON içermez.
+* Summary provider response gömmez.
 
-## 11. Audit Action Standardı
+---
+
+## 13. Audit Action Standardı
 
 Action değerleri tutarlı olmalıdır.
 
@@ -290,6 +431,7 @@ Action değerleri tutarlı olmalıdır.
 ```text
 Create
 Update
+Delete
 Disable
 Enable
 AssignRole
@@ -297,28 +439,65 @@ RemoveRole
 AssignPermission
 RemovePermission
 UpdateSettings
+Add
+Remove
+Send
+Retry
+Cancel
+Unlock
 ```
 
-Module değerleri:
+Kurallar:
+
+* Aynı anlam için farklı action değerleri kullanılmaz.
+* Feature içinde action stringleri dağınık çoğaltılmaz.
+* Yeni action gerekiyorsa mevcut isimlendirme tarzına uyar.
+* Action kullanıcıya gösterilecekse frontend label’a çevrilir.
+
+---
+
+## 14. Module / EntityName Standardı
+
+Module ve EntityName değerleri tutarlı olmalıdır.
+
+Örnek module değerleri:
 
 ```text
+Auth
 Users
 Roles
 Permissions
 Settings
-Auth
+AdManagement
+Notifications
+AuditLogs
+SecurityLogs
 ```
 
-EntityType değerleri:
+Örnek entity değerleri:
 
 ```text
-User
-Role
-Permission
+PortalUser
+PortalRole
+PortalPermission
 ApplicationSetting
+NotificationProvider
+NotificationTemplate
+NotificationOutbox
+AdUser
+AdUserGroupMembership
 ```
 
-## 12. Login Loglama Kuralları
+Kurallar:
+
+* Module ve EntityName teknik olarak tutarlı kalır.
+* Kullanıcıya gösterilirken frontend label’a çevrilebilir.
+* Module ve EntityName hassas veri içermez.
+* EntityId gerekiyorsa teknik kimlik olabilir ama secret içermez.
+
+---
+
+## 15. Login Loglama Standardı
 
 Başarılı login:
 
@@ -355,7 +534,16 @@ IsSuccess = false
 FailureReason = UserPassive
 ```
 
-## 13. Forbidden Access Kuralları
+Kurallar:
+
+* Şifre loglanmaz.
+* Token loglanmaz.
+* IP/UserAgent tutulabilir.
+* FailureReason kullanıcıya gereğinden fazla bilgi sızdırmayacak şekilde tasarlanır.
+
+---
+
+## 16. Forbidden Access Standardı
 
 Yetkisiz endpoint erişimi security log üretir.
 
@@ -373,109 +561,151 @@ CorrelationId
 
 Kurallar:
 
-- Response 403 olmalıdır.
-- Kullanıcıya gereksiz teknik detay dönülmez.
-- SecurityLog hassas veri içermez.
+* Response 403 olmalıdır.
+* Kullanıcıya gereksiz teknik detay dönülmez.
+* SecurityLog hassas veri içermez.
+* RequiredPermission secret değildir, loglanabilir.
+* Frontend permission guard güvenlik sayılmaz.
 
-## 14. Exception Loglama Kuralları
+---
+
+## 17. Exception Loglama Standardı
 
 Beklenmeyen exceptionlar ApplicationLog/Serilog ile loglanır.
 
 Kurallar:
 
-- Exception response içinde stack trace dönülmez.
-- CorrelationId response içinde dönebilir.
-- Exception detayları Serilog'a yazılır.
-- Kullanıcıya sade mesaj verilir.
+* Exception response içinde stack trace dönülmez.
+* CorrelationId response içinde veya header’da dönebilir.
+* Exception detayları Serilog’a yazılır.
+* Kullanıcıya sade mesaj verilir.
+* Raw provider exception kullanıcıya dönülmez.
+* Sensitive value içeren exception mesajları sanitize edilmelidir.
 
 Response örneği:
 
 ```json
 {
-  "success": false,
-  "data": null,
   "message": "Beklenmeyen bir hata oluştu.",
-  "errors": [],
   "correlationId": "..."
 }
 ```
 
-## 15. Log Yazma Servisleri
+---
 
-Backend içinde log yazımı merkezi servisler üzerinden yapılmalıdır.
+## 18. Log Yazma Servisleri
+
+Backend içinde log yazımı mümkün olduğunca merkezi servisler üzerinden yapılmalıdır.
 
 Örnek interface isimleri:
 
 ```text
 IAuditLogService
 ISecurityLogService
+IAdOperationLogService
+INotificationOutboxLogService, gerekiyorsa
 ```
 
 Kurallar:
 
-- Handlerlar doğrudan AuditLog DbSet'i ile uğraşmamalı, mümkünse servis kullanmalıdır.
-- Security eventler merkezi servisle yazılmalıdır.
-- Log servisleri current user ve correlation id bilgisini merkezi servislerden alabilir.
+* Handler/service doğrudan AuditLog DbSet’iyle rastgele uğraşmamalıdır.
+* Security eventler merkezi servisle yazılmalıdır.
+* Log servisleri current user ve correlation id bilgisini merkezi servislerden alabilir.
+* Modül operasyon logları kendi servisleri üzerinden yazılabilir.
+* Log yazımı ana işlemi gereksiz kırmamalı; ürün kararına göre davranmalıdır.
 
-## 16. Log Ekranı Kuralları
+---
+
+## 19. Log Ekranı Standardı
 
 Frontend log ekranları:
 
 ```text
 Audit log listesi
 Security log listesi
+Modül operasyon log listeleri, varsa
 ```
 
 Kurallar:
 
-- Server-side pagination kullanılır.
-- Tarih filtresi olmalıdır.
-- Kullanıcı filtresi olabilir.
-- Event/action filtresi olabilir.
-- Detaylar drawer veya dialog ile gösterilebilir.
-- Hassas veri gösterilmez.
+* Server-side pagination kullanılır.
+* Tarih filtresi bulunur.
+* Kullanıcı filtresi olabilir.
+* Event/action filtresi olabilir.
+* Entity/module filtresi olabilir.
+* Detaylar dialog/drawer ile gösterilebilir.
+* Hassas veri gösterilmez.
+* Uzun teknik değerler tabloyu bozmaz.
+* Log tabloları TanStack Table standardına uyar.
+* Search dışındaki filtreler ortak filter panel içinde olur.
+* Nested popover filtreleri seçim sırasında kapanmamalıdır.
 
-## 17. Log Retention
+---
+
+## 20. Log Retention
 
 İlk fazda log retention otomatik silme olarak uygulanmayabilir.
 
 Kurallar:
 
-- AuditLog varsayılan olarak silinmez.
-- SecurityLog varsayılan olarak silinmez.
-- Retention gerekiyorsa ayrı karar ister.
-- Log silme işi rastgele cleanup job ile yapılmaz.
+* AuditLog varsayılan olarak silinmez.
+* SecurityLog varsayılan olarak silinmez.
+* Modül operation log retention ayrı karar ister.
+* Notification outbox retention ayrı karar ister.
+* Retention gerekiyorsa ayrı job ve açık ürün kararı gerekir.
+* Log silme işi rastgele cleanup job ile yapılmaz.
 
-## 18. Test Kuralları
+---
+
+## 21. Test Standardı
 
 Aşağıdaki davranışlar test edilebilir:
 
 ```text
 Başarılı login security log üretir.
 Başarısız login security log üretir.
+Forbidden erişim security log üretir.
 Kullanıcı oluşturma audit log üretir.
 Rol atama audit log üretir.
-Forbidden erişim security log üretir.
+Ayar güncelleme audit log üretir.
 Audit log hassas veri içermez.
+Provider secret loglanmaz.
+Notification retry/cancel güvenli log üretir.
 ```
 
-## 19. Anti-Patternler
+Kurallar:
+
+* Gerçek secret kullanılan test yazılmaz.
+* Provider entegrasyonu fake/mock ile test edilir.
+* Sensitive masking test edilebilir.
+* Log payload içinde yasak alanlar test edilebilir.
+
+---
+
+## 22. Anti-Patternler
 
 Yapma:
 
 ```text
 Şifre/token/credential loglama.
+Authorization header loglama.
+Provider secret loglama.
 Audit log yerine sadece Serilog yazma.
 Security eventleri audit log içine karıştırma.
-Her modülde ayrı log tablosu icat etme.
+Modül operasyon logunu audit log yerine kullanma.
+Her modülde rastgele log tablosu icat etme.
 CorrelationId olmadan exception loglama.
 OldValuesJson içine hassas veri yazma.
 Login başarısızlıklarını logsuz bırakma.
 Forbidden erişimleri logsuz bırakma.
 Log ekranında hassas veri gösterme.
+Provider raw response’u sanitize etmeden saklama.
+Rendered notification body’yi loglama.
 ```
 
-## 20. Temel İlke
+---
+
+## 23. Temel İlke
 
 ApplicationLog teknik olaylar içindir.
 
@@ -483,4 +713,8 @@ AuditLog kullanıcı aksiyonları içindir.
 
 SecurityLog güvenlik olayları içindir.
 
-Bu üçü birbirine karıştırılmamalıdır.
+Modül operasyon logu dış sistem/modül işlem detayı içindir.
+
+Bu loglar birbirine karıştırılmaz.
+
+Log faydalı olmalıdır ama sır saklayamayan dedikoducuya dönüşmemelidir.

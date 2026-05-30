@@ -1,5 +1,5 @@
 ---
-description: SASPortal backend kodu için katman, CQRS, API, auth, permission, audit, EF Core ve güvenlik kuralları.
+description: SASPortal backend kodu için katman, servis, API, auth, permission, validation, external integration, notification, background job, audit ve güvenlik kuralları.
 globs:
   - "backend/**/*.cs"
   - "backend/**/*.csproj"
@@ -9,160 +9,365 @@ alwaysApply: true
 
 # SASPortal Backend Rules
 
-Bu kurallar backend dosyaları üzerinde çalışırken uygulanır.
+Bu kurallar SASPortal backend dosyaları üzerinde çalışırken uygulanır.
 
-Detaylı referans:
+Amaç; backend kodunun katmanlı, güvenli, test edilebilir, permission-aware, log standardına uyumlu ve mevcut proje mimarisiyle tutarlı kalmasını sağlamaktır.
+
+Bu dosya modül özelinde kural yazmaz. Yeni veya mevcut tüm backend modülleri bu genel standartlara uyar.
+
+---
+
+## 1. Backend Teknoloji Kararları
+
+Backend stack:
 
 ```text
-KuralSetleri/02_SASPortal_Backend_Kural_Seti.md
+ASP.NET Core Web API
+C#
+Entity Framework Core
+PostgreSQL
+Permission-based authorization
+JWT access token + refresh token
+Serilog
+Background job standardı
 ```
-
-## 1. Solution Yapısı
-
-Backend yapısı:
-
-```text
-backend/src/Sas.Api
-backend/src/Sas.Application
-backend/src/Sas.Domain
-backend/src/Sas.Infrastructure
-backend/src/Sas.Persistence
-backend/src/Sas.Shared
-backend/tests/Sas.UnitTests
-backend/tests/Sas.IntegrationTests
-```
-
-## 2. Katman Kuralları
-
-- `Sas.Api`: HTTP giriş noktasıdır.
-- `Sas.Application`: use-case, command, query, handler, DTO, validation katmanıdır.
-- `Sas.Domain`: entity, enum, value object katmanıdır.
-- `Sas.Infrastructure`: dış sistem ve teknik servis implementasyonlarıdır.
-- `Sas.Persistence`: EF Core, DbContext, migration ve configuration katmanıdır.
-- `Sas.Shared`: ortak result/error/paged modellerini içerir.
 
 Kurallar:
 
-- Controller içinde iş mantığı yazma.
-- Controller içine DbContext inject etme.
-- Domain katmanını başka katmana bağımlı yapma.
-- Infrastructure implementasyonunu Application içine doğrudan sokma.
-- Entity'yi doğrudan API response olarak dönme.
+* Mevcut backend mimarisine uyulur.
+* Yeni framework/paket kullanıcı onayı olmadan eklenmez.
+* Backend validation asıl veri bütünlüğü katmanıdır.
+* Frontend validation güvenlik veya veri bütünlüğü kaynağı değildir.
+* Entity doğrudan API response olarak dönülmez.
+* Permission kontrolü backend tarafında yapılır.
 
-## 3. CQRS / MediatR Kuralları
+---
 
-- Veri değiştiren işlem `Command` olmalıdır.
-- Veri okuyan işlem `Query` olmalıdır.
-- Her command/query için handler yazılır.
-- Handler tek use-case yürütür.
-- Handler validation yapmaz; validation FluentValidation ile yapılır.
+## 2. Solution ve Katman Yapısı
 
-Örnek isimler:
+Backend ana yapı:
 
 ```text
-CreateUserCommand
-CreateUserCommandValidator
-CreateUserCommandHandler
-GetUsersPagedQuery
-GetUsersPagedQueryHandler
+backend/src/SasPortal.Api
+backend/src/SasPortal.Application
+backend/src/SasPortal.Domain
+backend/src/SasPortal.Infrastructure
+backend/src/SasPortal.Persistence
+backend/tests
 ```
 
-## 4. Validation Kuralları
-
-- FluentValidation kullan.
-- Controller içinde manuel validation yapma.
-- Validation mesajları kullanıcı dostu olmalıdır.
-- Backend validation her zaman zorunludur.
-
-## 5. API Controller Kuralları
-
-- Controller sadece request alır ve mediator çağırır.
-- Response standardına uy.
-- Permission gereken endpointlerde permission attribute kullan.
-- HTTP status code standardına uy.
-
-Örnek akış:
+Katman sorumlulukları:
 
 ```text
-Controller -> Mediator.Send(command/query) -> Handler -> Result -> ActionResult
+SasPortal.Api            HTTP endpoint, middleware, auth wiring, DI giriş noktası
+SasPortal.Application    Use-case interface, model, service contract, business abstraction
+SasPortal.Domain         Entity, enum, domain model
+SasPortal.Infrastructure Dış sistem, LDAP/AD, HTTP provider, teknik servis implementasyonları
+SasPortal.Persistence    EF Core, DbContext, repository/service persistence, migration/configuration
+tests                    Unit/integration testler
 ```
 
-## 6. API Response Standardı
+Kurallar:
 
-Başarılı response:
+* Controller içine iş mantığı yazılmaz.
+* Controller içine DbContext inject edilmez.
+* Entity API response olarak dönülmez.
+* Infrastructure implementasyonu Application içine doğrudan gömülmez.
+* Domain katmanı HTTP, EF veya frontend bilgisi taşımaz.
+* Yeni kod mevcut katman düzenine göre konumlandırılır.
+* `Sas.*` namespace kullanılmaz; proje namespace standardı `SasPortal.*` şeklindedir.
 
-```json
-{
-  "success": true,
-  "data": {},
-  "message": null,
-  "errors": []
-}
-```
+---
 
-Hatalı response:
+## 3. Mimari Pattern Standardı
 
-```json
-{
-  "success": false,
-  "data": null,
-  "message": "İşlem başarısız.",
-  "errors": []
-}
-```
+Mevcut proje servis tabanlı Application abstraction yaklaşımıyla ilerler.
 
-## 7. Authentication Kuralları
+Kurallar:
 
-- Login AD kullanıcı adı/şifre doğrulamasıyla başlar.
-- AD başarılı olsa bile local Users tablosu kontrol edilir.
-- Local kullanıcı yoksa login reddedilir.
-- Pasif kullanıcı login olamaz.
-- Şifre hiçbir zaman loglanmaz.
-- Şifre veritabanına yazılmaz.
+* Mevcut servis patterni korunur.
+* Application katmanında interface/model/contract tanımlanır.
+* Infrastructure ve Persistence katmanları interface implementasyonu sağlar.
+* Controller sadece request alır, yetkiyi kontrol eder, servisi çağırır ve response döner.
+* İş mantığı controller içine yazılmaz.
+* Aynı use-case için ikinci paralel pattern kurulmaz.
+* MediatR/CQRS ancak proje kararı verilirse eklenir.
+* Mevcut projede kullanılmayan paket/pattern zorla eklenmez.
 
-## 8. JWT / Refresh Token Kuralları
-
-- Access token kısa ömürlü olur.
-- Refresh token DB'de plain text tutulmaz, hashlenir.
-- Logout refresh token'ı revoke eder.
-- Refresh token rotate işlemi security log üretir.
-- Token secret repo içinde düz metin tutulmaz.
-
-## 9. Permission Kuralları
-
-- Yetkilendirme permission-based yapılır.
-- Permission kodları magic string olarak dağınık kullanılmaz.
-- Merkezi permission sabitleri kullan.
-- Frontend permission kontrolü güvenlik değildir.
-- Asıl kontrol backend tarafındadır.
-
-## 10. Current User Kuralları
-
-- Kullanıcı bilgisine `ICurrentUserService` üzerinden eriş.
-- Her yerde `HttpContext.User.Claims.First(...)` yazma.
-- Audit log current user bilgisini merkezi servisten alır.
-
-## 11. Audit Log Kuralları
-
-Audit log, kim ne yaptı sorusuna cevap vermelidir.
-
-Audit gerektiren işlemler:
+Örnek servis akışı:
 
 ```text
-Kullanıcı oluşturma/güncelleme/pasife alma
+Controller -> Application service interface -> Infrastructure/Persistence implementation -> Result/Model -> Controller response
+```
+
+---
+
+## 4. Controller Standardı
+
+Controller sorumluluğu:
+
+* Route tanımlamak
+* Request model almak
+* Permission attribute kullanmak
+* Current user/context bilgilerini uygun servislerden almak
+* Application service çağırmak
+* Uygun HTTP response dönmek
+
+Kurallar:
+
+* Controller iş kuralı içermez.
+* Controller DbContext kullanmaz.
+* Controller dış sistem client’ı doğrudan çağırmaz.
+* Controller entity dönmez.
+* Controller içinde hassas veri loglanmaz.
+* Endpoint permission gerektiriyorsa attribute ile korunur.
+* Raw exception controller seviyesinde yakalanıp kullanıcıya döndürülmez.
+
+---
+
+## 5. API Contract Standardı
+
+API response için contract/DTO kullanılır.
+
+Kurallar:
+
+* Request/response modelleri açık tipli olur.
+* Entity doğrudan dönülmez.
+* Nullable alanlar bilinçli tanımlanır.
+* Endpoint mevcut proje standardında direkt response contract dönebilir.
+* Generic envelope kullanılacaksa mevcut endpoint standardıyla uyum aranır.
+* Aynı feature içinde response biçimleri tutarlı olmalıdır.
+* Frontend’i kıracak contract değişiklikleri açık karar olmadan yapılmaz.
+
+Örnek:
+
+```csharp
+public sealed record UserListItemResponse(
+    Guid Id,
+    string Username,
+    string DisplayName,
+    bool IsActive);
+```
+
+Yapma:
+
+```csharp
+return Ok(entity);
+```
+
+---
+
+## 6. Validation Standardı
+
+Kurallar:
+
+* Backend validation zorunludur.
+* Validation kullanıcı dostu hata üretir.
+* Validation raw exception veya stack trace döndürmez.
+* Kritik veri bütünlüğü sadece frontend validation’a bırakılmaz.
+* Mevcut projede FluentValidation varsa kullanılır.
+* FluentValidation yoksa mevcut validation patterni korunur.
+* Yeni validation dependency kullanıcı onayı olmadan eklenmez.
+* Save/update endpointlerinde backend validation eksik bırakılmaz.
+
+Validation örnekleri:
+
+```text
+Required alanlar
+MaxLength
+Enum/value allow-list
+Duplicate kontrolü
+Permission/ownership kontrolü
+Modül aktif/pasif kontrolü
+Dış sistem ayarlarının operation öncesi doğrulanması
+```
+
+---
+
+## 7. Authentication Standardı
+
+Kurallar:
+
+* Login AD doğrulaması ve local kullanıcı kontrolüyle yapılır.
+* AD başarılı olsa bile local kullanıcı yoksa login reddedilir.
+* Pasif local kullanıcı login olamaz.
+* Şifre veritabanına yazılmaz.
+* Şifre loglanmaz.
+* Login başarı/başarısızlıkları SecurityLog üretir.
+* Auth davranışı kullanıcı istemeden değiştirilmez.
+
+---
+
+## 8. JWT / Refresh Token Standardı
+
+Kurallar:
+
+* Access token kısa ömürlüdür.
+* Refresh token plain text saklanmaz.
+* Refresh token hashlenir.
+* Logout refresh token revoke eder.
+* Refresh token rotate işlemi security log üretir.
+* Token secret repo içinde düz metin tutulmaz.
+* Token, cookie veya secret loglanmaz.
+
+---
+
+## 9. Permission Standardı
+
+Kurallar:
+
+* Yetkilendirme permission-based yapılır.
+* Kritik endpointler permission attribute ile korunur.
+* Permission kodları magic string olarak dağınık yazılmaz.
+* Permission sabitleri merkezi yerde tutulur.
+* Permission seed idempotent olur.
+* Frontend permission kontrolü güvenlik değildir.
+* Backend permission kontrolü asıl güvenliktir.
+* Yeni operasyon yeni permission gerektiriyorsa açık permission eklenir.
+* Permission otomatik tüm rollere verilmez; ürün kararı gerekir.
+
+Permission isimlendirme örnekleri:
+
+```text
+Users.View
+Users.Create
+Users.Update
+Users.Disable
+Roles.View
+Roles.Update
+AdManagement.Users.Search
+AdManagement.Users.Create
+AdManagement.Users.Groups.View
+NotificationProviders.Update
+```
+
+---
+
+## 10. Current User / Request Context Standardı
+
+Kurallar:
+
+* Current user bilgisi merkezi servis/helper üzerinden alınır.
+* Her yerde `HttpContext.User.Claims.First(...)` yazılmaz.
+* IP address ve user agent gerekiyorsa merkezi context helper üzerinden alınır.
+* Audit/security log current user snapshot bilgisini merkezi şekilde alır.
+* Anonymous endpointlerde current user null olabilir, bu durum kontrollü işlenir.
+
+---
+
+## 11. Service Standardı
+
+Application service interface’leri açık sorumluluk taşımalıdır.
+
+Kurallar:
+
+* Servis tek feature/use-case grubuna odaklanır.
+* Her şeyi bilen dev servis yazılmaz.
+* Mevcut servis gereksiz büyüyorsa yeni ama anlamlı servis ayrılır.
+* Servis response/result modelleri typed olur.
+* Servis raw entity döndürmez.
+* Servis dış sistem exceptionlarını user-friendly result’a çevirir.
+* Servis hassas veri loglamaz.
+* Servis transaction gerekiyorsa transaction sınırını net belirler.
+
+---
+
+## 12. External Integration Standardı
+
+LDAP, AD, SMTP, SMS, HTTP provider gibi dış sistemlerde:
+
+* Ayarlar merkezi servislerden okunur.
+* Secret değerler korumalı saklanır.
+* Secret değerler loglanmaz.
+* Raw provider response kullanıcıya aynen dönülmez.
+* Provider hata mesajı sanitize edilir.
+* Timeout ve cancellation token desteklenir.
+* Test connection/test send gibi akışlar ayrı result döner.
+* Dış sistem çağrıları transaction içine gereksiz alınmaz.
+* Retry gerekiyorsa açık job/outbox standardıyla yapılır.
+* JSON body üretiminde escape/validasyon yapılır.
+* Header/query/body içinde secret loglanmaz.
+
+---
+
+## 13. Directory / LDAP / AD Operation Standardı
+
+Directory işlemleri için genel kurallar:
+
+* Operation öncesi modül/ayar operational check yapılır.
+* Ayar yoksa veya modül pasifse dış sisteme bağlanılmaz.
+* Service account bind hatası kullanıcı dostu döner.
+* DN, objectGuid, sAMAccountName, UPN gibi kimlikler typed modelde taşınır.
+* LDAP filter değerleri escape edilir.
+* Raw LDAP exception frontend’e dönülmez.
+* AD credential loglanmaz.
+* AD write operasyonları audit ve operasyon log standardına uyar.
+* Operation başarılı olsa bile yan işlem bildirimi başarısız olabilir; ana işlem kararına göre bozulmaz.
+* Password işlemleri özel güvenlik kararı gerektirir; sıradan account operation gibi eklenmez.
+
+---
+
+## 14. Notification / Outbox Standardı
+
+Bildirim altyapısı genel kuralları:
+
+* Provider ayarları merkezi şekilde yönetilir.
+* Template ve provider ayrımı korunur.
+* Outbox kaydı bildirim gönderiminden ayrı yaşam döngüsüne sahiptir.
+* Ana iş akışı ile bildirim gönderimi ayrıştırılır.
+* Bildirim kuyruğa alınamazsa ana iş akışı ürün kararına göre başarılı kalabilir.
+* Template render edilirken missing variable kontrollü ele alınır.
+* JSON body üreten providerlarda rendered body valid JSON olmalıdır.
+* Provider secret, rendered full body, gerçek recipient loglanmaz.
+* Retry/cancel işlemleri kontrollü yapılır.
+* Worker exceptionları loglanır ama secret içermez.
+* Test send ile outbox send aynı güvenlik/escaping standardını kullanır.
+
+---
+
+## 15. Background Job Standardı
+
+Kurallar:
+
+* Background job idempotent tasarlanır.
+* Aynı kayıt tekrar işlenirse duplicate etkisi üretmemelidir.
+* Retry sayısı ve hata mesajı kontrollü tutulur.
+* Job exceptionları application log’a yazılır.
+* Job kullanıcı context gerektiriyorsa actor bilgisi job payload içinde güvenli taşınır.
+* Job payload secret içermez.
+* Job başarısızlığı kullanıcıya gösterilecekse kısa ve güvenli summary üretilir.
+
+---
+
+## 16. Audit Log Standardı
+
+Audit log, kullanıcı aksiyonlarını izler.
+
+Audit gereken örnekler:
+
+```text
+Kullanıcı oluşturma/güncelleme/pasife alma/aktife alma
 Rol oluşturma/güncelleme/pasife alma
 Kullanıcıya rol atama/kaldırma
 Role izin atama/kaldırma
 Ayar güncelleme
+Modül kritik operasyonları
+Bildirim sağlayıcı/şablon/kural güncelleme
 ```
 
 Kurallar:
 
-- Kritik işlem audit logsuz bırakılmaz.
-- Audit log şifre/token/credential içermez.
-- Audit log kullanıcı snapshot bilgisi tutar.
+* Kritik işlem audit logsuz bırakılmaz.
+* Audit log şifre/token/credential içermez.
+* Audit log kullanıcı snapshot bilgisi tutar.
+* Audit log action/module/entity standardına uyar.
+* Ayar değişikliklerinde güvenli değişiklik özeti yazılır.
+* Büyük JSON dump audit log’a yazılmaz.
+* Raw provider body audit log’a yazılmaz.
 
-## 12. Security Log Kuralları
+---
+
+## 17. Security Log Standardı
 
 Security log olayları:
 
@@ -178,38 +383,122 @@ RefreshTokenFailed
 ForbiddenAccess
 ```
 
-## 13. Serilog / CorrelationId Kuralları
+Kurallar:
 
-- Serilog kullan.
-- Her request için CorrelationId üret.
-- CorrelationId response header içinde dönsün.
-- Exceptionlar merkezi middleware ile loglansın.
-- Hassas veri loglama.
+* Login denemeleri security log üretir.
+* Refresh token işlemleri security log üretir.
+* Forbidden erişimler security log üretir.
+* Security log şifre/token/secret içermez.
+* Security event audit log içine karıştırılmaz.
 
-## 14. EF Core Kuralları
+---
 
-- DbContext scoped olur.
-- DbContext controller'a inject edilmez.
-- Entity configuration ayrı sınıfta yapılır.
-- OnModelCreating şişirilmez.
-- Lazy loading kullanma.
-- Uygun querylerde AsNoTracking kullan.
+## 18. Application Log / Serilog Standardı
 
-## 15. Entity Kuralları
+Kurallar:
 
-- Entity Id tipi Guid olur.
-- User ve Role fiziksel silinmez, pasife alınır.
-- Permission seed/system kayıt olarak yönetilir.
-- Entity içinde HTTP veya DTO bilgisi bulunmaz.
+* Serilog kullanılır.
+* Structured logging kullanılır.
+* Exceptionlar merkezi middleware ile loglanır.
+* CorrelationId loglara eklenir.
+* Hassas veri loglanmaz.
+* User-friendly hata response içinde stack trace dönmez.
 
-## 16. Migration Kuralları
+Doğru:
 
-- Migration isimleri anlamlı olur.
-- Her migration tek mantıksal değişikliği temsil eder.
-- Kullanıcı istemeden migration oluşturma.
-- Production migration öncesi backup gerekir.
+```csharp
+_logger.LogInformation("User {UserId} created by {ActorUserId}", userId, actorUserId);
+```
 
-## 17. Transaction Kuralları
+Yanlış:
+
+```csharp
+_logger.LogInformation("Password is {Password}", password);
+```
+
+---
+
+## 19. Error Handling Standardı
+
+Kurallar:
+
+* Raw exception frontend’e dönülmez.
+* Kullanıcı dostu hata mesajı döner.
+* Permission hatası 403 standardına uyar.
+* Validation hatası 400 standardına uyar.
+* Not found durumları kontrollü döner.
+* Duplicate/unique violation 409 olarak dönebilir.
+* Dış sistem hataları sanitize edilir.
+* CorrelationId response içinde veya header’da bulunabilir.
+
+---
+
+## 20. EF Core Standardı
+
+Kurallar:
+
+* DbContext scoped lifetime kullanır.
+* DbContext controller’a inject edilmez.
+* Entity configuration ayrı sınıfta yapılır.
+* OnModelCreating şişirilmez.
+* Lazy loading kullanılmaz.
+* Uygun querylerde AsNoTracking kullanılır.
+* Liste querylerinde DTO projection tercih edilir.
+* Gereksiz Include kullanılmaz.
+* Büyük listeler pagination kullanır.
+
+---
+
+## 21. Entity Standardı
+
+Kurallar:
+
+* Ana entity Id tipi Guid olur.
+* Entity içinde HTTP/request/response bilgisi bulunmaz.
+* Entity doğrudan API response olarak dönülmez.
+* User/Role gibi temel kayıtlar fiziksel silinmez, pasife alınır.
+* Permission seed/system kayıt olarak yönetilir.
+* Audit alanları merkezi standarda göre yönetilir.
+
+---
+
+## 22. Pagination Standardı
+
+Liste endpointleri mümkünse standart pagination destekler:
+
+```text
+pageNumber
+pageSize
+search
+sortBy
+sortDirection
+```
+
+Kurallar:
+
+* Response typed paged model kullanır.
+* Büyük veri listeleri pagination olmadan dönülmez.
+* `pageSize` için maksimum limit uygulanır.
+* Search/filter değerleri query’ye güvenli uygulanır.
+* Sort alanları allow-list ile sınırlandırılır.
+* Backend totalCount sağlayamıyorsa hasNextPage/directory pagination contract bilinçli kullanılır.
+
+---
+
+## 23. Sorting / Filtering Standardı
+
+Kurallar:
+
+* Sort alanları kullanıcı inputundan doğrudan dynamic query olarak uygulanmaz.
+* Allow-list kullanılır.
+* Filter parametreleri typed modelle alınır.
+* Date filter UTC davranışı net olur.
+* Search değerleri normalize edilir.
+* SQL injection veya LDAP injection riskine karşı escape/parameterization uygulanır.
+
+---
+
+## 24. Transaction Standardı
 
 Transaction gereken örnekler:
 
@@ -217,50 +506,82 @@ Transaction gereken örnekler:
 User oluştur + rol ata + audit yaz
 Role oluştur + permission ata + audit yaz
 Refresh token rotate
+Ayar güncelle + audit yaz
 ```
 
 Kurallar:
 
-- Transaction use-case seviyesinde yönetilir.
-- Transaction içinde dış sistem çağrısından kaçın.
+* Transaction use-case seviyesinde yönetilir.
+* Dış sistem çağrıları transaction içine gereksiz alınmaz.
+* Transaction içinde dış sistem çağrısı gerekiyorsa hata senaryosu açık tasarlanır.
+* Audit log aynı transaction içinde mi dışında mı yazılacaksa ürün/teknik karar net olmalıdır.
 
-## 18. DateTime Kuralları
+---
 
-- DB içinde UTC sakla.
-- API response için DateTimeOffset tercih et.
-- `DateTime.Now` kullanma.
-- Zaman için `IDateTimeProvider` kullan.
+## 25. DateTime Standardı
 
-## 19. Pagination Standardı
+Kurallar:
 
-Liste endpointleri standart pagination destekler:
+* DB içinde UTC saklanır.
+* API response için DateTimeOffset tercih edilir.
+* `DateTime.Now` kullanılmaz.
+* Zaman için mevcut date/time provider standardı kullanılır.
+* Frontend locale formatlamayı yapar.
+* Log tarihleri UTC tutulur.
+
+---
+
+## 26. Secret / Configuration Standardı
+
+Kurallar:
+
+* appsettings production secret deposu değildir.
+* JWT secret repo içinde düz metin tutulmaz.
+* Connection string production’da güvenli sağlanır.
+* Şifre, token, API key, provider secret loglanmaz.
+* Hassas ayarlar response içinde maskelenir veya dönülmez.
+* Secret update audit log’da masked summary olarak görünür.
+* Secret değerler old/new JSON içine yazılmaz.
+
+---
+
+## 27. Settings Standardı
+
+Ayar kullanan servislerde:
+
+* Ayar okuma/yazma merkezi servis üzerinden yapılır.
+* Ayar yoksa güvenli default uygulanır.
+* Ayar yokken kritik modül aktif varsayılmaz.
+* Save sırasında backend validation yapılır.
+* Test connection/test send ayrı operasyon olarak tasarlanır.
+* Ayar değişikliği audit log üretir.
+* Secret alanlar korunur.
+* JSON settings modelleri typed serialize/deserialize edilir.
+* Unknown/null JSON güvenli default’a düşer.
+
+---
+
+## 28. Test Standardı
+
+Backend testlerinde:
+
+* Dış bağımlılıklar fake/mock yapılır.
+* Gerçek AD/SMS/SMTP provider’a istek atan unit test yazılmaz.
+* Permission, validation, logging, critical operation davranışları test edilebilir.
+* Sensitive data loglanmadığı test edilebilir.
+* Idempotent seed test edilebilir.
+* Test isimleri davranışı açık anlatır.
+
+Kontroller:
 
 ```text
-page
-pageSize
-search
-sortBy
-sortDirection
+dotnet build
+dotnet test
 ```
 
-Response `PagedResult<T>` olmalıdır.
+---
 
-## 20. Secret / Configuration Kuralları
-
-- appsettings.json hassas veri çöplüğü olmayacak.
-- JWT secret repo içinde düz metin tutulmaz.
-- Connection string production'da güvenli sağlanır.
-- Şifre, token, API key, connection string password loglanmaz.
-
-## 21. AD Management Settings Validation Standardı
-
-- AD Management aktifken bağlantı için kritik DN ve domain alanları backend tarafında zorunlu doğrulanmalıdır.
-- Frontend validation güvenlik veya veri bütünlüğü kaynağı kabul edilmez.
-- `DomainFqdn`, `NetbiosDomainName`, `DefaultNamingContext`, `BaseDn`, `UsersRootOu`, `DisabledUsersOu` ve servis hesabı bilgileri backend save akışında doğrulanmalıdır.
-- Validation mesajları kullanıcı dostu olmalı; şifre, secret veya stack trace içermemelidir.
-- Tercih edilen DC doğrulaması korunmalı; `DomainFqdn` yanlışsa preferred DC doğru olsa bile kayıt başarısız olmalıdır.
-
-## 22. Anti-Patternler
+## 29. Anti-Patternler
 
 Yapma:
 
@@ -268,9 +589,31 @@ Yapma:
 Controller içinde iş mantığı yazma.
 Controller'a DbContext inject etme.
 Entity'yi response olarak dönme.
+Raw exception frontend'e dönme.
 Refresh token'ı plain text saklama.
-Şifre/token/credential loglama.
+Şifre/token/credential/provider secret loglama.
 DateTime.Now kullanma.
 Magic string permission kullanma.
 Her liste için ayrı pagination modeli üretme.
-Her şeyi Shared klasörüne atma.
+Her feature için ayrı API response standardı uydurma.
+Dış sistem secretlarını audit/log içine yazma.
+Mevcut servis patternini bırakıp yeni mimari icat etme.
+Kullanıcı onayı olmadan dependency ekleme.
+Kullanıcı onayı olmadan migration oluşturma.
+```
+
+---
+
+## 30. Temel İlke
+
+Controller ince kalır.
+
+Service iş kuralını taşır.
+
+Entity veri modelidir, response değildir.
+
+Permission backend’de korunur.
+
+Log güvenli ve anlamlı olur.
+
+Mevcut proje patterni yok sayılmaz.

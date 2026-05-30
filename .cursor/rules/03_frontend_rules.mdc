@@ -1,701 +1,795 @@
 ---
-description: SASPortal frontend kodu için React, TypeScript, routing, auth, API client, TanStack Query, form, tablo ve UI kuralları.
+description: SASPortal frontend kodu için React, TypeScript, feature yapısı, API client, TanStack Query, TanStack Table, UI component, form, routing, permission, state ve i18n kuralları.
 globs:
-  - "frontend/**/*.{ts,tsx,css,json}"
+  - "frontend/**/*.{ts,tsx,json,css}"
 alwaysApply: true
 ---
 
 # SASPortal Frontend Rules
 
-Bu kurallar frontend dosyaları üzerinde çalışırken uygulanır.
+Bu kurallar SASPortal frontend dosyaları üzerinde çalışırken uygulanır.
 
-Detaylı referans:
+Amaç; frontend kodunun tutarlı, sürdürülebilir, permission-aware, i18n uyumlu, tekrar kullanılabilir component standardına bağlı ve modüler kalmasını sağlamaktır.
+
+Bu dosya modül özelinde kural yazmaz. Yeni veya mevcut tüm frontend modülleri bu genel standartlara uyar.
+
+---
+
+## 1. Ana Teknoloji Kararları
+
+Frontend stack:
 
 ```text
-KuralSetleri/03_SASPortal_Frontend_Kural_Seti.md
+React
+TypeScript
+Vite
+TanStack Query
+TanStack Table
+React Router
+Zustand
+i18next / react-i18next
+Tailwind CSS
+shadcn-style UI primitives
+Sonner toast
 ```
 
-## 1. Teknoloji Kararları
+Kurallar:
 
-- React 19.2 kullan.
-- TypeScript strict kullan.
-- Vite kullan.
-- Tailwind CSS v4 kullan.
-- shadcn/ui kullan.
-- Server state için TanStack Query v5 kullan.
-- Tablolar için TanStack Table v8 kullan.
-- Formlar için React Hook Form + Zod kullan.
-- Global auth state için Zustand kullan.
-- API iletişimi için merkezi Axios client kullan.
-- Toast için Sonner kullan.
-- Icon için Lucide React kullan.
+* TypeScript strict düşünülerek kod yazılır.
+* `any` kullanılmaz.
+* Gereksiz dependency eklenmez.
+* Yeni dependency kullanıcı onayı olmadan eklenmez.
+* Mevcut ortak component varsa yeniden yazılmaz.
+* Feature logic, UI component ve API katmanları ayrılır.
 
-## 2. Proje Yapısı
+---
 
-Frontend yapısı:
+## 2. Frontend Klasör Yapısı
+
+Genel yapı:
 
 ```text
 frontend/src/app
+frontend/src/components/common
+frontend/src/components/layout
+frontend/src/components/theme
+frontend/src/components/ui
 frontend/src/features
-frontend/src/components
-frontend/src/lib
 frontend/src/hooks
-frontend/src/types
-frontend/src/assets
-```
-
-Feature yapısı örneği:
-
-```text
-features/users/api.ts
-features/users/types.ts
-features/users/UsersPage.tsx
-features/users/AddUserDialog.tsx
-features/users/AssignRolesDialog.tsx
-features/users/UserDetailDialog.tsx
+frontend/src/lib
+frontend/src/locales
+frontend/src/pages
 ```
 
 Kurallar:
 
-- Feature'a özel component ilgili feature içinde kalır.
-- Ortak component `components/` altına konur.
-- Feature'lar birbirinin iç detaylarına doğrudan bağımlı olmaz.
-- Yeni geliştirmede `modules/` klasörü açılmaz.
-- Mevcut pattern düz feature dosya yapısıdır.
-- Büyük feature'larda gerekirse `components/`, `hooks/`, `schemas/` alt klasörleri açılabilir.
-- Cursor gereksiz klasör parçalama yapmamalıdır.
+* Feature’a özel sayfa, component, type ve api dosyaları `features/<feature-name>` altında tutulur.
+* Ortak UI primitive componentleri `components/ui` altında tutulur.
+* Ortak uygulama componentleri `components/common` altında tutulur.
+* Layout componentleri `components/layout` altında tutulur.
+* Ortak helper fonksiyonlar `lib` altında tutulur.
+* Ortak hooklar `hooks` altında tutulur.
+* Aynı iş için feature içinde ortak component kopyası oluşturulmaz.
 
-## 3. TypeScript Kuralları
+---
 
-- `any` kullanma.
-- Prop tiplerini açık yaz.
-- API response tiplerini açık yaz.
-- Magic string değerleri her yere dağıtma.
-- `type` ve `interface` kullanımında tutarlı ol.
+## 3. Feature Dosya Standardı
 
-Yanlış:
-
-```ts
-function UserCard(props: any) {}
-```
-
-Doğru:
-
-```ts
-type UserCardProps = {
-  displayName: string;
-  email?: string | null;
-};
-```
-
-## 4. Component Kuralları
-
-- Componentler küçük ve tek sorumluluklu olmalıdır.
-- Feature sayfa componentleri ilgili feature altında tutulur.
-- Gerekmedikçe `features/{feature}/pages` klasörü açılmaz.
-- UI componentleri mümkün olduğunca dumb/presentational olur.
-- Büyük componentleri parçala.
-- Aynı UI davranışını tekrar etme, ortak component üret.
-
-## 5. Routing Kuralları
-
-React Router kullan.
-
-Route örnekleri:
+Bir feature altında tipik yapı:
 
 ```text
-/login
-/dashboard
-/users
-/users/new
-/users/:id/edit
-/roles
-/permissions
-/logs/audit
-/logs/security
-/settings
+features/example/ExamplePage.tsx
+features/example/api.ts
+features/example/types.ts
+features/example/query-keys.ts
+features/example/example-columns.tsx
+features/example/components/ExampleForm.tsx
+features/example/components/ExampleDialog.tsx
 ```
 
 Kurallar:
 
-- Login public route olur.
-- Uygulama içi sayfalar auth guard arkasında olur.
-- Yetki gerektiren route permission guard ile korunur.
+* API çağrıları `api.ts` içinde olur.
+* Type/interface tanımları `types.ts` içinde olur.
+* Query key sabitleri feature içinde merkezi tutulur.
+* Büyük tablo kolonları `*-columns.tsx` dosyasına alınır.
+* Feature componenti içinde aşırı büyük inline JSX yazılmaz.
+* Feature içindeki componentler sadece o feature’a aitse `components` altında tutulur.
+* Bir component başka feature’da da kullanılacaksa `components/common` altına taşınır.
 
-## 6. Layout Kuralları
+---
 
-Ana layout:
-
-```text
-AppLayout
-  AppSidebar
-  Topbar
-  MainContent
-```
+## 4. API Client Standardı
 
 Kurallar:
 
-- Sidebar menüleri permission bilgisine göre gösterilir.
-- Topbar kullanıcı bilgisi ve logout içerir.
-- Layout componentleri `frontend/src/components/layout` altında tutulur.
-- Authenticated sayfalar `AppLayout` içinde çalışır.
-- `AppLayout`, `AppSidebar` ve `Topbar` layout standardının temelidir.
-- Test/Staging ortam etiketi gerekiyorsa Topbar/AppLayout içinde gösterilir.
-
-## 7. Auth State Kuralları
-
-Auth state için Zustand kullan.
-
-Auth store şunları yönetir:
-
-```text
-Access token
-Current user
-Permission listesi
-Role listesi
-Login durumu
-```
-
-Kurallar:
-
-- Componentler localStorage/sessionStorage ile doğrudan konuşmaz.
-- Token erişimi auth store/helper üzerinden olur.
-- Logout auth state'i temizler.
-- Refresh başarısızsa login'e yönlendir.
-
-## 8. API Client Kuralları
-
-Merkezi client:
-
-```text
-frontend/src/lib/api-client.ts
-```
-
-Kurallar:
-
-- Merkezi Axios client `frontend/src/lib/api-client.ts` içinde bulunur.
-- Component içinde doğrudan `axios.create` yapılmaz.
-- Her API çağrısı merkezi `apiClient` üzerinden yapılır.
-- Authorization header merkezi eklenir.
-- 401 response merkezi yakalanır.
-- Refresh token akışı merkezi yönetilir.
-- API fonksiyonları ilgili feature altında `api.ts` dosyasında bulunur.
-- Gerekmedikçe `features/{feature}/api/` klasörü açılmaz.
-- Mevcut `api.ts` pattern'i korunur.
+* Component içinde doğrudan `fetch` veya `axios` çağrısı yapılmaz.
+* Tüm API çağrıları merkezi API client üzerinden yapılır.
+* Feature API fonksiyonları `features/<feature>/api.ts` içinde tanımlanır.
+* API fonksiyonları typed request/response kullanır.
+* Backend contract ne dönüyorsa frontend type buna göre yazılır.
+* API error handling için ortak helper kullanılır.
+* Token, cookie, CSRF gibi detaylar component içine taşınmaz.
 
 Örnek:
 
-```text
-frontend/src/features/users/api.ts
-frontend/src/features/roles/api.ts
-frontend/src/features/permissions/api.ts
+```ts
+export async function getUsers(query: UserListQuery): Promise<PagedResponse<UserListItem>> {
+  const response = await apiClient.get<PagedResponse<UserListItem>>("/users", { params: query });
+  return response.data;
+}
 ```
 
-## 9. API Response Kuralları
+Yapma:
 
-Backend şu an endpoint bazlı direkt response contract döner.
+```ts
+const response = await axios.get("/api/users");
+```
+
+---
+
+## 5. TanStack Query Standardı
+
+Server state için TanStack Query kullanılır.
 
 Kurallar:
 
-- Frontend API tipleri backend response contractlarına birebir uygun tanımlanır.
-- Generic `ApiResponse<T>` envelope varsayılmaz.
-- Hata mesajları için `getApiErrorMessage(error, fallback)` gibi merkezi helper kullanılır.
-- `response.data.message` varsa kullanıcıya gösterilebilir.
-- `response.data.title` fallback olarak kullanılabilir.
-- Uzun vadede backend `errorCode + message` standardına geçebilir; mevcut frontend bunu varsaymaz.
-- Validation hataları form alanlarına map edilebilir olmalıdır.
+* API’den gelen veri `useQuery` ile okunur.
+* Veri değiştiren işlemler `useMutation` ile yapılır.
+* Query keyler magic array olarak dağınık yazılmaz.
+* Feature içinde query key sabitleri tutulur.
+* Mutation success sonrası ilgili query invalidate edilir.
+* Gereksiz global refetch yapılmaz.
+* Loading/error/empty durumları ortak componentlerle gösterilir.
+* Query enabled koşulları açık yazılır.
+* Arama/filter/pagination query key içine dahil edilir.
 
-## 10. TanStack Query Kuralları
+Örnek query key:
 
-- GET işlemleri `useQuery` ile yapılır.
-- POST/PUT/DELETE işlemleri `useMutation` ile yapılır.
-- Query keyler merkezi ve tutarlı olur.
-- Mutation sonrası ilgili query invalidate edilir.
-- Loading/error state ortak componentlerle gösterilir.
+```ts
+export const USERS_QUERY_KEY = ["users"] as const;
+```
 
-## 11. Form Kuralları
+Örnek kullanım:
 
-- React Hook Form kullan.
-- Zod schema kullan.
-- Backend validation hatalarını form alanlarına map et.
-- Submit loading state göster.
-- Başarılı işlemde toast göster.
-- Kritik işlemde confirmation dialog kullan.
+```ts
+queryKey: [...USERS_QUERY_KEY, "list", search, status, pageNumber, pageSize]
+```
 
-## 12. TanStack Table ve DataTable Standardı
+---
+
+## 6. TanStack Table Standardı
 
 Bu projede tablo standardı TanStack Table v8 üzerine kuruludur.
 
 Dependency:
-- `@tanstack/react-table` frontend dependency olarak bulunmalıdır.
-- Yeni tablo ekranları raw HTML table ile sıfırdan yazılmaz.
-- Her tablo, ortak DataTable componentleri üzerinden oluşturulur.
-
-Ortak tablo componentleri:
-- `frontend/src/components/common/data-table.tsx`
-- `DataTable`
-- `DataTableToolbar`
-- `DataTableFilterPanel`
-- `DataTableActiveFilters`
-- `DataTablePagination`
-
-TanStack Table kullanım kararları:
-
-Server-side listeleme yapılan ekranlarda:
-- `useReactTable` kullanılır.
-- `manualPagination: true` kullanılır.
-- Backend pagination/sorting/filtering davranışı korunur.
-- Pagination state kontrollü tutulur.
-- Query parametreleri mevcut API standardına göre yönetilir.
-
-Client-side listeleme yapılan ekranlarda:
-- `useReactTable` kullanılır.
-- `getCoreRowModel` kullanılır.
-- Gerekirse `getFilteredRowModel` kullanılır.
-- Gerekirse `getPaginationRowModel` kullanılır.
-- Küçük/orta ölçekli, zaten tek response ile gelen listelerde client-side pagination/filtering kullanılabilir.
-
-Kolon tanımları:
-- Kolonlar feature içinde ayrı `*-columns.tsx` dosyasında tutulabilir.
-- Büyük component içinde inline kolon karmaşası yapılmaz.
-- `ColumnDef<T>` tipleri açık yazılır.
-- Aksiyon kolonları standart hizalanır.
-- Teknik değerler `font-mono text-xs text-muted-foreground` standardıyla gösterilir.
-- Uzun metinler `truncate + title` veya kontrollü wrap ile tabloyu bozmayacak şekilde gösterilir.
-
-Görsel tablo standardı:
-- Wrapper: `overflow-hidden rounded-lg border bg-card`
-- Scroll container gerekiyorsa: `overflow-x-auto`
-- Header: `bg-muted/50 text-left`
-- Header cell: `px-3 py-2 font-medium whitespace-nowrap`
-- Row: `border-t align-top hover:bg-muted/20`
-- Cell: `px-3 py-2`
-- Action column: `w-0 whitespace-nowrap text-right`
-
-Toolbar standardı:
-- Search input görünür kalır.
-- Search dışındaki filtreler `DataTableFilterPanel` altında toplanır.
-- Filtreler butonunda aktif filtre sayısı gösterilir.
-- Aktif filtreler gerekirse chip/badge olarak gösterilir.
-- Filtre temizleme davranışı bulunur.
-
-Pagination standardı:
-- Pagination için ortak DataTable pagination componenti kullanılır.
-- Server-side ve client-side pagination aynı görsel standardı kullanır.
-- Page size seçenekleri ekran ihtiyacına göre belirlenir.
-- Varsayılan seçenekler mümkünse `10 / 25 / 50` olur.
-
-State standardı:
-- Loading için `LoadingState`
-- Error için `ErrorState`
-- Empty için `EmptyState`
-- Toast için Sonner
-- Kritik işlemler için `ConfirmDialog`
-
-Yeni tablo içeren promptlarda:
-- TanStack Table standardı kullanılmalıdır.
-- Ortak DataTable componentleri kullanılmalıdır.
-- Raw HTML table yazılmamalıdır.
-
-## 13. Loading / Error / Empty State Kuralları
-
-Ortak componentler kullan:
 
 ```text
-PageLoading
-TableLoading
-ErrorState
-EmptyState
-ForbiddenState
-NotFoundState
-```
-
-Her sayfa loading/error/empty durumunu göstermelidir.
-
-## 14. Toast / Dialog Kuralları
-
-- Toast için Sonner kullan.
-- Başarılı create/update işlemlerinde toast göster.
-- Hata durumunda kullanıcı dostu mesaj göster.
-- Kritik işlemler confirmation dialog ister.
-- Hassas veri toast içinde gösterilmez.
-
-## 15. Permission Guard Kuralları
-
-- Permission guard sadece UX içindir.
-- Menü ve buton görünürlüğünü yönetir.
-- Asıl güvenlik backend tarafındadır.
-- Permission kontrolünü güvenlik katmanı sanma.
-
-Örnek:
-
-```tsx
-<Can permission="Users.Create">
-  <Button>Yeni Kullanıcı</Button>
-</Can>
-```
-
-## 16. Sidebar Menü Kuralları
-
-Menüler merkezi config ile yönetilir.
-
-Örnek:
-
-```ts
-export const sidebarItems = [
-  {
-    title: "Kullanıcılar",
-    href: "/users",
-    icon: UsersIcon,
-    permission: "Users.View",
-  },
-];
-```
-
-## 17. shadcn/ui Kuralları
-
-- shadcn/ui componentleri `components/ui` altında bulunur.
-- UI componentleri iş mantığı içermez.
-- Variant yapısı korunur.
-- Gereksiz component kopyalama yapma.
-
-## 18. Tailwind Kuralları
-
-- Tailwind CSS v4 kullan.
-- Gereksiz inline style kullanma.
-- Dark/light mode uyumlu tokenlar kullan.
-- Çok uzun class listelerini component/variant ile sadeleştir.
-
-## 19. Tema Kuralları
-
-- Varsayılan görünen ad `SAS-Portal` olur.
-- Dark/light mode desteklenmelidir.
-- Kurumsal renkler ileride ayardan değiştirilebilir yapıya uygun tasarlanır.
-
-## 20. Auth Akışı
-
-Login:
-
-```text
-Login formu -> /auth/login -> token/current user -> auth store -> dashboard
-```
-
-Refresh:
-
-```text
-401 -> refresh dene -> başarılıysa request tekrar et -> başarısızsa login'e yönlendir
+@tanstack/react-table
 ```
 
 Kurallar:
 
-- Aynı anda birden fazla refresh isteği göndermemeye çalış.
-- Token'ı console'a yazma.
+* Yeni tablo ekranları raw HTML table ile yazılmaz.
+* Mevcut raw HTML table kullanımları refactor sırasında ortak DataTable standardına taşınır.
+* Her tablo `useReactTable` veya ortak table hookları ile oluşturulur.
+* Her tablo ortak `DataTable` componenti üzerinden render edilir.
+* Büyük tablo kolonları `ColumnDef<T>[]` olarak ayrı kolon dosyasında tutulur.
+* Sadece `DataTable` import etmek migration tamamlandı anlamına gelmez.
+* Toolbar, filtre, pagination, empty/loading/error davranışları da standarda uygun olmalıdır.
 
-## 21. Ekran Kuralları
-
-İlk faz ekranları:
+Ortak componentler:
 
 ```text
-Login
-Dashboard shell
-Kullanıcı listesi
-Kullanıcı oluşturma/düzenleme
-Rol listesi
-Rol oluşturma/düzenleme
-Rol izin atama
-Kullanıcı rol atama
-İzin listesi
-Audit log listesi
-Security log listesi
-Temel ayarlar
+components/common/data-table.tsx
+components/common/data-table-hooks.ts
 ```
 
-## 22. Log Ekranı Kuralları
+Beklenen ortak parçalar:
 
-- Audit log ve Security log listeleri server-side pagination kullanır.
-- Tarih filtresi olmalıdır.
-- Kullanıcı/event/action filtresi olabilir.
-- Log detay drawer/dialog ile gösterilebilir.
-- Hassas veri gösterilmez.
+```text
+DataTable
+DataTableToolbar
+DataTableFilterPanel
+DataTableActiveFilters
+DataTablePagination
+useServerDataTable
+useClientDataTable
+```
 
-## 23. Anti-Patternler
+---
+
+## 7. Server-side Tablo Standardı
+
+Backend pagination kullanan listelerde server-side tablo kullanılır.
+
+Örnek ekranlar:
+
+```text
+Kullanıcı listeleri
+Rol listeleri
+İzin listeleri
+Audit logs
+Security logs
+Bildirim şablonları, eğer backend pagination varsa
+Bildirim sağlayıcıları, eğer backend pagination varsa
+```
+
+TanStack ayarları:
+
+```text
+manualPagination: true
+getCoreRowModel
+controlled pagination state
+```
+
+Kurallar:
+
+* `pageNumber`, `pageSize`, `search`, `filters` parent state olarak tutulur.
+* Bu state query key içine dahil edilir.
+* Filter/search değişince pageNumber 1’e döner.
+* Backend `totalCount/totalPages` dönüyorsa server pagination tam kullanılır.
+* Backend sadece `hasNextPage` dönüyorsa directory pagination standardı kullanılır.
+* Page size değişince pageNumber 1’e döner.
+* Pagination ortak `DataTablePagination` ile gösterilir.
+
+---
+
+## 8. Directory Pagination Standardı
+
+Bazı endpointler totalCount bilmeden sadece `hasNextPage` ile çalışabilir.
+
+Bu durumda directory pagination kullanılır.
+
+UI davranışı:
+
+* Sayfa boyutu gösterilir.
+* Sayfa bilgisi gösterilir.
+* İlk sayfa butonu olur.
+* Önceki butonu olur.
+* Sonraki butonu olur.
+* Son sayfa butonu olmaz.
+* `pageNumber <= 1` ise İlk/Önceki disabled olur.
+* `hasNextPage = false` ise Sonraki disabled olur.
+* Page size değişince sayfa 1’e döner.
+
+Directory pagination total count varmış gibi davranmaz. Cursor burada hayal kurmaz; total yoksa total yoktur, dram bu kadar.
+
+---
+
+## 9. Client-side Tablo Standardı
+
+Tek response ile gelen küçük/orta ölçekli listelerde client-side tablo kullanılabilir.
+
+Örnek ekranlar:
+
+```text
+Ayar ekranı içindeki küçük listeler
+Notification rule listeleri
+Attribute mapping listeleri
+Kullanıcıya ait grup üyelikleri
+Template catalog gibi küçük veri listeleri
+```
+
+TanStack ayarları:
+
+```text
+getCoreRowModel
+getFilteredRowModel, gerekiyorsa
+getPaginationRowModel, gerekiyorsa
+```
+
+Kurallar:
+
+* Client-side tablolarda pagination varsayılan olarak açıktır.
+* Default page size: `10`
+* Page size seçenekleri: `10 / 25 / 50`
+* `enablePagination=false` sadece açık ürün kararı varsa kullanılır.
+* Search gerekiyorsa local/global filter state kullanılır.
+* Search değişince pageIndex 0’a döner.
+* Küçük tablo diye pagination tamamen atlanmaz; kayıt sayısı ileride artabilir.
+* Pagination sadece toplam kayıt page size’dan küçükse gizlenebilir.
+
+---
+
+## 10. DataTable Migration Checklist
+
+Bir ekran TanStack Table standardına taşındığında şu maddeler tamamlanır:
+
+```text
+ColumnDef kullanıldı.
+Ortak DataTable kullanıldı.
+Toolbar gerekiyorsa DataTableToolbar kullanıldı.
+Search gerekiyorsa görünür search input kullanıldı.
+Search dışı filtreler DataTableFilterPanel içine alındı.
+Pagination gerekiyorsa DataTablePagination kullanıldı.
+LoadingState kullanıldı.
+EmptyState kullanıldı.
+ErrorState veya route error standardı korundu.
+Row actions bozulmadı.
+Permission davranışı bozulmadı.
+Mutation/query invalidation davranışı bozulmadı.
+Uzun metinler tabloyu taşırmıyor.
+Action column hizası standart.
+Dark/light görünüm kontrol edildi.
+```
+
+Bu checklist tamamlanmadan “tablo refactor bitti” kabul edilmez.
+
+---
+
+## 11. DataTable Görsel Standardı
+
+Tablo wrapper:
+
+```text
+overflow-hidden
+rounded-lg
+border
+bg-card
+```
+
+Scroll container gerekiyorsa:
+
+```text
+overflow-x-auto
+```
+
+Table:
+
+```text
+min-w-full
+text-sm
+```
+
+Header:
+
+```text
+bg-muted/50
+text-left
+```
+
+Header cell:
+
+```text
+px-3
+py-2
+font-medium
+whitespace-nowrap
+```
+
+Row:
+
+```text
+border-t
+align-top
+hover:bg-muted/20
+```
+
+Cell:
+
+```text
+px-3
+py-2
+```
+
+Action column:
+
+```text
+w-0
+whitespace-nowrap
+text-right
+```
+
+Uzun teknik değerler:
+
+```text
+truncate + title
+font-mono
+text-xs
+text-muted-foreground
+```
+
+DN, objectId, guid, correlationId, token hash gibi uzun değerler tabloyu veya butonları ezemez. Tabloyu taşıran string yüzünden UI bozuluyorsa hata stringde değil, componenttedir. Ne yazık ki string kendini kısaltmayı bilmiyor.
+
+---
+
+## 12. DataTable Toolbar Standardı
+
+Toolbar düzeni:
+
+Sol:
+
+```text
+Search input
+```
+
+Sağ:
+
+```text
+Filtreler butonu
+Refresh butonu, varsa
+Primary action button, varsa
+```
+
+Kurallar:
+
+* Search input görünür kalır.
+* Search dışındaki filtreler `DataTableFilterPanel` içinde toplanır.
+* Aktif filtre sayısı Filtreler butonunda gösterilir.
+* Aktif filtreler gerekirse chip/badge olarak gösterilir.
+* Filtre temizleme davranışı bulunur.
+* Toolbar responsive olmalıdır.
+* Primary action butonları toolbar actions alanına konur.
+* Tablo üstünde ayrı ayrı dağılmış butonlar oluşturulmaz.
+
+---
+
+## 13. Filter Panel Standardı
+
+Search dışındaki filtreler ortak filter panelde toplanır.
+
+Kurallar:
+
+* Status, type, date, module, user, action gibi filtreler panel içinde olur.
+* Filter panel desktop için popover olabilir.
+* Panel içinde filtreler dikey ve düzenli görünür.
+* Temizle butonu bulunur.
+* Kapat butonu bulunur.
+* Filtreler anlık uygulanıyorsa Uygula butonu zorunlu değildir.
+* Filtre değişince pagination ilk sayfaya döner.
+* Aktif filtre sayısı doğru hesaplanır.
+* Aktif filtreleri temizle davranışı tüm filtreleri default hale getirir.
+
+---
+
+## 14. Nested Popover Standardı
+
+Filter panel içinde MultiSelect, DateRangePicker, Combobox gibi başka popover kullanan componentler bulunabilir.
+
+Kurallar:
+
+* Parent filter panel, iç popover’a tıklanınca kapanmamalıdır.
+* MultiSelect içinde seçim yapılabilmelidir.
+* DateRangePicker içinde tarih seçilebilmelidir.
+* Combobox içinde arama/seçim yapılabilmelidir.
+* Dış tıklama kapanma davranışı korunmalıdır.
+* Escape davranışı korunmalıdır.
+* Bu davranış ortak Popover veya DataTableFilterPanel seviyesinde çözülür.
+* Her feature’da ayrı `stopPropagation` hack yazılmaz.
+
+---
+
+## 15. Popover / Combobox Standardı
+
+Kurallar:
+
+* Popover positioning ortak component üzerinden yapılır.
+* Trigger genişliğiyle aynı açılması gereken popoverlarda ortak prop kullanılır.
+* `matchTriggerWidth` gibi ortak davranışlar feature içinde tekrar yazılmaz.
+* Uzun içerikler popover dışına taşmaz.
+* Uzun DN/code/id değerleri truncate + title ile gösterilir.
+* Combobox arama debounce gerektiriyorsa ortak hook kullanılabilir.
+* Popover/dropdown ekran dışına taşmamalıdır.
+* RowActions dropdown davranışı bozulmamalıdır.
+
+---
+
+## 16. Row Actions Standardı
+
+Tablo satır aksiyonları ortak pattern ile yapılır.
+
+Kurallar:
+
+* Aksiyonlar sağdaki action column içinde hizalanır.
+* Permission yoksa aksiyon gösterilmez veya disabled olur; mevcut ürün kararına uyulur.
+* Kritik aksiyonlar confirm dialog ister.
+* Dropdown ekran dışına taşmamalıdır.
+* Son satırda dropdown tablo içine sıkışmamalıdır.
+* Action button renkleri light/dark tema ile uyumlu olmalıdır.
+* Aksiyon metinleri i18n üzerinden gelir.
+
+---
+
+## 17. Loading / Empty / Error State Standardı
+
+Kurallar:
+
+* Loading için `LoadingState` kullanılır.
+* Empty için `EmptyState` kullanılır.
+* API error için mevcut route error veya `ErrorState` standardı kullanılır.
+* Dashed border ile feature-specific empty/loading blokları yeni kodda tercih edilmez.
+* Empty state açıklayıcı olmalıdır.
+* Error state raw exception göstermez.
+* Retry varsa ortak buton standardı kullanılır.
+
+---
+
+## 18. Form Standardı
+
+Formlar mevcut proje patternine uygun yazılır.
+
+Kurallar:
+
+* Yeni formda mevcut feature form patterni incelenir.
+* Büyük ve karmaşık formlarda form state ayrıştırılır.
+* Validation frontend’de UX içindir; backend validation asıl kaynaktır.
+* Frontend validation mesajları i18n ile gelir.
+* Submit sırasında button loading/disabled durumu gösterilir.
+* Save/cancel aksiyonları tutarlı konumlanır.
+* Form error ortak component ile gösterilir.
+* Gizli credential alanlarında maskeli gösterim standardı uygulanır.
+* Yeni form library dependency’si kullanıcı onayı olmadan eklenmez.
+
+Not:
+
+* React Hook Form veya Zod kullanılacaksa dependency mevcut değilse önce kullanıcı onayı gerekir.
+* Mevcut projede hangi form patterni kullanılıyorsa refactor sırasında o pattern korunur.
+
+---
+
+## 19. Dialog / Page Karar Standardı
+
+Dialog kısa ve tek odaklı işler içindir.
+
+Dialog için uygun işler:
+
+```text
+Kısa create/edit formu
+Confirm
+Detay görüntüleme
+Basit seçim
+```
+
+Ayrı sayfa gerektiren işler:
+
+```text
+Çok alanlı form
+Uzun iş akışı
+Tablo + arama + filtre + aksiyon
+Birden fazla bölüm içeren yönetim ekranı
+Kaybolmaması gereken veri girişi
+```
+
+Kurallar:
+
+* Kullanıcı çok veri girecekse dialog tercih edilmez.
+* Yanlışlıkla dışarı tıklayınca veri kaybı yaşanacak uzun formlar sayfa olmalıdır.
+* Dialog içerikleri kenara yapışmamalıdır.
+* Dialog header/body/footer spacing tutarlı olmalıdır.
+* Save/cancel butonları aynı footer içinde hizalanmalıdır.
+
+---
+
+## 20. Sayfa Layout Standardı
+
+Yeni sayfalar:
+
+* PageHeader veya mevcut SectionCard standardını kullanır.
+* Ana içerik `space-y-*` ile düzenli ayrılır.
+* Ana aksiyonlar başlık/toolbar alanında olur.
+* Geri dön butonu gerekiyorsa görünür konumda olur.
+* Kartlar gereksiz iç içe geçirilmez.
+* Responsive davranış kontrol edilir.
+* Dark/light tema uyumu korunur.
+
+---
+
+## 21. Settings UI Standardı
+
+Ayar ekranlarında:
+
+* Benzer ayarlar aynı tab veya section altında gruplanır.
+* Boolean ayarlar için genellikle switch kullanılır.
+* Checkbox yalnızca çoklu seçim veya klasik form anlamı varsa kullanılır.
+* Secret alanlar maskeli gösterilir.
+* Test connection/test send gibi butonlar net ayrılır.
+* Save butonu tutarlı konumdadır.
+* Ayar kaydetme audit log üretir, frontend bunu bozacak API davranışı üretmez.
+* Ayar yoksa güvenli default gösterilir.
+* Modül aktif/pasif davranışı açık ve görünür olmalıdır.
+
+---
+
+## 22. Permission-aware UI Standardı
+
+Kurallar:
+
+* Permission frontend’de sadece UX içindir.
+* Backend permission kontrolü zorunludur.
+* Permission yoksa kullanıcıya aksiyon gösterilmeyebilir.
+* Permission yokken route guard kullanıcıyı uygun ekrana yönlendirebilir.
+* Permission stringleri dağınık magic string olarak çoğaltılmaz; mevcut helper/pattern kullanılır.
+* SuperAdmin/bypass davranışı backend güvenlik modeline bağlıdır; frontend bunu güvenlik olarak kabul etmez.
+
+---
+
+## 23. Routing Standardı
+
+Kurallar:
+
+* Route tanımları merkezi router dosyasında tutulur.
+* Yeni route mevcut layout/guard standardına uyar.
+* Permission gereken route guard ile korunur.
+* Route parametreleri typed okunur.
+* Geçersiz parametre durumunda kullanıcı dostu state gösterilir.
+* Error route standardı korunur.
+* Gereksiz nested route karmaşası oluşturulmaz.
+
+---
+
+## 24. State Standardı
+
+State tipleri:
+
+```text
+Server state: TanStack Query
+Auth/user preference state: Zustand
+Local UI state: useState/useReducer
+Form state: mevcut form patterni
+```
+
+Kurallar:
+
+* Server state Zustand’a taşınmaz.
+* API response localStorage’a gereksiz yazılmaz.
+* UI state query key yerine geçmez.
+* Query invalidation açık yapılır.
+* Gereksiz global state oluşturulmaz.
+
+---
+
+## 25. Toast ve Confirm Standardı
+
+Toast:
+
+* Başarılı mutation sonrası kısa başarı mesajı gösterilir.
+* Hata durumunda kullanıcı dostu hata mesajı gösterilir.
+* Raw backend exception gösterilmez.
+* Aynı işlem için çoklu spam toast üretilmez.
+
+Confirm:
+
+* Kritik/destructive işlemler confirm dialog ister.
+* Confirm title/description i18n ile gelir.
+* Destructive işlemde destructive/danger variant kullanılır.
+* Confirm loading state destekler.
+* Confirm kapanınca local target state temizlenir.
+
+---
+
+## 26. Date / Time Standardı
+
+Kurallar:
+
+* Tarih gösterimi için ortak `DateTimeText` benzeri component kullanılır.
+* Her yerde ayrı `toLocaleString` yazılmaz.
+* Tarih filtrelerinde timezone dönüşümü bilinçli yapılır.
+* Backend UTC değer gönderir.
+* Frontend kullanıcının locale/diline göre gösterir.
+* Date range filtreleri pagination’ı ilk sayfaya döndürür.
+
+---
+
+## 27. i18n Standardı
+
+Kurallar:
+
+* Kullanıcıya görünen metin hardcoded yazılmaz.
+* TR ve EN karşılıklar birlikte eklenir.
+* Ortak metinler `common` namespace altında tutulur.
+* Feature metinleri ilgili namespace altında tutulur.
+* Teknik enum/code değerleri UI label’a çevrilir.
+* Eksik translation key bırakılmaz.
+* Tablo kolon adları translation key kullanır.
+* Toast, dialog, validation, empty/error/loading metinleri translation key kullanır.
+
+---
+
+## 28. Accessibility Standardı
+
+Kurallar:
+
+* Button gerçek button olmalıdır.
+* Clickable div kullanılmaz.
+* Form inputları label ile ilişkilendirilir.
+* Dialog erişilebilir title içerir.
+* Icon-only butonlarda aria-label bulunur.
+* Keyboard navigation bozulmaz.
+* Focus trap/dialog davranışları korunur.
+* Disabled state gerçek disabled veya aria-disabled ile anlamlı verilir.
+
+---
+
+## 29. Styling Standardı
+
+Kurallar:
+
+* Tailwind utility class kullanılır.
+* Inline style sadece zorunlu teknik hesaplamalarda kullanılır.
+* Aynı class setleri tekrar ediyorsa ortak component düşünülür.
+* Light/dark tema uyumu kontrol edilir.
+* `cn` helper class merge için kullanılır.
+* Magic pixel değerleri gereksiz çoğaltılmaz.
+* Responsive classlar bilinçli eklenir.
+* Uzun metin taşmaları kontrol edilir.
+
+---
+
+## 30. Component Kalitesi
+
+Kurallar:
+
+* Component tek sorumluluk taşır.
+* Çok büyüyen component bölünür.
+* Render içinde ağır hesaplama varsa `useMemo` düşünülebilir.
+* Callback prop drilling aşırı büyürse component sınırı gözden geçirilir.
+* Reusable olmayan şeyi erken soyutlama yapma.
+* Reusable olan şeyi feature içinde kopyalama.
+* `useEffect` gereksiz kullanılmaz.
+* Derived state gereksiz state olarak tutulmaz.
+
+---
+
+## 31. Test / Build Standardı
+
+Frontend değişikliklerinden sonra:
+
+```text
+npm run lint
+npm run build
+```
+
+Gerekli durumlarda:
+
+```text
+npm test
+```
+
+Manual kontrol:
+
+* Search çalışıyor mu?
+* Filtreler çalışıyor mu?
+* Pagination çalışıyor mu?
+* Row actions çalışıyor mu?
+* Permission davranışı korunuyor mu?
+* Loading/empty/error state görünüyor mu?
+* Dark/light tema bozuluyor mu?
+* Mobile/responsive davranış kabul edilebilir mi?
+* Nested popover kapanma problemi var mı?
+
+---
+
+## 32. Anti-Patternler
 
 Yapma:
 
 ```text
-Component içinde doğrudan axios çağırma.
-Her sayfada ayrı API client oluşturma.
-Token'ı console'a yazma.
-any kullanma.
-Her tablo için sıfırdan tablo mantığı yazma.
-Aynı loading/error/empty state'i her yerde farklı tasarlama.
-LocalStorage ile her componentin doğrudan konuşması.
-Magic string route ve permission değerlerini her yere dağıtma.
-Backend entity isimlerini doğrudan UI modeli gibi kullanma.
+Raw HTML table ile yeni tablo yazma.
+Sadece DataTable import edip migration tamamlandı sanma.
+Her tablo için ayrı pagination üretme.
+Her filtre için farklı UI yaklaşımı oluşturma.
+Popover içinde popover kapanma bug’ını feature-specific hack ile çözme.
+Component içinde doğrudan API çağırma.
+API response’u any olarak kullanma.
+Hardcoded kullanıcı metni yazma.
+Permission kontrolünü güvenlik sanma.
+Uzun DN/id/code değerleriyle tabloyu taşırma.
+Dialog içine büyük yönetim ekranı sıkıştırma.
+Kullanıcı onayı olmadan dependency ekleme.
+Kullanıcı onayı olmadan UI system değiştirme.
 ```
 
-## 24. Ek Frontend UI/UX Standartları
+---
 
-### Gerçek Proje Yapısı
+## 33. Temel İlke
 
-Frontend modül yapısı bu projede `features` klasörü üzerinden ilerler.
+Önce mevcut ortak componenti ara.
 
-Önerilen yapı:
+Yoksa ortak component geliştir.
 
-```text
-frontend/src/features/users
-frontend/src/features/roles
-frontend/src/features/permissions
-frontend/src/features/auth
-frontend/src/features/setup
-frontend/src/components
-frontend/src/components/common
-frontend/src/components/layout
-frontend/src/components/ui
-frontend/src/lib
-frontend/src/app
-```
+Sonra feature içinde kullan.
 
-Kurallar:
+Frontend standardı ekran ekran değişmez.
 
-- Yeni feature ekranları `frontend/src/features/{featureName}` altında oluşturulur.
-- Ortak reusable componentler `frontend/src/components/common` altında tutulur.
-- Layout componentleri `frontend/src/components/layout` altında tutulur.
-- shadcn/ui componentleri `frontend/src/components/ui` altında tutulur.
-- Yeni geliştirmede `modules` klasörü açılmaz.
-- Mevcut `features` yapısı bozulmaz.
-
-### Layout Standardı
-
-Authenticated sayfalar `AppLayout` içinde çalışır.
-
-Standart yapı:
-
-```text
-Sidebar
-Topbar
-Main content
-Page container
-PageHeader
-Toolbar
-Content card/table/dialog
-```
-
-Yeni authenticated sayfalarda layout dışına çıkan bağımsız sayfa görünümü kullanılmaz.
-
-### Sidebar Standardı
-
-Menüler düz liste halinde yazılmaz. Menüler merkezi config ve grup mantığıyla yönetilir.
-
-Varsayılan grup yapısı:
-
-```text
-Main
-  Dashboard
-Administration
-  Users
-  Roles
-  Permissions
-Monitoring
-  Audit Logs
-  Security Logs
-System
-  Settings
-  Health
-```
-
-Kurallar:
-
-- Hazır olmayan route/menu item görünmez.
-- Disabled placeholder menüler kullanılmaz.
-- `/users`, `/roles`, `/permissions` hazır route'lardır.
-- Audit Logs, Security Logs, Settings, Health gibi hazır olmayan route'lar sidebar'da görünmez.
-- Her menü item permission-aware olur.
-- Menü görünürlüğü merkezi `canAccess` helper üzerinden yapılır.
-- SuperAdmin permission bypass frontend tarafında da sadece `canAccess` helper üzerinden çalışır.
-- Ekran içinde özel SuperAdmin `if` blokları mümkün olduğunca yazılmaz.
-- Sidebar active route styling tutarlı olur.
-
-### Route Guard Standardı
-
-Login olmayan kullanıcı protected route açarsa `/login` sayfasına yönlendirilir.
-
-Login olmuş ama yetkisi olmayan kullanıcı `403` ekranı görür.
-`403` ekranı `AppLayout` içinde gösterilir.
-
-`403` ekranında şunlar bulunur:
-
-```text
-Açık ve kullanıcı dostu mesaj
-Dashboard'a dön butonu
-Geri dön butonu
-```
-
-`404` ekranı sade olur ve şunları içerir:
-
-```text
-Dashboard'a dön butonu
-Geri dön butonu
-```
-
-`403/404` ekranları boş, aksiyonsuz veya layout dışı bırakılmaz.
-
-### Alert / Confirm / Toast Standardı
-
-Browser `alert` kullanılmaz.
-Browser `confirm` kullanılmaz.
-
-Başarılı işlemler toast ile gösterilir:
-
-```text
-create success
-update success
-status change success
-role assignment success
-permission assignment success
-```
-
-Kritik işlemler `ConfirmDialog` ile onaylanır:
-
-```text
-user activate/deactivate
-role activate/deactivate
-clear all role permissions
-clear all user roles
-```
-
-Dialog/form içindeki backend validation hataları `FormError` ile gösterilir.
-Sayfa-level hatalar `ErrorState` veya toast error ile gösterilir.
-
-### Ortak Component Standardı
-
-Yeni ekranlar mümkün olduğunca şu ortak componentleri kullanır:
-
-```text
-PageHeader
-SectionCard
-DataToolbar
-EmptyState
-ErrorState
-LoadingState
-StatusBadge
-RoleBadgeList
-DateTimeText
-ConfirmDialog
-FormError
-ActionButtonGroup
-```
-
-Aşırı soyutlama yapılmaz.
-Componentler sade, okunabilir ve TypeScript tipli olur.
-Aynı UI davranışı farklı ekranlarda tekrar edilmez.
-
-### Liste / Tablo Standardı
-
-Liste ekranlarında şu toolbar düzeni tercih edilir:
-
-```text
-Search input
-Filter selectleri
-Refresh button
-Primary action button
-```
-
-Status filter standardı:
-
-```text
-Active
-Passive
-All
-```
-
-Tablo/kart ekranlarında loading, empty ve error state standart componentlerle gösterilir.
-
-Tüm tablo ekranlarında TanStack Table standardı kullanılır.
-Mevcut raw HTML table kullanımları refactor sırasında ortak DataTable componentlerine taşınır.
-Yeni tablo geliştirmelerinde raw HTML table yazılmaz.
-
-### Badge Standardı
-
-`StatusBadge`:
-
-```text
-Active
-Passive
-```
-
-Role type badge:
-
-```text
-System
-Custom
-```
-
-Permission code değerleri teknik değer olduğu için monospace veya badge benzeri görsel ile gösterilebilir.
-
-### Dialog / Detail Standardı
-
-Detail ekranları aynı görsel dilde olur.
-Create/Edit/Assign işlemleri dialog veya sheet ile yapılabilir.
-Form hataları dialog içinde aynı yerde gösterilir.
-
-Detail, form ve assignment ekranlarında full national id gösterilmez.
-National ID sadece masked değer üzerinden gösterilebilir.
-
-### Permission-aware UI
-
-UI güvenlik katmanı değildir.
-Frontend sadece UX için buton/menü gizler.
-Backend permission guard her zaman asıl güvenlik katmanıdır.
-
-Yeni button/action eklenirken ilgili permission kontrolü yapılır.
-
-Örnek permissionlar:
-
-```text
-Users.View
-Users.Create
-Users.Update
-Users.AssignRoles
-Roles.View
-Roles.Create
-Roles.Update
-Roles.AssignPermissions
-Permissions.View
-```
-
-SuperAdmin için permission bypass sadece merkezi `canAccess` helper üzerinden yapılır.
-
-### Settings Form / Backend Validation UX Standardı
-
-- Settings formlarında backend servis, bağlantı, kayıt veya validation hataları inline teknik detay bloğu olarak gösterilmez.
-- Form içinde sadece alan bazlı frontend validation hataları ilgili input yanında gösterilebilir.
-- Backend validation, servis bağlantısı ve kayıt hataları toast ile gösterilir.
-- Aynı hata mesajı ekranda birden fazla yerde tekrar edilmez.
-- Backend response içindeki validation details teknik amaçlıdır; kullanıcı formunda liste halinde gösterilmez.
-- Eğer backend save endpoint'i zaten validation yapıyorsa frontend'de ayrı "Bağlantıyı test et" / "Doğrula" butonu eklenmez.
-- Kullanıcı tek "Kaydet" aksiyonu ile ilerler.
-- Kaydet işlemi validation başarısızsa kayıt yapmaz ve kullanıcıya tek, net toast mesajı gösterir.
-- Ayrı test/doğrula butonu ancak açık ürün kararı varsa eklenir.
-- Settings form footer'larında gereksiz çift aksiyon butonu oluşturulmaz.
-
-### Hata Gösterim Standardı
-
-API hatalarında `response.data.message` varsa kullanıcıya bu mesaj gösterilir.
-`response.data.title` varsa fallback olarak kullanılabilir.
-Yoksa kullanıcı dostu generic mesaj gösterilir.
-
-Raw exception, stack trace veya teknik dump UI üzerinde gösterilmez.
-
-### Hassas Veri Standardı
-
-Token, password, refresh token, national id veya secret değerler `console.log` yapılmaz.
-National ID sadece masked alan üzerinden gösterilir.
-Full national id hiçbir frontend ekranında gösterilmez.
-
-### LocalStorage Kullanımı
-
-Componentler `localStorage/sessionStorage` ile doğrudan konuşmaz.
-Token erişimi auth store/helper üzerinden yapılır.
-Kullanıcı tercihleri için localStorage source of truth kabul edilmez.
-Dil tercihi gibi kullanıcı tercihleri backend kullanıcı profili üzerinden yönetilir.
+Bir ekran güzel, diğer ekran başka gezegenden gelmiş gibi görünemez.
