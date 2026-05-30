@@ -33,6 +33,7 @@
     "pagination": {
       "totalCount": "Toplam {{count}} kayıt",
       "pageInfo": "Sayfa {{pageNumber}} / {{totalPages}}",
+      "pageOnly": "Sayfa {{pageNumber}}",
       "pageSize": "Sayfa boyutu",
       "first": "İlk",
       "previous": "Önceki",

@@ -1,11 +1,20 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { DataTable } from "@/components/common/data-table";
+import {
+  DataTable,
+  DataTablePagination,
+  DataTableToolbar,
+} from "@/components/common/data-table";
 import { useClientDataTable } from "@/components/common/data-table-hooks";
+import { EmptyState } from "@/components/common/EmptyState";
+import { LoadingState } from "@/components/common/LoadingState";
 import { Button } from "@/components/ui/button";
 import { createAdAttributeMappingColumns } from "@/features/ad-management/ad-attribute-mapping-columns";
 import type { AdAttributeMapping } from "@/features/ad-management/types";
+
+const PAGE_SIZE_OPTIONS = [10, 25, 50];
+const DEFAULT_PAGE_SIZE = 10;
 
 type Props = {
   mappings: AdAttributeMapping[];
@@ -26,6 +35,8 @@ export function AdAttributeMappingsSection({
 }: Props) {
   const { t } = useTranslation(["settings", "common"]);
 
+  const [search, setSearch] = useState("");
+
   const isEmpty = !isLoading && mappings.length === 0;
 
   const columns = useMemo(
@@ -39,11 +50,22 @@ export function AdAttributeMappingsSection({
     [t, readOnly, onEdit, onDelete],
   );
 
+  const getSearchableValue = useMemo(
+    () => (row: AdAttributeMapping) =>
+      [row.logicalField, row.attributeName, row.displayName].filter(Boolean).join(" "),
+    [],
+  );
+
   const table = useClientDataTable({
     data: mappings,
     columns,
-    enablePagination: false,
+    globalFilter: search,
+    enableGlobalFilter: true,
+    getSearchableValue,
+    initialPageSize: DEFAULT_PAGE_SIZE,
   });
+
+  const showPagination = table.getPageCount() > 1;
 
   return (
     <div className="space-y-4">
@@ -56,27 +78,47 @@ export function AdAttributeMappingsSection({
             {t("settings:adManagement.mappings.description")}
           </p>
         </div>
-        {!readOnly ? (
-          <Button onClick={onCreate}>
-            {t("settings:adManagement.mappings.actions.create")}
-          </Button>
-        ) : null}
       </div>
 
-      {isLoading ? (
-        <p className="rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground">
-          {t("common:loading")}
-        </p>
-      ) : null}
+      {isLoading ? <LoadingState /> : null}
 
-      {isEmpty ? (
-        <div className="rounded-md border border-dashed px-3 py-6 text-center text-sm text-muted-foreground">
-          <p>{t("settings:adManagement.mappings.empty.title")}</p>
-          <p className="text-xs">{t("settings:adManagement.mappings.empty.description")}</p>
-        </div>
-      ) : null}
+      {!isLoading ? (
+        <>
+          <DataTableToolbar
+            searchValue={search}
+            onSearchChange={setSearch}
+            searchPlaceholder={t("settings:adManagement.mappings.searchPlaceholder")}
+            actions={
+              !readOnly ? (
+                <Button onClick={onCreate}>
+                  {t("settings:adManagement.mappings.actions.create")}
+                </Button>
+              ) : null
+            }
+          />
 
-      {!isLoading && mappings.length > 0 ? <DataTable table={table} /> : null}
+          {isEmpty ? (
+            <EmptyState
+              title={t("settings:adManagement.mappings.empty.title")}
+              description={t("settings:adManagement.mappings.empty.description")}
+            />
+          ) : (
+            <DataTable
+              table={table}
+              emptyMessage={t("common:dataTable.noResults")}
+              footer={
+                showPagination ? (
+                  <DataTablePagination
+                    mode="client"
+                    table={table}
+                    pageSizeOptions={PAGE_SIZE_OPTIONS}
+                  />
+                ) : undefined
+              }
+            />
+          )}
+        </>
+      ) : null}
     </div>
   );
 }

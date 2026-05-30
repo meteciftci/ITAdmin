@@ -31,6 +31,12 @@ function usePopoverContext() {
   return context;
 }
 
+type PopoverDescendantRegistry = {
+  register: (node: HTMLElement) => () => void;
+};
+
+const PopoverDescendantContext = createContext<PopoverDescendantRegistry | null>(null);
+
 type PopoverProps = {
   children: ReactNode;
   open?: boolean;
@@ -120,10 +126,36 @@ export function PopoverContent({
   ...props
 }: PopoverContentProps) {
   const { open, setOpen, triggerRef, contentRef } = usePopoverContext();
+  const parentRegistry = useContext(PopoverDescendantContext);
+  const descendantsRef = useRef<Set<HTMLElement>>(new Set());
   const [position, setPosition] = useState<{ top: number; left: number; width?: number }>({
     top: 0,
     left: 0,
   });
+
+  // Allow nested popovers (rendered into a portal as DOM siblings) to register
+  // their content nodes so ancestor popovers do not treat inner clicks as
+  // outside clicks. Registration propagates up the chain to support any depth.
+  const descendantRegistry = useMemo<PopoverDescendantRegistry>(
+    () => ({
+      register: (node: HTMLElement) => {
+        descendantsRef.current.add(node);
+        const unregisterFromParent = parentRegistry?.register(node);
+        return () => {
+          descendantsRef.current.delete(node);
+          unregisterFromParent?.();
+        };
+      },
+    }),
+    [parentRegistry],
+  );
+
+  useEffect(() => {
+    if (!open) return;
+    const node = contentRef.current;
+    if (!node || !parentRegistry) return;
+    return parentRegistry.register(node);
+  }, [open, parentRegistry, contentRef]);
 
   const updatePosition = useCallback(() => {
     if (!triggerRef.current || !contentRef.current) return;
@@ -166,7 +198,10 @@ export function PopoverContent({
       const target = event.target as Node;
       const clickedTrigger = triggerRef.current?.contains(target);
       const clickedContent = contentRef.current?.contains(target);
-      if (!clickedTrigger && !clickedContent) {
+      const clickedDescendant = Array.from(descendantsRef.current).some((node) =>
+        node.contains(target),
+      );
+      if (!clickedTrigger && !clickedContent && !clickedDescendant) {
         setOpen(false);
       }
     };
@@ -194,24 +229,27 @@ export function PopoverContent({
   if (!open) return null;
 
   return createPortal(
-    <div
-      ref={contentRef}
-      role="dialog"
-      aria-modal={false}
-      className={cn(
-        "fixed z-50 rounded-lg border border-border bg-popover p-2 text-popover-foreground shadow-md",
-        className,
-      )}
-      style={{
-        ...style,
-        top: position.top,
-        left: position.left,
-        ...(position.width !== undefined ? { width: position.width } : {}),
-      }}
-      {...props}
-    >
-      {children}
-    </div>,
+    <PopoverDescendantContext.Provider value={descendantRegistry}>
+      <div
+        ref={contentRef}
+        role="dialog"
+        aria-modal={false}
+        data-popover-content=""
+        className={cn(
+          "fixed z-50 rounded-lg border border-border bg-popover p-2 text-popover-foreground shadow-md",
+          className,
+        )}
+        style={{
+          ...style,
+          top: position.top,
+          left: position.left,
+          ...(position.width !== undefined ? { width: position.width } : {}),
+        }}
+        {...props}
+      >
+        {children}
+      </div>
+    </PopoverDescendantContext.Provider>,
     document.body,
   );
 }

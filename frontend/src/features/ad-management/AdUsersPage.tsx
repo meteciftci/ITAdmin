@@ -317,9 +317,6 @@ export function AdUsersPage() {
                       setPageSize(nextPageSize);
                       setPageNumber(1);
                     }}
-                    summaryText={t("adManagement:users.pagination.page", {
-                      pageNumber: usersQuery.data.pageNumber,
-                    })}
                   />
                 ) : null
               }

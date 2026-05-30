@@ -1,8 +1,13 @@
 import { useMemo, useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { DataTable } from "@/components/common/data-table";
+import {
+  DataTable,
+  DataTablePagination,
+  DataTableToolbar,
+} from "@/components/common/data-table";
 import { useClientDataTable } from "@/components/common/data-table-hooks";
+import { EmptyState } from "@/components/common/EmptyState";
 import { Button } from "@/components/ui/button";
 import { createAdNotificationRuleColumns } from "@/features/ad-management/ad-notification-rule-columns";
 import {
@@ -29,6 +34,9 @@ import {
   getNotificationTemplates,
 } from "@/features/notification-templates/api";
 import type { NotificationTemplateListItem } from "@/features/notification-templates/types";
+
+const PAGE_SIZE_OPTIONS = [10, 25, 50];
+const DEFAULT_PAGE_SIZE = 10;
 
 type Props = {
   settings: AdManagementSettings | undefined;
@@ -111,6 +119,7 @@ export function AdManagementNotificationsForm({
   const [rules, setRules] = useState<AdManagementNotificationRule[]>(() =>
     cloneRules(settings?.notificationSettings),
   );
+  const [search, setSearch] = useState("");
   const [dialog, setDialog] = useState<DialogState>({
     open: false,
     mode: "create",
@@ -183,23 +192,28 @@ export function AdManagementNotificationsForm({
     persistRules(nextRules, t("settings:adManagement.notifications.messages.ruleRemoved"));
   }
 
-  function templateStatusLabel(status: TemplateReadiness): string {
-    if (status === "ready") {
-      return t("settings:adManagement.notifications.templateStatus.ready");
-    }
+  const templateStatusLabel = useCallback(
+    (status: TemplateReadiness): string => {
+      if (status === "ready") {
+        return t("settings:adManagement.notifications.templateStatus.ready");
+      }
 
-    if (status === "passive") {
-      return t("settings:adManagement.notifications.templateStatus.passive");
-    }
+      if (status === "passive") {
+        return t("settings:adManagement.notifications.templateStatus.passive");
+      }
 
-    return t("settings:adManagement.notifications.templateStatus.missing");
-  }
+      return t("settings:adManagement.notifications.templateStatus.missing");
+    },
+    [t],
+  );
 
-  function channelLabel(channel: string): string {
-    return channel === AD_NOTIFICATION_CHANNELS.email
-      ? t("settings:adManagement.notifications.channels.email")
-      : t("settings:adManagement.notifications.channels.sms");
-  }
+  const channelLabel = useCallback(
+    (channel: string): string =>
+      channel === AD_NOTIFICATION_CHANNELS.email
+        ? t("settings:adManagement.notifications.channels.email")
+        : t("settings:adManagement.notifications.channels.sms"),
+    [t],
+  );
 
   const resolveTemplateReadinessForRule = useCallback(
     (eventKey: string, channel: string) =>
@@ -229,7 +243,6 @@ export function AdManagementNotificationsForm({
       readOnly,
       isSaving,
       mappings,
-      templates,
       resolveTemplateReadinessForRule,
       templateStatusLabel,
       handleToggleEnabled,
@@ -237,34 +250,75 @@ export function AdManagementNotificationsForm({
     ],
   );
 
+  const getSearchableValue = useMemo(
+    () => (rule: AdManagementNotificationRule) =>
+      [
+        eventLabel[rule.eventKey] ?? rule.eventKey,
+        channelLabel(rule.channel),
+        formatRecipientSourceLabel(rule, mappings, t),
+        templateStatusLabel(resolveTemplateReadinessForRule(rule.eventKey, rule.channel)),
+      ]
+        .filter(Boolean)
+        .join(" "),
+    [
+      eventLabel,
+      channelLabel,
+      mappings,
+      t,
+      templateStatusLabel,
+      resolveTemplateReadinessForRule,
+    ],
+  );
+
   const table = useClientDataTable({
     data: rules,
     columns,
-    enablePagination: false,
+    globalFilter: search,
+    enableGlobalFilter: true,
+    getSearchableValue,
+    initialPageSize: DEFAULT_PAGE_SIZE,
   });
+
+  const showPagination = table.getPageCount() > 1;
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-base font-medium">
-          {t("settings:adManagement.notifications.rulesTitle")}
-        </h3>
-        {!readOnly ? (
-          <Button
-            type="button"
-            onClick={() => setDialog({ open: true, mode: "create", rule: null })}
-          >
-            {t("settings:adManagement.notifications.actions.add")}
-          </Button>
-        ) : null}
-      </div>
+      <h3 className="text-base font-medium">
+        {t("settings:adManagement.notifications.rulesTitle")}
+      </h3>
+
+      <DataTableToolbar
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder={t("settings:adManagement.notifications.searchPlaceholder")}
+        actions={
+          !readOnly ? (
+            <Button
+              type="button"
+              onClick={() => setDialog({ open: true, mode: "create", rule: null })}
+            >
+              {t("settings:adManagement.notifications.actions.add")}
+            </Button>
+          ) : null
+        }
+      />
 
       {rules.length === 0 ? (
-        <div className="rounded-md border border-dashed px-3 py-6 text-center text-sm text-muted-foreground">
-          {t("settings:adManagement.notifications.empty")}
-        </div>
+        <EmptyState title={t("settings:adManagement.notifications.empty")} />
       ) : (
-        <DataTable table={table} />
+        <DataTable
+          table={table}
+          emptyMessage={t("common:dataTable.noResults")}
+          footer={
+            showPagination ? (
+              <DataTablePagination
+                mode="client"
+                table={table}
+                pageSizeOptions={PAGE_SIZE_OPTIONS}
+              />
+            ) : undefined
+          }
+        />
       )}
 
       <AdManagementNotificationRuleDialog

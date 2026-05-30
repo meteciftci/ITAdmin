@@ -37,6 +37,7 @@
       "createTitle": "New Notification Template",
       "editTitle": "Edit Notification Template",
       "catalogMismatch": "This template's module/event information was not found in the catalog.",
+      "searchPlaceholder": "Search module, event, channel or name",
       "actions": {
         "add": "New Template",
         "edit": "Edit"

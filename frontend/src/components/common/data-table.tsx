@@ -347,13 +347,12 @@ export function DataTablePagination<TData>(props: DataTablePaginationProps<TData
 
   if (props.mode === "directory") {
     const pageSizeOptions = props.pageSizeOptions ?? DEFAULT_PAGE_SIZE_OPTIONS;
+    const isFirstPage = props.pageNumber <= 1;
+    const summary =
+      props.summaryText ?? t("pagination.pageOnly", { pageNumber: props.pageNumber });
     return (
       <div className="flex flex-col gap-3 border-t px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-        {props.summaryText ? (
-          <p className="text-sm text-muted-foreground">{props.summaryText}</p>
-        ) : (
-          <div />
-        )}
+        <p className="text-sm text-muted-foreground">{summary}</p>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-2">
             <label
@@ -378,7 +377,15 @@ export function DataTablePagination<TData>(props: DataTablePaginationProps<TData
           <Button
             variant="outline"
             size="sm"
-            disabled={props.pageNumber <= 1}
+            disabled={isFirstPage}
+            onClick={() => props.onPageChange(1)}
+          >
+            {t("pagination.first")}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isFirstPage}
             onClick={() => props.onPageChange(props.pageNumber - 1)}
           >
             {t("pagination.previous")}

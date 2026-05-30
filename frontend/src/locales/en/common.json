@@ -33,6 +33,7 @@
     "pagination": {
       "totalCount": "Total {{count}} records",
       "pageInfo": "Page {{pageNumber}} / {{totalPages}}",
+      "pageOnly": "Page {{pageNumber}}",
       "pageSize": "Page size",
       "first": "First",
       "previous": "Previous",

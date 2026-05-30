@@ -37,6 +37,7 @@
       "createTitle": "Yeni Bildirim Şablonu",
       "editTitle": "Bildirim Şablonunu Düzenle",
       "catalogMismatch": "Bu şablonun modül/olay bilgisi katalogda bulunamadı.",
+      "searchPlaceholder": "Modül, olay, kanal veya ad ara",
       "actions": {
         "add": "Yeni Şablon",
         "edit": "Düzenle"
