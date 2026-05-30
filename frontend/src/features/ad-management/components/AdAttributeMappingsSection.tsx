@@ -65,7 +65,7 @@ export function AdAttributeMappingsSection({
     initialPageSize: DEFAULT_PAGE_SIZE,
   });
 
-  const showPagination = table.getPageCount() > 1;
+  const hasRows = mappings.length > 0;
 
   return (
     <div className="space-y-4">
@@ -107,7 +107,7 @@ export function AdAttributeMappingsSection({
               table={table}
               emptyMessage={t("common:dataTable.noResults")}
               footer={
-                showPagination ? (
+                hasRows ? (
                   <DataTablePagination
                     mode="client"
                     table={table}

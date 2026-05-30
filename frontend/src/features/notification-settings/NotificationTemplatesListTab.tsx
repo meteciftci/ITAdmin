@@ -82,7 +82,7 @@ export function NotificationTemplatesListTab() {
     initialPageSize: DEFAULT_PAGE_SIZE,
   });
 
-  const showPagination = table.getPageCount() > 1;
+  const hasRows = items.length > 0;
 
   return (
     <SectionCard title={t("notificationTemplates:sections.list")}>
@@ -113,7 +113,7 @@ export function NotificationTemplatesListTab() {
             table={table}
             emptyMessage={t("common:dataTable.noResults")}
             footer={
-              showPagination ? (
+              hasRows ? (
                 <DataTablePagination
                   mode="client"
                   table={table}
