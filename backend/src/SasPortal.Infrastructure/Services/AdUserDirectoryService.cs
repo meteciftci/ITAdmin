@@ -236,6 +236,12 @@ public sealed partial class AdUserDirectoryService(
                     : AdDirectoryFailureKind.NotConfigured);
         }
 
+        var ldapsError = AdDirectoryConnectionRequirements.GetLdapsRequiredErrorMessage(connection.UseSsl);
+        if (ldapsError is not null)
+        {
+            return ConnectionResolveResult.Failed(ldapsError, AdDirectoryFailureKind.InvalidRequest);
+        }
+
         return ConnectionResolveResult.Success(new DirectoryConnectionContext(connection));
     }
 
@@ -336,6 +342,7 @@ public sealed partial class AdUserDirectoryService(
 
         detail = new AdUserDetail(
             listItem.Id,
+            listItem.DistinguishedName,
             listItem.SamAccountName,
             listItem.UserPrincipalName,
             listItem.DisplayName,

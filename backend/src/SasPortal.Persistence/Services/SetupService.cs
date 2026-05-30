@@ -51,6 +51,7 @@ public sealed class SetupService(
         ("AdManagement", "AdManagement.Settings.Update", "Update AD management settings."),
         ("AdManagement", "AdManagement.Users.View", "View AD management directory users."),
         ("AdManagement", "AdManagement.Users.Create", "Create AD management directory users."),
+        ("AdManagement", "AdManagement.Users.Update", "Update AD management directory users."),
         ("AdManagement", "AdManagement.Users.Enable", "Enable AD management directory user accounts."),
         ("AdManagement", "AdManagement.Users.Disable", "Disable AD management directory user accounts."),
         ("AdManagement", "AdManagement.Users.Unlock", "Unlock AD management directory user accounts."),

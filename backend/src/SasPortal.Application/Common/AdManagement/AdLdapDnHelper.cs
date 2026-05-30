@@ -141,6 +141,27 @@ public static class AdLdapDnHelper
         return $"CN={escapedCn},{parentDistinguishedName.Trim()}";
     }
 
+    public static string? GetParentDistinguishedName(string? distinguishedName)
+    {
+        if (string.IsNullOrWhiteSpace(distinguishedName))
+        {
+            return null;
+        }
+
+        var components = SplitDnComponents(distinguishedName.Trim());
+        if (components.Length <= 1)
+        {
+            return null;
+        }
+
+        return string.Join(
+            ",",
+            components.Skip(1).Select(static component => component.Trim()));
+    }
+
+    public static string BuildCommonNameRdn(string commonName) =>
+        $"CN={EscapeDnComponent(commonName)}";
+
     public static string EscapeDnComponent(string value)
     {
         if (string.IsNullOrWhiteSpace(value))

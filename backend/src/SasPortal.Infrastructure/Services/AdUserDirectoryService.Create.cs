@@ -14,9 +14,7 @@ public sealed partial class AdUserDirectoryService
     private const string CreateUserFailedMessage = "AD kullanıcısı oluşturulamadı.";
     private const string NamingConflictFailedMessage =
         "Uygun kullanıcı adı veya UPN bulunamadı. Lütfen farklı bilgiler deneyin.";
-    private const string LdapsRequiredForCreateMessage =
-        "Kullanıcı oluşturma ve parola atama için LDAPS bağlantısı gereklidir. AD Yönetim ayarlarında SSL'i etkinleştirin.";
-    private const string PasswordSetFailedMessage = LdapsRequiredForCreateMessage;
+    private const string PasswordSetFailedMessage = AdDirectoryConnectionRequirements.LdapsRequiredMessage;
     private const string InvalidTargetOuMessage =
         "Seçilen OU, AD yönetim ayarlarındaki kullanıcı kök OU altında olmalıdır.";
     private const string MissingUpnSuffixMessage = "UPN suffix seçimi zorunludur.";
@@ -139,14 +137,6 @@ public sealed partial class AdUserDirectoryService
         }
 
         var connection = connectionResult.Context.Connection;
-        if (!connection.UseSsl)
-        {
-            return new CreateAdUserResult(
-                false,
-                LdapsRequiredForCreateMessage,
-                null,
-                AdDirectoryFailureKind.InvalidRequest);
-        }
 
         var upnSuffix = AdDefaultUpnSuffixNormalizer.Normalize(request.UpnSuffix);
         if (string.IsNullOrWhiteSpace(upnSuffix) || !AdDefaultUpnSuffixNormalizer.IsValidFormat(upnSuffix))

@@ -60,6 +60,7 @@ public sealed record MappedAdUserAttribute(
 
 public sealed record AdUserDetail(
     string Id,
+    string DistinguishedName,
     string? SamAccountName,
     string? UserPrincipalName,
     string? DisplayName,

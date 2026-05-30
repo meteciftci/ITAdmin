@@ -20,5 +20,9 @@ public interface IAdUserDirectoryService
         CreateAdUserRequest request,
         CancellationToken cancellationToken = default);
 
+    Task<AdUserDirectoryDetailResult> UpdateUserAsync(
+        UpdateAdUserRequest request,
+        CancellationToken cancellationToken = default);
+
     Task<AdUpnSuffixesResult> GetUpnSuffixesAsync(CancellationToken cancellationToken = default);
 }

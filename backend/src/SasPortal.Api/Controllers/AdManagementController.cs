@@ -386,6 +386,47 @@ public sealed class AdManagementController(
                     cancellation),
             cancellationToken);
 
+    [HttpPut("users/{id}")]
+    [RequirePermission(AdManagementPermissions.UsersUpdate)]
+    public async Task<ActionResult<AdUserDetailResponse>> UpdateUser(
+        [FromRoute] string id,
+        [FromBody] UpdateAdUserRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Guid.TryParse(id, out var objectGuid))
+        {
+            return BadRequest(new { message = "Geçersiz kullanıcı kimliği." });
+        }
+
+        var result = await adUserDirectoryService.UpdateUserAsync(
+            new AppModels.UpdateAdUserRequest(
+                objectGuid,
+                request.GivenName,
+                request.Surname,
+                request.DisplayName,
+                request.SamAccountName,
+                request.UserPrincipalName,
+                request.Mail,
+                request.Department,
+                request.MappedAttributes
+                    .Select(item => new AppModels.UpdateAdUserMappedAttributeRequest(
+                        item.LogicalField,
+                        item.Value))
+                    .ToList(),
+                ResolveActorUserId(User),
+                ResolveActorUserName(User),
+                ResolveIpAddress(),
+                ResolveUserAgent()),
+            cancellationToken);
+
+        if (!result.IsSuccess || result.User is null)
+        {
+            return MapDirectoryFailure(result.Message, result.FailureKind);
+        }
+
+        return Ok(MapUserDetail(result.User));
+    }
+
     [HttpGet("users/{id}")]
     [RequirePermission(AdManagementPermissions.UsersView)]
     public async Task<ActionResult<AdUserDetailResponse>> GetUserById(
