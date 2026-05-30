@@ -102,6 +102,8 @@ public sealed partial class AdUserDirectoryService
 
             var newCommonName = AdUpdateUserRequestValidator.DeriveCommonNameFromDisplayName(normalizedRequest.DisplayName);
             var currentCommonName = AdLdapDnHelper.ParseCommonNameFromDistinguishedName(distinguishedName);
+            var renamed = false;
+            var attributeWrites = false;
             try
             {
                 if (!string.Equals(currentCommonName, newCommonName, StringComparison.OrdinalIgnoreCase))
@@ -111,9 +113,10 @@ public sealed partial class AdUserDirectoryService
                         distinguishedName,
                         newCommonName,
                         normalizedRequest.UserId);
+                    renamed = true;
                 }
 
-                ApplyUserAttributeUpdates(
+                attributeWrites = ApplyUserAttributeUpdates(
                     ldapConnection,
                     distinguishedName,
                     normalizedRequest,
@@ -132,6 +135,18 @@ public sealed partial class AdUserDirectoryService
                     null,
                     null,
                     cancellationToken);
+            }
+
+            if (!renamed && !attributeWrites)
+            {
+                await WriteUpdateNoChangesLogsAsync(
+                    normalizedRequest,
+                    context.Connection,
+                    beforeDetail,
+                    distinguishedName,
+                    cancellationToken);
+
+                return new AdUserDirectoryDetailResult(true, string.Empty, beforeDetail);
             }
 
             if (!TryLoadUserForUpdate(
@@ -315,97 +330,125 @@ public sealed partial class AdUserDirectoryService
         return AdLdapDnHelper.BuildUserDistinguishedName(newCommonName, parentDn);
     }
 
-    private void ApplyUserAttributeUpdates(
+    private bool ApplyUserAttributeUpdates(
         LdapConnection ldapConnection,
         string distinguishedName,
         UpdateAdUserRequest request,
         SearchResultEntry entry,
         IReadOnlyList<AdAttributeMappingItem> mappings)
     {
-        var targetObjectGuid = request.UserId;
-        var commonName = AdUpdateUserRequestValidator.DeriveCommonNameFromDisplayName(request.DisplayName);
+        var wrote = false;
 
-        ApplyLdapModification(
-            ldapConnection,
-            distinguishedName,
-            DirectoryAttributeOperation.Replace,
-            "givenName",
-            AdUserUpdateSteps.UpdateBasicAttribute,
-            request,
-            request.GivenName);
-        ApplyLdapModification(
-            ldapConnection,
-            distinguishedName,
-            DirectoryAttributeOperation.Replace,
-            "sn",
-            AdUserUpdateSteps.UpdateBasicAttribute,
-            request,
-            request.Surname);
-        ApplyLdapModification(
-            ldapConnection,
-            distinguishedName,
-            DirectoryAttributeOperation.Replace,
-            "displayName",
-            AdUserUpdateSteps.UpdateBasicAttribute,
-            request,
-            request.DisplayName);
-        ApplyLdapModification(
-            ldapConnection,
-            distinguishedName,
-            DirectoryAttributeOperation.Replace,
-            "name",
-            AdUserUpdateSteps.UpdateBasicAttribute,
-            request,
-            commonName);
-        ApplyLdapModification(
-            ldapConnection,
-            distinguishedName,
-            DirectoryAttributeOperation.Replace,
-            "sAMAccountName",
-            AdUserUpdateSteps.UpdateBasicAttribute,
-            request,
-            request.SamAccountName);
-        ApplyLdapModification(
-            ldapConnection,
-            distinguishedName,
-            DirectoryAttributeOperation.Replace,
-            "userPrincipalName",
-            AdUserUpdateSteps.UpdateBasicAttribute,
-            request,
-            request.UserPrincipalName);
-
-        if (request.Mail is not null)
+        if (ScalarValueChanged(entry, "givenName", request.GivenName))
         {
-            ApplyOptionalScalarAttributeUpdate(
+            ApplyLdapModification(
+                ldapConnection,
+                distinguishedName,
+                DirectoryAttributeOperation.Replace,
+                "givenName",
+                AdUserUpdateSteps.UpdateBasicAttribute,
+                request,
+                request.GivenName);
+            wrote = true;
+        }
+
+        if (ScalarValueChanged(entry, "sn", request.Surname))
+        {
+            ApplyLdapModification(
+                ldapConnection,
+                distinguishedName,
+                DirectoryAttributeOperation.Replace,
+                "sn",
+                AdUserUpdateSteps.UpdateBasicAttribute,
+                request,
+                request.Surname);
+            wrote = true;
+        }
+
+        if (ScalarValueChanged(entry, "displayName", request.DisplayName))
+        {
+            ApplyLdapModification(
+                ldapConnection,
+                distinguishedName,
+                DirectoryAttributeOperation.Replace,
+                "displayName",
+                AdUserUpdateSteps.UpdateBasicAttribute,
+                request,
+                request.DisplayName);
+            wrote = true;
+        }
+
+        if (ScalarValueChanged(entry, "sAMAccountName", request.SamAccountName))
+        {
+            ApplyLdapModification(
+                ldapConnection,
+                distinguishedName,
+                DirectoryAttributeOperation.Replace,
+                "sAMAccountName",
+                AdUserUpdateSteps.UpdateBasicAttribute,
+                request,
+                request.SamAccountName);
+            wrote = true;
+        }
+
+        if (ScalarValueChanged(entry, "userPrincipalName", request.UserPrincipalName))
+        {
+            ApplyLdapModification(
+                ldapConnection,
+                distinguishedName,
+                DirectoryAttributeOperation.Replace,
+                "userPrincipalName",
+                AdUserUpdateSteps.UpdateBasicAttribute,
+                request,
+                request.UserPrincipalName);
+            wrote = true;
+        }
+
+        if (request.Mail is not null
+            && ApplyOptionalScalarAttributeUpdate(
                 ldapConnection,
                 distinguishedName,
                 entry,
                 "mail",
                 request.Mail,
-                request);
+                request))
+        {
+            wrote = true;
         }
 
-        if (request.Department is not null)
-        {
-            ApplyOptionalScalarAttributeUpdate(
+        if (request.Department is not null
+            && ApplyOptionalScalarAttributeUpdate(
                 ldapConnection,
                 distinguishedName,
                 entry,
                 "department",
                 request.Department,
-                request);
+                request))
+        {
+            wrote = true;
         }
 
-        ApplyMappedAttributeUpdates(
-            ldapConnection,
-            distinguishedName,
-            entry,
-            request.MappedAttributes,
-            mappings,
-            request);
+        if (ApplyMappedAttributeUpdates(
+                ldapConnection,
+                distinguishedName,
+                entry,
+                request.MappedAttributes,
+                mappings,
+                request))
+        {
+            wrote = true;
+        }
+
+        return wrote;
     }
 
-    private void ApplyOptionalScalarAttributeUpdate(
+    private static bool ScalarValueChanged(
+        SearchResultEntry entry,
+        string attributeName,
+        string requestedValue) =>
+        AdScalarAttributeComparer.HasChanged(GetFirstString(entry, attributeName), requestedValue);
+
+    private bool ApplyOptionalScalarAttributeUpdate(
         LdapConnection ldapConnection,
         string distinguishedName,
         SearchResultEntry entry,
@@ -418,7 +461,7 @@ public sealed partial class AdUserDirectoryService
         switch (action)
         {
             case AdMappedAttributeLdapAction.Skip:
-                return;
+                return false;
             case AdMappedAttributeLdapAction.Delete:
                 ApplyLdapModification(
                     ldapConnection,
@@ -427,7 +470,7 @@ public sealed partial class AdUserDirectoryService
                     attributeName,
                     AdUserUpdateSteps.UpdateBasicAttribute,
                     request);
-                return;
+                return true;
             case AdMappedAttributeLdapAction.Replace:
                 ApplyLdapModification(
                     ldapConnection,
@@ -437,13 +480,13 @@ public sealed partial class AdUserDirectoryService
                     AdUserUpdateSteps.UpdateBasicAttribute,
                     request,
                     requestedValue.Trim());
-                return;
+                return true;
             default:
-                return;
+                return false;
         }
     }
 
-    private void ApplyMappedAttributeUpdates(
+    private bool ApplyMappedAttributeUpdates(
         LdapConnection ldapConnection,
         string distinguishedName,
         SearchResultEntry entry,
@@ -451,8 +494,12 @@ public sealed partial class AdUserDirectoryService
         IReadOnlyList<AdAttributeMappingItem> mappings,
         UpdateAdUserRequest request)
     {
+        var wrote = false;
         var editableMappings = mappings
-            .Where(static mapping => mapping.IsEnabled && mapping.IsEditable)
+            .Where(static mapping =>
+                mapping.IsEnabled
+                && mapping.IsEditable
+                && !AdReservedCoreAttributes.IsReserved(mapping.AttributeName))
             .ToDictionary(static mapping => mapping.LogicalField, StringComparer.Ordinal);
 
         foreach (var mappedAttribute in mappedAttributes)
@@ -478,6 +525,7 @@ public sealed partial class AdUserDirectoryService
                         mapping.AttributeName,
                         AdUserUpdateSteps.UpdateMappedAttribute,
                         request);
+                    wrote = true;
                     continue;
                 case AdMappedAttributeLdapAction.Replace:
                     ApplyLdapModification(
@@ -488,11 +536,14 @@ public sealed partial class AdUserDirectoryService
                         AdUserUpdateSteps.UpdateMappedAttribute,
                         request,
                         requestedValue!);
+                    wrote = true;
                     continue;
                 default:
                     continue;
             }
         }
+
+        return wrote;
     }
 
     private void ApplyLdapModification(
@@ -652,6 +703,39 @@ public sealed partial class AdUserDirectoryService
             cancellationToken);
 
         return new AdUserDirectoryDetailResult(false, message, null, failureKind);
+    }
+
+    private async Task WriteUpdateNoChangesLogsAsync(
+        UpdateAdUserRequest request,
+        AdManagementConnectionParameters connection,
+        AdUserDetail beforeDetail,
+        string targetDistinguishedName,
+        CancellationToken cancellationToken)
+    {
+        await WriteUpdateOperationLogAsync(
+            request,
+            connection,
+            AdManagementOperationStatuses.Succeeded,
+            beforeDetail,
+            targetDistinguishedName,
+            beforeDetail,
+            beforeDetail.DistinguishedName,
+            "No changes detected",
+            cancellationToken);
+
+        await auditLogWriter.WriteAsync(
+            new AuditLogWriteRequest
+            {
+                Action = "Update",
+                EntityName = "AdUser",
+                EntityId = beforeDetail.Id,
+                Description = $"AD user update skipped (no changes): {beforeDetail.SamAccountName}.",
+                ActorUserId = request.ActorUserId,
+                ActorUserName = request.ActorUserName,
+                IpAddress = request.ActorIpAddress,
+                UserAgent = request.ActorUserAgent,
+            },
+            cancellationToken);
     }
 
     private async Task WriteUpdateSuccessLogsAsync(

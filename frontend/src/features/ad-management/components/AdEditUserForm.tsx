@@ -10,6 +10,7 @@ import { buttonVariants } from "@/components/ui/button-variants";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { buildChangedMappedAttributes } from "@/features/ad-management/ad-edit-mapped-attributes";
+import { isReservedCoreAdAttribute } from "@/features/ad-management/ad-reserved-core-attributes";
 import {
   buildDisplayNameFromParts,
   isSamAccountNameValid,
@@ -72,7 +73,11 @@ export function AdEditUserForm({ user, returnPath }: Props) {
   const queryClient = useQueryClient();
 
   const editableMappedAttributes = useMemo(
-    () => user.mappedAttributes.filter((attribute) => attribute.isEditable),
+    () =>
+      user.mappedAttributes.filter(
+        (attribute) =>
+          attribute.isEditable && !isReservedCoreAdAttribute(attribute.adAttribute),
+      ),
     [user.mappedAttributes],
   );
 

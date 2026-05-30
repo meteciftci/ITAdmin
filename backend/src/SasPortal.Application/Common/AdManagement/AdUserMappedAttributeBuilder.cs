@@ -15,7 +15,8 @@ public static class AdUserMappedAttributeBuilder
                      .OrderBy(static mapping => mapping.SortOrder))
         {
             var attributeName = mapping.AttributeName.Trim();
-            if (!AdLdapAttributeCatalog.IsValidAttributeName(attributeName))
+            if (AdReservedCoreAttributes.IsReserved(attributeName)
+                || !AdLdapAttributeCatalog.IsValidAttributeName(attributeName))
             {
                 continue;
             }

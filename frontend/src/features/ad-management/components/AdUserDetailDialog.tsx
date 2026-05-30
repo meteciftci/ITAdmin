@@ -82,30 +82,17 @@ export function AdUserDetailDialog({
   );
 
   const headerActions =
-    user && (canUpdateUser || canManageGroups) ? (
-      <>
-        {canManageGroups ? (
-          <Link
-            to={appendReturnTo(`/ad-management/users/${user.id}/groups`, returnTo)}
-            className={manageGroupsButtonClass}
-            onClick={() => onOpenChange(false)}
-          >
-            {t("adManagement:users.actions.manageGroups")}
-          </Link>
-        ) : null}
-        {canUpdateUser ? (
-          <button
-            type="button"
-            className={editUserButtonClass}
-            onClick={() => {
-              onOpenChange(false);
-              navigate(appendReturnTo(`/ad-management/users/${user.id}/edit`, returnTo));
-            }}
-          >
-            {t("adManagement:users.actions.edit")}
-          </button>
-        ) : null}
-      </>
+    user && canUpdateUser ? (
+      <button
+        type="button"
+        className={editUserButtonClass}
+        onClick={() => {
+          onOpenChange(false);
+          navigate(appendReturnTo(`/ad-management/users/${user.id}/edit`, returnTo));
+        }}
+      >
+        {t("adManagement:users.actions.edit")}
+      </button>
     ) : undefined;
 
   return (
@@ -180,7 +167,18 @@ export function AdUserDetailDialog({
           <Separator />
 
           <section className="space-y-2">
-            <SectionTitle>{t("adManagement:users.detail.groups")}</SectionTitle>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <SectionTitle>{t("adManagement:users.detail.groups")}</SectionTitle>
+              {canManageGroups ? (
+                <Link
+                  to={appendReturnTo(`/ad-management/users/${user.id}/groups`, returnTo)}
+                  className={manageGroupsButtonClass}
+                  onClick={() => onOpenChange(false)}
+                >
+                  {t("adManagement:users.actions.manageGroups")}
+                </Link>
+              ) : null}
+            </div>
             {user.groups.length > 0 ? (
               <div className="flex max-h-40 flex-wrap gap-2 overflow-y-auto rounded-md border bg-muted/20 p-2">
                 {user.groups.map((group) => (

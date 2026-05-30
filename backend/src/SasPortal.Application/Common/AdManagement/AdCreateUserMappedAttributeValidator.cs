@@ -42,6 +42,12 @@ public static class AdCreateUserMappedAttributeValidator
                 return false;
             }
 
+            if (AdReservedCoreAttributes.IsReserved(mapping.AttributeName))
+            {
+                message = AdReservedCoreAttributes.ReservedAttributeMappingMessage;
+                return false;
+            }
+
             if (!AdLdapAttributeCatalog.IsValidAttributeName(mapping.AttributeName))
             {
                 message = $"AD attribute adı geçersiz: {mapping.AttributeName}.";

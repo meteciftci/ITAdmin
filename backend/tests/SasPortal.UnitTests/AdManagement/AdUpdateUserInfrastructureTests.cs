@@ -60,6 +60,46 @@ public sealed class AdUpdateUserInfrastructureTests
     }
 
     [Fact]
+    public void TryValidate_WhenMappedFieldUsesReservedCoreAttribute_ReturnsError()
+    {
+        var mappings = new[]
+        {
+            new AdAttributeMappingItem(
+                Guid.NewGuid(),
+                "workMail",
+                "Work Mail",
+                "mail",
+                IsEnabled: true,
+                IsEditable: true,
+                IsSensitive: false,
+                IsSearchable: false,
+                ValidationType: "Email",
+                MaskingStrategy: "None",
+                SortOrder: 1),
+        };
+
+        var request = new UpdateAdUserRequest(
+            Guid.NewGuid(),
+            "Ali",
+            "Veli",
+            "Ali Veli",
+            "ali.veli",
+            "ali.veli@corp.example.com",
+            null,
+            null,
+            [new UpdateAdUserMappedAttributeRequest("workMail", "other@corp.example.com")],
+            null,
+            null,
+            null,
+            null);
+
+        var isValid = AdUpdateUserRequestValidator.TryValidate(request, mappings, out var message);
+
+        Assert.False(isValid);
+        Assert.Equal(AdReservedCoreAttributes.ReservedAttributeMappingMessage, message);
+    }
+
+    [Fact]
     public void TryValidate_WhenMappedFieldNotEditable_ReturnsError()
     {
         var mappings = new[]

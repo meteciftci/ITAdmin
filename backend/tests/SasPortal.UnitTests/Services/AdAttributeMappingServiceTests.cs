@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using SasPortal.Application.Common.AdManagement;
 using SasPortal.Application.Common.Models;
 using SasPortal.Persistence.Context;
 using SasPortal.Persistence.Services;
@@ -86,6 +87,22 @@ public sealed class AdAttributeMappingServiceTests
         var result = await service.CreateAsync(CreateRequest("mobilePhone", "Cep", attributeName));
 
         Assert.False(result.IsSuccess);
+        Assert.Empty(dbContext.AdAttributeMappings);
+    }
+
+    [Theory]
+    [InlineData("mail")]
+    [InlineData("department")]
+    [InlineData("sAMAccountName")]
+    public async Task CreateAsync_WithReservedCoreAttributeName_Rejected(string attributeName)
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateService(dbContext);
+
+        var result = await service.CreateAsync(CreateRequest("workMail", "Work Mail", attributeName));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(AdReservedCoreAttributes.ReservedAttributeMappingMessage, result.Message);
         Assert.Empty(dbContext.AdAttributeMappings);
     }
 

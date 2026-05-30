@@ -360,7 +360,8 @@
           "logicalFieldInvalid": "Logical field küçük harfle başlamalı, yalnızca harf/rakam içermelidir.",
           "displayNameRequired": "Alan adı zorunludur.",
           "attributeNameRequired": "AD attribute adı zorunludur.",
-          "attributeNameInvalid": "AD attribute adı geçerli değil. Örn: extensionAttribute1."
+          "attributeNameInvalid": "AD attribute adı geçerli değil. Örn: extensionAttribute1.",
+          "attributeNameReserved": "Bu AD attribute temel kullanıcı bilgisi veya sistem alanı olarak yönetiliyor. Mapped attributes içinde kullanılamaz."
         },
         "validationTypes": {
           "None": "Yok",

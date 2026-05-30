@@ -356,7 +356,8 @@
           "logicalFieldInvalid": "Logical field must start with a lowercase letter and contain only letters and digits.",
           "displayNameRequired": "Display name is required.",
           "attributeNameRequired": "AD attribute name is required.",
-          "attributeNameInvalid": "AD attribute name is not valid. Example: extensionAttribute1."
+          "attributeNameInvalid": "AD attribute name is not valid. Example: extensionAttribute1.",
+          "attributeNameReserved": "This AD attribute is managed as core user or system data and cannot be used in mapped attributes."
         },
         "validationTypes": {
           "None": "None",

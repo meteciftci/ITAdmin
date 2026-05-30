@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using SasPortal.Application.Abstractions.Services;
+using SasPortal.Application.Common.AdManagement;
 using SasPortal.Application.Common.Constants;
 using SasPortal.Application.Common.Models;
 using SasPortal.Domain.Entities;
@@ -91,6 +92,14 @@ public sealed class AdAttributeMappingService(
         if (string.IsNullOrWhiteSpace(attributeName) || !AttributeNameRegex.IsMatch(attributeName))
         {
             return new AdAttributeMappingResult(false, "Attribute name is invalid.", null);
+        }
+
+        if (AdReservedCoreAttributes.IsReserved(attributeName))
+        {
+            return new AdAttributeMappingResult(
+                false,
+                AdReservedCoreAttributes.ReservedAttributeMappingMessage,
+                null);
         }
 
         var validationType = NormalizeOrDefault(request.ValidationType, "None");
@@ -202,6 +211,14 @@ public sealed class AdAttributeMappingService(
         if (string.IsNullOrWhiteSpace(attributeName) || !AttributeNameRegex.IsMatch(attributeName))
         {
             return new AdAttributeMappingResult(false, "Attribute name is invalid.", null);
+        }
+
+        if (AdReservedCoreAttributes.IsReserved(attributeName))
+        {
+            return new AdAttributeMappingResult(
+                false,
+                AdReservedCoreAttributes.ReservedAttributeMappingMessage,
+                null);
         }
 
         var validationType = NormalizeOrDefault(request.ValidationType, "None");

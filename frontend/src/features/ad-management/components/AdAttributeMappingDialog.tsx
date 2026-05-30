@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { isReservedCoreAdAttribute } from "@/features/ad-management/ad-reserved-core-attributes";
 import {
   AD_ATTRIBUTE_NAME_REGEX,
   AD_LOGICAL_FIELD_REGEX,
@@ -132,6 +133,8 @@ function DialogContents({
       next.attributeName = t("settings:adManagement.mappings.validation.attributeNameRequired");
     } else if (!AD_ATTRIBUTE_NAME_REGEX.test(attributeName)) {
       next.attributeName = t("settings:adManagement.mappings.validation.attributeNameInvalid");
+    } else if (isReservedCoreAdAttribute(attributeName)) {
+      next.attributeName = t("settings:adManagement.mappings.validation.attributeNameReserved");
     }
 
     setFieldErrors(next);
