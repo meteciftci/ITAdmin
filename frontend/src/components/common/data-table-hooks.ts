@@ -23,6 +23,7 @@ export function useServerDataTable<TData>({
   pageIndex: number;
   pageSize: number;
 }) {
+  // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Table's useReactTable intentionally returns non-memoizable table APIs.
   return useReactTable({
     data,
     columns,
@@ -112,5 +113,6 @@ export function useClientDataTable<TData>({
     [columns, data, enableGlobalFilter, enablePagination, globalFilter, globalFilterFn, pagination],
   );
 
+  // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Table's useReactTable intentionally returns non-memoizable table APIs.
   return useReactTable(tableOptions);
 }

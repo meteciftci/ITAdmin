@@ -150,18 +150,21 @@ export function AdManagementNotificationsForm({
     [t],
   );
 
-  function persistRules(nextRules: AdManagementNotificationRule[], successMessage: string) {
-    if (!settings || readOnly) {
-      return;
-    }
+  const persistRules = useCallback(
+    (nextRules: AdManagementNotificationRule[], successMessage: string) => {
+      if (!settings || readOnly) {
+        return;
+      }
 
-    onSave(
-      buildUpdateAdManagementSettingsPayload(settings, {
-        notificationSettings: { rules: nextRules },
-      }),
-      { successMessage },
-    );
-  }
+      onSave(
+        buildUpdateAdManagementSettingsPayload(settings, {
+          notificationSettings: { rules: nextRules },
+        }),
+        { successMessage },
+      );
+    },
+    [settings, readOnly, onSave],
+  );
 
   function handleRuleSubmit(rule: AdManagementNotificationRule) {
     const nextRules =
@@ -178,19 +181,25 @@ export function AdManagementNotificationsForm({
     );
   }
 
-  function handleToggleEnabled(rule: AdManagementNotificationRule, enabled: boolean) {
-    const nextRules = rules.map((item) =>
-      item.id === rule.id ? { ...item, isEnabled: enabled } : item,
-    );
-    setRules(nextRules);
-    persistRules(nextRules, t("settings:adManagement.notifications.messages.ruleUpdated"));
-  }
+  const handleToggleEnabled = useCallback(
+    (rule: AdManagementNotificationRule, enabled: boolean) => {
+      const nextRules = rules.map((item) =>
+        item.id === rule.id ? { ...item, isEnabled: enabled } : item,
+      );
+      setRules(nextRules);
+      persistRules(nextRules, t("settings:adManagement.notifications.messages.ruleUpdated"));
+    },
+    [rules, persistRules, t],
+  );
 
-  function handleRemove(rule: AdManagementNotificationRule) {
-    const nextRules = rules.filter((item) => item.id !== rule.id);
-    setRules(nextRules);
-    persistRules(nextRules, t("settings:adManagement.notifications.messages.ruleRemoved"));
-  }
+  const handleRemove = useCallback(
+    (rule: AdManagementNotificationRule) => {
+      const nextRules = rules.filter((item) => item.id !== rule.id);
+      setRules(nextRules);
+      persistRules(nextRules, t("settings:adManagement.notifications.messages.ruleRemoved"));
+    },
+    [rules, persistRules, t],
+  );
 
   const templateStatusLabel = useCallback(
     (status: TemplateReadiness): string => {

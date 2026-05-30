@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -116,10 +116,13 @@ export function RolesPage() {
 
   const roles = useMemo(() => rolesQuery.data?.items ?? [], [rolesQuery.data]);
 
-  const handleToggleStatus = (role: RoleListItem) => {
-    if (role.isSystem || !canUpdate) return;
-    setConfirmTarget(role);
-  };
+  const handleToggleStatus = useCallback(
+    (role: RoleListItem) => {
+      if (role.isSystem || !canUpdate) return;
+      setConfirmTarget(role);
+    },
+    [canUpdate],
+  );
 
   const columns = useMemo(
     () =>

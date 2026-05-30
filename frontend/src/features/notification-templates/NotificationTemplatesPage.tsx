@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -96,25 +96,28 @@ export function NotificationTemplatesPage() {
     setDialogOpen(true);
   };
 
-  const openEdit = async (item: NotificationTemplateListItem) => {
-    try {
-      const template = await getNotificationTemplate(item.id);
-      setEditingId(template.id);
-      setForm({
-        moduleKey: template.moduleKey,
-        eventKey: template.eventKey,
-        channel: template.channel,
-        name: template.name,
-        isEnabled: template.isEnabled,
-        subjectTemplate: template.subjectTemplate ?? "",
-        bodyTemplate: template.bodyTemplate,
-        description: template.description ?? "",
-      });
-      setDialogOpen(true);
-    } catch (error: unknown) {
-      toast.error(getApiErrorMessage(error, t("notificationTemplates:messages.loadFailed")));
-    }
-  };
+  const openEdit = useCallback(
+    async (item: NotificationTemplateListItem) => {
+      try {
+        const template = await getNotificationTemplate(item.id);
+        setEditingId(template.id);
+        setForm({
+          moduleKey: template.moduleKey,
+          eventKey: template.eventKey,
+          channel: template.channel,
+          name: template.name,
+          isEnabled: template.isEnabled,
+          subjectTemplate: template.subjectTemplate ?? "",
+          bodyTemplate: template.bodyTemplate,
+          description: template.description ?? "",
+        });
+        setDialogOpen(true);
+      } catch (error: unknown) {
+        toast.error(getApiErrorMessage(error, t("notificationTemplates:messages.loadFailed")));
+      }
+    },
+    [t],
+  );
 
   const updateField = <K extends keyof FormState>(field: K, value: FormState[K]) => {
     setForm((current) => ({ ...current, [field]: value }));

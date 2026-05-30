@@ -27,7 +27,7 @@ public static class AdUserNameNormalizer
     public static string NormalizeUserName(string? givenName, string? surname)
     {
         var combined = $"{givenName ?? string.Empty}.{surname ?? string.Empty}";
-        return NormalizeSamAccountName(combined, reserveSuffixLength: 0);
+        return NormalizeSamAccountName(combined, reserveSuffixLength: 0) ?? string.Empty;
     }
 
     public static string? NormalizeSamAccountName(string? value, int reserveSuffixLength = 0)
