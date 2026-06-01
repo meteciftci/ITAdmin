@@ -83,9 +83,30 @@
         "general": "General",
         "error": "Error Detail",
         "requestSummary": "Request Summary",
-        "beforeSnapshot": "Before Snapshot",
-        "afterSnapshot": "After Snapshot"
+        "snapshotComparison": "Snapshot Comparison",
+        "mappedAttributes": "Mapped Attributes",
+        "rawJson": "Raw JSON",
+        "rawBeforeJson": "Raw Before JSON",
+        "rawAfterJson": "Raw After JSON",
+        "rawRequestSummaryJson": "Raw Request Summary JSON"
       }
+    },
+    "comparison": {
+      "field": "Field",
+      "before": "Before",
+      "after": "After",
+      "changed": "Changed",
+      "afterMissing": "No after snapshot was recorded."
+    },
+    "snapshotFields": {
+      "givenName": "Given name",
+      "surname": "Surname",
+      "displayName": "Display name",
+      "samAccountName": "sAMAccountName",
+      "userPrincipalName": "UPN",
+      "mail": "Mail",
+      "department": "Department",
+      "distinguishedName": "Distinguished Name"
     },
     "empty": {
       "title": "No records found",

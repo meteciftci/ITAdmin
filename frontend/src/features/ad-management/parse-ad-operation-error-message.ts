@@ -1,3 +1,5 @@
+import { unwrapJsonLikeString } from "@/lib/parse-json-like-value";
+
 export type AdOperationErrorDiagnostic = {
   code?: string;
   operation?: string;
@@ -114,31 +116,15 @@ export function parseRequestSummaryChangeStatus(
     return null;
   }
 
-  try {
-    const parsed: unknown = JSON.parse(requestSummaryJson);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return null;
-    }
-
-    const changeStatus = (parsed as Record<string, unknown>).changeStatus;
-    if (typeof changeStatus === "string" && changeStatus.trim().length > 0) {
-      return changeStatus.trim();
-    }
-  } catch {
+  const unwrapped = unwrapJsonLikeString(requestSummaryJson.trim());
+  if (!unwrapped || typeof unwrapped !== "object" || Array.isArray(unwrapped)) {
     return null;
   }
 
+  const changeStatus = (unwrapped as Record<string, unknown>).changeStatus;
+  if (typeof changeStatus === "string" && changeStatus.trim().length > 0) {
+    return changeStatus.trim();
+  }
+
   return null;
-}
-
-export function formatJsonForDisplay(value: string | null | undefined): string {
-  if (!value?.trim()) {
-    return "";
-  }
-
-  try {
-    return JSON.stringify(JSON.parse(value) as unknown, null, 2);
-  } catch {
-    return value;
-  }
 }

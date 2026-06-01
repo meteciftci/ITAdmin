@@ -83,9 +83,30 @@
         "general": "Genel Bilgiler",
         "error": "Hata Detayı",
         "requestSummary": "Request Summary",
-        "beforeSnapshot": "Before Snapshot",
-        "afterSnapshot": "After Snapshot"
+        "snapshotComparison": "Snapshot Karşılaştırması",
+        "mappedAttributes": "Eşlenen Alanlar",
+        "rawJson": "Ham JSON",
+        "rawBeforeJson": "Ham Before JSON",
+        "rawAfterJson": "Ham After JSON",
+        "rawRequestSummaryJson": "Ham Request Summary JSON"
       }
+    },
+    "comparison": {
+      "field": "Alan",
+      "before": "Önce",
+      "after": "Sonra",
+      "changed": "Değişti",
+      "afterMissing": "Sonra snapshot kaydı bulunmuyor."
+    },
+    "snapshotFields": {
+      "givenName": "Ad",
+      "surname": "Soyad",
+      "displayName": "Görünen Ad",
+      "samAccountName": "sAMAccountName",
+      "userPrincipalName": "UPN",
+      "mail": "E-posta",
+      "department": "Departman",
+      "distinguishedName": "Distinguished Name"
     },
     "empty": {
       "title": "Kayıt bulunamadı",

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { CodeBadge } from "@/components/common/CodeBadge";
 import { DateTimeText } from "@/components/common/DateTimeText";
 import { Badge } from "@/components/ui/badge";
+import { AdOperationLogSnapshotDetail } from "@/features/ad-management/components/AdOperationLogSnapshotDetail";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,7 +16,6 @@ import {
 } from "@/components/ui/dialog";
 import { getAdOperationStatusBadgeVariant } from "@/features/ad-management/ad-operation-log-columns";
 import {
-  formatJsonForDisplay,
   parseAdOperationErrorMessage,
   parseRequestSummaryChangeStatus,
 } from "@/features/ad-management/parse-ad-operation-error-message";
@@ -36,21 +36,6 @@ function DetailRow({ label, value }: { label: string; value: ReactNode }) {
       <p className="text-xs text-muted-foreground">{label}</p>
       <div className="min-h-5 whitespace-pre-wrap break-words">{value ?? "-"}</div>
     </div>
-  );
-}
-
-function JsonBlock({ value }: { value: string | null | undefined }) {
-  const { t } = useTranslation("adOperationLogs");
-  const formatted = formatJsonForDisplay(value);
-
-  if (!formatted) {
-    return <span className="text-muted-foreground">{t("detail.none")}</span>;
-  }
-
-  return (
-    <pre className="max-h-64 overflow-auto rounded-md border bg-muted/30 p-3 font-mono text-xs whitespace-pre-wrap break-words">
-      {formatted}
-    </pre>
   );
 }
 
@@ -203,20 +188,11 @@ export function AdOperationLogDetailDialog({
                 ) : null}
               </section>
 
-              <section className="space-y-2 border-t pt-4">
-                <h3 className="text-sm font-medium">{t("detail.sections.requestSummary")}</h3>
-                <JsonBlock value={detail.requestSummaryJson} />
-              </section>
-
-              <section className="space-y-2 border-t pt-4">
-                <h3 className="text-sm font-medium">{t("detail.sections.beforeSnapshot")}</h3>
-                <JsonBlock value={detail.beforeSnapshotJson} />
-              </section>
-
-              <section className="space-y-2 border-t pt-4">
-                <h3 className="text-sm font-medium">{t("detail.sections.afterSnapshot")}</h3>
-                <JsonBlock value={detail.afterSnapshotJson} />
-              </section>
+              <AdOperationLogSnapshotDetail
+                beforeSnapshotJson={detail.beforeSnapshotJson}
+                afterSnapshotJson={detail.afterSnapshotJson}
+                requestSummaryJson={detail.requestSummaryJson}
+              />
             </>
           ) : null}
         </div>
