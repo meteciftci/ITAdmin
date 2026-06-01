@@ -13,6 +13,7 @@ import trSecurityLogs from "@/locales/tr/securityLogs.json";
 import trSettings from "@/locales/tr/settings.json";
 import trSetup from "@/locales/tr/setup.json";
 import trAdManagement from "@/locales/tr/adManagement.json";
+import trAdOperationLogs from "@/locales/tr/adOperationLogs.json";
 import trUsers from "@/locales/tr/users.json";
 import trNotificationProviders from "@/locales/tr/notificationProviders.json";
 import trNotificationOutbox from "@/locales/tr/notificationOutbox.json";
@@ -31,6 +32,7 @@ import enSecurityLogs from "@/locales/en/securityLogs.json";
 import enSettings from "@/locales/en/settings.json";
 import enSetup from "@/locales/en/setup.json";
 import enAdManagement from "@/locales/en/adManagement.json";
+import enAdOperationLogs from "@/locales/en/adOperationLogs.json";
 import enUsers from "@/locales/en/users.json";
 import enNotificationProviders from "@/locales/en/notificationProviders.json";
 import enNotificationOutbox from "@/locales/en/notificationOutbox.json";
@@ -54,6 +56,7 @@ const resources = {
     errors: trErrors.errors,
     users: trUsers.users,
     adManagement: trAdManagement.adManagement,
+    adOperationLogs: trAdOperationLogs.adOperationLogs,
     roles: trRoles.roles,
     permissions: trPermissions.permissions,
     securityLogs: trSecurityLogs.securityLogs,
@@ -73,6 +76,7 @@ const resources = {
     errors: enErrors.errors,
     users: enUsers.users,
     adManagement: enAdManagement.adManagement,
+    adOperationLogs: enAdOperationLogs.adOperationLogs,
     roles: enRoles.roles,
     permissions: enPermissions.permissions,
     securityLogs: enSecurityLogs.securityLogs,
@@ -98,6 +102,7 @@ void i18n.use(initReactI18next).init({
     "errors",
     "users",
     "adManagement",
+    "adOperationLogs",
     "roles",
     "permissions",
     "auditLogs",

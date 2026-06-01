@@ -1,3 +1,5 @@
+using SasPortal.Application.Common.Models;
+
 namespace SasPortal.Application.Abstractions.Services;
 
 public sealed class AdOperationLogEntry
@@ -24,4 +26,10 @@ public sealed class AdOperationLogEntry
 public interface IAdOperationLogService
 {
     Task WriteAsync(AdOperationLogEntry entry, CancellationToken cancellationToken = default);
+
+    Task<PagedResult<AdOperationLogListItem>> GetLogsAsync(
+        AdOperationLogListQuery query,
+        CancellationToken cancellationToken = default);
+
+    Task<AdOperationLogDetail?> GetLogByIdAsync(Guid id, CancellationToken cancellationToken = default);
 }

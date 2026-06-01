@@ -1,11 +1,13 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  Activity,
   BellRing,
   Boxes,
   ClipboardList,
   Inbox,
   House,
   KeyRound,
+  ListTree,
   Network,
   Shield,
   ShieldAlert,
@@ -171,6 +173,21 @@ export const getSidebarGroups = (
         to: "/security-logs",
         icon: ShieldAlert,
         visible: canAccess(user, "SecurityLogs.View"),
+      },
+      {
+        kind: "collapsible",
+        titleKey: "items.moduleLogs",
+        routePrefix: "/monitoring/module-logs",
+        icon: ListTree,
+        visible: canAccess(user, "AdOperationLogs.View"),
+        children: [
+          {
+            titleKey: "items.adOperationLogs",
+            to: "/monitoring/module-logs/ad-operation-logs",
+            icon: Activity,
+            visible: canAccess(user, "AdOperationLogs.View"),
+          },
+        ],
       },
       {
         kind: "link",

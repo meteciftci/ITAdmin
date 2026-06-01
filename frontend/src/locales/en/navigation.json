@@ -19,6 +19,8 @@
       "permissions": "Permissions",
       "auditLogs": "Audit Logs",
       "securityLogs": "Security Logs",
+      "moduleLogs": "Module Logs",
+      "adOperationLogs": "AD Operation Logs",
       "notificationOutbox": "Notification Queue",
       "settings": "Settings",
       "applicationSettings": "Application Settings",

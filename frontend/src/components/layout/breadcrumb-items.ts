@@ -14,6 +14,10 @@ const breadcrumbItems: BreadcrumbItem[] = [
   { to: "/permissions", titleKey: "items.permissions" },
   { to: "/audit-logs", titleKey: "items.auditLogs" },
   { to: "/security-logs", titleKey: "items.securityLogs" },
+  {
+    to: "/monitoring/module-logs/ad-operation-logs",
+    titleKey: "items.adOperationLogs",
+  },
   { to: "/settings", titleKey: "items.settings" },
 ];
 

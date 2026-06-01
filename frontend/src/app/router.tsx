@@ -102,6 +102,11 @@ const AdEditUserPage = lazy(() =>
     default: module.AdEditUserPage,
   })),
 );
+const AdOperationLogsPage = lazy(() =>
+  import("@/features/ad-management/AdOperationLogsPage").then((module) => ({
+    default: module.AdOperationLogsPage,
+  })),
+);
 const ErrorPage = lazy(() =>
   import("@/pages/ErrorPage").then((module) => ({ default: module.ErrorPage })),
 );
@@ -194,6 +199,20 @@ export const router = createBrowserRouter([
           <AppLayout>
             <LazyRoute>
               <NotificationOutboxPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/monitoring/module-logs/ad-operation-logs",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission="AdOperationLogs.View">
+          <AppLayout>
+            <LazyRoute>
+              <AdOperationLogsPage />
             </LazyRoute>
           </AppLayout>
         </RequirePermission>

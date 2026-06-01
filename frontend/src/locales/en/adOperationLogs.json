@@ -1,0 +1,95 @@
+{
+  "adOperationLogs": {
+    "title": "AD Operation Logs",
+    "description": "Monitor user, group, and other operations performed in the AD module.",
+    "sections": {
+      "listTitle": "AD Operation Log List"
+    },
+    "moduleWarning": {
+      "title": "AD Management module inactive or incomplete",
+      "description": "The AD Management module is currently disabled or not fully configured. Historical operation logs can still be viewed."
+    },
+    "filters": {
+      "statusAll": "All statuses",
+      "operationAll": "All operations",
+      "targetSearchPlaceholder": "Search target (sAMAccountName or GUID)...",
+      "actorLabel": "Actor",
+      "actorPlaceholder": "Actor username",
+      "dateRangePlaceholder": "Select date range",
+      "clearDateRange": "Clear"
+    },
+    "table": {
+      "createdAt": "Date",
+      "operation": "Operation",
+      "status": "Status",
+      "target": "Target",
+      "actor": "Actor",
+      "domainController": "Domain Controller",
+      "errorSummary": "Error Summary",
+      "actions": "Actions"
+    },
+    "actions": {
+      "detail": "Detail"
+    },
+    "operations": {
+      "SettingsUpdated": "Settings update",
+      "SettingsValidated": "Settings validation",
+      "AttributeMappingCreated": "Attribute mapping created",
+      "AttributeMappingUpdated": "Attribute mapping updated",
+      "AttributeMappingDeleted": "Attribute mapping deleted",
+      "CreateUser": "Create user",
+      "UserUpdate": "User update",
+      "UserEnable": "Enable user",
+      "UserDisable": "Disable user",
+      "UserUnlock": "Unlock user",
+      "UserGroupAdd": "Add to group",
+      "UserGroupRemove": "Remove from group"
+    },
+    "statuses": {
+      "Succeeded": "Succeeded",
+      "Failed": "Failed",
+      "Skipped": "Skipped",
+      "noChangesDetected": "No changes"
+    },
+    "diagnostic": {
+      "code": "Code",
+      "operation": "Operation",
+      "step": "Step",
+      "attribute": "Attribute",
+      "reason": "Reason",
+      "message": "Message",
+      "ldapResultCode": "LDAP Result Code",
+      "ldapExceptionErrorCode": "LDAP Exception Error Code",
+      "partialUpdate": "Partial Update",
+      "rollbackStatus": "Rollback Status",
+      "targetObjectGuid": "Target Object GUID",
+      "ldapDiagnosticMessage": "LDAP Diagnostic Message"
+    },
+    "detail": {
+      "title": "Operation Log Detail",
+      "description": "Record details, error diagnostics, and snapshot data.",
+      "none": "None",
+      "createdAt": "Date",
+      "operation": "Operation",
+      "status": "Status",
+      "target": "Target",
+      "targetDn": "Distinguished Name",
+      "actor": "Actor",
+      "domainController": "Domain Controller",
+      "ipAddress": "IP Address",
+      "correlationId": "Correlation ID",
+      "userAgent": "User Agent",
+      "sections": {
+        "general": "General",
+        "error": "Error Detail",
+        "requestSummary": "Request Summary",
+        "beforeSnapshot": "Before Snapshot",
+        "afterSnapshot": "After Snapshot"
+      }
+    },
+    "empty": {
+      "title": "No records found",
+      "description": "No operation logs match the selected filters. Clear filters and try again."
+    }
+  }
+}

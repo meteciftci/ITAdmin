@@ -40,5 +40,11 @@ file sealed class SqliteLogsAppDbContext(DbContextOptions<AppDbContext> options)
             .HasConversion(
                 x => x.UtcDateTime,
                 x => new DateTimeOffset(DateTime.SpecifyKind(x, DateTimeKind.Utc)));
+
+        modelBuilder.Entity<AdOperationLog>()
+            .Property(x => x.CreatedAt)
+            .HasConversion(
+                x => x.UtcDateTime,
+                x => new DateTimeOffset(DateTime.SpecifyKind(x, DateTimeKind.Utc)));
     }
 }

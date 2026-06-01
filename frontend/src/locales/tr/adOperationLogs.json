@@ -1,0 +1,95 @@
+{
+  "adOperationLogs": {
+    "title": "AD Operasyon Logları",
+    "description": "AD modülünde gerçekleşen kullanıcı, grup ve diğer operasyon kayıtlarını izleyin.",
+    "sections": {
+      "listTitle": "AD Operasyon Log Listesi"
+    },
+    "moduleWarning": {
+      "title": "AD Yönetimi modülü pasif veya eksik yapılandırılmış",
+      "description": "AD Yönetimi modülü şu anda pasif veya tam yapılandırılmamış. Geçmiş operasyon logları görüntülenebilir."
+    },
+    "filters": {
+      "statusAll": "Tüm durumlar",
+      "operationAll": "Tüm operasyonlar",
+      "targetSearchPlaceholder": "Hedef (sAMAccountName veya GUID) ara...",
+      "actorLabel": "Aktör",
+      "actorPlaceholder": "Aktör kullanıcı adı",
+      "dateRangePlaceholder": "Tarih aralığı seçin",
+      "clearDateRange": "Temizle"
+    },
+    "table": {
+      "createdAt": "Tarih",
+      "operation": "Operasyon",
+      "status": "Durum",
+      "target": "Hedef",
+      "actor": "Aktör",
+      "domainController": "Domain Controller",
+      "errorSummary": "Hata Özeti",
+      "actions": "İşlemler"
+    },
+    "actions": {
+      "detail": "Detay"
+    },
+    "operations": {
+      "SettingsUpdated": "Ayar güncelleme",
+      "SettingsValidated": "Ayar doğrulama",
+      "AttributeMappingCreated": "Öznitelik eşlemesi oluşturma",
+      "AttributeMappingUpdated": "Öznitelik eşlemesi güncelleme",
+      "AttributeMappingDeleted": "Öznitelik eşlemesi silme",
+      "CreateUser": "Kullanıcı oluşturma",
+      "UserUpdate": "Kullanıcı güncelleme",
+      "UserEnable": "Kullanıcı etkinleştirme",
+      "UserDisable": "Kullanıcı devre dışı bırakma",
+      "UserUnlock": "Kullanıcı kilidi açma",
+      "UserGroupAdd": "Gruba ekleme",
+      "UserGroupRemove": "Gruptan çıkarma"
+    },
+    "statuses": {
+      "Succeeded": "Başarılı",
+      "Failed": "Başarısız",
+      "Skipped": "Atlandı",
+      "noChangesDetected": "Değişiklik yok"
+    },
+    "diagnostic": {
+      "code": "Kod",
+      "operation": "Operasyon",
+      "step": "Adım",
+      "attribute": "Attribute",
+      "reason": "Neden",
+      "message": "Mesaj",
+      "ldapResultCode": "LDAP Result Code",
+      "ldapExceptionErrorCode": "LDAP Exception Error Code",
+      "partialUpdate": "Partial Update",
+      "rollbackStatus": "Rollback Status",
+      "targetObjectGuid": "Target Object GUID",
+      "ldapDiagnosticMessage": "LDAP Diagnostic Message"
+    },
+    "detail": {
+      "title": "Operasyon Log Detayı",
+      "description": "Kayıt detayları, hata tanısı ve snapshot verileri.",
+      "none": "Yok",
+      "createdAt": "Tarih",
+      "operation": "Operasyon",
+      "status": "Durum",
+      "target": "Hedef",
+      "targetDn": "Distinguished Name",
+      "actor": "Aktör",
+      "domainController": "Domain Controller",
+      "ipAddress": "IP Adresi",
+      "correlationId": "Correlation ID",
+      "userAgent": "User Agent",
+      "sections": {
+        "general": "Genel Bilgiler",
+        "error": "Hata Detayı",
+        "requestSummary": "Request Summary",
+        "beforeSnapshot": "Before Snapshot",
+        "afterSnapshot": "After Snapshot"
+      }
+    },
+    "empty": {
+      "title": "Kayıt bulunamadı",
+      "description": "Seçili filtrelere uygun operasyon logu yok. Filtreleri temizleyip tekrar deneyin."
+    }
+  }
+}

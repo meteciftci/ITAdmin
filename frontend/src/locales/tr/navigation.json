@@ -19,6 +19,8 @@
       "permissions": "İzinler",
       "auditLogs": "Audit Logları",
       "securityLogs": "Security Logları",
+      "moduleLogs": "Modül Logları",
+      "adOperationLogs": "AD Operasyon Logları",
       "notificationOutbox": "Bildirim Kuyruğu",
       "settings": "Ayarlar",
       "applicationSettings": "Uygulama Ayarları",
