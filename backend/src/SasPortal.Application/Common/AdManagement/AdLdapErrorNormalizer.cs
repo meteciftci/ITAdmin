@@ -23,6 +23,12 @@ public static class AdLdapErrorNormalizer
     private const int LdapBusy = 51;
 
     public const string UpdateUserFailedMessage = "AD kullanıcısı güncellenemedi.";
+    public const string PreflightSamAccountNameDuplicateMessage =
+        "Bu kullanıcı adı başka bir AD nesnesi tarafından kullanılıyor.";
+    public const string PreflightUserPrincipalNameDuplicateMessage =
+        "Bu UPN başka bir AD nesnesi tarafından kullanılıyor.";
+    public const string PreflightCnDuplicateMessage =
+        "Bu görünen ad/CN aynı OU içinde başka bir AD nesnesi tarafından kullanılıyor.";
     public const string EntryAlreadyExistsMessage =
         "Bu CN, kullanıcı adı veya UPN başka bir AD nesnesi tarafından kullanılıyor.";
     public const string ConstraintViolationMessage =

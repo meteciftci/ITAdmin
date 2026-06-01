@@ -10,4 +10,10 @@ public sealed record AdUserUpdateFailureContext(
     string? TargetDistinguishedName = null,
     string? NormalizedReasonOverride = null,
     string? EnglishMessageOverride = null,
-    string? DiagnosticCode = null);
+    string? DiagnosticCode = null,
+    bool PartialUpdate = false,
+    string? RollbackStatus = null,
+    IReadOnlyList<string>? AppliedChanges = null,
+    IReadOnlyList<string>? RolledBackChanges = null,
+    IReadOnlyList<AdUserUpdateRollbackError>? RollbackErrors = null,
+    bool? AfterReloadFailed = null);

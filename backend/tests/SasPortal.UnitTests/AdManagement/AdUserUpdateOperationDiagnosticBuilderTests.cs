@@ -130,4 +130,94 @@ public sealed class AdUserUpdateOperationDiagnosticBuilderTests
         Assert.Equal(AdUserUpdateNormalizedReasons.NoSuchObject, root.GetProperty("normalizedReason").GetString());
         Assert.Equal("The AD user could not be found.", root.GetProperty("message").GetString());
     }
+
+    [Fact]
+    public void BuildPreflightDuplicateJson_IncludesRollbackNotRequiredAndPartialUpdateFalse()
+    {
+        var targetGuid = Guid.NewGuid();
+        var json = AdUserUpdateOperationDiagnosticBuilder.BuildPreflightDuplicateJson(
+            "sAMAccountName",
+            "The sAMAccountName value is already used by another AD object.",
+            targetGuid);
+
+        using var document = JsonDocument.Parse(json);
+        var root = document.RootElement;
+
+        Assert.Equal(AdUserUpdateDiagnosticCodes.PreflightFailed, root.GetProperty("code").GetString());
+        Assert.Equal("Preflight", root.GetProperty("step").GetString());
+        Assert.Equal("sAMAccountName", root.GetProperty("attribute").GetString());
+        Assert.False(root.GetProperty("partialUpdate").GetBoolean());
+        Assert.Equal(AdUserUpdateRollbackStatus.NotRequired, root.GetProperty("rollbackStatus").GetString());
+        Assert.Equal(targetGuid.ToString("D"), root.GetProperty("targetObjectGuid").GetString());
+    }
+
+    [Fact]
+    public void BuildWithRollback_Succeeded_SetsRollbackSucceededCodeAndPartialUpdateFalse()
+    {
+        var json = AdUserUpdateOperationDiagnosticBuilder.BuildWithRollback(
+            new AdUserUpdateFailureContext(
+                "UpdateBasicAttribute",
+                AttributeName: "userPrincipalName",
+                LdapResultCode: 68,
+                TargetObjectGuid: Guid.NewGuid(),
+                NormalizedReasonOverride: AdUserUpdateNormalizedReasons.DuplicateValue,
+                EnglishMessageOverride:
+                    "The userPrincipalName value is already used by another AD object."),
+            new AdUserUpdateRollbackResult
+            {
+                Status = AdUserUpdateRollbackStatus.Succeeded,
+                RolledBackChanges = ["sAMAccountName"],
+                Errors = [],
+            },
+            ["sAMAccountName"]);
+
+        using var document = JsonDocument.Parse(json);
+        var root = document.RootElement;
+
+        Assert.Equal(
+            AdUserUpdateDiagnosticCodes.UpdateFailedRollbackSucceeded,
+            root.GetProperty("code").GetString());
+        Assert.False(root.GetProperty("partialUpdate").GetBoolean());
+        Assert.Equal(AdUserUpdateRollbackStatus.Succeeded, root.GetProperty("rollbackStatus").GetString());
+        Assert.Equal(
+            new[] { "sAMAccountName" },
+            root.GetProperty("appliedChanges").EnumerateArray().Select(static x => x.GetString()!).ToArray());
+        Assert.Equal(
+            new[] { "sAMAccountName" },
+            root.GetProperty("rolledBackChanges").EnumerateArray().Select(static x => x.GetString()!).ToArray());
+    }
+
+    [Fact]
+    public void BuildWithRollback_Failed_SetsPartialUpdateTrueAndRollbackErrors()
+    {
+        var json = AdUserUpdateOperationDiagnosticBuilder.BuildWithRollback(
+            new AdUserUpdateFailureContext(
+                "UpdateMappedAttribute",
+                AttributeName: "employeeID",
+                NormalizedReasonOverride: AdUserUpdateNormalizedReasons.ConstraintViolation,
+                EnglishMessageOverride: "Active Directory rejected the requested attribute change."),
+            new AdUserUpdateRollbackResult
+            {
+                Status = AdUserUpdateRollbackStatus.Failed,
+                RolledBackChanges = ["sAMAccountName"],
+                Errors =
+                [
+                    new AdUserUpdateRollbackError("givenName", "Rollback failed for attribute givenName."),
+                ],
+            },
+            ["sAMAccountName", "givenName"]);
+
+        using var document = JsonDocument.Parse(json);
+        var root = document.RootElement;
+
+        Assert.Equal(
+            AdUserUpdateDiagnosticCodes.UpdateFailedRollbackFailed,
+            root.GetProperty("code").GetString());
+        Assert.True(root.GetProperty("partialUpdate").GetBoolean());
+        Assert.Equal(AdUserUpdateRollbackStatus.Failed, root.GetProperty("rollbackStatus").GetString());
+        Assert.Contains(
+            "givenName",
+            root.GetProperty("rollbackErrors").EnumerateArray().Select(static x => x.GetProperty("attribute").GetString()));
+        Assert.DoesNotContain("secret-value", json, StringComparison.Ordinal);
+    }
 }

@@ -6,6 +6,7 @@ namespace SasPortal.Application.Common.AdManagement;
 public static class AdUserUpdateOperationDiagnosticBuilder
 {
     private const string OperationName = "UserUpdate";
+    private const string PreflightStep = "Preflight";
 
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
@@ -30,9 +31,11 @@ public static class AdUserUpdateOperationDiagnosticBuilder
                 context.LdapExceptionErrorCode,
                 context.LdapDiagnosticMessage);
 
+        var code = context.DiagnosticCode ?? ResolveDefaultCode(context);
+
         var payload = new AdUserUpdateOperationDiagnosticPayload
         {
-            Code = context.DiagnosticCode ?? AdUserUpdateDiagnosticCodes.UpdateFailed,
+            Code = code,
             Operation = OperationName,
             Step = context.Step,
             Attribute = string.IsNullOrWhiteSpace(context.AttributeName) ? null : context.AttributeName,
@@ -45,9 +48,66 @@ public static class AdUserUpdateOperationDiagnosticBuilder
             TargetObjectGuid = context.TargetObjectGuid?.ToString("D"),
             TargetDistinguishedName = AdLdapDiagnosticSanitizer.SanitizeDistinguishedName(
                 context.TargetDistinguishedName),
+            PartialUpdate = context.RollbackStatus is not null ? context.PartialUpdate : null,
+            RollbackStatus = context.RollbackStatus,
+            AppliedChanges = context.AppliedChanges?.Count > 0 ? context.AppliedChanges : null,
+            RolledBackChanges = context.RolledBackChanges?.Count > 0 ? context.RolledBackChanges : null,
+            RollbackErrors = context.RollbackErrors?.Count > 0
+                ? context.RollbackErrors
+                    .Select(static error => new AdUserUpdateOperationDiagnosticRollbackError
+                    {
+                        Attribute = error.Attribute,
+                        Message = error.Message,
+                    })
+                    .ToList()
+                : null,
+            AfterReloadFailed = context.AfterReloadFailed == true ? true : null,
         };
 
         return JsonSerializer.Serialize(payload, SerializerOptions);
+    }
+
+    public static string BuildPreflightDuplicateJson(
+        string attributeName,
+        string englishMessage,
+        Guid targetObjectGuid) =>
+        BuildJson(
+            new AdUserUpdateFailureContext(
+                PreflightStep,
+                AttributeName: attributeName,
+                TargetObjectGuid: targetObjectGuid,
+                DiagnosticCode: AdUserUpdateDiagnosticCodes.PreflightFailed,
+                NormalizedReasonOverride: AdUserUpdateNormalizedReasons.DuplicateValue,
+                EnglishMessageOverride: englishMessage,
+                PartialUpdate: false,
+                RollbackStatus: AdUserUpdateRollbackStatus.NotRequired));
+
+    public static string BuildWithRollback(
+        AdUserUpdateFailureContext failureContext,
+        AdUserUpdateRollbackResult rollbackResult,
+        IReadOnlyList<string> appliedChangeNames)
+    {
+        var partialUpdate = rollbackResult.Status is AdUserUpdateRollbackStatus.Failed
+            or AdUserUpdateRollbackStatus.PartiallySucceeded;
+
+        var code = rollbackResult.Status switch
+        {
+            AdUserUpdateRollbackStatus.Succeeded => AdUserUpdateDiagnosticCodes.UpdateFailedRollbackSucceeded,
+            AdUserUpdateRollbackStatus.Failed or AdUserUpdateRollbackStatus.PartiallySucceeded =>
+                AdUserUpdateDiagnosticCodes.UpdateFailedRollbackFailed,
+            _ => failureContext.DiagnosticCode ?? AdUserUpdateDiagnosticCodes.UpdateFailed,
+        };
+
+        return BuildJson(
+            failureContext with
+            {
+                DiagnosticCode = code,
+                PartialUpdate = partialUpdate,
+                RollbackStatus = rollbackResult.Status,
+                AppliedChanges = appliedChangeNames,
+                RolledBackChanges = rollbackResult.RolledBackChanges,
+                RollbackErrors = rollbackResult.Errors,
+            });
     }
 
     public static string BuildNotFoundJson(string step, Guid? targetObjectGuid = null) =>
@@ -56,7 +116,8 @@ public static class AdUserUpdateOperationDiagnosticBuilder
                 step,
                 TargetObjectGuid: targetObjectGuid,
                 NormalizedReasonOverride: AdUserUpdateNormalizedReasons.NoSuchObject,
-                EnglishMessageOverride: "The AD user could not be found."));
+                EnglishMessageOverride: "The AD user could not be found.",
+                RollbackStatus: AdUserUpdateRollbackStatus.NotRequired));
 
     public static string BuildValidationJson(string step, string englishMessage) =>
         BuildJson(
@@ -64,21 +125,35 @@ public static class AdUserUpdateOperationDiagnosticBuilder
                 step,
                 DiagnosticCode: AdUserUpdateDiagnosticCodes.ValidationFailed,
                 NormalizedReasonOverride: AdUserUpdateNormalizedReasons.InvalidRequest,
-                EnglishMessageOverride: englishMessage));
+                EnglishMessageOverride: englishMessage,
+                RollbackStatus: AdUserUpdateRollbackStatus.NotRequired));
 
     public static string BuildGenericFailureJson(
         string step,
         string normalizedReason,
         string englishMessage,
         Guid? targetObjectGuid = null,
-        string? targetDistinguishedName = null) =>
+        string? targetDistinguishedName = null,
+        bool? afterReloadFailed = null) =>
         BuildJson(
             new AdUserUpdateFailureContext(
                 step,
                 TargetObjectGuid: targetObjectGuid,
                 TargetDistinguishedName: targetDistinguishedName,
                 NormalizedReasonOverride: normalizedReason,
-                EnglishMessageOverride: englishMessage));
+                EnglishMessageOverride: englishMessage,
+                RollbackStatus: AdUserUpdateRollbackStatus.NotRequired,
+                AfterReloadFailed: afterReloadFailed));
+
+    private static string ResolveDefaultCode(AdUserUpdateFailureContext context)
+    {
+        if (string.Equals(context.DiagnosticCode, AdUserUpdateDiagnosticCodes.PreflightFailed, StringComparison.Ordinal))
+        {
+            return AdUserUpdateDiagnosticCodes.PreflightFailed;
+        }
+
+        return AdUserUpdateDiagnosticCodes.UpdateFailed;
+    }
 
     public static string ResolveNormalizedReason(
         int? ldapResultCode,
@@ -154,13 +229,6 @@ public static class AdUserUpdateOperationDiagnosticBuilder
             return AdUserUpdateNormalizedReasons.DuplicateValue;
         }
 
-        if (!string.IsNullOrWhiteSpace(attributeName)
-            && MatchesDuplicate(diagnostic) == false
-            && code is null)
-        {
-            return AdUserUpdateNormalizedReasons.Unknown;
-        }
-
         return AdUserUpdateNormalizedReasons.Unknown;
     }
 
@@ -198,6 +266,12 @@ public static class AdUserUpdateOperationDiagnosticBuilder
 
     private static string ResolveDuplicateEnglishMessage(string? attributeName, string? ldapDiagnosticMessage)
     {
+        if (IsCnAttribute(attributeName)
+            || DiagnosticMentionsAttribute(ldapDiagnosticMessage, "cn"))
+        {
+            return "The CN value is already used by another AD object in the target OU.";
+        }
+
         if (IsSamAccountNameAttribute(attributeName)
             || DiagnosticMentionsAttribute(ldapDiagnosticMessage, "samaccountname"))
         {
@@ -270,6 +344,9 @@ public static class AdUserUpdateOperationDiagnosticBuilder
     private static bool MatchesNoSuchObject(string? message) =>
         ContainsAny(message, "nosuchobject", "no such object", "00002030");
 
+    private static bool IsCnAttribute(string? attributeName) =>
+        string.Equals(attributeName, "cn", StringComparison.OrdinalIgnoreCase);
+
     private static bool IsSamAccountNameAttribute(string? attributeName) =>
         string.Equals(attributeName, "sAMAccountName", StringComparison.OrdinalIgnoreCase);
 
@@ -311,5 +388,17 @@ public static class AdUserUpdateOperationDiagnosticBuilder
         public string? LdapDiagnosticMessage { get; init; }
         public string? TargetObjectGuid { get; init; }
         public string? TargetDistinguishedName { get; init; }
+        public bool? PartialUpdate { get; init; }
+        public string? RollbackStatus { get; init; }
+        public IReadOnlyList<string>? AppliedChanges { get; init; }
+        public IReadOnlyList<string>? RolledBackChanges { get; init; }
+        public IReadOnlyList<AdUserUpdateOperationDiagnosticRollbackError>? RollbackErrors { get; init; }
+        public bool? AfterReloadFailed { get; init; }
+    }
+
+    private sealed class AdUserUpdateOperationDiagnosticRollbackError
+    {
+        public string Attribute { get; init; } = string.Empty;
+        public string Message { get; init; } = string.Empty;
     }
 }

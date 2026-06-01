@@ -1,5 +1,4 @@
 using System.DirectoryServices.Protocols;
-using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using SasPortal.Application.Abstractions.Services;
 using SasPortal.Application.Common.AdManagement;
@@ -12,16 +11,6 @@ public sealed partial class AdUserDirectoryService
 {
     private const string UpdateUserFailedMessage = AdLdapErrorNormalizer.UpdateUserFailedMessage;
     private const int LdapNoSuchAttribute = 16;
-
-    private static class AdUserUpdateSteps
-    {
-        public const string LoadUser = "LoadUser";
-        public const string RenameCn = "RenameCn";
-        public const string UpdateBasicAttribute = "UpdateBasicAttribute";
-        public const string UpdateMappedAttribute = "UpdateMappedAttribute";
-        public const string ReloadUser = "ReloadUser";
-        public const string UpdateUser = "UpdateUser";
-    }
 
     public async Task<AdUserDirectoryDetailResult> UpdateUserAsync(
         UpdateAdUserRequest request,
@@ -106,45 +95,13 @@ public sealed partial class AdUserDirectoryService
                     cancellationToken);
             }
 
-            var newCommonName = AdUpdateUserRequestValidator.DeriveCommonNameFromDisplayName(normalizedRequest.DisplayName);
-            var currentCommonName = AdLdapDnHelper.ParseCommonNameFromDistinguishedName(distinguishedName);
-            var renamed = false;
-            var attributeWrites = false;
-            try
-            {
-                if (!string.Equals(currentCommonName, newCommonName, StringComparison.OrdinalIgnoreCase))
-                {
-                    distinguishedName = RenameUserCommonName(
-                        ldapConnection,
-                        distinguishedName,
-                        newCommonName,
-                        normalizedRequest.UserId);
-                    renamed = true;
-                }
+            var changePlan = BuildUpdateChangePlan(
+                normalizedRequest,
+                beforeEntry!,
+                distinguishedName,
+                activeMappings);
 
-                attributeWrites = ApplyUserAttributeUpdates(
-                    ldapConnection,
-                    distinguishedName,
-                    normalizedRequest,
-                    beforeEntry!,
-                    mappings);
-            }
-            catch (UpdateUserLdapException ex)
-            {
-                return await FailUpdateAsync(
-                    normalizedRequest,
-                    context.Connection,
-                    ex.UserMessage,
-                    ex.FailureKind,
-                    ex.OperationDiagnosticJson,
-                    beforeDetail,
-                    distinguishedName,
-                    null,
-                    null,
-                    cancellationToken);
-            }
-
-            if (!renamed && !attributeWrites)
+            if (!changePlan.HasChanges)
             {
                 await WriteUpdateNoChangesLogsAsync(
                     normalizedRequest,
@@ -155,6 +112,54 @@ public sealed partial class AdUserDirectoryService
 
                 return new AdUserDirectoryDetailResult(true, string.Empty, beforeDetail);
             }
+
+            var preflightFailure = RunUpdatePreflightChecks(ldapConnection, searchBase, changePlan);
+            if (preflightFailure is not null)
+            {
+                return await FailUpdateAsync(
+                    normalizedRequest,
+                    context.Connection,
+                    preflightFailure.UserMessage,
+                    AdDirectoryFailureKind.InvalidRequest,
+                    AdUserUpdateOperationDiagnosticBuilder.BuildPreflightDuplicateJson(
+                        preflightFailure.AttributeName,
+                        preflightFailure.EnglishDiagnosticMessage,
+                        normalizedRequest.UserId),
+                    beforeDetail,
+                    distinguishedName,
+                    beforeDetail,
+                    distinguishedName,
+                    cancellationToken);
+            }
+
+            var appliedChanges = new List<AdUserUpdateAppliedChange>();
+            var currentDn = distinguishedName;
+
+            try
+            {
+                ExecuteUpdateChangePlan(
+                    ldapConnection,
+                    ref currentDn,
+                    changePlan,
+                    normalizedRequest,
+                    appliedChanges);
+            }
+            catch (UpdateUserLdapException ex)
+            {
+                return await HandleUpdateWriteFailureAsync(
+                    ldapConnection,
+                    searchBase,
+                    normalizedRequest,
+                    context.Connection,
+                    beforeDetail,
+                    currentDn,
+                    appliedChanges,
+                    ex,
+                    activeMappings,
+                    cancellationToken);
+            }
+
+            distinguishedName = currentDn;
 
             if (!TryLoadUserForUpdate(
                     ldapConnection,
@@ -185,7 +190,8 @@ public sealed partial class AdUserDirectoryService
                         AdUserUpdateNormalizedReasons.ConnectionFailed,
                         "The AD user could not be reloaded after update.",
                         normalizedRequest.UserId,
-                        distinguishedName),
+                        distinguishedName,
+                        afterReloadFailed: true),
                     beforeDetail,
                     distinguishedName,
                     null,
@@ -226,7 +232,8 @@ public sealed partial class AdUserDirectoryService
                         LdapResultCode: ex.ErrorCode,
                         LdapExceptionErrorCode: ex.ErrorCode,
                         LdapDiagnosticMessage: ex.Message,
-                        TargetObjectGuid: normalizedRequest.UserId)),
+                        TargetObjectGuid: normalizedRequest.UserId,
+                        RollbackStatus: AdUserUpdateRollbackStatus.NotRequired)),
                 null,
                 null,
                 null,
@@ -264,6 +271,71 @@ public sealed partial class AdUserDirectoryService
                 null,
                 cancellationToken);
         }
+    }
+
+    private async Task<AdUserDirectoryDetailResult> HandleUpdateWriteFailureAsync(
+        LdapConnection ldapConnection,
+        string searchBase,
+        UpdateAdUserRequest request,
+        AdManagementConnectionParameters connection,
+        AdUserDetail beforeDetail,
+        string currentDistinguishedName,
+        IReadOnlyList<AdUserUpdateAppliedChange> appliedChanges,
+        UpdateUserLdapException exception,
+        IReadOnlyList<AdAttributeMappingItem> activeMappings,
+        CancellationToken cancellationToken)
+    {
+        var rollbackDn = currentDistinguishedName;
+        var rollbackResult = TryRollbackAppliedChanges(
+            ldapConnection,
+            ref rollbackDn,
+            appliedChanges,
+            request);
+
+        var partialUpdate = rollbackResult.Status is AdUserUpdateRollbackStatus.Failed
+            or AdUserUpdateRollbackStatus.PartiallySucceeded;
+
+        AdUserDetail? afterDetail = null;
+        var afterReloadFailed = false;
+        if (TryLoadUserForUpdate(
+                ldapConnection,
+                searchBase,
+                request.UserId,
+                activeMappings,
+                out var reloadedDetail,
+                out _)
+            && reloadedDetail is not null)
+        {
+            afterDetail = reloadedDetail;
+        }
+        else
+        {
+            afterReloadFailed = true;
+            afterDetail = partialUpdate ? null : beforeDetail;
+        }
+
+        var appliedChangeNames = GetAppliedChangeLogNames(appliedChanges);
+        var diagnosticJson = AdUserUpdateOperationDiagnosticBuilder.BuildWithRollback(
+            exception.FailureContext with
+            {
+                TargetObjectGuid = request.UserId,
+                TargetDistinguishedName = currentDistinguishedName,
+                AfterReloadFailed = afterReloadFailed ? true : null,
+            },
+            rollbackResult,
+            appliedChangeNames);
+
+        return await FailUpdateAsync(
+            request,
+            connection,
+            exception.UserMessage,
+            exception.FailureKind,
+            diagnosticJson,
+            beforeDetail,
+            rollbackDn,
+            afterDetail,
+            afterDetail?.DistinguishedName ?? rollbackDn,
+            cancellationToken);
     }
 
     private static UpdateAdUserRequest NormalizeUpdateRequest(UpdateAdUserRequest request) =>
@@ -317,363 +389,6 @@ public sealed partial class AdUserDirectoryService
         entry = response.Entries[0];
         return TryMapDetailItem(entry, activeMappings, out detail);
     }
-
-    private string RenameUserCommonName(
-        LdapConnection ldapConnection,
-        string distinguishedName,
-        string newCommonName,
-        Guid targetObjectGuid)
-    {
-        var parentDn = AdLdapDnHelper.GetParentDistinguishedName(distinguishedName);
-        if (string.IsNullOrWhiteSpace(parentDn))
-        {
-            throw CreateUpdateUserLdapException(
-                AdLdapErrorNormalizer.InvalidDnSyntaxMessage,
-                AdDirectoryFailureKind.InvalidRequest,
-                new AdUserUpdateFailureContext(
-                    AdUserUpdateSteps.RenameCn,
-                    AttributeName: "cn",
-                    TargetObjectGuid: targetObjectGuid,
-                    TargetDistinguishedName: distinguishedName,
-                    NormalizedReasonOverride: AdUserUpdateNormalizedReasons.InvalidDnSyntax,
-                    EnglishMessageOverride:
-                        "The display name or distinguished name is not valid for Active Directory."));
-        }
-
-        var newRdn = AdLdapDnHelper.BuildCommonNameRdn(newCommonName);
-        var modifyDnRequest = new ModifyDNRequest(distinguishedName, parentDn, newRdn);
-        var response = (DirectoryResponse)ldapConnection.SendRequest(modifyDnRequest);
-        if (response.ResultCode != ResultCode.Success)
-        {
-            var ldapResultCode = (int)response.ResultCode;
-            LogLdapFailure(
-                null,
-                AdUserUpdateSteps.RenameCn,
-                "cn",
-                ldapResultCode,
-                response.ErrorMessage,
-                null,
-                targetObjectGuid,
-                distinguishedName);
-
-            throw CreateUpdateUserLdapException(
-                AdLdapErrorNormalizer.Normalize(ldapResultCode, response.ErrorMessage),
-                MapFailureKind(response.ResultCode),
-                new AdUserUpdateFailureContext(
-                    AdUserUpdateSteps.RenameCn,
-                    AttributeName: "cn",
-                    LdapResultCode: ldapResultCode,
-                    LdapDiagnosticMessage: response.ErrorMessage,
-                    TargetObjectGuid: targetObjectGuid,
-                    TargetDistinguishedName: distinguishedName));
-        }
-
-        return AdLdapDnHelper.BuildUserDistinguishedName(newCommonName, parentDn);
-    }
-
-    private bool ApplyUserAttributeUpdates(
-        LdapConnection ldapConnection,
-        string distinguishedName,
-        UpdateAdUserRequest request,
-        SearchResultEntry entry,
-        IReadOnlyList<AdAttributeMappingItem> mappings)
-    {
-        var wrote = false;
-
-        if (ScalarValueChanged(entry, "givenName", request.GivenName))
-        {
-            ApplyLdapModification(
-                ldapConnection,
-                distinguishedName,
-                DirectoryAttributeOperation.Replace,
-                "givenName",
-                AdUserUpdateSteps.UpdateBasicAttribute,
-                request,
-                request.GivenName);
-            wrote = true;
-        }
-
-        if (ScalarValueChanged(entry, "sn", request.Surname))
-        {
-            ApplyLdapModification(
-                ldapConnection,
-                distinguishedName,
-                DirectoryAttributeOperation.Replace,
-                "sn",
-                AdUserUpdateSteps.UpdateBasicAttribute,
-                request,
-                request.Surname);
-            wrote = true;
-        }
-
-        if (ScalarValueChanged(entry, "displayName", request.DisplayName))
-        {
-            ApplyLdapModification(
-                ldapConnection,
-                distinguishedName,
-                DirectoryAttributeOperation.Replace,
-                "displayName",
-                AdUserUpdateSteps.UpdateBasicAttribute,
-                request,
-                request.DisplayName);
-            wrote = true;
-        }
-
-        if (ScalarValueChanged(entry, "sAMAccountName", request.SamAccountName))
-        {
-            ApplyLdapModification(
-                ldapConnection,
-                distinguishedName,
-                DirectoryAttributeOperation.Replace,
-                "sAMAccountName",
-                AdUserUpdateSteps.UpdateBasicAttribute,
-                request,
-                request.SamAccountName);
-            wrote = true;
-        }
-
-        if (ScalarValueChanged(entry, "userPrincipalName", request.UserPrincipalName))
-        {
-            ApplyLdapModification(
-                ldapConnection,
-                distinguishedName,
-                DirectoryAttributeOperation.Replace,
-                "userPrincipalName",
-                AdUserUpdateSteps.UpdateBasicAttribute,
-                request,
-                request.UserPrincipalName);
-            wrote = true;
-        }
-
-        if (request.Mail is not null
-            && ApplyOptionalScalarAttributeUpdate(
-                ldapConnection,
-                distinguishedName,
-                entry,
-                "mail",
-                request.Mail,
-                request))
-        {
-            wrote = true;
-        }
-
-        if (request.Department is not null
-            && ApplyOptionalScalarAttributeUpdate(
-                ldapConnection,
-                distinguishedName,
-                entry,
-                "department",
-                request.Department,
-                request))
-        {
-            wrote = true;
-        }
-
-        if (ApplyMappedAttributeUpdates(
-                ldapConnection,
-                distinguishedName,
-                entry,
-                request.MappedAttributes,
-                mappings,
-                request))
-        {
-            wrote = true;
-        }
-
-        return wrote;
-    }
-
-    private static bool ScalarValueChanged(
-        SearchResultEntry entry,
-        string attributeName,
-        string requestedValue) =>
-        AdScalarAttributeComparer.HasChanged(GetFirstString(entry, attributeName), requestedValue);
-
-    private bool ApplyOptionalScalarAttributeUpdate(
-        LdapConnection ldapConnection,
-        string distinguishedName,
-        SearchResultEntry entry,
-        string attributeName,
-        string requestedValue,
-        UpdateAdUserRequest request)
-    {
-        var existing = GetAllStrings(entry, attributeName);
-        var action = AdMappedAttributeLdapUpdatePlanner.ResolveAction(requestedValue, existing);
-        switch (action)
-        {
-            case AdMappedAttributeLdapAction.Skip:
-                return false;
-            case AdMappedAttributeLdapAction.Delete:
-                ApplyLdapModification(
-                    ldapConnection,
-                    distinguishedName,
-                    DirectoryAttributeOperation.Delete,
-                    attributeName,
-                    AdUserUpdateSteps.UpdateBasicAttribute,
-                    request);
-                return true;
-            case AdMappedAttributeLdapAction.Replace:
-                ApplyLdapModification(
-                    ldapConnection,
-                    distinguishedName,
-                    DirectoryAttributeOperation.Replace,
-                    attributeName,
-                    AdUserUpdateSteps.UpdateBasicAttribute,
-                    request,
-                    requestedValue.Trim());
-                return true;
-            default:
-                return false;
-        }
-    }
-
-    private bool ApplyMappedAttributeUpdates(
-        LdapConnection ldapConnection,
-        string distinguishedName,
-        SearchResultEntry entry,
-        IReadOnlyList<UpdateAdUserMappedAttributeRequest> mappedAttributes,
-        IReadOnlyList<AdAttributeMappingItem> mappings,
-        UpdateAdUserRequest request)
-    {
-        var wrote = false;
-        var editableMappings = mappings
-            .Where(static mapping =>
-                mapping.IsEnabled
-                && mapping.IsEditable
-                && !AdReservedCoreAttributes.IsReserved(mapping.AttributeName))
-            .ToDictionary(static mapping => mapping.LogicalField, StringComparer.Ordinal);
-
-        foreach (var mappedAttribute in mappedAttributes)
-        {
-            if (!editableMappings.TryGetValue(mappedAttribute.LogicalField, out var mapping))
-            {
-                continue;
-            }
-
-            var existingValues = GetAllStrings(entry, mapping.AttributeName);
-            var requestedValue = ExtractMappedAttributeValue(mappedAttribute.Value);
-            var action = AdMappedAttributeLdapUpdatePlanner.ResolveAction(requestedValue, existingValues);
-
-            switch (action)
-            {
-                case AdMappedAttributeLdapAction.Skip:
-                    continue;
-                case AdMappedAttributeLdapAction.Delete:
-                    ApplyLdapModification(
-                        ldapConnection,
-                        distinguishedName,
-                        DirectoryAttributeOperation.Delete,
-                        mapping.AttributeName,
-                        AdUserUpdateSteps.UpdateMappedAttribute,
-                        request);
-                    wrote = true;
-                    continue;
-                case AdMappedAttributeLdapAction.Replace:
-                    ApplyLdapModification(
-                        ldapConnection,
-                        distinguishedName,
-                        DirectoryAttributeOperation.Replace,
-                        mapping.AttributeName,
-                        AdUserUpdateSteps.UpdateMappedAttribute,
-                        request,
-                        requestedValue!);
-                    wrote = true;
-                    continue;
-                default:
-                    continue;
-            }
-        }
-
-        return wrote;
-    }
-
-    private void ApplyLdapModification(
-        LdapConnection ldapConnection,
-        string distinguishedName,
-        DirectoryAttributeOperation operation,
-        string attributeName,
-        string updateStep,
-        UpdateAdUserRequest request,
-        params string[] values)
-    {
-        try
-        {
-            var modifyRequest = values.Length == 0
-                ? new ModifyRequest(distinguishedName, operation, attributeName)
-                : new ModifyRequest(distinguishedName, operation, attributeName, values);
-
-            var response = (DirectoryResponse)ldapConnection.SendRequest(modifyRequest);
-            if (response.ResultCode == ResultCode.Success)
-            {
-                return;
-            }
-
-            if (operation == DirectoryAttributeOperation.Delete
-                && response.ResultCode == ResultCode.NoSuchAttribute)
-            {
-                return;
-            }
-
-            var ldapResultCode = (int)response.ResultCode;
-            LogLdapFailure(
-                request,
-                updateStep,
-                attributeName,
-                ldapResultCode,
-                response.ErrorMessage,
-                null,
-                request.UserId,
-                distinguishedName);
-
-            throw CreateUpdateUserLdapException(
-                AdLdapErrorNormalizer.Normalize(ldapResultCode, response.ErrorMessage),
-                MapFailureKind(response.ResultCode),
-                new AdUserUpdateFailureContext(
-                    updateStep,
-                    AttributeName: attributeName,
-                    LdapResultCode: ldapResultCode,
-                    LdapDiagnosticMessage: response.ErrorMessage,
-                    TargetObjectGuid: request.UserId,
-                    TargetDistinguishedName: distinguishedName));
-        }
-        catch (LdapException ex) when (operation == DirectoryAttributeOperation.Delete && ex.ErrorCode == LdapNoSuchAttribute)
-        {
-            return;
-        }
-        catch (LdapException ex)
-        {
-            LogLdapFailure(
-                request,
-                updateStep,
-                attributeName,
-                ex.ErrorCode,
-                ex.Message,
-                ex.ErrorCode,
-                request.UserId,
-                distinguishedName);
-
-            throw CreateUpdateUserLdapException(
-                AdLdapErrorNormalizer.Normalize(ex.ErrorCode, ex.Message),
-                MapFailureKind((ResultCode)ex.ErrorCode),
-                new AdUserUpdateFailureContext(
-                    updateStep,
-                    AttributeName: attributeName,
-                    LdapResultCode: ex.ErrorCode,
-                    LdapExceptionErrorCode: ex.ErrorCode,
-                    LdapDiagnosticMessage: ex.Message,
-                    TargetObjectGuid: request.UserId,
-                    TargetDistinguishedName: distinguishedName));
-        }
-    }
-
-    private static UpdateUserLdapException CreateUpdateUserLdapException(
-        string userMessage,
-        AdDirectoryFailureKind failureKind,
-        AdUserUpdateFailureContext diagnosticContext) =>
-        new(
-            userMessage,
-            failureKind,
-            AdUserUpdateOperationDiagnosticBuilder.BuildJson(diagnosticContext));
 
     private void LogLdapFailure(
         UpdateAdUserRequest? request,
@@ -902,7 +617,7 @@ public sealed partial class AdUserDirectoryService
     }
 
     private static string SerializeUpdateSnapshot(AdUserDetail detail) =>
-        JsonSerializer.Serialize(AdUserUpdateSnapshotBuilder.Build(
+        System.Text.Json.JsonSerializer.Serialize(AdUserUpdateSnapshotBuilder.Build(
             detail.GivenName,
             detail.Surname,
             detail.DisplayName,
@@ -913,14 +628,20 @@ public sealed partial class AdUserDirectoryService
             detail.DistinguishedName,
             detail.MappedAttributes));
 
+    private static UpdateUserLdapException CreateUpdateUserLdapException(
+        string userMessage,
+        AdDirectoryFailureKind failureKind,
+        AdUserUpdateFailureContext failureContext) =>
+        new(userMessage, failureKind, failureContext);
+
     private sealed class UpdateUserLdapException(
         string userMessage,
         AdDirectoryFailureKind failureKind,
-        string operationDiagnosticJson)
+        AdUserUpdateFailureContext failureContext)
         : Exception(userMessage)
     {
         public string UserMessage { get; } = userMessage;
         public AdDirectoryFailureKind FailureKind { get; } = failureKind;
-        public string OperationDiagnosticJson { get; } = operationDiagnosticJson;
+        public AdUserUpdateFailureContext FailureContext { get; } = failureContext;
     }
 }
