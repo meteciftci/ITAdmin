@@ -1,3 +1,4 @@
+using SasPortal.Application.Abstractions.Services;
 using SasPortal.Application.Common.Constants;
 using SasPortal.Application.Common.Models;
 using SasPortal.Domain.Entities;
@@ -133,6 +134,76 @@ public sealed class AdOperationLogServiceTests
             new AdOperationLogListQuery(null, null, null, null, null, null, null, null, null, 1, 20));
 
         Assert.Equal(diagnosticJson, Assert.Single(result.Items).ErrorMessage);
+    }
+
+    [Fact]
+    public async Task WriteAsync_TruncatesLongTargetDistinguishedNameTo1000Characters()
+    {
+        var (connection, dbContext) = await SqliteTestDbContextFactory.CreateAsync();
+        using var _ = connection;
+        await using var context = dbContext;
+
+        var service = new AdOperationLogService(context);
+        var longDn = "CN=" + new string('x', 1200) + ",OU=Groups,DC=example,DC=com";
+
+        await service.WriteAsync(
+            new AdOperationLogEntry
+            {
+                OperationType = AdManagementOperationTypes.UserGroupAdd,
+                Status = AdManagementOperationStatuses.Succeeded,
+                TargetDistinguishedName = longDn,
+            });
+
+        await context.SaveChangesAsync();
+
+        var log = Assert.Single(context.AdOperationLogs);
+        Assert.Equal(1000, log.TargetDistinguishedName!.Length);
+        Assert.Equal(longDn[..1000], log.TargetDistinguishedName);
+    }
+
+    [Fact]
+    public async Task WriteAsync_TruncatesBoundedFieldsToConfiguredMaxLengths()
+    {
+        var (connection, dbContext) = await SqliteTestDbContextFactory.CreateAsync();
+        using var _ = connection;
+        await using var context = dbContext;
+
+        var service = new AdOperationLogService(context);
+
+        await service.WriteAsync(
+            new AdOperationLogEntry
+            {
+                OperationType = new string('o', 80),
+                Status = new string('s', 50),
+                TargetObjectType = new string('t', 80),
+                TargetDistinguishedName = new string('d', 1100),
+                TargetObjectGuid = new string('g', 80),
+                TargetSamAccountName = new string('a', 120),
+                ErrorCode = new string('c', 80),
+                ErrorMessage = new string('m', 2500),
+                DomainController = new string('h', 300),
+                ActorUserName = new string('u', 120),
+                IpAddress = new string('p', 80),
+                UserAgent = new string('v', 1100),
+                CorrelationId = new string('r', 80),
+            });
+
+        await context.SaveChangesAsync();
+
+        var log = Assert.Single(context.AdOperationLogs);
+        Assert.Equal(64, log.OperationType.Length);
+        Assert.Equal(32, log.Status.Length);
+        Assert.Equal(64, log.TargetObjectType!.Length);
+        Assert.Equal(1000, log.TargetDistinguishedName!.Length);
+        Assert.Equal(64, log.TargetObjectGuid!.Length);
+        Assert.Equal(100, log.TargetSamAccountName!.Length);
+        Assert.Equal(64, log.ErrorCode!.Length);
+        Assert.Equal(2000, log.ErrorMessage!.Length);
+        Assert.Equal(250, log.DomainController!.Length);
+        Assert.Equal(100, log.ActorUserName!.Length);
+        Assert.Equal(64, log.IpAddress!.Length);
+        Assert.Equal(1024, log.UserAgent!.Length);
+        Assert.Equal(64, log.CorrelationId!.Length);
     }
 
     [Fact]

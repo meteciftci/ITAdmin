@@ -9,9 +9,19 @@ namespace SasPortal.Persistence.Services;
 
 public sealed class AdOperationLogService(AppDbContext context) : IAdOperationLogService
 {
+    private const int OperationTypeMaxLength = 64;
+    private const int TargetObjectTypeMaxLength = 64;
+    private const int TargetDistinguishedNameMaxLength = 1000;
+    private const int TargetObjectGuidMaxLength = 64;
+    private const int TargetSamAccountNameMaxLength = 100;
+    private const int StatusMaxLength = 32;
+    private const int ErrorCodeMaxLength = 64;
     private const int ErrorMessageMaxLength = 2000;
+    private const int DomainControllerMaxLength = 250;
+    private const int ActorUserNameMaxLength = 100;
     private const int IpAddressMaxLength = 64;
     private const int UserAgentMaxLength = 1024;
+    private const int CorrelationIdMaxLength = 64;
     private const int MaxPageSize = 100;
 
     public async Task WriteAsync(AdOperationLogEntry entry, CancellationToken cancellationToken = default)
@@ -23,23 +33,27 @@ public sealed class AdOperationLogService(AppDbContext context) : IAdOperationLo
 
         var log = new AdOperationLog
         {
-            OperationType = entry.OperationType.Trim(),
-            Status = string.IsNullOrWhiteSpace(entry.Status) ? "Succeeded" : entry.Status.Trim(),
-            TargetObjectType = NormalizeNullable(entry.TargetObjectType),
-            TargetDistinguishedName = NormalizeNullable(entry.TargetDistinguishedName),
-            TargetObjectGuid = NormalizeNullable(entry.TargetObjectGuid),
-            TargetSamAccountName = NormalizeNullable(entry.TargetSamAccountName),
-            ErrorCode = NormalizeNullable(entry.ErrorCode),
-            ErrorMessage = Truncate(NormalizeNullable(entry.ErrorMessage), ErrorMessageMaxLength),
-            DomainController = NormalizeNullable(entry.DomainController),
+            OperationType = TruncateRequired(entry.OperationType, OperationTypeMaxLength),
+            Status = TruncateRequired(
+                string.IsNullOrWhiteSpace(entry.Status) ? "Succeeded" : entry.Status,
+                StatusMaxLength),
+            TargetObjectType = TruncateNullable(entry.TargetObjectType, TargetObjectTypeMaxLength),
+            TargetDistinguishedName = TruncateNullable(
+                entry.TargetDistinguishedName,
+                TargetDistinguishedNameMaxLength),
+            TargetObjectGuid = TruncateNullable(entry.TargetObjectGuid, TargetObjectGuidMaxLength),
+            TargetSamAccountName = TruncateNullable(entry.TargetSamAccountName, TargetSamAccountNameMaxLength),
+            ErrorCode = TruncateNullable(entry.ErrorCode, ErrorCodeMaxLength),
+            ErrorMessage = TruncateNullable(entry.ErrorMessage, ErrorMessageMaxLength),
+            DomainController = TruncateNullable(entry.DomainController, DomainControllerMaxLength),
             RequestSummaryJson = NormalizeNullable(entry.RequestSummaryJson),
             BeforeSnapshotJson = NormalizeNullable(entry.BeforeSnapshotJson),
             AfterSnapshotJson = NormalizeNullable(entry.AfterSnapshotJson),
             ActorUserId = entry.ActorUserId,
-            ActorUserName = NormalizeNullable(entry.ActorUserName),
-            IpAddress = Truncate(NormalizeNullable(entry.IpAddress), IpAddressMaxLength),
-            UserAgent = Truncate(NormalizeNullable(entry.UserAgent), UserAgentMaxLength),
-            CorrelationId = NormalizeNullable(entry.CorrelationId),
+            ActorUserName = TruncateNullable(entry.ActorUserName, ActorUserNameMaxLength),
+            IpAddress = TruncateNullable(entry.IpAddress, IpAddressMaxLength),
+            UserAgent = TruncateNullable(entry.UserAgent, UserAgentMaxLength),
+            CorrelationId = TruncateNullable(entry.CorrelationId, CorrelationIdMaxLength),
             CreatedAt = new DateTimeOffset(DateTime.UtcNow, TimeSpan.Zero)
         };
 
@@ -238,13 +252,20 @@ public sealed class AdOperationLogService(AppDbContext context) : IAdOperationLo
         return value.Trim();
     }
 
-    private static string? Truncate(string? value, int maxLength)
+    private static string TruncateRequired(string value, int maxLength)
     {
-        if (string.IsNullOrEmpty(value))
+        var trimmed = value.Trim();
+        return trimmed.Length <= maxLength ? trimmed : trimmed[..maxLength];
+    }
+
+    private static string? TruncateNullable(string? value, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(value))
         {
-            return value;
+            return null;
         }
 
-        return value.Length <= maxLength ? value : value[..maxLength];
+        var trimmed = value.Trim();
+        return trimmed.Length <= maxLength ? trimmed : trimmed[..maxLength];
     }
 }

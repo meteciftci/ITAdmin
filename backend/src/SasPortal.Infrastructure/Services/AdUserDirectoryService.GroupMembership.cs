@@ -1,5 +1,6 @@
 using System.DirectoryServices.Protocols;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using SasPortal.Application.Abstractions.Services;
 using SasPortal.Application.Common.AdManagement;
 using SasPortal.Application.Common.Constants;
@@ -19,6 +20,11 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
     private const string GroupMembershipRemovedMessage = "Grup üyeliği kaldırıldı.";
     private const int GroupSearchDefaultLimit = 50;
     private const int GroupSearchMaxLimit = 50;
+    private const int GroupMembershipServerLogDnMaxLength = 250;
+    private const string GroupMembershipSuccessLoggingFailedMessage =
+        "AD group membership operation succeeded but logging failed.";
+    private const string GroupMembershipFailureLoggingFailedMessage =
+        "AD group membership operation failed but logging failed.";
 
     public Task<AdUserGroupMembershipResult> GetUserGroupsAsync(
         AdUserGroupMembershipRequest request,
@@ -435,28 +441,14 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
         AdGroupDirectoryInfo groupInfo,
         CancellationToken cancellationToken)
     {
-        await WriteGroupOperationLogsAsync(
+        await WriteGroupSuccessLogsSafelyAsync(
             request,
             operationType,
-            AdManagementOperationStatuses.Succeeded,
+            auditAction,
+            auditDescription,
             connection,
             userContext,
             groupInfo,
-            null,
-            cancellationToken);
-
-        await auditLogWriter.WriteAsync(
-            new AuditLogWriteRequest
-            {
-                Action = auditAction,
-                EntityName = "AdUserGroupMembership",
-                EntityId = userContext.DistinguishedName,
-                Description = auditDescription,
-                ActorUserId = request.ActorUserId,
-                ActorUserName = request.ActorUserName,
-                IpAddress = request.ActorIpAddress,
-                UserAgent = request.ActorUserAgent,
-            },
             cancellationToken);
 
         return new AdUserGroupOperationResult(
@@ -479,32 +471,15 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
         AdDirectoryFailureKind? failureKind,
         CancellationToken cancellationToken)
     {
-        await WriteGroupOperationLogsAsync(
+        await WriteGroupFailureLogsSafelyAsync(
             request,
             operationType,
-            AdManagementOperationStatuses.Failed,
-            null,
+            auditAction,
+            auditDescription,
             userContext,
             groupInfo,
             message,
             cancellationToken);
-
-        if (!string.IsNullOrWhiteSpace(auditDescription))
-        {
-            await auditLogWriter.WriteAsync(
-                new AuditLogWriteRequest
-                {
-                    Action = auditAction,
-                    EntityName = "AdUserGroupMembership",
-                    EntityId = userContext?.DistinguishedName ?? request.UserId.ToString("D"),
-                    Description = auditDescription,
-                    ActorUserId = request.ActorUserId,
-                    ActorUserName = request.ActorUserName,
-                    IpAddress = request.ActorIpAddress,
-                    UserAgent = request.ActorUserAgent,
-                },
-                cancellationToken);
-        }
 
         return new AdUserGroupOperationResult(
             false,
@@ -514,6 +489,168 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
             groupInfo?.Name,
             failureKind);
     }
+
+    private async Task WriteGroupSuccessLogsSafelyAsync(
+        GroupMembershipChangeRequest request,
+        string operationType,
+        string auditAction,
+        string auditDescription,
+        AdManagementConnectionParameters connection,
+        AdUserGroupContext userContext,
+        AdGroupDirectoryInfo groupInfo,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await WriteGroupOperationLogsAsync(
+                request,
+                operationType,
+                AdManagementOperationStatuses.Succeeded,
+                connection,
+                userContext,
+                groupInfo,
+                null,
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            LogGroupMembershipLoggingFailure(
+                ex,
+                operationSucceeded: true,
+                operationType,
+                request,
+                userContext,
+                groupInfo);
+        }
+
+        try
+        {
+            await auditLogWriter.WriteAsync(
+                BuildGroupMembershipAuditRequest(
+                    auditAction,
+                    userContext.UserId,
+                    auditDescription,
+                    request),
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            LogGroupMembershipLoggingFailure(
+                ex,
+                operationSucceeded: true,
+                operationType,
+                request,
+                userContext,
+                groupInfo);
+        }
+    }
+
+    private async Task WriteGroupFailureLogsSafelyAsync(
+        GroupMembershipChangeRequest request,
+        string operationType,
+        string auditAction,
+        string auditDescription,
+        AdUserGroupContext? userContext,
+        AdGroupDirectoryInfo? groupInfo,
+        string? errorMessage,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await WriteGroupOperationLogsAsync(
+                request,
+                operationType,
+                AdManagementOperationStatuses.Failed,
+                null,
+                userContext,
+                groupInfo,
+                errorMessage,
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            LogGroupMembershipLoggingFailure(
+                ex,
+                operationSucceeded: false,
+                operationType,
+                request,
+                userContext,
+                groupInfo);
+        }
+
+        if (string.IsNullOrWhiteSpace(auditDescription))
+        {
+            return;
+        }
+
+        try
+        {
+            await auditLogWriter.WriteAsync(
+                BuildGroupMembershipAuditRequest(
+                    auditAction,
+                    userContext?.UserId ?? request.UserId.ToString("D"),
+                    auditDescription,
+                    request),
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            LogGroupMembershipLoggingFailure(
+                ex,
+                operationSucceeded: false,
+                operationType,
+                request,
+                userContext,
+                groupInfo);
+        }
+    }
+
+    private static AuditLogWriteRequest BuildGroupMembershipAuditRequest(
+        string auditAction,
+        string entityId,
+        string auditDescription,
+        GroupMembershipChangeRequest request) =>
+        new()
+        {
+            Action = auditAction,
+            EntityName = "AdUserGroupMembership",
+            EntityId = entityId,
+            Description = auditDescription,
+            ActorUserId = request.ActorUserId,
+            ActorUserName = request.ActorUserName,
+            IpAddress = request.ActorIpAddress,
+            UserAgent = request.ActorUserAgent,
+        };
+
+    private void LogGroupMembershipLoggingFailure(
+        Exception exception,
+        bool operationSucceeded,
+        string operationType,
+        GroupMembershipChangeRequest request,
+        AdUserGroupContext? userContext,
+        AdGroupDirectoryInfo? groupInfo)
+    {
+        var logMessage = operationSucceeded
+            ? GroupMembershipSuccessLoggingFailedMessage
+            : GroupMembershipFailureLoggingFailedMessage;
+
+        logger.LogError(
+            exception,
+            "{LogMessage} OperationType={OperationType} UserId={UserId} GroupName={GroupName} GroupDistinguishedName={GroupDistinguishedName} ActorUserId={ActorUserId}",
+            logMessage,
+            operationType,
+            userContext?.UserId ?? request.UserId.ToString("D"),
+            groupInfo?.Name,
+            TruncateForServerLog(groupInfo?.DistinguishedName ?? request.GroupDistinguishedName),
+            request.ActorUserId);
+    }
+
+    private static string? TruncateForServerLog(string? value) =>
+        string.IsNullOrWhiteSpace(value)
+            ? null
+            : value.Trim().Length <= GroupMembershipServerLogDnMaxLength
+                ? value.Trim()
+                : value.Trim()[..GroupMembershipServerLogDnMaxLength];
 
     private async Task WriteGroupOperationLogsAsync(
         GroupMembershipChangeRequest request,
