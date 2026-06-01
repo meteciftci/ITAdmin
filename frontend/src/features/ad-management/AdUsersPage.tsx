@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -12,13 +12,7 @@ import { useServerDataTable } from "@/components/common/data-table-hooks";
 import { EmptyState } from "@/components/common/EmptyState";
 import { LoadingState } from "@/components/common/LoadingState";
 import { SectionCard } from "@/components/common/SectionCard";
-import { appendReturnTo } from "@/features/ad-management/ad-return-path";
-import {
-  AD_USERS_LIST_DEFAULTS,
-  buildAdUsersListPath,
-  buildAdUsersListSearchParams,
-  parseAdUsersListQuery,
-} from "@/features/ad-management/ad-users-list-query";
+import { AD_USERS_LIST_DEFAULTS } from "@/features/ad-management/ad-users-list-query";
 import { createAdUserColumns } from "@/features/ad-management/ad-users-columns";
 import {
   AD_MANAGEMENT_USERS_QUERY_KEY,
@@ -33,9 +27,11 @@ import { AdManagementModuleStateGuard } from "@/features/ad-management/component
 import { AdUserDetailDialog } from "@/features/ad-management/components/AdUserDetailDialog";
 import { AdUsersSearchToolbar } from "@/features/ad-management/components/AdUsersSearchToolbar";
 import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useAdManagementModuleStatus";
+import { useAdUserListState } from "@/features/ad-management/use-ad-user-list-state";
 import type { AdUserAccountConfirmAction, AdUserListItem } from "@/features/ad-management/types";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { createApiErrorRouteState, getErrorRoutePath } from "@/lib/route-error";
+
 type AccountConfirmTarget = {
   user: AdUserListItem;
   action: AdUserAccountConfirmAction;
@@ -55,18 +51,12 @@ export function AdUsersPage() {
   const canUnlockUser = canAccess(currentUser, "AdManagement.Users.Unlock");
   const canManageGroups = canAccess(currentUser, "AdManagement.Users.Groups.View");
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-
-  const listState = useMemo(
-    () => parseAdUsersListQuery(searchParams),
-    [searchParams],
-  );
-  const listPath = useMemo(() => buildAdUsersListPath(listState), [listState]);
+  const { listState, listPath, updateListState, clearListState } = useAdUserListState();
 
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [confirmTarget, setConfirmTarget] = useState<AccountConfirmTarget | null>(null);
 
-  const normalizedSearch = listState.q.trim();
+  const normalizedSearch = listState.search.trim();
   const canSearch = normalizedSearch.length >= MIN_SEARCH_LENGTH;
   const effectiveSearch = canSearch ? normalizedSearch : undefined;
 
@@ -76,14 +66,14 @@ export function AdUsersPage() {
       "list",
       effectiveSearch,
       listState.status,
-      listState.page,
+      listState.pageNumber,
       listState.pageSize,
     ],
     queryFn: () =>
       getAdUsers({
         search: effectiveSearch,
         status: listState.status,
-        pageNumber: listState.page,
+        pageNumber: listState.pageNumber,
         pageSize: listState.pageSize,
       }),
     enabled: moduleStatus.isOperational && canSearch,
@@ -99,17 +89,6 @@ export function AdUsersPage() {
 
   const users = useMemo(() => usersQuery.data?.items ?? [], [usersQuery.data]);
 
-  const updateListQuery = useCallback(
-    (patch: Partial<typeof listState>) => {
-      const nextState = {
-        ...listState,
-        ...patch,
-      };
-      setSearchParams(buildAdUsersListSearchParams(nextState), { replace: true });
-    },
-    [listState, setSearchParams],
-  );
-
   const columns = useMemo(
     () =>
       createAdUserColumns({
@@ -121,10 +100,10 @@ export function AdUsersPage() {
         canUnlockUser,
         onDetail: (user) => setSelectedUserId(user.id),
         onEdit: (user) => {
-          navigate(appendReturnTo(`/ad-management/users/${user.id}/edit`, listPath));
+          navigate(`/ad-management/users/${user.id}/edit`);
         },
         onManageGroups: (user) => {
-          navigate(appendReturnTo(`/ad-management/users/${user.id}/groups`, listPath));
+          navigate(`/ad-management/users/${user.id}/groups`);
         },
         onDisable: (user) => setConfirmTarget({ user, action: "disable" }),
         onEnable: (user) => setConfirmTarget({ user, action: "enable" }),
@@ -138,15 +117,16 @@ export function AdUsersPage() {
       canEnableUser,
       canUnlockUser,
       navigate,
-      listPath,
     ],
   );
 
   const table = useServerDataTable({
     data: users,
     columns,
-    pageCount: usersQuery.data?.hasNextPage ? listState.page + 1 : listState.page,
-    pageIndex: listState.page - 1,
+    pageCount: usersQuery.data?.hasNextPage
+      ? listState.pageNumber + 1
+      : listState.pageNumber,
+    pageIndex: listState.pageNumber - 1,
     pageSize: listState.pageSize,
   });
 
@@ -262,7 +242,8 @@ export function AdUsersPage() {
             canSearch={canSearch}
             canCreateUser={canCreateUser}
             activeFilterCount={activeFilterCount}
-            onListStateChange={updateListQuery}
+            onListStateChange={updateListState}
+            onClearFilters={clearListState}
             onRefresh={handleRefresh}
           />
 
@@ -293,12 +274,12 @@ export function AdUsersPage() {
                     pageSize={usersQuery.data.pageSize}
                     hasNextPage={usersQuery.data.hasNextPage}
                     onPageChange={(nextPage) => {
-                      updateListQuery({ page: nextPage });
+                      updateListState({ pageNumber: nextPage });
                     }}
                     onPageSizeChange={(nextPageSize) => {
-                      updateListQuery({
+                      updateListState({
                         pageSize: nextPageSize,
-                        page: AD_USERS_LIST_DEFAULTS.page,
+                        pageNumber: AD_USERS_LIST_DEFAULTS.pageNumber,
                       });
                     }}
                   />
@@ -312,7 +293,6 @@ export function AdUsersPage() {
       <AdUserDetailDialog
         open={Boolean(selectedUserId)}
         user={userDetailQuery.data ?? null}
-        returnTo={listPath}
         canUpdateUser={canUpdateUser}
         onOpenChange={(open) => {
           if (!open) {

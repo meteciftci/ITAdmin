@@ -78,6 +78,9 @@ public sealed partial class AdUserDirectoryService
                     context.Connection,
                     UserNotFoundMessage,
                     AdDirectoryFailureKind.NotFound,
+                    AdUserUpdateOperationDiagnosticBuilder.BuildNotFoundJson(
+                        AdUserUpdateSteps.LoadUser,
+                        normalizedRequest.UserId),
                     beforeDetail,
                     beforeDetail?.DistinguishedName,
                     null,
@@ -93,6 +96,9 @@ public sealed partial class AdUserDirectoryService
                     context.Connection,
                     UserNotFoundMessage,
                     AdDirectoryFailureKind.NotFound,
+                    AdUserUpdateOperationDiagnosticBuilder.BuildNotFoundJson(
+                        AdUserUpdateSteps.LoadUser,
+                        normalizedRequest.UserId),
                     beforeDetail,
                     distinguishedName,
                     null,
@@ -130,6 +136,7 @@ public sealed partial class AdUserDirectoryService
                     context.Connection,
                     ex.UserMessage,
                     ex.FailureKind,
+                    ex.OperationDiagnosticJson,
                     beforeDetail,
                     distinguishedName,
                     null,
@@ -173,6 +180,12 @@ public sealed partial class AdUserDirectoryService
                     context.Connection,
                     UpdateUserFailedMessage,
                     AdDirectoryFailureKind.ConnectionFailed,
+                    AdUserUpdateOperationDiagnosticBuilder.BuildGenericFailureJson(
+                        AdUserUpdateSteps.ReloadUser,
+                        AdUserUpdateNormalizedReasons.ConnectionFailed,
+                        "The AD user could not be reloaded after update.",
+                        normalizedRequest.UserId,
+                        distinguishedName),
                     beforeDetail,
                     distinguishedName,
                     null,
@@ -207,6 +220,13 @@ public sealed partial class AdUserDirectoryService
                 context.Connection,
                 AdLdapErrorNormalizer.Normalize(ex.ErrorCode, ex.Message),
                 AdDirectoryFailureKind.ConnectionFailed,
+                AdUserUpdateOperationDiagnosticBuilder.BuildJson(
+                    new AdUserUpdateFailureContext(
+                        AdUserUpdateSteps.UpdateUser,
+                        LdapResultCode: ex.ErrorCode,
+                        LdapExceptionErrorCode: ex.ErrorCode,
+                        LdapDiagnosticMessage: ex.Message,
+                        TargetObjectGuid: normalizedRequest.UserId)),
                 null,
                 null,
                 null,
@@ -233,6 +253,11 @@ public sealed partial class AdUserDirectoryService
                 context.Connection,
                 UpdateUserFailedMessage,
                 AdDirectoryFailureKind.ConnectionFailed,
+                AdUserUpdateOperationDiagnosticBuilder.BuildGenericFailureJson(
+                    AdUserUpdateSteps.UpdateUser,
+                    AdUserUpdateNormalizedReasons.Unknown,
+                    "The AD user update failed.",
+                    normalizedRequest.UserId),
                 null,
                 null,
                 null,
@@ -302,9 +327,17 @@ public sealed partial class AdUserDirectoryService
         var parentDn = AdLdapDnHelper.GetParentDistinguishedName(distinguishedName);
         if (string.IsNullOrWhiteSpace(parentDn))
         {
-            throw new UpdateUserLdapException(
+            throw CreateUpdateUserLdapException(
                 AdLdapErrorNormalizer.InvalidDnSyntaxMessage,
-                AdDirectoryFailureKind.InvalidRequest);
+                AdDirectoryFailureKind.InvalidRequest,
+                new AdUserUpdateFailureContext(
+                    AdUserUpdateSteps.RenameCn,
+                    AttributeName: "cn",
+                    TargetObjectGuid: targetObjectGuid,
+                    TargetDistinguishedName: distinguishedName,
+                    NormalizedReasonOverride: AdUserUpdateNormalizedReasons.InvalidDnSyntax,
+                    EnglishMessageOverride:
+                        "The display name or distinguished name is not valid for Active Directory."));
         }
 
         var newRdn = AdLdapDnHelper.BuildCommonNameRdn(newCommonName);
@@ -312,19 +345,27 @@ public sealed partial class AdUserDirectoryService
         var response = (DirectoryResponse)ldapConnection.SendRequest(modifyDnRequest);
         if (response.ResultCode != ResultCode.Success)
         {
+            var ldapResultCode = (int)response.ResultCode;
             LogLdapFailure(
                 null,
                 AdUserUpdateSteps.RenameCn,
                 "cn",
-                (int)response.ResultCode,
+                ldapResultCode,
                 response.ErrorMessage,
                 null,
                 targetObjectGuid,
                 distinguishedName);
 
-            throw new UpdateUserLdapException(
-                AdLdapErrorNormalizer.Normalize((int)response.ResultCode, response.ErrorMessage),
-                MapFailureKind(response.ResultCode));
+            throw CreateUpdateUserLdapException(
+                AdLdapErrorNormalizer.Normalize(ldapResultCode, response.ErrorMessage),
+                MapFailureKind(response.ResultCode),
+                new AdUserUpdateFailureContext(
+                    AdUserUpdateSteps.RenameCn,
+                    AttributeName: "cn",
+                    LdapResultCode: ldapResultCode,
+                    LdapDiagnosticMessage: response.ErrorMessage,
+                    TargetObjectGuid: targetObjectGuid,
+                    TargetDistinguishedName: distinguishedName));
         }
 
         return AdLdapDnHelper.BuildUserDistinguishedName(newCommonName, parentDn);
@@ -573,19 +614,27 @@ public sealed partial class AdUserDirectoryService
                 return;
             }
 
+            var ldapResultCode = (int)response.ResultCode;
             LogLdapFailure(
                 request,
                 updateStep,
                 attributeName,
-                (int)response.ResultCode,
+                ldapResultCode,
                 response.ErrorMessage,
                 null,
                 request.UserId,
                 distinguishedName);
 
-            throw new UpdateUserLdapException(
-                AdLdapErrorNormalizer.Normalize((int)response.ResultCode, response.ErrorMessage),
-                MapFailureKind(response.ResultCode));
+            throw CreateUpdateUserLdapException(
+                AdLdapErrorNormalizer.Normalize(ldapResultCode, response.ErrorMessage),
+                MapFailureKind(response.ResultCode),
+                new AdUserUpdateFailureContext(
+                    updateStep,
+                    AttributeName: attributeName,
+                    LdapResultCode: ldapResultCode,
+                    LdapDiagnosticMessage: response.ErrorMessage,
+                    TargetObjectGuid: request.UserId,
+                    TargetDistinguishedName: distinguishedName));
         }
         catch (LdapException ex) when (operation == DirectoryAttributeOperation.Delete && ex.ErrorCode == LdapNoSuchAttribute)
         {
@@ -603,11 +652,28 @@ public sealed partial class AdUserDirectoryService
                 request.UserId,
                 distinguishedName);
 
-            throw new UpdateUserLdapException(
+            throw CreateUpdateUserLdapException(
                 AdLdapErrorNormalizer.Normalize(ex.ErrorCode, ex.Message),
-                MapFailureKind((ResultCode)ex.ErrorCode));
+                MapFailureKind((ResultCode)ex.ErrorCode),
+                new AdUserUpdateFailureContext(
+                    updateStep,
+                    AttributeName: attributeName,
+                    LdapResultCode: ex.ErrorCode,
+                    LdapExceptionErrorCode: ex.ErrorCode,
+                    LdapDiagnosticMessage: ex.Message,
+                    TargetObjectGuid: request.UserId,
+                    TargetDistinguishedName: distinguishedName));
         }
     }
+
+    private static UpdateUserLdapException CreateUpdateUserLdapException(
+        string userMessage,
+        AdDirectoryFailureKind failureKind,
+        AdUserUpdateFailureContext diagnosticContext) =>
+        new(
+            userMessage,
+            failureKind,
+            AdUserUpdateOperationDiagnosticBuilder.BuildJson(diagnosticContext));
 
     private void LogLdapFailure(
         UpdateAdUserRequest? request,
@@ -672,6 +738,7 @@ public sealed partial class AdUserDirectoryService
         AdManagementConnectionParameters connection,
         string message,
         AdDirectoryFailureKind failureKind,
+        string operationDiagnosticJson,
         AdUserDetail? beforeDetail,
         string? targetDistinguishedName,
         AdUserDetail? afterDetail,
@@ -685,7 +752,7 @@ public sealed partial class AdUserDirectoryService
             targetDistinguishedName,
             afterDetail,
             afterDistinguishedName,
-            message,
+            operationDiagnosticJson,
             cancellationToken);
 
         await auditLogWriter.WriteAsync(
@@ -720,7 +787,8 @@ public sealed partial class AdUserDirectoryService
             targetDistinguishedName,
             beforeDetail,
             beforeDetail.DistinguishedName,
-            "No changes detected",
+            errorMessage: null,
+            requestSummaryJson: """{"changeStatus":"NoChangesDetected"}""",
             cancellationToken);
 
         await auditLogWriter.WriteAsync(
@@ -754,7 +822,8 @@ public sealed partial class AdUserDirectoryService
             targetDistinguishedName,
             afterDetail,
             afterDetail.DistinguishedName,
-            null,
+            errorMessage: null,
+            requestSummaryJson: null,
             cancellationToken);
 
         await auditLogWriter.WriteAsync(
@@ -779,7 +848,7 @@ public sealed partial class AdUserDirectoryService
         string? targetDistinguishedName,
         AdUserDetail? afterDetail,
         string? afterDistinguishedName,
-        string message,
+        string operationDiagnosticJson,
         CancellationToken cancellationToken) =>
         WriteUpdateOperationLogAsync(
             request,
@@ -789,7 +858,8 @@ public sealed partial class AdUserDirectoryService
             targetDistinguishedName,
             afterDetail,
             afterDistinguishedName,
-            message,
+            errorMessage: operationDiagnosticJson,
+            requestSummaryJson: null,
             cancellationToken);
 
     private async Task WriteUpdateOperationLogAsync(
@@ -801,6 +871,7 @@ public sealed partial class AdUserDirectoryService
         AdUserDetail? afterDetail,
         string? afterDistinguishedName,
         string? errorMessage,
+        string? requestSummaryJson,
         CancellationToken cancellationToken)
     {
         var beforeSnapshot = beforeDetail is null ? null : SerializeUpdateSnapshot(beforeDetail);
@@ -820,6 +891,7 @@ public sealed partial class AdUserDirectoryService
                 BeforeSnapshotJson = beforeSnapshot,
                 AfterSnapshotJson = afterSnapshot,
                 ErrorMessage = errorMessage,
+                RequestSummaryJson = requestSummaryJson,
                 ActorUserId = request.ActorUserId,
                 ActorUserName = request.ActorUserName,
                 IpAddress = request.ActorIpAddress,
@@ -841,10 +913,14 @@ public sealed partial class AdUserDirectoryService
             detail.DistinguishedName,
             detail.MappedAttributes));
 
-    private sealed class UpdateUserLdapException(string userMessage, AdDirectoryFailureKind failureKind)
+    private sealed class UpdateUserLdapException(
+        string userMessage,
+        AdDirectoryFailureKind failureKind,
+        string operationDiagnosticJson)
         : Exception(userMessage)
     {
         public string UserMessage { get; } = userMessage;
         public AdDirectoryFailureKind FailureKind { get; } = failureKind;
+        public string OperationDiagnosticJson { get; } = operationDiagnosticJson;
     }
 }

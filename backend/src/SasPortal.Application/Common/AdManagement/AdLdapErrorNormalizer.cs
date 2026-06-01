@@ -116,11 +116,15 @@ public static class AdLdapErrorNormalizer
         if (ContainsAdDiagnostic(
                 message,
                 "0000208F",
+                "00002071",
+                "000021C7",
                 "entry_exists",
                 "entry already exists",
                 "attributeorvalueexists",
+                "attribute or value exists",
                 "already exists",
-                "object already exists"))
+                "object already exists",
+                "constraint violation"))
         {
             return EntryAlreadyExistsMessage;
         }
@@ -157,7 +161,16 @@ public static class AdLdapErrorNormalizer
     }
 
     private static bool MatchesAlreadyExists(string? message) =>
-        ContainsAny(message, "entryalreadyexists", "already exists", "attributeorvalueexists", "entry_exists");
+        ContainsAny(
+            message,
+            "entryalreadyexists",
+            "already exists",
+            "attributeorvalueexists",
+            "attribute or value exists",
+            "entry_exists",
+            "00002071",
+            "000021c7",
+            "constraint violation");
 
     private static bool MatchesConstraint(string? message) =>
         ContainsAny(message, "constraintviolation", "constraint violation", "0000052d");

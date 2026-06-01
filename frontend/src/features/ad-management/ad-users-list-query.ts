@@ -1,16 +1,21 @@
 import type { AdUserStatusFilter } from "@/features/ad-management/types";
 
-export type AdUsersListQueryState = {
-  q: string;
+export const AD_USERS_LIST_STORAGE_KEY = "sasportal.adManagement.users.listState";
+
+export type AdUsersListState = {
+  search: string;
   status: AdUserStatusFilter;
-  page: number;
+  pageNumber: number;
   pageSize: number;
 };
 
-export const AD_USERS_LIST_DEFAULTS: AdUsersListQueryState = {
-  q: "",
+/** @deprecated Use AdUsersListState. Kept for gradual migration in imports. */
+export type AdUsersListQueryState = AdUsersListState;
+
+export const AD_USERS_LIST_DEFAULTS: AdUsersListState = {
+  search: "",
   status: "all",
-  page: 1,
+  pageNumber: 1,
   pageSize: 20,
 };
 
@@ -22,57 +27,66 @@ const VALID_STATUS: ReadonlySet<AdUserStatusFilter> = new Set([
 
 const PAGE_SIZE_OPTIONS = new Set([10, 20, 25, 50]);
 
-export function parseAdUsersListQuery(
+export function normalizeAdUsersListState(
+  state: Partial<AdUsersListState> | null | undefined,
+): AdUsersListState {
+  const rawStatus = state?.status;
+  const status = VALID_STATUS.has(rawStatus as AdUserStatusFilter)
+    ? (rawStatus as AdUserStatusFilter)
+    : AD_USERS_LIST_DEFAULTS.status;
+
+  return {
+    search: typeof state?.search === "string" ? state.search : AD_USERS_LIST_DEFAULTS.search,
+    status,
+    pageNumber: parsePositiveInt(state?.pageNumber, AD_USERS_LIST_DEFAULTS.pageNumber),
+    pageSize: parsePageSize(state?.pageSize),
+  };
+}
+
+export function parseAdUsersListStateFromSession(raw: string | null): AdUsersListState {
+  if (!raw?.trim()) {
+    return { ...AD_USERS_LIST_DEFAULTS };
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<AdUsersListState> & {
+      q?: string;
+      page?: number;
+    };
+
+    return normalizeAdUsersListState({
+      search: typeof parsed.search === "string" ? parsed.search : parsed.q,
+      status: parsed.status,
+      pageNumber: parsed.pageNumber ?? parsed.page,
+      pageSize: parsed.pageSize,
+    });
+  } catch {
+    return { ...AD_USERS_LIST_DEFAULTS };
+  }
+}
+
+export function parseAdUsersListStateFromUrl(
   searchParams: URLSearchParams,
-): AdUsersListQueryState {
+): AdUsersListState {
   const rawStatus = searchParams.get("status");
   const status = VALID_STATUS.has(rawStatus as AdUserStatusFilter)
     ? (rawStatus as AdUserStatusFilter)
     : AD_USERS_LIST_DEFAULTS.status;
 
-  const page = parsePositiveInt(searchParams.get("page"), AD_USERS_LIST_DEFAULTS.page);
-  const pageSize = parsePageSize(searchParams.get("pageSize"));
-
-  return {
-    q: searchParams.get("q")?.trim() ?? AD_USERS_LIST_DEFAULTS.q,
+  return normalizeAdUsersListState({
+    search: searchParams.get("q")?.trim() ?? AD_USERS_LIST_DEFAULTS.search,
     status,
-    page,
-    pageSize,
-  };
+    pageNumber: parsePositiveInt(searchParams.get("page"), AD_USERS_LIST_DEFAULTS.pageNumber),
+    pageSize: parsePageSize(searchParams.get("pageSize")),
+  });
 }
 
-export function buildAdUsersListSearchParams(
-  state: AdUsersListQueryState,
-): URLSearchParams {
-  const params = new URLSearchParams();
-
-  if (state.q.trim()) {
-    params.set("q", state.q.trim());
+function parsePositiveInt(value: unknown, fallback: number): number {
+  if (typeof value === "number") {
+    return Number.isFinite(value) && value >= 1 ? Math.floor(value) : fallback;
   }
 
-  if (state.status !== AD_USERS_LIST_DEFAULTS.status) {
-    params.set("status", state.status);
-  }
-
-  if (state.page !== AD_USERS_LIST_DEFAULTS.page) {
-    params.set("page", String(state.page));
-  }
-
-  if (state.pageSize !== AD_USERS_LIST_DEFAULTS.pageSize) {
-    params.set("pageSize", String(state.pageSize));
-  }
-
-  return params;
-}
-
-export function buildAdUsersListPath(state: AdUsersListQueryState): string {
-  const params = buildAdUsersListSearchParams(state);
-  const query = params.toString();
-  return query ? `/ad-management/users?${query}` : "/ad-management/users";
-}
-
-function parsePositiveInt(value: string | null, fallback: number): number {
-  if (!value) {
+  if (typeof value !== "string" || !value.trim()) {
     return fallback;
   }
 
@@ -84,7 +98,7 @@ function parsePositiveInt(value: string | null, fallback: number): number {
   return parsed;
 }
 
-function parsePageSize(value: string | null): number {
+function parsePageSize(value: unknown): number {
   const parsed = parsePositiveInt(value, AD_USERS_LIST_DEFAULTS.pageSize);
   return PAGE_SIZE_OPTIONS.has(parsed) ? parsed : AD_USERS_LIST_DEFAULTS.pageSize;
 }

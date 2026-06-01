@@ -39,20 +39,10 @@ public static class AdLdapUpdateDiagnosticLog
 
         if (!string.IsNullOrWhiteSpace(ldapErrorMessage))
         {
-            parts.Add($"LdapErrorMessage={SanitizeDiagnosticMessage(ldapErrorMessage)}");
+            parts.Add(
+                $"LdapErrorMessage={AdLdapDiagnosticSanitizer.SanitizeLdapDiagnosticMessage(ldapErrorMessage)}");
         }
 
         return string.Join("; ", parts);
-    }
-
-    private static string SanitizeDiagnosticMessage(string message)
-    {
-        var trimmed = message.Trim();
-        if (trimmed.Length > 500)
-        {
-            trimmed = $"{trimmed[..500]}…";
-        }
-
-        return trimmed.Replace('\r', ' ').Replace('\n', ' ');
     }
 }

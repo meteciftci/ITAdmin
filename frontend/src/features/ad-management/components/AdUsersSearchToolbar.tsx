@@ -6,20 +6,22 @@ import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { DataTableToolbar } from "@/components/common/data-table";
 import { Select } from "@/components/ui/select";
+import { AD_USERS_LIST_PATH } from "@/features/ad-management/ad-users-list-path";
 import {
   AD_USERS_LIST_DEFAULTS,
-  type AdUsersListQueryState,
+  type AdUsersListState,
 } from "@/features/ad-management/ad-users-list-query";
 import type { AdUserStatusFilter } from "@/features/ad-management/types";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { cn } from "@/lib/utils";
 
 type Props = {
-  listState: AdUsersListQueryState;
+  listState: AdUsersListState;
   canSearch: boolean;
   canCreateUser: boolean;
   activeFilterCount: number;
-  onListStateChange: (patch: Partial<AdUsersListQueryState>) => void;
+  onListStateChange: (patch: Partial<AdUsersListState>) => void;
+  onClearFilters: () => void;
   onRefresh: () => void;
 };
 
@@ -29,28 +31,29 @@ export function AdUsersSearchToolbar({
   canCreateUser,
   activeFilterCount,
   onListStateChange,
+  onClearFilters,
   onRefresh,
 }: Props) {
   const { t } = useTranslation(["adManagement", "common"]);
-  const [searchInput, setSearchInput] = useState(listState.q);
+  const [searchInput, setSearchInput] = useState(listState.search);
   const debouncedSearch = useDebouncedValue(searchInput, 400);
 
-  /* eslint-disable react-hooks/set-state-in-effect -- sync draft search with URL on navigation */
+  /* eslint-disable react-hooks/set-state-in-effect -- sync draft search when list state is restored */
   useEffect(() => {
-    setSearchInput(listState.q);
-  }, [listState.q]);
+    setSearchInput(listState.search);
+  }, [listState.search]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
-    if (debouncedSearch === listState.q) {
+    if (debouncedSearch === listState.search) {
       return;
     }
 
     onListStateChange({
-      q: debouncedSearch,
-      page: AD_USERS_LIST_DEFAULTS.page,
+      search: debouncedSearch,
+      pageNumber: AD_USERS_LIST_DEFAULTS.pageNumber,
     });
-  }, [debouncedSearch, listState.q, onListStateChange]);
+  }, [debouncedSearch, listState.search, onListStateChange]);
 
   return (
     <DataTableToolbar
@@ -59,12 +62,8 @@ export function AdUsersSearchToolbar({
       searchPlaceholder={t("adManagement:users.searchPlaceholder")}
       activeFilterCount={activeFilterCount}
       onClearFilters={() => {
-        setSearchInput(AD_USERS_LIST_DEFAULTS.q);
-        onListStateChange({
-          q: AD_USERS_LIST_DEFAULTS.q,
-          status: AD_USERS_LIST_DEFAULTS.status,
-          page: AD_USERS_LIST_DEFAULTS.page,
-        });
+        setSearchInput(AD_USERS_LIST_DEFAULTS.search);
+        onClearFilters();
       }}
       filterContent={
         <Select
@@ -72,7 +71,7 @@ export function AdUsersSearchToolbar({
           onChange={(event) => {
             onListStateChange({
               status: event.target.value as AdUserStatusFilter,
-              page: AD_USERS_LIST_DEFAULTS.page,
+              pageNumber: AD_USERS_LIST_DEFAULTS.pageNumber,
             });
           }}
           className="w-full"
@@ -86,7 +85,7 @@ export function AdUsersSearchToolbar({
         <>
           {canCreateUser ? (
             <Link
-              to="/ad-management/users/create"
+              to={`${AD_USERS_LIST_PATH}/create`}
               className={cn(buttonVariants({ variant: "default" }))}
             >
               {t("adManagement:users.actions.create")}

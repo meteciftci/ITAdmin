@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/common/PageHeader";
+import { AD_USERS_LIST_PATH } from "@/features/ad-management/ad-users-list-path";
 import { SectionCard } from "@/components/common/SectionCard";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
@@ -137,7 +138,7 @@ export function AdCreateUserPage() {
       } else {
         toast.success(baseMessage);
       }
-      navigate("/ad-management/users");
+      navigate(AD_USERS_LIST_PATH);
     },
     onError: (error) => {
       toast.error(
@@ -206,7 +207,7 @@ export function AdCreateUserPage() {
         description={t("adManagement:users.create.pageDescription")}
         actions={
           <Link
-            to="/ad-management/users"
+            to={AD_USERS_LIST_PATH}
             className={cn(buttonVariants({ variant: "outline" }))}
           >
             {t("common:actions.back")}
@@ -336,7 +337,7 @@ export function AdCreateUserPage() {
 
             <div className="flex flex-wrap justify-end gap-2">
               <Link
-                to="/ad-management/users"
+                to={AD_USERS_LIST_PATH}
                 className={cn(buttonVariants({ variant: "outline" }))}
               >
                 {t("common:actions.cancel")}

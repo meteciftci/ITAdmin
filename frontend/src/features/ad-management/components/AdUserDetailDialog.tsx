@@ -5,7 +5,6 @@ import { useTranslation } from "react-i18next";
 
 import { useAuthStore } from "@/features/auth/auth-store";
 import { buttonVariants } from "@/components/ui/button-variants";
-import { appendReturnTo } from "@/features/ad-management/ad-return-path";
 import { canAccess } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
@@ -39,7 +38,6 @@ const manageGroupsButtonClass = cn(
 type Props = {
   user: AdUserDetail | null;
   open: boolean;
-  returnTo: string;
   canUpdateUser: boolean;
   onOpenChange: (open: boolean) => void;
 };
@@ -64,7 +62,6 @@ function formatMappedValue(attribute: MappedAdUserAttribute): string {
 export function AdUserDetailDialog({
   user,
   open,
-  returnTo,
   canUpdateUser,
   onOpenChange,
 }: Props) {
@@ -88,7 +85,7 @@ export function AdUserDetailDialog({
         className={editUserButtonClass}
         onClick={() => {
           onOpenChange(false);
-          navigate(appendReturnTo(`/ad-management/users/${user.id}/edit`, returnTo));
+          navigate(`/ad-management/users/${user.id}/edit`);
         }}
       >
         {t("adManagement:users.actions.edit")}
@@ -171,7 +168,7 @@ export function AdUserDetailDialog({
               <SectionTitle>{t("adManagement:users.detail.groups")}</SectionTitle>
               {canManageGroups ? (
                 <Link
-                  to={appendReturnTo(`/ad-management/users/${user.id}/groups`, returnTo)}
+                  to={`/ad-management/users/${user.id}/groups`}
                   className={manageGroupsButtonClass}
                   onClick={() => onOpenChange(false)}
                 >
