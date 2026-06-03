@@ -42,6 +42,15 @@ public sealed class AdAttributeMappingServiceTests
         var op = Assert.Single(dbContext.AdOperationLogs);
         Assert.Equal("AttributeMappingCreated", op.OperationType);
         Assert.Equal("Succeeded", op.Status);
+        Assert.NotNull(op.RequestSummaryJson);
+        Assert.Null(op.BeforeSnapshotJson);
+        Assert.NotNull(op.AfterSnapshotJson);
+        Assert.Null(op.ErrorCode);
+        Assert.Null(op.ErrorMessage);
+
+        using var requestDocument = System.Text.Json.JsonDocument.Parse(op.RequestSummaryJson!);
+        Assert.Equal("AttributeMappingCreated", requestDocument.RootElement.GetProperty("operation").GetString());
+        Assert.Equal("mobilePhone", requestDocument.RootElement.GetProperty("logicalField").GetString());
     }
 
     [Fact]

@@ -11,6 +11,10 @@ public sealed partial class AdUserDirectoryService
 {
     private const string UpdateUserFailedMessage = AdLdapErrorNormalizer.UpdateUserFailedMessage;
     private const int LdapNoSuchAttribute = 16;
+    private const string UpdateUserSuccessLoggingFailedMessage =
+        "AD user update operation succeeded but logging failed.";
+    private const string UpdateUserFailureLoggingFailedMessage =
+        "AD user update operation failed but logging failed.";
 
     public async Task<AdUserDirectoryDetailResult> UpdateUserAsync(
         UpdateAdUserRequest request,
@@ -460,29 +464,55 @@ public sealed partial class AdUserDirectoryService
         string? afterDistinguishedName,
         CancellationToken cancellationToken)
     {
-        await WriteUpdateFailureLogsAsync(
-            request,
-            connection,
-            beforeDetail,
-            targetDistinguishedName,
-            afterDetail,
-            afterDistinguishedName,
-            operationDiagnosticJson,
-            cancellationToken);
+        try
+        {
+            await WriteUpdateFailureLogsAsync(
+                request,
+                connection,
+                beforeDetail,
+                targetDistinguishedName,
+                afterDetail,
+                afterDistinguishedName,
+                operationDiagnosticJson,
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "{LogMessage} UserId={UserId} SamAccountName={SamAccountName} ActorUserId={ActorUserId}",
+                UpdateUserFailureLoggingFailedMessage,
+                request.UserId,
+                request.SamAccountName,
+                request.ActorUserId);
+        }
 
-        await auditLogWriter.WriteAsync(
-            new AuditLogWriteRequest
-            {
-                Action = "Update",
-                EntityName = "AdUser",
-                EntityId = request.UserId.ToString("D"),
-                Description = $"AD user update failed: {request.SamAccountName}.",
-                ActorUserId = request.ActorUserId,
-                ActorUserName = request.ActorUserName,
-                IpAddress = request.ActorIpAddress,
-                UserAgent = request.ActorUserAgent,
-            },
-            cancellationToken);
+        try
+        {
+            await auditLogWriter.WriteAsync(
+                new AuditLogWriteRequest
+                {
+                    Action = "Update",
+                    EntityName = "AdUser",
+                    EntityId = request.UserId.ToString("D"),
+                    Description = $"AD user update failed: {request.SamAccountName}.",
+                    ActorUserId = request.ActorUserId,
+                    ActorUserName = request.ActorUserName,
+                    IpAddress = request.ActorIpAddress,
+                    UserAgent = request.ActorUserAgent,
+                },
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "{LogMessage} UserId={UserId} SamAccountName={SamAccountName} ActorUserId={ActorUserId}",
+                UpdateUserFailureLoggingFailedMessage,
+                request.UserId,
+                request.SamAccountName,
+                request.ActorUserId);
+        }
 
         return new AdUserDirectoryDetailResult(false, message, null, failureKind);
     }
@@ -494,31 +524,57 @@ public sealed partial class AdUserDirectoryService
         string targetDistinguishedName,
         CancellationToken cancellationToken)
     {
-        await WriteUpdateOperationLogAsync(
-            request,
-            connection,
-            AdManagementOperationStatuses.Succeeded,
-            beforeDetail,
-            targetDistinguishedName,
-            beforeDetail,
-            beforeDetail.DistinguishedName,
-            errorMessage: null,
-            requestSummaryJson: """{"changeStatus":"NoChangesDetected"}""",
-            cancellationToken);
+        try
+        {
+            await WriteUpdateOperationLogAsync(
+                request,
+                connection,
+                AdManagementOperationStatuses.Succeeded,
+                beforeDetail,
+                targetDistinguishedName,
+                beforeDetail,
+                beforeDetail.DistinguishedName,
+                errorMessage: null,
+                requestSummaryJson: """{"changeStatus":"NoChangesDetected"}""",
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "{LogMessage} UserId={UserId} SamAccountName={SamAccountName} ActorUserId={ActorUserId}",
+                UpdateUserSuccessLoggingFailedMessage,
+                beforeDetail.Id,
+                beforeDetail.SamAccountName,
+                request.ActorUserId);
+        }
 
-        await auditLogWriter.WriteAsync(
-            new AuditLogWriteRequest
-            {
-                Action = "Update",
-                EntityName = "AdUser",
-                EntityId = beforeDetail.Id,
-                Description = $"AD user update skipped (no changes): {beforeDetail.SamAccountName}.",
-                ActorUserId = request.ActorUserId,
-                ActorUserName = request.ActorUserName,
-                IpAddress = request.ActorIpAddress,
-                UserAgent = request.ActorUserAgent,
-            },
-            cancellationToken);
+        try
+        {
+            await auditLogWriter.WriteAsync(
+                new AuditLogWriteRequest
+                {
+                    Action = "Update",
+                    EntityName = "AdUser",
+                    EntityId = beforeDetail.Id,
+                    Description = $"AD user update skipped (no changes): {beforeDetail.SamAccountName}.",
+                    ActorUserId = request.ActorUserId,
+                    ActorUserName = request.ActorUserName,
+                    IpAddress = request.ActorIpAddress,
+                    UserAgent = request.ActorUserAgent,
+                },
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "{LogMessage} UserId={UserId} SamAccountName={SamAccountName} ActorUserId={ActorUserId}",
+                UpdateUserSuccessLoggingFailedMessage,
+                beforeDetail.Id,
+                beforeDetail.SamAccountName,
+                request.ActorUserId);
+        }
     }
 
     private async Task WriteUpdateSuccessLogsAsync(
@@ -529,31 +585,57 @@ public sealed partial class AdUserDirectoryService
         string targetDistinguishedName,
         CancellationToken cancellationToken)
     {
-        await WriteUpdateOperationLogAsync(
-            request,
-            connection,
-            AdManagementOperationStatuses.Succeeded,
-            beforeDetail,
-            targetDistinguishedName,
-            afterDetail,
-            afterDetail.DistinguishedName,
-            errorMessage: null,
-            requestSummaryJson: null,
-            cancellationToken);
+        try
+        {
+            await WriteUpdateOperationLogAsync(
+                request,
+                connection,
+                AdManagementOperationStatuses.Succeeded,
+                beforeDetail,
+                targetDistinguishedName,
+                afterDetail,
+                afterDetail.DistinguishedName,
+                errorMessage: null,
+                requestSummaryJson: null,
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "{LogMessage} UserId={UserId} SamAccountName={SamAccountName} ActorUserId={ActorUserId}",
+                UpdateUserSuccessLoggingFailedMessage,
+                afterDetail.Id,
+                afterDetail.SamAccountName,
+                request.ActorUserId);
+        }
 
-        await auditLogWriter.WriteAsync(
-            new AuditLogWriteRequest
-            {
-                Action = "Update",
-                EntityName = "AdUser",
-                EntityId = afterDetail.Id,
-                Description = $"AD user updated: {afterDetail.SamAccountName}.",
-                ActorUserId = request.ActorUserId,
-                ActorUserName = request.ActorUserName,
-                IpAddress = request.ActorIpAddress,
-                UserAgent = request.ActorUserAgent,
-            },
-            cancellationToken);
+        try
+        {
+            await auditLogWriter.WriteAsync(
+                new AuditLogWriteRequest
+                {
+                    Action = "Update",
+                    EntityName = "AdUser",
+                    EntityId = afterDetail.Id,
+                    Description = $"AD user updated: {afterDetail.SamAccountName}.",
+                    ActorUserId = request.ActorUserId,
+                    ActorUserName = request.ActorUserName,
+                    IpAddress = request.ActorIpAddress,
+                    UserAgent = request.ActorUserAgent,
+                },
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "{LogMessage} UserId={UserId} SamAccountName={SamAccountName} ActorUserId={ActorUserId}",
+                UpdateUserSuccessLoggingFailedMessage,
+                afterDetail.Id,
+                afterDetail.SamAccountName,
+                request.ActorUserId);
+        }
     }
 
     private Task WriteUpdateFailureLogsAsync(

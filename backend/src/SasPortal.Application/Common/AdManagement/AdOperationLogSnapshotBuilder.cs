@@ -1,8 +1,8 @@
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using SasPortal.Application.Common.Constants;
 using SasPortal.Application.Common.Models;
+using SasPortal.Domain.Entities;
 
 namespace SasPortal.Application.Common.AdManagement;
 
@@ -37,19 +37,8 @@ public static class AdOperationLogSnapshotBuilder
         string? distinguishedName,
         string? groupName,
         string? groupDistinguishedName,
-        bool isDirectMember)
-    {
-        if (operationType == AdManagementOperationTypes.UserGroupRemove)
-        {
-            return JsonSerializer.Serialize(
-                new
-                {
-                    membership = new { isDirectMember },
-                },
-                SerializerOptions);
-        }
-
-        return JsonSerializer.Serialize(
+        bool isDirectMember) =>
+        JsonSerializer.Serialize(
             new
             {
                 operation = operationType,
@@ -58,7 +47,6 @@ public static class AdOperationLogSnapshotBuilder
                 membership = new { isDirectMember },
             },
             SerializerOptions);
-    }
 
     public static string BuildGroupMembershipAfterSnapshot(
         string operationType,
@@ -68,19 +56,8 @@ public static class AdOperationLogSnapshotBuilder
         string? distinguishedName,
         string? groupName,
         string? groupDistinguishedName,
-        bool isDirectMember)
-    {
-        if (operationType == AdManagementOperationTypes.UserGroupRemove)
-        {
-            return JsonSerializer.Serialize(
-                new
-                {
-                    membership = new { isDirectMember },
-                },
-                SerializerOptions);
-        }
-
-        return JsonSerializer.Serialize(
+        bool isDirectMember) =>
+        JsonSerializer.Serialize(
             new
             {
                 operation = operationType,
@@ -89,7 +66,6 @@ public static class AdOperationLogSnapshotBuilder
                 membership = new { isDirectMember },
             },
             SerializerOptions);
-    }
 
     public static string BuildAccountRequestSummary(
         string operationType,
@@ -157,6 +133,10 @@ public static class AdOperationLogSnapshotBuilder
 
     public static string BuildAccountAfterSnapshot(
         string operationType,
+        string userId,
+        string? samAccountName,
+        string? userPrincipalName,
+        string? distinguishedName,
         bool isEnabled,
         bool isLockedOut,
         int? userAccountControl,
@@ -164,19 +144,25 @@ public static class AdOperationLogSnapshotBuilder
     {
         if (operationType == AdManagementOperationTypes.UserUnlock)
         {
-            return new JsonObject
-            {
-                ["account"] = new JsonObject
+            return JsonSerializer.Serialize(
+                new
                 {
-                    ["isLocked"] = isLockedOut,
-                    ["lockoutTime"] = FormatLockoutTime(lockoutTime),
+                    operation = operationType,
+                    user = BuildUserSnapshot(userId, samAccountName, userPrincipalName, distinguishedName),
+                    account = new
+                    {
+                        isLocked = isLockedOut,
+                        lockoutTime = FormatLockoutTime(lockoutTime),
+                    },
                 },
-            }.ToJsonString(SerializerOptions);
+                SerializerOptions);
         }
 
         return JsonSerializer.Serialize(
             new
             {
+                operation = operationType,
+                user = BuildUserSnapshot(userId, samAccountName, userPrincipalName, distinguishedName),
                 account = new
                 {
                     isEnabled,
@@ -186,6 +172,208 @@ public static class AdOperationLogSnapshotBuilder
             },
             SerializerOptions);
     }
+
+    public static string BuildSettingsSnapshot(
+        AdManagementSettings entity,
+        IReadOnlyList<string> preferredDomainControllers,
+        AdManagementNotificationSettings notificationSettings) =>
+        JsonSerializer.Serialize(
+            new
+            {
+                isEnabled = entity.IsEnabled,
+                domainFqdn = entity.DomainFqdn,
+                defaultUserCreationUpnSuffix = entity.DefaultUserCreationUpnSuffix,
+                netbiosDomainName = entity.NetbiosDomainName,
+                defaultNamingContext = entity.DefaultNamingContext,
+                baseDn = entity.BaseDn,
+                usersRootOu = entity.UsersRootOu,
+                disabledUsersOu = entity.DisabledUsersOu,
+                groupsSearchBase = entity.GroupsSearchBase,
+                computersSearchBase = entity.ComputersSearchBase,
+                preferredDomainControllers,
+                useSsl = entity.UseSsl,
+                ldapPort = entity.LdapPort,
+                serviceAccountUserName = entity.ServiceAccountUserName,
+                hasServiceAccountPassword = !string.IsNullOrWhiteSpace(entity.EncryptedServiceAccountPassword),
+                powerShellHealthEnabled = entity.PowerShellHealthEnabled,
+                powerShellTimeoutSeconds = entity.PowerShellTimeoutSeconds,
+                notificationSettings = BuildNotificationSettingsSummary(notificationSettings),
+                lastValidatedAt = entity.LastValidatedAt,
+                lastValidationStatus = entity.LastValidationStatus,
+            },
+            SerializerOptions);
+
+    public static string BuildSettingsUpdatedRequestSummary(
+        UpdateAdManagementSettingsRequest request,
+        AdManagementSettings entity,
+        IReadOnlyList<string> preferredDomainControllers,
+        bool passwordChanged,
+        bool notificationRulesChanged,
+        AdManagementSettings? beforeEntity = null)
+    {
+        var changedFields = beforeEntity is null
+            ? null
+            : BuildSettingsChangedFields(beforeEntity, request, passwordChanged, notificationRulesChanged);
+
+        return JsonSerializer.Serialize(
+            new
+            {
+                operation = AdManagementOperationTypes.SettingsUpdated,
+                isEnabled = request.IsEnabled,
+                domainFqdn = entity.DomainFqdn,
+                defaultUserCreationUpnSuffix = entity.DefaultUserCreationUpnSuffix,
+                netbiosDomainName = entity.NetbiosDomainName,
+                useSsl = entity.UseSsl,
+                ldapPort = entity.LdapPort,
+                preferredDomainControllers,
+                passwordChanged,
+                passwordCleared = request.ClearServiceAccountPassword,
+                notificationRulesChanged,
+                changedFields,
+            },
+            SerializerOptions);
+    }
+
+    public static string BuildSettingsValidationSummary(AdManagementValidationResult result) =>
+        JsonSerializer.Serialize(
+            new
+            {
+                operation = AdManagementOperationTypes.SettingsValidated,
+                isValid = result.IsValid,
+                checkedAt = result.CheckedAt,
+                message = SanitizeValidationMessage(result.Message),
+                details = result.Details
+                    .Select(static detail => new
+                    {
+                        key = detail.Key,
+                        status = detail.Status,
+                        message = SanitizeValidationMessage(detail.Message),
+                    })
+                    .ToList(),
+            },
+            SerializerOptions);
+
+    public static string BuildAttributeMappingSnapshot(AdAttributeMapping entity) =>
+        JsonSerializer.Serialize(
+            new
+            {
+                id = entity.Id,
+                logicalField = entity.LogicalField,
+                displayName = entity.DisplayName,
+                attributeName = entity.AttributeName,
+                isEnabled = entity.IsEnabled,
+                isEditable = entity.IsEditable,
+                isSensitive = entity.IsSensitive,
+                isSearchable = entity.IsSearchable,
+                validationType = entity.ValidationType,
+                maskingStrategy = entity.MaskingStrategy,
+                sortOrder = entity.SortOrder,
+            },
+            SerializerOptions);
+
+    public static string BuildAttributeMappingCreateRequestSummary(CreateAdAttributeMappingRequest request) =>
+        JsonSerializer.Serialize(
+            new
+            {
+                operation = AdManagementOperationTypes.AttributeMappingCreated,
+                logicalField = NormalizeNullable(request.LogicalField),
+                displayName = NormalizeNullable(request.DisplayName),
+                attributeName = NormalizeNullable(request.AttributeName),
+                isEnabled = request.IsEnabled,
+                isEditable = request.IsEditable,
+                isSensitive = request.IsSensitive,
+                isSearchable = request.IsSearchable,
+                validationType = NormalizeNullable(request.ValidationType),
+                maskingStrategy = NormalizeNullable(request.MaskingStrategy),
+                sortOrder = request.SortOrder,
+            },
+            SerializerOptions);
+
+    public static string BuildAttributeMappingUpdateRequestSummary(
+        UpdateAdAttributeMappingRequest request,
+        AdAttributeMapping before)
+    {
+        var displayName = NormalizeNullable(request.DisplayName);
+        var attributeName = NormalizeNullable(request.AttributeName);
+        var validationType = NormalizeNullable(request.ValidationType) ?? "None";
+        var maskingStrategy = NormalizeNullable(request.MaskingStrategy) ?? "None";
+
+        var changedFields = new List<string>();
+        if (!string.Equals(before.DisplayName, displayName, StringComparison.Ordinal))
+        {
+            changedFields.Add("displayName");
+        }
+
+        if (!string.Equals(before.AttributeName, attributeName, StringComparison.Ordinal))
+        {
+            changedFields.Add("attributeName");
+        }
+
+        if (before.IsEnabled != request.IsEnabled)
+        {
+            changedFields.Add("isEnabled");
+        }
+
+        if (before.IsEditable != request.IsEditable)
+        {
+            changedFields.Add("isEditable");
+        }
+
+        if (before.IsSensitive != request.IsSensitive)
+        {
+            changedFields.Add("isSensitive");
+        }
+
+        if (before.IsSearchable != request.IsSearchable)
+        {
+            changedFields.Add("isSearchable");
+        }
+
+        if (!string.Equals(before.ValidationType, validationType, StringComparison.Ordinal))
+        {
+            changedFields.Add("validationType");
+        }
+
+        if (!string.Equals(before.MaskingStrategy, maskingStrategy, StringComparison.Ordinal))
+        {
+            changedFields.Add("maskingStrategy");
+        }
+
+        if (before.SortOrder != request.SortOrder)
+        {
+            changedFields.Add("sortOrder");
+        }
+
+        return JsonSerializer.Serialize(
+            new
+            {
+                operation = AdManagementOperationTypes.AttributeMappingUpdated,
+                id = request.Id,
+                changedFields,
+                displayName,
+                attributeName,
+                isEnabled = request.IsEnabled,
+                isEditable = request.IsEditable,
+                isSensitive = request.IsSensitive,
+                isSearchable = request.IsSearchable,
+                validationType,
+                maskingStrategy,
+                sortOrder = request.SortOrder,
+            },
+            SerializerOptions);
+    }
+
+    public static string BuildAttributeMappingDeleteRequestSummary(
+        DeleteAdAttributeMappingRequest request,
+        AdAttributeMapping entity) =>
+        JsonSerializer.Serialize(
+            new
+            {
+                operation = AdManagementOperationTypes.AttributeMappingDeleted,
+                id = request.Id,
+                logicalField = entity.LogicalField,
+            },
+            SerializerOptions);
 
     public static string BuildCreateRequestSummary(CreateAdUserRequest request)
     {
@@ -314,4 +502,140 @@ public static class AdOperationLogSnapshotBuilder
 
     private static string? FormatLockoutTime(long? lockoutTime) =>
         lockoutTime is null or 0 ? null : lockoutTime.Value.ToString();
+
+    private static object BuildNotificationSettingsSummary(AdManagementNotificationSettings settings) =>
+        new
+        {
+            rules = settings.Rules
+                .OrderBy(static rule => rule.EventKey, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(static rule => rule.Channel, StringComparer.OrdinalIgnoreCase)
+                .Select(static rule => new
+                {
+                    id = rule.Id,
+                    eventKey = rule.EventKey,
+                    channel = rule.Channel,
+                    isEnabled = rule.IsEnabled,
+                    recipientSourceType = rule.RecipientSource?.Type,
+                })
+                .ToList(),
+        };
+
+    private static IReadOnlyList<string> BuildSettingsChangedFields(
+        AdManagementSettings beforeEntity,
+        UpdateAdManagementSettingsRequest request,
+        bool passwordChanged,
+        bool notificationRulesChanged)
+    {
+        var changedFields = new List<string>();
+
+        if (beforeEntity.IsEnabled != request.IsEnabled)
+        {
+            changedFields.Add("isEnabled");
+        }
+
+        if (!string.Equals(NormalizeNullable(beforeEntity.DomainFqdn), NormalizeNullable(request.DomainFqdn), StringComparison.OrdinalIgnoreCase))
+        {
+            changedFields.Add("domainFqdn");
+        }
+
+        if (!string.Equals(
+                NormalizeNullable(beforeEntity.DefaultUserCreationUpnSuffix),
+                NormalizeDefaultUserCreationUpnSuffix(request.DefaultUserCreationUpnSuffix),
+                StringComparison.OrdinalIgnoreCase))
+        {
+            changedFields.Add("defaultUserCreationUpnSuffix");
+        }
+
+        if (!string.Equals(NormalizeNullable(beforeEntity.NetbiosDomainName), NormalizeNullable(request.NetbiosDomainName), StringComparison.OrdinalIgnoreCase))
+        {
+            changedFields.Add("netbiosDomainName");
+        }
+
+        if (!string.Equals(NormalizeNullable(beforeEntity.DefaultNamingContext), NormalizeNullable(request.DefaultNamingContext), StringComparison.OrdinalIgnoreCase))
+        {
+            changedFields.Add("defaultNamingContext");
+        }
+
+        if (!string.Equals(NormalizeNullable(beforeEntity.BaseDn), NormalizeNullable(request.BaseDn), StringComparison.OrdinalIgnoreCase))
+        {
+            changedFields.Add("baseDn");
+        }
+
+        if (!string.Equals(NormalizeNullable(beforeEntity.UsersRootOu), NormalizeNullable(request.UsersRootOu), StringComparison.OrdinalIgnoreCase))
+        {
+            changedFields.Add("usersRootOu");
+        }
+
+        if (!string.Equals(NormalizeNullable(beforeEntity.DisabledUsersOu), NormalizeNullable(request.DisabledUsersOu), StringComparison.OrdinalIgnoreCase))
+        {
+            changedFields.Add("disabledUsersOu");
+        }
+
+        if (!string.Equals(NormalizeNullable(beforeEntity.GroupsSearchBase), NormalizeNullable(request.GroupsSearchBase), StringComparison.OrdinalIgnoreCase))
+        {
+            changedFields.Add("groupsSearchBase");
+        }
+
+        if (!string.Equals(NormalizeNullable(beforeEntity.ComputersSearchBase), NormalizeNullable(request.ComputersSearchBase), StringComparison.OrdinalIgnoreCase))
+        {
+            changedFields.Add("computersSearchBase");
+        }
+
+        if (beforeEntity.UseSsl != request.UseSsl)
+        {
+            changedFields.Add("useSsl");
+        }
+
+        if (beforeEntity.LdapPort != request.LdapPort)
+        {
+            changedFields.Add("ldapPort");
+        }
+
+        if (!string.Equals(NormalizeNullable(beforeEntity.ServiceAccountUserName), NormalizeNullable(request.ServiceAccountUserName), StringComparison.OrdinalIgnoreCase))
+        {
+            changedFields.Add("serviceAccountUserName");
+        }
+
+        if (beforeEntity.PowerShellHealthEnabled != request.PowerShellHealthEnabled)
+        {
+            changedFields.Add("powerShellHealthEnabled");
+        }
+
+        if (beforeEntity.PowerShellTimeoutSeconds != request.PowerShellTimeoutSeconds)
+        {
+            changedFields.Add("powerShellTimeoutSeconds");
+        }
+
+        if (passwordChanged)
+        {
+            changedFields.Add("serviceAccountPassword");
+        }
+
+        if (notificationRulesChanged)
+        {
+            changedFields.Add("notificationSettings");
+        }
+
+        return changedFields;
+    }
+
+    private static string? NormalizeDefaultUserCreationUpnSuffix(string? value)
+    {
+        var normalized = NormalizeNullable(value);
+        return string.IsNullOrWhiteSpace(normalized) ? null : normalized;
+    }
+
+    private static string? NormalizeNullable(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static string? SanitizeValidationMessage(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var trimmed = value.Trim();
+        return trimmed.Length <= 1000 ? trimmed : trimmed[..1000];
+    }
 }

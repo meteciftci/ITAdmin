@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using SasPortal.Application.Common.Constants;
+using SasPortal.Application.Common.Models;
 
 namespace SasPortal.Application.Common.AdManagement;
 
@@ -117,6 +118,26 @@ public static class AdOperationErrorDiagnosticBuilder
                 PartialUpdate: false,
                 RollbackStatus: AdUserUpdateRollbackStatus.NotRequired));
 
+    public static string BuildSettingsValidationFailureJson(AdManagementValidationResult result)
+    {
+        var failedDetail = result.Details.FirstOrDefault(static detail =>
+            string.Equals(detail.Status, AdManagementValidationStatuses.Failed, StringComparison.OrdinalIgnoreCase));
+
+        var step = MapValidationKeyToStep(failedDetail?.Key);
+        var normalizedReason = ResolveValidationNormalizedReason(failedDetail?.Key);
+
+        return BuildJson(
+            new AdOperationFailureContext(
+                AdManagementOperationTypes.SettingsValidated,
+                step,
+                DiagnosticCode: AdOperationDiagnosticCodes.SettingsValidationFailed,
+                NormalizedReasonOverride: normalizedReason,
+                EnglishMessageOverride: "AD management settings validation failed.",
+                LdapDiagnosticMessage: result.Message,
+                PartialUpdate: false,
+                RollbackStatus: AdUserUpdateRollbackStatus.NotRequired));
+    }
+
     public static string? ResolveDefaultCode(string operationType) =>
         operationType switch
         {
@@ -126,7 +147,34 @@ public static class AdOperationErrorDiagnosticBuilder
             AdManagementOperationTypes.UserDisable => AdOperationDiagnosticCodes.UserDisableFailed,
             AdManagementOperationTypes.UserUnlock => AdOperationDiagnosticCodes.UserUnlockFailed,
             AdManagementOperationTypes.CreateUser => AdOperationDiagnosticCodes.UserCreateFailed,
+            AdManagementOperationTypes.SettingsValidated => AdOperationDiagnosticCodes.SettingsValidationFailed,
+            AdManagementOperationTypes.AttributeMappingCreated => AdOperationDiagnosticCodes.AttributeMappingCreateFailed,
+            AdManagementOperationTypes.AttributeMappingUpdated => AdOperationDiagnosticCodes.AttributeMappingUpdateFailed,
+            AdManagementOperationTypes.AttributeMappingDeleted => AdOperationDiagnosticCodes.AttributeMappingDeleteFailed,
             _ => null,
+        };
+
+    private static string MapValidationKeyToStep(string? key) =>
+        key switch
+        {
+            "serviceAccountBind" => "ValidateConnection",
+            "domainFqdn" => "ValidateDomainFqdn",
+            "defaultNamingContext" => "ValidateDefaultNamingContext",
+            "baseDn" => "ValidateBaseDn",
+            "usersRootOu" => "ValidateUsersRootOu",
+            "disabledUsersOu" => "ValidateDisabledUsersOu",
+            "groupsSearchBase" => "ValidateGroupsSearchBase",
+            "computersSearchBase" => "ValidateComputersSearchBase",
+            "preferredDomainControllers" => "ValidatePreferredDomainControllers",
+            _ => "ValidateConnection",
+        };
+
+    private static string ResolveValidationNormalizedReason(string? failedDetailKey) =>
+        failedDetailKey switch
+        {
+            "serviceAccountBind" or "domainFqdn" or "preferredDomainControllers" =>
+                AdUserUpdateNormalizedReasons.ConnectionFailed,
+            _ => AdUserUpdateNormalizedReasons.Unknown,
         };
 
     private static string ResolveEnglishMessage(string operation, string normalizedReason) =>

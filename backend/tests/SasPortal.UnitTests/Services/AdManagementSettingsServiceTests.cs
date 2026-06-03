@@ -272,7 +272,19 @@ public sealed class AdManagementSettingsServiceTests
         var op = Assert.Single(dbContext.AdOperationLogs.Where(x => x.OperationType == "SettingsUpdated"));
         Assert.Equal("Succeeded", op.Status);
         Assert.NotNull(op.RequestSummaryJson);
+        Assert.NotNull(op.AfterSnapshotJson);
+        Assert.Null(op.ErrorCode);
+        Assert.Null(op.ErrorMessage);
         Assert.DoesNotContain("topsecret-token", op.RequestSummaryJson!, StringComparison.Ordinal);
+        Assert.DoesNotContain("topsecret-token", op.BeforeSnapshotJson ?? string.Empty, StringComparison.Ordinal);
+        Assert.DoesNotContain("topsecret-token", op.AfterSnapshotJson!, StringComparison.Ordinal);
+        Assert.DoesNotContain("encryptedServiceAccountPassword", op.AfterSnapshotJson!, StringComparison.OrdinalIgnoreCase);
+
+        using var requestSummaryDocument = System.Text.Json.JsonDocument.Parse(op.RequestSummaryJson!);
+        Assert.Equal("SettingsUpdated", requestSummaryDocument.RootElement.GetProperty("operation").GetString());
+
+        using var afterSnapshotDocument = System.Text.Json.JsonDocument.Parse(op.AfterSnapshotJson!);
+        Assert.True(afterSnapshotDocument.RootElement.GetProperty("hasServiceAccountPassword").GetBoolean());
 
         foreach (var entry in dbContext.AuditLogs)
         {
@@ -421,9 +433,22 @@ public sealed class AdManagementSettingsServiceTests
         var op = await dbContext.AdOperationLogs.SingleAsync(x =>
             x.OperationType == "SettingsValidated");
         Assert.Equal("Failed", op.Status);
-        Assert.Equal(failureMessage, op.ErrorMessage);
-        Assert.Null(op.DomainController);
+        Assert.Equal(AdOperationDiagnosticCodes.SettingsValidationFailed, op.ErrorCode);
+        Assert.NotNull(op.ErrorMessage);
+        using (var diagnosticDocument = System.Text.Json.JsonDocument.Parse(op.ErrorMessage!))
+        {
+            Assert.Equal(
+                AdOperationDiagnosticCodes.SettingsValidationFailed,
+                diagnosticDocument.RootElement.GetProperty("code").GetString());
+            Assert.Equal("SettingsValidated", diagnosticDocument.RootElement.GetProperty("operation").GetString());
+        }
+
         Assert.NotNull(op.RequestSummaryJson);
+        using (var summaryDocument = System.Text.Json.JsonDocument.Parse(op.RequestSummaryJson!))
+        {
+            Assert.Equal("SettingsValidated", summaryDocument.RootElement.GetProperty("operation").GetString());
+        }
+
         Assert.DoesNotContain("super-secret-password", op.RequestSummaryJson!, StringComparison.Ordinal);
         Assert.DoesNotContain("super-secret-password", op.ErrorMessage!, StringComparison.Ordinal);
     }
@@ -512,8 +537,17 @@ public sealed class AdManagementSettingsServiceTests
 
         var op = await dbContext.AdOperationLogs.SingleAsync(x => x.OperationType == "SettingsValidated");
         Assert.Equal("Failed", op.Status);
+        Assert.Equal(AdOperationDiagnosticCodes.SettingsValidationFailed, op.ErrorCode);
         Assert.Equal("dc01.corp.local", op.DomainController);
         Assert.NotNull(op.RequestSummaryJson);
+        Assert.NotNull(op.ErrorMessage);
+        using (var diagnosticDocument = System.Text.Json.JsonDocument.Parse(op.ErrorMessage!))
+        {
+            Assert.Equal(
+                AdOperationDiagnosticCodes.SettingsValidationFailed,
+                diagnosticDocument.RootElement.GetProperty("code").GetString());
+        }
+
         Assert.DoesNotContain("super-secret-password", op.RequestSummaryJson!, StringComparison.Ordinal);
         Assert.DoesNotContain("super-secret-password", op.ErrorMessage ?? string.Empty, StringComparison.Ordinal);
 

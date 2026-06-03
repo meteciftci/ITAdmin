@@ -1,6 +1,7 @@
 using System.DirectoryServices.Protocols;
 using System.Net;
 using System.Text;
+using Microsoft.Extensions.Logging;
 using SasPortal.Application.Abstractions.Services;
 using SasPortal.Application.Common.AdManagement;
 using SasPortal.Application.Common.Constants;
@@ -22,6 +23,10 @@ public sealed partial class AdUserDirectoryService
     private const int OuSearchMaxPageSize = 100;
     private const int UserAccountControlDisabled = 0x0202;
     private const int UserAccountControlEnabled = 0x0200;
+    private const string CreateUserSuccessLoggingFailedMessage =
+        "AD user create operation succeeded but logging failed.";
+    private const string CreateUserFailureLoggingFailedMessage =
+        "AD user create operation failed but logging failed.";
 
     public async Task<AdOrganizationalUnitSearchResult> SearchOrganizationalUnitsAsync(
         AdOrganizationalUnitSearchQuery query,
@@ -642,39 +647,65 @@ public sealed partial class AdUserDirectoryService
             request.MappedAttributes,
             mappings);
 
-        await adOperationLogService.WriteAsync(
-            new AdOperationLogEntry
-            {
-                OperationType = AdManagementOperationTypes.CreateUser,
-                Status = AdManagementOperationStatuses.Succeeded,
-                TargetObjectType = AdManagementTargetUserTypes.AdUser,
-                TargetDistinguishedName = response.DistinguishedName,
-                TargetObjectGuid = response.Id,
-                TargetSamAccountName = response.SamAccountName,
-                RequestSummaryJson = requestSummary,
-                BeforeSnapshotJson = null,
-                AfterSnapshotJson = afterSnapshot,
-                ActorUserId = request.ActorUserId,
-                ActorUserName = request.ActorUserName,
-                IpAddress = request.ActorIpAddress,
-                UserAgent = request.ActorUserAgent,
-                DomainController = ResolvePrimaryHost(connection),
-            },
-            cancellationToken);
+        try
+        {
+            await adOperationLogService.WriteAsync(
+                new AdOperationLogEntry
+                {
+                    OperationType = AdManagementOperationTypes.CreateUser,
+                    Status = AdManagementOperationStatuses.Succeeded,
+                    TargetObjectType = AdManagementTargetUserTypes.AdUser,
+                    TargetDistinguishedName = response.DistinguishedName,
+                    TargetObjectGuid = response.Id,
+                    TargetSamAccountName = response.SamAccountName,
+                    RequestSummaryJson = requestSummary,
+                    BeforeSnapshotJson = null,
+                    AfterSnapshotJson = afterSnapshot,
+                    ActorUserId = request.ActorUserId,
+                    ActorUserName = request.ActorUserName,
+                    IpAddress = request.ActorIpAddress,
+                    UserAgent = request.ActorUserAgent,
+                    DomainController = ResolvePrimaryHost(connection),
+                },
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "{LogMessage} SamAccountName={SamAccountName} UserId={UserId} ActorUserId={ActorUserId}",
+                CreateUserSuccessLoggingFailedMessage,
+                response.SamAccountName,
+                response.Id,
+                request.ActorUserId);
+        }
 
-        await auditLogWriter.WriteAsync(
-            new AuditLogWriteRequest
-            {
-                Action = "Create",
-                EntityName = "AdUser",
-                EntityId = response.DistinguishedName,
-                Description = $"AD user created: {response.SamAccountName}.",
-                ActorUserId = request.ActorUserId,
-                ActorUserName = request.ActorUserName,
-                IpAddress = request.ActorIpAddress,
-                UserAgent = request.ActorUserAgent,
-            },
-            cancellationToken);
+        try
+        {
+            await auditLogWriter.WriteAsync(
+                new AuditLogWriteRequest
+                {
+                    Action = "Create",
+                    EntityName = "AdUser",
+                    EntityId = response.Id,
+                    Description = $"AD user created: {response.SamAccountName}.",
+                    ActorUserId = request.ActorUserId,
+                    ActorUserName = request.ActorUserName,
+                    IpAddress = request.ActorIpAddress,
+                    UserAgent = request.ActorUserAgent,
+                },
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "{LogMessage} SamAccountName={SamAccountName} UserId={UserId} ActorUserId={ActorUserId}",
+                CreateUserSuccessLoggingFailedMessage,
+                response.SamAccountName,
+                response.Id,
+                request.ActorUserId);
+        }
     }
 
     private async Task WriteCreateFailureLogsAsync(
@@ -690,25 +721,37 @@ public sealed partial class AdUserDirectoryService
             englishMessageOverride: ResolveCreateFailureEnglishMessage(message),
             normalizedReasonOverride: ResolveCreateFailureReason(message));
 
-        await adOperationLogService.WriteAsync(
-            new AdOperationLogEntry
-            {
-                OperationType = AdManagementOperationTypes.CreateUser,
-                Status = AdManagementOperationStatuses.Failed,
-                TargetObjectType = AdManagementTargetUserTypes.AdUser,
-                TargetDistinguishedName = request.TargetOuDistinguishedName,
-                ErrorCode = AdOperationLogErrorCodeExtractor.TryExtractFromDiagnosticJson(diagnosticJson),
-                ErrorMessage = diagnosticJson,
-                RequestSummaryJson = requestSummary,
-                BeforeSnapshotJson = null,
-                AfterSnapshotJson = null,
-                ActorUserId = request.ActorUserId,
-                ActorUserName = request.ActorUserName,
-                IpAddress = request.ActorIpAddress,
-                UserAgent = request.ActorUserAgent,
-                DomainController = ResolvePrimaryHost(connection),
-            },
-            cancellationToken);
+        try
+        {
+            await adOperationLogService.WriteAsync(
+                new AdOperationLogEntry
+                {
+                    OperationType = AdManagementOperationTypes.CreateUser,
+                    Status = AdManagementOperationStatuses.Failed,
+                    TargetObjectType = AdManagementTargetUserTypes.AdUser,
+                    TargetDistinguishedName = request.TargetOuDistinguishedName,
+                    ErrorCode = AdOperationLogErrorCodeExtractor.TryExtractFromDiagnosticJson(diagnosticJson),
+                    ErrorMessage = diagnosticJson,
+                    RequestSummaryJson = requestSummary,
+                    BeforeSnapshotJson = null,
+                    AfterSnapshotJson = null,
+                    ActorUserId = request.ActorUserId,
+                    ActorUserName = request.ActorUserName,
+                    IpAddress = request.ActorIpAddress,
+                    UserAgent = request.ActorUserAgent,
+                    DomainController = ResolvePrimaryHost(connection),
+                },
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "{LogMessage} SamAccountName={SamAccountName} ActorUserId={ActorUserId}",
+                CreateUserFailureLoggingFailedMessage,
+                request.SamAccountName,
+                request.ActorUserId);
+        }
     }
 
     private static string? ResolveCreateFailureReason(string message)

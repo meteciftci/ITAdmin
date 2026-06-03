@@ -164,6 +164,17 @@ public sealed class AdManagementSettingsService(
             ? AdManagementNotificationSettingsSerializer.CreateDefault()
             : AdManagementNotificationSettingsSerializer.Deserialize(entity.NotificationSettingsJson);
 
+        string? settingsBeforeSnapshotJson = null;
+        AdManagementSettings? beforeSettingsEntity = null;
+        if (!isNew && entity is not null)
+        {
+            beforeSettingsEntity = entity;
+            settingsBeforeSnapshotJson = AdOperationLogSnapshotBuilder.BuildSettingsSnapshot(
+                entity,
+                ParsePreferredDomainControllers(entity.PreferredDomainControllersJson),
+                beforeNotificationSettings);
+        }
+
         entity ??= new AdManagementSettings
         {
             CreatedAt = now,
@@ -237,6 +248,8 @@ public sealed class AdManagementSettingsService(
         var notificationRulesSummary = AdManagementNotificationSettingsAuditBuilder.BuildRulesChangeSummary(
             beforeNotificationSettings,
             notificationSettings);
+        var notificationRulesChanged = !string.IsNullOrWhiteSpace(notificationRulesSummary);
+
         var auditPrefix = string.IsNullOrWhiteSpace(notificationRulesSummary)
             ? $"AD management settings updated. Enabled: {entity.IsEnabled}. Password changed: {passwordChanged}."
             : $"AD management settings updated. Enabled: {entity.IsEnabled}. Password changed: {passwordChanged}. {notificationRulesSummary.TrimEnd('.', ' ')}.";
@@ -260,7 +273,18 @@ public sealed class AdManagementSettingsService(
             },
             cancellationToken);
 
-        var summaryJson = BuildSettingsRequestSummary(request, entity, preferredControllers, passwordChanged);
+        var summaryJson = AdOperationLogSnapshotBuilder.BuildSettingsUpdatedRequestSummary(
+            request,
+            entity,
+            preferredControllers,
+            passwordChanged,
+            notificationRulesChanged,
+            beforeSettingsEntity);
+        var settingsAfterSnapshotJson = AdOperationLogSnapshotBuilder.BuildSettingsSnapshot(
+            entity,
+            preferredControllers,
+            notificationSettings);
+
         await adOperationLogService.WriteAsync(
             new AdOperationLogEntry
             {
@@ -268,6 +292,8 @@ public sealed class AdManagementSettingsService(
                 Status = AdManagementOperationStatuses.Succeeded,
                 TargetObjectType = AdManagementTargetObjectTypes.AdManagementSettings,
                 RequestSummaryJson = summaryJson,
+                BeforeSnapshotJson = settingsBeforeSnapshotJson,
+                AfterSnapshotJson = settingsAfterSnapshotJson,
                 ActorUserId = request.ActorUserId,
                 ActorUserName = request.ActorUserName,
                 IpAddress = request.ActorIpAddress,
@@ -377,6 +403,14 @@ public sealed class AdManagementSettingsService(
             },
             cancellationToken);
 
+        string? errorDiagnosticJson = null;
+        string? errorCode = null;
+        if (!result.IsValid)
+        {
+            errorDiagnosticJson = AdOperationErrorDiagnosticBuilder.BuildSettingsValidationFailureJson(result);
+            errorCode = AdOperationLogErrorCodeExtractor.TryExtractFromDiagnosticJson(errorDiagnosticJson);
+        }
+
         await adOperationLogService.WriteAsync(
             new AdOperationLogEntry
             {
@@ -385,9 +419,10 @@ public sealed class AdManagementSettingsService(
                     ? AdManagementOperationStatuses.Succeeded
                     : AdManagementOperationStatuses.Failed,
                 TargetObjectType = AdManagementTargetObjectTypes.AdManagementSettings,
-                ErrorMessage = result.IsValid ? null : safeMessage,
+                ErrorCode = errorCode,
+                ErrorMessage = errorDiagnosticJson,
                 DomainController = NormalizeNullable(primaryDomainController),
-                RequestSummaryJson = BuildValidationSummary(result),
+                RequestSummaryJson = AdOperationLogSnapshotBuilder.BuildSettingsValidationSummary(result),
                 ActorUserId = request.ActorUserId,
                 ActorUserName = request.ActorUserName,
                 IpAddress = request.ActorIpAddress,
@@ -663,57 +698,5 @@ public sealed class AdManagementSettingsService(
         return trimmed.Length <= ValidationMessageMaxLength
             ? trimmed
             : trimmed[..ValidationMessageMaxLength];
-    }
-
-    private static string BuildValidationSummary(AdManagementValidationResult result)
-    {
-        // Password values are intentionally excluded; only keys + statuses are recorded.
-        var summary = new
-        {
-            isValid = result.IsValid,
-            checkedAt = result.CheckedAt,
-            message = SanitizeForLog(result.Message),
-            details = result.Details
-                .Select(d => new
-                {
-                    key = d.Key,
-                    status = d.Status,
-                    message = SanitizeForLog(d.Message)
-                })
-                .ToList()
-        };
-
-        return JsonSerializer.Serialize(summary);
-    }
-
-    private static string BuildSettingsRequestSummary(
-        UpdateAdManagementSettingsRequest request,
-        AdManagementSettings entity,
-        IReadOnlyList<string> preferredControllers,
-        bool passwordChanged)
-    {
-        // Password values are intentionally excluded from the summary.
-        var summary = new
-        {
-            isEnabled = request.IsEnabled,
-            domainFqdn = entity.DomainFqdn,
-            netbiosDomainName = entity.NetbiosDomainName,
-            defaultNamingContext = entity.DefaultNamingContext,
-            baseDn = entity.BaseDn,
-            usersRootOu = entity.UsersRootOu,
-            disabledUsersOu = entity.DisabledUsersOu,
-            groupsSearchBase = entity.GroupsSearchBase,
-            computersSearchBase = entity.ComputersSearchBase,
-            preferredDomainControllers = preferredControllers,
-            useSsl = entity.UseSsl,
-            ldapPort = entity.LdapPort,
-            serviceAccountUserName = entity.ServiceAccountUserName,
-            powerShellHealthEnabled = entity.PowerShellHealthEnabled,
-            powerShellTimeoutSeconds = entity.PowerShellTimeoutSeconds,
-            passwordChanged,
-            passwordCleared = request.ClearServiceAccountPassword
-        };
-
-        return JsonSerializer.Serialize(summary);
     }
 }

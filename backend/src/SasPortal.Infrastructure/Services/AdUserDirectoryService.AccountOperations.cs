@@ -1,4 +1,5 @@
 using System.DirectoryServices.Protocols;
+using Microsoft.Extensions.Logging;
 using SasPortal.Application.Abstractions.Services;
 using SasPortal.Application.Common.AdManagement;
 using SasPortal.Application.Common.Constants;
@@ -18,6 +19,10 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
     private const string AccountLoadUserStep = "LoadUser";
     private const string AccountModifyStep = "ModifyAccountControl";
     private const string AccountUnlockStep = "UnlockAccount";
+    private const string AccountOperationSuccessLoggingFailedMessage =
+        "AD account operation succeeded but logging failed.";
+    private const string AccountOperationFailureLoggingFailedMessage =
+        "AD account operation failed but logging failed.";
 
     public Task<AdUserAccountOperationResult> EnableAsync(
         AdUserAccountOperationRequest request,
@@ -448,29 +453,15 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
                 cancellationToken);
         }
 
-        await WriteAccountOperationLogsAsync(
+        await WriteAccountSuccessLogsSafelyAsync(
             request,
             operationType,
-            AdManagementOperationStatuses.Succeeded,
+            auditAction,
+            auditDescription,
             connection,
             beforeState,
             afterState,
-            null,
             notificationSummary,
-            cancellationToken);
-
-        await auditLogWriter.WriteAsync(
-            new AuditLogWriteRequest
-            {
-                Action = auditAction,
-                EntityName = "AdUser",
-                EntityId = afterState.DistinguishedName,
-                Description = auditDescription,
-                ActorUserId = request.ActorUserId,
-                ActorUserName = request.ActorUserName,
-                IpAddress = request.ActorIpAddress,
-                UserAgent = request.ActorUserAgent,
-            },
             cancellationToken);
 
         return new AdUserAccountOperationResult(
@@ -521,33 +512,15 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
                 ldapExceptionErrorCode: ldapException.ErrorCode,
                 ldapDiagnosticMessage: ldapException.Message);
 
-        await WriteAccountOperationLogsAsync(
+        await WriteAccountFailureLogsSafelyAsync(
             request,
             operationType,
-            AdManagementOperationStatuses.Failed,
+            auditAction,
+            auditDescription,
             connection,
             beforeState,
-            afterState: beforeState,
             diagnosticJson,
-            notificationSummary: null,
             cancellationToken);
-
-        if (!string.IsNullOrWhiteSpace(auditDescription))
-        {
-            await auditLogWriter.WriteAsync(
-                new AuditLogWriteRequest
-                {
-                    Action = auditAction,
-                    EntityName = "AdUser",
-                    EntityId = request.UserId.ToString("D"),
-                    Description = auditDescription,
-                    ActorUserId = request.ActorUserId,
-                    ActorUserName = request.ActorUserName,
-                    IpAddress = request.ActorIpAddress,
-                    UserAgent = request.ActorUserAgent,
-                },
-                cancellationToken);
-        }
 
         return new AdUserAccountOperationResult(
             false,
@@ -596,6 +569,10 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
             ? null
             : AdOperationLogSnapshotBuilder.BuildAccountAfterSnapshot(
                 operationType,
+                afterState.UserId,
+                afterState.SamAccountName,
+                afterState.UserPrincipalName,
+                afterState.DistinguishedName,
                 afterState.IsEnabled,
                 afterState.IsLockedOut,
                 afterState.UserAccountControl,
@@ -634,6 +611,153 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
                 DomainController = connection is null ? null : ResolvePrimaryHost(connection),
             },
             cancellationToken);
+    }
+
+    private async Task WriteAccountSuccessLogsSafelyAsync(
+        AdUserAccountOperationRequest request,
+        string operationType,
+        string auditAction,
+        string auditDescription,
+        AdManagementConnectionParameters connection,
+        AdUserAccountState beforeState,
+        AdUserAccountState afterState,
+        AdManagementNotificationSummary? notificationSummary,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await WriteAccountOperationLogsAsync(
+                request,
+                operationType,
+                AdManagementOperationStatuses.Succeeded,
+                connection,
+                beforeState,
+                afterState,
+                errorDiagnosticJson: null,
+                notificationSummary,
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            LogAccountOperationLoggingFailure(
+                ex,
+                operationSucceeded: true,
+                operationType,
+                request,
+                afterState);
+        }
+
+        try
+        {
+            await auditLogWriter.WriteAsync(
+                new AuditLogWriteRequest
+                {
+                    Action = auditAction,
+                    EntityName = "AdUser",
+                    EntityId = afterState.UserId,
+                    Description = auditDescription,
+                    ActorUserId = request.ActorUserId,
+                    ActorUserName = request.ActorUserName,
+                    IpAddress = request.ActorIpAddress,
+                    UserAgent = request.ActorUserAgent,
+                },
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            LogAccountOperationLoggingFailure(
+                ex,
+                operationSucceeded: true,
+                operationType,
+                request,
+                afterState);
+        }
+    }
+
+    private async Task WriteAccountFailureLogsSafelyAsync(
+        AdUserAccountOperationRequest request,
+        string operationType,
+        string auditAction,
+        string? auditDescription,
+        AdManagementConnectionParameters? connection,
+        AdUserAccountState? beforeState,
+        string diagnosticJson,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await WriteAccountOperationLogsAsync(
+                request,
+                operationType,
+                AdManagementOperationStatuses.Failed,
+                connection,
+                beforeState,
+                afterState: beforeState,
+                diagnosticJson,
+                notificationSummary: null,
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            LogAccountOperationLoggingFailure(
+                ex,
+                operationSucceeded: false,
+                operationType,
+                request,
+                beforeState);
+        }
+
+        if (string.IsNullOrWhiteSpace(auditDescription))
+        {
+            return;
+        }
+
+        try
+        {
+            await auditLogWriter.WriteAsync(
+                new AuditLogWriteRequest
+                {
+                    Action = auditAction,
+                    EntityName = "AdUser",
+                    EntityId = request.UserId.ToString("D"),
+                    Description = auditDescription,
+                    ActorUserId = request.ActorUserId,
+                    ActorUserName = request.ActorUserName,
+                    IpAddress = request.ActorIpAddress,
+                    UserAgent = request.ActorUserAgent,
+                },
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            LogAccountOperationLoggingFailure(
+                ex,
+                operationSucceeded: false,
+                operationType,
+                request,
+                beforeState);
+        }
+    }
+
+    private void LogAccountOperationLoggingFailure(
+        Exception exception,
+        bool operationSucceeded,
+        string operationType,
+        AdUserAccountOperationRequest request,
+        AdUserAccountState? accountState)
+    {
+        var logMessage = operationSucceeded
+            ? AccountOperationSuccessLoggingFailedMessage
+            : AccountOperationFailureLoggingFailedMessage;
+
+        logger.LogError(
+            exception,
+            "{LogMessage} OperationType={OperationType} UserId={UserId} SamAccountName={SamAccountName} ActorUserId={ActorUserId}",
+            logMessage,
+            operationType,
+            accountState?.UserId ?? request.UserId.ToString("D"),
+            accountState?.SamAccountName,
+            request.ActorUserId);
     }
 
     private static string AppendNotificationSummary(

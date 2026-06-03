@@ -164,7 +164,9 @@ public sealed class AdAttributeMappingService(
                 OperationType = AdManagementOperationTypes.AttributeMappingCreated,
                 Status = AdManagementOperationStatuses.Succeeded,
                 TargetObjectType = AdManagementTargetObjectTypes.AdAttributeMapping,
-                RequestSummaryJson = BuildMappingSummary(entity),
+                RequestSummaryJson = AdOperationLogSnapshotBuilder.BuildAttributeMappingCreateRequestSummary(request),
+                BeforeSnapshotJson = null,
+                AfterSnapshotJson = AdOperationLogSnapshotBuilder.BuildAttributeMappingSnapshot(entity),
                 ActorUserId = request.ActorUserId,
                 ActorUserName = request.ActorUserName,
                 IpAddress = request.ActorIpAddress,
@@ -231,6 +233,10 @@ public sealed class AdAttributeMappingService(
 
         var now = DateTime.UtcNow;
         var oldAttributeName = entity.AttributeName;
+        var beforeSnapshotJson = AdOperationLogSnapshotBuilder.BuildAttributeMappingSnapshot(entity);
+        var updateRequestSummaryJson = AdOperationLogSnapshotBuilder.BuildAttributeMappingUpdateRequestSummary(
+            request,
+            entity);
 
         entity.DisplayName = displayName;
         entity.AttributeName = attributeName;
@@ -269,7 +275,9 @@ public sealed class AdAttributeMappingService(
                 OperationType = AdManagementOperationTypes.AttributeMappingUpdated,
                 Status = AdManagementOperationStatuses.Succeeded,
                 TargetObjectType = AdManagementTargetObjectTypes.AdAttributeMapping,
-                RequestSummaryJson = BuildMappingSummary(entity),
+                RequestSummaryJson = updateRequestSummaryJson,
+                BeforeSnapshotJson = beforeSnapshotJson,
+                AfterSnapshotJson = AdOperationLogSnapshotBuilder.BuildAttributeMappingSnapshot(entity),
                 ActorUserId = request.ActorUserId,
                 ActorUserName = request.ActorUserName,
                 IpAddress = request.ActorIpAddress,
@@ -299,6 +307,10 @@ public sealed class AdAttributeMappingService(
 
         var now = DateTime.UtcNow;
         var snapshot = MapToItem(entity);
+        var beforeSnapshotJson = AdOperationLogSnapshotBuilder.BuildAttributeMappingSnapshot(entity);
+        var deleteRequestSummaryJson = AdOperationLogSnapshotBuilder.BuildAttributeMappingDeleteRequestSummary(
+            request,
+            entity);
 
         context.AdAttributeMappings.Remove(entity);
 
@@ -326,7 +338,9 @@ public sealed class AdAttributeMappingService(
                 OperationType = AdManagementOperationTypes.AttributeMappingDeleted,
                 Status = AdManagementOperationStatuses.Succeeded,
                 TargetObjectType = AdManagementTargetObjectTypes.AdAttributeMapping,
-                BeforeSnapshotJson = BuildMappingSummary(entity),
+                RequestSummaryJson = deleteRequestSummaryJson,
+                BeforeSnapshotJson = beforeSnapshotJson,
+                AfterSnapshotJson = null,
                 ActorUserId = request.ActorUserId,
                 ActorUserName = request.ActorUserName,
                 IpAddress = request.ActorIpAddress,
@@ -372,26 +386,6 @@ public sealed class AdAttributeMappingService(
             entity.ValidationType,
             entity.MaskingStrategy,
             entity.SortOrder);
-
-    private static string BuildMappingSummary(AdAttributeMapping entity)
-    {
-        var summary = new
-        {
-            id = entity.Id,
-            logicalField = entity.LogicalField,
-            displayName = entity.DisplayName,
-            attributeName = entity.AttributeName,
-            isEnabled = entity.IsEnabled,
-            isEditable = entity.IsEditable,
-            isSensitive = entity.IsSensitive,
-            isSearchable = entity.IsSearchable,
-            validationType = entity.ValidationType,
-            maskingStrategy = entity.MaskingStrategy,
-            sortOrder = entity.SortOrder
-        };
-
-        return JsonSerializer.Serialize(summary);
-    }
 
     private static string? NormalizeNullable(string? value)
     {
