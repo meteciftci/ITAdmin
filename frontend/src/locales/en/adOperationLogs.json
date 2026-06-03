@@ -108,6 +108,33 @@
       "department": "Department",
       "distinguishedName": "Distinguished Name"
     },
+    "snapshotSections": {
+      "user": "User",
+      "accountStatus": "Account Status",
+      "lockStatus": "Lock Status",
+      "group": "Group",
+      "groupMembership": "Group Membership",
+      "createdUser": "Created User",
+      "notifications": "Notifications",
+      "boolean": {
+        "yes": "Yes",
+        "no": "No"
+      },
+      "fields": {
+        "userId": "User ID",
+        "samAccountName": "sAMAccountName",
+        "userPrincipalName": "UPN",
+        "displayName": "Display name",
+        "distinguishedName": "Distinguished Name",
+        "groupName": "Group Name",
+        "groupDistinguishedName": "Group Distinguished Name",
+        "isDirectMember": "Direct member",
+        "isEnabled": "Enabled",
+        "isLocked": "Locked",
+        "userAccountControl": "User Account Control",
+        "lockoutTime": "Lockout Time"
+      }
+    },
     "empty": {
       "title": "No records found",
       "description": "No operation logs match the selected filters. Clear filters and try again."

@@ -189,6 +189,7 @@ export function AdOperationLogDetailDialog({
               </section>
 
               <AdOperationLogSnapshotDetail
+                operationType={detail.operationType}
                 beforeSnapshotJson={detail.beforeSnapshotJson}
                 afterSnapshotJson={detail.afterSnapshotJson}
                 requestSummaryJson={detail.requestSummaryJson}

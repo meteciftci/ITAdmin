@@ -108,6 +108,33 @@
       "department": "Departman",
       "distinguishedName": "Distinguished Name"
     },
+    "snapshotSections": {
+      "user": "Kullanıcı",
+      "accountStatus": "Hesap Durumu",
+      "lockStatus": "Kilit Durumu",
+      "group": "Grup",
+      "groupMembership": "Grup Üyeliği",
+      "createdUser": "Oluşturulan Kullanıcı",
+      "notifications": "Bildirimler",
+      "boolean": {
+        "yes": "Evet",
+        "no": "Hayır"
+      },
+      "fields": {
+        "userId": "User ID",
+        "samAccountName": "sAMAccountName",
+        "userPrincipalName": "UPN",
+        "displayName": "Görünen Ad",
+        "distinguishedName": "Distinguished Name",
+        "groupName": "Group Name",
+        "groupDistinguishedName": "Group Distinguished Name",
+        "isDirectMember": "Direkt Üye mi",
+        "isEnabled": "Aktif mi",
+        "isLocked": "Kilitli mi",
+        "userAccountControl": "User Account Control",
+        "lockoutTime": "Lockout Time"
+      }
+    },
     "empty": {
       "title": "Kayıt bulunamadı",
       "description": "Seçili filtrelere uygun operasyon logu yok. Filtreleri temizleyip tekrar deneyin."

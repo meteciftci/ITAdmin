@@ -28,6 +28,8 @@ export type SnapshotComparisonRow = {
   before: string | null;
   after: string | null;
   changed: boolean;
+  monoBefore?: boolean;
+  monoAfter?: boolean;
 };
 
 function readTrimmedString(value: unknown): string | null {
@@ -219,4 +221,386 @@ export function parseRequestSummaryEntries(
       displayValue: formatSnapshotValue(entryValue) ?? "-",
     }))
     .sort((left, right) => left.key.localeCompare(right.key));
+}
+
+export type ParsedSnapshotUser = {
+  id: string | null;
+  samAccountName: string | null;
+  userPrincipalName: string | null;
+  displayName: string | null;
+  distinguishedName: string | null;
+};
+
+export type ParsedSnapshotAccount = {
+  isEnabled: boolean | null;
+  isLocked: boolean | null;
+  userAccountControl: number | null;
+  lockoutTime: string | null;
+};
+
+export type ParsedSnapshotGroup = {
+  name: string | null;
+  distinguishedName: string | null;
+};
+
+export type ParsedSnapshotMembership = {
+  isDirectMember: boolean | null;
+};
+
+export type ParsedNestedAdOperationSnapshot = {
+  operation: string | null;
+  user: ParsedSnapshotUser | null;
+  account: ParsedSnapshotAccount | null;
+  group: ParsedSnapshotGroup | null;
+  membership: ParsedSnapshotMembership | null;
+  mappedAttributes: ParsedMappedSnapshotAttribute[];
+  notifications: string | null;
+  rawRecord: Record<string, unknown>;
+};
+
+export type GenericSnapshotEntry = {
+  key: string;
+  displayValue: string;
+  nested?: GenericSnapshotEntry[];
+};
+
+export type SnapshotRenderStrategy =
+  | "userUpdate"
+  | "userCreate"
+  | "accountStatus"
+  | "lockStatus"
+  | "groupMembership"
+  | "generic";
+
+const ACCOUNT_STATUS_OPERATION_TYPES = new Set(["UserEnable", "UserDisable"]);
+const LOCK_STATUS_OPERATION_TYPES = new Set(["UserUnlock"]);
+const GROUP_MEMBERSHIP_OPERATION_TYPES = new Set(["UserGroupAdd", "UserGroupRemove"]);
+
+function readRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  return value as Record<string, unknown>;
+}
+
+function readBoolean(value: unknown): boolean | null {
+  if (typeof value === "boolean") {
+    return value;
+  }
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true") {
+      return true;
+    }
+    if (normalized === "false") {
+      return false;
+    }
+  }
+  return null;
+}
+
+function readNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function parseSnapshotUser(value: unknown): ParsedSnapshotUser | null {
+  const record = readRecord(value);
+  if (!record) {
+    return null;
+  }
+
+  const user: ParsedSnapshotUser = {
+    id: formatSnapshotValue(record.id ?? record.Id),
+    samAccountName: formatSnapshotValue(record.samAccountName ?? record.SamAccountName),
+    userPrincipalName: formatSnapshotValue(record.userPrincipalName ?? record.UserPrincipalName),
+    displayName: formatSnapshotValue(record.displayName ?? record.DisplayName),
+    distinguishedName: formatSnapshotValue(record.distinguishedName ?? record.DistinguishedName),
+  };
+
+  return Object.values(user).some((entry) => entry !== null) ? user : null;
+}
+
+function parseSnapshotAccount(value: unknown): ParsedSnapshotAccount | null {
+  const record = readRecord(value);
+  if (!record) {
+    return null;
+  }
+
+  const account: ParsedSnapshotAccount = {
+    isEnabled: readBoolean(record.isEnabled ?? record.IsEnabled),
+    isLocked: readBoolean(record.isLocked ?? record.IsLocked),
+    userAccountControl: readNumber(record.userAccountControl ?? record.UserAccountControl),
+    lockoutTime: formatSnapshotValue(record.lockoutTime ?? record.LockoutTime),
+  };
+
+  return Object.values(account).some((entry) => entry !== null) ? account : null;
+}
+
+function parseSnapshotGroup(value: unknown): ParsedSnapshotGroup | null {
+  const record = readRecord(value);
+  if (!record) {
+    return null;
+  }
+
+  const group: ParsedSnapshotGroup = {
+    name: formatSnapshotValue(record.name ?? record.Name),
+    distinguishedName: formatSnapshotValue(record.distinguishedName ?? record.DistinguishedName),
+  };
+
+  return Object.values(group).some((entry) => entry !== null) ? group : null;
+}
+
+function parseSnapshotMembership(value: unknown): ParsedSnapshotMembership | null {
+  const record = readRecord(value);
+  if (!record) {
+    return null;
+  }
+
+  const isDirectMember = readBoolean(record.isDirectMember ?? record.IsDirectMember);
+  return isDirectMember === null ? null : { isDirectMember };
+}
+
+export function parseNestedAdOperationSnapshot(value: unknown): ParsedNestedAdOperationSnapshot | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  let payload: unknown = value;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+    payload = unwrapJsonLikeString(trimmed);
+  }
+
+  const record = readRecord(payload);
+  if (!record) {
+    return null;
+  }
+
+  return {
+    operation: formatSnapshotValue(record.operation ?? record.Operation),
+    user: parseSnapshotUser(record.user ?? record.User),
+    account: parseSnapshotAccount(record.account ?? record.Account),
+    group: parseSnapshotGroup(record.group ?? record.Group),
+    membership: parseSnapshotMembership(record.membership ?? record.Membership),
+    mappedAttributes: readMappedAttributes(record.mappedAttributes ?? record.MappedAttributes),
+    notifications: formatSnapshotValue(record.notifications ?? record.Notifications),
+    rawRecord: record,
+  };
+}
+
+export function resolveSnapshotUser(
+  before: ParsedNestedAdOperationSnapshot | null,
+  after: ParsedNestedAdOperationSnapshot | null,
+): ParsedSnapshotUser | null {
+  return after?.user ?? before?.user ?? null;
+}
+
+export function resolveSnapshotGroup(
+  before: ParsedNestedAdOperationSnapshot | null,
+  after: ParsedNestedAdOperationSnapshot | null,
+): ParsedSnapshotGroup | null {
+  return after?.group ?? before?.group ?? null;
+}
+
+export function formatSnapshotBoolean(
+  value: boolean | null | undefined,
+  labels: { yes: string; no: string },
+): string | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  return value ? labels.yes : labels.no;
+}
+
+function buildComparisonRow(
+  key: string,
+  beforeValue: string | null,
+  afterValue: string | null,
+  monoBefore = false,
+  monoAfter = false,
+): SnapshotComparisonRow {
+  const normalizedBefore = normalizeComparisonValue(beforeValue);
+  const normalizedAfter = normalizeComparisonValue(afterValue);
+
+  return {
+    key,
+    before: normalizedBefore,
+    after: normalizedAfter,
+    changed: normalizedBefore !== normalizedAfter,
+    monoBefore,
+    monoAfter,
+  };
+}
+
+export function buildAccountStatusComparisonRows(
+  before: ParsedNestedAdOperationSnapshot | null,
+  after: ParsedNestedAdOperationSnapshot | null,
+  formatBoolean: (value: boolean | null | undefined) => string | null,
+): SnapshotComparisonRow[] {
+  const rows = [
+    buildComparisonRow(
+      "isEnabled",
+      formatBoolean(before?.account?.isEnabled),
+      formatBoolean(after?.account?.isEnabled),
+    ),
+    buildComparisonRow(
+      "isLocked",
+      formatBoolean(before?.account?.isLocked),
+      formatBoolean(after?.account?.isLocked),
+    ),
+    buildComparisonRow(
+      "userAccountControl",
+      before?.account?.userAccountControl != null
+        ? String(before.account.userAccountControl)
+        : null,
+      after?.account?.userAccountControl != null ? String(after.account.userAccountControl) : null,
+    ),
+  ];
+
+  return rows.filter((row) => row.before !== null || row.after !== null);
+}
+
+export function buildLockStatusComparisonRows(
+  before: ParsedNestedAdOperationSnapshot | null,
+  after: ParsedNestedAdOperationSnapshot | null,
+  formatBoolean: (value: boolean | null | undefined) => string | null,
+): SnapshotComparisonRow[] {
+  const rows = [
+    buildComparisonRow(
+      "isLocked",
+      formatBoolean(before?.account?.isLocked),
+      formatBoolean(after?.account?.isLocked),
+    ),
+    buildComparisonRow(
+      "lockoutTime",
+      before?.account?.lockoutTime ?? null,
+      after?.account?.lockoutTime ?? null,
+    ),
+    buildComparisonRow(
+      "userAccountControl",
+      before?.account?.userAccountControl != null
+        ? String(before.account.userAccountControl)
+        : null,
+      after?.account?.userAccountControl != null ? String(after.account.userAccountControl) : null,
+    ),
+  ];
+
+  return rows.filter((row) => row.before !== null || row.after !== null);
+}
+
+export function buildMembershipComparisonRows(
+  before: ParsedNestedAdOperationSnapshot | null,
+  after: ParsedNestedAdOperationSnapshot | null,
+  formatBoolean: (value: boolean | null | undefined) => string | null,
+): SnapshotComparisonRow[] {
+  const rows = [
+    buildComparisonRow(
+      "isDirectMember",
+      formatBoolean(before?.membership?.isDirectMember),
+      formatBoolean(after?.membership?.isDirectMember),
+    ),
+  ];
+
+  return rows.filter((row) => row.before !== null || row.after !== null);
+}
+
+export function hasNestedSnapshotContent(snapshot: ParsedNestedAdOperationSnapshot | null): boolean {
+  if (!snapshot) {
+    return false;
+  }
+
+  return Boolean(
+    snapshot.user ||
+      snapshot.account ||
+      snapshot.group ||
+      snapshot.membership ||
+      snapshot.mappedAttributes.length > 0 ||
+      snapshot.notifications ||
+      Object.keys(snapshot.rawRecord).length > 0,
+  );
+}
+
+export function getSnapshotRenderStrategy(operationType: string): SnapshotRenderStrategy {
+  if (operationType === "UserUpdate") {
+    return "userUpdate";
+  }
+  if (operationType === "CreateUser") {
+    return "userCreate";
+  }
+  if (ACCOUNT_STATUS_OPERATION_TYPES.has(operationType)) {
+    return "accountStatus";
+  }
+  if (LOCK_STATUS_OPERATION_TYPES.has(operationType)) {
+    return "lockStatus";
+  }
+  if (GROUP_MEMBERSHIP_OPERATION_TYPES.has(operationType)) {
+    return "groupMembership";
+  }
+  return "generic";
+}
+
+export function buildGenericSnapshotEntries(
+  value: unknown,
+  prefix = "",
+): GenericSnapshotEntry[] {
+  if (value === null || value === undefined) {
+    return [];
+  }
+
+  if (Array.isArray(value)) {
+    const displayValue = formatSnapshotValue(value);
+    return displayValue ? [{ key: prefix || "value", displayValue }] : [];
+  }
+
+  if (typeof value !== "object") {
+    const displayValue = formatSnapshotValue(value);
+    return displayValue ? [{ key: prefix || "value", displayValue }] : [];
+  }
+
+  const record = value as Record<string, unknown>;
+  const entries: GenericSnapshotEntry[] = [];
+
+  for (const [key, entryValue] of Object.entries(record).sort(([left], [right]) =>
+    left.localeCompare(right),
+  )) {
+    const fullKey = prefix ? `${prefix}.${key}` : key;
+
+    if (entryValue && typeof entryValue === "object" && !Array.isArray(entryValue)) {
+      const nested = buildGenericSnapshotEntries(entryValue, fullKey);
+      if (nested.length > 0) {
+        entries.push({ key: fullKey, displayValue: "", nested });
+      }
+      continue;
+    }
+
+    const displayValue = formatSnapshotValue(entryValue);
+    if (displayValue) {
+      entries.push({ key: fullKey, displayValue });
+    }
+  }
+
+  return entries;
+}
+
+export function buildGenericSnapshotSections(
+  beforeSnapshotJson: string | null | undefined,
+  afterSnapshotJson: string | null | undefined,
+): { before: GenericSnapshotEntry[]; after: GenericSnapshotEntry[] } {
+  const beforeParsed = parseNestedAdOperationSnapshot(beforeSnapshotJson);
+  const afterParsed = parseNestedAdOperationSnapshot(afterSnapshotJson);
+
+  return {
+    before: beforeParsed ? buildGenericSnapshotEntries(beforeParsed.rawRecord) : [],
+    after: afterParsed ? buildGenericSnapshotEntries(afterParsed.rawRecord) : [],
+  };
 }
