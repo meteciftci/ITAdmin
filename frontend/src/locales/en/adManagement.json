@@ -213,6 +213,25 @@
         }
       },
       "detail": {
+        "page": {
+          "title": "User Detail",
+          "back": "Back",
+          "accountSummary": "Account Summary",
+          "accountStatusCard": "Account Status",
+          "lockStatusCard": "Lock Status",
+          "basicInfo": "Basic Information",
+          "technicalInfo": "Technical AD Information",
+          "mappedAttributes": "Mapped Attributes",
+          "showEmptyFields": "Show empty fields",
+          "groupsSummary": "Group Memberships Summary",
+          "totalGroups": "Total groups: {{count}}",
+          "moreGroups": "+{{count}} more",
+          "recentOperations": "Recent AD Operations",
+          "viewAllLogs": "View all logs",
+          "noRecentOperations": "No recent operations found",
+          "objectGuid": "objectGUID",
+          "distinguishedName": "Distinguished Name"
+        },
         "dialogTitle": "User detail",
         "displayName": "Display name",
         "username": "User name",

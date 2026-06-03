@@ -261,6 +261,7 @@ export type MappedAdUserAttribute = {
 
 export type AdUserDetail = {
   id: string;
+  distinguishedName: string | null;
   samAccountName: string | null;
   userPrincipalName: string | null;
   displayName: string | null;

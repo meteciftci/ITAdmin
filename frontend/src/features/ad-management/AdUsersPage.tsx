@@ -14,17 +14,16 @@ import { LoadingState } from "@/components/common/LoadingState";
 import { SectionCard } from "@/components/common/SectionCard";
 import { AD_USERS_LIST_DEFAULTS } from "@/features/ad-management/ad-users-list-query";
 import { createAdUserColumns } from "@/features/ad-management/ad-users-columns";
+import { buildAdUserDetailPath } from "@/features/ad-management/ad-user-detail-path";
 import {
   AD_MANAGEMENT_USERS_QUERY_KEY,
   disableAdUser,
   enableAdUser,
-  getAdUserById,
   getAdUsers,
   invalidateAdManagementUserQueries,
   unlockAdUser,
 } from "@/features/ad-management/api";
 import { AdManagementModuleStateGuard } from "@/features/ad-management/components/AdManagementModuleStateGuard";
-import { AdUserDetailDialog } from "@/features/ad-management/components/AdUserDetailDialog";
 import { AdUsersSearchToolbar } from "@/features/ad-management/components/AdUsersSearchToolbar";
 import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useAdManagementModuleStatus";
 import { useAdUserListState } from "@/features/ad-management/use-ad-user-list-state";
@@ -53,7 +52,6 @@ export function AdUsersPage() {
   const navigate = useNavigate();
   const { listState, listPath, updateListState, clearListState } = useAdUserListState();
 
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [confirmTarget, setConfirmTarget] = useState<AccountConfirmTarget | null>(null);
 
   const normalizedSearch = listState.search.trim();
@@ -79,14 +77,6 @@ export function AdUsersPage() {
     enabled: moduleStatus.isOperational && canSearch,
   });
 
-  const userDetailQuery = useQuery({
-    queryKey: [...AD_MANAGEMENT_USERS_QUERY_KEY, "detail", selectedUserId],
-    queryFn: () => getAdUserById(selectedUserId!),
-    enabled: moduleStatus.isOperational && Boolean(selectedUserId),
-    staleTime: 0,
-    refetchOnMount: "always",
-  });
-
   const users = useMemo(() => usersQuery.data?.items ?? [], [usersQuery.data]);
 
   const columns = useMemo(
@@ -98,7 +88,9 @@ export function AdUsersPage() {
         canDisableUser,
         canEnableUser,
         canUnlockUser,
-        onDetail: (user) => setSelectedUserId(user.id),
+        onDetail: (user) => {
+          navigate(buildAdUserDetailPath(user.id));
+        },
         onEdit: (user) => {
           navigate(`/ad-management/users/${user.id}/edit`);
         },
@@ -157,11 +149,6 @@ export function AdUsersPage() {
       }
 
       await invalidateAdManagementUserQueries(queryClient);
-      if (selectedUserId === variables.userId) {
-        await queryClient.invalidateQueries({
-          queryKey: [...AD_MANAGEMENT_USERS_QUERY_KEY, "detail", variables.userId],
-        });
-      }
 
       const message =
         variables.action === "enable"
@@ -185,9 +172,6 @@ export function AdUsersPage() {
     }
 
     usersQuery.refetch();
-    if (selectedUserId) {
-      userDetailQuery.refetch();
-    }
   };
 
   const confirmCopy = useMemo(() => {
@@ -289,17 +273,6 @@ export function AdUsersPage() {
           ) : null}
         </div>
       </SectionCard>
-
-      <AdUserDetailDialog
-        open={Boolean(selectedUserId)}
-        user={userDetailQuery.data ?? null}
-        canUpdateUser={canUpdateUser}
-        onOpenChange={(open) => {
-          if (!open) {
-            setSelectedUserId(null);
-          }
-        }}
-      />
 
       <ConfirmDialog
         open={Boolean(confirmTarget)}

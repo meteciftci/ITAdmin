@@ -213,6 +213,25 @@
         }
       },
       "detail": {
+        "page": {
+          "title": "Kullanıcı Detayı",
+          "back": "Geri Dön",
+          "accountSummary": "Hesap Özeti",
+          "accountStatusCard": "Hesap Durumu",
+          "lockStatusCard": "Kilit Durumu",
+          "basicInfo": "Temel Bilgiler",
+          "technicalInfo": "Teknik AD Bilgileri",
+          "mappedAttributes": "Eşlenen Alanlar",
+          "showEmptyFields": "Boş alanları göster",
+          "groupsSummary": "Grup Üyelikleri Özeti",
+          "totalGroups": "Toplam Grup: {{count}}",
+          "moreGroups": "+{{count}} daha",
+          "recentOperations": "Son AD Operasyonları",
+          "viewAllLogs": "Tüm logları görüntüle",
+          "noRecentOperations": "Son operasyon bulunamadı",
+          "objectGuid": "objectGUID",
+          "distinguishedName": "Distinguished Name"
+        },
         "dialogTitle": "Kullanıcı detayı",
         "displayName": "Görünen ad",
         "username": "Kullanıcı adı",

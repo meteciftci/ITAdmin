@@ -37,6 +37,7 @@ public sealed record MappedAdUserAttributeResponse(
 
 public sealed record AdUserDetailResponse(
     string Id,
+    string DistinguishedName,
     string? SamAccountName,
     string? UserPrincipalName,
     string? DisplayName,

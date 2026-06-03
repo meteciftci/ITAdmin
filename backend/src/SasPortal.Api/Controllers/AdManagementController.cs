@@ -817,6 +817,7 @@ public sealed class AdManagementController(
     private static AdUserDetailResponse MapUserDetail(AppModels.AdUserDetail item) =>
         new(
             item.Id,
+            item.DistinguishedName,
             item.SamAccountName,
             item.UserPrincipalName,
             item.DisplayName,
