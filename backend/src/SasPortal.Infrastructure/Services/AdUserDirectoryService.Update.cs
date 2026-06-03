@@ -605,6 +605,9 @@ public sealed partial class AdUserDirectoryService
                 TargetSamAccountName = afterDetail?.SamAccountName ?? beforeDetail?.SamAccountName ?? request.SamAccountName,
                 BeforeSnapshotJson = beforeSnapshot,
                 AfterSnapshotJson = afterSnapshot,
+                ErrorCode = string.Equals(status, AdManagementOperationStatuses.Failed, StringComparison.Ordinal)
+                    ? AdOperationLogErrorCodeExtractor.TryExtractFromDiagnosticJson(errorMessage)
+                    : null,
                 ErrorMessage = errorMessage,
                 RequestSummaryJson = requestSummaryJson,
                 ActorUserId = request.ActorUserId,

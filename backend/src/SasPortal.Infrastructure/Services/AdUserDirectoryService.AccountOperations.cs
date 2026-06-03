@@ -1,5 +1,4 @@
 using System.DirectoryServices.Protocols;
-using System.Text.Json;
 using SasPortal.Application.Abstractions.Services;
 using SasPortal.Application.Common.AdManagement;
 using SasPortal.Application.Common.Constants;
@@ -16,6 +15,9 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
     private const string AccountEnabledMessage = "Kullanıcı hesabı aktife alındı.";
     private const string AccountDisabledMessage = "Kullanıcı hesabı pasife alındı.";
     private const string AccountUnlockedMessage = "Kullanıcı kilidi açıldı.";
+    private const string AccountLoadUserStep = "LoadUser";
+    private const string AccountModifyStep = "ModifyAccountControl";
+    private const string AccountUnlockStep = "UnlockAccount";
 
     public Task<AdUserAccountOperationResult> EnableAsync(
         AdUserAccountOperationRequest request,
@@ -55,6 +57,7 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
                 $"AD user account {auditDescriptionVerb} failed.",
                 connectionResult.Message,
                 connectionResult.Context?.Connection,
+                beforeState: null,
                 connectionResult.FailureKind,
                 cancellationToken);
         }
@@ -70,9 +73,12 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
                 $"AD user account {auditDescriptionVerb} failed.",
                 AdManagementNotConfiguredMessage,
                 context.Connection,
+                beforeState: null,
                 AdDirectoryFailureKind.NotConfigured,
                 cancellationToken);
         }
+
+        AdUserAccountState? loadedBeforeState = null;
 
         try
         {
@@ -90,9 +96,12 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
                     $"AD user account {auditDescriptionVerb} failed.",
                     UserNotFoundMessage,
                     context.Connection,
+                    beforeState: null,
                     AdDirectoryFailureKind.NotFound,
                     cancellationToken);
             }
+
+            loadedBeforeState = beforeState;
 
             if (beforeState.IsEnabled != disabled)
             {
@@ -131,6 +140,7 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
                     $"AD user account {auditDescriptionVerb} failed.",
                     AccountOperationFailedMessage,
                     context.Connection,
+                    loadedBeforeState,
                     AdDirectoryFailureKind.ConnectionFailed,
                     cancellationToken);
             }
@@ -160,8 +170,10 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
                 $"AD user account {auditDescriptionVerb} failed.",
                 SanitizeLdapError(ex),
                 context.Connection,
+                loadedBeforeState,
                 AdDirectoryFailureKind.ConnectionFailed,
-                cancellationToken);
+                cancellationToken,
+                ex);
         }
         catch (Exception)
         {
@@ -172,6 +184,7 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
                 $"AD user account {auditDescriptionVerb} failed.",
                 AccountOperationFailedMessage,
                 context.Connection,
+                loadedBeforeState,
                 AdDirectoryFailureKind.ConnectionFailed,
                 cancellationToken);
         }
@@ -194,6 +207,7 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
                 "AD user account unlock failed.",
                 connectionResult.Message,
                 connectionResult.Context?.Connection,
+                beforeState: null,
                 connectionResult.FailureKind,
                 cancellationToken);
         }
@@ -209,9 +223,12 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
                 "AD user account unlock failed.",
                 AdManagementNotConfiguredMessage,
                 context.Connection,
+                beforeState: null,
                 AdDirectoryFailureKind.NotConfigured,
                 cancellationToken);
         }
+
+        AdUserAccountState? loadedBeforeState = null;
 
         try
         {
@@ -229,9 +246,12 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
                     "AD user account unlock failed.",
                     UserNotFoundMessage,
                     context.Connection,
+                    beforeState: null,
                     AdDirectoryFailureKind.NotFound,
                     cancellationToken);
             }
+
+            loadedBeforeState = beforeState;
 
             if (!beforeState.IsLockedOut)
             {
@@ -263,6 +283,7 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
                     "AD user account unlock failed.",
                     AccountOperationFailedMessage,
                     context.Connection,
+                    loadedBeforeState,
                     AdDirectoryFailureKind.ConnectionFailed,
                     cancellationToken);
             }
@@ -288,8 +309,10 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
                 "AD user account unlock failed.",
                 SanitizeLdapError(ex),
                 context.Connection,
+                loadedBeforeState,
                 AdDirectoryFailureKind.ConnectionFailed,
-                cancellationToken);
+                cancellationToken,
+                ex);
         }
         catch (Exception)
         {
@@ -300,6 +323,7 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
                 "AD user account unlock failed.",
                 AccountOperationFailedMessage,
                 context.Connection,
+                loadedBeforeState,
                 AdDirectoryFailureKind.ConnectionFailed,
                 cancellationToken);
         }
@@ -359,7 +383,8 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
             GetFirstString(entry, "userPrincipalName"),
             userAccountControl,
             AdLdapValueConverter.IsAccountEnabled(userAccountControl),
-            AdLdapValueConverter.IsAccountLockedOut(lockoutTime));
+            AdLdapValueConverter.IsAccountLockedOut(lockoutTime),
+            lockoutTime);
 
         return true;
     }
@@ -466,18 +491,45 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
         string auditDescription,
         string message,
         AdManagementConnectionParameters? connection,
+        AdUserAccountState? beforeState,
         AdDirectoryFailureKind? failureKind,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        LdapException? ldapException = null)
     {
+        var step = operationType == AdManagementOperationTypes.UserUnlock
+            ? AccountUnlockStep
+            : AccountModifyStep;
+        if (beforeState is null && string.Equals(message, UserNotFoundMessage, StringComparison.Ordinal))
+        {
+            step = AccountLoadUserStep;
+        }
+
+        var diagnosticJson = ldapException is null
+            ? BuildAccountFailureDiagnostic(
+                operationType,
+                step,
+                request.UserId,
+                beforeState?.DistinguishedName,
+                ResolveAccountFailureReason(message),
+                message)
+            : AdOperationErrorDiagnosticBuilder.BuildAccountOperationFailureJson(
+                operationType,
+                step,
+                request.UserId,
+                beforeState?.DistinguishedName,
+                ldapResultCode: ldapException.ErrorCode,
+                ldapExceptionErrorCode: ldapException.ErrorCode,
+                ldapDiagnosticMessage: ldapException.Message);
+
         await WriteAccountOperationLogsAsync(
             request,
             operationType,
             AdManagementOperationStatuses.Failed,
             connection,
-            null,
-            null,
-            message,
-            null,
+            beforeState,
+            afterState: beforeState,
+            diagnosticJson,
+            notificationSummary: null,
             cancellationToken);
 
         if (!string.IsNullOrWhiteSpace(auditDescription))
@@ -511,38 +563,53 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
         AdManagementConnectionParameters? connection,
         AdUserAccountState? beforeState,
         AdUserAccountState? afterState,
-        string? errorMessage,
+        string? errorDiagnosticJson,
         AdManagementNotificationSummary? notificationSummary,
         CancellationToken cancellationToken)
     {
+        var requestedEnabled = operationType switch
+        {
+            AdManagementOperationTypes.UserEnable => true,
+            AdManagementOperationTypes.UserDisable => false,
+            _ => (bool?)null,
+        };
+
+        var requestSummary = AdOperationLogSnapshotBuilder.BuildAccountRequestSummary(
+            operationType,
+            request.UserId,
+            requestedEnabled);
+
         var beforeSnapshot = beforeState is null
             ? null
-            : JsonSerializer.Serialize(new
-            {
-                userId = beforeState.UserId,
-                samAccountName = beforeState.SamAccountName,
-                userPrincipalName = beforeState.UserPrincipalName,
-                distinguishedName = beforeState.DistinguishedName,
-                isEnabled = beforeState.IsEnabled,
-                isLockedOut = beforeState.IsLockedOut,
-                userAccountControl = beforeState.UserAccountControl,
-            });
+            : AdOperationLogSnapshotBuilder.BuildAccountBeforeSnapshot(
+                operationType,
+                beforeState.UserId,
+                beforeState.SamAccountName,
+                beforeState.UserPrincipalName,
+                beforeState.DistinguishedName,
+                beforeState.IsEnabled,
+                beforeState.IsLockedOut,
+                beforeState.UserAccountControl,
+                beforeState.LockoutTime);
 
         var afterSnapshot = afterState is null
             ? null
-            : JsonSerializer.Serialize(new
-            {
-                userId = afterState.UserId,
-                samAccountName = afterState.SamAccountName,
-                userPrincipalName = afterState.UserPrincipalName,
-                distinguishedName = afterState.DistinguishedName,
-                isEnabled = afterState.IsEnabled,
-                isLockedOut = afterState.IsLockedOut,
-                userAccountControl = afterState.UserAccountControl,
-                notifications = notificationSummary is null
-                    ? null
-                    : FormatNotificationLogSummary(notificationSummary),
-            });
+            : AdOperationLogSnapshotBuilder.BuildAccountAfterSnapshot(
+                operationType,
+                afterState.IsEnabled,
+                afterState.IsLockedOut,
+                afterState.UserAccountControl,
+                afterState.LockoutTime);
+
+        if (notificationSummary is not null && afterSnapshot is not null)
+        {
+            afterSnapshot = AppendNotificationSummary(afterSnapshot, notificationSummary);
+        }
+
+        var isSuccess = string.Equals(
+            status,
+            AdManagementOperationStatuses.Succeeded,
+            StringComparison.Ordinal);
 
         await adOperationLogService.WriteAsync(
             new AdOperationLogEntry
@@ -553,7 +620,11 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
                 TargetDistinguishedName = afterState?.DistinguishedName ?? beforeState?.DistinguishedName,
                 TargetObjectGuid = afterState?.UserId ?? beforeState?.UserId ?? request.UserId.ToString("D"),
                 TargetSamAccountName = afterState?.SamAccountName ?? beforeState?.SamAccountName,
-                ErrorMessage = errorMessage,
+                ErrorCode = isSuccess
+                    ? null
+                    : AdOperationLogErrorCodeExtractor.TryExtractFromDiagnosticJson(errorDiagnosticJson),
+                ErrorMessage = isSuccess ? null : errorDiagnosticJson,
+                RequestSummaryJson = requestSummary,
                 BeforeSnapshotJson = beforeSnapshot,
                 AfterSnapshotJson = afterSnapshot,
                 ActorUserId = request.ActorUserId,
@@ -564,6 +635,76 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
             },
             cancellationToken);
     }
+
+    private static string AppendNotificationSummary(
+        string afterSnapshotJson,
+        AdManagementNotificationSummary notificationSummary)
+    {
+        using var document = System.Text.Json.JsonDocument.Parse(afterSnapshotJson);
+        using var stream = new MemoryStream();
+        using (var writer = new System.Text.Json.Utf8JsonWriter(stream))
+        {
+            writer.WriteStartObject();
+            foreach (var property in document.RootElement.EnumerateObject())
+            {
+                property.WriteTo(writer);
+            }
+
+            writer.WriteString(
+                "notifications",
+                FormatNotificationLogSummary(notificationSummary));
+            writer.WriteEndObject();
+        }
+
+        return System.Text.Encoding.UTF8.GetString(stream.ToArray());
+    }
+
+    private static string? ResolveAccountFailureReason(string message)
+    {
+        if (string.Equals(message, UserNotFoundMessage, StringComparison.Ordinal))
+        {
+            return AdUserUpdateNormalizedReasons.NoSuchObject;
+        }
+
+        if (string.Equals(message, AdManagementNotConfiguredMessage, StringComparison.Ordinal))
+        {
+            return AdUserUpdateNormalizedReasons.InvalidRequest;
+        }
+
+        if (string.Equals(message, AccountOperationFailedMessage, StringComparison.Ordinal))
+        {
+            return AdUserUpdateNormalizedReasons.ConnectionFailed;
+        }
+
+        return null;
+    }
+
+    private static string BuildAccountFailureDiagnostic(
+        string operationType,
+        string step,
+        Guid targetObjectGuid,
+        string? targetDistinguishedName,
+        string? normalizedReasonOverride,
+        string userMessage) =>
+        AdOperationErrorDiagnosticBuilder.BuildAccountOperationFailureJson(
+            operationType,
+            step,
+            targetObjectGuid,
+            targetDistinguishedName,
+            englishMessageOverride: ResolveAccountFailureEnglishMessage(userMessage),
+            normalizedReasonOverride: normalizedReasonOverride);
+
+    private static string ResolveAccountFailureEnglishMessage(string userMessage) =>
+        userMessage switch
+        {
+            var message when string.Equals(message, UserNotFoundMessage, StringComparison.Ordinal) =>
+                "The AD user could not be found.",
+            var message when string.Equals(message, AdManagementNotConfiguredMessage, StringComparison.Ordinal) =>
+                "AD management is not configured.",
+            var message when string.Equals(message, AccountOperationFailedMessage, StringComparison.Ordinal) =>
+                "The AD account operation failed.",
+            _ => "The AD account operation failed.",
+        };
 
     private static string SanitizeLdapError(LdapException exception) =>
         string.IsNullOrWhiteSpace(exception.Message) || exception.Message.Contains("ldap", StringComparison.OrdinalIgnoreCase)
@@ -698,5 +839,6 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
         string? UserPrincipalName,
         int? UserAccountControl,
         bool IsEnabled,
-        bool IsLockedOut);
+        bool IsLockedOut,
+        long? LockoutTime);
 }

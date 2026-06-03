@@ -1,6 +1,8 @@
 using System.Reflection;
+using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using SasPortal.Application.Abstractions.Services;
+using SasPortal.Application.Common.AdManagement;
 using SasPortal.Application.Common.Constants;
 using SasPortal.Application.Common.Models;
 using SasPortal.Infrastructure.Services;
@@ -184,6 +186,7 @@ public sealed class AdUserDirectoryServiceGroupMembershipLoggingTests
         "Grup üyeliği eklendi.",
         connection,
         userContext,
+        userContext,
         groupInfo,
         CancellationToken.None,
       ])!;
@@ -211,6 +214,7 @@ public sealed class AdUserDirectoryServiceGroupMembershipLoggingTests
         "Add",
         "AD user added to group failed.",
         message,
+        BuildFailureDiagnostic(),
         userContext,
         groupInfo,
         "CN=VPN Users,DC=example,DC=com",
@@ -220,6 +224,15 @@ public sealed class AdUserDirectoryServiceGroupMembershipLoggingTests
 
     return await task;
   }
+
+  private static string BuildFailureDiagnostic() =>
+    AdOperationErrorDiagnosticBuilder.BuildGroupMembershipFailureJson(
+      AdManagementOperationTypes.UserGroupAdd,
+      "LoadGroup",
+      UserObjectGuid,
+      "CN=user,DC=example,DC=com",
+      englishMessageOverride: "The AD group could not be found.",
+      normalizedReasonOverride: AdUserUpdateNormalizedReasons.NoSuchObject);
 
   private static object CreateChangeRequest()
   {

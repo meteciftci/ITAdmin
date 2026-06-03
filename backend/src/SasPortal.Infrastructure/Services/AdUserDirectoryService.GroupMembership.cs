@@ -1,5 +1,4 @@
 using System.DirectoryServices.Protocols;
-using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using SasPortal.Application.Abstractions.Services;
 using SasPortal.Application.Common.AdManagement;
@@ -25,6 +24,10 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
         "AD group membership operation succeeded but logging failed.";
     private const string GroupMembershipFailureLoggingFailedMessage =
         "AD group membership operation failed but logging failed.";
+    private const string GroupMembershipValidateStep = "ValidateRequest";
+    private const string GroupMembershipLoadUserStep = "LoadUser";
+    private const string GroupMembershipLoadGroupStep = "LoadGroup";
+    private const string GroupMembershipModifyStep = "ModifyGroupMembership";
 
     public Task<AdUserGroupMembershipResult> GetUserGroupsAsync(
         AdUserGroupMembershipRequest request,
@@ -247,6 +250,13 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
                 auditAction,
                 add ? "AD user added to group failed." : "AD user removed from group failed.",
                 InvalidGroupDnMessage,
+                BuildGroupFailureDiagnostic(
+                    operationType,
+                    GroupMembershipValidateStep,
+                    request.UserId,
+                    null,
+                    englishMessageOverride: "The group distinguished name is invalid.",
+                    normalizedReasonOverride: AdUserUpdateNormalizedReasons.InvalidRequest),
                 null,
                 null,
                 null,
@@ -263,6 +273,13 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
                 auditAction,
                 add ? "AD user added to group failed." : "AD user removed from group failed.",
                 connectionResult.Message,
+                BuildGroupFailureDiagnostic(
+                    operationType,
+                    GroupMembershipValidateStep,
+                    request.UserId,
+                    groupDn,
+                    englishMessageOverride: "The LDAP connection failed.",
+                    normalizedReasonOverride: AdUserUpdateNormalizedReasons.ConnectionFailed),
                 null,
                 null,
                 groupDn,
@@ -279,6 +296,13 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
                 auditAction,
                 add ? "AD user added to group failed." : "AD user removed from group failed.",
                 AdManagementNotConfiguredMessage,
+                BuildGroupFailureDiagnostic(
+                    operationType,
+                    GroupMembershipValidateStep,
+                    request.UserId,
+                    groupDn,
+                    englishMessageOverride: "AD management is not configured.",
+                    normalizedReasonOverride: AdUserUpdateNormalizedReasons.InvalidRequest),
                 null,
                 null,
                 groupDn,
@@ -301,6 +325,13 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
                     auditAction,
                     add ? "AD user added to group failed." : "AD user removed from group failed.",
                     UserNotFoundMessage,
+                    BuildGroupFailureDiagnostic(
+                        operationType,
+                        GroupMembershipLoadUserStep,
+                        request.UserId,
+                        null,
+                        englishMessageOverride: "The AD user could not be found.",
+                        normalizedReasonOverride: AdUserUpdateNormalizedReasons.NoSuchObject),
                     null,
                     null,
                     groupDn,
@@ -316,6 +347,13 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
                     auditAction,
                     add ? "AD user added to group failed." : "AD user removed from group failed.",
                     GroupNotFoundMessage,
+                    BuildGroupFailureDiagnostic(
+                        operationType,
+                        GroupMembershipLoadGroupStep,
+                        request.UserId,
+                        userContext.DistinguishedName,
+                        englishMessageOverride: "The AD group could not be found.",
+                        normalizedReasonOverride: AdUserUpdateNormalizedReasons.NoSuchObject),
                     userContext,
                     null,
                     groupDn,
@@ -323,9 +361,8 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
                     cancellationToken);
             }
 
-            var isMember = userContext.MemberOfDns.Contains(
-                groupInfo.DistinguishedName,
-                StringComparer.OrdinalIgnoreCase);
+            var isMember = IsDirectGroupMember(userContext, groupInfo);
+            var beforeContext = userContext;
 
             if (add && isMember)
             {
@@ -336,6 +373,7 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
                     $"AD user added to group. User: {userContext.SamAccountName}. Group: {groupInfo.Name}.",
                     UserAlreadyInGroupMessage,
                     connectionResult.Context.Connection,
+                    beforeContext,
                     userContext,
                     groupInfo,
                     cancellationToken);
@@ -350,6 +388,7 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
                     $"AD user removed from group. User: {userContext.SamAccountName}. Group: {groupInfo.Name}.",
                     UserNotInGroupMessage,
                     connectionResult.Context.Connection,
+                    beforeContext,
                     userContext,
                     groupInfo,
                     cancellationToken);
@@ -377,7 +416,14 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
                     auditAction,
                     add ? "AD user added to group failed." : "AD user removed from group failed.",
                     GroupOperationFailedMessage,
-                    userContext,
+                    BuildGroupFailureDiagnostic(
+                        operationType,
+                        GroupMembershipModifyStep,
+                        request.UserId,
+                        userContext.DistinguishedName,
+                        englishMessageOverride: "The AD group membership operation failed after modify.",
+                        normalizedReasonOverride: AdUserUpdateNormalizedReasons.ConnectionFailed),
+                    beforeContext,
                     groupInfo,
                     groupDn,
                     AdDirectoryFailureKind.ConnectionFailed,
@@ -396,6 +442,7 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
                 auditDescription,
                 successMessage,
                 connectionResult.Context.Connection,
+                beforeContext,
                 afterContext,
                 groupInfo,
                 cancellationToken);
@@ -408,6 +455,14 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
                 auditAction,
                 add ? "AD user added to group failed." : "AD user removed from group failed.",
                 SanitizeGroupLdapError(ex),
+                BuildGroupFailureDiagnostic(
+                    operationType,
+                    GroupMembershipModifyStep,
+                    request.UserId,
+                    null,
+                    ldapResultCode: ex.ErrorCode,
+                    ldapExceptionErrorCode: ex.ErrorCode,
+                    ldapDiagnosticMessage: ex.Message),
                 null,
                 null,
                 groupDn,
@@ -422,6 +477,13 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
                 auditAction,
                 add ? "AD user added to group failed." : "AD user removed from group failed.",
                 GroupOperationFailedMessage,
+                BuildGroupFailureDiagnostic(
+                    operationType,
+                    GroupMembershipModifyStep,
+                    request.UserId,
+                    null,
+                    englishMessageOverride: "The AD group membership operation failed.",
+                    normalizedReasonOverride: AdUserUpdateNormalizedReasons.Unknown),
                 null,
                 null,
                 groupDn,
@@ -437,7 +499,8 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
         string auditDescription,
         string message,
         AdManagementConnectionParameters connection,
-        AdUserGroupContext userContext,
+        AdUserGroupContext beforeContext,
+        AdUserGroupContext afterContext,
         AdGroupDirectoryInfo groupInfo,
         CancellationToken cancellationToken)
     {
@@ -447,14 +510,15 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
             auditAction,
             auditDescription,
             connection,
-            userContext,
+            beforeContext,
+            afterContext,
             groupInfo,
             cancellationToken);
 
         return new AdUserGroupOperationResult(
             true,
             message,
-            userContext.UserId,
+            afterContext.UserId,
             groupInfo.DistinguishedName,
             groupInfo.Name);
     }
@@ -465,7 +529,8 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
         string auditAction,
         string auditDescription,
         string message,
-        AdUserGroupContext? userContext,
+        string errorDiagnosticJson,
+        AdUserGroupContext? beforeContext,
         AdGroupDirectoryInfo? groupInfo,
         string? groupDn,
         AdDirectoryFailureKind? failureKind,
@@ -476,9 +541,9 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
             operationType,
             auditAction,
             auditDescription,
-            userContext,
+            beforeContext,
             groupInfo,
-            message,
+            errorDiagnosticJson,
             cancellationToken);
 
         return new AdUserGroupOperationResult(
@@ -496,7 +561,8 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
         string auditAction,
         string auditDescription,
         AdManagementConnectionParameters connection,
-        AdUserGroupContext userContext,
+        AdUserGroupContext beforeContext,
+        AdUserGroupContext afterContext,
         AdGroupDirectoryInfo groupInfo,
         CancellationToken cancellationToken)
     {
@@ -507,9 +573,10 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
                 operationType,
                 AdManagementOperationStatuses.Succeeded,
                 connection,
-                userContext,
+                beforeContext,
+                afterContext,
                 groupInfo,
-                null,
+                errorDiagnosticJson: null,
                 cancellationToken);
         }
         catch (Exception ex)
@@ -519,7 +586,7 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
                 operationSucceeded: true,
                 operationType,
                 request,
-                userContext,
+                afterContext,
                 groupInfo);
         }
 
@@ -528,7 +595,7 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
             await auditLogWriter.WriteAsync(
                 BuildGroupMembershipAuditRequest(
                     auditAction,
-                    userContext.UserId,
+                    afterContext.UserId,
                     auditDescription,
                     request),
                 cancellationToken);
@@ -540,7 +607,7 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
                 operationSucceeded: true,
                 operationType,
                 request,
-                userContext,
+                afterContext,
                 groupInfo);
         }
     }
@@ -550,9 +617,9 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
         string operationType,
         string auditAction,
         string auditDescription,
-        AdUserGroupContext? userContext,
+        AdUserGroupContext? beforeContext,
         AdGroupDirectoryInfo? groupInfo,
-        string? errorMessage,
+        string errorDiagnosticJson,
         CancellationToken cancellationToken)
     {
         try
@@ -561,10 +628,11 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
                 request,
                 operationType,
                 AdManagementOperationStatuses.Failed,
-                null,
-                userContext,
+                connection: null,
+                beforeContext,
+                afterContext: beforeContext,
                 groupInfo,
-                errorMessage,
+                errorDiagnosticJson,
                 cancellationToken);
         }
         catch (Exception ex)
@@ -574,7 +642,7 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
                 operationSucceeded: false,
                 operationType,
                 request,
-                userContext,
+                beforeContext,
                 groupInfo);
         }
 
@@ -588,7 +656,7 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
             await auditLogWriter.WriteAsync(
                 BuildGroupMembershipAuditRequest(
                     auditAction,
-                    userContext?.UserId ?? request.UserId.ToString("D"),
+                    beforeContext?.UserId ?? request.UserId.ToString("D"),
                     auditDescription,
                     request),
                 cancellationToken);
@@ -600,7 +668,7 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
                 operationSucceeded: false,
                 operationType,
                 request,
-                userContext,
+                beforeContext,
                 groupInfo);
         }
     }
@@ -657,29 +725,47 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
         string operationType,
         string status,
         AdManagementConnectionParameters? connection,
-        AdUserGroupContext? userContext,
+        AdUserGroupContext? beforeContext,
+        AdUserGroupContext? afterContext,
         AdGroupDirectoryInfo? groupInfo,
-        string? errorMessage,
+        string? errorDiagnosticJson,
         CancellationToken cancellationToken)
     {
-        var requestSummary = JsonSerializer.Serialize(new
-        {
-            userId = request.UserId,
-            groupDistinguishedName = groupInfo?.DistinguishedName ?? request.GroupDistinguishedName,
-            groupName = groupInfo?.Name,
-        });
+        var groupDistinguishedName = groupInfo?.DistinguishedName ?? request.GroupDistinguishedName;
+        var requestSummary = AdOperationLogSnapshotBuilder.BuildGroupMembershipRequestSummary(
+            operationType,
+            request.UserId,
+            groupDistinguishedName,
+            groupInfo?.Name);
 
-        var snapshot = userContext is null
+        var beforeSnapshot = beforeContext is null || groupInfo is null
             ? null
-            : JsonSerializer.Serialize(new
-            {
-                userId = userContext.UserId,
-                samAccountName = userContext.SamAccountName,
-                userPrincipalName = userContext.UserPrincipalName,
-                distinguishedName = userContext.DistinguishedName,
-                groupDistinguishedName = groupInfo?.DistinguishedName,
-                groupName = groupInfo?.Name,
-            });
+            : AdOperationLogSnapshotBuilder.BuildGroupMembershipBeforeSnapshot(
+                operationType,
+                beforeContext.UserId,
+                beforeContext.SamAccountName,
+                beforeContext.UserPrincipalName,
+                beforeContext.DistinguishedName,
+                groupInfo.Name,
+                groupInfo.DistinguishedName,
+                IsDirectGroupMember(beforeContext, groupInfo));
+
+        var afterSnapshot = afterContext is null || groupInfo is null
+            ? null
+            : AdOperationLogSnapshotBuilder.BuildGroupMembershipAfterSnapshot(
+                operationType,
+                afterContext.UserId,
+                afterContext.SamAccountName,
+                afterContext.UserPrincipalName,
+                afterContext.DistinguishedName,
+                groupInfo.Name,
+                groupInfo.DistinguishedName,
+                IsDirectGroupMember(afterContext, groupInfo));
+
+        var isSuccess = string.Equals(
+            status,
+            AdManagementOperationStatuses.Succeeded,
+            StringComparison.Ordinal);
 
         await adOperationLogService.WriteAsync(
             new AdOperationLogEntry
@@ -687,12 +773,16 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
                 OperationType = operationType,
                 Status = status,
                 TargetObjectType = AdManagementTargetUserTypes.AdUser,
-                TargetDistinguishedName = userContext?.DistinguishedName,
-                TargetObjectGuid = userContext?.UserId ?? request.UserId.ToString("D"),
-                TargetSamAccountName = userContext?.SamAccountName,
-                ErrorMessage = errorMessage,
+                TargetDistinguishedName = afterContext?.DistinguishedName ?? beforeContext?.DistinguishedName,
+                TargetObjectGuid = afterContext?.UserId ?? beforeContext?.UserId ?? request.UserId.ToString("D"),
+                TargetSamAccountName = afterContext?.SamAccountName ?? beforeContext?.SamAccountName,
+                ErrorCode = isSuccess
+                    ? null
+                    : AdOperationLogErrorCodeExtractor.TryExtractFromDiagnosticJson(errorDiagnosticJson),
+                ErrorMessage = isSuccess ? null : errorDiagnosticJson,
                 RequestSummaryJson = requestSummary,
-                AfterSnapshotJson = snapshot,
+                BeforeSnapshotJson = beforeSnapshot,
+                AfterSnapshotJson = afterSnapshot,
                 ActorUserId = request.ActorUserId,
                 ActorUserName = request.ActorUserName,
                 IpAddress = request.ActorIpAddress,
@@ -701,6 +791,30 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
             },
             cancellationToken);
     }
+
+    private static bool IsDirectGroupMember(AdUserGroupContext userContext, AdGroupDirectoryInfo groupInfo) =>
+        userContext.MemberOfDns.Contains(groupInfo.DistinguishedName, StringComparer.OrdinalIgnoreCase);
+
+    private static string BuildGroupFailureDiagnostic(
+        string operationType,
+        string step,
+        Guid targetObjectGuid,
+        string? targetDistinguishedName,
+        string? englishMessageOverride = null,
+        string? normalizedReasonOverride = null,
+        int? ldapResultCode = null,
+        int? ldapExceptionErrorCode = null,
+        string? ldapDiagnosticMessage = null) =>
+        AdOperationErrorDiagnosticBuilder.BuildGroupMembershipFailureJson(
+            operationType,
+            step,
+            targetObjectGuid,
+            targetDistinguishedName,
+            englishMessageOverride,
+            ldapResultCode,
+            ldapExceptionErrorCode,
+            ldapDiagnosticMessage,
+            normalizedReasonOverride);
 
     private static IReadOnlyList<AdUserGroupMembershipItem> BuildDirectGroupMembershipItems(
         LdapConnection ldapConnection,

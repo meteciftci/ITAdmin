@@ -1,7 +1,6 @@
 using System.DirectoryServices.Protocols;
 using System.Net;
 using System.Text;
-using System.Text.Json;
 using SasPortal.Application.Abstractions.Services;
 using SasPortal.Application.Common.AdManagement;
 using SasPortal.Application.Common.Constants;
@@ -202,6 +201,7 @@ public sealed partial class AdUserDirectoryService
                     request,
                     NamingConflictFailedMessage,
                     connection,
+                    step: "ResolveNaming",
                     cancellationToken);
                 return new CreateAdUserResult(
                     false,
@@ -238,7 +238,7 @@ public sealed partial class AdUserDirectoryService
             catch (CreateUserLdapException ex)
             {
                 TryDeleteCreatedUser(ldapConnection, distinguishedName);
-                await WriteCreateFailureLogsAsync(request, ex.UserMessage, connection, cancellationToken);
+                await WriteCreateFailureLogsAsync(request, ex.UserMessage, connection, step: "CreateUser", cancellationToken);
                 return new CreateAdUserResult(
                     false,
                     ex.UserMessage,
@@ -278,6 +278,7 @@ public sealed partial class AdUserDirectoryService
                 request,
                 response,
                 connection,
+                mappings,
                 notificationSummary,
                 cancellationToken);
 
@@ -289,6 +290,7 @@ public sealed partial class AdUserDirectoryService
                 request,
                 CreateUserFailedMessage,
                 connectionResult.Context.Connection,
+                step: "CreateUser",
                 cancellationToken);
             return new CreateAdUserResult(
                 false,
@@ -302,6 +304,7 @@ public sealed partial class AdUserDirectoryService
                 request,
                 CreateUserFailedMessage,
                 connectionResult.Context.Connection,
+                step: "CreateUser",
                 cancellationToken);
             return new CreateAdUserResult(
                 false,
@@ -628,22 +631,16 @@ public sealed partial class AdUserDirectoryService
         CreateAdUserRequest request,
         CreateAdUserResponse response,
         AdManagementConnectionParameters connection,
-        AdManagementNotificationSummary notificationSummary,
+        IReadOnlyList<AdAttributeMappingItem> mappings,
+        AdManagementNotificationSummary _,
         CancellationToken cancellationToken)
     {
-        var summary = JsonSerializer.Serialize(new
-        {
-            givenName = request.GivenName.Trim(),
-            surname = request.Surname.Trim(),
-            samAccountName = response.SamAccountName,
-            userPrincipalName = response.UserPrincipalName,
-            targetOuDistinguishedName = request.TargetOuDistinguishedName,
-            isEnabled = request.IsEnabled,
-            mustChangePasswordAtNextLogon = request.MustChangePasswordAtNextLogon,
-            namingCollisionResolved = response.NamingCollisionResolved,
-            generatedSuffix = response.GeneratedSuffix,
-            notifications = FormatNotificationLogSummary(notificationSummary),
-        });
+        var requestSummary = AdOperationLogSnapshotBuilder.BuildCreateRequestSummary(request);
+        var afterSnapshot = AdOperationLogSnapshotBuilder.BuildCreateAfterSnapshot(
+            response,
+            request.IsEnabled,
+            request.MappedAttributes,
+            mappings);
 
         await adOperationLogService.WriteAsync(
             new AdOperationLogEntry
@@ -654,7 +651,9 @@ public sealed partial class AdUserDirectoryService
                 TargetDistinguishedName = response.DistinguishedName,
                 TargetObjectGuid = response.Id,
                 TargetSamAccountName = response.SamAccountName,
-                RequestSummaryJson = summary,
+                RequestSummaryJson = requestSummary,
+                BeforeSnapshotJson = null,
+                AfterSnapshotJson = afterSnapshot,
                 ActorUserId = request.ActorUserId,
                 ActorUserName = request.ActorUserName,
                 IpAddress = request.ActorIpAddress,
@@ -682,15 +681,14 @@ public sealed partial class AdUserDirectoryService
         CreateAdUserRequest request,
         string message,
         AdManagementConnectionParameters connection,
+        string step,
         CancellationToken cancellationToken)
     {
-        var summary = JsonSerializer.Serialize(new
-        {
-            givenName = request.GivenName?.Trim(),
-            surname = request.Surname?.Trim(),
-            targetOuDistinguishedName = request.TargetOuDistinguishedName,
-            isEnabled = request.IsEnabled,
-        });
+        var requestSummary = AdOperationLogSnapshotBuilder.BuildCreateRequestSummary(request);
+        var diagnosticJson = AdOperationErrorDiagnosticBuilder.BuildCreateUserFailureJson(
+            step,
+            englishMessageOverride: ResolveCreateFailureEnglishMessage(message),
+            normalizedReasonOverride: ResolveCreateFailureReason(message));
 
         await adOperationLogService.WriteAsync(
             new AdOperationLogEntry
@@ -699,8 +697,11 @@ public sealed partial class AdUserDirectoryService
                 Status = AdManagementOperationStatuses.Failed,
                 TargetObjectType = AdManagementTargetUserTypes.AdUser,
                 TargetDistinguishedName = request.TargetOuDistinguishedName,
-                ErrorMessage = message,
-                RequestSummaryJson = summary,
+                ErrorCode = AdOperationLogErrorCodeExtractor.TryExtractFromDiagnosticJson(diagnosticJson),
+                ErrorMessage = diagnosticJson,
+                RequestSummaryJson = requestSummary,
+                BeforeSnapshotJson = null,
+                AfterSnapshotJson = null,
                 ActorUserId = request.ActorUserId,
                 ActorUserName = request.ActorUserName,
                 IpAddress = request.ActorIpAddress,
@@ -709,6 +710,38 @@ public sealed partial class AdUserDirectoryService
             },
             cancellationToken);
     }
+
+    private static string? ResolveCreateFailureReason(string message)
+    {
+        if (string.Equals(message, NamingConflictFailedMessage, StringComparison.Ordinal))
+        {
+            return AdUserUpdateNormalizedReasons.DuplicateValue;
+        }
+
+        if (string.Equals(message, PasswordSetFailedMessage, StringComparison.Ordinal))
+        {
+            return AdUserUpdateNormalizedReasons.InvalidRequest;
+        }
+
+        if (string.Equals(message, CreateUserFailedMessage, StringComparison.Ordinal))
+        {
+            return AdUserUpdateNormalizedReasons.ConnectionFailed;
+        }
+
+        return AdUserUpdateNormalizedReasons.Unknown;
+    }
+
+    private static string ResolveCreateFailureEnglishMessage(string message) =>
+        message switch
+        {
+            var value when string.Equals(value, NamingConflictFailedMessage, StringComparison.Ordinal) =>
+                "A suitable samAccountName or UPN could not be resolved for the requested user.",
+            var value when string.Equals(value, PasswordSetFailedMessage, StringComparison.Ordinal) =>
+                "The initial password could not be set because LDAPS is required.",
+            var value when string.Equals(value, CreateUserFailedMessage, StringComparison.Ordinal) =>
+                "The AD user create operation failed.",
+            _ => "The AD user create operation failed.",
+        };
 
     private static AdOrganizationalUnitSearchResult OuConnectionFailed() =>
         new(false, DirectoryQueryFailedMessage, null, AdDirectoryFailureKind.ConnectionFailed);
