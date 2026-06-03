@@ -1,4 +1,14 @@
-const AD_USERS_LIST_FALLBACK = "/ad-management/users";
+import { buildAdUserDetailPath } from "./ad-user-detail-path.ts";
+import { AD_USERS_LIST_PATH } from "./ad-users-list-path.ts";
+
+export const AD_USER_RETURN_LABEL_DETAIL = "adUserDetail";
+
+export type AdUserNavigationState = {
+  returnTo?: string;
+  returnLabel?: string;
+};
+
+const AD_USERS_LIST_FALLBACK = AD_USERS_LIST_PATH;
 
 const BLOCKED_RETURN_TO_PREFIXES = [
   "http:",
@@ -44,4 +54,60 @@ export function buildReturnToQueryParam(path: string): string {
 export function appendReturnTo(path: string, returnTo: string): string {
   const separator = path.includes("?") ? "&" : "?";
   return `${path}${separator}returnTo=${buildReturnToQueryParam(returnTo)}`;
+}
+
+export function buildAdUserDetailReturnState(userId: string): AdUserNavigationState {
+  return {
+    returnTo: buildAdUserDetailPath(userId),
+    returnLabel: AD_USER_RETURN_LABEL_DETAIL,
+  };
+}
+
+export function readAdUserReturnToFromState(state: unknown): string | undefined {
+  if (!state || typeof state !== "object") {
+    return undefined;
+  }
+
+  const returnTo = (state as AdUserNavigationState).returnTo;
+  return typeof returnTo === "string" ? returnTo : undefined;
+}
+
+export function resolveAdUserReturnPath(
+  state: unknown,
+  fallback: string = AD_USERS_LIST_FALLBACK,
+): string {
+  const returnTo = readAdUserReturnToFromState(state);
+  if (!returnTo?.trim()) {
+    return fallback;
+  }
+
+  return resolveSafeReturnPath(returnTo);
+}
+
+/** @deprecated Prefer location.state; kept for legacy query-based returnTo links. */
+export function readAdUserReturnToFromSearchParams(
+  searchParams: URLSearchParams,
+): string | undefined {
+  const returnTo = searchParams.get("returnTo");
+  return returnTo?.trim() ? returnTo : undefined;
+}
+
+export function resolveAdUserReturnPathFromLocation(
+  state: unknown,
+  searchParams?: URLSearchParams,
+  fallback: string = AD_USERS_LIST_FALLBACK,
+): string {
+  const fromState = readAdUserReturnToFromState(state);
+  if (fromState?.trim()) {
+    return resolveSafeReturnPath(fromState);
+  }
+
+  const fromQuery = searchParams
+    ? readAdUserReturnToFromSearchParams(searchParams)
+    : undefined;
+  if (fromQuery) {
+    return resolveSafeReturnPath(fromQuery);
+  }
+
+  return fallback;
 }

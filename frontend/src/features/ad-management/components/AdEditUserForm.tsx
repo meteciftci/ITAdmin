@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AD_USERS_LIST_PATH } from "@/features/ad-management/ad-users-list-path";
 import { buildChangedMappedAttributes } from "@/features/ad-management/ad-edit-mapped-attributes";
 import { isReservedCoreAdAttribute } from "@/features/ad-management/ad-reserved-core-attributes";
 import {
@@ -65,9 +64,10 @@ function buildMappedInitialValues(attributes: MappedAdUserAttribute[]): MappedFi
 
 type Props = {
   user: AdUserDetail;
+  returnPath: string;
 };
 
-export function AdEditUserForm({ user }: Props) {
+export function AdEditUserForm({ user, returnPath }: Props) {
   const { t } = useTranslation(["adManagement", "common"]);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -104,7 +104,7 @@ export function AdEditUserForm({ user }: Props) {
         queryKey: [...AD_MANAGEMENT_USERS_QUERY_KEY, "detail", user.id],
       });
       toast.success(t("adManagement:users.edit.messages.updated"));
-      navigate(AD_USERS_LIST_PATH);
+      navigate(returnPath);
     },
     onError: (error) => {
       toast.error(
@@ -261,7 +261,7 @@ export function AdEditUserForm({ user }: Props) {
 
         <div className="flex flex-wrap justify-end gap-2">
           <Link
-            to={AD_USERS_LIST_PATH}
+            to={returnPath}
             className={cn(buttonVariants({ variant: "outline" }))}
           >
             {t("common:actions.cancel")}

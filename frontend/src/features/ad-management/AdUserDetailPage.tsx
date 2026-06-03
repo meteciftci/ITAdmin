@@ -11,6 +11,7 @@ import { LoadingState } from "@/components/common/LoadingState";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
+import { buildAdUserDetailReturnState } from "@/features/ad-management/ad-return-path";
 import { AD_USERS_LIST_PATH } from "@/features/ad-management/ad-users-list-path";
 import { isGuidLike } from "@/features/ad-management/ad-user-detail-utils";
 import { AD_MANAGEMENT_USERS_QUERY_KEY, getAdUserById } from "@/features/ad-management/api";
@@ -112,6 +113,7 @@ export function AdUserDetailPage() {
               {canUpdateUser && user ? (
                 <Link
                   to={`/ad-management/users/${user.id}/edit`}
+                  state={buildAdUserDetailReturnState(user.id)}
                   className={editUserButtonClass}
                 >
                   {t("adManagement:users.actions.edit")}
@@ -120,6 +122,7 @@ export function AdUserDetailPage() {
               {canManageGroups && user ? (
                 <Link
                   to={`/ad-management/users/${user.id}/groups`}
+                  state={buildAdUserDetailReturnState(user.id)}
                   className={manageGroupsButtonClass}
                 >
                   {t("adManagement:users.actions.manageGroups")}
@@ -161,7 +164,7 @@ export function AdUserDetailPage() {
               showEmptyFields={showEmptyMappedFields}
               onShowEmptyFieldsChange={setShowEmptyMappedFields}
             />
-            <AdUserGroupsSummarySection user={user} canManageGroups={canManageGroups} />
+            <AdUserGroupsSummarySection user={user} />
             {canViewOperationLogs ? (
               <AdUserRecentOperationsSection userId={user.id} enabled />
             ) : null}

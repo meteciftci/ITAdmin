@@ -1,9 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
-import { useAuthStore } from "@/features/auth/auth-store";
 import { buttonVariants } from "@/components/ui/button-variants";
-import { canAccess } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
 import { DetailDialog } from "@/components/common/DetailDialog";
@@ -41,8 +39,6 @@ export function AdUserDetailDialog({
 }: Props) {
   const { t } = useTranslation(["adManagement", "common"]);
   const navigate = useNavigate();
-  const currentUser = useAuthStore((state) => state.user);
-  const canManageGroups = canAccess(currentUser, "AdManagement.Users.Groups.View");
   const [showEmptyMappedFields, setShowEmptyMappedFields] = useState(false);
 
   const headerActions =
@@ -77,7 +73,7 @@ export function AdUserDetailDialog({
             showEmptyFields={showEmptyMappedFields}
             onShowEmptyFieldsChange={setShowEmptyMappedFields}
           />
-          <AdUserGroupsSummarySection user={user} canManageGroups={canManageGroups} />
+          <AdUserGroupsSummarySection user={user} />
         </div>
       ) : null}
     </DetailDialog>
