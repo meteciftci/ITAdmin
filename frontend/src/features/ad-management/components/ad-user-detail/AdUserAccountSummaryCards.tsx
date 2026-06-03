@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import { DateTimeText } from "@/components/common/DateTimeText";
@@ -12,28 +13,48 @@ type Props = {
 export function AdUserAccountSummaryCards({ user }: Props) {
   const { t } = useTranslation("adManagement");
 
-  const cards = [
-    {
-      key: "accountStatus",
-      label: t("users.detail.page.accountStatusCard"),
-      content: <AdAccountStatusBadge isEnabled={user.isEnabled} />,
-    },
-    {
-      key: "lockStatus",
-      label: t("users.detail.page.lockStatusCard"),
-      content: <AdLockStatusBadge isLockedOut={user.isLockedOut} />,
-    },
-    {
-      key: "lastLogon",
-      label: t("users.detail.lastLogon"),
-      content: <DateTimeText value={user.lastLogonAt} />,
-    },
-    {
-      key: "passwordLastSet",
-      label: t("users.detail.passwordLastSet"),
-      content: <DateTimeText value={user.passwordLastSetAt} />,
-    },
-  ];
+  const cards = useMemo(() => {
+    const items = [
+      {
+        key: "accountStatus",
+        label: t("users.detail.page.accountStatusCard"),
+        content: <AdAccountStatusBadge isEnabled={user.isEnabled} />,
+      },
+      {
+        key: "lockStatus",
+        label: t("users.detail.page.lockStatusCard"),
+        content: <AdLockStatusBadge isLockedOut={user.isLockedOut} />,
+      },
+      {
+        key: "lastLogon",
+        label: t("users.detail.lastLogon"),
+        content: <DateTimeText value={user.lastLogonAt} />,
+      },
+      {
+        key: "passwordLastSet",
+        label: t("users.detail.passwordLastSet"),
+        content: <DateTimeText value={user.passwordLastSetAt} />,
+      },
+    ];
+
+    if (user.accountExpiresAt) {
+      items.push({
+        key: "accountExpires",
+        label: t("users.detail.page.accountExpiresCard"),
+        content: <DateTimeText value={user.accountExpiresAt} />,
+      });
+    }
+
+    if (user.badPwdCount !== null && user.badPwdCount !== undefined) {
+      items.push({
+        key: "badPwdCount",
+        label: t("users.detail.page.badPwdCount"),
+        content: <span>{user.badPwdCount}</span>,
+      });
+    }
+
+    return items;
+  }, [t, user]);
 
   return (
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

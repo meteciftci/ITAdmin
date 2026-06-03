@@ -98,7 +98,7 @@ public sealed class AdOperationLogService(AppDbContext context) : IAdOperationLo
         }
         else if (!string.IsNullOrWhiteSpace(query.TargetObjectGuid))
         {
-            logsQuery = ApplyStringContainsFilter(logsQuery, query.TargetObjectGuid.Trim(), StringFilterField.TargetObjectGuid);
+            logsQuery = ApplyTargetObjectGuidFilter(logsQuery, query.TargetObjectGuid.Trim());
         }
 
         if (!string.IsNullOrWhiteSpace(query.ActorUserName))
@@ -235,6 +235,19 @@ public sealed class AdOperationLogService(AppDbContext context) : IAdOperationLo
             _ => logsQuery.Where(x =>
                 x.DomainController != null && x.DomainController.Contains(search)),
         };
+    }
+
+    private static IQueryable<AdOperationLog> ApplyTargetObjectGuidFilter(
+        IQueryable<AdOperationLog> logsQuery,
+        string targetObjectGuid)
+    {
+        if (!Guid.TryParse(targetObjectGuid, out var parsedGuid))
+        {
+            return logsQuery.Where(static _ => false);
+        }
+
+        var canonical = parsedGuid.ToString("D");
+        return logsQuery.Where(x => x.TargetObjectGuid == canonical);
     }
 
     private bool IsNpgsqlProvider() =>

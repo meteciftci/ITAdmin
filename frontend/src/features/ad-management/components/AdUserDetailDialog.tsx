@@ -10,6 +10,7 @@ import { AdUserBasicInfoSection } from "@/features/ad-management/components/ad-u
 import { AdUserGroupsSummarySection } from "@/features/ad-management/components/ad-user-detail/AdUserGroupsSummarySection";
 import { AdUserMappedAttributesSection } from "@/features/ad-management/components/ad-user-detail/AdUserMappedAttributesSection";
 import { AdUserTechnicalInfoSection } from "@/features/ad-management/components/ad-user-detail/AdUserTechnicalInfoSection";
+import type { MappedAttributeDisplayFilter } from "@/features/ad-management/ad-user-detail-utils";
 import type { AdUserDetail } from "@/features/ad-management/types";
 import { useState } from "react";
 
@@ -39,7 +40,8 @@ export function AdUserDetailDialog({
 }: Props) {
   const { t } = useTranslation(["adManagement", "common"]);
   const navigate = useNavigate();
-  const [showEmptyMappedFields, setShowEmptyMappedFields] = useState(false);
+  const [mappedAttributesFilter, setMappedAttributesFilter] =
+    useState<MappedAttributeDisplayFilter>("filled");
 
   const headerActions =
     user && canUpdateUser ? (
@@ -70,8 +72,8 @@ export function AdUserDetailDialog({
           <AdUserTechnicalInfoSection user={user} />
           <AdUserMappedAttributesSection
             user={user}
-            showEmptyFields={showEmptyMappedFields}
-            onShowEmptyFieldsChange={setShowEmptyMappedFields}
+            filter={mappedAttributesFilter}
+            onFilterChange={setMappedAttributesFilter}
           />
           <AdUserGroupsSummarySection user={user} />
         </div>

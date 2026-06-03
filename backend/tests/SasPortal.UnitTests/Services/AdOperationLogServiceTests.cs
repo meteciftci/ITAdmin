@@ -113,6 +113,67 @@ public sealed class AdOperationLogServiceTests
     }
 
     [Fact]
+    public async Task GetLogsAsync_FiltersByTargetObjectGuidExactMatch()
+    {
+        var (connection, dbContext) = await SqliteTestDbContextFactory.CreateAsync();
+        using var _ = connection;
+        await using var context = dbContext;
+
+        var targetGuid = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+        await SeedLogsAsync(
+            context,
+            CreateLog("UserUpdate", objectGuid: targetGuid.ToString("D")),
+            CreateLog("UserEnable", objectGuid: "bbbbbbbb-cccc-dddd-eeee-ffffffffffff"));
+
+        var service = new AdOperationLogService(context);
+        var result = await service.GetLogsAsync(
+            new AdOperationLogListQuery(
+                null,
+                null,
+                null,
+                null,
+                targetGuid.ToString("D"),
+                null,
+                null,
+                null,
+                null,
+                1,
+                20));
+
+        Assert.Single(result.Items);
+        Assert.Equal(targetGuid.ToString("D"), result.Items.Single().TargetObjectGuid);
+    }
+
+    [Fact]
+    public async Task GetLogsAsync_InvalidTargetObjectGuidReturnsEmpty()
+    {
+        var (connection, dbContext) = await SqliteTestDbContextFactory.CreateAsync();
+        using var _ = connection;
+        await using var context = dbContext;
+
+        await SeedLogsAsync(
+            context,
+            CreateLog("UserUpdate", objectGuid: Guid.NewGuid().ToString("D")));
+
+        var service = new AdOperationLogService(context);
+        var result = await service.GetLogsAsync(
+            new AdOperationLogListQuery(
+                null,
+                null,
+                null,
+                null,
+                "not-a-guid",
+                null,
+                null,
+                null,
+                null,
+                1,
+                20));
+
+        Assert.Empty(result.Items);
+    }
+
+    [Fact]
     public async Task GetLogsAsync_PreservesJsonDiagnosticErrorMessage()
     {
         var (connection, dbContext) = await SqliteTestDbContextFactory.CreateAsync();

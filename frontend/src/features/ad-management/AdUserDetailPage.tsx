@@ -13,7 +13,10 @@ import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { buildAdUserDetailReturnState } from "@/features/ad-management/ad-return-path";
 import { AD_USERS_LIST_PATH } from "@/features/ad-management/ad-users-list-path";
-import { isGuidLike } from "@/features/ad-management/ad-user-detail-utils";
+import {
+  isGuidLike,
+  type MappedAttributeDisplayFilter,
+} from "@/features/ad-management/ad-user-detail-utils";
 import { AD_MANAGEMENT_USERS_QUERY_KEY, getAdUserById } from "@/features/ad-management/api";
 import { AdUserAccountSummaryCards } from "@/features/ad-management/components/ad-user-detail/AdUserAccountSummaryCards";
 import { AdUserBasicInfoSection } from "@/features/ad-management/components/ad-user-detail/AdUserBasicInfoSection";
@@ -49,7 +52,8 @@ export function AdUserDetailPage() {
   const canUpdateUser = canAccess(currentUser, "AdManagement.Users.Update");
   const canManageGroups = canAccess(currentUser, "AdManagement.Users.Groups.View");
   const canViewOperationLogs = canAccess(currentUser, "AdOperationLogs.View");
-  const [showEmptyMappedFields, setShowEmptyMappedFields] = useState(false);
+  const [mappedAttributesFilter, setMappedAttributesFilter] =
+    useState<MappedAttributeDisplayFilter>("filled");
 
   const hasValidId = Boolean(userId?.trim()) && isGuidLike(userId);
 
@@ -161,8 +165,8 @@ export function AdUserDetailPage() {
             <AdUserTechnicalInfoSection user={user} />
             <AdUserMappedAttributesSection
               user={user}
-              showEmptyFields={showEmptyMappedFields}
-              onShowEmptyFieldsChange={setShowEmptyMappedFields}
+              filter={mappedAttributesFilter}
+              onFilterChange={setMappedAttributesFilter}
             />
             <AdUserGroupsSummarySection user={user} />
             {canViewOperationLogs ? (

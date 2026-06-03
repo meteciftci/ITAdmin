@@ -342,6 +342,11 @@ public sealed partial class AdUserDirectoryService(
 
         var mappedAttributes = BuildMappedAttributes(entry, activeMappings);
 
+        var userAccountControl = GetFirstInt(entry, "userAccountControl");
+        var lockoutTime = GetFirstLong(entry, "lockoutTime");
+        var lastLogonTimestampAt = AdLdapValueConverter.FromAdFileTime(
+            GetFirstLong(entry, "lastLogonTimestamp"));
+
         detail = new AdUserDetail(
             listItem.Id,
             listItem.DistinguishedName,
@@ -358,6 +363,12 @@ public sealed partial class AdUserDirectoryService(
             listItem.LastLogonAt,
             listItem.WhenCreated,
             listItem.WhenChanged,
+            userAccountControl,
+            AdLdapValueConverter.FromAdFileTime(GetFirstLong(entry, "accountExpires")),
+            AdLdapValueConverter.FromAdFileTime(lockoutTime),
+            GetFirstInt(entry, "badPwdCount"),
+            AdLdapValueConverter.FromAdFileTime(GetFirstLong(entry, "badPasswordTime")),
+            lastLogonTimestampAt,
             groups,
             mappedAttributes);
 

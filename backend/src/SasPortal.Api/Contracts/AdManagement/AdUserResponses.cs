@@ -51,5 +51,11 @@ public sealed record AdUserDetailResponse(
     DateTimeOffset? LastLogonAt,
     DateTimeOffset? WhenCreated,
     DateTimeOffset? WhenChanged,
+    int? UserAccountControl,
+    DateTimeOffset? AccountExpiresAt,
+    DateTimeOffset? LockoutTimeAt,
+    int? BadPwdCount,
+    DateTimeOffset? BadPasswordTimeAt,
+    DateTimeOffset? LastLogonTimestampAt,
     IReadOnlyList<AdUserGroupMembershipResponse> Groups,
     IReadOnlyList<MappedAdUserAttributeResponse> MappedAttributes);

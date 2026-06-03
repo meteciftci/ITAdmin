@@ -28,25 +28,36 @@ function createMappedAttribute(
 }
 
 describe("filterMappedAttributesForDisplay", () => {
-  it("returns only populated mapped attributes by default", () => {
+  it("returns only populated mapped attributes for filled filter", () => {
     const attributes = [
       createMappedAttribute({ logicalField: "a", sortOrder: 2, value: null }),
       createMappedAttribute({ logicalField: "b", sortOrder: 1, value: ["x"] }),
       createMappedAttribute({ logicalField: "c", sortOrder: 3, value: ["  "] }),
     ];
 
-    const result = filterMappedAttributesForDisplay(attributes, false);
+    const result = filterMappedAttributesForDisplay(attributes, "filled");
     assert.equal(result.length, 1);
     assert.equal(result[0]?.logicalField, "b");
   });
 
-  it("includes empty mapped attributes when showEmptyFields is enabled", () => {
+  it("includes only empty mapped attributes for empty filter", () => {
     const attributes = [
       createMappedAttribute({ logicalField: "a", sortOrder: 2, value: null }),
       createMappedAttribute({ logicalField: "b", sortOrder: 1, value: ["x"] }),
     ];
 
-    const result = filterMappedAttributesForDisplay(attributes, true);
+    const result = filterMappedAttributesForDisplay(attributes, "empty");
+    assert.equal(result.length, 1);
+    assert.equal(result[0]?.logicalField, "a");
+  });
+
+  it("includes all mapped attributes for all filter", () => {
+    const attributes = [
+      createMappedAttribute({ logicalField: "a", sortOrder: 2, value: null }),
+      createMappedAttribute({ logicalField: "b", sortOrder: 1, value: ["x"] }),
+    ];
+
+    const result = filterMappedAttributesForDisplay(attributes, "all");
     assert.equal(result.length, 2);
     assert.deepEqual(
       result.map((item) => item.logicalField),

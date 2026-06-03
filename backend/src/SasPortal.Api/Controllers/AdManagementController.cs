@@ -831,6 +831,12 @@ public sealed class AdManagementController(
             item.LastLogonAt,
             item.WhenCreated,
             item.WhenChanged,
+            item.UserAccountControl,
+            item.AccountExpiresAt,
+            item.LockoutTimeAt,
+            item.BadPwdCount,
+            item.BadPasswordTimeAt,
+            item.LastLogonTimestampAt,
             item.Groups
                 .Select(MapGroupMembership)
                 .ToList(),

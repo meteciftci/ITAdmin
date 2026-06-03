@@ -28,7 +28,7 @@ export function AdUserGroupsSummarySection({ user }: Props) {
                 key={group.distinguishedName}
                 variant="secondary"
                 className="max-w-full whitespace-normal break-words"
-                title={group.name}
+                title={group.distinguishedName}
               >
                 {group.name}
               </Badge>

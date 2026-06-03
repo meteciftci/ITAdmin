@@ -74,6 +74,12 @@ public sealed record AdUserDetail(
     DateTimeOffset? LastLogonAt,
     DateTimeOffset? WhenCreated,
     DateTimeOffset? WhenChanged,
+    int? UserAccountControl,
+    DateTimeOffset? AccountExpiresAt,
+    DateTimeOffset? LockoutTimeAt,
+    int? BadPwdCount,
+    DateTimeOffset? BadPasswordTimeAt,
+    DateTimeOffset? LastLogonTimestampAt,
     IReadOnlyList<AdUserGroupMembership> Groups,
     IReadOnlyList<MappedAdUserAttribute> MappedAttributes);
 

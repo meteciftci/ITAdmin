@@ -275,6 +275,12 @@ export type AdUserDetail = {
   lastLogonAt: string | null;
   whenCreated: string | null;
   whenChanged: string | null;
+  userAccountControl: number | null;
+  accountExpiresAt: string | null;
+  lockoutTimeAt: string | null;
+  badPwdCount: number | null;
+  badPasswordTimeAt: string | null;
+  lastLogonTimestampAt: string | null;
   groups: AdUserGroupMembership[];
   mappedAttributes: MappedAdUserAttribute[];
 };

@@ -126,6 +126,9 @@ public sealed class AdLdapAttributeCatalogTests
         Assert.Contains(attributes, name => name.Equals("givenName", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(attributes, name => name.Equals("sn", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(attributes, name => name.Equals("memberOf", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(attributes, name => name.Equals("accountExpires", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(attributes, name => name.Equals("badPwdCount", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(attributes, name => name.Equals("badPasswordTime", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(attributes, name => name.Equals("employeeType", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(attributes, name => name.Equals("extensionAttribute1", StringComparison.OrdinalIgnoreCase));
     }
