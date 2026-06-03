@@ -37,21 +37,11 @@ export function AdUserTechnicalInfoSection({ user }: Props) {
             value={user.distinguishedName}
             valueClassName="break-all font-mono text-xs"
           />
-          <AdUserDetailField label={t("users.detail.created")}>
-            <DateTimeText value={user.whenCreated} />
-          </AdUserDetailField>
-          <AdUserDetailField label={t("users.detail.changed")}>
-            <DateTimeText value={user.whenChanged} />
-          </AdUserDetailField>
-          <AdUserDetailField label={t("users.detail.lastLogon")}>
-            <DateTimeText value={user.lastLogonAt} />
-          </AdUserDetailField>
-          <AdUserDetailField label={t("users.detail.page.lastLogonTimestamp")}>
-            <DateTimeText value={user.lastLogonTimestampAt} />
-          </AdUserDetailField>
-          <AdUserDetailField label={t("users.detail.passwordLastSet")}>
-            <DateTimeText value={user.passwordLastSetAt} />
-          </AdUserDetailField>
+          <AdUserDetailField
+            label={t("users.detail.page.userAccountControl")}
+            value={formatAdUserAccountControlValue(user.userAccountControl)}
+            valueClassName="font-mono text-xs"
+          />
           <AdUserDetailField label={t("users.detail.page.accountExpires")}>
             <DateTimeText value={user.accountExpiresAt} />
           </AdUserDetailField>
@@ -69,11 +59,9 @@ export function AdUserTechnicalInfoSection({ user }: Props) {
           <AdUserDetailField label={t("users.detail.page.badPasswordTime")}>
             <DateTimeText value={user.badPasswordTimeAt} />
           </AdUserDetailField>
-          <AdUserDetailField
-            label={t("users.detail.page.userAccountControl")}
-            value={formatAdUserAccountControlValue(user.userAccountControl)}
-            valueClassName="font-mono text-xs"
-          />
+          <AdUserDetailField label={t("users.detail.page.lastLogonTimestamp")}>
+            <DateTimeText value={user.lastLogonTimestampAt} />
+          </AdUserDetailField>
         </div>
 
         <div className="space-y-2">

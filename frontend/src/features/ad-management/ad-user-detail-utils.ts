@@ -30,23 +30,16 @@ export function sortMappedAttributes(
   return [...attributes].sort((left, right) => left.sortOrder - right.sortOrder);
 }
 
-export type MappedAttributeDisplayFilter = "filled" | "empty" | "all";
-
 export function filterMappedAttributesForDisplay(
   attributes: MappedAdUserAttribute[],
-  filter: MappedAttributeDisplayFilter,
+  showEmptyFields: boolean,
 ): MappedAdUserAttribute[] {
   const sorted = sortMappedAttributes(attributes);
-
-  switch (filter) {
-    case "all":
-      return sorted;
-    case "empty":
-      return sorted.filter((attribute) => !hasMappedAttributeValue(attribute));
-    case "filled":
-    default:
-      return sorted.filter(hasMappedAttributeValue);
+  if (showEmptyFields) {
+    return sorted;
   }
+
+  return sorted.filter(hasMappedAttributeValue);
 }
 
 export type AdUserGroupsSummary = {

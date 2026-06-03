@@ -3,48 +3,43 @@ import { useTranslation } from "react-i18next";
 
 import { SectionCard } from "@/components/common/SectionCard";
 import { Badge } from "@/components/ui/badge";
-import { Select } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import {
   filterMappedAttributesForDisplay,
   formatMappedAdUserAttributeValue,
-  type MappedAttributeDisplayFilter,
 } from "@/features/ad-management/ad-user-detail-utils";
 import type { AdUserDetail } from "@/features/ad-management/types";
 
 type Props = {
   user: AdUserDetail;
-  filter: MappedAttributeDisplayFilter;
-  onFilterChange: (value: MappedAttributeDisplayFilter) => void;
+  showEmptyFields: boolean;
+  onShowEmptyFieldsChange: (value: boolean) => void;
 };
 
 export function AdUserMappedAttributesSection({
   user,
-  filter,
-  onFilterChange,
+  showEmptyFields,
+  onShowEmptyFieldsChange,
 }: Props) {
   const { t } = useTranslation("adManagement");
 
   const mappedAttributes = useMemo(
-    () => filterMappedAttributesForDisplay(user.mappedAttributes, filter),
-    [filter, user.mappedAttributes],
+    () => filterMappedAttributesForDisplay(user.mappedAttributes, showEmptyFields),
+    [showEmptyFields, user.mappedAttributes],
   );
 
   return (
     <SectionCard
       title={t("users.detail.page.mappedAttributes")}
       actions={
-        <Select
-          value={filter}
-          onChange={(event) => {
-            onFilterChange(event.target.value as MappedAttributeDisplayFilter);
-          }}
-          className="h-8 min-w-[8rem] text-sm"
-          aria-label={t("users.detail.page.mappedAttributesFilter")}
-        >
-          <option value="filled">{t("users.detail.page.mappedFilter.filled")}</option>
-          <option value="empty">{t("users.detail.page.mappedFilter.empty")}</option>
-          <option value="all">{t("users.detail.page.mappedFilter.all")}</option>
-        </Select>
+        <label className="flex cursor-pointer items-center gap-2 text-sm">
+          <Switch
+            checked={showEmptyFields}
+            onCheckedChange={onShowEmptyFieldsChange}
+            aria-label={t("users.detail.page.showEmptyFields")}
+          />
+          <span>{t("users.detail.page.showEmptyFields")}</span>
+        </label>
       }
     >
       {mappedAttributes.length > 0 ? (

@@ -13,8 +13,8 @@ type Props = {
 export function AdUserAccountSummaryCards({ user }: Props) {
   const { t } = useTranslation("adManagement");
 
-  const cards = useMemo(() => {
-    const items = [
+  const cards = useMemo(
+    () => [
       {
         key: "accountStatus",
         label: t("users.detail.page.accountStatusCard"),
@@ -35,29 +35,22 @@ export function AdUserAccountSummaryCards({ user }: Props) {
         label: t("users.detail.passwordLastSet"),
         content: <DateTimeText value={user.passwordLastSetAt} />,
       },
-    ];
-
-    if (user.accountExpiresAt) {
-      items.push({
-        key: "accountExpires",
-        label: t("users.detail.page.accountExpiresCard"),
-        content: <DateTimeText value={user.accountExpiresAt} />,
-      });
-    }
-
-    if (user.badPwdCount !== null && user.badPwdCount !== undefined) {
-      items.push({
-        key: "badPwdCount",
-        label: t("users.detail.page.badPwdCount"),
-        content: <span>{user.badPwdCount}</span>,
-      });
-    }
-
-    return items;
-  }, [t, user]);
+      {
+        key: "whenCreated",
+        label: t("users.detail.created"),
+        content: <DateTimeText value={user.whenCreated} />,
+      },
+      {
+        key: "whenChanged",
+        label: t("users.detail.changed"),
+        content: <DateTimeText value={user.whenChanged} />,
+      },
+    ],
+    [t, user],
+  );
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
       {cards.map((card) => (
         <div
           key={card.key}
