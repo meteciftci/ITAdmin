@@ -493,6 +493,41 @@ public sealed class AdManagementController(
         return Ok(MapUserGroupMemberships(result));
     }
 
+    [HttpGet("users/{id}/effective-groups")]
+    [RequirePermission(AdManagementPermissions.UsersGroupsView)]
+    public async Task<ActionResult<AdUserEffectiveGroupsResponse>> GetUserEffectiveGroups(
+        [FromRoute] string id,
+        [FromQuery] int? maxDepth,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Guid.TryParse(id, out var objectGuid))
+        {
+            return BadRequest(new { message = "Geçersiz kullanıcı kimliği." });
+        }
+
+        if (maxDepth.HasValue
+            && (maxDepth.Value < AdEffectiveGroupMembershipLimits.MinMaxDepth
+                || maxDepth.Value > AdEffectiveGroupMembershipLimits.MaxMaxDepth))
+        {
+            return BadRequest(new
+            {
+                message =
+                    $"maxDepth {AdEffectiveGroupMembershipLimits.MinMaxDepth} ile {AdEffectiveGroupMembershipLimits.MaxMaxDepth} arasında olmalıdır.",
+            });
+        }
+
+        var result = await adUserGroupMembershipService.GetUserEffectiveGroupsAsync(
+            new AppModels.AdUserEffectiveGroupsRequest(objectGuid, maxDepth),
+            cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return MapDirectoryFailure(result.Message, result.FailureKind);
+        }
+
+        return Ok(MapUserEffectiveGroups(result));
+    }
+
     [HttpGet("groups/search")]
     [RequirePermission(AdManagementPermissions.UsersGroupsView)]
     public async Task<ActionResult<AdGroupSearchResponse>> SearchGroups(
@@ -904,6 +939,44 @@ public sealed class AdManagementController(
                     group.Description,
                     group.IsDirect))
                 .ToList() ?? []);
+
+    private static AdUserEffectiveGroupsResponse MapUserEffectiveGroups(
+        AppModels.AdUserEffectiveGroupsResult result) =>
+        new(
+            result.UserId ?? string.Empty,
+            result.DisplayName,
+            result.SamAccountName,
+            result.UserPrincipalName,
+            result.DistinguishedName,
+            result.DirectGroups?
+                .Select(group => new AdEffectiveGroupSummaryItemResponse(
+                    group.Name,
+                    group.DistinguishedName,
+                    group.SamAccountName,
+                    group.Description,
+                    group.DisplayName))
+                .ToList() ?? [],
+            result.EffectiveGroups?
+                .Select(group => new AdEffectiveGroupNestedItemResponse(
+                    group.Name,
+                    group.DistinguishedName,
+                    group.SamAccountName,
+                    group.Description,
+                    group.DisplayName,
+                    group.Depth,
+                    group.IsDirect,
+                    group.Path
+                        .Select(node => new AdMembershipPathNodeResponse(
+                            node.Type,
+                            node.Name,
+                            node.DisplayName,
+                            node.SamAccountName,
+                            node.DistinguishedName))
+                        .ToList()))
+                .ToList() ?? [],
+            result.MaxDepth,
+            result.Truncated,
+            result.TruncatedReason);
 
     private async Task<ActionResult<AdUserAccountOperationResponse>> ExecuteAccountOperationAsync(
         string id,

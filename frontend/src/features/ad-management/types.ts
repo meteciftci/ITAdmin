@@ -360,6 +360,46 @@ export type AdUserGroupMembershipResponse = {
   groups: AdUserGroupMembershipItem[];
 };
 
+export type AdMembershipPathNode = {
+  type: string;
+  name: string;
+  displayName: string | null;
+  samAccountName: string | null;
+  distinguishedName: string;
+};
+
+export type AdEffectiveGroupSummaryItem = {
+  name: string;
+  distinguishedName: string;
+  samAccountName: string | null;
+  description: string | null;
+  displayName: string | null;
+};
+
+export type AdEffectiveGroupNestedItem = {
+  name: string;
+  distinguishedName: string;
+  samAccountName: string | null;
+  description: string | null;
+  displayName: string | null;
+  depth: number;
+  isDirect: boolean;
+  path: AdMembershipPathNode[];
+};
+
+export type AdUserEffectiveGroupsResponse = {
+  userId: string;
+  displayName: string | null;
+  samAccountName: string | null;
+  userPrincipalName: string | null;
+  distinguishedName: string | null;
+  directGroups: AdEffectiveGroupSummaryItem[];
+  effectiveGroups: AdEffectiveGroupNestedItem[];
+  maxDepth: number;
+  truncated: boolean;
+  truncatedReason: string | null;
+};
+
 export type AdGroupSearchItem = {
   distinguishedName: string;
   displayName: string | null;

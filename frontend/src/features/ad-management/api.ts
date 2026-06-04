@@ -14,6 +14,7 @@ import type {
   CreateAdAttributeMappingRequest,
   AdUserAccountOperationResponse,
   AdUserGroupMembershipResponse,
+  AdUserEffectiveGroupsResponse,
   AdUserGroupMutationRequest,
   AdUserGroupOperationResponse,
   MoveAdUserOuRequest,
@@ -49,6 +50,12 @@ export const AD_MANAGEMENT_USER_GROUPS_QUERY_KEY = [
   "ad-management",
   "users",
   "groups",
+] as const;
+
+export const AD_MANAGEMENT_USER_EFFECTIVE_GROUPS_QUERY_KEY = [
+  "ad-management",
+  "users",
+  "effective-groups",
 ] as const;
 
 export async function invalidateAdManagementUserQueries(
@@ -251,6 +258,21 @@ export const getAdUserGroups = async (
 ): Promise<AdUserGroupMembershipResponse> => {
   const { data } = await apiClient.get<AdUserGroupMembershipResponse>(
     `/ad-management/users/${userId}/groups`,
+  );
+  return data;
+};
+
+export const getAdUserEffectiveGroups = async (
+  userId: string,
+  options?: { maxDepth?: number },
+): Promise<AdUserEffectiveGroupsResponse> => {
+  const { data } = await apiClient.get<AdUserEffectiveGroupsResponse>(
+    `/ad-management/users/${userId}/effective-groups`,
+    {
+      params: {
+        maxDepth: options?.maxDepth,
+      },
+    },
   );
   return data;
 };

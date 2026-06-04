@@ -265,6 +265,32 @@
           "groupsSummary": "Group Memberships Summary",
           "totalGroups": "Total groups: {{count}}",
           "moreGroups": "+{{count}} more",
+          "effectiveGroups": {
+            "title": "Effective Group Membership",
+            "description": "View direct and nested group memberships resolved from AD parent group chains.",
+            "directCount": "Direct groups: {{count}}",
+            "effectiveCount": "Nested groups: {{count}}",
+            "appliedMaxDepth": "Max depth: {{depth}}",
+            "maxDepth": "Max depth",
+            "depth": "Depth {{depth}}",
+            "membershipPath": "Membership path",
+            "pathUser": "User",
+            "pathGroup": "Group",
+            "truncated": "Results were limited for performance. Some nested memberships may not be shown.",
+            "tabs": {
+              "direct": "Direct",
+              "effective": "Nested / Effective"
+            },
+            "empty": {
+              "directTitle": "No direct groups",
+              "directDescription": "No direct AD group memberships were found for this user.",
+              "effectiveTitle": "No nested groups",
+              "effectiveDescription": "No nested group memberships were found within the selected depth."
+            },
+            "errors": {
+              "loadFailed": "Effective group memberships could not be loaded."
+            }
+          },
           "recentOperations": "Recent AD Operations",
           "viewAllLogs": "View all logs",
           "noRecentOperations": "No recent operations found",

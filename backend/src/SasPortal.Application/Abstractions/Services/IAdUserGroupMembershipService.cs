@@ -8,6 +8,10 @@ public interface IAdUserGroupMembershipService
         AdUserGroupMembershipRequest request,
         CancellationToken cancellationToken = default);
 
+    Task<AdUserEffectiveGroupsResult> GetUserEffectiveGroupsAsync(
+        AdUserEffectiveGroupsRequest request,
+        CancellationToken cancellationToken = default);
+
     Task<AdGroupSearchResult> SearchGroupsAsync(
         AdGroupSearchRequest request,
         CancellationToken cancellationToken = default);

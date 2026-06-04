@@ -48,6 +48,21 @@ describe("AdUserManagerSection form actions", () => {
   });
 });
 
+describe("AdUserEffectiveGroupsSection i18n", () => {
+  it("uses adManagement effective groups translation keys", () => {
+    const source = readFileSync(
+      new URL(
+        "./components/ad-user-detail/AdUserEffectiveGroupsSection.tsx",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    assert.equal(source.includes("users.detail.effectiveGroups.title"), true);
+    assert.equal(source.includes("users.detail.effectiveGroups.errors.loadFailed"), true);
+  });
+});
+
 describe("invalidateAdUserDetailRelatedQueries", () => {
   it("invalidates detail, list and operation logs", () => {
     const source = readFileSync(new URL("./api.ts", import.meta.url), "utf8");
