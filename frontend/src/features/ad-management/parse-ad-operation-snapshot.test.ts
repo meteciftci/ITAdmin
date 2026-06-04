@@ -8,6 +8,7 @@ import {
   buildLockStatusComparisonRows,
   buildMappedAttributeComparisonRows,
   buildMembershipComparisonRows,
+  buildOuMoveComparisonRows,
   formatSnapshotBoolean,
   getSnapshotRenderStrategy,
   parseAdOperationSnapshot,
@@ -192,6 +193,56 @@ describe("parseNestedAdOperationSnapshot", () => {
     assert.equal(rows[0]?.changed, true);
   });
 
+  it("builds OU move comparison rows for UserOuMove snapshots", () => {
+    const before = parseNestedAdOperationSnapshot(
+      JSON.stringify({
+        operation: "UserOuMove",
+        user: {
+          id: "550e8400-e29b-41d4-a716-446655440000",
+          samAccountName: "mete.test2",
+          userPrincipalName: "mete.test2@corp.local",
+          distinguishedName: "CN=mete.test2,OU=Old,OU=Users,DC=corp,DC=local",
+        },
+        ou: { distinguishedName: "OU=Old,OU=Users,DC=corp,DC=local" },
+      }),
+    );
+    const after = parseNestedAdOperationSnapshot(
+      JSON.stringify({
+        operation: "UserOuMove",
+        user: {
+          id: "550e8400-e29b-41d4-a716-446655440000",
+          samAccountName: "mete.test2",
+          userPrincipalName: "mete.test2@corp.local",
+          distinguishedName: "CN=mete.test2,OU=New,OU=Users,DC=corp,DC=local",
+        },
+        ou: { distinguishedName: "OU=New,OU=Users,DC=corp,DC=local" },
+      }),
+    );
+
+    const rows = buildOuMoveComparisonRows(before, after);
+    const ouRow = rows.find((row) => row.key === "ou");
+    const dnRow = rows.find((row) => row.key === "distinguishedName");
+
+    assert.equal(ouRow?.before, "OU=Old,OU=Users,DC=corp,DC=local");
+    assert.equal(ouRow?.after, "OU=New,OU=Users,DC=corp,DC=local");
+    assert.equal(ouRow?.changed, true);
+    assert.equal(dnRow?.before, "CN=mete.test2,OU=Old,OU=Users,DC=corp,DC=local");
+    assert.equal(dnRow?.after, "CN=mete.test2,OU=New,OU=Users,DC=corp,DC=local");
+    assert.equal(dnRow?.monoBefore, true);
+    assert.equal(dnRow?.monoAfter, true);
+  });
+
+  it("parses ou node from UserOuMove snapshot", () => {
+    const snapshot = parseNestedAdOperationSnapshot(
+      JSON.stringify({
+        operation: "UserOuMove",
+        ou: { DistinguishedName: "OU=Target,DC=corp,DC=local" },
+      }),
+    );
+
+    assert.equal(snapshot?.ou?.distinguishedName, "OU=Target,DC=corp,DC=local");
+  });
+
   it("builds membership comparison for UserGroupRemove", () => {
     const before = parseNestedAdOperationSnapshot(
       JSON.stringify({ membership: { isDirectMember: true } }),
@@ -258,10 +309,16 @@ describe("getSnapshotRenderStrategy", () => {
     assert.equal(getSnapshotRenderStrategy("UserUnlock"), "lockStatus");
     assert.equal(getSnapshotRenderStrategy("UserGroupAdd"), "groupMembership");
     assert.equal(getSnapshotRenderStrategy("UserGroupRemove"), "groupMembership");
+    assert.equal(getSnapshotRenderStrategy("UserOuMove"), "ouMove");
   });
 
   it("falls back to generic for unknown operation types", () => {
     assert.equal(getSnapshotRenderStrategy("SettingsUpdated"), "generic");
+    assert.notEqual(getSnapshotRenderStrategy("UserOuMove"), "generic");
+  });
+
+  it("keeps UserGroupAdd on groupMembership strategy", () => {
+    assert.equal(getSnapshotRenderStrategy("UserGroupAdd"), "groupMembership");
   });
 });
 

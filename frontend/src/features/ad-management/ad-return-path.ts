@@ -2,6 +2,7 @@ import { buildAdUserDetailPath } from "./ad-user-detail-path.ts";
 import { AD_USERS_LIST_PATH } from "./ad-users-list-path.ts";
 
 export const AD_USER_RETURN_LABEL_DETAIL = "adUserDetail";
+export const AD_USER_RETURN_LABEL_LIST = "adUsersList";
 
 export type AdUserNavigationState = {
   returnTo?: string;
@@ -60,6 +61,13 @@ export function buildAdUserDetailReturnState(userId: string): AdUserNavigationSt
   return {
     returnTo: buildAdUserDetailPath(userId),
     returnLabel: AD_USER_RETURN_LABEL_DETAIL,
+  };
+}
+
+export function buildAdUsersListReturnState(): AdUserNavigationState {
+  return {
+    returnTo: AD_USERS_LIST_PATH,
+    returnLabel: AD_USER_RETURN_LABEL_LIST,
   };
 }
 

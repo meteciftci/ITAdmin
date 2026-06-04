@@ -15,6 +15,7 @@ import {
   buildLockStatusComparisonRows,
   buildMappedAttributeComparisonRows,
   buildMembershipComparisonRows,
+  buildOuMoveComparisonRows,
   formatSnapshotBoolean,
   getSnapshotRenderStrategy,
   hasSnapshotContent,
@@ -322,6 +323,66 @@ function LockStatusSnapshotSections({
   );
 }
 
+function OuMoveSnapshotSections({
+  beforeSnapshotJson,
+  afterSnapshotJson,
+  noneLabel,
+  emptyDash,
+  t,
+}: {
+  beforeSnapshotJson: string | null | undefined;
+  afterSnapshotJson: string | null | undefined;
+  noneLabel: string;
+  emptyDash: string;
+  t: TFunction<"adOperationLogs">;
+}) {
+  const beforeSnapshot = useMemo(
+    () => parseNestedAdOperationSnapshot(beforeSnapshotJson),
+    [beforeSnapshotJson],
+  );
+  const afterSnapshot = useMemo(
+    () => parseNestedAdOperationSnapshot(afterSnapshotJson),
+    [afterSnapshotJson],
+  );
+  const user = useMemo(
+    () => resolveSnapshotUser(beforeSnapshot, afterSnapshot),
+    [beforeSnapshot, afterSnapshot],
+  );
+  const ouMoveRows = useMemo(
+    () => buildOuMoveComparisonRows(beforeSnapshot, afterSnapshot),
+    [beforeSnapshot, afterSnapshot],
+  );
+
+  const getOuMoveFieldLabel = (key: string) => {
+    if (key === "ou") {
+      return t("snapshotSections.fields.ou");
+    }
+    if (key === "distinguishedName") {
+      return t("snapshotSections.fields.distinguishedName");
+    }
+    return key;
+  };
+
+  return (
+    <>
+      <section className="space-y-3 border-t pt-4">
+        <h3 className="text-sm font-medium">{t("snapshotSections.user")}</h3>
+        <KeyValueGrid entries={getUserFieldEntries(t, user)} noneLabel={noneLabel} />
+      </section>
+
+      <section className="space-y-3 border-t pt-4">
+        <h3 className="text-sm font-medium">{t("snapshotSections.ouMove")}</h3>
+        <ComparisonTable
+          rows={ouMoveRows}
+          getFieldLabel={getOuMoveFieldLabel}
+          emptyLabel={emptyDash}
+          noneLabel={noneLabel}
+        />
+      </section>
+    </>
+  );
+}
+
 function GroupMembershipSnapshotSections({
   beforeSnapshotJson,
   afterSnapshotJson,
@@ -589,6 +650,16 @@ export function AdOperationLogSnapshotDetail({
       case "groupMembership":
         return (
           <GroupMembershipSnapshotSections
+            beforeSnapshotJson={beforeSnapshotJson}
+            afterSnapshotJson={afterSnapshotJson}
+            noneLabel={noneLabel}
+            emptyDash={emptyDash}
+            t={t}
+          />
+        );
+      case "ouMove":
+        return (
+          <OuMoveSnapshotSections
             beforeSnapshotJson={beforeSnapshotJson}
             afterSnapshotJson={afterSnapshotJson}
             noneLabel={noneLabel}

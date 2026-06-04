@@ -14,6 +14,7 @@ import { LoadingState } from "@/components/common/LoadingState";
 import { SectionCard } from "@/components/common/SectionCard";
 import { AD_USERS_LIST_DEFAULTS } from "@/features/ad-management/ad-users-list-query";
 import { createAdUserColumns } from "@/features/ad-management/ad-users-columns";
+import { buildAdUsersListReturnState } from "@/features/ad-management/ad-return-path";
 import { buildAdUserDetailPath } from "@/features/ad-management/ad-user-detail-path";
 import {
   AD_MANAGEMENT_USERS_QUERY_KEY,
@@ -100,7 +101,9 @@ export function AdUsersPage() {
           navigate(`/ad-management/users/${user.id}/groups`);
         },
         onMoveOu: (user) => {
-          navigate(`/ad-management/users/${user.id}/move-ou`);
+          navigate(`/ad-management/users/${user.id}/move-ou`, {
+            state: buildAdUsersListReturnState(),
+          });
         },
         onDisable: (user) => setConfirmTarget({ user, action: "disable" }),
         onEnable: (user) => setConfirmTarget({ user, action: "enable" }),

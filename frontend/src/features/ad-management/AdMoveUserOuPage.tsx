@@ -25,6 +25,7 @@ import { AdManagementModuleStateGuard } from "@/features/ad-management/component
 import { AdOuSearchCombobox } from "@/features/ad-management/components/AdOuSearchCombobox";
 import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useAdManagementModuleStatus";
 import { getApiErrorMessage } from "@/lib/api-error";
+import { AD_USER_FORM_ACTIONS_CLASSNAME } from "@/features/ad-management/ad-form-actions";
 import { cn } from "@/lib/utils";
 
 function SummaryField({
@@ -58,11 +59,7 @@ export function AdMoveUserOuPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const moduleStatus = useAdManagementModuleStatus();
-  const returnPath = resolveAdUserReturnPathFromLocation(
-    location.state,
-    undefined,
-    userId ? `/ad-management/users/${userId}` : AD_USERS_LIST_PATH,
-  );
+  const returnPath = resolveAdUserReturnPathFromLocation(location.state, undefined, AD_USERS_LIST_PATH);
 
   const [targetOuDistinguishedName, setTargetOuDistinguishedName] = useState<string | null>(null);
 
@@ -215,16 +212,16 @@ export function AdMoveUserOuPage() {
               />
             </SectionCard>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <Button type="submit" disabled={!canSubmit}>
-                {t("adManagement:users.moveOu.actions.submit")}
-              </Button>
+            <div className={AD_USER_FORM_ACTIONS_CLASSNAME}>
               <Link
                 to={returnPath}
                 className={cn(buttonVariants({ variant: "outline" }))}
               >
                 {t("common:actions.cancel")}
               </Link>
+              <Button type="submit" disabled={!canSubmit}>
+                {t("adManagement:users.moveOu.actions.submit")}
+              </Button>
             </div>
           </form>
         ) : null}

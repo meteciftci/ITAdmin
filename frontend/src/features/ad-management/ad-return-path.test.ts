@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 
 import {
   buildAdUserDetailReturnState,
+  buildAdUsersListReturnState,
   readAdUserReturnToFromState,
   resolveAdUserReturnPath,
   resolveAdUserReturnPathFromLocation,
@@ -13,6 +14,15 @@ import { buildAdUserDetailPath } from "./ad-user-detail-path.ts";
 const userId = "550e8400-e29b-41d4-a716-446655440000";
 const detailPath = buildAdUserDetailPath(userId);
 const listPath = "/ad-management/users";
+
+describe("buildAdUsersListReturnState", () => {
+  it("returns list path and label", () => {
+    assert.deepEqual(buildAdUsersListReturnState(), {
+      returnTo: listPath,
+      returnLabel: "adUsersList",
+    });
+  });
+});
 
 describe("buildAdUserDetailReturnState", () => {
   it("returns detail path and label", () => {
@@ -57,6 +67,11 @@ describe("resolveAdUserReturnPathFromLocation", () => {
       ),
       detailPath,
     );
+  });
+
+  it("defaults to list fallback when state and query are absent", () => {
+    assert.equal(resolveAdUserReturnPathFromLocation(null, undefined, listPath), listPath);
+    assert.equal(resolveAdUserReturnPathFromLocation(undefined, undefined, listPath), listPath);
   });
 
   it("supports legacy query returnTo when state is absent", () => {

@@ -243,6 +243,10 @@ export type ParsedSnapshotGroup = {
   distinguishedName: string | null;
 };
 
+export type ParsedSnapshotOu = {
+  distinguishedName: string | null;
+};
+
 export type ParsedSnapshotMembership = {
   isDirectMember: boolean | null;
 };
@@ -252,6 +256,7 @@ export type ParsedNestedAdOperationSnapshot = {
   user: ParsedSnapshotUser | null;
   account: ParsedSnapshotAccount | null;
   group: ParsedSnapshotGroup | null;
+  ou: ParsedSnapshotOu | null;
   membership: ParsedSnapshotMembership | null;
   mappedAttributes: ParsedMappedSnapshotAttribute[];
   notifications: string | null;
@@ -270,11 +275,13 @@ export type SnapshotRenderStrategy =
   | "accountStatus"
   | "lockStatus"
   | "groupMembership"
+  | "ouMove"
   | "generic";
 
 const ACCOUNT_STATUS_OPERATION_TYPES = new Set(["UserEnable", "UserDisable"]);
 const LOCK_STATUS_OPERATION_TYPES = new Set(["UserUnlock"]);
 const GROUP_MEMBERSHIP_OPERATION_TYPES = new Set(["UserGroupAdd", "UserGroupRemove"]);
+const OU_MOVE_OPERATION_TYPES = new Set(["UserOuMove"]);
 
 function readRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -343,6 +350,19 @@ function parseSnapshotAccount(value: unknown): ParsedSnapshotAccount | null {
   return Object.values(account).some((entry) => entry !== null) ? account : null;
 }
 
+function parseSnapshotOu(value: unknown): ParsedSnapshotOu | null {
+  const record = readRecord(value);
+  if (!record) {
+    return null;
+  }
+
+  const ou: ParsedSnapshotOu = {
+    distinguishedName: formatSnapshotValue(record.distinguishedName ?? record.DistinguishedName),
+  };
+
+  return ou.distinguishedName !== null ? ou : null;
+}
+
 function parseSnapshotGroup(value: unknown): ParsedSnapshotGroup | null {
   const record = readRecord(value);
   if (!record) {
@@ -391,6 +411,7 @@ export function parseNestedAdOperationSnapshot(value: unknown): ParsedNestedAdOp
     user: parseSnapshotUser(record.user ?? record.User),
     account: parseSnapshotAccount(record.account ?? record.Account),
     group: parseSnapshotGroup(record.group ?? record.Group),
+    ou: parseSnapshotOu(record.ou ?? record.Ou),
     membership: parseSnapshotMembership(record.membership ?? record.Membership),
     mappedAttributes: readMappedAttributes(record.mappedAttributes ?? record.MappedAttributes),
     notifications: formatSnapshotValue(record.notifications ?? record.Notifications),
@@ -410,6 +431,13 @@ export function resolveSnapshotGroup(
   after: ParsedNestedAdOperationSnapshot | null,
 ): ParsedSnapshotGroup | null {
   return after?.group ?? before?.group ?? null;
+}
+
+export function resolveSnapshotOu(
+  before: ParsedNestedAdOperationSnapshot | null,
+  after: ParsedNestedAdOperationSnapshot | null,
+): ParsedSnapshotOu | null {
+  return after?.ou ?? before?.ou ?? null;
 }
 
 export function formatSnapshotBoolean(
@@ -498,6 +526,30 @@ export function buildLockStatusComparisonRows(
   return rows.filter((row) => row.before !== null || row.after !== null);
 }
 
+export function buildOuMoveComparisonRows(
+  before: ParsedNestedAdOperationSnapshot | null,
+  after: ParsedNestedAdOperationSnapshot | null,
+): SnapshotComparisonRow[] {
+  const rows = [
+    buildComparisonRow(
+      "ou",
+      before?.ou?.distinguishedName ?? null,
+      after?.ou?.distinguishedName ?? null,
+      true,
+      true,
+    ),
+    buildComparisonRow(
+      "distinguishedName",
+      before?.user?.distinguishedName ?? null,
+      after?.user?.distinguishedName ?? null,
+      true,
+      true,
+    ),
+  ];
+
+  return rows.filter((row) => row.before !== null || row.after !== null);
+}
+
 export function buildMembershipComparisonRows(
   before: ParsedNestedAdOperationSnapshot | null,
   after: ParsedNestedAdOperationSnapshot | null,
@@ -523,6 +575,7 @@ export function hasNestedSnapshotContent(snapshot: ParsedNestedAdOperationSnapsh
     snapshot.user ||
       snapshot.account ||
       snapshot.group ||
+      snapshot.ou ||
       snapshot.membership ||
       snapshot.mappedAttributes.length > 0 ||
       snapshot.notifications ||
@@ -545,6 +598,9 @@ export function getSnapshotRenderStrategy(operationType: string): SnapshotRender
   }
   if (GROUP_MEMBERSHIP_OPERATION_TYPES.has(operationType)) {
     return "groupMembership";
+  }
+  if (OU_MOVE_OPERATION_TYPES.has(operationType)) {
+    return "ouMove";
   }
   return "generic";
 }
