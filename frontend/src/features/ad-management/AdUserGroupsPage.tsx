@@ -110,7 +110,7 @@ export function AdUserGroupsPage() {
       addAdUserToGroup(userId!, { groupDistinguishedName }),
     onSuccess: async (response) => {
       if (!response.success) {
-        toast.error(response.message || t("adManagement:users.groups.messages.operationFailed"));
+        toast.error(t("adManagement:users.groups.messages.operationFailed"));
         return;
       }
 
@@ -132,7 +132,7 @@ export function AdUserGroupsPage() {
       removeAdUserFromGroup(userId!, { groupDistinguishedName }),
     onSuccess: async (response) => {
       if (!response.success) {
-        toast.error(response.message || t("adManagement:users.groups.messages.operationFailed"));
+        toast.error(t("adManagement:users.groups.messages.operationFailed"));
         return;
       }
 

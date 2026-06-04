@@ -95,10 +95,14 @@ export function AdUsersPage() {
           navigate(buildAdUserDetailPath(user.id));
         },
         onEdit: (user) => {
-          navigate(`/ad-management/users/${user.id}/edit`);
+          navigate(`/ad-management/users/${user.id}/edit`, {
+            state: buildAdUsersListReturnState(),
+          });
         },
         onManageGroups: (user) => {
-          navigate(`/ad-management/users/${user.id}/groups`);
+          navigate(`/ad-management/users/${user.id}/groups`, {
+            state: buildAdUsersListReturnState(),
+          });
         },
         onMoveOu: (user) => {
           navigate(`/ad-management/users/${user.id}/move-ou`, {
@@ -153,7 +157,7 @@ export function AdUsersPage() {
     },
     onSuccess: async (response, variables) => {
       if (!response.success) {
-        toast.error(response.message || t("adManagement:users.messages.operationFailed"));
+        toast.error(t("adManagement:users.messages.operationFailed"));
         return;
       }
 

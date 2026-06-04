@@ -51,6 +51,8 @@ describe("resolveAdUserReturnPath", () => {
     assert.equal(resolveAdUserReturnPath({ returnTo: "https://evil.example" }), listPath);
     assert.equal(resolveAdUserReturnPath({ returnTo: "javascript:alert(1)" }), listPath);
     assert.equal(resolveAdUserReturnPath({ returnTo: "//evil.example" }), listPath);
+    assert.equal(resolveAdUserReturnPath({ returnTo: "/javascript:alert(1)" }), listPath);
+    assert.equal(resolveAdUserReturnPath({ returnTo: "/ad-management/users/../../../etc" }), listPath);
   });
 });
 
@@ -95,5 +97,15 @@ describe("readAdUserReturnToFromState", () => {
 describe("resolveSafeReturnPath", () => {
   it("allows internal paths", () => {
     assert.equal(resolveSafeReturnPath(detailPath), detailPath);
+  });
+
+  it("rejects scheme injections after leading slash", () => {
+    assert.equal(resolveSafeReturnPath("/javascript:alert(1)"), listPath);
+    assert.equal(resolveSafeReturnPath("/data:text/html,test"), listPath);
+  });
+
+  it("rejects parent directory traversal segments", () => {
+    assert.equal(resolveSafeReturnPath(`${detailPath}/../users`), listPath);
+    assert.equal(resolveSafeReturnPath("/ad-management/users/.."), listPath);
   });
 });

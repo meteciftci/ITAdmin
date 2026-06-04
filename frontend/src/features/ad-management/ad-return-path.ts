@@ -11,14 +11,29 @@ export type AdUserNavigationState = {
 
 const AD_USERS_LIST_FALLBACK = AD_USERS_LIST_PATH;
 
-const BLOCKED_RETURN_TO_PREFIXES = [
+const BLOCKED_RETURN_TO_SCHEMES = [
   "http:",
   "https:",
   "javascript:",
   "data:",
   "file:",
-  "//",
 ];
+
+function containsBlockedReturnScheme(path: string): boolean {
+  const lower = path.toLowerCase();
+  if (lower.includes("//")) {
+    return true;
+  }
+
+  return BLOCKED_RETURN_TO_SCHEMES.some((scheme) => lower.includes(scheme));
+}
+
+function containsParentDirectorySegment(path: string): boolean {
+  return path
+    .split("/")
+    .filter((segment) => segment.length > 0)
+    .some((segment) => segment === "..");
+}
 
 export function resolveSafeReturnPath(returnTo: string | null | undefined): string {
   if (!returnTo?.trim()) {
@@ -36,8 +51,7 @@ export function resolveSafeReturnPath(returnTo: string | null | undefined): stri
     return AD_USERS_LIST_FALLBACK;
   }
 
-  const lower = decoded.toLowerCase();
-  if (BLOCKED_RETURN_TO_PREFIXES.some((prefix) => lower.startsWith(prefix))) {
+  if (containsBlockedReturnScheme(decoded)) {
     return AD_USERS_LIST_FALLBACK;
   }
 
@@ -45,16 +59,11 @@ export function resolveSafeReturnPath(returnTo: string | null | undefined): stri
     return AD_USERS_LIST_FALLBACK;
   }
 
+  if (containsParentDirectorySegment(decoded)) {
+    return AD_USERS_LIST_FALLBACK;
+  }
+
   return decoded;
-}
-
-export function buildReturnToQueryParam(path: string): string {
-  return encodeURIComponent(path.startsWith("/") ? path : `/${path}`);
-}
-
-export function appendReturnTo(path: string, returnTo: string): string {
-  const separator = path.includes("?") ? "&" : "?";
-  return `${path}${separator}returnTo=${buildReturnToQueryParam(returnTo)}`;
 }
 
 export function buildAdUserDetailReturnState(userId: string): AdUserNavigationState {

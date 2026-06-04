@@ -254,8 +254,12 @@ public sealed partial class AdUserDirectoryService
             var successMessage =
                 $"Kullanıcı oluşturuldu: {resolvedNames.DisplayName} ({resolvedNames.SamAccountName}).";
 
+            var publicUserId = AdUserIdentityResolver.ResolvePublicUserId(
+                createdObjectGuid,
+                resolvedNames.SamAccountName);
+
             var responseWithoutNotifications = new CreateAdUserResponse(
-                createdObjectGuid ?? distinguishedName,
+                publicUserId,
                 distinguishedName,
                 resolvedNames.CommonName,
                 resolvedNames.SamAccountName,
@@ -687,7 +691,9 @@ public sealed partial class AdUserDirectoryService
                 {
                     Action = "Create",
                     EntityName = "AdUser",
-                    EntityId = response.Id,
+                    EntityId = AdUserIdentityResolver.ResolveAuditEntityId(
+                        response.Id,
+                        response.SamAccountName),
                     Description = $"AD user created: {response.SamAccountName}.",
                     ActorUserId = request.ActorUserId,
                     ActorUserName = request.ActorUserName,

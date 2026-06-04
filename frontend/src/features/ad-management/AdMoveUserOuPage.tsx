@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -56,10 +56,15 @@ export function AdMoveUserOuPage() {
   const { t } = useTranslation(["adManagement", "common", "errors"]);
   const { id: userId } = useParams<{ id: string }>();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const moduleStatus = useAdManagementModuleStatus();
-  const returnPath = resolveAdUserReturnPathFromLocation(location.state, undefined, AD_USERS_LIST_PATH);
+  const returnPath = resolveAdUserReturnPathFromLocation(
+    location.state,
+    searchParams,
+    AD_USERS_LIST_PATH,
+  );
 
   const [targetOuDistinguishedName, setTargetOuDistinguishedName] = useState<string | null>(null);
 
@@ -85,7 +90,7 @@ export function AdMoveUserOuPage() {
       }),
     onSuccess: async (response) => {
       if (!response.success) {
-        toast.error(response.message || t("adManagement:users.moveOu.messages.moveFailed"));
+        toast.error(t("adManagement:users.moveOu.messages.moveFailed"));
         return;
       }
 
