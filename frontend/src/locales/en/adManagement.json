@@ -318,6 +318,9 @@
           "description": "View direct and nested group memberships resolved from AD parent group chains.",
           "directCount": "Direct groups: {{count}}",
           "effectiveCount": "Nested groups: {{count}}",
+          "directCountFiltered": "Direct groups: {{filtered}} / {{total}}",
+          "effectiveCountFiltered": "Nested groups: {{filtered}} / {{total}}",
+          "searchPlaceholder": "Search groups...",
           "appliedMaxDepth": "Max depth: {{depth}}",
           "maxDepth": "Max depth",
           "depth": "Depth {{depth}}",
@@ -333,7 +336,9 @@
             "directTitle": "No direct groups",
             "directDescription": "No direct AD group memberships were found for this user.",
             "effectiveTitle": "No nested groups",
-            "effectiveDescription": "No nested group memberships were found within the selected depth."
+            "effectiveDescription": "No nested group memberships were found within the selected depth.",
+            "searchTitle": "No search results",
+            "searchDescription": "No groups match your search criteria."
           },
           "errors": {
             "loadFailed": "Effective group memberships could not be loaded."

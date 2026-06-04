@@ -318,6 +318,9 @@
           "description": "AD üst grup zincirlerinden çözümlenen doğrudan ve dolaylı grup üyeliklerini görüntüleyin.",
           "directCount": "Doğrudan gruplar: {{count}}",
           "effectiveCount": "Dolaylı gruplar: {{count}}",
+          "directCountFiltered": "Doğrudan gruplar: {{filtered}} / {{total}}",
+          "effectiveCountFiltered": "Dolaylı gruplar: {{filtered}} / {{total}}",
+          "searchPlaceholder": "Grup ara...",
           "appliedMaxDepth": "Maks. derinlik: {{depth}}",
           "maxDepth": "Maks. derinlik",
           "depth": "Derinlik {{depth}}",
@@ -333,7 +336,9 @@
             "directTitle": "Doğrudan grup bulunamadı",
             "directDescription": "Bu kullanıcı için doğrudan AD grup üyeliği bulunamadı.",
             "effectiveTitle": "Dolaylı grup bulunamadı",
-            "effectiveDescription": "Seçilen derinlik içinde dolaylı grup üyeliği bulunamadı."
+            "effectiveDescription": "Seçilen derinlik içinde dolaylı grup üyeliği bulunamadı.",
+            "searchTitle": "Arama sonucu bulunamadı",
+            "searchDescription": "Arama kriterine uygun grup bulunamadı."
           },
           "errors": {
             "loadFailed": "Etkin grup üyelikleri yüklenemedi."

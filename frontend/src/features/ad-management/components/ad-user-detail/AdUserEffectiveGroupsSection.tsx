@@ -1,5 +1,6 @@
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Search, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { EmptyState } from "@/components/common/EmptyState";
@@ -7,8 +8,14 @@ import { ErrorState } from "@/components/common/ErrorState";
 import { LoadingState } from "@/components/common/LoadingState";
 import { SectionCard } from "@/components/common/SectionCard";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  filterEffectiveGroupMemberships,
+  normalizeEffectiveGroupSearchText,
+} from "@/features/ad-management/ad-effective-group-search";
 import {
   getAdGroupPathNodeLabel,
   getAdGroupPrimaryLabel,
@@ -161,6 +168,7 @@ export function AdUserEffectiveGroupsSection({ userId }: Props) {
   const { t } = useTranslation(["adManagement", "common"]);
   const [maxDepth, setMaxDepth] = useState<number>(DEFAULT_MAX_DEPTH);
   const [activeTab, setActiveTab] = useState<"direct" | "effective">("direct");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const effectiveGroupsQuery = useQuery({
     queryKey: [...AD_MANAGEMENT_USER_EFFECTIVE_GROUPS_QUERY_KEY, userId, maxDepth],
@@ -169,8 +177,24 @@ export function AdUserEffectiveGroupsSection({ userId }: Props) {
   });
 
   const data = effectiveGroupsQuery.data;
-  const directCount = data?.directGroups.length ?? 0;
-  const effectiveCount = data?.effectiveGroups.length ?? 0;
+  const normalizedSearchQuery = useMemo(
+    () => normalizeEffectiveGroupSearchText(searchQuery),
+    [searchQuery],
+  );
+  const hasActiveSearch = normalizedSearchQuery.length > 0;
+
+  const filteredMemberships = useMemo(() => {
+    if (!data) {
+      return { directGroups: [], effectiveGroups: [] };
+    }
+
+    return filterEffectiveGroupMemberships(data, searchQuery);
+  }, [data, searchQuery]);
+
+  const totalDirectCount = data?.directGroups.length ?? 0;
+  const totalEffectiveCount = data?.effectiveGroups.length ?? 0;
+  const filteredDirectCount = filteredMemberships.directGroups.length;
+  const filteredEffectiveCount = filteredMemberships.effectiveGroups.length;
   const pathUserFallbackLabel = t("adManagement:users.detail.effectiveGroups.pathUser");
 
   return (
@@ -211,14 +235,24 @@ export function AdUserEffectiveGroupsSection({ userId }: Props) {
         <div className="space-y-3">
           <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
             <span>
-              {t("adManagement:users.detail.effectiveGroups.directCount", {
-                count: directCount,
-              })}
+              {hasActiveSearch
+                ? t("adManagement:users.detail.effectiveGroups.directCountFiltered", {
+                    filtered: filteredDirectCount,
+                    total: totalDirectCount,
+                  })
+                : t("adManagement:users.detail.effectiveGroups.directCount", {
+                    count: totalDirectCount,
+                  })}
             </span>
             <span>
-              {t("adManagement:users.detail.effectiveGroups.effectiveCount", {
-                count: effectiveCount,
-              })}
+              {hasActiveSearch
+                ? t("adManagement:users.detail.effectiveGroups.effectiveCountFiltered", {
+                    filtered: filteredEffectiveCount,
+                    total: totalEffectiveCount,
+                  })
+                : t("adManagement:users.detail.effectiveGroups.effectiveCount", {
+                    count: totalEffectiveCount,
+                  })}
             </span>
             <span>
               {t("adManagement:users.detail.effectiveGroups.appliedMaxDepth", {
@@ -243,26 +277,62 @@ export function AdUserEffectiveGroupsSection({ userId }: Props) {
               </TabsTrigger>
             </TabsList>
 
+            <div className="relative mt-3 w-full">
+              <Search
+                className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden="true"
+              />
+              <Input
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder={t("adManagement:users.detail.effectiveGroups.searchPlaceholder")}
+                className="w-full pr-9 pl-8"
+                aria-label={t("adManagement:users.detail.effectiveGroups.searchPlaceholder")}
+              />
+              {searchQuery ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="absolute top-1/2 right-1 size-7 -translate-y-1/2"
+                  onClick={() => setSearchQuery("")}
+                  aria-label={t("common:dataTable.clearFilters")}
+                >
+                  <X className="size-4" />
+                </Button>
+              ) : null}
+            </div>
+
             <TabsContent value="direct" className="mt-3">
-              {directCount === 0 ? (
+              {totalDirectCount === 0 ? (
                 <EmptyState
                   title={t("adManagement:users.detail.effectiveGroups.empty.directTitle")}
                   description={t("adManagement:users.detail.effectiveGroups.empty.directDescription")}
                 />
+              ) : filteredDirectCount === 0 ? (
+                <EmptyState
+                  title={t("adManagement:users.detail.effectiveGroups.empty.searchTitle")}
+                  description={t("adManagement:users.detail.effectiveGroups.empty.searchDescription")}
+                />
               ) : (
-                <DirectGroupList groups={data.directGroups} />
+                <DirectGroupList groups={filteredMemberships.directGroups} />
               )}
             </TabsContent>
 
             <TabsContent value="effective" className="mt-3">
-              {effectiveCount === 0 ? (
+              {totalEffectiveCount === 0 ? (
                 <EmptyState
                   title={t("adManagement:users.detail.effectiveGroups.empty.effectiveTitle")}
                   description={t("adManagement:users.detail.effectiveGroups.empty.effectiveDescription")}
                 />
+              ) : filteredEffectiveCount === 0 ? (
+                <EmptyState
+                  title={t("adManagement:users.detail.effectiveGroups.empty.searchTitle")}
+                  description={t("adManagement:users.detail.effectiveGroups.empty.searchDescription")}
+                />
               ) : (
                 <EffectiveGroupList
-                  groups={data.effectiveGroups}
+                  groups={filteredMemberships.effectiveGroups}
                   t={t}
                   userFallbackLabel={pathUserFallbackLabel}
                 />
