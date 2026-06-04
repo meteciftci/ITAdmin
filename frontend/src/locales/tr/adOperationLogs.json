@@ -45,7 +45,8 @@
       "UserDisable": "Kullanıcı devre dışı bırakma",
       "UserUnlock": "Kullanıcı kilidi açma",
       "UserGroupAdd": "Gruba ekleme",
-      "UserGroupRemove": "Gruptan çıkarma"
+      "UserGroupRemove": "Gruptan çıkarma",
+      "UserOuMove": "OU taşıma"
     },
     "statuses": {
       "Succeeded": "Başarılı",

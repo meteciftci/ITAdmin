@@ -98,6 +98,30 @@ public static class AdOperationErrorDiagnosticBuilder
                 PartialUpdate: false,
                 RollbackStatus: AdUserUpdateRollbackStatus.NotRequired));
 
+    public static string BuildUserOuMoveFailureJson(
+        string step,
+        Guid? targetObjectGuid,
+        string? targetDistinguishedName,
+        string? englishMessageOverride = null,
+        int? ldapResultCode = null,
+        int? ldapExceptionErrorCode = null,
+        string? ldapDiagnosticMessage = null,
+        string? normalizedReasonOverride = null) =>
+        BuildJson(
+            new AdOperationFailureContext(
+                AdManagementOperationTypes.UserOuMove,
+                step,
+                DiagnosticCode: AdOperationDiagnosticCodes.UserOuMoveFailed,
+                NormalizedReasonOverride: normalizedReasonOverride,
+                EnglishMessageOverride: englishMessageOverride,
+                LdapResultCode: ldapResultCode,
+                LdapExceptionErrorCode: ldapExceptionErrorCode,
+                LdapDiagnosticMessage: ldapDiagnosticMessage,
+                TargetObjectGuid: targetObjectGuid,
+                TargetDistinguishedName: targetDistinguishedName,
+                PartialUpdate: false,
+                RollbackStatus: AdUserUpdateRollbackStatus.NotRequired));
+
     public static string BuildCreateUserFailureJson(
         string step,
         string? englishMessageOverride = null,
@@ -147,6 +171,7 @@ public static class AdOperationErrorDiagnosticBuilder
             AdManagementOperationTypes.UserDisable => AdOperationDiagnosticCodes.UserDisableFailed,
             AdManagementOperationTypes.UserUnlock => AdOperationDiagnosticCodes.UserUnlockFailed,
             AdManagementOperationTypes.CreateUser => AdOperationDiagnosticCodes.UserCreateFailed,
+            AdManagementOperationTypes.UserOuMove => AdOperationDiagnosticCodes.UserOuMoveFailed,
             AdManagementOperationTypes.SettingsValidated => AdOperationDiagnosticCodes.SettingsValidationFailed,
             AdManagementOperationTypes.AttributeMappingCreated => AdOperationDiagnosticCodes.AttributeMappingCreateFailed,
             AdManagementOperationTypes.AttributeMappingUpdated => AdOperationDiagnosticCodes.AttributeMappingUpdateFailed,
@@ -224,6 +249,8 @@ public static class AdOperationErrorDiagnosticBuilder
                         "The AD user unlock operation failed.",
                     AdManagementOperationTypes.CreateUser =>
                         "The AD user create operation failed.",
+                    AdManagementOperationTypes.UserOuMove =>
+                        "The AD user OU move operation failed.",
                     _ => "The AD operation failed.",
                 },
         };

@@ -41,6 +41,13 @@ const manageGroupsButtonClass = cn(
   "dark:bg-emerald-500/15 dark:text-emerald-300 dark:hover:bg-emerald-500/25",
 );
 
+const moveOuButtonClass = cn(
+  buttonVariants({ size: "sm" }),
+  "inline-flex h-8 min-h-8 items-center justify-center px-3 text-sm",
+  "border border-sky-500/30 bg-sky-500/15 text-sky-700 hover:bg-sky-500/25",
+  "dark:bg-sky-500/15 dark:text-sky-300 dark:hover:bg-sky-500/25",
+);
+
 export function AdUserDetailPage() {
   const { t } = useTranslation(["adManagement", "common", "errors"]);
   const { id: userId } = useParams<{ id: string }>();
@@ -48,6 +55,7 @@ export function AdUserDetailPage() {
   const currentUser = useAuthStore((state) => state.user);
   const canUpdateUser = canAccess(currentUser, "AdManagement.Users.Update");
   const canManageGroups = canAccess(currentUser, "AdManagement.Users.Groups.View");
+  const canMoveOu = canAccess(currentUser, "AdManagement.Users.MoveOu");
   const canViewOperationLogs = canAccess(currentUser, "AdOperationLogs.View");
   const [showEmptyMappedFields, setShowEmptyMappedFields] = useState(false);
 
@@ -126,6 +134,15 @@ export function AdUserDetailPage() {
                   className={manageGroupsButtonClass}
                 >
                   {t("adManagement:users.actions.manageGroups")}
+                </Link>
+              ) : null}
+              {canMoveOu && user ? (
+                <Link
+                  to={`/ad-management/users/${user.id}/move-ou`}
+                  state={buildAdUserDetailReturnState(user.id)}
+                  className={moveOuButtonClass}
+                >
+                  {t("adManagement:users.actions.moveOu")}
                 </Link>
               ) : null}
             </div>

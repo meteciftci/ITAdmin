@@ -67,6 +67,48 @@ public static class AdOperationLogSnapshotBuilder
             },
             SerializerOptions);
 
+    public static string BuildUserOuMoveRequestSummary(
+        Guid userId,
+        string targetOuDistinguishedName) =>
+        JsonSerializer.Serialize(
+            new
+            {
+                operation = AdManagementOperationTypes.UserOuMove,
+                userId = userId.ToString("D"),
+                targetOuDistinguishedName,
+            },
+            SerializerOptions);
+
+    public static string BuildUserOuMoveBeforeSnapshot(
+        string userId,
+        string? samAccountName,
+        string? userPrincipalName,
+        string? distinguishedName,
+        string? parentOuDistinguishedName) =>
+        JsonSerializer.Serialize(
+            new
+            {
+                operation = AdManagementOperationTypes.UserOuMove,
+                user = BuildUserSnapshot(userId, samAccountName, userPrincipalName, distinguishedName),
+                ou = new { distinguishedName = parentOuDistinguishedName },
+            },
+            SerializerOptions);
+
+    public static string BuildUserOuMoveAfterSnapshot(
+        string userId,
+        string? samAccountName,
+        string? userPrincipalName,
+        string? distinguishedName,
+        string? parentOuDistinguishedName) =>
+        JsonSerializer.Serialize(
+            new
+            {
+                operation = AdManagementOperationTypes.UserOuMove,
+                user = BuildUserSnapshot(userId, samAccountName, userPrincipalName, distinguishedName),
+                ou = new { distinguishedName = parentOuDistinguishedName },
+            },
+            SerializerOptions);
+
     public static string BuildAccountRequestSummary(
         string operationType,
         Guid userId,

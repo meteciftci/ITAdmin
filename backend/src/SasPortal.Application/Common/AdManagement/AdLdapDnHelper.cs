@@ -159,6 +159,30 @@ public static class AdLdapDnHelper
             components.Skip(1).Select(static component => component.Trim()));
     }
 
+    public static string? GetRelativeDistinguishedName(string? distinguishedName)
+    {
+        if (string.IsNullOrWhiteSpace(distinguishedName))
+        {
+            return null;
+        }
+
+        var components = SplitDnComponents(distinguishedName.Trim());
+        return components.Length == 0 ? null : components[0].Trim();
+    }
+
+    public static bool AreDistinguishedNamesEqual(string? left, string? right)
+    {
+        if (string.IsNullOrWhiteSpace(left) || string.IsNullOrWhiteSpace(right))
+        {
+            return false;
+        }
+
+        return string.Equals(
+            NormalizeDn(left),
+            NormalizeDn(right),
+            StringComparison.OrdinalIgnoreCase);
+    }
+
     public static string BuildCommonNameRdn(string commonName) =>
         $"CN={EscapeDnComponent(commonName)}";
 

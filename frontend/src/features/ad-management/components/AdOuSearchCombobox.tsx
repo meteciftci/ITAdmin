@@ -17,6 +17,11 @@ type Props = {
   disabled?: boolean;
   className?: string;
   showFieldLabel?: boolean;
+  fieldLabelKey?: string;
+  placeholderKey?: string;
+  searchKey?: string;
+  emptyKey?: string;
+  errorKey?: string;
 };
 
 export function AdOuSearchCombobox({
@@ -25,6 +30,11 @@ export function AdOuSearchCombobox({
   disabled,
   className,
   showFieldLabel = true,
+  fieldLabelKey = "adManagement:users.create.fields.ou",
+  placeholderKey = "adManagement:users.create.fields.ouPlaceholder",
+  searchKey = "adManagement:users.create.fields.ouSearch",
+  emptyKey = "adManagement:users.create.empty.ouNotFound",
+  errorKey = "adManagement:users.create.errors.ouLoadFailed",
 }: Props) {
   const { t } = useTranslation(["adManagement", "common"]);
   const [open, setOpen] = useState(false);
@@ -67,7 +77,7 @@ export function AdOuSearchCombobox({
   return (
     <div className={cn("w-full min-w-0 space-y-1.5", className)}>
       {showFieldLabel ? (
-        <Label>{t("adManagement:users.create.fields.ou")} *</Label>
+        <Label>{t(fieldLabelKey)} *</Label>
       ) : null}
       <Popover open={open} onOpenChange={setOpen}>
         <div className="w-full [&>span]:flex [&>span]:w-full">
@@ -81,7 +91,7 @@ export function AdOuSearchCombobox({
               )}
             >
               <span className={cn("min-w-0 flex-1 truncate", !triggerLabel && "text-muted-foreground")}>
-                {triggerLabel || t("adManagement:users.create.fields.ouPlaceholder")}
+                {triggerLabel || t(placeholderKey)}
               </span>
               <ChevronDown className="ml-2 size-4 shrink-0 opacity-60" />
             </button>
@@ -91,7 +101,7 @@ export function AdOuSearchCombobox({
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder={t("adManagement:users.create.fields.ouSearch")}
+            placeholder={t(searchKey)}
             disabled={disabled}
             autoFocus
           />
@@ -101,12 +111,12 @@ export function AdOuSearchCombobox({
             ) : null}
             {ouQuery.isError ? (
               <p className="px-2 py-3 text-sm text-destructive">
-                {t("adManagement:users.create.errors.ouLoadFailed")}
+                {t(errorKey)}
               </p>
             ) : null}
             {ouQuery.isSuccess && !items.length ? (
               <p className="px-2 py-3 text-sm text-muted-foreground">
-                {t("adManagement:users.create.empty.ouNotFound")}
+                {t(emptyKey)}
               </p>
             ) : null}
             {items.length > 0 ? (

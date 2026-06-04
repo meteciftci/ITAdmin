@@ -28,6 +28,7 @@ public static class DependencyInjection
         services.AddScoped<IAdUserDirectoryService>(sp => sp.GetRequiredService<AdUserDirectoryService>());
         services.AddScoped<IAdUserAccountOperationService>(sp => sp.GetRequiredService<AdUserDirectoryService>());
         services.AddScoped<IAdUserGroupMembershipService>(sp => sp.GetRequiredService<AdUserDirectoryService>());
+        services.AddScoped<IAdUserOuMoveService>(sp => sp.GetRequiredService<AdUserDirectoryService>());
 
         services.AddScoped<ISmsProviderAdapter, CustomHttpSmsAdapter>();
         services.AddScoped<IEmailProviderAdapter, SmtpEmailProviderAdapter>();

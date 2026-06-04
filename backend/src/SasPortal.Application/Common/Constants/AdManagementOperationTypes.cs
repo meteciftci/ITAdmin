@@ -14,6 +14,7 @@ public static class AdManagementOperationTypes
     public const string UserUnlock = "UserUnlock";
     public const string UserGroupAdd = "UserGroupAdd";
     public const string UserGroupRemove = "UserGroupRemove";
+    public const string UserOuMove = "UserOuMove";
 }
 
 public static class AdManagementTargetUserTypes

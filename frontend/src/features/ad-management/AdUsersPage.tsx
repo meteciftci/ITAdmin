@@ -49,6 +49,7 @@ export function AdUsersPage() {
   const canDisableUser = canAccess(currentUser, "AdManagement.Users.Disable");
   const canUnlockUser = canAccess(currentUser, "AdManagement.Users.Unlock");
   const canManageGroups = canAccess(currentUser, "AdManagement.Users.Groups.View");
+  const canMoveOu = canAccess(currentUser, "AdManagement.Users.MoveOu");
   const navigate = useNavigate();
   const { listState, listPath, updateListState, clearListState } = useAdUserListState();
 
@@ -88,6 +89,7 @@ export function AdUsersPage() {
         canDisableUser,
         canEnableUser,
         canUnlockUser,
+        canMoveOu,
         onDetail: (user) => {
           navigate(buildAdUserDetailPath(user.id));
         },
@@ -96,6 +98,9 @@ export function AdUsersPage() {
         },
         onManageGroups: (user) => {
           navigate(`/ad-management/users/${user.id}/groups`);
+        },
+        onMoveOu: (user) => {
+          navigate(`/ad-management/users/${user.id}/move-ou`);
         },
         onDisable: (user) => setConfirmTarget({ user, action: "disable" }),
         onEnable: (user) => setConfirmTarget({ user, action: "enable" }),
@@ -108,6 +113,7 @@ export function AdUsersPage() {
       canDisableUser,
       canEnableUser,
       canUnlockUser,
+      canMoveOu,
       navigate,
     ],
   );

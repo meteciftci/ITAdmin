@@ -45,7 +45,8 @@
       "UserDisable": "Disable user",
       "UserUnlock": "Unlock user",
       "UserGroupAdd": "Add to group",
-      "UserGroupRemove": "Remove from group"
+      "UserGroupRemove": "Remove from group",
+      "UserOuMove": "Move OU"
     },
     "statuses": {
       "Succeeded": "Succeeded",

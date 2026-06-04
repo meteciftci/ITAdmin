@@ -42,6 +42,24 @@ public sealed class AdLdapDnHelperTests
     }
 
     [Fact]
+    public void GetParentDistinguishedName_ReturnsParentForEscapedCommaCn()
+    {
+        var userDn = "CN=Ali\\, Veli,OU=Source,OU=Users,DC=example,DC=com";
+
+        var parent = AdLdapDnHelper.GetParentDistinguishedName(userDn);
+
+        Assert.Equal("OU=Source,OU=Users,DC=example,DC=com", parent);
+    }
+
+    [Fact]
+    public void AreDistinguishedNamesEqual_IgnoresCaseAndSpacing()
+    {
+        Assert.True(AdLdapDnHelper.AreDistinguishedNamesEqual(
+            "ou=source,ou=users,dc=example,dc=com",
+            "OU=Source,OU=Users,DC=example,DC=com"));
+    }
+
+    [Fact]
     public void BuildGroupMemberships_SortsAlphabeticallyByName()
     {
         var memberships = AdLdapDnHelper.BuildGroupMemberships(

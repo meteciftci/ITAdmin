@@ -46,7 +46,8 @@
         "enable": "Hesabı aktife al",
         "disable": "Hesabı pasife al",
         "unlock": "Kilidi aç",
-        "manageGroups": "Grup üyeliklerini yönet"
+        "manageGroups": "Grup üyeliklerini yönet",
+        "moveOu": "OU Taşı"
       },
       "edit": {
         "pageTitle": "AD kullanıcısı düzenle",
@@ -157,6 +158,44 @@
         "page": "Sayfa {{pageNumber}}",
         "previous": "Önceki",
         "next": "Sonraki"
+      },
+      "moveOu": {
+        "pageTitle": "Kullanıcıyı OU'ya Taşı",
+        "pageDescription": "AD kullanıcısını yalnızca kullanıcı kök OU kapsamındaki bir organizasyon birimine taşıyın.",
+        "sections": {
+          "userSummary": "Kullanıcı özeti",
+          "targetOu": "Hedef OU"
+        },
+        "fields": {
+          "displayName": "Görünen ad",
+          "samAccountName": "Kullanıcı adı",
+          "userPrincipalName": "UPN",
+          "currentDn": "Mevcut Distinguished Name",
+          "currentOu": "Mevcut OU",
+          "targetOu": "Hedef OU",
+          "targetOuPlaceholder": "Hedef OU seçin",
+          "targetOuSearch": "OU ara"
+        },
+        "warnings": {
+          "usersRootScope": "Kullanıcı yalnızca kullanıcı kök OU'su altındaki OU'lara taşınabilir."
+        },
+        "actions": {
+          "submit": "OU Taşı"
+        },
+        "messages": {
+          "moved": "Kullanıcı OU taşıma işlemi başarılı.",
+          "alreadyInOu": "Kullanıcı zaten seçilen OU içinde.",
+          "moveFailed": "OU taşıma işlemi başarısız oldu."
+        },
+        "validation": {
+          "targetOuRequired": "Hedef OU seçimi zorunludur."
+        },
+        "errors": {
+          "ouLoadFailed": "OU listesi yüklenemedi."
+        },
+        "empty": {
+          "ouNotFound": "OU bulunamadı."
+        }
       },
       "groups": {
         "pageTitle": "Grup Üyelikleri",

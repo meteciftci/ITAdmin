@@ -19,7 +19,8 @@ public sealed class AdManagementController(
     IAdManagementValidationService validationService,
     IAdUserDirectoryService adUserDirectoryService,
     IAdUserAccountOperationService adUserAccountOperationService,
-    IAdUserGroupMembershipService adUserGroupMembershipService) : ControllerBase
+    IAdUserGroupMembershipService adUserGroupMembershipService,
+    IAdUserOuMoveService adUserOuMoveService) : ControllerBase
 {
     [HttpGet("settings")]
     [RequirePermission(AdManagementPermissions.SettingsView)]
@@ -289,6 +290,74 @@ public sealed class AdManagementController(
         [FromRoute] string id,
         CancellationToken cancellationToken = default) =>
         await ExecuteAccountOperationAsync(id, adUserAccountOperationService.UnlockAsync, cancellationToken);
+
+    [HttpPost("users/{id}/move-ou")]
+    [RequirePermission(AdManagementPermissions.UsersMoveOu)]
+    public async Task<ActionResult<MoveAdUserOuResponse>> MoveUserOu(
+        [FromRoute] string id,
+        [FromBody] MoveAdUserOuRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Guid.TryParse(id, out var objectGuid))
+        {
+            return BadRequest(new MoveAdUserOuResponse(
+                false,
+                "Geçersiz kullanıcı kimliği.",
+                id,
+                null,
+                null,
+                null,
+                null,
+                request.TargetOuDistinguishedName));
+        }
+
+        if (string.IsNullOrWhiteSpace(request.TargetOuDistinguishedName))
+        {
+            return BadRequest(new MoveAdUserOuResponse(
+                false,
+                "Hedef OU seçimi zorunludur.",
+                id,
+                null,
+                null,
+                null,
+                null,
+                request.TargetOuDistinguishedName));
+        }
+
+        var result = await adUserOuMoveService.MoveOuAsync(
+            new AppModels.MoveAdUserOuRequest(
+                objectGuid,
+                request.TargetOuDistinguishedName.Trim(),
+                ResolveActorUserId(User),
+                ResolveActorUserName(User),
+                ResolveIpAddress(),
+                ResolveUserAgent()),
+            cancellationToken);
+
+        var response = new MoveAdUserOuResponse(
+            result.IsSuccess,
+            result.Message,
+            result.UserId ?? id,
+            result.SamAccountName,
+            result.UserPrincipalName,
+            result.DistinguishedName,
+            result.PreviousDistinguishedName,
+            result.TargetOuDistinguishedName);
+
+        if (result.IsSuccess)
+        {
+            return Ok(response);
+        }
+
+        return result.FailureKind switch
+        {
+            AppModels.AdDirectoryFailureKind.NotFound => NotFound(response),
+            AppModels.AdDirectoryFailureKind.ConnectionFailed => StatusCode(
+                StatusCodes.Status503ServiceUnavailable,
+                response),
+            _ => BadRequest(response),
+        };
+    }
 
     [HttpGet("users/{id}/groups")]
     [RequirePermission(AdManagementPermissions.UsersGroupsView)]

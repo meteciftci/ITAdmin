@@ -107,6 +107,11 @@ const AdEditUserPage = lazy(() =>
     default: module.AdEditUserPage,
   })),
 );
+const AdMoveUserOuPage = lazy(() =>
+  import("@/features/ad-management/AdMoveUserOuPage").then((module) => ({
+    default: module.AdMoveUserOuPage,
+  })),
+);
 const AdOperationLogsPage = lazy(() =>
   import("@/features/ad-management/AdOperationLogsPage").then((module) => ({
     default: module.AdOperationLogsPage,
@@ -481,6 +486,20 @@ export const router = createBrowserRouter([
           <AppLayout>
             <LazyRoute>
               <AdUserGroupsPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/ad-management/users/:id/move-ou",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission="AdManagement.Users.MoveOu">
+          <AppLayout>
+            <LazyRoute>
+              <AdMoveUserOuPage />
             </LazyRoute>
           </AppLayout>
         </RequirePermission>

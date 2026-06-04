@@ -46,7 +46,8 @@
         "enable": "Enable account",
         "disable": "Disable account",
         "unlock": "Unlock account",
-        "manageGroups": "Manage group memberships"
+        "manageGroups": "Manage group memberships",
+        "moveOu": "Move OU"
       },
       "edit": {
         "pageTitle": "Edit AD user",
@@ -157,6 +158,44 @@
         "page": "Page {{pageNumber}}",
         "previous": "Previous",
         "next": "Next"
+      },
+      "moveOu": {
+        "pageTitle": "Move User to OU",
+        "pageDescription": "Move the AD user only within organizational units under the configured users root OU.",
+        "sections": {
+          "userSummary": "User summary",
+          "targetOu": "Target OU"
+        },
+        "fields": {
+          "displayName": "Display name",
+          "samAccountName": "Username",
+          "userPrincipalName": "UPN",
+          "currentDn": "Current distinguished name",
+          "currentOu": "Current OU",
+          "targetOu": "Target OU",
+          "targetOuPlaceholder": "Select target OU",
+          "targetOuSearch": "Search OUs"
+        },
+        "warnings": {
+          "usersRootScope": "Users can only be moved to OUs under the configured users root OU."
+        },
+        "actions": {
+          "submit": "Move OU"
+        },
+        "messages": {
+          "moved": "User OU move completed successfully.",
+          "alreadyInOu": "User is already in the selected OU.",
+          "moveFailed": "AD user OU move operation failed."
+        },
+        "validation": {
+          "targetOuRequired": "Target OU selection is required."
+        },
+        "errors": {
+          "ouLoadFailed": "Failed to load organizational units."
+        },
+        "empty": {
+          "ouNotFound": "No organizational unit found."
+        }
       },
       "groups": {
         "pageTitle": "Group Memberships",

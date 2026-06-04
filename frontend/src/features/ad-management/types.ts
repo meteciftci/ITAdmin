@@ -321,6 +321,21 @@ export type AdUserAccountOperationResponse = {
 
 export type AdUserAccountConfirmAction = "enable" | "disable" | "unlock";
 
+export type MoveAdUserOuRequest = {
+  targetOuDistinguishedName: string;
+};
+
+export type MoveAdUserOuResponse = {
+  success: boolean;
+  message: string;
+  userId: string;
+  samAccountName: string | null;
+  userPrincipalName: string | null;
+  distinguishedName: string | null;
+  previousDistinguishedName: string | null;
+  targetOuDistinguishedName: string | null;
+};
+
 export type AdUserGroupMembershipItem = {
   distinguishedName: string;
   displayName: string | null;

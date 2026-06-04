@@ -20,9 +20,11 @@ type CreateAdUserColumnsOptions = {
   canDisableUser: boolean;
   canEnableUser: boolean;
   canUnlockUser: boolean;
+  canMoveOu: boolean;
   onDetail: (user: AdUserListItem) => void;
   onEdit: (user: AdUserListItem) => void;
   onManageGroups: (user: AdUserListItem) => void;
+  onMoveOu: (user: AdUserListItem) => void;
   onDisable: (user: AdUserListItem) => void;
   onEnable: (user: AdUserListItem) => void;
   onUnlock: (user: AdUserListItem) => void;
@@ -35,9 +37,11 @@ export function createAdUserColumns({
   canDisableUser,
   canEnableUser,
   canUnlockUser,
+  canMoveOu,
   onDetail,
   onEdit,
   onManageGroups,
+  onMoveOu,
   onDisable,
   onEnable,
   onUnlock,
@@ -109,6 +113,16 @@ export function createAdUserColumns({
               <DropdownMenuItem onClick={() => onManageGroups(user)}>
                 {t("adManagement:users.actions.manageGroups")}
               </DropdownMenuItem>
+            ) : null}
+            {canMoveOu ? (
+              <DropdownMenuItem onClick={() => onMoveOu(user)}>
+                {t("adManagement:users.actions.moveOu")}
+              </DropdownMenuItem>
+            ) : null}
+            {(canDisableUser && user.isEnabled)
+            || (canEnableUser && !user.isEnabled)
+            || (canUnlockUser && user.isLockedOut) ? (
+              <DropdownMenuSeparator />
             ) : null}
             {canDisableUser && user.isEnabled ? (
               <DropdownMenuItem onClick={() => onDisable(user)}>

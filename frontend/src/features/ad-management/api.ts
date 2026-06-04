@@ -15,6 +15,8 @@ import type {
   AdUserGroupMembershipResponse,
   AdUserGroupMutationRequest,
   AdUserGroupOperationResponse,
+  MoveAdUserOuRequest,
+  MoveAdUserOuResponse,
   AdGroupSearchResponse,
   CreateAdUserRequest,
   CreateAdUserResponse,
@@ -189,6 +191,17 @@ export const unlockAdUser = async (
 ): Promise<AdUserAccountOperationResponse> => {
   const { data } = await apiClient.post<AdUserAccountOperationResponse>(
     `/ad-management/users/${userId}/unlock`,
+  );
+  return data;
+};
+
+export const moveAdUserOu = async (
+  userId: string,
+  payload: MoveAdUserOuRequest,
+): Promise<MoveAdUserOuResponse> => {
+  const { data } = await apiClient.post<MoveAdUserOuResponse>(
+    `/ad-management/users/${userId}/move-ou`,
+    payload,
   );
   return data;
 };
