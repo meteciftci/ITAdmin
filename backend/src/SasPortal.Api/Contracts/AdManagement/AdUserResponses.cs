@@ -58,4 +58,9 @@ public sealed record AdUserDetailResponse(
     DateTimeOffset? BadPasswordTimeAt,
     DateTimeOffset? LastLogonTimestampAt,
     IReadOnlyList<AdUserGroupMembershipResponse> Groups,
-    IReadOnlyList<MappedAdUserAttributeResponse> MappedAttributes);
+    IReadOnlyList<MappedAdUserAttributeResponse> MappedAttributes,
+    string? ManagerDistinguishedName = null,
+    string? ManagerId = null,
+    string? ManagerSamAccountName = null,
+    string? ManagerUserPrincipalName = null,
+    string? ManagerDisplayName = null);

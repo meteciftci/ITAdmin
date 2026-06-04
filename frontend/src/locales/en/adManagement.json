@@ -332,6 +332,33 @@
         "sections": {
           "basic": "Basic information",
           "accountStatus": "Account status"
+        },
+        "manager": {
+          "title": "Manager",
+          "notAssigned": "No manager assigned",
+          "changeManager": "Change manager",
+          "clearManager": "Clear manager",
+          "selectManager": "Select manager",
+          "searchPlaceholder": "Search manager...",
+          "updated": "Manager updated",
+          "updateFailed": "Manager could not be updated",
+          "clearConfirmDescription": "This will remove the manager assignment for this user.",
+          "selfSelectionError": "A user cannot be their own manager"
+        },
+        "accountExpiration": {
+          "title": "Account Expiration",
+          "neverExpires": "Never expires",
+          "expiresOnDate": "Expires on a specific date",
+          "expiresAt": "Expiration date",
+          "updated": "Account expiration updated",
+          "updateFailed": "Account expiration could not be updated",
+          "dateRequired": "Expiration date is required"
+        },
+        "actions": {
+          "operations": "Actions",
+          "enable": "Enable",
+          "disable": "Disable",
+          "unlock": "Unlock"
         }
       }
     }

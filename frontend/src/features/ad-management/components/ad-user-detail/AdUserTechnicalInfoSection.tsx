@@ -42,9 +42,6 @@ export function AdUserTechnicalInfoSection({ user }: Props) {
             value={formatAdUserAccountControlValue(user.userAccountControl)}
             valueClassName="font-mono text-xs"
           />
-          <AdUserDetailField label={t("users.detail.page.accountExpires")}>
-            <DateTimeText value={user.accountExpiresAt} />
-          </AdUserDetailField>
           <AdUserDetailField label={t("users.detail.page.lockoutTime")}>
             <DateTimeText value={user.lockoutTimeAt} />
           </AdUserDetailField>

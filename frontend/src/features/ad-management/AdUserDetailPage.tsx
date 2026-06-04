@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AxiosError } from "axios";
 
@@ -9,15 +9,14 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { ErrorState } from "@/components/common/ErrorState";
 import { LoadingState } from "@/components/common/LoadingState";
 import { PageHeader } from "@/components/common/PageHeader";
-import { Button } from "@/components/ui/button";
-import { buttonVariants } from "@/components/ui/button-variants";
-import { buildAdUserDetailReturnState } from "@/features/ad-management/ad-return-path";
-import { AD_USERS_LIST_PATH } from "@/features/ad-management/ad-users-list-path";
 import { isGuidLike } from "@/features/ad-management/ad-user-detail-utils";
 import { AD_MANAGEMENT_USERS_QUERY_KEY, getAdUserById } from "@/features/ad-management/api";
 import { AdUserAccountSummaryCards } from "@/features/ad-management/components/ad-user-detail/AdUserAccountSummaryCards";
+import { AdUserAccountExpirationSection } from "@/features/ad-management/components/ad-user-detail/AdUserAccountExpirationSection";
 import { AdUserBasicInfoSection } from "@/features/ad-management/components/ad-user-detail/AdUserBasicInfoSection";
+import { AdUserDetailHeaderActions } from "@/features/ad-management/components/ad-user-detail/AdUserDetailHeaderActions";
 import { AdUserGroupsSummarySection } from "@/features/ad-management/components/ad-user-detail/AdUserGroupsSummarySection";
+import { AdUserManagerSection } from "@/features/ad-management/components/ad-user-detail/AdUserManagerSection";
 import { AdUserMappedAttributesSection } from "@/features/ad-management/components/ad-user-detail/AdUserMappedAttributesSection";
 import { AdUserRecentOperationsSection } from "@/features/ad-management/components/ad-user-detail/AdUserRecentOperationsSection";
 import { AdUserTechnicalInfoSection } from "@/features/ad-management/components/ad-user-detail/AdUserTechnicalInfoSection";
@@ -25,28 +24,6 @@ import { AdManagementModuleStateGuard } from "@/features/ad-management/component
 import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useAdManagementModuleStatus";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { canAccess } from "@/lib/permissions";
-import { cn } from "@/lib/utils";
-
-const editUserButtonClass = cn(
-  buttonVariants({ size: "sm" }),
-  "inline-flex h-8 min-h-8 items-center justify-center px-3 text-sm",
-  "border border-amber-500/30 bg-amber-500/15 text-amber-700 hover:bg-amber-500/25",
-  "dark:bg-amber-500/15 dark:text-amber-300 dark:hover:bg-amber-500/25",
-);
-
-const manageGroupsButtonClass = cn(
-  buttonVariants({ size: "sm" }),
-  "inline-flex h-8 min-h-8 items-center justify-center px-3 text-sm",
-  "border border-emerald-500/30 bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/25",
-  "dark:bg-emerald-500/15 dark:text-emerald-300 dark:hover:bg-emerald-500/25",
-);
-
-const moveOuButtonClass = cn(
-  buttonVariants({ size: "sm" }),
-  "inline-flex h-8 min-h-8 items-center justify-center px-3 text-sm",
-  "border border-sky-500/30 bg-sky-500/15 text-sky-700 hover:bg-sky-500/25",
-  "dark:bg-sky-500/15 dark:text-sky-300 dark:hover:bg-sky-500/25",
-);
 
 export function AdUserDetailPage() {
   const { t } = useTranslation(["adManagement", "common", "errors"]);
@@ -56,6 +33,9 @@ export function AdUserDetailPage() {
   const canUpdateUser = canAccess(currentUser, "AdManagement.Users.Update");
   const canManageGroups = canAccess(currentUser, "AdManagement.Users.Groups.View");
   const canMoveOu = canAccess(currentUser, "AdManagement.Users.MoveOu");
+  const canEnableUser = canAccess(currentUser, "AdManagement.Users.Enable");
+  const canDisableUser = canAccess(currentUser, "AdManagement.Users.Disable");
+  const canUnlockUser = canAccess(currentUser, "AdManagement.Users.Unlock");
   const canViewOperationLogs = canAccess(currentUser, "AdOperationLogs.View");
   const [showEmptyMappedFields, setShowEmptyMappedFields] = useState(false);
 
@@ -102,50 +82,19 @@ export function AdUserDetailPage() {
           title={pageTitle}
           description={pageDescription}
           actions={
-            <div className="flex flex-wrap items-center gap-2">
-              <Link
-                to={AD_USERS_LIST_PATH}
-                className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-              >
-                {t("adManagement:users.detail.page.back")}
-              </Link>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => userQuery.refetch()}
-                disabled={userQuery.isFetching}
-              >
-                {t("adManagement:users.actions.refresh")}
-              </Button>
-              {canUpdateUser && user ? (
-                <Link
-                  to={`/ad-management/users/${user.id}/edit`}
-                  state={buildAdUserDetailReturnState(user.id)}
-                  className={editUserButtonClass}
-                >
-                  {t("adManagement:users.actions.edit")}
-                </Link>
-              ) : null}
-              {canManageGroups && user ? (
-                <Link
-                  to={`/ad-management/users/${user.id}/groups`}
-                  state={buildAdUserDetailReturnState(user.id)}
-                  className={manageGroupsButtonClass}
-                >
-                  {t("adManagement:users.actions.manageGroups")}
-                </Link>
-              ) : null}
-              {canMoveOu && user ? (
-                <Link
-                  to={`/ad-management/users/${user.id}/move-ou`}
-                  state={buildAdUserDetailReturnState(user.id)}
-                  className={moveOuButtonClass}
-                >
-                  {t("adManagement:users.actions.moveOu")}
-                </Link>
-              ) : null}
-            </div>
+            user ? (
+              <AdUserDetailHeaderActions
+                user={user}
+                isFetching={userQuery.isFetching}
+                onRefresh={() => userQuery.refetch()}
+                canUpdateUser={canUpdateUser}
+                canManageGroups={canManageGroups}
+                canMoveOu={canMoveOu}
+                canEnableUser={canEnableUser}
+                canDisableUser={canDisableUser}
+                canUnlockUser={canUnlockUser}
+              />
+            ) : null
           }
         />
 
@@ -175,6 +124,8 @@ export function AdUserDetailPage() {
               <AdUserAccountSummaryCards user={user} />
             </div>
             <AdUserBasicInfoSection user={user} />
+            <AdUserManagerSection user={user} canUpdate={canUpdateUser} />
+            <AdUserAccountExpirationSection user={user} canUpdate={canUpdateUser} />
             <AdUserTechnicalInfoSection user={user} />
             <AdUserMappedAttributesSection
               user={user}

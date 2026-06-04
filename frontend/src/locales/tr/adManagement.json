@@ -332,6 +332,33 @@
         "sections": {
           "basic": "Temel bilgiler",
           "accountStatus": "Hesap durumu"
+        },
+        "manager": {
+          "title": "Manager",
+          "notAssigned": "Manager atanmamış",
+          "changeManager": "Manager değiştir",
+          "clearManager": "Manager temizle",
+          "selectManager": "Manager seç",
+          "searchPlaceholder": "Manager ara...",
+          "updated": "Manager güncellendi",
+          "updateFailed": "Manager güncellenemedi",
+          "clearConfirmDescription": "Bu kullanıcının manager ataması kaldırılacak.",
+          "selfSelectionError": "Kullanıcı kendisinin manager'ı olamaz"
+        },
+        "accountExpiration": {
+          "title": "Hesap Bitiş Tarihi",
+          "neverExpires": "Hesap süresi dolmaz",
+          "expiresOnDate": "Belirli tarihte sona erer",
+          "expiresAt": "Bitiş tarihi",
+          "updated": "Hesap bitiş tarihi güncellendi",
+          "updateFailed": "Hesap bitiş tarihi güncellenemedi",
+          "dateRequired": "Bitiş tarihi zorunludur"
+        },
+        "actions": {
+          "operations": "İşlemler",
+          "enable": "Aktife Al",
+          "disable": "Pasife Al",
+          "unlock": "Kilidi Aç"
         }
       }
     }

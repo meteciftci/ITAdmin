@@ -98,6 +98,54 @@ public static class AdOperationErrorDiagnosticBuilder
                 PartialUpdate: false,
                 RollbackStatus: AdUserUpdateRollbackStatus.NotRequired));
 
+    public static string BuildUserManagerUpdateFailureJson(
+        string step,
+        Guid? targetObjectGuid,
+        string? targetDistinguishedName,
+        string? englishMessageOverride = null,
+        int? ldapResultCode = null,
+        int? ldapExceptionErrorCode = null,
+        string? ldapDiagnosticMessage = null,
+        string? normalizedReasonOverride = null) =>
+        BuildJson(
+            new AdOperationFailureContext(
+                AdManagementOperationTypes.UserManagerUpdate,
+                step,
+                DiagnosticCode: AdOperationDiagnosticCodes.UserManagerUpdateFailed,
+                NormalizedReasonOverride: normalizedReasonOverride,
+                EnglishMessageOverride: englishMessageOverride,
+                LdapResultCode: ldapResultCode,
+                LdapExceptionErrorCode: ldapExceptionErrorCode,
+                LdapDiagnosticMessage: ldapDiagnosticMessage,
+                TargetObjectGuid: targetObjectGuid,
+                TargetDistinguishedName: targetDistinguishedName,
+                PartialUpdate: false,
+                RollbackStatus: AdUserUpdateRollbackStatus.NotRequired));
+
+    public static string BuildUserAccountExpirationUpdateFailureJson(
+        string step,
+        Guid? targetObjectGuid,
+        string? targetDistinguishedName,
+        string? englishMessageOverride = null,
+        int? ldapResultCode = null,
+        int? ldapExceptionErrorCode = null,
+        string? ldapDiagnosticMessage = null,
+        string? normalizedReasonOverride = null) =>
+        BuildJson(
+            new AdOperationFailureContext(
+                AdManagementOperationTypes.UserAccountExpirationUpdate,
+                step,
+                DiagnosticCode: AdOperationDiagnosticCodes.UserAccountExpirationUpdateFailed,
+                NormalizedReasonOverride: normalizedReasonOverride,
+                EnglishMessageOverride: englishMessageOverride,
+                LdapResultCode: ldapResultCode,
+                LdapExceptionErrorCode: ldapExceptionErrorCode,
+                LdapDiagnosticMessage: ldapDiagnosticMessage,
+                TargetObjectGuid: targetObjectGuid,
+                TargetDistinguishedName: targetDistinguishedName,
+                PartialUpdate: false,
+                RollbackStatus: AdUserUpdateRollbackStatus.NotRequired));
+
     public static string BuildUserOuMoveFailureJson(
         string step,
         Guid? targetObjectGuid,
@@ -172,6 +220,9 @@ public static class AdOperationErrorDiagnosticBuilder
             AdManagementOperationTypes.UserUnlock => AdOperationDiagnosticCodes.UserUnlockFailed,
             AdManagementOperationTypes.CreateUser => AdOperationDiagnosticCodes.UserCreateFailed,
             AdManagementOperationTypes.UserOuMove => AdOperationDiagnosticCodes.UserOuMoveFailed,
+            AdManagementOperationTypes.UserManagerUpdate => AdOperationDiagnosticCodes.UserManagerUpdateFailed,
+            AdManagementOperationTypes.UserAccountExpirationUpdate =>
+                AdOperationDiagnosticCodes.UserAccountExpirationUpdateFailed,
             AdManagementOperationTypes.SettingsValidated => AdOperationDiagnosticCodes.SettingsValidationFailed,
             AdManagementOperationTypes.AttributeMappingCreated => AdOperationDiagnosticCodes.AttributeMappingCreateFailed,
             AdManagementOperationTypes.AttributeMappingUpdated => AdOperationDiagnosticCodes.AttributeMappingUpdateFailed,

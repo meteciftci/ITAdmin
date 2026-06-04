@@ -20,7 +20,9 @@ public sealed class AdManagementController(
     IAdUserDirectoryService adUserDirectoryService,
     IAdUserAccountOperationService adUserAccountOperationService,
     IAdUserGroupMembershipService adUserGroupMembershipService,
-    IAdUserOuMoveService adUserOuMoveService) : ControllerBase
+    IAdUserOuMoveService adUserOuMoveService,
+    IAdUserManagerUpdateService adUserManagerUpdateService,
+    IAdUserAccountExpirationUpdateService adUserAccountExpirationUpdateService) : ControllerBase
 {
     [HttpGet("settings")]
     [RequirePermission(AdManagementPermissions.SettingsView)]
@@ -290,6 +292,110 @@ public sealed class AdManagementController(
         [FromRoute] string id,
         CancellationToken cancellationToken = default) =>
         await ExecuteAccountOperationAsync(id, adUserAccountOperationService.UnlockAsync, cancellationToken);
+
+    [HttpPut("users/{id}/manager")]
+    [RequirePermission(AdManagementPermissions.UsersUpdate)]
+    public async Task<ActionResult<UpdateAdUserManagerResponse>> UpdateUserManager(
+        [FromRoute] string id,
+        [FromBody] UpdateAdUserManagerRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Guid.TryParse(id, out var objectGuid))
+        {
+            return BadRequest(new UpdateAdUserManagerResponse(
+                false,
+                "Geçersiz kullanıcı kimliği.",
+                id,
+                null,
+                null,
+                null));
+        }
+
+        var result = await adUserManagerUpdateService.UpdateManagerAsync(
+            new AppModels.UpdateAdUserManagerRequest(
+                objectGuid,
+                request.ManagerUserId,
+                request.ClearManager,
+                ResolveActorUserId(User),
+                ResolveActorUserName(User),
+                ResolveIpAddress(),
+                ResolveUserAgent()),
+            cancellationToken);
+
+        var response = new UpdateAdUserManagerResponse(
+            result.IsSuccess,
+            result.Message,
+            result.UserId ?? id,
+            result.SamAccountName,
+            result.ManagerDistinguishedName,
+            result.ManagerDisplayName);
+
+        if (result.IsSuccess)
+        {
+            return Ok(response);
+        }
+
+        return result.FailureKind switch
+        {
+            AppModels.AdDirectoryFailureKind.NotFound => NotFound(response),
+            AppModels.AdDirectoryFailureKind.ConnectionFailed => StatusCode(
+                StatusCodes.Status503ServiceUnavailable,
+                response),
+            _ => BadRequest(response),
+        };
+    }
+
+    [HttpPut("users/{id}/account-expiration")]
+    [RequirePermission(AdManagementPermissions.UsersUpdate)]
+    public async Task<ActionResult<UpdateAdUserAccountExpirationResponse>> UpdateUserAccountExpiration(
+        [FromRoute] string id,
+        [FromBody] UpdateAdUserAccountExpirationRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Guid.TryParse(id, out var objectGuid))
+        {
+            return BadRequest(new UpdateAdUserAccountExpirationResponse(
+                false,
+                "Geçersiz kullanıcı kimliği.",
+                id,
+                null,
+                null,
+                request.NeverExpires));
+        }
+
+        var result = await adUserAccountExpirationUpdateService.UpdateAccountExpirationAsync(
+            new AppModels.UpdateAdUserAccountExpirationRequest(
+                objectGuid,
+                request.NeverExpires,
+                request.ExpiresAt,
+                ResolveActorUserId(User),
+                ResolveActorUserName(User),
+                ResolveIpAddress(),
+                ResolveUserAgent()),
+            cancellationToken);
+
+        var response = new UpdateAdUserAccountExpirationResponse(
+            result.IsSuccess,
+            result.Message,
+            result.UserId ?? id,
+            result.SamAccountName,
+            result.AccountExpiresAt,
+            result.NeverExpires);
+
+        if (result.IsSuccess)
+        {
+            return Ok(response);
+        }
+
+        return result.FailureKind switch
+        {
+            AppModels.AdDirectoryFailureKind.NotFound => NotFound(response),
+            AppModels.AdDirectoryFailureKind.ConnectionFailed => StatusCode(
+                StatusCodes.Status503ServiceUnavailable,
+                response),
+            _ => BadRequest(response),
+        };
+    }
 
     [HttpPost("users/{id}/move-ou")]
     [RequirePermission(AdManagementPermissions.UsersMoveOu)]
@@ -911,7 +1017,12 @@ public sealed class AdManagementController(
                 .ToList(),
             item.MappedAttributes
                 .Select(MapMappedAttribute)
-                .ToList());
+                .ToList(),
+            item.ManagerDistinguishedName,
+            item.ManagerId,
+            item.ManagerSamAccountName,
+            item.ManagerUserPrincipalName,
+            item.ManagerDisplayName);
 
     private static AdUserGroupMembershipResponse MapGroupMembership(AppModels.AdUserGroupMembership item) =>
         new(item.Name, item.DistinguishedName);

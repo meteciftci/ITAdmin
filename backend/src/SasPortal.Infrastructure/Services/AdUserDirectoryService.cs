@@ -202,6 +202,8 @@ public sealed partial class AdUserDirectoryService(
                     AdDirectoryFailureKind.NotFound);
             }
 
+            detail = TryEnrichDetailWithResolvedManager(ldapConnection, detail);
+
             return new AdUserDirectoryDetailResult(true, string.Empty, detail);
         }
         catch (LdapException)
@@ -347,6 +349,8 @@ public sealed partial class AdUserDirectoryService(
         var lastLogonTimestampAt = AdLdapValueConverter.FromAdFileTime(
             GetFirstLong(entry, "lastLogonTimestamp"));
 
+        var managerDistinguishedName = GetFirstString(entry, "manager");
+
         detail = new AdUserDetail(
             listItem.Id,
             listItem.DistinguishedName,
@@ -370,8 +374,92 @@ public sealed partial class AdUserDirectoryService(
             AdLdapValueConverter.FromAdFileTime(GetFirstLong(entry, "badPasswordTime")),
             lastLogonTimestampAt,
             groups,
-            mappedAttributes);
+            mappedAttributes,
+            managerDistinguishedName);
 
+        return true;
+    }
+
+    private AdUserDetail TryEnrichDetailWithResolvedManager(LdapConnection ldapConnection, AdUserDetail detail)
+    {
+        if (string.IsNullOrWhiteSpace(detail.ManagerDistinguishedName))
+        {
+            return detail;
+        }
+
+        try
+        {
+            if (!TryResolveManagerByDistinguishedName(
+                    ldapConnection,
+                    detail.ManagerDistinguishedName,
+                    out var managerId,
+                    out var managerSamAccountName,
+                    out var managerUserPrincipalName,
+                    out var managerDisplayName))
+            {
+                return detail;
+            }
+
+            return detail with
+            {
+                ManagerId = managerId,
+                ManagerSamAccountName = managerSamAccountName,
+                ManagerUserPrincipalName = managerUserPrincipalName,
+                ManagerDisplayName = managerDisplayName,
+            };
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                ex,
+                "AD user manager resolve failed for user {UserId}",
+                detail.Id);
+            return detail;
+        }
+    }
+
+    private static bool TryResolveManagerByDistinguishedName(
+        LdapConnection ldapConnection,
+        string managerDistinguishedName,
+        out string? managerId,
+        out string? managerSamAccountName,
+        out string? managerUserPrincipalName,
+        out string? managerDisplayName)
+    {
+        managerId = null;
+        managerSamAccountName = null;
+        managerUserPrincipalName = null;
+        managerDisplayName = null;
+
+        var searchRequest = new SearchRequest(
+            managerDistinguishedName.Trim(),
+            "(&(objectCategory=person)(objectClass=user))",
+            SearchScope.Base,
+            "objectGUID",
+            "sAMAccountName",
+            "userPrincipalName",
+            "displayName")
+        {
+            SizeLimit = 1,
+            TimeLimit = LdapOperationTimeout,
+        };
+
+        var response = (SearchResponse)ldapConnection.SendRequest(searchRequest);
+        if (response.ResultCode != ResultCode.Success || response.Entries.Count == 0)
+        {
+            return false;
+        }
+
+        var entry = response.Entries[0];
+        if (!TryGetObjectGuid(entry, out var objectGuid))
+        {
+            return false;
+        }
+
+        managerId = objectGuid.ToString("D");
+        managerSamAccountName = GetFirstString(entry, "sAMAccountName");
+        managerUserPrincipalName = GetFirstString(entry, "userPrincipalName");
+        managerDisplayName = GetFirstString(entry, "displayName");
         return true;
     }
 

@@ -251,6 +251,19 @@ export type ParsedSnapshotMembership = {
   isDirectMember: boolean | null;
 };
 
+export type ParsedSnapshotManager = {
+  id: string | null;
+  displayName: string | null;
+  samAccountName: string | null;
+  userPrincipalName: string | null;
+  distinguishedName: string | null;
+};
+
+export type ParsedSnapshotAccountExpiration = {
+  neverExpires: boolean | null;
+  accountExpiresAt: string | null;
+};
+
 export type ParsedNestedAdOperationSnapshot = {
   operation: string | null;
   user: ParsedSnapshotUser | null;
@@ -258,6 +271,8 @@ export type ParsedNestedAdOperationSnapshot = {
   group: ParsedSnapshotGroup | null;
   ou: ParsedSnapshotOu | null;
   membership: ParsedSnapshotMembership | null;
+  manager: ParsedSnapshotManager | null;
+  accountExpiration: ParsedSnapshotAccountExpiration | null;
   mappedAttributes: ParsedMappedSnapshotAttribute[];
   notifications: string | null;
   rawRecord: Record<string, unknown>;
@@ -276,12 +291,16 @@ export type SnapshotRenderStrategy =
   | "lockStatus"
   | "groupMembership"
   | "ouMove"
+  | "userManagerUpdate"
+  | "userAccountExpirationUpdate"
   | "generic";
 
 const ACCOUNT_STATUS_OPERATION_TYPES = new Set(["UserEnable", "UserDisable"]);
 const LOCK_STATUS_OPERATION_TYPES = new Set(["UserUnlock"]);
 const GROUP_MEMBERSHIP_OPERATION_TYPES = new Set(["UserGroupAdd", "UserGroupRemove"]);
 const OU_MOVE_OPERATION_TYPES = new Set(["UserOuMove"]);
+const USER_MANAGER_UPDATE_OPERATION_TYPES = new Set(["UserManagerUpdate"]);
+const USER_ACCOUNT_EXPIRATION_UPDATE_OPERATION_TYPES = new Set(["UserAccountExpirationUpdate"]);
 
 function readRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -387,6 +406,49 @@ function parseSnapshotMembership(value: unknown): ParsedSnapshotMembership | nul
   return isDirectMember === null ? null : { isDirectMember };
 }
 
+function parseSnapshotManager(value: unknown): ParsedSnapshotManager | null {
+  if (value === null) {
+    return {
+      id: null,
+      displayName: null,
+      samAccountName: null,
+      userPrincipalName: null,
+      distinguishedName: null,
+    };
+  }
+
+  const record = readRecord(value);
+  if (!record) {
+    return null;
+  }
+
+  const manager: ParsedSnapshotManager = {
+    id: formatSnapshotValue(record.id ?? record.Id),
+    displayName: formatSnapshotValue(record.displayName ?? record.DisplayName),
+    samAccountName: formatSnapshotValue(record.samAccountName ?? record.SamAccountName),
+    userPrincipalName: formatSnapshotValue(record.userPrincipalName ?? record.UserPrincipalName),
+    distinguishedName: formatSnapshotValue(record.distinguishedName ?? record.DistinguishedName),
+  };
+
+  return Object.values(manager).some((entry) => entry !== null) ? manager : null;
+}
+
+function parseSnapshotAccountExpiration(value: unknown): ParsedSnapshotAccountExpiration | null {
+  const record = readRecord(value);
+  if (!record) {
+    return null;
+  }
+
+  const accountExpiration: ParsedSnapshotAccountExpiration = {
+    neverExpires: readBoolean(record.neverExpires ?? record.NeverExpires),
+    accountExpiresAt: formatSnapshotValue(record.accountExpiresAt ?? record.AccountExpiresAt),
+  };
+
+  return accountExpiration.neverExpires !== null || accountExpiration.accountExpiresAt !== null
+    ? accountExpiration
+    : null;
+}
+
 export function parseNestedAdOperationSnapshot(value: unknown): ParsedNestedAdOperationSnapshot | null {
   if (value === null || value === undefined) {
     return null;
@@ -413,6 +475,10 @@ export function parseNestedAdOperationSnapshot(value: unknown): ParsedNestedAdOp
     group: parseSnapshotGroup(record.group ?? record.Group),
     ou: parseSnapshotOu(record.ou ?? record.Ou),
     membership: parseSnapshotMembership(record.membership ?? record.Membership),
+    manager: parseSnapshotManager(record.manager ?? record.Manager),
+    accountExpiration: parseSnapshotAccountExpiration(
+      record.accountExpiration ?? record.AccountExpiration,
+    ),
     mappedAttributes: readMappedAttributes(record.mappedAttributes ?? record.MappedAttributes),
     notifications: formatSnapshotValue(record.notifications ?? record.Notifications),
     rawRecord: record,
@@ -550,6 +616,59 @@ export function buildOuMoveComparisonRows(
   return rows.filter((row) => row.before !== null || row.after !== null);
 }
 
+export function buildManagerComparisonRows(
+  before: ParsedNestedAdOperationSnapshot | null,
+  after: ParsedNestedAdOperationSnapshot | null,
+): SnapshotComparisonRow[] {
+  const rows = [
+    buildComparisonRow(
+      "displayName",
+      before?.manager?.displayName ?? null,
+      after?.manager?.displayName ?? null,
+    ),
+    buildComparisonRow(
+      "samAccountName",
+      before?.manager?.samAccountName ?? null,
+      after?.manager?.samAccountName ?? null,
+    ),
+    buildComparisonRow(
+      "userPrincipalName",
+      before?.manager?.userPrincipalName ?? null,
+      after?.manager?.userPrincipalName ?? null,
+    ),
+    buildComparisonRow(
+      "distinguishedName",
+      before?.manager?.distinguishedName ?? null,
+      after?.manager?.distinguishedName ?? null,
+      true,
+      true,
+    ),
+  ];
+
+  return rows.filter((row) => row.before !== null || row.after !== null);
+}
+
+export function buildAccountExpirationComparisonRows(
+  before: ParsedNestedAdOperationSnapshot | null,
+  after: ParsedNestedAdOperationSnapshot | null,
+  formatBoolean: (value: boolean | null | undefined) => string | null,
+): SnapshotComparisonRow[] {
+  const rows = [
+    buildComparisonRow(
+      "neverExpires",
+      formatBoolean(before?.accountExpiration?.neverExpires),
+      formatBoolean(after?.accountExpiration?.neverExpires),
+    ),
+    buildComparisonRow(
+      "accountExpiresAt",
+      before?.accountExpiration?.accountExpiresAt ?? null,
+      after?.accountExpiration?.accountExpiresAt ?? null,
+    ),
+  ];
+
+  return rows.filter((row) => row.before !== null || row.after !== null);
+}
+
 export function buildMembershipComparisonRows(
   before: ParsedNestedAdOperationSnapshot | null,
   after: ParsedNestedAdOperationSnapshot | null,
@@ -577,6 +696,8 @@ export function hasNestedSnapshotContent(snapshot: ParsedNestedAdOperationSnapsh
       snapshot.group ||
       snapshot.ou ||
       snapshot.membership ||
+      snapshot.manager ||
+      snapshot.accountExpiration ||
       snapshot.mappedAttributes.length > 0 ||
       snapshot.notifications ||
       Object.keys(snapshot.rawRecord).length > 0,
@@ -601,6 +722,12 @@ export function getSnapshotRenderStrategy(operationType: string): SnapshotRender
   }
   if (OU_MOVE_OPERATION_TYPES.has(operationType)) {
     return "ouMove";
+  }
+  if (USER_MANAGER_UPDATE_OPERATION_TYPES.has(operationType)) {
+    return "userManagerUpdate";
+  }
+  if (USER_ACCOUNT_EXPIRATION_UPDATE_OPERATION_TYPES.has(operationType)) {
+    return "userAccountExpirationUpdate";
   }
   return "generic";
 }

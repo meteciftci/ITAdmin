@@ -1,6 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 
 import { defaultAdManagementNotificationSettings } from "@/features/ad-management/ad-management-settings-payload";
+import { AD_OPERATION_LOGS_QUERY_KEY } from "@/features/ad-management/operation-logs-api";
 import { apiClient } from "@/lib/api-client";
 
 import type {
@@ -24,6 +25,10 @@ import type {
   UpdateAdAttributeMappingRequest,
   UpdateAdManagementSettingsRequest,
   UpdateAdUserRequest,
+  UpdateAdUserManagerRequest,
+  UpdateAdUserManagerResponse,
+  UpdateAdUserAccountExpirationRequest,
+  UpdateAdUserAccountExpirationResponse,
 } from "@/features/ad-management/types";
 
 export const AD_MANAGEMENT_SETTINGS_QUERY_KEY = [
@@ -51,6 +56,19 @@ export async function invalidateAdManagementUserQueries(
 ): Promise<void> {
   await queryClient.invalidateQueries({
     queryKey: AD_MANAGEMENT_USERS_QUERY_KEY,
+  });
+}
+
+export async function invalidateAdUserDetailRelatedQueries(
+  queryClient: QueryClient,
+  userId: string,
+): Promise<void> {
+  await invalidateAdManagementUserQueries(queryClient);
+  await queryClient.invalidateQueries({
+    queryKey: [...AD_OPERATION_LOGS_QUERY_KEY, "recent", userId],
+  });
+  await queryClient.invalidateQueries({
+    queryKey: AD_OPERATION_LOGS_QUERY_KEY,
   });
 }
 
@@ -132,6 +150,28 @@ export const updateAdUser = async (
 ): Promise<AdUserDetail> => {
   const { data } = await apiClient.put<AdUserDetail>(
     `/ad-management/users/${userId}`,
+    payload,
+  );
+  return data;
+};
+
+export const updateAdUserManager = async (
+  userId: string,
+  payload: UpdateAdUserManagerRequest,
+): Promise<UpdateAdUserManagerResponse> => {
+  const { data } = await apiClient.put<UpdateAdUserManagerResponse>(
+    `/ad-management/users/${userId}/manager`,
+    payload,
+  );
+  return data;
+};
+
+export const updateAdUserAccountExpiration = async (
+  userId: string,
+  payload: UpdateAdUserAccountExpirationRequest,
+): Promise<UpdateAdUserAccountExpirationResponse> => {
+  const { data } = await apiClient.put<UpdateAdUserAccountExpirationResponse>(
+    `/ad-management/users/${userId}/account-expiration`,
     payload,
   );
   return data;

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using SasPortal.Application.Common.Constants;
@@ -11,6 +12,12 @@ public static class AdOperationLogSnapshotBuilder
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    };
+
+    private static readonly JsonSerializerOptions SerializerOptionsWithNullManager = new()
+    {
+        DefaultIgnoreCondition = JsonIgnoreCondition.Never,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
     };
 
@@ -106,6 +113,98 @@ public static class AdOperationLogSnapshotBuilder
                 operation = AdManagementOperationTypes.UserOuMove,
                 user = BuildUserSnapshot(userId, samAccountName, userPrincipalName, distinguishedName),
                 ou = new { distinguishedName = parentOuDistinguishedName },
+            },
+            SerializerOptions);
+
+    public static string BuildUserManagerUpdateRequestSummary(
+        Guid userId,
+        Guid? managerUserId,
+        bool clearManager) =>
+        JsonSerializer.Serialize(
+            new
+            {
+                operation = AdManagementOperationTypes.UserManagerUpdate,
+                userId = userId.ToString("D"),
+                managerUserId = managerUserId?.ToString("D"),
+                clearManager,
+            },
+            SerializerOptions);
+
+    public static string BuildUserManagerUpdateBeforeSnapshot(
+        string userId,
+        string? samAccountName,
+        string? userPrincipalName,
+        string? distinguishedName,
+        AdUserManagerSnapshotInfo? manager) =>
+        JsonSerializer.Serialize(
+            BuildManagerUpdateSnapshotBody(userId, samAccountName, userPrincipalName, distinguishedName, manager),
+            new JsonSerializerOptions
+            {
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            });
+
+    public static string BuildUserManagerUpdateAfterSnapshot(
+        string userId,
+        string? samAccountName,
+        string? userPrincipalName,
+        string? distinguishedName,
+        AdUserManagerSnapshotInfo? manager) =>
+        JsonSerializer.Serialize(
+            BuildManagerUpdateSnapshotBody(userId, samAccountName, userPrincipalName, distinguishedName, manager),
+            SerializerOptionsWithNullManager);
+
+    public static string BuildUserAccountExpirationUpdateRequestSummary(
+        Guid userId,
+        bool neverExpires,
+        string? expiresAt) =>
+        JsonSerializer.Serialize(
+            new
+            {
+                operation = AdManagementOperationTypes.UserAccountExpirationUpdate,
+                userId = userId.ToString("D"),
+                neverExpires,
+                expiresAt,
+            },
+            SerializerOptions);
+
+    public static string BuildUserAccountExpirationUpdateBeforeSnapshot(
+        string userId,
+        string? samAccountName,
+        string? userPrincipalName,
+        string? distinguishedName,
+        bool neverExpires,
+        DateTimeOffset? accountExpiresAt) =>
+        JsonSerializer.Serialize(
+            new
+            {
+                operation = AdManagementOperationTypes.UserAccountExpirationUpdate,
+                user = BuildUserSnapshot(userId, samAccountName, userPrincipalName, distinguishedName),
+                accountExpiration = new
+                {
+                    neverExpires,
+                    accountExpiresAt = FormatAccountExpiresAt(accountExpiresAt),
+                },
+            },
+            SerializerOptions);
+
+    public static string BuildUserAccountExpirationUpdateAfterSnapshot(
+        string userId,
+        string? samAccountName,
+        string? userPrincipalName,
+        string? distinguishedName,
+        bool neverExpires,
+        DateTimeOffset? accountExpiresAt) =>
+        JsonSerializer.Serialize(
+            new
+            {
+                operation = AdManagementOperationTypes.UserAccountExpirationUpdate,
+                user = BuildUserSnapshot(userId, samAccountName, userPrincipalName, distinguishedName),
+                accountExpiration = new
+                {
+                    neverExpires,
+                    accountExpiresAt = FormatAccountExpiresAt(accountExpiresAt),
+                },
             },
             SerializerOptions);
 
@@ -541,6 +640,34 @@ public static class AdOperationLogSnapshotBuilder
             name = groupName,
             distinguishedName = groupDistinguishedName,
         };
+
+    private static object? BuildManagerSnapshot(AdUserManagerSnapshotInfo? manager) =>
+        manager is null
+            ? null
+            : new
+            {
+                id = manager.Id,
+                samAccountName = manager.SamAccountName,
+                userPrincipalName = manager.UserPrincipalName,
+                displayName = manager.DisplayName,
+                distinguishedName = manager.DistinguishedName,
+            };
+
+    private static object BuildManagerUpdateSnapshotBody(
+        string userId,
+        string? samAccountName,
+        string? userPrincipalName,
+        string? distinguishedName,
+        AdUserManagerSnapshotInfo? manager) =>
+        new
+        {
+            operation = AdManagementOperationTypes.UserManagerUpdate,
+            user = BuildUserSnapshot(userId, samAccountName, userPrincipalName, distinguishedName),
+            manager = BuildManagerSnapshot(manager),
+        };
+
+    private static string? FormatAccountExpiresAt(DateTimeOffset? accountExpiresAt) =>
+        accountExpiresAt?.ToUniversalTime().ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
     private static string? FormatLockoutTime(long? lockoutTime) =>
         lockoutTime is null or 0 ? null : lockoutTime.Value.ToString();

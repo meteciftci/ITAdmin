@@ -310,11 +310,15 @@ describe("getSnapshotRenderStrategy", () => {
     assert.equal(getSnapshotRenderStrategy("UserGroupAdd"), "groupMembership");
     assert.equal(getSnapshotRenderStrategy("UserGroupRemove"), "groupMembership");
     assert.equal(getSnapshotRenderStrategy("UserOuMove"), "ouMove");
+    assert.equal(getSnapshotRenderStrategy("UserManagerUpdate"), "userManagerUpdate");
+    assert.equal(getSnapshotRenderStrategy("UserAccountExpirationUpdate"), "userAccountExpirationUpdate");
   });
 
   it("falls back to generic for unknown operation types", () => {
     assert.equal(getSnapshotRenderStrategy("SettingsUpdated"), "generic");
     assert.notEqual(getSnapshotRenderStrategy("UserOuMove"), "generic");
+    assert.notEqual(getSnapshotRenderStrategy("UserManagerUpdate"), "generic");
+    assert.notEqual(getSnapshotRenderStrategy("UserAccountExpirationUpdate"), "generic");
   });
 
   it("keeps UserGroupAdd on groupMembership strategy", () => {

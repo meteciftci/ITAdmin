@@ -46,7 +46,9 @@
       "UserUnlock": "Unlock user",
       "UserGroupAdd": "Add to group",
       "UserGroupRemove": "Remove from group",
-      "UserOuMove": "Move OU"
+      "UserOuMove": "Move OU",
+      "UserManagerUpdate": "Manager update",
+      "UserAccountExpirationUpdate": "Account expiration update"
     },
     "statuses": {
       "Succeeded": "Succeeded",
@@ -118,6 +120,8 @@
       "group": "Group",
       "groupMembership": "Group Membership",
       "ouMove": "OU Move",
+      "userManagerUpdate": "Manager Update",
+      "userAccountExpirationUpdate": "Account Expiration Update",
       "createdUser": "Created User",
       "notifications": "Notifications",
       "boolean": {
@@ -137,7 +141,9 @@
         "isEnabled": "Enabled",
         "isLocked": "Locked",
         "userAccountControl": "User Account Control",
-        "lockoutTime": "Lockout Time"
+        "lockoutTime": "Lockout Time",
+        "neverExpires": "Never Expires",
+        "accountExpiresAt": "Account Expires At"
       }
     },
     "empty": {

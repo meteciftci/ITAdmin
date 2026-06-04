@@ -53,6 +53,7 @@ public static partial class AdLdapAttributeCatalog
         "department",
         "userAccountControl",
         "accountExpires",
+        "manager",
         "lockoutTime",
         "badPwdCount",
         "badPasswordTime",

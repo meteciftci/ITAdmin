@@ -81,7 +81,48 @@ public sealed record AdUserDetail(
     DateTimeOffset? BadPasswordTimeAt,
     DateTimeOffset? LastLogonTimestampAt,
     IReadOnlyList<AdUserGroupMembership> Groups,
-    IReadOnlyList<MappedAdUserAttribute> MappedAttributes);
+    IReadOnlyList<MappedAdUserAttribute> MappedAttributes,
+    string? ManagerDistinguishedName = null,
+    string? ManagerId = null,
+    string? ManagerSamAccountName = null,
+    string? ManagerUserPrincipalName = null,
+    string? ManagerDisplayName = null);
+
+public sealed record UpdateAdUserManagerRequest(
+    Guid UserId,
+    Guid? ManagerUserId,
+    bool ClearManager,
+    Guid? ActorUserId,
+    string? ActorUserName,
+    string? ActorIpAddress,
+    string? ActorUserAgent);
+
+public sealed record UpdateAdUserManagerResult(
+    bool IsSuccess,
+    string Message,
+    string? UserId,
+    string? SamAccountName,
+    string? ManagerDistinguishedName,
+    string? ManagerDisplayName,
+    AdDirectoryFailureKind? FailureKind = null);
+
+public sealed record UpdateAdUserAccountExpirationRequest(
+    Guid UserId,
+    bool NeverExpires,
+    string? ExpiresAt,
+    Guid? ActorUserId,
+    string? ActorUserName,
+    string? ActorIpAddress,
+    string? ActorUserAgent);
+
+public sealed record UpdateAdUserAccountExpirationResult(
+    bool IsSuccess,
+    string Message,
+    string? UserId,
+    string? SamAccountName,
+    DateTimeOffset? AccountExpiresAt,
+    bool NeverExpires,
+    AdDirectoryFailureKind? FailureKind = null);
 
 public sealed record AdUserDirectorySearchResult(
     bool IsSuccess,

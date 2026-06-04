@@ -19,6 +19,8 @@ public sealed class AdManagementControllerUserMutationGuardTests
         ["POST:users/{id}/groups"] = AdManagementPermissions.UsersGroupsAdd,
         ["DELETE:users/{id}/groups"] = AdManagementPermissions.UsersGroupsRemove,
         ["PUT:users/{id}"] = AdManagementPermissions.UsersUpdate,
+        ["PUT:users/{id}/manager"] = AdManagementPermissions.UsersUpdate,
+        ["PUT:users/{id}/account-expiration"] = AdManagementPermissions.UsersUpdate,
     };
 
     [Fact]

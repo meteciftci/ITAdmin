@@ -6,6 +6,7 @@ public static class AdLdapValueConverter
 {
     public const int UserAccountControlDisabledFlag = 0x0002;
     private const int UserAccountControlNormalAccountFlag = 0x0200;
+    public const long NeverExpiresFileTime = 9223372036854775807L;
 
     public static bool IsAccountEnabled(int? userAccountControl) =>
         userAccountControl is null || (userAccountControl.Value & UserAccountControlDisabledFlag) == 0;
@@ -21,21 +22,54 @@ public static class AdLdapValueConverter
     public static bool IsAccountLockedOut(long? lockoutTime) =>
         lockoutTime is > 0;
 
+    public static bool IsNeverExpiresFileTime(long? fileTime) =>
+        fileTime is null or <= 0 or NeverExpiresFileTime;
+
     public static DateTimeOffset? FromAdFileTime(long? fileTime)
     {
-        if (fileTime is null or <= 0)
+        if (IsNeverExpiresFileTime(fileTime))
         {
             return null;
         }
 
         try
         {
-            return DateTimeOffset.FromFileTime(fileTime.Value).ToUniversalTime();
+            return DateTimeOffset.FromFileTime(fileTime!.Value).ToUniversalTime();
         }
         catch (ArgumentOutOfRangeException)
         {
             return null;
         }
+    }
+
+    public static long ToAdFileTime(DateTimeOffset expiresAtUtc) =>
+        expiresAtUtc.ToUniversalTime().ToFileTime();
+
+    public static long ToNeverExpiresFileTime() => NeverExpiresFileTime;
+
+    public static bool TryParseAccountExpirationDate(
+        string? expiresAt,
+        out DateTimeOffset expiresAtUtc,
+        out string? errorMessage)
+    {
+        expiresAtUtc = default;
+        errorMessage = null;
+
+        if (string.IsNullOrWhiteSpace(expiresAt))
+        {
+            errorMessage = "Account expiration date is required.";
+            return false;
+        }
+
+        if (!DateOnly.TryParse(expiresAt.Trim(), CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateOnly))
+        {
+            errorMessage = "Account expiration date is invalid.";
+            return false;
+        }
+
+        expiresAtUtc = new DateTimeOffset(
+            dateOnly.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
+        return true;
     }
 
     public static DateTimeOffset? ParseGeneralizedTime(string? value)

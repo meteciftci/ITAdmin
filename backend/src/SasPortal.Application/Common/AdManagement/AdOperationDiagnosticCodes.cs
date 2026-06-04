@@ -9,6 +9,8 @@ public static class AdOperationDiagnosticCodes
     public const string UserUnlockFailed = "AD_USER_UNLOCK_FAILED";
     public const string UserCreateFailed = "AD_USER_CREATE_FAILED";
     public const string UserOuMoveFailed = "AD_USER_OU_MOVE_FAILED";
+    public const string UserManagerUpdateFailed = "AD_USER_MANAGER_UPDATE_FAILED";
+    public const string UserAccountExpirationUpdateFailed = "AD_USER_ACCOUNT_EXPIRATION_UPDATE_FAILED";
     public const string SettingsValidationFailed = "AD_SETTINGS_VALIDATION_FAILED";
     public const string AttributeMappingCreateFailed = "AD_ATTRIBUTE_MAPPING_CREATE_FAILED";
     public const string AttributeMappingUpdateFailed = "AD_ATTRIBUTE_MAPPING_UPDATE_FAILED";

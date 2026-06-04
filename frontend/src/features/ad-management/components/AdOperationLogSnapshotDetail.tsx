@@ -9,10 +9,12 @@ import {
   RawJsonDisclosure,
 } from "@/features/ad-management/ad-operation-snapshot-ui";
 import {
+  buildAccountExpirationComparisonRows,
   buildAccountStatusComparisonRows,
   buildCoreFieldComparisonRows,
   buildGenericSnapshotSections,
   buildLockStatusComparisonRows,
+  buildManagerComparisonRows,
   buildMappedAttributeComparisonRows,
   buildMembershipComparisonRows,
   buildOuMoveComparisonRows,
@@ -383,6 +385,132 @@ function OuMoveSnapshotSections({
   );
 }
 
+function UserManagerUpdateSnapshotSections({
+  beforeSnapshotJson,
+  afterSnapshotJson,
+  noneLabel,
+  emptyDash,
+  t,
+}: {
+  beforeSnapshotJson: string | null | undefined;
+  afterSnapshotJson: string | null | undefined;
+  noneLabel: string;
+  emptyDash: string;
+  t: TFunction<"adOperationLogs">;
+}) {
+  const beforeSnapshot = useMemo(
+    () => parseNestedAdOperationSnapshot(beforeSnapshotJson),
+    [beforeSnapshotJson],
+  );
+  const afterSnapshot = useMemo(
+    () => parseNestedAdOperationSnapshot(afterSnapshotJson),
+    [afterSnapshotJson],
+  );
+  const user = useMemo(
+    () => resolveSnapshotUser(beforeSnapshot, afterSnapshot),
+    [beforeSnapshot, afterSnapshot],
+  );
+  const managerRows = useMemo(
+    () => buildManagerComparisonRows(beforeSnapshot, afterSnapshot),
+    [afterSnapshot, beforeSnapshot],
+  );
+
+  const getManagerFieldLabel = (key: string) => {
+    const labels: Record<string, string> = {
+      displayName: t("snapshotSections.fields.displayName"),
+      samAccountName: t("snapshotSections.fields.samAccountName"),
+      userPrincipalName: t("snapshotSections.fields.userPrincipalName"),
+      distinguishedName: t("snapshotSections.fields.distinguishedName"),
+    };
+    return labels[key] ?? key;
+  };
+
+  return (
+    <>
+      <section className="space-y-3 border-t pt-4">
+        <h3 className="text-sm font-medium">{t("snapshotSections.user")}</h3>
+        <KeyValueGrid entries={getUserFieldEntries(t, user)} noneLabel={noneLabel} />
+      </section>
+
+      <section className="space-y-3 border-t pt-4">
+        <h3 className="text-sm font-medium">{t("snapshotSections.userManagerUpdate")}</h3>
+        <ComparisonTable
+          rows={managerRows}
+          getFieldLabel={getManagerFieldLabel}
+          emptyLabel={emptyDash}
+          noneLabel={noneLabel}
+        />
+      </section>
+    </>
+  );
+}
+
+function UserAccountExpirationUpdateSnapshotSections({
+  beforeSnapshotJson,
+  afterSnapshotJson,
+  noneLabel,
+  emptyDash,
+  t,
+}: {
+  beforeSnapshotJson: string | null | undefined;
+  afterSnapshotJson: string | null | undefined;
+  noneLabel: string;
+  emptyDash: string;
+  t: TFunction<"adOperationLogs">;
+}) {
+  const booleanLabels = useMemo(
+    () => ({ yes: t("snapshotSections.boolean.yes"), no: t("snapshotSections.boolean.no") }),
+    [t],
+  );
+  const formatBoolean = useMemo(
+    () => (value: boolean | null | undefined) => formatSnapshotBoolean(value, booleanLabels),
+    [booleanLabels],
+  );
+  const beforeSnapshot = useMemo(
+    () => parseNestedAdOperationSnapshot(beforeSnapshotJson),
+    [beforeSnapshotJson],
+  );
+  const afterSnapshot = useMemo(
+    () => parseNestedAdOperationSnapshot(afterSnapshotJson),
+    [afterSnapshotJson],
+  );
+  const user = useMemo(
+    () => resolveSnapshotUser(beforeSnapshot, afterSnapshot),
+    [beforeSnapshot, afterSnapshot],
+  );
+  const expirationRows = useMemo(
+    () => buildAccountExpirationComparisonRows(beforeSnapshot, afterSnapshot, formatBoolean),
+    [afterSnapshot, beforeSnapshot, formatBoolean],
+  );
+
+  const getExpirationFieldLabel = (key: string) => {
+    const labels: Record<string, string> = {
+      neverExpires: t("snapshotSections.fields.neverExpires"),
+      accountExpiresAt: t("snapshotSections.fields.accountExpiresAt"),
+    };
+    return labels[key] ?? key;
+  };
+
+  return (
+    <>
+      <section className="space-y-3 border-t pt-4">
+        <h3 className="text-sm font-medium">{t("snapshotSections.user")}</h3>
+        <KeyValueGrid entries={getUserFieldEntries(t, user)} noneLabel={noneLabel} />
+      </section>
+
+      <section className="space-y-3 border-t pt-4">
+        <h3 className="text-sm font-medium">{t("snapshotSections.userAccountExpirationUpdate")}</h3>
+        <ComparisonTable
+          rows={expirationRows}
+          getFieldLabel={getExpirationFieldLabel}
+          emptyLabel={emptyDash}
+          noneLabel={noneLabel}
+        />
+      </section>
+    </>
+  );
+}
+
 function GroupMembershipSnapshotSections({
   beforeSnapshotJson,
   afterSnapshotJson,
@@ -660,6 +788,26 @@ export function AdOperationLogSnapshotDetail({
       case "ouMove":
         return (
           <OuMoveSnapshotSections
+            beforeSnapshotJson={beforeSnapshotJson}
+            afterSnapshotJson={afterSnapshotJson}
+            noneLabel={noneLabel}
+            emptyDash={emptyDash}
+            t={t}
+          />
+        );
+      case "userManagerUpdate":
+        return (
+          <UserManagerUpdateSnapshotSections
+            beforeSnapshotJson={beforeSnapshotJson}
+            afterSnapshotJson={afterSnapshotJson}
+            noneLabel={noneLabel}
+            emptyDash={emptyDash}
+            t={t}
+          />
+        );
+      case "userAccountExpirationUpdate":
+        return (
+          <UserAccountExpirationUpdateSnapshotSections
             beforeSnapshotJson={beforeSnapshotJson}
             afterSnapshotJson={afterSnapshotJson}
             noneLabel={noneLabel}

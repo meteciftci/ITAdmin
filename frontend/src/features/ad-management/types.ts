@@ -283,6 +283,11 @@ export type AdUserDetail = {
   lastLogonTimestampAt: string | null;
   groups: AdUserGroupMembership[];
   mappedAttributes: MappedAdUserAttribute[];
+  managerDistinguishedName: string | null;
+  managerId: string | null;
+  managerSamAccountName: string | null;
+  managerUserPrincipalName: string | null;
+  managerDisplayName: string | null;
 };
 
 export type GetAdUsersParams = {
@@ -376,4 +381,32 @@ export type AdUserGroupOperationResponse = {
 
 export type AdUserGroupMutationRequest = {
   groupDistinguishedName: string;
+};
+
+export type UpdateAdUserManagerRequest = {
+  managerUserId: string | null;
+  clearManager: boolean;
+};
+
+export type UpdateAdUserManagerResponse = {
+  success: boolean;
+  message: string;
+  userId: string;
+  samAccountName: string | null;
+  managerDistinguishedName: string | null;
+  managerDisplayName: string | null;
+};
+
+export type UpdateAdUserAccountExpirationRequest = {
+  neverExpires: boolean;
+  expiresAt: string | null;
+};
+
+export type UpdateAdUserAccountExpirationResponse = {
+  success: boolean;
+  message: string;
+  userId: string;
+  samAccountName: string | null;
+  accountExpiresAt: string | null;
+  neverExpires: boolean;
 };
