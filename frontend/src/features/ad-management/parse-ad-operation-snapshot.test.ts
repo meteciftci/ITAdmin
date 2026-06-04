@@ -300,6 +300,32 @@ describe("parseNestedAdOperationSnapshot", () => {
   });
 });
 
+describe("parseSnapshotAccountExpiration", () => {
+  it("prefers accountExpiresDate and falls back to legacy accountExpiresAt", () => {
+    const withDateOnly = parseNestedAdOperationSnapshot(
+      JSON.stringify({
+        accountExpiration: {
+          neverExpires: false,
+          accountExpiresDate: "2026-06-27",
+        },
+      }),
+    );
+
+    assert.equal(withDateOnly?.accountExpiration?.accountExpiresDate, "2026-06-27");
+
+    const withLegacy = parseNestedAdOperationSnapshot(
+      JSON.stringify({
+        accountExpiration: {
+          neverExpires: false,
+          accountExpiresAt: "2026-06-27T00:00:00Z",
+        },
+      }),
+    );
+
+    assert.equal(withLegacy?.accountExpiration?.accountExpiresDate, "2026-06-27T00:00:00Z");
+  });
+});
+
 describe("getSnapshotRenderStrategy", () => {
   it("maps known operation types to dedicated strategies", () => {
     assert.equal(getSnapshotRenderStrategy("UserUpdate"), "userUpdate");

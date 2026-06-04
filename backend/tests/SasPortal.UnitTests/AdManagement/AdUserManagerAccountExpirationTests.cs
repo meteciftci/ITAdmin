@@ -1,6 +1,7 @@
 using System.Text.Json;
 using SasPortal.Application.Common.AdManagement;
 using SasPortal.Application.Common.Constants;
+using SasPortal.Application.Common.Models;
 
 namespace SasPortal.UnitTests.AdManagement;
 
@@ -90,22 +91,66 @@ public sealed class AdUserManagerAccountExpirationTests
             document.RootElement.GetProperty("code").GetString());
     }
 
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public void ToAdFileTime_SetsExpectedValues(bool neverExpires)
+    [Fact]
+    public void UserAccountExpirationUpdate_Snapshot_UsesDateOnlyField()
     {
-        if (neverExpires)
-        {
-            Assert.Equal(AdLdapValueConverter.NeverExpiresFileTime, AdLdapValueConverter.ToNeverExpiresFileTime());
-            return;
-        }
+        var json = AdOperationLogSnapshotBuilder.BuildUserAccountExpirationUpdateAfterSnapshot(
+            "11111111-1111-1111-1111-111111111111",
+            "user1",
+            "user1@domain.local",
+            "CN=user1,OU=Users,DC=domain,DC=local",
+            neverExpires: false,
+            accountExpiresDate: "2026-06-27");
 
-        var expiresAt = new DateTimeOffset(2026, 12, 31, 0, 0, 0, TimeSpan.Zero);
-        var fileTime = AdLdapValueConverter.ToAdFileTime(expiresAt);
-        var roundTrip = AdLdapValueConverter.FromAdFileTime(fileTime);
-        Assert.NotNull(roundTrip);
-        Assert.Equal(expiresAt.UtcDateTime.Date, roundTrip!.Value.UtcDateTime.Date);
+        using var document = JsonDocument.Parse(json);
+        Assert.Equal(
+            "2026-06-27",
+            document.RootElement
+                .GetProperty("accountExpiration")
+                .GetProperty("accountExpiresDate")
+                .GetString());
+    }
+
+    [Fact]
+    public void AccountExpirationDateConverter_WriteBoundary_ReadDisplayDate()
+    {
+        var selectedDate = new DateOnly(2026, 6, 27);
+        var fileTime = AdAccountExpirationDateConverter.ToAccountExpiresFileTime(selectedDate);
+
+        Assert.Equal("2026-06-27", AdAccountExpirationDateConverter.ToDisplayDateString(fileTime));
+    }
+
+    [Fact]
+    public void AccountExpirationDateConverter_NeverExpires_ReturnsNullDisplayDate()
+    {
+        Assert.Null(AdAccountExpirationDateConverter.ToDisplayDateString(0));
+        Assert.Null(AdAccountExpirationDateConverter.ToDisplayDateString(AdLdapValueConverter.NeverExpiresFileTime));
+    }
+
+    [Fact]
+    public void AdLdapUserSearchBases_ResolveDistinctSearchBases_SkipsDuplicatesAndEmpty()
+    {
+        var connection = new AdManagementConnectionParameters(
+            null,
+            null,
+            "dc=domain,dc=local",
+            "dc=domain,dc=local",
+            "OU=Users,DC=domain,DC=local",
+            "OU=Disabled,DC=domain,DC=local",
+            null,
+            null,
+            Array.Empty<string>(),
+            false,
+            389,
+            null,
+            null);
+
+        var bases = AdLdapUserSearchBases.ResolveDistinctSearchBases(connection);
+
+        Assert.Equal(3, bases.Count);
+        Assert.Equal("dc=domain,dc=local", bases[0]);
+        Assert.Equal("OU=Users,DC=domain,DC=local", bases[1]);
+        Assert.Equal("OU=Disabled,DC=domain,DC=local", bases[2]);
     }
 
     [Fact]

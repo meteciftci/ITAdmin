@@ -350,6 +350,7 @@ public sealed partial class AdUserDirectoryService(
             GetFirstLong(entry, "lastLogonTimestamp"));
 
         var managerDistinguishedName = GetFirstString(entry, "manager");
+        var accountExpiresRaw = GetFirstLong(entry, "accountExpires");
 
         detail = new AdUserDetail(
             listItem.Id,
@@ -368,7 +369,8 @@ public sealed partial class AdUserDirectoryService(
             listItem.WhenCreated,
             listItem.WhenChanged,
             userAccountControl,
-            AdLdapValueConverter.FromAdFileTime(GetFirstLong(entry, "accountExpires")),
+            AdLdapValueConverter.FromAdFileTime(accountExpiresRaw),
+            AdAccountExpirationDateConverter.ToDisplayDateString(accountExpiresRaw),
             AdLdapValueConverter.FromAdFileTime(lockoutTime),
             GetFirstInt(entry, "badPwdCount"),
             AdLdapValueConverter.FromAdFileTime(GetFirstLong(entry, "badPasswordTime")),

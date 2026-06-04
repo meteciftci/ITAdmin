@@ -49,28 +49,9 @@ public static class AdLdapValueConverter
 
     public static bool TryParseAccountExpirationDate(
         string? expiresAt,
-        out DateTimeOffset expiresAtUtc,
-        out string? errorMessage)
-    {
-        expiresAtUtc = default;
-        errorMessage = null;
-
-        if (string.IsNullOrWhiteSpace(expiresAt))
-        {
-            errorMessage = "Account expiration date is required.";
-            return false;
-        }
-
-        if (!DateOnly.TryParse(expiresAt.Trim(), CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateOnly))
-        {
-            errorMessage = "Account expiration date is invalid.";
-            return false;
-        }
-
-        expiresAtUtc = new DateTimeOffset(
-            dateOnly.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
-        return true;
-    }
+        out DateOnly selectedDate,
+        out string? errorMessage) =>
+        AdAccountExpirationDateConverter.TryParseSelectedDate(expiresAt, out selectedDate, out errorMessage);
 
     public static DateTimeOffset? ParseGeneralizedTime(string? value)
     {

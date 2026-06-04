@@ -6,6 +6,11 @@ import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { SectionCard } from "@/components/common/SectionCard";
 import { Button } from "@/components/ui/button";
+import { AD_USER_FORM_ACTIONS_CLASSNAME } from "@/features/ad-management/ad-form-actions";
+import {
+  adUserDetailManagerChangeButtonClass,
+  adUserDetailManagerClearButtonClass,
+} from "@/features/ad-management/ad-user-detail-button-styles";
 import { AdUserDetailField } from "@/features/ad-management/components/ad-user-detail/AdUserDetailField";
 import { AdUserSearchCombobox } from "@/features/ad-management/components/AdUserSearchCombobox";
 import {
@@ -79,20 +84,27 @@ export function AdUserManagerSection({ user, canUpdate }: Props) {
         actions={
           canUpdate && hasManager && !editing ? (
             <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={() => setEditing(true)}>
+              <Button
+                type="button"
+                className={adUserDetailManagerChangeButtonClass}
+                onClick={() => setEditing(true)}
+              >
                 {t("adManagement:users.detail.manager.changeManager")}
               </Button>
               <Button
                 type="button"
-                variant="outline"
-                size="sm"
+                className={adUserDetailManagerClearButtonClass}
                 onClick={() => setClearConfirmOpen(true)}
               >
                 {t("adManagement:users.detail.manager.clearManager")}
               </Button>
             </div>
           ) : canUpdate && !hasManager && !editing ? (
-            <Button type="button" variant="outline" size="sm" onClick={() => setEditing(true)}>
+            <Button
+              type="button"
+              className={adUserDetailManagerChangeButtonClass}
+              onClick={() => setEditing(true)}
+            >
               {t("adManagement:users.detail.manager.changeManager")}
             </Button>
           ) : null
@@ -134,15 +146,7 @@ export function AdUserManagerSection({ user, canUpdate }: Props) {
               excludeUserId={user.id}
               disabled={managerMutation.isPending}
             />
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                size="sm"
-                onClick={handleSave}
-                disabled={!selectedManager || managerMutation.isPending}
-              >
-                {t("common:actions.save")}
-              </Button>
+            <div className={AD_USER_FORM_ACTIONS_CLASSNAME}>
               <Button
                 type="button"
                 variant="outline"
@@ -154,6 +158,14 @@ export function AdUserManagerSection({ user, canUpdate }: Props) {
                 disabled={managerMutation.isPending}
               >
                 {t("common:actions.cancel")}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleSave}
+                disabled={!selectedManager || managerMutation.isPending}
+              >
+                {t("common:actions.save")}
               </Button>
             </div>
           </div>

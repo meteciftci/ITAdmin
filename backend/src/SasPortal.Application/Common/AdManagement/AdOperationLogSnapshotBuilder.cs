@@ -174,7 +174,7 @@ public static class AdOperationLogSnapshotBuilder
         string? userPrincipalName,
         string? distinguishedName,
         bool neverExpires,
-        DateTimeOffset? accountExpiresAt) =>
+        string? accountExpiresDate) =>
         JsonSerializer.Serialize(
             new
             {
@@ -183,7 +183,7 @@ public static class AdOperationLogSnapshotBuilder
                 accountExpiration = new
                 {
                     neverExpires,
-                    accountExpiresAt = FormatAccountExpiresAt(accountExpiresAt),
+                    accountExpiresDate,
                 },
             },
             SerializerOptions);
@@ -194,7 +194,7 @@ public static class AdOperationLogSnapshotBuilder
         string? userPrincipalName,
         string? distinguishedName,
         bool neverExpires,
-        DateTimeOffset? accountExpiresAt) =>
+        string? accountExpiresDate) =>
         JsonSerializer.Serialize(
             new
             {
@@ -203,7 +203,7 @@ public static class AdOperationLogSnapshotBuilder
                 accountExpiration = new
                 {
                     neverExpires,
-                    accountExpiresAt = FormatAccountExpiresAt(accountExpiresAt),
+                    accountExpiresDate,
                 },
             },
             SerializerOptions);
@@ -666,8 +666,6 @@ public static class AdOperationLogSnapshotBuilder
             manager = BuildManagerSnapshot(manager),
         };
 
-    private static string? FormatAccountExpiresAt(DateTimeOffset? accountExpiresAt) =>
-        accountExpiresAt?.ToUniversalTime().ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
     private static string? FormatLockoutTime(long? lockoutTime) =>
         lockoutTime is null or 0 ? null : lockoutTime.Value.ToString();

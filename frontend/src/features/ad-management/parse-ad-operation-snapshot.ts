@@ -261,7 +261,7 @@ export type ParsedSnapshotManager = {
 
 export type ParsedSnapshotAccountExpiration = {
   neverExpires: boolean | null;
-  accountExpiresAt: string | null;
+  accountExpiresDate: string | null;
 };
 
 export type ParsedNestedAdOperationSnapshot = {
@@ -441,10 +441,15 @@ function parseSnapshotAccountExpiration(value: unknown): ParsedSnapshotAccountEx
 
   const accountExpiration: ParsedSnapshotAccountExpiration = {
     neverExpires: readBoolean(record.neverExpires ?? record.NeverExpires),
-    accountExpiresAt: formatSnapshotValue(record.accountExpiresAt ?? record.AccountExpiresAt),
+    accountExpiresDate: formatSnapshotValue(
+      record.accountExpiresDate
+        ?? record.AccountExpiresDate
+        ?? record.accountExpiresAt
+        ?? record.AccountExpiresAt,
+    ),
   };
 
-  return accountExpiration.neverExpires !== null || accountExpiration.accountExpiresAt !== null
+  return accountExpiration.neverExpires !== null || accountExpiration.accountExpiresDate !== null
     ? accountExpiration
     : null;
 }
@@ -660,9 +665,9 @@ export function buildAccountExpirationComparisonRows(
       formatBoolean(after?.accountExpiration?.neverExpires),
     ),
     buildComparisonRow(
-      "accountExpiresAt",
-      before?.accountExpiration?.accountExpiresAt ?? null,
-      after?.accountExpiration?.accountExpiresAt ?? null,
+      "accountExpiresDate",
+      before?.accountExpiration?.accountExpiresDate ?? null,
+      after?.accountExpiration?.accountExpiresDate ?? null,
     ),
   ];
 

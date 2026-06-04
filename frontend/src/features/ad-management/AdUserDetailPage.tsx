@@ -124,8 +124,10 @@ export function AdUserDetailPage() {
               <AdUserAccountSummaryCards user={user} />
             </div>
             <AdUserBasicInfoSection user={user} />
-            <AdUserManagerSection user={user} canUpdate={canUpdateUser} />
-            <AdUserAccountExpirationSection user={user} canUpdate={canUpdateUser} />
+            <div className="grid gap-4 xl:grid-cols-2">
+              <AdUserManagerSection user={user} canUpdate={canUpdateUser} />
+              <AdUserAccountExpirationSection user={user} canUpdate={canUpdateUser} />
+            </div>
             <AdUserTechnicalInfoSection user={user} />
             <AdUserMappedAttributesSection
               user={user}

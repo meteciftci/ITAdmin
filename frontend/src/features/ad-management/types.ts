@@ -277,6 +277,7 @@ export type AdUserDetail = {
   whenChanged: string | null;
   userAccountControl: number | null;
   accountExpiresAt: string | null;
+  accountExpiresDate: string | null;
   lockoutTimeAt: string | null;
   badPwdCount: number | null;
   badPasswordTimeAt: string | null;
@@ -407,6 +408,6 @@ export type UpdateAdUserAccountExpirationResponse = {
   message: string;
   userId: string;
   samAccountName: string | null;
-  accountExpiresAt: string | null;
+  accountExpiresDate: string | null;
   neverExpires: boolean;
 };

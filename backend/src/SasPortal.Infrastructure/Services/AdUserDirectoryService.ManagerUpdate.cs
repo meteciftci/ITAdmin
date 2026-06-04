@@ -91,8 +91,7 @@ public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
         }
 
         var connection = connectionResult.Context.Connection;
-        var searchBase = ResolveDetailSearchBase(connection);
-        if (string.IsNullOrWhiteSpace(searchBase))
+        if (AdLdapUserSearchBases.ResolveDistinctSearchBases(connection).Count == 0)
         {
             return await FailManagerUpdateAsync(
                 request,
@@ -117,7 +116,7 @@ public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
             using var ldapConnection = CreateBoundConnection(connectionResult.Context);
             if (!TryLoadUserManagerContext(
                     ldapConnection,
-                    searchBase,
+                    connection,
                     request.UserId,
                     out var beforeContext))
             {
@@ -144,7 +143,7 @@ public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
             {
                 if (!TryLoadManagerUserContext(
                         ldapConnection,
-                        searchBase,
+                        connection,
                         request.ManagerUserId!.Value,
                         out targetManager))
                 {
@@ -193,7 +192,7 @@ public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
 
             if (!TryLoadUserManagerContext(
                     ldapConnection,
-                    searchBase,
+                    connection,
                     request.UserId,
                     out var afterContext))
             {
@@ -551,35 +550,21 @@ public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
 
     private static bool TryLoadUserManagerContext(
         LdapConnection ldapConnection,
-        string searchBase,
+        AdManagementConnectionParameters connection,
         Guid objectGuid,
         out AdUserManagerOperationContext context)
     {
         context = null!;
-        var guidFilter = AdLdapFilterHelper.FormatObjectGuidFilter(objectGuid);
-        var filter =
-            $"(&(objectCategory=person)(objectClass=user)(!(isDeleted=TRUE))(objectGUID={guidFilter}))";
-
-        var searchRequest = new SearchRequest(
-            searchBase,
-            filter,
-            SearchScope.Subtree,
-            "distinguishedName",
-            "sAMAccountName",
-            "userPrincipalName",
-            "manager")
-        {
-            SizeLimit = 2,
-            TimeLimit = LdapOperationTimeout,
-        };
-
-        var response = (SearchResponse)ldapConnection.SendRequest(searchRequest);
-        if (response.ResultCode != ResultCode.Success || response.Entries.Count == 0)
+        if (!TryFindUserEntryByObjectGuid(
+                ldapConnection,
+                connection,
+                objectGuid,
+                ["distinguishedName", "sAMAccountName", "userPrincipalName", "manager", "objectGUID"],
+                out var entry))
         {
             return false;
         }
 
-        var entry = response.Entries[0];
         if (!TryGetObjectGuid(entry, out var userGuid))
         {
             return false;
@@ -626,36 +611,21 @@ public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
 
     private static bool TryLoadManagerUserContext(
         LdapConnection ldapConnection,
-        string searchBase,
+        AdManagementConnectionParameters connection,
         Guid managerUserId,
         out AdUserManagerSnapshotInfo manager)
     {
         manager = null!;
-        var guidFilter = AdLdapFilterHelper.FormatObjectGuidFilter(managerUserId);
-        var filter =
-            $"(&(objectCategory=person)(objectClass=user)(!(isDeleted=TRUE))(objectGUID={guidFilter}))";
-
-        var searchRequest = new SearchRequest(
-            searchBase,
-            filter,
-            SearchScope.Subtree,
-            "distinguishedName",
-            "sAMAccountName",
-            "userPrincipalName",
-            "displayName",
-            "objectGUID")
-        {
-            SizeLimit = 2,
-            TimeLimit = LdapOperationTimeout,
-        };
-
-        var response = (SearchResponse)ldapConnection.SendRequest(searchRequest);
-        if (response.ResultCode != ResultCode.Success || response.Entries.Count == 0)
+        if (!TryFindUserEntryByObjectGuid(
+                ldapConnection,
+                connection,
+                managerUserId,
+                ["distinguishedName", "sAMAccountName", "userPrincipalName", "displayName", "objectGUID"],
+                out var entry))
         {
             return false;
         }
 
-        var entry = response.Entries[0];
         if (!TryGetObjectGuid(entry, out var objectGuid))
         {
             return false;

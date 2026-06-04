@@ -487,6 +487,7 @@ function UserAccountExpirationUpdateSnapshotSections({
     const labels: Record<string, string> = {
       neverExpires: t("snapshotSections.fields.neverExpires"),
       accountExpiresAt: t("snapshotSections.fields.accountExpiresAt"),
+      accountExpiresDate: t("snapshotSections.fields.accountExpiresAt"),
     };
     return labels[key] ?? key;
   };

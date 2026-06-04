@@ -52,12 +52,12 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
                 cancellationToken);
         }
 
-        DateTimeOffset parsedExpiresAtUtc = default;
+        DateOnly parsedSelectedDate = default;
         if (!request.NeverExpires)
         {
             if (!AdLdapValueConverter.TryParseAccountExpirationDate(
                     request.ExpiresAt,
-                    out parsedExpiresAtUtc,
+                    out parsedSelectedDate,
                     out var parseError))
             {
                 return await FailAccountExpirationUpdateAsync(
@@ -97,8 +97,7 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
         }
 
         var connection = connectionResult.Context.Connection;
-        var searchBase = ResolveDetailSearchBase(connection);
-        if (string.IsNullOrWhiteSpace(searchBase))
+        if (AdLdapUserSearchBases.ResolveDistinctSearchBases(connection).Count == 0)
         {
             return await FailAccountExpirationUpdateAsync(
                 request,
@@ -123,7 +122,7 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
             using var ldapConnection = CreateBoundConnection(connectionResult.Context);
             if (!TryLoadUserAccountExpirationContext(
                     ldapConnection,
-                    searchBase,
+                    connection,
                     request.UserId,
                     out var beforeContext))
             {
@@ -146,9 +145,14 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
             loadedBeforeContext = beforeContext;
 
             var targetNeverExpires = request.NeverExpires;
-            DateTimeOffset? targetExpiresAt = targetNeverExpires ? null : parsedExpiresAtUtc;
+            var targetExpiresDate = targetNeverExpires
+                ? null
+                : parsedSelectedDate.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
             if (beforeContext.NeverExpires == targetNeverExpires
-                && beforeContext.AccountExpiresAt == targetExpiresAt)
+                && string.Equals(
+                    beforeContext.AccountExpiresDate,
+                    targetExpiresDate,
+                    StringComparison.Ordinal))
             {
                 return await CompleteAccountExpirationUpdateAsync(
                     request,
@@ -163,13 +167,13 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
 
             var fileTime = targetNeverExpires
                 ? AdLdapValueConverter.ToNeverExpiresFileTime()
-                : AdLdapValueConverter.ToAdFileTime(targetExpiresAt!.Value);
+                : AdAccountExpirationDateConverter.ToAccountExpiresFileTime(parsedSelectedDate);
 
             ApplyAccountExpires(ldapConnection, beforeContext.DistinguishedName, fileTime);
 
             if (!TryLoadUserAccountExpirationContext(
                     ldapConnection,
-                    searchBase,
+                    connection,
                     request.UserId,
                     out var afterContext))
             {
@@ -263,7 +267,7 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
             message,
             afterContext.UserId,
             afterContext.SamAccountName,
-            afterContext.AccountExpiresAt,
+            afterContext.AccountExpiresDate,
             afterContext.NeverExpires);
     }
 
@@ -290,7 +294,7 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
             message,
             request.UserId.ToString("D"),
             beforeContext?.SamAccountName,
-            beforeContext?.AccountExpiresAt,
+            beforeContext?.AccountExpiresDate,
             beforeContext?.NeverExpires ?? request.NeverExpires,
             failureKind);
     }
@@ -424,7 +428,7 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
                 beforeContext.UserPrincipalName,
                 beforeContext.DistinguishedName,
                 beforeContext.NeverExpires,
-                beforeContext.AccountExpiresAt);
+                beforeContext.AccountExpiresDate);
 
         var afterSnapshot = afterContext is null
             ? null
@@ -434,7 +438,7 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
                 afterContext.UserPrincipalName,
                 afterContext.DistinguishedName,
                 afterContext.NeverExpires,
-                afterContext.AccountExpiresAt);
+                afterContext.AccountExpiresDate);
 
         await adOperationLogService.WriteAsync(
             new AdOperationLogEntry
@@ -523,36 +527,21 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
 
     private static bool TryLoadUserAccountExpirationContext(
         LdapConnection ldapConnection,
-        string searchBase,
+        AdManagementConnectionParameters connection,
         Guid objectGuid,
         out AdUserAccountExpirationContext context)
     {
         context = null!;
-        var guidFilter = AdLdapFilterHelper.FormatObjectGuidFilter(objectGuid);
-        var filter =
-            $"(&(objectCategory=person)(objectClass=user)(!(isDeleted=TRUE))(objectGUID={guidFilter}))";
-
-        var searchRequest = new SearchRequest(
-            searchBase,
-            filter,
-            SearchScope.Subtree,
-            "distinguishedName",
-            "sAMAccountName",
-            "userPrincipalName",
-            "accountExpires",
-            "objectGUID")
-        {
-            SizeLimit = 2,
-            TimeLimit = LdapOperationTimeout,
-        };
-
-        var response = (SearchResponse)ldapConnection.SendRequest(searchRequest);
-        if (response.ResultCode != ResultCode.Success || response.Entries.Count == 0)
+        if (!TryFindUserEntryByObjectGuid(
+                ldapConnection,
+                connection,
+                objectGuid,
+                ["distinguishedName", "sAMAccountName", "userPrincipalName", "accountExpires", "objectGUID"],
+                out var entry))
         {
             return false;
         }
 
-        var entry = response.Entries[0];
         if (!TryGetObjectGuid(entry, out var userGuid))
         {
             return false;
@@ -565,8 +554,8 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
         }
 
         var accountExpiresRaw = GetFirstLong(entry, "accountExpires");
-        var neverExpires = AdLdapValueConverter.IsNeverExpiresFileTime(accountExpiresRaw);
-        var accountExpiresAt = AdLdapValueConverter.FromAdFileTime(accountExpiresRaw);
+        var neverExpires = AdAccountExpirationDateConverter.IsNeverExpires(accountExpiresRaw);
+        var accountExpiresDate = AdAccountExpirationDateConverter.ToDisplayDateString(accountExpiresRaw);
 
         context = new AdUserAccountExpirationContext(
             userGuid.ToString("D"),
@@ -574,7 +563,7 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
             GetFirstString(entry, "sAMAccountName"),
             GetFirstString(entry, "userPrincipalName"),
             neverExpires,
-            accountExpiresAt);
+            accountExpiresDate);
 
         return true;
     }
@@ -585,5 +574,5 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
         string? SamAccountName,
         string? UserPrincipalName,
         bool NeverExpires,
-        DateTimeOffset? AccountExpiresAt);
+        string? AccountExpiresDate);
 }

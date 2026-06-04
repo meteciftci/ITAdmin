@@ -379,7 +379,7 @@ public sealed class AdManagementController(
             result.Message,
             result.UserId ?? id,
             result.SamAccountName,
-            result.AccountExpiresAt,
+            result.AccountExpiresDate,
             result.NeverExpires);
 
         if (result.IsSuccess)
@@ -1008,6 +1008,7 @@ public sealed class AdManagementController(
             item.WhenChanged,
             item.UserAccountControl,
             item.AccountExpiresAt,
+            item.AccountExpiresDate,
             item.LockoutTimeAt,
             item.BadPwdCount,
             item.BadPasswordTimeAt,

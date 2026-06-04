@@ -350,6 +350,7 @@
           "neverExpires": "Never expires",
           "expiresOnDate": "Expires on a specific date",
           "expiresAt": "Expiration date",
+          "datePlaceholder": "Select a date",
           "updated": "Account expiration updated",
           "updateFailed": "Account expiration could not be updated",
           "dateRequired": "Expiration date is required"

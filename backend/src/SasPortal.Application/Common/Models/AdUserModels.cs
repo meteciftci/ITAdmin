@@ -76,6 +76,7 @@ public sealed record AdUserDetail(
     DateTimeOffset? WhenChanged,
     int? UserAccountControl,
     DateTimeOffset? AccountExpiresAt,
+    string? AccountExpiresDate,
     DateTimeOffset? LockoutTimeAt,
     int? BadPwdCount,
     DateTimeOffset? BadPasswordTimeAt,
@@ -120,7 +121,7 @@ public sealed record UpdateAdUserAccountExpirationResult(
     string Message,
     string? UserId,
     string? SamAccountName,
-    DateTimeOffset? AccountExpiresAt,
+    string? AccountExpiresDate,
     bool NeverExpires,
     AdDirectoryFailureKind? FailureKind = null);
 

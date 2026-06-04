@@ -5,5 +5,5 @@ public sealed record UpdateAdUserAccountExpirationResponse(
     string Message,
     string UserId,
     string? SamAccountName,
-    DateTimeOffset? AccountExpiresAt,
+    string? AccountExpiresDate,
     bool NeverExpires);

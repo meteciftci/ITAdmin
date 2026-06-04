@@ -53,6 +53,7 @@ public sealed record AdUserDetailResponse(
     DateTimeOffset? WhenChanged,
     int? UserAccountControl,
     DateTimeOffset? AccountExpiresAt,
+    string? AccountExpiresDate,
     DateTimeOffset? LockoutTimeAt,
     int? BadPwdCount,
     DateTimeOffset? BadPasswordTimeAt,

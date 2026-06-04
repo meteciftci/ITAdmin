@@ -350,6 +350,7 @@
           "neverExpires": "Hesap süresi dolmaz",
           "expiresOnDate": "Belirli tarihte sona erer",
           "expiresAt": "Bitiş tarihi",
+          "datePlaceholder": "Tarih seçin",
           "updated": "Hesap bitiş tarihi güncellendi",
           "updateFailed": "Hesap bitiş tarihi güncellenemedi",
           "dateRequired": "Bitiş tarihi zorunludur"
