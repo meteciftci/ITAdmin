@@ -7,7 +7,34 @@ import path from 'node:path'
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   build: {
-    chunkSizeWarningLimit: 650,
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            {
+              name: 'react-vendor',
+              test: /node_modules\/(react|react-dom|react-router|react-router-dom)\//,
+              priority: 30,
+            },
+            {
+              name: 'query-vendor',
+              test: /node_modules\/@tanstack\//,
+              priority: 25,
+            },
+            {
+              name: 'i18n-vendor',
+              test: /node_modules\/(i18next|react-i18next)\//,
+              priority: 20,
+            },
+            {
+              name: 'ui-vendor',
+              test: /node_modules\/(lucide-react|date-fns|sonner|zustand|clsx|tailwind-merge|class-variance-authority)\//,
+              priority: 15,
+            },
+          ],
+        },
+      },
+    },
   },
   resolve: {
     alias: {
