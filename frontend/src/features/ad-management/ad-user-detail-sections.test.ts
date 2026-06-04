@@ -48,18 +48,14 @@ describe("AdUserManagerSection form actions", () => {
   });
 });
 
-describe("AdUserEffectiveGroupsSection i18n", () => {
-  it("uses adManagement effective groups translation keys", () => {
+describe("AdUserDetailPage group summary removal", () => {
+  it("does not import or render AdUserGroupsSummarySection", () => {
     const source = readFileSync(
-      new URL(
-        "./components/ad-user-detail/AdUserEffectiveGroupsSection.tsx",
-        import.meta.url,
-      ),
+      new URL("./AdUserDetailPage.tsx", import.meta.url),
       "utf8",
     );
 
-    assert.equal(source.includes("users.detail.effectiveGroups.title"), true);
-    assert.equal(source.includes("users.detail.effectiveGroups.errors.loadFailed"), true);
+    assert.equal(source.includes("AdUserGroupsSummarySection"), false);
   });
 });
 

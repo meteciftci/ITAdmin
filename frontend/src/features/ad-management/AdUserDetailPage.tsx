@@ -16,7 +16,6 @@ import { AdUserAccountExpirationSection } from "@/features/ad-management/compone
 import { AdUserBasicInfoSection } from "@/features/ad-management/components/ad-user-detail/AdUserBasicInfoSection";
 import { AdUserDetailHeaderActions } from "@/features/ad-management/components/ad-user-detail/AdUserDetailHeaderActions";
 import { AdUserEffectiveGroupsSection } from "@/features/ad-management/components/ad-user-detail/AdUserEffectiveGroupsSection";
-import { AdUserGroupsSummarySection } from "@/features/ad-management/components/ad-user-detail/AdUserGroupsSummarySection";
 import { AdUserManagerSection } from "@/features/ad-management/components/ad-user-detail/AdUserManagerSection";
 import { AdUserMappedAttributesSection } from "@/features/ad-management/components/ad-user-detail/AdUserMappedAttributesSection";
 import { AdUserRecentOperationsSection } from "@/features/ad-management/components/ad-user-detail/AdUserRecentOperationsSection";
@@ -135,7 +134,6 @@ export function AdUserDetailPage() {
               showEmptyFields={showEmptyMappedFields}
               onShowEmptyFieldsChange={setShowEmptyMappedFields}
             />
-            <AdUserGroupsSummarySection user={user} />
             {canManageGroups ? (
               <AdUserEffectiveGroupsSection userId={user.id} />
             ) : null}

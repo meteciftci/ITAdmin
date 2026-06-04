@@ -265,32 +265,6 @@
           "groupsSummary": "Grup Üyelikleri Özeti",
           "totalGroups": "Toplam Grup: {{count}}",
           "moreGroups": "+{{count}} daha",
-          "effectiveGroups": {
-            "title": "Etkin Grup Üyelikleri",
-            "description": "AD üst grup zincirlerinden çözümlenen doğrudan ve dolaylı grup üyeliklerini görüntüleyin.",
-            "directCount": "Doğrudan gruplar: {{count}}",
-            "effectiveCount": "Dolaylı gruplar: {{count}}",
-            "appliedMaxDepth": "Maks. derinlik: {{depth}}",
-            "maxDepth": "Maks. derinlik",
-            "depth": "Derinlik {{depth}}",
-            "membershipPath": "Üyelik yolu",
-            "pathUser": "Kullanıcı",
-            "pathGroup": "Grup",
-            "truncated": "Performans için sonuçlar sınırlandırıldı. Bazı dolaylı üyelikler gösterilmeyebilir.",
-            "tabs": {
-              "direct": "Doğrudan",
-              "effective": "Dolaylı / Etkin"
-            },
-            "empty": {
-              "directTitle": "Doğrudan grup bulunamadı",
-              "directDescription": "Bu kullanıcı için doğrudan AD grup üyeliği bulunamadı.",
-              "effectiveTitle": "Dolaylı grup bulunamadı",
-              "effectiveDescription": "Seçilen derinlik içinde dolaylı grup üyeliği bulunamadı."
-            },
-            "errors": {
-              "loadFailed": "Etkin grup üyelikleri yüklenemedi."
-            }
-          },
           "recentOperations": "Son AD Operasyonları",
           "viewAllLogs": "Tüm logları görüntüle",
           "noRecentOperations": "Son operasyon bulunamadı",
@@ -337,6 +311,32 @@
             "PASSWORD_EXPIRED": "PASSWORD_EXPIRED",
             "TRUSTED_TO_AUTH_FOR_DELEGATION": "TRUSTED_TO_AUTH_FOR_DELEGATION",
             "PARTIAL_SECRETS_ACCOUNT": "PARTIAL_SECRETS_ACCOUNT"
+          }
+        },
+        "effectiveGroups": {
+          "title": "Etkin Grup Üyelikleri",
+          "description": "AD üst grup zincirlerinden çözümlenen doğrudan ve dolaylı grup üyeliklerini görüntüleyin.",
+          "directCount": "Doğrudan gruplar: {{count}}",
+          "effectiveCount": "Dolaylı gruplar: {{count}}",
+          "appliedMaxDepth": "Maks. derinlik: {{depth}}",
+          "maxDepth": "Maks. derinlik",
+          "depth": "Derinlik {{depth}}",
+          "membershipPath": "Üyelik yolu",
+          "pathUser": "Kullanıcı",
+          "pathGroup": "Grup",
+          "truncated": "Performans için sonuçlar sınırlandırıldı. Bazı dolaylı üyelikler gösterilmeyebilir.",
+          "tabs": {
+            "direct": "Doğrudan",
+            "effective": "Dolaylı / Etkin"
+          },
+          "empty": {
+            "directTitle": "Doğrudan grup bulunamadı",
+            "directDescription": "Bu kullanıcı için doğrudan AD grup üyeliği bulunamadı.",
+            "effectiveTitle": "Dolaylı grup bulunamadı",
+            "effectiveDescription": "Seçilen derinlik içinde dolaylı grup üyeliği bulunamadı."
+          },
+          "errors": {
+            "loadFailed": "Etkin grup üyelikleri yüklenemedi."
           }
         },
         "dialogTitle": "Kullanıcı detayı",

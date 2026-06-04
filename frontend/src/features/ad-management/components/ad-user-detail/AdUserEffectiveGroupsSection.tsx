@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
@@ -9,6 +9,12 @@ import { SectionCard } from "@/components/common/SectionCard";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  getAdGroupPathNodeLabel,
+  getAdGroupPrimaryLabel,
+  getAdGroupSecondaryLabel,
+  type AdGroupDisplayFields,
+} from "@/features/ad-management/ad-group-display-labels";
 import {
   AD_MANAGEMENT_USER_EFFECTIVE_GROUPS_QUERY_KEY,
   getAdUserEffectiveGroups,
@@ -28,34 +34,81 @@ type Props = {
   userId: string;
 };
 
-function formatPathNodeLabel(node: AdMembershipPathNode, t: (key: string) => string): string {
-  if (node.type === "User") {
-    return node.displayName ?? node.name ?? t("adManagement:users.detail.effectiveGroups.pathUser");
-  }
+function GroupMembershipCard({
+  group,
+  distinguishedName,
+  headerAccessory,
+  children,
+}: {
+  group: AdGroupDisplayFields;
+  distinguishedName: string;
+  headerAccessory?: ReactNode;
+  children?: ReactNode;
+}) {
+  const primaryLabel = getAdGroupPrimaryLabel(group);
+  const secondaryLabel = getAdGroupSecondaryLabel(group, primaryLabel);
 
-  return node.displayName ?? node.name ?? node.samAccountName ?? node.distinguishedName;
+  return (
+    <li className="space-y-2 rounded-md border bg-card px-3 py-2 text-sm">
+      <div className="space-y-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="min-w-0 flex-1 truncate font-medium" title={primaryLabel}>
+            {primaryLabel}
+          </p>
+          {headerAccessory}
+        </div>
+        {secondaryLabel ? (
+          <p className="truncate text-xs text-muted-foreground" title={secondaryLabel}>
+            {secondaryLabel}
+          </p>
+        ) : null}
+      </div>
+      {children}
+      <p
+        className="break-all font-mono text-xs text-muted-foreground"
+        title={distinguishedName}
+      >
+        {distinguishedName}
+      </p>
+    </li>
+  );
 }
 
 function MembershipPathBreadcrumb({
   path,
-  t,
+  userFallbackLabel,
 }: {
   path: AdMembershipPathNode[];
-  t: (key: string) => string;
+  userFallbackLabel: string;
 }) {
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-1 text-xs text-muted-foreground">
-      {path.map((node, index) => (
-        <span key={`${node.distinguishedName}-${index}`} className="inline-flex min-w-0 items-center gap-1">
-          {index > 0 ? <span aria-hidden="true">→</span> : null}
+      {path.map((node, index) => {
+        const label = getAdGroupPathNodeLabel(
+          {
+            displayName: node.displayName,
+            name: node.name,
+            samAccountName: node.samAccountName,
+            distinguishedName: node.distinguishedName,
+          },
+          node.type === "User" ? userFallbackLabel : undefined,
+        );
+
+        return (
           <span
-            className="max-w-[12rem] truncate font-medium text-foreground"
-            title={node.distinguishedName}
+            key={`${node.distinguishedName}-${index}`}
+            className="inline-flex min-w-0 items-center gap-1"
           >
-            {formatPathNodeLabel(node, t)}
+            {index > 0 ? <span aria-hidden="true">→</span> : null}
+            <span
+              className="max-w-[12rem] truncate font-medium text-foreground"
+              title={node.distinguishedName}
+            >
+              {label}
+            </span>
           </span>
-        </span>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -64,21 +117,7 @@ function DirectGroupList({ groups }: { groups: AdEffectiveGroupSummaryItem[] }) 
   return (
     <ul className="max-h-72 space-y-2 overflow-y-auto rounded-md border bg-muted/20 p-2">
       {groups.map((group) => (
-        <li
-          key={group.distinguishedName}
-          className="rounded-md border bg-card px-3 py-2 text-sm"
-        >
-          <p className="font-medium">{group.name}</p>
-          {group.samAccountName ? (
-            <p className="text-xs text-muted-foreground">{group.samAccountName}</p>
-          ) : null}
-          <p
-            className="mt-1 break-all font-mono text-xs text-muted-foreground"
-            title={group.distinguishedName}
-          >
-            {group.distinguishedName}
-          </p>
-        </li>
+        <GroupMembershipCard key={group.distinguishedName} group={group} distinguishedName={group.distinguishedName} />
       ))}
     </ul>
   );
@@ -87,39 +126,32 @@ function DirectGroupList({ groups }: { groups: AdEffectiveGroupSummaryItem[] }) 
 function EffectiveGroupList({
   groups,
   t,
+  userFallbackLabel,
 }: {
   groups: AdEffectiveGroupNestedItem[];
   t: (key: string, options?: Record<string, unknown>) => string;
+  userFallbackLabel: string;
 }) {
   return (
     <ul className="max-h-96 space-y-3 overflow-y-auto rounded-md border bg-muted/20 p-2">
       {groups.map((group) => (
-        <li
+        <GroupMembershipCard
           key={group.distinguishedName}
-          className="space-y-2 rounded-md border bg-card px-3 py-2 text-sm"
-        >
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="font-medium">{group.name}</p>
+          group={group}
+          distinguishedName={group.distinguishedName}
+          headerAccessory={
             <Badge variant="outline" className="text-xs">
               {t("adManagement:users.detail.effectiveGroups.depth", { depth: group.depth })}
             </Badge>
-          </div>
-          {group.samAccountName ? (
-            <p className="text-xs text-muted-foreground">{group.samAccountName}</p>
-          ) : null}
+          }
+        >
           <div className="space-y-1">
             <p className="text-xs font-medium text-muted-foreground">
               {t("adManagement:users.detail.effectiveGroups.membershipPath")}
             </p>
-            <MembershipPathBreadcrumb path={group.path} t={t} />
+            <MembershipPathBreadcrumb path={group.path} userFallbackLabel={userFallbackLabel} />
           </div>
-          <p
-            className="break-all font-mono text-xs text-muted-foreground"
-            title={group.distinguishedName}
-          >
-            {group.distinguishedName}
-          </p>
-        </li>
+        </GroupMembershipCard>
       ))}
     </ul>
   );
@@ -139,6 +171,7 @@ export function AdUserEffectiveGroupsSection({ userId }: Props) {
   const data = effectiveGroupsQuery.data;
   const directCount = data?.directGroups.length ?? 0;
   const effectiveCount = data?.effectiveGroups.length ?? 0;
+  const pathUserFallbackLabel = t("adManagement:users.detail.effectiveGroups.pathUser");
 
   return (
     <SectionCard
@@ -228,7 +261,11 @@ export function AdUserEffectiveGroupsSection({ userId }: Props) {
                   description={t("adManagement:users.detail.effectiveGroups.empty.effectiveDescription")}
                 />
               ) : (
-                <EffectiveGroupList groups={data.effectiveGroups} t={t} />
+                <EffectiveGroupList
+                  groups={data.effectiveGroups}
+                  t={t}
+                  userFallbackLabel={pathUserFallbackLabel}
+                />
               )}
             </TabsContent>
           </Tabs>
