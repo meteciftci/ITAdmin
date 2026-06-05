@@ -30,6 +30,9 @@ import type {
   UpdateAdUserManagerResponse,
   UpdateAdUserAccountExpirationRequest,
   UpdateAdUserAccountExpirationResponse,
+  AdGroupDetail,
+  AdGroupListResponse,
+  GetAdGroupsParams,
 } from "@/features/ad-management/types";
 
 export const AD_MANAGEMENT_SETTINGS_QUERY_KEY = [
@@ -43,6 +46,8 @@ export const AD_MANAGEMENT_MAPPINGS_QUERY_KEY = [
 ] as const;
 
 export const AD_MANAGEMENT_USERS_QUERY_KEY = ["ad-management", "users"] as const;
+
+export const AD_MANAGEMENT_GROUPS_QUERY_KEY = ["ad-management", "groups"] as const;
 
 export const AD_UPN_SUFFIXES_QUERY_KEY = ["ad-management", "upn-suffixes"] as const;
 
@@ -143,6 +148,24 @@ export const getAdUsers = async (
       pageSize: params.pageSize ?? 20,
     },
   });
+  return data;
+};
+
+export const getAdGroups = async (
+  params: GetAdGroupsParams,
+): Promise<AdGroupListResponse> => {
+  const { data } = await apiClient.get<AdGroupListResponse>("/ad-management/groups", {
+    params: {
+      search: params.search,
+      page: params.page ?? 1,
+      pageSize: params.pageSize ?? 20,
+    },
+  });
+  return data;
+};
+
+export const getAdGroupById = async (id: string): Promise<AdGroupDetail> => {
+  const { data } = await apiClient.get<AdGroupDetail>(`/ad-management/groups/${id}`);
   return data;
 };
 

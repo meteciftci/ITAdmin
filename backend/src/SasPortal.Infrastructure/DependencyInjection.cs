@@ -32,6 +32,7 @@ public static class DependencyInjection
         services.AddScoped<IAdUserManagerUpdateService>(sp => sp.GetRequiredService<AdUserDirectoryService>());
         services.AddScoped<IAdUserAccountExpirationUpdateService>(sp =>
             sp.GetRequiredService<AdUserDirectoryService>());
+        services.AddScoped<IAdGroupDirectoryService>(sp => sp.GetRequiredService<AdUserDirectoryService>());
 
         services.AddScoped<ISmsProviderAdapter, CustomHttpSmsAdapter>();
         services.AddScoped<IEmailProviderAdapter, SmtpEmailProviderAdapter>();

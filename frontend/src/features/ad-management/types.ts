@@ -242,6 +242,68 @@ export type AdUserSearchResponse = {
   hasNextPage: boolean;
 };
 
+export type AdGroupScope = "Global" | "DomainLocal" | "Universal" | "Unknown";
+
+export type AdGroupMemberType = "User" | "Group" | "Computer" | "Unknown";
+
+export type AdGroupListItem = {
+  id: string;
+  distinguishedName: string;
+  displayName: string | null;
+  name: string;
+  cn: string | null;
+  samAccountName: string | null;
+  description: string | null;
+  groupScope: AdGroupScope;
+  securityEnabled: boolean;
+  groupType: number | null;
+};
+
+export type AdGroupListResponse = {
+  items: AdGroupListItem[];
+  pageNumber: number;
+  pageSize: number;
+  hasNextPage: boolean;
+};
+
+export type AdGroupMemberItem = {
+  type: AdGroupMemberType;
+  displayName: string | null;
+  name: string | null;
+  samAccountName: string | null;
+  distinguishedName: string;
+  description: string | null;
+};
+
+export type AdGroupDetail = {
+  id: string;
+  distinguishedName: string;
+  displayName: string | null;
+  name: string;
+  cn: string | null;
+  samAccountName: string | null;
+  description: string | null;
+  groupScope: AdGroupScope;
+  securityEnabled: boolean;
+  groupType: number | null;
+  whenCreated: string | null;
+  whenChanged: string | null;
+  managedByDistinguishedName: string | null;
+  managedByDisplayName: string | null;
+  memberCount: number;
+  memberOfCount: number;
+  members: AdGroupMemberItem[];
+  memberOf: AdGroupMemberItem[];
+  membersTruncated: boolean;
+  memberOfTruncated: boolean;
+};
+
+export type GetAdGroupsParams = {
+  search?: string;
+  page?: number;
+  pageSize?: number;
+};
+
 export type AdUserGroupMembership = {
   name: string;
   distinguishedName: string;

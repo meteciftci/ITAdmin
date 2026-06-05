@@ -11,6 +11,7 @@
       "home": "Home",
       "adManagement": "AD Management",
       "adManagementUsers": "Users",
+      "adManagementGroups": "Groups",
       "adManagementUsersCreate": "Create AD user",
       "adManagementUsersEdit": "Edit AD user",
       "adManagementUserGroups": "Group Memberships",

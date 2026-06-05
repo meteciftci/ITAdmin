@@ -393,6 +393,70 @@
           "unlock": "Kilidi Aç"
         }
       }
+    },
+    "groups": {
+      "title": "AD Grupları",
+      "description": "Active Directory security gruplarını görüntüleyin ve arayın.",
+      "searchPlaceholder": "Grup ara...",
+      "table": {
+        "displayName": "Display Name",
+        "name": "Name",
+        "cn": "CN",
+        "samAccountName": "sAMAccountName",
+        "description": "Description",
+        "scope": "Scope",
+        "type": "Type",
+        "distinguishedName": "Distinguished Name",
+        "actions": "İşlemler"
+      },
+      "scope": {
+        "global": "Global",
+        "domainLocal": "Domain Local",
+        "universal": "Universal",
+        "unknown": "Unknown"
+      },
+      "type": {
+        "security": "Security",
+        "distribution": "Distribution"
+      },
+      "memberTypes": {
+        "user": "Kullanıcı",
+        "group": "Grup",
+        "computer": "Bilgisayar",
+        "unknown": "Bilinmeyen"
+      },
+      "actions": {
+        "detail": "Detay",
+        "back": "Geri Dön"
+      },
+      "empty": {
+        "searchRequiredTitle": "Arama gerekli",
+        "searchRequired": "Grup aramak için en az 2 karakter girin.",
+        "title": "Grup bulunamadı",
+        "description": "Arama kriterlerinize uygun security group bulunamadı."
+      },
+      "errors": {
+        "notFound": "Grup bulunamadı"
+      },
+      "detail": {
+        "pageTitle": "Grup detayı",
+        "summaryTitle": "Grup Özeti",
+        "technicalTitle": "Teknik AD Bilgileri",
+        "membersTitle": "Üyeler",
+        "memberOfTitle": "Üye Olduğu Gruplar",
+        "securityEnabled": "Security Enabled",
+        "groupType": "Group Type",
+        "objectGuid": "Object GUID",
+        "whenCreated": "When Created",
+        "whenChanged": "When Changed",
+        "managedBy": "Managed By",
+        "managedByDn": "Managed By DN",
+        "memberCount": "Üye sayısı: {{count}}",
+        "memberOfCount": "Üye olunan grup sayısı: {{count}}",
+        "membersEmpty": "Üye bulunamadı",
+        "memberOfEmpty": "Üye olunan grup bulunamadı",
+        "truncatedNotice": "Sonuçlar sınırlandırıldı"
+      }
     }
   }
 }

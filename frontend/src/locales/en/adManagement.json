@@ -393,6 +393,70 @@
           "unlock": "Unlock"
         }
       }
+    },
+    "groups": {
+      "title": "AD Security Groups",
+      "description": "View and search Active Directory security groups.",
+      "searchPlaceholder": "Search groups...",
+      "table": {
+        "displayName": "Display Name",
+        "name": "Name",
+        "cn": "CN",
+        "samAccountName": "sAMAccountName",
+        "description": "Description",
+        "scope": "Scope",
+        "type": "Type",
+        "distinguishedName": "Distinguished Name",
+        "actions": "Actions"
+      },
+      "scope": {
+        "global": "Global",
+        "domainLocal": "Domain Local",
+        "universal": "Universal",
+        "unknown": "Unknown"
+      },
+      "type": {
+        "security": "Security",
+        "distribution": "Distribution"
+      },
+      "memberTypes": {
+        "user": "User",
+        "group": "Group",
+        "computer": "Computer",
+        "unknown": "Unknown"
+      },
+      "actions": {
+        "detail": "Detail",
+        "back": "Back"
+      },
+      "empty": {
+        "searchRequiredTitle": "Search required",
+        "searchRequired": "Enter at least 2 characters to search groups.",
+        "title": "No groups found",
+        "description": "No security groups matched your search criteria."
+      },
+      "errors": {
+        "notFound": "Group not found"
+      },
+      "detail": {
+        "pageTitle": "Group detail",
+        "summaryTitle": "Group Summary",
+        "technicalTitle": "Technical AD Information",
+        "membersTitle": "Members",
+        "memberOfTitle": "Member Of",
+        "securityEnabled": "Security Enabled",
+        "groupType": "Group Type",
+        "objectGuid": "Object GUID",
+        "whenCreated": "When Created",
+        "whenChanged": "When Changed",
+        "managedBy": "Managed By",
+        "managedByDn": "Managed By DN",
+        "memberCount": "Member count: {{count}}",
+        "memberOfCount": "Member of count: {{count}}",
+        "membersEmpty": "No members found",
+        "memberOfEmpty": "No member-of groups found",
+        "truncatedNotice": "Results were truncated"
+      }
     }
   }
 }

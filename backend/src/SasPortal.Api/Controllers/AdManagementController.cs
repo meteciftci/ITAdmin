@@ -22,7 +22,8 @@ public sealed class AdManagementController(
     IAdUserGroupMembershipService adUserGroupMembershipService,
     IAdUserOuMoveService adUserOuMoveService,
     IAdUserManagerUpdateService adUserManagerUpdateService,
-    IAdUserAccountExpirationUpdateService adUserAccountExpirationUpdateService) : ControllerBase
+    IAdUserAccountExpirationUpdateService adUserAccountExpirationUpdateService,
+    IAdGroupDirectoryService adGroupDirectoryService) : ControllerBase
 {
     [HttpGet("settings")]
     [RequirePermission(AdManagementPermissions.SettingsView)]
@@ -169,6 +170,50 @@ public sealed class AdManagementController(
             result.Page.PageNumber,
             result.Page.PageSize,
             result.Page.HasNextPage));
+    }
+
+    [HttpGet("groups")]
+    [RequirePermission(AdManagementPermissions.GroupsView)]
+    public async Task<ActionResult<AdGroupListResponse>> ListGroups(
+        [FromQuery] string? search,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await adGroupDirectoryService.SearchGroupsAsync(
+            new AppModels.AdGroupListQuery(search, page, pageSize),
+            cancellationToken);
+
+        if (!result.IsSuccess || result.Page is null)
+        {
+            return MapDirectoryFailure(result.Message, result.FailureKind);
+        }
+
+        return Ok(new AdGroupListResponse(
+            result.Page.Items.Select(MapGroupListItem).ToList(),
+            result.Page.PageNumber,
+            result.Page.PageSize,
+            result.Page.HasNextPage));
+    }
+
+    [HttpGet("groups/{id}")]
+    [RequirePermission(AdManagementPermissions.GroupsView)]
+    public async Task<ActionResult<AdGroupDetailResponse>> GetGroupById(
+        [FromRoute] string id,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Guid.TryParse(id, out var objectGuid))
+        {
+            return BadRequest(new { message = "Geçersiz grup kimliği." });
+        }
+
+        var result = await adGroupDirectoryService.GetGroupByIdAsync(objectGuid, cancellationToken);
+        if (!result.IsSuccess || result.Group is null)
+        {
+            return MapDirectoryFailure(result.Message, result.FailureKind);
+        }
+
+        return Ok(MapGroupDetail(result.Group));
     }
 
     [HttpGet("upn-suffixes")]
@@ -1061,6 +1106,51 @@ public sealed class AdManagementController(
             item.WhenCreated,
             item.WhenChanged,
             item.LastLogonAt);
+
+    private static AdGroupListItemResponse MapGroupListItem(AppModels.AdGroupListItem item) =>
+        new(
+            item.Id,
+            item.DistinguishedName,
+            item.DisplayName,
+            item.Name,
+            item.Cn,
+            item.SamAccountName,
+            item.Description,
+            item.GroupScope,
+            item.SecurityEnabled,
+            item.GroupType);
+
+    private static AdGroupDetailResponse MapGroupDetail(AppModels.AdGroupDetail item) =>
+        new(
+            item.Id,
+            item.DistinguishedName,
+            item.DisplayName,
+            item.Name,
+            item.Cn,
+            item.SamAccountName,
+            item.Description,
+            item.GroupScope,
+            item.SecurityEnabled,
+            item.GroupType,
+            item.WhenCreated,
+            item.WhenChanged,
+            item.ManagedByDistinguishedName,
+            item.ManagedByDisplayName,
+            item.MemberCount,
+            item.MemberOfCount,
+            item.Members.Select(MapGroupMemberItem).ToList(),
+            item.MemberOf.Select(MapGroupMemberItem).ToList(),
+            item.MembersTruncated,
+            item.MemberOfTruncated);
+
+    private static AdGroupMemberItemResponse MapGroupMemberItem(AppModels.AdGroupMemberItem item) =>
+        new(
+            item.Type,
+            item.DisplayName,
+            item.Name,
+            item.SamAccountName,
+            item.DistinguishedName,
+            item.Description);
 
     private static AdUserDetailResponse MapUserDetail(AppModels.AdUserDetail item) =>
         new(

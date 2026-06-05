@@ -44,11 +44,13 @@ export function AppSidebar() {
     setMobileSidebarOpen,
   } = useLayoutShell();
 
-  const canViewAdOperations = canAccess(user, "AdManagement.Users.View");
+  const canViewAdManagementModule =
+    canAccess(user, "AdManagement.Users.View")
+    || canAccess(user, "AdManagement.Groups.View");
   const adManagementSettingsQuery = useQuery({
     queryKey: AD_MANAGEMENT_SETTINGS_QUERY_KEY,
     queryFn: getAdManagementSettings,
-    enabled: canViewAdOperations,
+    enabled: canViewAdManagementModule,
     staleTime: 60_000,
   });
 

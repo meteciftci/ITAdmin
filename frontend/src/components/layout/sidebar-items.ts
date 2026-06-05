@@ -80,7 +80,17 @@ export function getVisibleSidebarGroupItems(items: SidebarGroupItem[]): SidebarG
     .filter((item): item is SidebarGroupItem => item !== null);
 }
 
-function isAdManagementOperationsVisible(
+function isAdManagementModuleOperational(
+  moduleState?: AdManagementModuleSidebarState,
+): boolean {
+  if (!moduleState || moduleState.isLoading) {
+    return false;
+  }
+
+  return moduleState.isConfigured && moduleState.isEnabled;
+}
+
+function isAdManagementUsersVisible(
   user: CurrentUser | null,
   moduleState?: AdManagementModuleSidebarState,
 ): boolean {
@@ -88,11 +98,26 @@ function isAdManagementOperationsVisible(
     return false;
   }
 
-  if (!moduleState || moduleState.isLoading) {
+  return isAdManagementModuleOperational(moduleState);
+}
+
+function isAdManagementGroupsVisible(
+  user: CurrentUser | null,
+  moduleState?: AdManagementModuleSidebarState,
+): boolean {
+  if (!canAccess(user, "AdManagement.Groups.View")) {
     return false;
   }
 
-  return moduleState.isConfigured && moduleState.isEnabled;
+  return isAdManagementModuleOperational(moduleState);
+}
+
+function isAdManagementSectionVisible(
+  user: CurrentUser | null,
+  moduleState?: AdManagementModuleSidebarState,
+): boolean {
+  return isAdManagementUsersVisible(user, moduleState)
+    || isAdManagementGroupsVisible(user, moduleState);
 }
 
 export const getSidebarGroups = (
@@ -119,13 +144,19 @@ export const getSidebarGroups = (
         titleKey: "items.adManagement",
         routePrefix: "/ad-management",
         icon: Network,
-        visible: isAdManagementOperationsVisible(user, adManagementModule),
+        visible: isAdManagementSectionVisible(user, adManagementModule),
         children: [
           {
             titleKey: "items.adManagementUsers",
             to: "/ad-management/users",
             icon: Users,
-            visible: isAdManagementOperationsVisible(user, adManagementModule),
+            visible: isAdManagementUsersVisible(user, adManagementModule),
+          },
+          {
+            titleKey: "items.adManagementGroups",
+            to: "/ad-management/groups",
+            icon: Shield,
+            visible: isAdManagementGroupsVisible(user, adManagementModule),
           },
         ],
       },
