@@ -106,7 +106,47 @@ describe("ad groups route and menu wiring", () => {
     assert.match(columnsSource, /getAdGroupPrimaryLabel/);
     assert.doesNotMatch(columnsSource, /groups\.actions\.(create|edit|delete)|AddUserToGroup|RemoveUserFromGroup/i);
     assert.match(detailSource, /getAdGroupPrimaryLabel/);
+    assert.match(detailSource, /getAdGroupMemberPrimaryLabel/);
     assert.match(detailSource, /membersTruncated|memberOfTruncated/);
     assert.doesNotMatch(detailSource, /AddUserToGroup|RemoveUserFromGroup|manageGroups/i);
+  });
+
+  it("does not render member distinguishedName as visible row", () => {
+    const detailSource = readFileSync(
+      new URL("./AdGroupDetailPage.tsx", import.meta.url),
+      "utf8",
+    );
+    const memberListSource = detailSource.slice(
+      detailSource.indexOf("function MemberList"),
+      detailSource.indexOf("export function AdGroupDetailPage"),
+    );
+
+    assert.match(memberListSource, /getAdGroupMemberPrimaryLabel/);
+    assert.match(memberListSource, /title=\{item\.distinguishedName\}/);
+    assert.doesNotMatch(memberListSource, /font-mono[\s\S]*\{item\.distinguishedName\}/);
+  });
+
+  it("shows truncated notice with i18n key and warning styling", () => {
+    const detailSource = readFileSync(
+      new URL("./AdGroupDetailPage.tsx", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(detailSource, /groups\.detail\.truncatedNotice/);
+    assert.match(detailSource, /border-amber-500/);
+  });
+
+  it("uses Turkish labels for group detail fields in TR locale", () => {
+    const trLocale = readFileSync(
+      new URL("../../locales/tr/adManagement.json", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(trLocale, /"whenCreated": "Oluşturulma Tarihi"/);
+    assert.match(trLocale, /"whenChanged": "Değiştirilme Tarihi"/);
+    assert.match(trLocale, /"managedBy": "Yönetici"/);
+    assert.doesNotMatch(trLocale, /"whenCreated": "When Created"/);
+    assert.doesNotMatch(trLocale, /"whenChanged": "When Changed"/);
+    assert.doesNotMatch(trLocale, /"managedBy": "Managed By"/);
   });
 });

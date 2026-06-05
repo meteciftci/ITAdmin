@@ -399,13 +399,13 @@
       "description": "Active Directory security gruplarını görüntüleyin ve arayın.",
       "searchPlaceholder": "Grup ara...",
       "table": {
-        "displayName": "Display Name",
-        "name": "Name",
+        "displayName": "Görünen Ad",
+        "name": "Ad",
         "cn": "CN",
         "samAccountName": "sAMAccountName",
-        "description": "Description",
-        "scope": "Scope",
-        "type": "Type",
+        "description": "Açıklama",
+        "scope": "Kapsam",
+        "type": "Tür",
         "distinguishedName": "Distinguished Name",
         "actions": "İşlemler"
       },
@@ -444,18 +444,18 @@
         "technicalTitle": "Teknik AD Bilgileri",
         "membersTitle": "Üyeler",
         "memberOfTitle": "Üye Olduğu Gruplar",
-        "securityEnabled": "Security Enabled",
-        "groupType": "Group Type",
-        "objectGuid": "Object GUID",
-        "whenCreated": "When Created",
-        "whenChanged": "When Changed",
-        "managedBy": "Managed By",
-        "managedByDn": "Managed By DN",
+        "securityEnabled": "Security Group",
+        "groupType": "Grup Türü",
+        "objectGuid": "objectGUID",
+        "whenCreated": "Oluşturulma Tarihi",
+        "whenChanged": "Değiştirilme Tarihi",
+        "managedBy": "Yönetici",
+        "managedByDn": "Yönetici DN",
         "memberCount": "Üye sayısı: {{count}}",
         "memberOfCount": "Üye olunan grup sayısı: {{count}}",
         "membersEmpty": "Üye bulunamadı",
         "memberOfEmpty": "Üye olunan grup bulunamadı",
-        "truncatedNotice": "Sonuçlar sınırlandırıldı"
+        "truncatedNotice": "Sonuçlar sınırlandırıldı. Daha fazla kayıt olabilir."
       }
     }
   }

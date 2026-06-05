@@ -455,7 +455,7 @@
         "memberOfCount": "Member of count: {{count}}",
         "membersEmpty": "No members found",
         "memberOfEmpty": "No member-of groups found",
-        "truncatedNotice": "Results were truncated"
+        "truncatedNotice": "Results are limited. More records may exist."
       }
     }
   }

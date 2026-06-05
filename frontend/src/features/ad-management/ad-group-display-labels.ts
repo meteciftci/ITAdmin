@@ -1,6 +1,6 @@
 export type AdGroupDisplayFields = {
   displayName: string | null;
-  name: string;
+  name: string | null;
   samAccountName: string | null;
   description?: string | null;
   distinguishedName: string;
@@ -32,6 +32,26 @@ export function getAdGroupSecondaryLabel(
     normalizeLabel(group.name),
     normalizeLabel(group.samAccountName),
     normalizeLabel(group.description),
+  ]) {
+    if (candidate && !labelsEqual(candidate, primaryLabel)) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
+export function getAdGroupMemberPrimaryLabel(member: AdGroupDisplayFields): string {
+  return getAdGroupPrimaryLabel(member);
+}
+
+export function getAdGroupMemberSecondaryLabel(
+  member: AdGroupDisplayFields,
+  primaryLabel: string,
+): string | null {
+  for (const candidate of [
+    normalizeLabel(member.samAccountName),
+    normalizeLabel(member.name),
   ]) {
     if (candidate && !labelsEqual(candidate, primaryLabel)) {
       return candidate;

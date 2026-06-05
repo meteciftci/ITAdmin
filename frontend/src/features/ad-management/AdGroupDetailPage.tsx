@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { isGuidLike } from "@/features/ad-management/ad-user-detail-utils";
 import {
+  getAdGroupMemberPrimaryLabel,
+  getAdGroupMemberSecondaryLabel,
   getAdGroupPrimaryLabel,
   getAdGroupSecondaryLabel,
 } from "@/features/ad-management/ad-group-display-labels";
@@ -51,31 +53,44 @@ function MemberList({
   return (
     <div className="space-y-3">
       {truncated ? (
-        <p className="text-sm text-muted-foreground">{t("groups.detail.truncatedNotice")}</p>
+        <p
+          className={cn(
+            "rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-muted-foreground",
+          )}
+        >
+          {t("groups.detail.truncatedNotice")}
+        </p>
       ) : null}
       <div className="divide-y rounded-lg border">
         {items.map((item) => {
-          const primaryLabel =
-            item.displayName?.trim()
-            || item.name?.trim()
-            || item.samAccountName?.trim()
-            || item.distinguishedName;
+          const primaryLabel = getAdGroupMemberPrimaryLabel(item);
+          const secondaryLabel = getAdGroupMemberSecondaryLabel(item, primaryLabel);
 
           return (
-            <div key={item.distinguishedName} className="space-y-1 px-3 py-3">
+            <div
+              key={item.distinguishedName}
+              className="space-y-1 px-3 py-3"
+              title={item.distinguishedName}
+            >
               <div className="flex flex-wrap items-center gap-2">
-                <p className="font-medium">{primaryLabel}</p>
+                <p className="font-medium" title={item.distinguishedName}>
+                  {primaryLabel}
+                </p>
                 <Badge variant="outline">{getAdGroupMemberTypeLabel(t, item.type)}</Badge>
               </div>
-              {item.samAccountName ? (
-                <p className="text-xs text-muted-foreground">{item.samAccountName}</p>
+              {secondaryLabel ? (
+                <p className="truncate text-xs text-muted-foreground" title={secondaryLabel}>
+                  {secondaryLabel}
+                </p>
               ) : null}
               {item.description ? (
-                <p className="text-xs text-muted-foreground">{item.description}</p>
+                <p
+                  className="line-clamp-2 text-xs text-muted-foreground"
+                  title={item.description}
+                >
+                  {item.description}
+                </p>
               ) : null}
-              <p className="break-all font-mono text-xs text-muted-foreground">
-                {item.distinguishedName}
-              </p>
             </div>
           );
         })}

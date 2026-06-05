@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  getAdGroupMemberPrimaryLabel,
+  getAdGroupMemberSecondaryLabel,
   getAdGroupPathNodeLabel,
   getAdGroupPrimaryLabel,
   getAdGroupSecondaryLabel,
@@ -54,5 +56,44 @@ describe("ad-group-display-labels", () => {
     });
 
     assert.equal(label, "Mete TEST");
+  });
+
+  it("uses displayName as member primary label", () => {
+    const member = {
+      displayName: "John Doe",
+      name: "john.doe",
+      samAccountName: "john.doe",
+      distinguishedName: "CN=John Doe,OU=Users,DC=example,DC=com",
+      description: "Test user",
+    };
+
+    assert.equal(getAdGroupMemberPrimaryLabel(member), "John Doe");
+  });
+
+  it("uses samAccountName as member secondary when different from primary", () => {
+    const member = {
+      displayName: "John Doe",
+      name: "John Doe",
+      samAccountName: "john.doe",
+      distinguishedName: "CN=John Doe,OU=Users,DC=example,DC=com",
+    };
+    const primary = getAdGroupMemberPrimaryLabel(member);
+    const secondary = getAdGroupMemberSecondaryLabel(member, primary);
+
+    assert.equal(primary, "John Doe");
+    assert.equal(secondary, "john.doe");
+  });
+
+  it("does not include description in member secondary label", () => {
+    const member = {
+      displayName: "VPN Users",
+      name: "VPN Users",
+      samAccountName: "VPN Users",
+      description: "VPN access group",
+      distinguishedName: "CN=VPN Users,OU=Groups,DC=example,DC=com",
+    };
+    const primary = getAdGroupMemberPrimaryLabel(member);
+
+    assert.equal(getAdGroupMemberSecondaryLabel(member, primary), null);
   });
 });
