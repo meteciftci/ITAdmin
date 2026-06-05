@@ -38,13 +38,39 @@ describe("ad-group-display-labels", () => {
     const group = {
       displayName: "Same Label",
       name: "Same Label",
+      cn: "Same Label",
       samAccountName: "Same Label",
-      description: "Same Label",
       distinguishedName: "CN=Same,OU=Groups,DC=example,DC=com",
     };
     const primary = getAdGroupPrimaryLabel(group);
 
     assert.equal(getAdGroupSecondaryLabel(group, primary), null);
+  });
+
+  it("uses cn in primary label fallback before samAccountName", () => {
+    const primary = getAdGroupPrimaryLabel({
+      displayName: null,
+      name: null,
+      cn: "VPN Users",
+      samAccountName: "vpn-users",
+      distinguishedName: "CN=VPN Users,OU=Groups,DC=example,DC=com",
+    });
+
+    assert.equal(primary, "VPN Users");
+  });
+
+  it("prefers samAccountName over name for secondary label", () => {
+    const group = {
+      displayName: "VPN Users",
+      name: "VPN Users Name",
+      cn: "VPN Users",
+      samAccountName: "vpn-users",
+      distinguishedName: "CN=VPN Users,OU=Groups,DC=example,DC=com",
+    };
+    const primary = getAdGroupPrimaryLabel(group);
+    const secondary = getAdGroupSecondaryLabel(group, primary);
+
+    assert.equal(secondary, "vpn-users");
   });
 
   it("prefers path node displayName over name and samAccountName", () => {

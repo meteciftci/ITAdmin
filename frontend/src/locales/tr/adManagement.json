@@ -399,6 +399,7 @@
       "description": "Active Directory security gruplarını görüntüleyin ve arayın.",
       "searchPlaceholder": "Grup ara...",
       "table": {
+        "group": "Grup",
         "displayName": "Görünen Ad",
         "name": "Ad",
         "cn": "CN",

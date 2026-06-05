@@ -104,11 +104,77 @@ describe("ad groups route and menu wiring", () => {
 
     assert.match(toolbarSource, /searchPlaceholder=\{t\("adManagement:groups\.searchPlaceholder"\)\}/);
     assert.match(columnsSource, /getAdGroupPrimaryLabel/);
+    assert.match(columnsSource, /groups\.table\.group/);
     assert.doesNotMatch(columnsSource, /groups\.actions\.(create|edit|delete)|AddUserToGroup|RemoveUserFromGroup/i);
     assert.match(detailSource, /getAdGroupPrimaryLabel/);
     assert.match(detailSource, /getAdGroupMemberPrimaryLabel/);
     assert.match(detailSource, /membersTruncated|memberOfTruncated/);
     assert.doesNotMatch(detailSource, /AddUserToGroup|RemoveUserFromGroup|manageGroups/i);
+  });
+
+  it("does not render separate name, cn, samAccountName, or distinguishedName list columns", () => {
+    const columnsSource = readFileSync(
+      new URL("./ad-groups-columns.tsx", import.meta.url),
+      "utf8",
+    );
+
+    assert.doesNotMatch(columnsSource, /accessorKey: "name"/);
+    assert.doesNotMatch(columnsSource, /accessorKey: "cn"/);
+    assert.doesNotMatch(columnsSource, /accessorKey: "samAccountName"/);
+    assert.doesNotMatch(columnsSource, /accessorKey: "distinguishedName"/);
+    assert.doesNotMatch(columnsSource, /groups\.table\.distinguishedName/);
+  });
+
+  it("keeps DN in group cell title but not as visible column", () => {
+    const columnsSource = readFileSync(
+      new URL("./ad-groups-columns.tsx", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(columnsSource, /title=\{group\.distinguishedName\}/);
+    assert.doesNotMatch(columnsSource, /font-mono[\s\S]*\{group\.distinguishedName\}/);
+  });
+
+  it("centers scope, type, and actions columns via DataTable meta align", () => {
+    const columnsSource = readFileSync(
+      new URL("./ad-groups-columns.tsx", import.meta.url),
+      "utf8",
+    );
+    const scopeSection = columnsSource.slice(
+      columnsSource.indexOf('id: "scope"'),
+      columnsSource.indexOf('id: "type"'),
+    );
+    const typeSection = columnsSource.slice(
+      columnsSource.indexOf('id: "type"'),
+      columnsSource.indexOf('id: "actions"'),
+    );
+    const actionsSection = columnsSource.slice(
+      columnsSource.indexOf('id: "actions"'),
+      columnsSource.indexOf("];", columnsSource.indexOf('id: "actions"')),
+    );
+
+    assert.doesNotMatch(columnsSource, /CENTERED_ACTION_COLUMN_META/);
+    assert.doesNotMatch(columnsSource, /CENTERED_COLUMN_META/);
+    assert.doesNotMatch(columnsSource, /w-full text-center/);
+    assert.doesNotMatch(columnsSource, /flex justify-center/);
+    assert.match(scopeSection, /align: "center"/);
+    assert.match(typeSection, /align: "center"/);
+    assert.match(actionsSection, /isAction: true, align: "center"/);
+    assert.match(actionsSection, /groups\.actions\.detail/);
+    assert.doesNotMatch(actionsSection, /groups\.actions\.(create|edit|delete)/);
+  });
+
+  it("keeps technical fields on group detail page", () => {
+    const detailSource = readFileSync(
+      new URL("./AdGroupDetailPage.tsx", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(detailSource, /groups\.table\.displayName/);
+    assert.match(detailSource, /groups\.table\.name/);
+    assert.match(detailSource, /groups\.table\.cn/);
+    assert.match(detailSource, /groups\.table\.samAccountName/);
+    assert.match(detailSource, /groups\.table\.distinguishedName/);
   });
 
   it("does not render member distinguishedName as visible row", () => {

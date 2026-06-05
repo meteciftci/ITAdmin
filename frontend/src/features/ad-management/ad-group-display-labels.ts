@@ -1,6 +1,7 @@
 export type AdGroupDisplayFields = {
   displayName: string | null;
   name: string | null;
+  cn?: string | null;
   samAccountName: string | null;
   description?: string | null;
   distinguishedName: string;
@@ -19,6 +20,7 @@ export function getAdGroupPrimaryLabel(group: AdGroupDisplayFields): string {
   return (
     normalizeLabel(group.displayName)
     ?? normalizeLabel(group.name)
+    ?? normalizeLabel(group.cn)
     ?? normalizeLabel(group.samAccountName)
     ?? group.distinguishedName
   );
@@ -29,9 +31,9 @@ export function getAdGroupSecondaryLabel(
   primaryLabel: string,
 ): string | null {
   for (const candidate of [
-    normalizeLabel(group.name),
     normalizeLabel(group.samAccountName),
-    normalizeLabel(group.description),
+    normalizeLabel(group.name),
+    normalizeLabel(group.cn),
   ]) {
     if (candidate && !labelsEqual(candidate, primaryLabel)) {
       return candidate;
@@ -69,6 +71,7 @@ export function getAdGroupPathNodeLabel(
     return (
       normalizeLabel(node.displayName)
       ?? normalizeLabel(node.name)
+      ?? normalizeLabel(node.cn)
       ?? normalizeLabel(node.samAccountName)
       ?? fallbackUserLabel
     );
@@ -77,6 +80,7 @@ export function getAdGroupPathNodeLabel(
   return (
     normalizeLabel(node.displayName)
     ?? normalizeLabel(node.name)
+    ?? normalizeLabel(node.cn)
     ?? normalizeLabel(node.samAccountName)
     ?? node.distinguishedName
   );

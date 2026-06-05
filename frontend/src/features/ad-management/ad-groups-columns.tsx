@@ -26,37 +26,29 @@ export function createAdGroupColumns({
 }: CreateAdGroupColumnsOptions): ColumnDef<AdGroupListItem, unknown>[] {
   return [
     {
-      id: "primaryLabel",
-      header: () => t("adManagement:groups.table.displayName"),
+      id: "group",
+      header: () => t("adManagement:groups.table.group"),
       cell: ({ row }) => {
         const group = row.original;
         const primaryLabel = getAdGroupPrimaryLabel(group);
         const secondaryLabel = getAdGroupSecondaryLabel(group, primaryLabel);
 
         return (
-          <div className="space-y-0.5">
-            <p className="font-medium">{primaryLabel}</p>
+          <div className="space-y-0.5" title={group.distinguishedName}>
+            <p className="font-medium" title={group.distinguishedName}>
+              {primaryLabel}
+            </p>
             {secondaryLabel ? (
-              <p className="text-xs text-muted-foreground">{secondaryLabel}</p>
+              <p
+                className="truncate text-xs text-muted-foreground"
+                title={secondaryLabel}
+              >
+                {secondaryLabel}
+              </p>
             ) : null}
           </div>
         );
       },
-    },
-    {
-      accessorKey: "name",
-      header: () => t("adManagement:groups.table.name"),
-      cell: ({ row }) => row.original.name || "-",
-    },
-    {
-      accessorKey: "cn",
-      header: () => t("adManagement:groups.table.cn"),
-      cell: ({ row }) => row.original.cn || "-",
-    },
-    {
-      accessorKey: "samAccountName",
-      header: () => t("adManagement:groups.table.samAccountName"),
-      cell: ({ row }) => row.original.samAccountName || "-",
     },
     {
       accessorKey: "description",
@@ -67,6 +59,7 @@ export function createAdGroupColumns({
     {
       id: "scope",
       header: () => t("adManagement:groups.table.scope"),
+      meta: { align: "center" } satisfies DataTableColumnMeta,
       cell: ({ row }) => (
         <Badge variant="secondary">
           {getAdGroupScopeLabel(t, row.original.groupScope)}
@@ -76,6 +69,7 @@ export function createAdGroupColumns({
     {
       id: "type",
       header: () => t("adManagement:groups.table.type"),
+      meta: { align: "center" } satisfies DataTableColumnMeta,
       cell: ({ row }) => (
         <Badge variant={row.original.securityEnabled ? "default" : "outline"}>
           {getAdGroupTypeLabel(t, row.original.securityEnabled)}
@@ -83,18 +77,9 @@ export function createAdGroupColumns({
       ),
     },
     {
-      accessorKey: "distinguishedName",
-      header: () => t("adManagement:groups.table.distinguishedName"),
-      meta: { truncate: true } satisfies DataTableColumnMeta,
-      cell: ({ row }) => (
-        <span className="break-all font-mono text-xs text-muted-foreground">
-          {row.original.distinguishedName}
-        </span>
-      ),
-    },
-    {
       id: "actions",
       header: () => t("adManagement:groups.table.actions"),
+      meta: { isAction: true, align: "center" } satisfies DataTableColumnMeta,
       cell: ({ row }) => (
         <RowActions>
           <DropdownMenuItem onClick={() => onDetail(row.original)}>

@@ -77,6 +77,7 @@ export function createAdUserColumns({
     {
       id: "status",
       header: () => t("adManagement:users.table.status"),
+      meta: { align: "center" } satisfies DataTableColumnMeta,
       cell: ({ row }) => (
         <div className="flex flex-wrap items-center gap-2">
           <AdAccountStatusBadge isEnabled={row.original.isEnabled} />
@@ -89,12 +90,13 @@ export function createAdUserColumns({
     {
       id: "lastLogon",
       header: () => t("adManagement:users.table.lastLogon"),
+      meta: { align: "center" } satisfies DataTableColumnMeta,
       cell: ({ row }) => <DateTimeText value={row.original.lastLogonAt} />,
     },
     {
       id: "actions",
       header: () => t("adManagement:users.table.actions"),
-      meta: { isAction: true } satisfies DataTableColumnMeta,
+      meta: { isAction: true, align: "center" } satisfies DataTableColumnMeta,
       cell: ({ row }) => {
         const user = row.original;
         return (

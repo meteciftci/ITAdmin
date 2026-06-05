@@ -11,8 +11,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
+export type DataTableColumnAlign = "left" | "center" | "right";
+
 export type DataTableColumnMeta = {
   isAction?: boolean;
+  align?: DataTableColumnAlign;
   truncate?: boolean;
   mono?: boolean;
   headerClassName?: string;
@@ -72,10 +75,44 @@ export type DataTablePaginationProps<TData> =
 
 const DEFAULT_PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
+const ACTION_COLUMN_WIDTH_CLASS =
+  "w-[112px] min-w-[112px] max-w-[112px] whitespace-nowrap";
+
+function getEffectiveAlign(
+  meta: DataTableColumnMeta | undefined,
+): DataTableColumnAlign | undefined {
+  if (meta?.align) {
+    return meta.align;
+  }
+
+  if (meta?.isAction) {
+    return "right";
+  }
+
+  return undefined;
+}
+
+function getAlignClassName(align: DataTableColumnAlign | undefined) {
+  if (align === "center") {
+    return "text-center";
+  }
+
+  if (align === "right") {
+    return "text-right";
+  }
+
+  if (align === "left") {
+    return "text-left";
+  }
+
+  return undefined;
+}
+
 function getHeaderClassName(meta: DataTableColumnMeta | undefined) {
   return cn(
-    "px-3 py-2 font-medium whitespace-nowrap",
-    meta?.isAction && "w-0 text-right",
+    "px-3 py-2 font-medium",
+    meta?.isAction ? ACTION_COLUMN_WIDTH_CLASS : "whitespace-nowrap",
+    getAlignClassName(getEffectiveAlign(meta)),
     meta?.headerClassName,
   );
 }
@@ -83,11 +120,26 @@ function getHeaderClassName(meta: DataTableColumnMeta | undefined) {
 function getCellClassName(meta: DataTableColumnMeta | undefined) {
   return cn(
     "px-3 py-2",
-    meta?.isAction && "w-0 whitespace-nowrap text-right",
+    meta?.isAction && ACTION_COLUMN_WIDTH_CLASS,
+    getAlignClassName(getEffectiveAlign(meta)),
     meta?.truncate && "max-w-48 truncate",
     meta?.mono && "font-mono text-xs text-muted-foreground",
     meta?.cellClassName,
   );
+}
+
+function getCellContentClassName(meta: DataTableColumnMeta | undefined) {
+  const align = getEffectiveAlign(meta);
+
+  if (!align || align === "left") {
+    return meta?.isAction ? "flex justify-start" : null;
+  }
+
+  if (align === "center") {
+    return "flex justify-center";
+  }
+
+  return "flex justify-end";
 }
 
 type DataTableProps<TData> = {
@@ -162,9 +214,19 @@ export function DataTable<TData>({
                         meta?.truncate && typeof cell.getValue() === "string"
                           ? (cell.getValue() as string)
                           : undefined;
+                      const contentWrapperClass = getCellContentClassName(meta);
+                      const cellContent = flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext(),
+                      );
+
                       return (
                         <td key={cell.id} className={getCellClassName(meta)} title={title}>
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          {contentWrapperClass ? (
+                            <div className={contentWrapperClass}>{cellContent}</div>
+                          ) : (
+                            cellContent
+                          )}
                         </td>
                       );
                     })}

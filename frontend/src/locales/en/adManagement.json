@@ -399,6 +399,7 @@
       "description": "View and search Active Directory security groups.",
       "searchPlaceholder": "Search groups...",
       "table": {
+        "group": "Group",
         "displayName": "Display Name",
         "name": "Name",
         "cn": "CN",
