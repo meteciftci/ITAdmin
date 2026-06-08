@@ -9,6 +9,7 @@ import {
 } from "./ad-group-display-labels.ts";
 import { AD_GROUPS_LIST_PATH } from "./ad-groups-list-path.ts";
 import {
+  buildAdGroupDetailReturnState,
   buildAdGroupsListReturnState,
   resolveAdGroupReturnPath,
   resolveSafeAdGroupReturnPath,
@@ -20,6 +21,13 @@ const listPath = AD_GROUPS_LIST_PATH;
 describe("ad groups navigation", () => {
   it("builds group detail path", () => {
     assert.equal(buildAdGroupDetailPath(groupId), `${listPath}/${groupId}`);
+  });
+
+  it("returns detail path from detail return state", () => {
+    assert.equal(
+      resolveAdGroupReturnPath(buildAdGroupDetailReturnState(groupId)),
+      `${listPath}/${groupId}`,
+    );
   });
 
   it("returns list path from list return state", () => {
@@ -88,7 +96,11 @@ describe("ad groups route and menu wiring", () => {
     assert.match(sidebarSource, /items\.adManagementGroups/);
   });
 
-  it("renders groups list search input and read-only detail sections", () => {
+  it("renders groups list search input, toolbar create action, and read-only detail sections", () => {
+    const pageSource = readFileSync(
+      new URL("./AdGroupsPage.tsx", import.meta.url),
+      "utf8",
+    );
     const toolbarSource = readFileSync(
       new URL("./components/AdGroupsSearchToolbar.tsx", import.meta.url),
       "utf8",
@@ -103,9 +115,16 @@ describe("ad groups route and menu wiring", () => {
     );
 
     assert.match(toolbarSource, /searchPlaceholder=\{t\("adManagement:groups\.searchPlaceholder"\)\}/);
+    assert.match(toolbarSource, /canCreateGroup/);
+    assert.match(toolbarSource, /groups\.create\.actions\.open/);
+    assert.match(toolbarSource, /AD_GROUP_CREATE_PATH/);
+    assert.doesNotMatch(pageSource, /SectionCard[\s\S]*actions=\{/);
+    assert.match(pageSource, /canCreateGroup=\{canCreateGroup\}/);
     assert.match(columnsSource, /getAdGroupPrimaryLabel/);
     assert.match(columnsSource, /groups\.table\.group/);
-    assert.doesNotMatch(columnsSource, /groups\.actions\.(create|edit|delete)|AddUserToGroup|RemoveUserFromGroup/i);
+    assert.match(columnsSource, /canUpdateGroup/);
+    assert.match(columnsSource, /groups\.actions\.edit/);
+    assert.doesNotMatch(columnsSource, /groups\.actions\.(create|delete)|AddUserToGroup|RemoveUserFromGroup/i);
     assert.match(detailSource, /getAdGroupPrimaryLabel/);
     assert.match(detailSource, /getAdGroupMemberPrimaryLabel/);
     assert.match(detailSource, /membersTruncated|memberOfTruncated/);
@@ -161,7 +180,26 @@ describe("ad groups route and menu wiring", () => {
     assert.match(typeSection, /align: "center"/);
     assert.match(actionsSection, /isAction: true, align: "center"/);
     assert.match(actionsSection, /groups\.actions\.detail/);
-    assert.doesNotMatch(actionsSection, /groups\.actions\.(create|edit|delete)/);
+    assert.match(actionsSection, /canUpdateGroup/);
+    assert.match(actionsSection, /groups\.actions\.edit/);
+    assert.doesNotMatch(actionsSection, /groups\.actions\.(create|delete)/);
+  });
+
+  it("navigates to edit from list with list return state and from detail with detail return state", () => {
+    const pageSource = readFileSync(
+      new URL("./AdGroupsPage.tsx", import.meta.url),
+      "utf8",
+    );
+    const detailSource = readFileSync(
+      new URL("./AdGroupDetailPage.tsx", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(pageSource, /buildAdGroupsListReturnState\(\)/);
+    assert.match(pageSource, /buildAdGroupEditPath/);
+    assert.match(detailSource, /buildAdGroupDetailReturnState\(group\.id\)/);
+    assert.match(detailSource, /adDetailEditButtonClass/);
+    assert.doesNotMatch(detailSource, /state=\{location\.state\}/);
   });
 
   it("keeps technical fields on group detail page", () => {
@@ -202,7 +240,7 @@ describe("ad groups route and menu wiring", () => {
     assert.match(detailSource, /border-amber-500/);
   });
 
-  it("uses Turkish labels for group detail fields in TR locale", () => {
+  it("uses simplified Turkish group labels in TR locale", () => {
     const trLocale = readFileSync(
       new URL("../../locales/tr/adManagement.json", import.meta.url),
       "utf8",
@@ -211,6 +249,10 @@ describe("ad groups route and menu wiring", () => {
     assert.match(trLocale, /"whenCreated": "Oluşturulma Tarihi"/);
     assert.match(trLocale, /"whenChanged": "Değiştirilme Tarihi"/);
     assert.match(trLocale, /"managedBy": "Yönetici"/);
+    assert.match(trLocale, /"displayName": "Grup Görünen Ad"/);
+    assert.match(trLocale, /"technicalName": "Grup Adı"/);
+    assert.match(trLocale, /"name": "Grup Adı"/);
+    assert.doesNotMatch(trLocale, /Grup Teknik Adı/);
     assert.doesNotMatch(trLocale, /"whenCreated": "When Created"/);
     assert.doesNotMatch(trLocale, /"whenChanged": "When Changed"/);
     assert.doesNotMatch(trLocale, /"managedBy": "Managed By"/);

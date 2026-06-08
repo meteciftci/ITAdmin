@@ -21,15 +21,9 @@ import {
   unlockAdUser,
 } from "@/features/ad-management/api";
 import type { AdUserAccountConfirmAction, AdUserDetail } from "@/features/ad-management/types";
+import { adDetailEditButtonClass } from "@/features/ad-management/ad-user-detail-button-styles";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { cn } from "@/lib/utils";
-
-const editUserButtonClass = cn(
-  buttonVariants({ size: "sm" }),
-  "inline-flex h-8 min-h-8 items-center justify-center px-3 text-sm",
-  "border border-amber-500/30 bg-amber-500/15 text-amber-700 hover:bg-amber-500/25",
-  "dark:bg-amber-500/15 dark:text-amber-300 dark:hover:bg-amber-500/25",
-);
 
 type Props = {
   user: AdUserDetail;
@@ -151,7 +145,7 @@ export function AdUserDetailHeaderActions({
           <Link
             to={`/ad-management/users/${user.id}/edit`}
             state={buildAdUserDetailReturnState(user.id)}
-            className={editUserButtonClass}
+            className={adDetailEditButtonClass}
           >
             {t("adManagement:users.actions.edit")}
           </Link>

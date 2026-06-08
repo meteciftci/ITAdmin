@@ -29,7 +29,11 @@ import {
   getAdGroupTypeLabel,
 } from "@/features/ad-management/ad-group-labels";
 import { buildAdGroupEditPath } from "@/features/ad-management/ad-group-detail-path";
-import { resolveAdGroupReturnPath } from "@/features/ad-management/ad-groups-return-path";
+import { adDetailEditButtonClass } from "@/features/ad-management/ad-user-detail-button-styles";
+import {
+  buildAdGroupDetailReturnState,
+  resolveAdGroupReturnPath,
+} from "@/features/ad-management/ad-groups-return-path";
 import { AD_GROUPS_LIST_PATH } from "@/features/ad-management/ad-groups-list-path";
 import { AD_MANAGEMENT_GROUPS_QUERY_KEY, getAdGroupById } from "@/features/ad-management/api";
 import { AdUserDetailField } from "@/features/ad-management/components/ad-user-detail/AdUserDetailField";
@@ -164,26 +168,28 @@ export function AdGroupDetailPage() {
             <div className="flex flex-wrap items-center gap-2">
               <Link
                 to={returnPath}
-                className={cn(buttonVariants({ variant: "outline" }))}
+                className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
               >
                 {t("adManagement:groups.actions.back")}
               </Link>
-              {canUpdateGroup && group ? (
-                <Link
-                  to={buildAdGroupEditPath(group.id)}
-                  state={location.state}
-                  className={cn(buttonVariants({ variant: "outline" }))}
-                >
-                  {t("adManagement:groups.edit.actions.open")}
-                </Link>
-              ) : null}
               <Button
+                type="button"
                 variant="outline"
+                size="sm"
                 onClick={() => groupQuery.refetch()}
                 disabled={groupQuery.isFetching}
               >
                 {t("common:actions.refresh")}
               </Button>
+              {canUpdateGroup && group ? (
+                <Link
+                  to={buildAdGroupEditPath(group.id)}
+                  state={buildAdGroupDetailReturnState(group.id)}
+                  className={adDetailEditButtonClass}
+                >
+                  {t("adManagement:groups.actions.edit")}
+                </Link>
+              ) : null}
             </div>
           }
         />

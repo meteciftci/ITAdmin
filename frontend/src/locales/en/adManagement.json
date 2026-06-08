@@ -400,8 +400,8 @@
       "searchPlaceholder": "Search groups...",
       "table": {
         "group": "Group",
-        "displayName": "Display Name",
-        "name": "Name",
+        "displayName": "Group Display Name",
+        "name": "Group Name",
         "cn": "CN",
         "samAccountName": "sAMAccountName",
         "description": "Description",
@@ -428,6 +428,7 @@
       },
       "actions": {
         "detail": "Detail",
+        "edit": "Edit",
         "back": "Back"
       },
       "create": {
@@ -435,8 +436,8 @@
         "description": "Create a new Active Directory security group.",
         "formTitle": "Group Information",
         "fields": {
-          "displayName": "Display Name",
-          "technicalName": "Group Technical Name",
+          "displayName": "Group Display Name",
+          "technicalName": "Group Name",
           "samAccountName": "sAMAccountName",
           "description": "Description",
           "scope": "Scope",
@@ -450,7 +451,7 @@
         },
         "errors": {
           "ouLoadFailed": "Failed to load OUs",
-          "duplicateCn": "A group with the same technical name already exists",
+          "duplicateCn": "A group with the same group name already exists",
           "duplicateSamAccountName": "The same sAMAccountName is already used by another group",
           "invalidOu": "The selected OU is invalid"
         },

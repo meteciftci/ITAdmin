@@ -400,8 +400,8 @@
       "searchPlaceholder": "Grup ara...",
       "table": {
         "group": "Grup",
-        "displayName": "Görünen Ad",
-        "name": "Ad",
+        "displayName": "Grup Görünen Ad",
+        "name": "Grup Adı",
         "cn": "CN",
         "samAccountName": "sAMAccountName",
         "description": "Açıklama",
@@ -428,6 +428,7 @@
       },
       "actions": {
         "detail": "Detay",
+        "edit": "Düzenle",
         "back": "Geri Dön"
       },
       "create": {
@@ -435,8 +436,8 @@
         "description": "Yeni bir Active Directory security group oluşturun.",
         "formTitle": "Grup Bilgileri",
         "fields": {
-          "displayName": "Görünen Ad",
-          "technicalName": "Grup Teknik Adı",
+          "displayName": "Grup Görünen Ad",
+          "technicalName": "Grup Adı",
           "samAccountName": "sAMAccountName",
           "description": "Açıklama",
           "scope": "Kapsam",
@@ -450,7 +451,7 @@
         },
         "errors": {
           "ouLoadFailed": "OU listesi yüklenemedi",
-          "duplicateCn": "Aynı teknik ada sahip bir grup zaten var",
+          "duplicateCn": "Aynı grup adına sahip bir grup zaten var",
           "duplicateSamAccountName": "Aynı sAMAccountName başka bir grup tarafından kullanılıyor",
           "invalidOu": "Seçilen OU geçersiz"
         },

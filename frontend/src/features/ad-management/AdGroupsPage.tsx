@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { useAuthStore } from "@/features/auth/auth-store";
@@ -13,9 +13,10 @@ import { SectionCard } from "@/components/common/SectionCard";
 import { AD_GROUPS_LIST_DEFAULTS } from "@/features/ad-management/ad-groups-list-query";
 import { createAdGroupColumns } from "@/features/ad-management/ad-groups-columns";
 import { buildAdGroupsListReturnState } from "@/features/ad-management/ad-groups-return-path";
-import { AD_GROUP_CREATE_PATH, buildAdGroupDetailPath } from "@/features/ad-management/ad-group-detail-path";
-import { buttonVariants } from "@/components/ui/button-variants";
-import { cn } from "@/lib/utils";
+import {
+  buildAdGroupDetailPath,
+  buildAdGroupEditPath,
+} from "@/features/ad-management/ad-group-detail-path";
 import {
   AD_MANAGEMENT_GROUPS_QUERY_KEY,
   getAdGroups,
@@ -32,6 +33,7 @@ export function AdGroupsPage() {
   const { t } = useTranslation(["adManagement", "common", "errors"]);
   const currentUser = useAuthStore((state) => state.user);
   const canCreateGroup = canAccess(currentUser, "AdManagement.Groups.Create");
+  const canUpdateGroup = canAccess(currentUser, "AdManagement.Groups.Update");
   const moduleStatus = useAdManagementModuleStatus();
   const navigate = useNavigate();
   const { listState, listPath, updateListState, clearListState } = useAdGroupListState();
@@ -63,13 +65,19 @@ export function AdGroupsPage() {
     () =>
       createAdGroupColumns({
         t,
+        canUpdateGroup,
         onDetail: (group) => {
           navigate(buildAdGroupDetailPath(group.id), {
             state: buildAdGroupsListReturnState(),
           });
         },
+        onEdit: (group) => {
+          navigate(buildAdGroupEditPath(group.id), {
+            state: buildAdGroupsListReturnState(),
+          });
+        },
       }),
-    [t, navigate],
+    [t, navigate, canUpdateGroup],
   );
 
   const table = useServerDataTable({
@@ -107,21 +115,12 @@ export function AdGroupsPage() {
         <SectionCard
           title={t("adManagement:groups.title")}
           description={t("adManagement:groups.description")}
-          actions={
-            canCreateGroup ? (
-              <Link
-                to={AD_GROUP_CREATE_PATH}
-                className={cn(buttonVariants())}
-              >
-                {t("adManagement:groups.create.actions.open")}
-              </Link>
-            ) : undefined
-          }
         >
           <div className="space-y-4">
             <AdGroupsSearchToolbar
               listState={listState}
               canSearch={canSearch}
+              canCreateGroup={canCreateGroup}
               onListStateChange={updateListState}
               onClearFilters={clearListState}
               onRefresh={handleRefresh}

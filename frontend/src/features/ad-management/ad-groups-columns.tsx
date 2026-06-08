@@ -17,12 +17,16 @@ import type { AdGroupListItem } from "@/features/ad-management/types";
 
 type CreateAdGroupColumnsOptions = {
   t: TFunction;
+  canUpdateGroup: boolean;
   onDetail: (group: AdGroupListItem) => void;
+  onEdit: (group: AdGroupListItem) => void;
 };
 
 export function createAdGroupColumns({
   t,
+  canUpdateGroup,
   onDetail,
+  onEdit,
 }: CreateAdGroupColumnsOptions): ColumnDef<AdGroupListItem, unknown>[] {
   return [
     {
@@ -85,6 +89,11 @@ export function createAdGroupColumns({
           <DropdownMenuItem onClick={() => onDetail(row.original)}>
             {t("adManagement:groups.actions.detail")}
           </DropdownMenuItem>
+          {canUpdateGroup ? (
+            <DropdownMenuItem onClick={() => onEdit(row.original)}>
+              {t("adManagement:groups.actions.edit")}
+            </DropdownMenuItem>
+          ) : null}
         </RowActions>
       ),
     },

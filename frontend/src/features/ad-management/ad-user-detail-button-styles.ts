@@ -6,11 +6,14 @@ const detailActionButtonBase = cn(
   "inline-flex h-8 min-h-8 items-center justify-center px-3 text-sm",
 );
 
-export const adUserDetailEditButtonClass = cn(
+export const adDetailEditButtonClass = cn(
   detailActionButtonBase,
   "border border-amber-500/30 bg-amber-500/15 text-amber-700 hover:bg-amber-500/25",
   "dark:bg-amber-500/15 dark:text-amber-300 dark:hover:bg-amber-500/25",
 );
+
+/** @deprecated Use adDetailEditButtonClass */
+export const adUserDetailEditButtonClass = adDetailEditButtonClass;
 
 export const adUserDetailManagerChangeButtonClass = cn(
   detailActionButtonBase,
