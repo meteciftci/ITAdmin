@@ -540,6 +540,10 @@
         "removeError": "Üye gruptan çıkarılamadı.",
         "searchCandidatesPlaceholder": "Kullanıcı, grup veya bilgisayar ara",
         "selectCandidate": "Eklenecek üyeyi seçin",
+        "memberColumn": "Üye",
+        "actionsColumn": "İşlemler",
+        "searchNoResults": "Aramaya uygun üye bulunamadı.",
+        "rangeInfo": "{{start}}-{{end}} / {{total}} üye",
         "noCandidates": "Uygun üye bulunamadı.",
         "noMembers": "Bu grupta doğrudan üye yok."
       }

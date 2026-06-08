@@ -19,6 +19,45 @@ describe("Ad group member management UI", () => {
     assert.match(detailSource, /canManageMembers=\{canManageMembers\}/);
   });
 
+  it("uses member column header in members list and keeps selectCandidate in add dialog only", () => {
+    const sectionSource = readFileSync(
+      new URL("./components/AdGroupMembersSection.tsx", import.meta.url),
+      "utf8",
+    );
+    const dialogSource = readFileSync(
+      new URL("./components/AdAddGroupMemberDialog.tsx", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(sectionSource, /groups\.members\.memberColumn/);
+    assert.doesNotMatch(sectionSource, /groups\.members\.selectCandidate/);
+    assert.match(dialogSource, /groups\.members\.selectCandidate/);
+  });
+
+  it("renders member-specific search placeholder and range info", () => {
+    const sectionSource = readFileSync(
+      new URL("./components/AdGroupMembersSection.tsx", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(sectionSource, /groups\.members\.searchPlaceholder/);
+    assert.match(sectionSource, /groups\.members\.rangeInfo/);
+    assert.doesNotMatch(sectionSource, /users\.groups\.pagination\.rangeInfo/);
+    assert.match(sectionSource, /groups\.members\.searchNoResults/);
+  });
+
+  it("keeps remove action behind confirmation and permission guard", () => {
+    const sectionSource = readFileSync(
+      new URL("./components/AdGroupMembersSection.tsx", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(sectionSource, /if \(canManageMembers\)/);
+    assert.match(sectionSource, /setRemoveTarget/);
+    assert.match(sectionSource, /AdRemoveGroupMemberConfirmDialog/);
+    assert.match(sectionSource, /variant="outline"/);
+  });
+
   it("uses server-side member query params for search, type, and pagination", () => {
     const sectionSource = readFileSync(
       new URL("./components/AdGroupMembersSection.tsx", import.meta.url),
@@ -64,6 +103,13 @@ describe("Ad group member management UI", () => {
 
     assert.match(snapshotDetailSource, /case "groupMember"/);
     assert.match(snapshotDetailSource, /GroupMemberSnapshotSections/);
-    assert.doesNotMatch(snapshotDetailSource, /case "groupMember":[\s\S]*generic/i);
+    assert.match(
+      snapshotDetailSource,
+      /case "groupMember":[\s\S]*?GroupMemberSnapshotSections/,
+    );
+    assert.doesNotMatch(
+      snapshotDetailSource,
+      /case "groupMember":[\s\S]*?GenericSnapshotBlock/,
+    );
   });
 });

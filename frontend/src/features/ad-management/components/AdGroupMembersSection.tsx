@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { ColumnDef } from "@tanstack/react-table";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -11,6 +12,7 @@ import {
   DataTable,
   DataTablePagination,
   DataTableToolbar,
+  type DataTableColumnMeta,
 } from "@/components/common/data-table";
 import { useServerDataTable } from "@/components/common/data-table-hooks";
 import { Badge } from "@/components/ui/badge";
@@ -113,13 +115,14 @@ export function AdGroupMembersSection({
   const totalPages = hasNextPage ? pageNumber + 1 : pageNumber;
   const rangeStart = totalCount === 0 ? 0 : (pageNumber - 1) * pageSize + 1;
   const rangeEnd = totalCount === 0 ? 0 : Math.min(pageNumber * pageSize, totalCount);
+  const hasActiveFilters = search.trim().length > 0 || typeFilter !== "all";
 
-  const columns = useMemo(
-    () => [
+  const columns = useMemo((): ColumnDef<AdGroupMemberListItem, unknown>[] => {
+    const memberColumns: ColumnDef<AdGroupMemberListItem, unknown>[] = [
       {
         id: "member",
-        header: t("adManagement:groups.members.selectCandidate"),
-        cell: ({ row }: { row: { original: AdGroupMemberListItem } }) => {
+        header: () => t("adManagement:groups.members.memberColumn"),
+        cell: ({ row }) => {
           const member = row.original;
           const primaryLabel = getAdGroupMemberPrimaryLabel(member);
           const secondaryLabel = getAdGroupMemberSecondaryLabel(member, primaryLabel);
@@ -147,30 +150,30 @@ export function AdGroupMembersSection({
           );
         },
       },
-      ...(canManageMembers
-        ? [
-            {
-              id: "actions",
-              header: "",
-              cell: ({ row }: { row: { original: AdGroupMemberListItem } }) => (
-                <div className="text-right">
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    disabled={removeMutation.isPending}
-                    onClick={() => setRemoveTarget(row.original)}
-                  >
-                    {t("adManagement:groups.members.remove")}
-                  </Button>
-                </div>
-              ),
-            },
-          ]
-        : []),
-    ],
-    [canManageMembers, removeMutation.isPending, t],
-  );
+    ];
+
+    if (canManageMembers) {
+      memberColumns.push({
+        id: "actions",
+        header: () => t("adManagement:groups.members.actionsColumn"),
+        meta: { isAction: true, align: "right" } satisfies DataTableColumnMeta,
+        cell: ({ row }) => (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+            disabled={removeMutation.isPending}
+            onClick={() => setRemoveTarget(row.original)}
+          >
+            {t("adManagement:groups.members.remove")}
+          </Button>
+        ),
+      });
+    }
+
+    return memberColumns;
+  }, [canManageMembers, removeMutation.isPending, t]);
 
   const table = useServerDataTable({
     data: items,
@@ -194,17 +197,19 @@ export function AdGroupMembersSection({
         }
       >
         <div className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-[1fr_180px]">
-            <DataTableToolbar
-              searchValue={search}
-              onSearchChange={(value) => {
-                setSearch(value);
-                setPageNumber(1);
-              }}
-              searchPlaceholder={t("adManagement:groups.members.searchPlaceholder")}
-              showFiltersButton={false}
-            />
-            <div className="space-y-2">
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div className="min-w-0 flex-1">
+              <DataTableToolbar
+                searchValue={search}
+                onSearchChange={(value) => {
+                  setSearch(value);
+                  setPageNumber(1);
+                }}
+                searchPlaceholder={t("adManagement:groups.members.searchPlaceholder")}
+                showFiltersButton={false}
+              />
+            </div>
+            <div className="w-full shrink-0 space-y-2 md:w-44">
               <Label htmlFor="group-members-type-filter">
                 {t("adManagement:groups.members.typeFilter")}
               </Label>
@@ -240,8 +245,8 @@ export function AdGroupMembersSection({
             items.length === 0 ? (
               <EmptyState
                 title={
-                  search
-                    ? t("adManagement:users.groups.empty.searchNoResultsTitle")
+                  hasActiveFilters
+                    ? t("adManagement:groups.members.searchNoResults")
                     : t("adManagement:groups.members.noMembers")
                 }
               />
@@ -249,7 +254,7 @@ export function AdGroupMembersSection({
               <div className="space-y-4">
                 {totalCount > 0 ? (
                   <span className="text-sm text-muted-foreground">
-                    {t("adManagement:users.groups.pagination.rangeInfo", {
+                    {t("adManagement:groups.members.rangeInfo", {
                       start: rangeStart,
                       end: rangeEnd,
                       total: totalCount,
