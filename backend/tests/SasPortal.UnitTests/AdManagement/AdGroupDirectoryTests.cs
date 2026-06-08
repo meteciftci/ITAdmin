@@ -125,4 +125,55 @@ public sealed class AdGroupDirectoryTests
         Assert.True(AdGroupDirectoryLimits.MemberDisplayLimit > 0);
         Assert.True(AdGroupDirectoryLimits.MemberOfDisplayLimit > 0);
     }
+
+    [Fact]
+    public void GroupsCreatePermissionConstant_IsDefined()
+    {
+        Assert.Equal("AdManagement.Groups.Create", AdManagementPermissions.GroupsCreate);
+        Assert.Equal("AdManagement.Groups.Update", AdManagementPermissions.GroupsUpdate);
+    }
+
+    [Fact]
+    public void DefaultPermissionSeed_ContainsGroupsCreateAndUpdate()
+    {
+        var permissions = typeof(SetupService)
+            .GetField("DefaultPermissions", BindingFlags.Static | BindingFlags.NonPublic)!
+            .GetValue(null) as Array;
+
+        Assert.NotNull(permissions);
+        Assert.Contains(permissions.Cast<object>(), item =>
+        {
+            var tuple = (ValueTuple<string, string, string>)item!;
+            return string.Equals(tuple.Item2, AdManagementPermissions.GroupsCreate, StringComparison.Ordinal);
+        });
+        Assert.Contains(permissions.Cast<object>(), item =>
+        {
+            var tuple = (ValueTuple<string, string, string>)item!;
+            return string.Equals(tuple.Item2, AdManagementPermissions.GroupsUpdate, StringComparison.Ordinal);
+        });
+    }
+
+    [Fact]
+    public void CreateGroupEndpoint_RequiresGroupsCreatePermission()
+    {
+        var method = typeof(AdManagementController).GetMethod(nameof(AdManagementController.CreateGroup));
+        Assert.NotNull(method);
+
+        var permissionAttribute = method.GetCustomAttribute<RequirePermissionAttribute>();
+        Assert.Equal(
+            RequirePermissionAttribute.PolicyPrefix + AdManagementPermissions.GroupsCreate,
+            permissionAttribute?.Policy);
+    }
+
+    [Fact]
+    public void UpdateGroupEndpoint_RequiresGroupsUpdatePermission()
+    {
+        var method = typeof(AdManagementController).GetMethod(nameof(AdManagementController.UpdateGroup));
+        Assert.NotNull(method);
+
+        var permissionAttribute = method.GetCustomAttribute<RequirePermissionAttribute>();
+        Assert.Equal(
+            RequirePermissionAttribute.PolicyPrefix + AdManagementPermissions.GroupsUpdate,
+            permissionAttribute?.Policy);
+    }
 }

@@ -216,6 +216,95 @@ public sealed class AdManagementController(
         return Ok(MapGroupDetail(result.Group));
     }
 
+    [HttpPost("groups")]
+    [RequirePermission(AdManagementPermissions.GroupsCreate)]
+    public async Task<ActionResult<AdGroupDetailResponse>> CreateGroup(
+        [FromBody] CreateAdGroupRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await adGroupDirectoryService.CreateGroupAsync(
+            new AppModels.CreateAdGroupRequest(
+                request.DisplayName,
+                request.Name,
+                request.SamAccountName,
+                request.Description,
+                request.GroupScope,
+                request.TargetOuDistinguishedName,
+                ResolveActorUserId(User),
+                ResolveActorUserName(User),
+                ResolveIpAddress(),
+                ResolveUserAgent()),
+            cancellationToken);
+
+        if (!result.IsSuccess || result.Group is null)
+        {
+            return MapDirectoryFailure(result.Message, result.FailureKind);
+        }
+
+        return Ok(MapGroupDetail(result.Group));
+    }
+
+    [HttpPut("groups/{id}")]
+    [RequirePermission(AdManagementPermissions.GroupsUpdate)]
+    public async Task<ActionResult<AdGroupDetailResponse>> UpdateGroup(
+        [FromRoute] string id,
+        [FromBody] UpdateAdGroupRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Guid.TryParse(id, out var objectGuid))
+        {
+            return BadRequest(new { message = "Geçersiz grup kimliği." });
+        }
+
+        var result = await adGroupDirectoryService.UpdateGroupAsync(
+            new AppModels.UpdateAdGroupRequest(
+                objectGuid,
+                request.DisplayName,
+                request.Name,
+                request.SamAccountName,
+                request.Description,
+                ResolveActorUserId(User),
+                ResolveActorUserName(User),
+                ResolveIpAddress(),
+                ResolveUserAgent()),
+            cancellationToken);
+
+        if (!result.IsSuccess || result.Group is null)
+        {
+            return MapDirectoryFailure(result.Message, result.FailureKind);
+        }
+
+        return Ok(MapGroupDetail(result.Group));
+    }
+
+    [HttpGet("group-organizational-units")]
+    [RequirePermission(AdManagementPermissions.GroupsCreate)]
+    public async Task<ActionResult<AdOrganizationalUnitSearchResponse>> SearchGroupOrganizationalUnits(
+        [FromQuery] string? search,
+        [FromQuery] int pageSize = 50,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await adGroupDirectoryService.SearchGroupOrganizationalUnitsAsync(
+            new AppModels.AdOrganizationalUnitSearchQuery(search, pageSize),
+            cancellationToken);
+
+        if (!result.IsSuccess || result.Page is null)
+        {
+            return MapDirectoryFailure(result.Message, result.FailureKind);
+        }
+
+        return Ok(new AdOrganizationalUnitSearchResponse(
+            result.Page.Items
+                .Select(item => new AdOrganizationalUnitListItemResponse(
+                    item.DistinguishedName,
+                    item.Name,
+                    item.DisplayName,
+                    item.Ou,
+                    item.Label))
+                .ToList(),
+            result.Page.HasMore));
+    }
+
     [HttpGet("upn-suffixes")]
     [RequireAnyPermission(
         AdManagementPermissions.UsersCreate,

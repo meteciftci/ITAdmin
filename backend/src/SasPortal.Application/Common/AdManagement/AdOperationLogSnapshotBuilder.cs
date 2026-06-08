@@ -516,6 +516,39 @@ public static class AdOperationLogSnapshotBuilder
             },
             SerializerOptions);
 
+    public static string BuildGroupCreateRequestSummary(CreateAdGroupRequest request) =>
+        JsonSerializer.Serialize(
+            new
+            {
+                operation = AdManagementOperationTypes.GroupCreate,
+                displayName = request.DisplayName.Trim(),
+                name = request.Name.Trim(),
+                samAccountName = request.SamAccountName.Trim(),
+                description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim(),
+                groupScope = request.GroupScope.Trim(),
+                targetOuDistinguishedName = request.TargetOuDistinguishedName.Trim(),
+            },
+            SerializerOptions);
+
+    public static string BuildGroupCreateAfterSnapshot(AdGroupDetail group) =>
+        JsonSerializer.Serialize(
+            new
+            {
+                operation = AdManagementOperationTypes.GroupCreate,
+                group = new
+                {
+                    id = group.Id,
+                    samAccountName = group.SamAccountName,
+                    displayName = group.DisplayName,
+                    name = group.Name,
+                    distinguishedName = group.DistinguishedName,
+                    groupScope = group.GroupScope,
+                    securityEnabled = group.SecurityEnabled,
+                    groupType = group.GroupType,
+                },
+            },
+            SerializerOptions);
+
     public static string BuildCreateRequestSummary(CreateAdUserRequest request)
     {
         var mappedAttributeFields = request.MappedAttributes

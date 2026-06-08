@@ -430,6 +430,51 @@
         "detail": "Detail",
         "back": "Back"
       },
+      "create": {
+        "pageTitle": "Create Group",
+        "description": "Create a new Active Directory security group.",
+        "formTitle": "Group Information",
+        "fields": {
+          "displayName": "Display Name",
+          "technicalName": "Group Technical Name",
+          "samAccountName": "sAMAccountName",
+          "description": "Description",
+          "scope": "Scope",
+          "ou": "OU",
+          "ouPlaceholder": "Select OU",
+          "ouSearch": "Search OUs...",
+          "ouSearchPlaceholder": "Search OUs..."
+        },
+        "empty": {
+          "ouNotFound": "No OU found"
+        },
+        "errors": {
+          "ouLoadFailed": "Failed to load OUs",
+          "duplicateCn": "A group with the same technical name already exists",
+          "duplicateSamAccountName": "The same sAMAccountName is already used by another group",
+          "invalidOu": "The selected OU is invalid"
+        },
+        "actions": {
+          "open": "Create Group",
+          "submit": "Create"
+        },
+        "messages": {
+          "created": "Group created",
+          "createFailed": "Group could not be created"
+        }
+      },
+      "edit": {
+        "pageTitle": "Edit Group",
+        "formTitle": "Group Information",
+        "actions": {
+          "open": "Edit",
+          "submit": "Update"
+        },
+        "messages": {
+          "updated": "Group updated",
+          "updateFailed": "Group could not be updated"
+        }
+      },
       "empty": {
         "searchRequiredTitle": "Search required",
         "searchRequired": "Enter at least 2 characters to search groups.",

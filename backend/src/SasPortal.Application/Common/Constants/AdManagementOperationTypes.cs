@@ -17,11 +17,18 @@ public static class AdManagementOperationTypes
     public const string UserOuMove = "UserOuMove";
     public const string UserManagerUpdate = "UserManagerUpdate";
     public const string UserAccountExpirationUpdate = "UserAccountExpirationUpdate";
+    public const string GroupCreate = "GroupCreate";
+    public const string GroupUpdate = "GroupUpdate";
 }
 
 public static class AdManagementTargetUserTypes
 {
     public const string AdUser = "AdUser";
+}
+
+public static class AdManagementTargetGroupTypes
+{
+    public const string AdGroup = "AdGroup";
 }
 
 public static class AdManagementOperationStatuses

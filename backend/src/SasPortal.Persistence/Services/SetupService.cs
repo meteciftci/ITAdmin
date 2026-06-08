@@ -59,6 +59,8 @@ public sealed class SetupService(
         ("AdManagement", "AdManagement.Users.Groups.Add", "Add AD users to groups."),
         ("AdManagement", "AdManagement.Users.Groups.Remove", "Remove AD users from groups."),
         ("AdManagement", "AdManagement.Groups.View", "View AD management security groups."),
+        ("AdManagement", "AdManagement.Groups.Create", "Create AD management security groups."),
+        ("AdManagement", "AdManagement.Groups.Update", "Update AD management security groups."),
         ("AdManagement", "AdManagement.Users.MoveOu", "Move AD management directory users between OUs."),
         ("AdOperationLogs", "AdOperationLogs.View", "View AD operation logs."),
         ("NotificationProviders", "NotificationProviders.View", "View notification provider settings."),

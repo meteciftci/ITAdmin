@@ -4,6 +4,9 @@ import { Link, useLocation, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AxiosError } from "axios";
 
+import { useAuthStore } from "@/features/auth/auth-store";
+import { canAccess } from "@/lib/permissions";
+
 import { DateTimeText } from "@/components/common/DateTimeText";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ErrorState } from "@/components/common/ErrorState";
@@ -25,6 +28,7 @@ import {
   getAdGroupScopeLabel,
   getAdGroupTypeLabel,
 } from "@/features/ad-management/ad-group-labels";
+import { buildAdGroupEditPath } from "@/features/ad-management/ad-group-detail-path";
 import { resolveAdGroupReturnPath } from "@/features/ad-management/ad-groups-return-path";
 import { AD_GROUPS_LIST_PATH } from "@/features/ad-management/ad-groups-list-path";
 import { AD_MANAGEMENT_GROUPS_QUERY_KEY, getAdGroupById } from "@/features/ad-management/api";
@@ -101,6 +105,8 @@ function MemberList({
 
 export function AdGroupDetailPage() {
   const { t } = useTranslation(["adManagement", "common", "errors"]);
+  const currentUser = useAuthStore((state) => state.user);
+  const canUpdateGroup = canAccess(currentUser, "AdManagement.Groups.Update");
   const { id: groupId } = useParams<{ id: string }>();
   const location = useLocation();
   const moduleStatus = useAdManagementModuleStatus();
@@ -162,6 +168,15 @@ export function AdGroupDetailPage() {
               >
                 {t("adManagement:groups.actions.back")}
               </Link>
+              {canUpdateGroup && group ? (
+                <Link
+                  to={buildAdGroupEditPath(group.id)}
+                  state={location.state}
+                  className={cn(buttonVariants({ variant: "outline" }))}
+                >
+                  {t("adManagement:groups.edit.actions.open")}
+                </Link>
+              ) : null}
               <Button
                 variant="outline"
                 onClick={() => groupQuery.refetch()}

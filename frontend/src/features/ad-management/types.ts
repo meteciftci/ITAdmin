@@ -304,6 +304,22 @@ export type GetAdGroupsParams = {
   pageSize?: number;
 };
 
+export type CreateAdGroupRequest = {
+  displayName: string;
+  name: string;
+  samAccountName: string;
+  description?: string | null;
+  groupScope: AdGroupScope;
+  targetOuDistinguishedName: string;
+};
+
+export type UpdateAdGroupRequest = {
+  displayName: string;
+  name: string;
+  samAccountName: string;
+  description?: string | null;
+};
+
 export type AdUserGroupMembership = {
   name: string;
   distinguishedName: string;

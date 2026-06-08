@@ -430,6 +430,51 @@
         "detail": "Detay",
         "back": "Geri Dön"
       },
+      "create": {
+        "pageTitle": "Grup Oluştur",
+        "description": "Yeni bir Active Directory security group oluşturun.",
+        "formTitle": "Grup Bilgileri",
+        "fields": {
+          "displayName": "Görünen Ad",
+          "technicalName": "Grup Teknik Adı",
+          "samAccountName": "sAMAccountName",
+          "description": "Açıklama",
+          "scope": "Kapsam",
+          "ou": "OU",
+          "ouPlaceholder": "OU seçin",
+          "ouSearch": "OU ara...",
+          "ouSearchPlaceholder": "OU ara..."
+        },
+        "empty": {
+          "ouNotFound": "OU bulunamadı"
+        },
+        "errors": {
+          "ouLoadFailed": "OU listesi yüklenemedi",
+          "duplicateCn": "Aynı teknik ada sahip bir grup zaten var",
+          "duplicateSamAccountName": "Aynı sAMAccountName başka bir grup tarafından kullanılıyor",
+          "invalidOu": "Seçilen OU geçersiz"
+        },
+        "actions": {
+          "open": "Grup Oluştur",
+          "submit": "Oluştur"
+        },
+        "messages": {
+          "created": "Grup oluşturuldu",
+          "createFailed": "Grup oluşturulamadı"
+        }
+      },
+      "edit": {
+        "pageTitle": "Grubu Düzenle",
+        "formTitle": "Grup Bilgileri",
+        "actions": {
+          "open": "Düzenle",
+          "submit": "Güncelle"
+        },
+        "messages": {
+          "updated": "Grup güncellendi",
+          "updateFailed": "Grup güncellenemedi"
+        }
+      },
       "empty": {
         "searchRequiredTitle": "Arama gerekli",
         "searchRequired": "Grup aramak için en az 2 karakter girin.",

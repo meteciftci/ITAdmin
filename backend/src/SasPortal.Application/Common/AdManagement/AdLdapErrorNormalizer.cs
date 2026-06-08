@@ -23,6 +23,13 @@ public static class AdLdapErrorNormalizer
     private const int LdapBusy = 51;
 
     public const string UpdateUserFailedMessage = "AD kullanıcısı güncellenemedi.";
+    public const string UpdateGroupFailedMessage = "AD grubu güncellenemedi.";
+    public const string CreateGroupFailedMessage = "AD grubu oluşturulamadı.";
+    public const string PreflightGroupSamAccountNameDuplicateMessage =
+        "Aynı sAMAccountName başka bir grup tarafından kullanılıyor.";
+    public const string PreflightGroupCnDuplicateMessage =
+        "Aynı teknik ada sahip bir grup zaten var.";
+    public const string GroupNotFoundMessage = "AD grubu bulunamadı.";
     public const string PreflightSamAccountNameDuplicateMessage =
         "Bu kullanıcı adı başka bir AD nesnesi tarafından kullanılıyor.";
     public const string PreflightUserPrincipalNameDuplicateMessage =

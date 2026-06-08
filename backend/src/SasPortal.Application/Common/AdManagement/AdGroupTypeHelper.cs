@@ -39,6 +39,34 @@ public static class AdGroupTypeHelper
             _ => "Unknown",
         };
 
+    public static bool TryParseScopeCode(string? scopeCode, out AdGroupScope scope)
+    {
+        scope = AdGroupScope.Unknown;
+        if (string.IsNullOrWhiteSpace(scopeCode))
+        {
+            return false;
+        }
+
+        scope = scopeCode.Trim() switch
+        {
+            "Global" => AdGroupScope.Global,
+            "DomainLocal" => AdGroupScope.DomainLocal,
+            "Universal" => AdGroupScope.Universal,
+            _ => AdGroupScope.Unknown,
+        };
+
+        return scope is AdGroupScope.Global or AdGroupScope.DomainLocal or AdGroupScope.Universal;
+    }
+
+    public static int BuildSecurityGroupType(AdGroupScope scope) =>
+        scope switch
+        {
+            AdGroupScope.Global => unchecked(SecurityEnabledFlag | GlobalGroupFlag),
+            AdGroupScope.DomainLocal => unchecked(SecurityEnabledFlag | DomainLocalGroupFlag),
+            AdGroupScope.Universal => unchecked(SecurityEnabledFlag | UniversalGroupFlag),
+            _ => throw new ArgumentOutOfRangeException(nameof(scope), scope, "Unsupported group scope."),
+        };
+
     private static AdGroupScope ResolveScope(int groupTypeRaw)
     {
         if ((groupTypeRaw & UniversalGroupFlag) != 0)

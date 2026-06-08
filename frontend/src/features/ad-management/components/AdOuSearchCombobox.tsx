@@ -6,10 +6,15 @@ import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { searchOrganizationalUnits } from "@/features/ad-management/api";
+import {
+  searchGroupOrganizationalUnits,
+  searchOrganizationalUnits,
+} from "@/features/ad-management/api";
 import type { AdOrganizationalUnitListItem } from "@/features/ad-management/types";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { cn } from "@/lib/utils";
+
+type OuSearchContext = "users" | "groups";
 
 type Props = {
   value: string | null;
@@ -17,6 +22,7 @@ type Props = {
   disabled?: boolean;
   className?: string;
   showFieldLabel?: boolean;
+  searchContext?: OuSearchContext;
   fieldLabelKey?: string;
   placeholderKey?: string;
   searchKey?: string;
@@ -30,6 +36,7 @@ export function AdOuSearchCombobox({
   disabled,
   className,
   showFieldLabel = true,
+  searchContext = "users",
   fieldLabelKey = "adManagement:users.create.fields.ou",
   placeholderKey = "adManagement:users.create.fields.ouPlaceholder",
   searchKey = "adManagement:users.create.fields.ouSearch",
@@ -43,12 +50,17 @@ export function AdOuSearchCombobox({
   const debouncedSearch = useDebouncedValue(search, 350);
 
   const ouQuery = useQuery({
-    queryKey: ["ad-management", "organizational-units", debouncedSearch],
-    queryFn: () =>
-      searchOrganizationalUnits({
+    queryKey: ["ad-management", "organizational-units", searchContext, debouncedSearch],
+    queryFn: () => {
+      const params = {
         search: debouncedSearch.trim() || undefined,
         pageSize: 50,
-      }),
+      };
+
+      return searchContext === "groups"
+        ? searchGroupOrganizationalUnits(params)
+        : searchOrganizationalUnits(params);
+    },
     enabled: open && !disabled,
   });
 

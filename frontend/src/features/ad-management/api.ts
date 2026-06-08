@@ -32,7 +32,9 @@ import type {
   UpdateAdUserAccountExpirationResponse,
   AdGroupDetail,
   AdGroupListResponse,
+  CreateAdGroupRequest,
   GetAdGroupsParams,
+  UpdateAdGroupRequest,
 } from "@/features/ad-management/types";
 
 export const AD_MANAGEMENT_SETTINGS_QUERY_KEY = [
@@ -168,6 +170,48 @@ export const getAdGroupById = async (id: string): Promise<AdGroupDetail> => {
   const { data } = await apiClient.get<AdGroupDetail>(`/ad-management/groups/${id}`);
   return data;
 };
+
+export const createAdGroup = async (
+  payload: CreateAdGroupRequest,
+): Promise<AdGroupDetail> => {
+  const { data } = await apiClient.post<AdGroupDetail>("/ad-management/groups", payload);
+  return data;
+};
+
+export const updateAdGroup = async (
+  groupId: string,
+  payload: UpdateAdGroupRequest,
+): Promise<AdGroupDetail> => {
+  const { data } = await apiClient.put<AdGroupDetail>(
+    `/ad-management/groups/${groupId}`,
+    payload,
+  );
+  return data;
+};
+
+export const searchGroupOrganizationalUnits = async (params: {
+  search?: string;
+  pageSize?: number;
+}): Promise<AdOrganizationalUnitSearchResponse> => {
+  const { data } = await apiClient.get<AdOrganizationalUnitSearchResponse>(
+    "/ad-management/group-organizational-units",
+    {
+      params: {
+        search: params.search,
+        pageSize: params.pageSize ?? 50,
+      },
+    },
+  );
+  return data;
+};
+
+export async function invalidateAdManagementGroupQueries(
+  queryClient: QueryClient,
+): Promise<void> {
+  await queryClient.invalidateQueries({
+    queryKey: AD_MANAGEMENT_GROUPS_QUERY_KEY,
+  });
+}
 
 export const getAdUserById = async (id: string): Promise<AdUserDetail> => {
   const { data } = await apiClient.get<AdUserDetail>(`/ad-management/users/${id}`);

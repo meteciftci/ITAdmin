@@ -170,6 +170,39 @@ public static class AdOperationErrorDiagnosticBuilder
                 PartialUpdate: false,
                 RollbackStatus: AdUserUpdateRollbackStatus.NotRequired));
 
+    public static string BuildCreateGroupFailureJson(
+        string step,
+        string? englishMessageOverride = null,
+        string? normalizedReasonOverride = null,
+        int? ldapResultCode = null,
+        int? ldapExceptionErrorCode = null,
+        string? ldapDiagnosticMessage = null) =>
+        BuildJson(
+            new AdOperationFailureContext(
+                AdManagementOperationTypes.GroupCreate,
+                step,
+                DiagnosticCode: AdOperationDiagnosticCodes.GroupCreateFailed,
+                NormalizedReasonOverride: normalizedReasonOverride,
+                EnglishMessageOverride: englishMessageOverride,
+                LdapResultCode: ldapResultCode,
+                LdapExceptionErrorCode: ldapExceptionErrorCode,
+                LdapDiagnosticMessage: ldapDiagnosticMessage,
+                PartialUpdate: false,
+                RollbackStatus: AdUserUpdateRollbackStatus.NotRequired));
+
+    public static string BuildCreateGroupPreflightFailureJson(
+        string step,
+        string englishMessage) =>
+        BuildJson(
+            new AdOperationFailureContext(
+                AdManagementOperationTypes.GroupCreate,
+                step,
+                DiagnosticCode: AdOperationDiagnosticCodes.GroupCreatePreflightFailed,
+                NormalizedReasonOverride: AdUserUpdateNormalizedReasons.DuplicateValue,
+                EnglishMessageOverride: englishMessage,
+                PartialUpdate: false,
+                RollbackStatus: AdUserUpdateRollbackStatus.NotRequired));
+
     public static string BuildCreateUserFailureJson(
         string step,
         string? englishMessageOverride = null,

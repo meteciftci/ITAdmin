@@ -15,4 +15,8 @@ public static class AdOperationDiagnosticCodes
     public const string AttributeMappingCreateFailed = "AD_ATTRIBUTE_MAPPING_CREATE_FAILED";
     public const string AttributeMappingUpdateFailed = "AD_ATTRIBUTE_MAPPING_UPDATE_FAILED";
     public const string AttributeMappingDeleteFailed = "AD_ATTRIBUTE_MAPPING_DELETE_FAILED";
+    public const string GroupCreateFailed = "AD_GROUP_CREATE_FAILED";
+    public const string GroupCreatePreflightFailed = "AD_GROUP_CREATE_PREFLIGHT_FAILED";
+    public const string GroupUpdateFailed = "AD_GROUP_UPDATE_FAILED";
+    public const string GroupUpdatePreflightFailed = "AD_GROUP_UPDATE_PREFLIGHT_FAILED";
 }
