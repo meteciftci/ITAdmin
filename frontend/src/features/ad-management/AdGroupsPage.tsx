@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -21,6 +21,7 @@ import {
   AD_MANAGEMENT_GROUPS_QUERY_KEY,
   getAdGroups,
 } from "@/features/ad-management/api";
+import { AdDeleteGroupConfirmDialog } from "@/features/ad-management/components/AdDeleteGroupConfirmDialog";
 import { AdManagementModuleStateGuard } from "@/features/ad-management/components/AdManagementModuleStateGuard";
 import { AdGroupsSearchToolbar } from "@/features/ad-management/components/AdGroupsSearchToolbar";
 import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useAdManagementModuleStatus";
@@ -34,6 +35,8 @@ export function AdGroupsPage() {
   const currentUser = useAuthStore((state) => state.user);
   const canCreateGroup = canAccess(currentUser, "AdManagement.Groups.Create");
   const canUpdateGroup = canAccess(currentUser, "AdManagement.Groups.Update");
+  const canDeleteGroup = canAccess(currentUser, "AdManagement.Groups.Delete");
+  const [deleteGroupId, setDeleteGroupId] = useState<string | null>(null);
   const moduleStatus = useAdManagementModuleStatus();
   const navigate = useNavigate();
   const { listState, listPath, updateListState, clearListState } = useAdGroupListState();
@@ -66,6 +69,7 @@ export function AdGroupsPage() {
       createAdGroupColumns({
         t,
         canUpdateGroup,
+        canDeleteGroup,
         onDetail: (group) => {
           navigate(buildAdGroupDetailPath(group.id), {
             state: buildAdGroupsListReturnState(),
@@ -76,8 +80,11 @@ export function AdGroupsPage() {
             state: buildAdGroupsListReturnState(),
           });
         },
+        onDelete: (group) => {
+          setDeleteGroupId(group.id);
+        },
       }),
-    [t, navigate, canUpdateGroup],
+    [t, navigate, canUpdateGroup, canDeleteGroup],
   );
 
   const table = useServerDataTable({
@@ -169,6 +176,20 @@ export function AdGroupsPage() {
           </div>
         </SectionCard>
       </section>
+
+      <AdDeleteGroupConfirmDialog
+        open={deleteGroupId !== null}
+        groupId={deleteGroupId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteGroupId(null);
+          }
+        }}
+        onDeleted={() => {
+          setDeleteGroupId(null);
+          handleRefresh();
+        }}
+      />
     </AdManagementModuleStateGuard>
   );
 }

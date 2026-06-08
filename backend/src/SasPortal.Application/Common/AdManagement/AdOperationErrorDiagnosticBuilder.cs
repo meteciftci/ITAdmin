@@ -260,6 +260,7 @@ public static class AdOperationErrorDiagnosticBuilder
             AdManagementOperationTypes.AttributeMappingCreated => AdOperationDiagnosticCodes.AttributeMappingCreateFailed,
             AdManagementOperationTypes.AttributeMappingUpdated => AdOperationDiagnosticCodes.AttributeMappingUpdateFailed,
             AdManagementOperationTypes.AttributeMappingDeleted => AdOperationDiagnosticCodes.AttributeMappingDeleteFailed,
+            AdManagementOperationTypes.GroupDelete => AdOperationDiagnosticCodes.GroupDeleteFailed,
             _ => null,
         };
 

@@ -30,6 +30,7 @@ public static class AdLdapErrorNormalizer
     public const string PreflightGroupCnDuplicateMessage =
         "Aynı teknik ada sahip bir grup zaten var.";
     public const string GroupNotFoundMessage = "AD grubu bulunamadı.";
+    public const string DeleteGroupFailedMessage = "AD grubu silinemedi.";
     public const string PreflightSamAccountNameDuplicateMessage =
         "Bu kullanıcı adı başka bir AD nesnesi tarafından kullanılıyor.";
     public const string PreflightUserPrincipalNameDuplicateMessage =

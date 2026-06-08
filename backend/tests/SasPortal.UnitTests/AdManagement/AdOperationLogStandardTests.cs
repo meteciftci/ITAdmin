@@ -566,13 +566,71 @@ public sealed class AdOperationLogStandardTests
         Assert.Equal("vpn-users", document.RootElement.GetProperty("name").GetString());
     }
 
+    [Fact]
+    public void GroupDelete_RequestSummary_ContainsOperationAndGroupIdentity()
+    {
+        var group = CreateSampleGroupDetail(memberCount: 12, memberOfCount: 3);
+        var request = new DeleteAdGroupRequest(
+            GroupId: Guid.Parse(group.Id),
+            ActorUserId: null,
+            ActorUserName: null,
+            ActorIpAddress: null,
+            ActorUserAgent: null);
+
+        var json = AdGroupDeleteSnapshotBuilder.BuildRequestSummary(request, group);
+
+        using var document = JsonDocument.Parse(json);
+        Assert.Equal(AdManagementOperationTypes.GroupDelete, document.RootElement.GetProperty("operation").GetString());
+        Assert.Equal(group.Id, document.RootElement.GetProperty("groupId").GetString());
+        Assert.Equal("vpn-users", document.RootElement.GetProperty("samAccountName").GetString());
+        Assert.Equal("vpn-users", document.RootElement.GetProperty("name").GetString());
+        Assert.Equal(
+            "CN=VPN Users,OU=Groups,DC=corp,DC=local",
+            document.RootElement.GetProperty("distinguishedName").GetString());
+    }
+
+    [Fact]
+    public void GroupDelete_BeforeSnapshot_ContainsNestedGroupWithMemberCounts()
+    {
+        var group = CreateSampleGroupDetail(memberCount: 12, memberOfCount: 3);
+        var json = AdGroupDeleteSnapshotBuilder.Build(group);
+
+        using var document = JsonDocument.Parse(json);
+        Assert.Equal(AdManagementOperationTypes.GroupDelete, document.RootElement.GetProperty("operation").GetString());
+        Assert.True(document.RootElement.TryGetProperty("group", out var groupNode));
+        Assert.Equal(12, groupNode.GetProperty("memberCount").GetInt32());
+        Assert.Equal(3, groupNode.GetProperty("memberOfCount").GetInt32());
+        Assert.Equal("vpn-users", groupNode.GetProperty("samAccountName").GetString());
+    }
+
+    [Fact]
+    public void GroupDelete_FailureDiagnostic_ContainsExtractableErrorCode()
+    {
+        var diagnosticJson = AdGroupDeleteOperationDiagnosticBuilder.BuildGenericFailureJson(
+            "DeleteGroup",
+            AdUserUpdateNormalizedReasons.DeleteFailed,
+            "The AD security group could not be deleted.",
+            Guid.Parse("550e8400-e29b-41d4-a716-446655440000"),
+            "CN=VPN Users,OU=Groups,DC=corp,DC=local");
+
+        var extractedCode = AdOperationLogErrorCodeExtractor.TryExtractFromDiagnosticJson(diagnosticJson);
+
+        using var document = JsonDocument.Parse(diagnosticJson);
+        Assert.Equal(AdOperationDiagnosticCodes.GroupDeleteFailed, extractedCode);
+        Assert.Equal(AdOperationDiagnosticCodes.GroupDeleteFailed, document.RootElement.GetProperty("code").GetString());
+        Assert.Equal("GroupDelete", document.RootElement.GetProperty("operation").GetString());
+        Assert.Equal("DeleteGroup", document.RootElement.GetProperty("step").GetString());
+    }
+
     private static AdGroupDetail CreateSampleGroupDetail(
         string id = "550e8400-e29b-41d4-a716-446655440000",
         string name = "vpn-users",
         string? cn = "VPN Users",
         string? samAccountName = "vpn-users",
         string distinguishedName = "CN=VPN Users,OU=Groups,DC=corp,DC=local",
-        string? description = "VPN access group") =>
+        string? description = "VPN access group",
+        int memberCount = 0,
+        int memberOfCount = 0) =>
         new(
             Id: id,
             DistinguishedName: distinguishedName,
@@ -588,8 +646,8 @@ public sealed class AdOperationLogStandardTests
             WhenChanged: null,
             ManagedByDistinguishedName: null,
             ManagedByDisplayName: null,
-            MemberCount: 0,
-            MemberOfCount: 0,
+            MemberCount: memberCount,
+            MemberOfCount: memberOfCount,
             Members: Array.Empty<AdGroupMemberItem>(),
             MemberOf: Array.Empty<AdGroupMemberItem>(),
             MembersTruncated: false,

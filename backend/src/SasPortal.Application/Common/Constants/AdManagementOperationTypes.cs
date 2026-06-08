@@ -19,6 +19,7 @@ public static class AdManagementOperationTypes
     public const string UserAccountExpirationUpdate = "UserAccountExpirationUpdate";
     public const string GroupCreate = "GroupCreate";
     public const string GroupUpdate = "GroupUpdate";
+    public const string GroupDelete = "GroupDelete";
 }
 
 public static class AdManagementTargetUserTypes

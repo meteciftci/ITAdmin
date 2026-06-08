@@ -19,4 +19,6 @@ public static class AdOperationDiagnosticCodes
     public const string GroupCreatePreflightFailed = "AD_GROUP_CREATE_PREFLIGHT_FAILED";
     public const string GroupUpdateFailed = "AD_GROUP_UPDATE_FAILED";
     public const string GroupUpdatePreflightFailed = "AD_GROUP_UPDATE_PREFLIGHT_FAILED";
+    public const string GroupDeleteFailed = "AD_GROUP_DELETE_FAILED";
+    public const string GroupDeletePreflightFailed = "AD_GROUP_DELETE_PREFLIGHT_FAILED";
 }

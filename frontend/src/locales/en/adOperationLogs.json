@@ -48,7 +48,10 @@
       "UserGroupRemove": "Remove from group",
       "UserOuMove": "Move OU",
       "UserManagerUpdate": "Manager update",
-      "UserAccountExpirationUpdate": "Account expiration update"
+      "UserAccountExpirationUpdate": "Account expiration update",
+      "GroupCreate": "Create group",
+      "GroupUpdate": "Update group",
+      "GroupDelete": "Delete group"
     },
     "statuses": {
       "Succeeded": "Succeeded",
@@ -125,6 +128,7 @@
       "createdUser": "Created User",
       "createdGroup": "Created Group",
       "groupUpdate": "Group Information",
+      "deletedGroup": "Deleted Group",
       "notifications": "Notifications",
       "boolean": {
         "yes": "Yes",
@@ -151,7 +155,9 @@
         "userAccountControl": "User Account Control",
         "lockoutTime": "Lockout Time",
         "neverExpires": "Never Expires",
-        "accountExpiresAt": "Account Expires At"
+        "accountExpiresAt": "Account Expires At",
+        "memberCount": "Member Count",
+        "memberOfCount": "Member Of Count"
       }
     },
     "empty": {

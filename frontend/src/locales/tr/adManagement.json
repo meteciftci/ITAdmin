@@ -429,7 +429,19 @@
       "actions": {
         "detail": "Detay",
         "edit": "Düzenle",
+        "delete": "Sil",
         "back": "Geri Dön"
+      },
+      "delete": {
+        "title": "Grubu Sil",
+        "description": "Bu işlem AD grubunu siler. Aynı adla yeniden grup oluşturmak eski SID ve yetkileri geri getirmez.",
+        "confirmLabel": "Silmek için sAMAccountName değerini yazın",
+        "confirmPlaceholder": "sAMAccountName",
+        "confirmButton": "Grubu Sil",
+        "success": "Grup silindi.",
+        "error": "Grup silinemedi.",
+        "memberCount": "Üye Sayısı",
+        "memberOfCount": "Üye Olduğu Grup Sayısı"
       },
       "create": {
         "pageTitle": "Grup Oluştur",
@@ -486,6 +498,9 @@
         "notFound": "Grup bulunamadı"
       },
       "detail": {
+        "actions": {
+          "operations": "İşlemler"
+        },
         "pageTitle": "Grup detayı",
         "summaryTitle": "Grup Özeti",
         "technicalTitle": "Teknik AD Bilgileri",

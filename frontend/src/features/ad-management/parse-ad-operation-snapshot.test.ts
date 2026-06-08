@@ -342,6 +342,7 @@ describe("getSnapshotRenderStrategy", () => {
     assert.equal(getSnapshotRenderStrategy("UserAccountExpirationUpdate"), "userAccountExpirationUpdate");
     assert.equal(getSnapshotRenderStrategy("GroupCreate"), "groupCreate");
     assert.equal(getSnapshotRenderStrategy("GroupUpdate"), "groupUpdate");
+    assert.equal(getSnapshotRenderStrategy("GroupDelete"), "groupDelete");
   });
 
   it("falls back to generic for unknown operation types", () => {
@@ -387,6 +388,25 @@ describe("parseNestedAdOperationSnapshot group snapshots", () => {
     assert.equal(parsed?.group?.groupScope, "Global");
     assert.equal(parsed?.group?.securityEnabled, true);
     assert.equal(parsed?.group?.groupType, -2147483646);
+  });
+
+  it("parses GroupDelete memberCount and memberOfCount", () => {
+    const parsed = parseNestedAdOperationSnapshot(
+      JSON.stringify({
+        operation: "GroupDelete",
+        group: {
+          id: "550e8400-e29b-41d4-a716-446655440000",
+          displayName: "VPN Users",
+          name: "vpn-users",
+          samAccountName: "vpn-users",
+          memberCount: 12,
+          memberOfCount: 3,
+        },
+      }),
+    );
+
+    assert.equal(parsed?.group?.memberCount, 12);
+    assert.equal(parsed?.group?.memberOfCount, 3);
   });
 
   it("builds group comparison rows for rename scenario", () => {
@@ -440,8 +460,11 @@ describe("AdOperationLogSnapshotDetail group render wiring", () => {
 
     assert.match(detailSource, /GroupCreateSnapshotSections/);
     assert.match(detailSource, /GroupUpdateSnapshotSections/);
+    assert.match(detailSource, /GroupDeleteSnapshotSections/);
     assert.match(detailSource, /case "groupCreate"/);
     assert.match(detailSource, /case "groupUpdate"/);
+    assert.match(detailSource, /case "groupDelete"/);
+    assert.match(detailSource, /snapshotSections\.deletedGroup/);
     assert.match(detailSource, /buildGroupComparisonRows/);
     assert.match(detailSource, /ComparisonTable/);
     assert.match(detailSource, /getGroupFieldEntries/);
@@ -457,6 +480,10 @@ describe("adOperationLogs group snapshot locale labels", () => {
 
     assert.match(trLocale, /"createdGroup": "Oluşturulan Grup"/);
     assert.match(trLocale, /"groupUpdate": "Grup Bilgileri"/);
+    assert.match(trLocale, /"deletedGroup": "Silinen Grup"/);
+    assert.match(trLocale, /"GroupDelete": "Grup silme"/);
+    assert.match(trLocale, /"memberCount": "Üye Sayısı"/);
+    assert.match(trLocale, /"memberOfCount": "Üye Olduğu Grup Sayısı"/);
     assert.match(trLocale, /"groupDisplayName": "Grup Görünen Ad"/);
     assert.match(trLocale, /"groupName": "Grup Adı"/);
   });

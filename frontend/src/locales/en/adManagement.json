@@ -429,7 +429,19 @@
       "actions": {
         "detail": "Detail",
         "edit": "Edit",
+        "delete": "Delete",
         "back": "Back"
+      },
+      "delete": {
+        "title": "Delete Group",
+        "description": "This deletes the AD group. Recreating a group with the same name does not restore the old SID or permissions.",
+        "confirmLabel": "Type the sAMAccountName to delete",
+        "confirmPlaceholder": "sAMAccountName",
+        "confirmButton": "Delete Group",
+        "success": "Group deleted.",
+        "error": "Group could not be deleted.",
+        "memberCount": "Member Count",
+        "memberOfCount": "Member Of Count"
       },
       "create": {
         "pageTitle": "Create Group",
@@ -486,6 +498,9 @@
         "notFound": "Group not found"
       },
       "detail": {
+        "actions": {
+          "operations": "Operations"
+        },
         "pageTitle": "Group detail",
         "summaryTitle": "Group Summary",
         "technicalTitle": "Technical AD Information",

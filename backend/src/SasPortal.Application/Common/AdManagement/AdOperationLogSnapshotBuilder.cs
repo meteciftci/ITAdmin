@@ -557,6 +557,8 @@ public static class AdOperationLogSnapshotBuilder
             groupScope = group.GroupScope,
             securityEnabled = group.SecurityEnabled,
             groupType = group.GroupType,
+            memberCount = group.MemberCount,
+            memberOfCount = group.MemberOfCount,
         };
 
     public static string BuildCreateRequestSummary(CreateAdUserRequest request)

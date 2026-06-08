@@ -33,6 +33,7 @@ import type {
   AdGroupDetail,
   AdGroupListResponse,
   CreateAdGroupRequest,
+  DeleteAdGroupResponse,
   GetAdGroupsParams,
   UpdateAdGroupRequest,
 } from "@/features/ad-management/types";
@@ -185,6 +186,13 @@ export const updateAdGroup = async (
   const { data } = await apiClient.put<AdGroupDetail>(
     `/ad-management/groups/${groupId}`,
     payload,
+  );
+  return data;
+};
+
+export const deleteAdGroup = async (groupId: string): Promise<DeleteAdGroupResponse> => {
+  const { data } = await apiClient.delete<DeleteAdGroupResponse>(
+    `/ad-management/groups/${groupId}`,
   );
   return data;
 };

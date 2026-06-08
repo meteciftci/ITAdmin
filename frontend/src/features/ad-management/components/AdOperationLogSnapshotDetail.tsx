@@ -117,6 +117,16 @@ function getGroupFieldEntries(
       label: t("snapshotSections.fields.groupType"),
       value: group.groupType != null ? String(group.groupType) : null,
     },
+    {
+      key: "memberCount",
+      label: t("snapshotSections.fields.memberCount"),
+      value: group.memberCount != null ? String(group.memberCount) : null,
+    },
+    {
+      key: "memberOfCount",
+      label: t("snapshotSections.fields.memberOfCount"),
+      value: group.memberOfCount != null ? String(group.memberOfCount) : null,
+    },
   ];
 }
 
@@ -777,6 +787,40 @@ function GroupCreateSnapshotSections({
   );
 }
 
+function GroupDeleteSnapshotSections({
+  beforeSnapshotJson,
+  noneLabel,
+  t,
+}: {
+  beforeSnapshotJson: string | null | undefined;
+  noneLabel: string;
+  t: TFunction<"adOperationLogs">;
+}) {
+  const booleanLabels = useMemo(
+    () => ({ yes: t("snapshotSections.boolean.yes"), no: t("snapshotSections.boolean.no") }),
+    [t],
+  );
+  const formatBoolean = useMemo(
+    () => (value: boolean | null | undefined) => formatSnapshotBoolean(value, booleanLabels),
+    [booleanLabels],
+  );
+
+  const beforeSnapshot = useMemo(
+    () => parseNestedAdOperationSnapshot(beforeSnapshotJson),
+    [beforeSnapshotJson],
+  );
+
+  return (
+    <section className="space-y-3 border-t pt-4">
+      <h3 className="text-sm font-medium">{t("snapshotSections.deletedGroup")}</h3>
+      <KeyValueGrid
+        entries={getGroupFieldEntries(t, beforeSnapshot?.group ?? null, formatBoolean)}
+        noneLabel={noneLabel}
+      />
+    </section>
+  );
+}
+
 function GroupUpdateSnapshotSections({
   beforeSnapshotJson,
   afterSnapshotJson,
@@ -1006,6 +1050,14 @@ export function AdOperationLogSnapshotDetail({
             afterSnapshotJson={afterSnapshotJson}
             noneLabel={noneLabel}
             emptyDash={emptyDash}
+            t={t}
+          />
+        );
+      case "groupDelete":
+        return (
+          <GroupDeleteSnapshotSections
+            beforeSnapshotJson={beforeSnapshotJson}
+            noneLabel={noneLabel}
             t={t}
           />
         );

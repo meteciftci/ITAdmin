@@ -277,6 +277,37 @@ public sealed class AdManagementController(
         return Ok(MapGroupDetail(result.Group));
     }
 
+    [HttpDelete("groups/{id}")]
+    [RequirePermission(AdManagementPermissions.GroupsDelete)]
+    public async Task<ActionResult<DeleteAdGroupResponse>> DeleteGroup(
+        [FromRoute] string id,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Guid.TryParse(id, out var objectGuid))
+        {
+            return BadRequest(new { message = "Geçersiz grup kimliği." });
+        }
+
+        var result = await adGroupDirectoryService.DeleteGroupAsync(
+            new AppModels.DeleteAdGroupRequest(
+                objectGuid,
+                ResolveActorUserId(User),
+                ResolveActorUserName(User),
+                ResolveIpAddress(),
+                ResolveUserAgent()),
+            cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return MapDirectoryFailure(result.Message, result.FailureKind);
+        }
+
+        return Ok(new DeleteAdGroupResponse(
+            true,
+            result.Message,
+            result.DeletedGroupId));
+    }
+
     [HttpGet("group-organizational-units")]
     [RequirePermission(AdManagementPermissions.GroupsCreate)]
     public async Task<ActionResult<AdOrganizationalUnitSearchResponse>> SearchGroupOrganizationalUnits(

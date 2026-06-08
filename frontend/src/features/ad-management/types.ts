@@ -320,6 +320,12 @@ export type UpdateAdGroupRequest = {
   description?: string | null;
 };
 
+export type DeleteAdGroupResponse = {
+  success: boolean;
+  message: string;
+  deletedGroupId: string | null;
+};
+
 export type AdUserGroupMembership = {
   name: string;
   distinguishedName: string;

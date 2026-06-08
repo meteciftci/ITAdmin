@@ -249,6 +249,8 @@ export type ParsedSnapshotGroup = {
   groupScope: string | null;
   securityEnabled: boolean | null;
   groupType: number | null;
+  memberCount: number | null;
+  memberOfCount: number | null;
 };
 
 export const SNAPSHOT_GROUP_COMPARISON_FIELD_KEYS = [
@@ -311,6 +313,7 @@ export type SnapshotRenderStrategy =
   | "userCreate"
   | "groupCreate"
   | "groupUpdate"
+  | "groupDelete"
   | "accountStatus"
   | "lockStatus"
   | "groupMembership"
@@ -417,7 +420,9 @@ function hasParsedSnapshotGroupContent(group: ParsedSnapshotGroup): boolean {
     group.distinguishedName !== null ||
     group.groupScope !== null ||
     group.securityEnabled !== null ||
-    group.groupType !== null
+    group.groupType !== null ||
+    group.memberCount !== null ||
+    group.memberOfCount !== null
   );
 }
 
@@ -438,6 +443,8 @@ function parseSnapshotGroup(value: unknown): ParsedSnapshotGroup | null {
     groupScope: formatSnapshotValue(record.groupScope ?? record.GroupScope),
     securityEnabled: readBoolean(record.securityEnabled ?? record.SecurityEnabled),
     groupType: readNumber(record.groupType ?? record.GroupType),
+    memberCount: readNumber(record.memberCount ?? record.MemberCount),
+    memberOfCount: readNumber(record.memberOfCount ?? record.MemberOfCount),
   };
 
   return hasParsedSnapshotGroupContent(group) ? group : null;
@@ -445,7 +452,7 @@ function parseSnapshotGroup(value: unknown): ParsedSnapshotGroup | null {
 
 function tryParseFlatGroupSnapshot(record: Record<string, unknown>): ParsedSnapshotGroup | null {
   const operation = formatSnapshotValue(record.operation ?? record.Operation);
-  if (operation !== "GroupCreate" && operation !== "GroupUpdate") {
+  if (operation !== "GroupCreate" && operation !== "GroupUpdate" && operation !== "GroupDelete") {
     return null;
   }
 
@@ -826,6 +833,9 @@ export function getSnapshotRenderStrategy(operationType: string): SnapshotRender
   }
   if (operationType === "GroupUpdate") {
     return "groupUpdate";
+  }
+  if (operationType === "GroupDelete") {
+    return "groupDelete";
   }
   if (ACCOUNT_STATUS_OPERATION_TYPES.has(operationType)) {
     return "accountStatus";

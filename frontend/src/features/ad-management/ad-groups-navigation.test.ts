@@ -124,11 +124,16 @@ describe("ad groups route and menu wiring", () => {
     assert.match(columnsSource, /groups\.table\.group/);
     assert.match(columnsSource, /canUpdateGroup/);
     assert.match(columnsSource, /groups\.actions\.edit/);
-    assert.doesNotMatch(columnsSource, /groups\.actions\.(create|delete)|AddUserToGroup|RemoveUserFromGroup/i);
+    assert.doesNotMatch(columnsSource, /groups\.actions\.create|AddUserToGroup|RemoveUserFromGroup/i);
     assert.match(detailSource, /getAdGroupPrimaryLabel/);
     assert.match(detailSource, /getAdGroupMemberPrimaryLabel/);
     assert.match(detailSource, /membersTruncated|memberOfTruncated/);
     assert.doesNotMatch(detailSource, /AddUserToGroup|RemoveUserFromGroup|manageGroups/i);
+    assert.match(pageSource, /canDeleteGroup/);
+    assert.match(pageSource, /AdDeleteGroupConfirmDialog/);
+    assert.match(detailSource, /canDeleteGroup/);
+    assert.match(detailSource, /groups\.actions\.delete/);
+    assert.match(detailSource, /AdDeleteGroupConfirmDialog/);
   });
 
   it("does not render separate name, cn, samAccountName, or distinguishedName list columns", () => {
@@ -182,7 +187,10 @@ describe("ad groups route and menu wiring", () => {
     assert.match(actionsSection, /groups\.actions\.detail/);
     assert.match(actionsSection, /canUpdateGroup/);
     assert.match(actionsSection, /groups\.actions\.edit/);
-    assert.doesNotMatch(actionsSection, /groups\.actions\.(create|delete)/);
+    assert.doesNotMatch(actionsSection, /groups\.actions\.create/);
+    assert.match(actionsSection, /canDeleteGroup/);
+    assert.match(actionsSection, /groups\.actions\.delete/);
+    assert.match(actionsSection, /DropdownMenuSeparator/);
   });
 
   it("navigates to edit from list with list return state and from detail with detail return state", () => {

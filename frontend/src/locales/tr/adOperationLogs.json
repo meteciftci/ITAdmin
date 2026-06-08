@@ -48,7 +48,10 @@
       "UserGroupRemove": "Gruptan çıkarma",
       "UserOuMove": "OU taşıma",
       "UserManagerUpdate": "Manager güncelleme",
-      "UserAccountExpirationUpdate": "Hesap bitiş tarihi güncelleme"
+      "UserAccountExpirationUpdate": "Hesap bitiş tarihi güncelleme",
+      "GroupCreate": "Grup oluşturma",
+      "GroupUpdate": "Grup güncelleme",
+      "GroupDelete": "Grup silme"
     },
     "statuses": {
       "Succeeded": "Başarılı",
@@ -125,6 +128,7 @@
       "createdUser": "Oluşturulan Kullanıcı",
       "createdGroup": "Oluşturulan Grup",
       "groupUpdate": "Grup Bilgileri",
+      "deletedGroup": "Silinen Grup",
       "notifications": "Bildirimler",
       "boolean": {
         "yes": "Evet",
@@ -151,7 +155,9 @@
         "userAccountControl": "User Account Control",
         "lockoutTime": "Lockout Time",
         "neverExpires": "Süresiz",
-        "accountExpiresAt": "Hesap Bitiş Tarihi"
+        "accountExpiresAt": "Hesap Bitiş Tarihi",
+        "memberCount": "Üye Sayısı",
+        "memberOfCount": "Üye Olduğu Grup Sayısı"
       }
     },
     "empty": {

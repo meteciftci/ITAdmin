@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useLocation, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AxiosError } from "axios";
 
@@ -14,7 +14,9 @@ import { LoadingState } from "@/components/common/LoadingState";
 import { PageHeader } from "@/components/common/PageHeader";
 import { SectionCard } from "@/components/common/SectionCard";
 import { Badge } from "@/components/ui/badge";
+import { RowActions } from "@/components/common/RowActions";
 import { Button } from "@/components/ui/button";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { isGuidLike } from "@/features/ad-management/ad-user-detail-utils";
 import {
   getAdGroupMemberPrimaryLabel,
@@ -35,6 +37,7 @@ import {
 } from "@/features/ad-management/ad-groups-return-path";
 import { AD_GROUPS_LIST_PATH } from "@/features/ad-management/ad-groups-list-path";
 import { AD_MANAGEMENT_GROUPS_QUERY_KEY, getAdGroupById } from "@/features/ad-management/api";
+import { AdDeleteGroupConfirmDialog } from "@/features/ad-management/components/AdDeleteGroupConfirmDialog";
 import { AdUserDetailField } from "@/features/ad-management/components/ad-user-detail/AdUserDetailField";
 import { AdManagementModuleStateGuard } from "@/features/ad-management/components/AdManagementModuleStateGuard";
 import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useAdManagementModuleStatus";
@@ -110,8 +113,11 @@ export function AdGroupDetailPage() {
   const { t } = useTranslation(["adManagement", "common", "errors"]);
   const currentUser = useAuthStore((state) => state.user);
   const canUpdateGroup = canAccess(currentUser, "AdManagement.Groups.Update");
+  const canDeleteGroup = canAccess(currentUser, "AdManagement.Groups.Delete");
   const { id: groupId } = useParams<{ id: string }>();
   const location = useLocation();
+  const navigate = useNavigate();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const moduleStatus = useAdManagementModuleStatus();
   const hasValidId = Boolean(groupId?.trim()) && isGuidLike(groupId);
   const returnPath = resolveAdGroupReturnPath(location.state, AD_GROUPS_LIST_PATH);
@@ -189,6 +195,16 @@ export function AdGroupDetailPage() {
                 >
                   {t("adManagement:groups.actions.edit")}
                 </Link>
+              ) : null}
+              {canDeleteGroup && group ? (
+                <RowActions label={t("adManagement:groups.detail.actions.operations")}>
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => setDeleteDialogOpen(true)}
+                  >
+                    {t("adManagement:groups.actions.delete")}
+                  </DropdownMenuItem>
+                </RowActions>
               ) : null}
             </div>
           }
@@ -317,6 +333,15 @@ export function AdGroupDetailPage() {
           </>
         ) : null}
       </section>
+
+      <AdDeleteGroupConfirmDialog
+        open={deleteDialogOpen}
+        groupId={group?.id ?? null}
+        onOpenChange={setDeleteDialogOpen}
+        onDeleted={() => {
+          navigate(AD_GROUPS_LIST_PATH);
+        }}
+      />
     </AdManagementModuleStateGuard>
   );
 }

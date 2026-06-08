@@ -4,7 +4,7 @@ import type { TFunction } from "i18next";
 import { RowActions } from "@/components/common/RowActions";
 import type { DataTableColumnMeta } from "@/components/common/data-table";
 import { Badge } from "@/components/ui/badge";
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import {
   getAdGroupPrimaryLabel,
   getAdGroupSecondaryLabel,
@@ -18,15 +18,19 @@ import type { AdGroupListItem } from "@/features/ad-management/types";
 type CreateAdGroupColumnsOptions = {
   t: TFunction;
   canUpdateGroup: boolean;
+  canDeleteGroup: boolean;
   onDetail: (group: AdGroupListItem) => void;
   onEdit: (group: AdGroupListItem) => void;
+  onDelete: (group: AdGroupListItem) => void;
 };
 
 export function createAdGroupColumns({
   t,
   canUpdateGroup,
+  canDeleteGroup,
   onDetail,
   onEdit,
+  onDelete,
 }: CreateAdGroupColumnsOptions): ColumnDef<AdGroupListItem, unknown>[] {
   return [
     {
@@ -93,6 +97,17 @@ export function createAdGroupColumns({
             <DropdownMenuItem onClick={() => onEdit(row.original)}>
               {t("adManagement:groups.actions.edit")}
             </DropdownMenuItem>
+          ) : null}
+          {canDeleteGroup ? (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => onDelete(row.original)}
+              >
+                {t("adManagement:groups.actions.delete")}
+              </DropdownMenuItem>
+            </>
           ) : null}
         </RowActions>
       ),

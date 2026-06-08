@@ -131,6 +131,7 @@ public sealed class AdGroupDirectoryTests
     {
         Assert.Equal("AdManagement.Groups.Create", AdManagementPermissions.GroupsCreate);
         Assert.Equal("AdManagement.Groups.Update", AdManagementPermissions.GroupsUpdate);
+        Assert.Equal("AdManagement.Groups.Delete", AdManagementPermissions.GroupsDelete);
     }
 
     [Fact]
@@ -174,6 +175,33 @@ public sealed class AdGroupDirectoryTests
         var permissionAttribute = method.GetCustomAttribute<RequirePermissionAttribute>();
         Assert.Equal(
             RequirePermissionAttribute.PolicyPrefix + AdManagementPermissions.GroupsUpdate,
+            permissionAttribute?.Policy);
+    }
+
+    [Fact]
+    public void DefaultPermissionSeed_ContainsGroupsDelete()
+    {
+        var permissions = typeof(SetupService)
+            .GetField("DefaultPermissions", BindingFlags.Static | BindingFlags.NonPublic)!
+            .GetValue(null) as Array;
+
+        Assert.NotNull(permissions);
+        Assert.Contains(permissions.Cast<object>(), item =>
+        {
+            var tuple = (ValueTuple<string, string, string>)item!;
+            return string.Equals(tuple.Item2, AdManagementPermissions.GroupsDelete, StringComparison.Ordinal);
+        });
+    }
+
+    [Fact]
+    public void DeleteGroupEndpoint_RequiresGroupsDeletePermission()
+    {
+        var method = typeof(AdManagementController).GetMethod(nameof(AdManagementController.DeleteGroup));
+        Assert.NotNull(method);
+
+        var permissionAttribute = method.GetCustomAttribute<RequirePermissionAttribute>();
+        Assert.Equal(
+            RequirePermissionAttribute.PolicyPrefix + AdManagementPermissions.GroupsDelete,
             permissionAttribute?.Policy);
     }
 }
