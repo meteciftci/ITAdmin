@@ -14,4 +14,6 @@ public static class AdUserUpdateNormalizedReasons
     public const string LdapsRequired = "LdapsRequired";
     public const string PermissionDenied = "PermissionDenied";
     public const string Unknown = "Unknown";
+    public const string AlreadyMember = "AlreadyMember";
+    public const string NotDirectMember = "NotDirectMember";
 }

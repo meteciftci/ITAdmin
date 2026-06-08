@@ -36,6 +36,13 @@ import type {
   DeleteAdGroupResponse,
   GetAdGroupsParams,
   UpdateAdGroupRequest,
+  AdGroupMembersListResponse,
+  GetAdGroupMembersParams,
+  AdGroupMemberCandidatesResponse,
+  GetAdGroupMemberCandidatesParams,
+  AddAdGroupMemberRequest,
+  RemoveAdGroupMemberRequest,
+  AdGroupMemberOperationResponse,
 } from "@/features/ad-management/types";
 
 export const AD_MANAGEMENT_SETTINGS_QUERY_KEY = [
@@ -51,6 +58,12 @@ export const AD_MANAGEMENT_MAPPINGS_QUERY_KEY = [
 export const AD_MANAGEMENT_USERS_QUERY_KEY = ["ad-management", "users"] as const;
 
 export const AD_MANAGEMENT_GROUPS_QUERY_KEY = ["ad-management", "groups"] as const;
+
+export const AD_MANAGEMENT_GROUP_MEMBERS_QUERY_KEY = [
+  "ad-management",
+  "groups",
+  "members",
+] as const;
 
 export const AD_UPN_SUFFIXES_QUERY_KEY = ["ad-management", "upn-suffixes"] as const;
 
@@ -218,6 +231,76 @@ export async function invalidateAdManagementGroupQueries(
 ): Promise<void> {
   await queryClient.invalidateQueries({
     queryKey: AD_MANAGEMENT_GROUPS_QUERY_KEY,
+  });
+}
+
+export const getAdGroupMembers = async (
+  groupId: string,
+  params: GetAdGroupMembersParams,
+): Promise<AdGroupMembersListResponse> => {
+  const { data } = await apiClient.get<AdGroupMembersListResponse>(
+    `/ad-management/groups/${groupId}/members`,
+    {
+      params: {
+        search: params.search,
+        type: params.type ?? "all",
+        pageNumber: params.pageNumber ?? 1,
+        pageSize: params.pageSize ?? 20,
+      },
+    },
+  );
+  return data;
+};
+
+export const searchAdGroupMemberCandidates = async (
+  groupId: string,
+  params: GetAdGroupMemberCandidatesParams,
+): Promise<AdGroupMemberCandidatesResponse> => {
+  const { data } = await apiClient.get<AdGroupMemberCandidatesResponse>(
+    `/ad-management/groups/${groupId}/member-candidates`,
+    {
+      params: {
+        search: params.search,
+        types: params.types?.join(",") ?? "user,group,computer",
+        pageSize: params.pageSize ?? 50,
+      },
+    },
+  );
+  return data;
+};
+
+export const addAdGroupMember = async (
+  groupId: string,
+  payload: AddAdGroupMemberRequest,
+): Promise<AdGroupMemberOperationResponse> => {
+  const { data } = await apiClient.post<AdGroupMemberOperationResponse>(
+    `/ad-management/groups/${groupId}/members`,
+    payload,
+  );
+  return data;
+};
+
+export const removeAdGroupMember = async (
+  groupId: string,
+  payload: RemoveAdGroupMemberRequest,
+): Promise<AdGroupMemberOperationResponse> => {
+  const { data } = await apiClient.delete<AdGroupMemberOperationResponse>(
+    `/ad-management/groups/${groupId}/members`,
+    { data: payload },
+  );
+  return data;
+};
+
+export async function invalidateAdGroupMemberQueries(
+  queryClient: QueryClient,
+  groupId: string,
+): Promise<void> {
+  await queryClient.invalidateQueries({
+    queryKey: [...AD_MANAGEMENT_GROUP_MEMBERS_QUERY_KEY, groupId],
+  });
+  await invalidateAdManagementGroupQueries(queryClient);
+  await queryClient.invalidateQueries({
+    queryKey: AD_OPERATION_LOGS_QUERY_KEY,
   });
 }
 

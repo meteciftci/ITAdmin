@@ -27,6 +27,7 @@ import {
   parseNestedAdOperationSnapshot,
   parseRequestSummaryEntries,
   resolveSnapshotGroup,
+  resolveSnapshotMember,
   resolveSnapshotUser,
   type GenericSnapshotEntry,
   type ParsedSnapshotGroup,
@@ -593,6 +594,142 @@ function UserAccountExpirationUpdateSnapshotSections({
   );
 }
 
+function GroupMemberSnapshotSections({
+  beforeSnapshotJson,
+  afterSnapshotJson,
+  noneLabel,
+  emptyDash,
+  t,
+}: {
+  beforeSnapshotJson: string | null | undefined;
+  afterSnapshotJson: string | null | undefined;
+  noneLabel: string;
+  emptyDash: string;
+  t: TFunction<"adOperationLogs">;
+}) {
+  const booleanLabels = useMemo(
+    () => ({ yes: t("snapshotSections.boolean.yes"), no: t("snapshotSections.boolean.no") }),
+    [t],
+  );
+  const formatBoolean = useMemo(
+    () => (value: boolean | null | undefined) => formatSnapshotBoolean(value, booleanLabels),
+    [booleanLabels],
+  );
+
+  const beforeSnapshot = useMemo(
+    () => parseNestedAdOperationSnapshot(beforeSnapshotJson),
+    [beforeSnapshotJson],
+  );
+  const afterSnapshot = useMemo(
+    () => parseNestedAdOperationSnapshot(afterSnapshotJson),
+    [afterSnapshotJson],
+  );
+  const group = useMemo(
+    () => resolveSnapshotGroup(beforeSnapshot, afterSnapshot),
+    [beforeSnapshot, afterSnapshot],
+  );
+  const member = useMemo(
+    () => resolveSnapshotMember(beforeSnapshot, afterSnapshot),
+    [beforeSnapshot, afterSnapshot],
+  );
+  const membershipRows = useMemo(
+    () => buildMembershipComparisonRows(beforeSnapshot, afterSnapshot, formatBoolean),
+    [beforeSnapshot, afterSnapshot, formatBoolean],
+  );
+
+  const groupEntries = [
+    {
+      key: "displayName",
+      label: t("snapshotSections.fields.groupDisplayName"),
+      value: group?.displayName ?? null,
+    },
+    {
+      key: "name",
+      label: t("snapshotSections.fields.groupName"),
+      value: group?.name ?? null,
+    },
+    {
+      key: "samAccountName",
+      label: t("snapshotSections.fields.samAccountName"),
+      value: group?.samAccountName ?? null,
+    },
+    {
+      key: "distinguishedName",
+      label: t("snapshotSections.fields.groupDistinguishedName"),
+      value: group?.distinguishedName ?? null,
+      mono: true,
+    },
+  ];
+
+  const memberEntries = [
+    {
+      key: "type",
+      label: t("snapshotSections.fields.memberType"),
+      value: member?.type ?? null,
+    },
+    {
+      key: "displayName",
+      label: t("snapshotSections.fields.displayName"),
+      value: member?.displayName ?? null,
+    },
+    {
+      key: "name",
+      label: t("snapshotSections.fields.groupName"),
+      value: member?.name ?? null,
+    },
+    {
+      key: "cn",
+      label: t("snapshotSections.fields.cn"),
+      value: member?.cn ?? null,
+    },
+    {
+      key: "samAccountName",
+      label: t("snapshotSections.fields.samAccountName"),
+      value: member?.samAccountName ?? null,
+    },
+    {
+      key: "userPrincipalName",
+      label: t("snapshotSections.fields.userPrincipalName"),
+      value: member?.userPrincipalName ?? null,
+    },
+    {
+      key: "dNSHostName",
+      label: t("snapshotSections.fields.dNSHostName"),
+      value: member?.dNSHostName ?? null,
+    },
+    {
+      key: "distinguishedName",
+      label: t("snapshotSections.fields.distinguishedName"),
+      value: member?.distinguishedName ?? null,
+      mono: true,
+    },
+  ];
+
+  return (
+    <>
+      <section className="space-y-3 border-t pt-4">
+        <h3 className="text-sm font-medium">{t("snapshotSections.group")}</h3>
+        <KeyValueGrid entries={groupEntries} noneLabel={noneLabel} />
+      </section>
+
+      <section className="space-y-3 border-t pt-4">
+        <h3 className="text-sm font-medium">{t("snapshotSections.member")}</h3>
+        <KeyValueGrid entries={memberEntries} noneLabel={noneLabel} />
+      </section>
+
+      <section className="space-y-3 border-t pt-4">
+        <h3 className="text-sm font-medium">{t("snapshotSections.groupMember")}</h3>
+        <ComparisonTable
+          rows={membershipRows}
+          getFieldLabel={() => t("snapshotSections.fields.isDirectMember")}
+          emptyLabel={emptyDash}
+          noneLabel={noneLabel}
+        />
+      </section>
+    </>
+  );
+}
+
 function GroupMembershipSnapshotSections({
   beforeSnapshotJson,
   afterSnapshotJson,
@@ -989,6 +1126,16 @@ export function AdOperationLogSnapshotDetail({
       case "groupMembership":
         return (
           <GroupMembershipSnapshotSections
+            beforeSnapshotJson={beforeSnapshotJson}
+            afterSnapshotJson={afterSnapshotJson}
+            noneLabel={noneLabel}
+            emptyDash={emptyDash}
+            t={t}
+          />
+        );
+      case "groupMember":
+        return (
+          <GroupMemberSnapshotSections
             beforeSnapshotJson={beforeSnapshotJson}
             afterSnapshotJson={afterSnapshotJson}
             noneLabel={noneLabel}

@@ -19,4 +19,33 @@ public static class AdLdapGroupFilterHelper
         var guidFilter = AdLdapFilterHelper.FormatObjectGuidFilter(objectGuid);
         return SecurityGroupBaseFilter[..^1] + $"(objectGUID={guidFilter}))";
     }
+
+    public static string BuildComputerSearchFilter(string searchTerm)
+    {
+        var escaped = AdLdapFilterHelper.EscapeFilterValue(searchTerm.Trim());
+        return
+            "(&(objectCategory=computer)(objectClass=computer)" +
+            "(|(displayName=*" + escaped + "*)(name=*" + escaped + "*)(cn=*" + escaped + "*)" +
+            "(sAMAccountName=*" + escaped + "*)(userPrincipalName=*" + escaped + "*)" +
+            "(dNSHostName=*" + escaped + "*)(description=*" + escaped + "*)))";
+    }
+
+    public static string BuildUserMemberCandidateSearchFilter(string searchTerm) =>
+        "(&(objectCategory=person)(objectClass=user)(!(isDeleted=TRUE))" +
+        BuildMemberSearchClause(searchTerm) + ")";
+
+    public static string BuildSecurityGroupMemberCandidateSearchFilter(string searchTerm) =>
+        SecurityGroupBaseFilter[..^1] + BuildMemberSearchClause(searchTerm) + ")";
+
+    public static string BuildComputerMemberCandidateSearchFilter(string searchTerm) =>
+        "(&(objectCategory=computer)(objectClass=computer)" + BuildMemberSearchClause(searchTerm) + ")";
+
+    private static string BuildMemberSearchClause(string searchTerm)
+    {
+        var escaped = AdLdapFilterHelper.EscapeFilterValue(searchTerm.Trim());
+        return
+            "(|(displayName=*" + escaped + "*)(name=*" + escaped + "*)(cn=*" + escaped + "*)" +
+            "(sAMAccountName=*" + escaped + "*)(userPrincipalName=*" + escaped + "*)" +
+            "(dNSHostName=*" + escaped + "*)(description=*" + escaped + "*))";
+    }
 }

@@ -51,7 +51,9 @@
       "UserAccountExpirationUpdate": "Hesap bitiş tarihi güncelleme",
       "GroupCreate": "Grup oluşturma",
       "GroupUpdate": "Grup güncelleme",
-      "GroupDelete": "Grup silme"
+      "GroupDelete": "Grup silme",
+      "GroupMemberAdd": "Grup üyesi ekleme",
+      "GroupMemberRemove": "Grup üyesi çıkarma"
     },
     "statuses": {
       "Succeeded": "Başarılı",
@@ -122,6 +124,8 @@
       "lockStatus": "Kilit Durumu",
       "group": "Grup",
       "groupMembership": "Grup Üyeliği",
+      "member": "Üye",
+      "groupMember": "Grup Üyeliği",
       "ouMove": "OU Taşıma",
       "userManagerUpdate": "Manager Güncelleme",
       "userAccountExpirationUpdate": "Hesap Bitiş Tarihi Güncelleme",
@@ -157,7 +161,9 @@
         "neverExpires": "Süresiz",
         "accountExpiresAt": "Hesap Bitiş Tarihi",
         "memberCount": "Üye Sayısı",
-        "memberOfCount": "Üye Olduğu Grup Sayısı"
+        "memberOfCount": "Üye Olduğu Grup Sayısı",
+        "memberType": "Üye Türü",
+        "dNSHostName": "DNS Hostname"
       }
     },
     "empty": {

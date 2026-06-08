@@ -518,6 +518,30 @@
         "membersEmpty": "No members found",
         "memberOfEmpty": "No member-of groups found",
         "truncatedNotice": "Results are limited. More records may exist."
+      },
+      "members": {
+        "searchPlaceholder": "Search members",
+        "typeFilter": "Type",
+        "types": {
+          "all": "All",
+          "user": "User",
+          "group": "Group",
+          "computer": "Computer"
+        },
+        "add": "Add Member",
+        "remove": "Remove Member",
+        "addTitle": "Add Group Member",
+        "addDescription": "Search for a user, group, or computer to add to this security group.",
+        "removeTitle": "Remove Membership",
+        "removeDescription": "This action removes only the direct group membership.",
+        "addSuccess": "Member added to the group.",
+        "removeSuccess": "Member removed from the group.",
+        "addError": "Member could not be added to the group.",
+        "removeError": "Member could not be removed from the group.",
+        "searchCandidatesPlaceholder": "Search user, group, or computer",
+        "selectCandidate": "Select a member to add",
+        "noCandidates": "No suitable member found.",
+        "noMembers": "This group has no direct members."
       }
     }
   }

@@ -298,6 +298,83 @@ export type AdGroupDetail = {
   memberOfTruncated: boolean;
 };
 
+export type AdGroupMemberListTypeFilter = "all" | "user" | "group" | "computer";
+
+export type AdGroupMemberListItem = {
+  id: string | null;
+  type: AdGroupMemberType;
+  displayName: string | null;
+  name: string | null;
+  cn: string | null;
+  samAccountName: string | null;
+  userPrincipalName: string | null;
+  dNSHostName: string | null;
+  description: string | null;
+  distinguishedName: string;
+  isDirectMember: boolean;
+};
+
+export type AdGroupMembersListResponse = {
+  items: AdGroupMemberListItem[];
+  pageNumber: number;
+  pageSize: number;
+  memberCount: number;
+  hasNextPage: boolean;
+};
+
+export type GetAdGroupMembersParams = {
+  search?: string;
+  type?: AdGroupMemberListTypeFilter;
+  pageNumber?: number;
+  pageSize?: number;
+};
+
+export type AdGroupMemberCandidateType = "user" | "group" | "computer";
+
+export type AdGroupMemberCandidateItem = {
+  id: string | null;
+  type: AdGroupMemberType;
+  displayName: string | null;
+  name: string | null;
+  cn: string | null;
+  samAccountName: string | null;
+  userPrincipalName: string | null;
+  dNSHostName: string | null;
+  description: string | null;
+  distinguishedName: string;
+  isAlreadyDirectMember: boolean;
+  isEnabled: boolean | null;
+};
+
+export type AdGroupMemberCandidatesResponse = {
+  items: AdGroupMemberCandidateItem[];
+};
+
+export type GetAdGroupMemberCandidatesParams = {
+  search: string;
+  types?: AdGroupMemberCandidateType[];
+  pageSize?: number;
+};
+
+export type AddAdGroupMemberRequest = {
+  memberDistinguishedName: string;
+  memberType?: AdGroupMemberCandidateType;
+};
+
+export type RemoveAdGroupMemberRequest = {
+  memberDistinguishedName: string;
+};
+
+export type AdGroupMemberOperationResponse = {
+  success: boolean;
+  message: string;
+  groupId: string | null;
+  groupDistinguishedName: string | null;
+  groupName: string | null;
+  memberDistinguishedName: string | null;
+  memberName: string | null;
+};
+
 export type GetAdGroupsParams = {
   search?: string;
   page?: number;

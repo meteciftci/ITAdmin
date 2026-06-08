@@ -134,6 +134,9 @@ describe("ad groups route and menu wiring", () => {
     assert.match(detailSource, /canDeleteGroup/);
     assert.match(detailSource, /groups\.actions\.delete/);
     assert.match(detailSource, /AdDeleteGroupConfirmDialog/);
+    assert.match(detailSource, /canManageMembers/);
+    assert.match(detailSource, /AdGroupMembersSection/);
+    assert.match(detailSource, /AdManagement\.Groups\.ManageMembers/);
   });
 
   it("does not render separate name, cn, samAccountName, or distinguishedName list columns", () => {

@@ -38,6 +38,7 @@ import {
 import { AD_GROUPS_LIST_PATH } from "@/features/ad-management/ad-groups-list-path";
 import { AD_MANAGEMENT_GROUPS_QUERY_KEY, getAdGroupById } from "@/features/ad-management/api";
 import { AdDeleteGroupConfirmDialog } from "@/features/ad-management/components/AdDeleteGroupConfirmDialog";
+import { AdGroupMembersSection } from "@/features/ad-management/components/AdGroupMembersSection";
 import { AdUserDetailField } from "@/features/ad-management/components/ad-user-detail/AdUserDetailField";
 import { AdManagementModuleStateGuard } from "@/features/ad-management/components/AdManagementModuleStateGuard";
 import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useAdManagementModuleStatus";
@@ -114,6 +115,7 @@ export function AdGroupDetailPage() {
   const currentUser = useAuthStore((state) => state.user);
   const canUpdateGroup = canAccess(currentUser, "AdManagement.Groups.Update");
   const canDeleteGroup = canAccess(currentUser, "AdManagement.Groups.Delete");
+  const canManageMembers = canAccess(currentUser, "AdManagement.Groups.ManageMembers");
   const { id: groupId } = useParams<{ id: string }>();
   const location = useLocation();
   const navigate = useNavigate();
@@ -305,18 +307,13 @@ export function AdGroupDetailPage() {
               </div>
             </SectionCard>
 
-            <SectionCard
-              title={t("adManagement:groups.detail.membersTitle")}
-              description={t("adManagement:groups.detail.memberCount", {
-                count: group.memberCount,
-              })}
-            >
-              <MemberList
-                items={group.members}
-                truncated={group.membersTruncated}
-                emptyTitle={t("adManagement:groups.detail.membersEmpty")}
-              />
-            </SectionCard>
+            <AdGroupMembersSection
+              groupId={group.id}
+              groupName={primaryLabel}
+              memberCount={group.memberCount}
+              canManageMembers={canManageMembers}
+              enabled={moduleStatus.isOperational}
+            />
 
             <SectionCard
               title={t("adManagement:groups.detail.memberOfTitle")}

@@ -275,6 +275,19 @@ export type ParsedSnapshotMembership = {
   isDirectMember: boolean | null;
 };
 
+export type ParsedSnapshotMember = {
+  id: string | null;
+  type: string | null;
+  displayName: string | null;
+  name: string | null;
+  cn: string | null;
+  samAccountName: string | null;
+  userPrincipalName: string | null;
+  dNSHostName: string | null;
+  description: string | null;
+  distinguishedName: string | null;
+};
+
 export type ParsedSnapshotManager = {
   id: string | null;
   displayName: string | null;
@@ -293,6 +306,7 @@ export type ParsedNestedAdOperationSnapshot = {
   user: ParsedSnapshotUser | null;
   account: ParsedSnapshotAccount | null;
   group: ParsedSnapshotGroup | null;
+  member: ParsedSnapshotMember | null;
   ou: ParsedSnapshotOu | null;
   membership: ParsedSnapshotMembership | null;
   manager: ParsedSnapshotManager | null;
@@ -317,6 +331,7 @@ export type SnapshotRenderStrategy =
   | "accountStatus"
   | "lockStatus"
   | "groupMembership"
+  | "groupMember"
   | "ouMove"
   | "userManagerUpdate"
   | "userAccountExpirationUpdate"
@@ -325,6 +340,7 @@ export type SnapshotRenderStrategy =
 const ACCOUNT_STATUS_OPERATION_TYPES = new Set(["UserEnable", "UserDisable"]);
 const LOCK_STATUS_OPERATION_TYPES = new Set(["UserUnlock"]);
 const GROUP_MEMBERSHIP_OPERATION_TYPES = new Set(["UserGroupAdd", "UserGroupRemove"]);
+const GROUP_MEMBER_OPERATION_TYPES = new Set(["GroupMemberAdd", "GroupMemberRemove"]);
 const OU_MOVE_OPERATION_TYPES = new Set(["UserOuMove"]);
 const USER_MANAGER_UPDATE_OPERATION_TYPES = new Set(["UserManagerUpdate"]);
 const USER_ACCOUNT_EXPIRATION_UPDATE_OPERATION_TYPES = new Set(["UserAccountExpirationUpdate"]);
@@ -459,6 +475,28 @@ function tryParseFlatGroupSnapshot(record: Record<string, unknown>): ParsedSnaps
   return parseSnapshotGroup(record);
 }
 
+function parseSnapshotMember(value: unknown): ParsedSnapshotMember | null {
+  const record = readRecord(value);
+  if (!record) {
+    return null;
+  }
+
+  const member: ParsedSnapshotMember = {
+    id: formatSnapshotValue(record.id ?? record.Id),
+    type: formatSnapshotValue(record.type ?? record.Type),
+    displayName: formatSnapshotValue(record.displayName ?? record.DisplayName),
+    name: formatSnapshotValue(record.name ?? record.Name),
+    cn: formatSnapshotValue(record.cn ?? record.Cn),
+    samAccountName: formatSnapshotValue(record.samAccountName ?? record.SamAccountName),
+    userPrincipalName: formatSnapshotValue(record.userPrincipalName ?? record.UserPrincipalName),
+    dNSHostName: formatSnapshotValue(record.dNSHostName ?? record.DNSHostName),
+    description: formatSnapshotValue(record.description ?? record.Description),
+    distinguishedName: formatSnapshotValue(record.distinguishedName ?? record.DistinguishedName),
+  };
+
+  return Object.values(member).some((entry) => entry !== null) ? member : null;
+}
+
 function parseSnapshotMembership(value: unknown): ParsedSnapshotMembership | null {
   const record = readRecord(value);
   if (!record) {
@@ -545,6 +583,7 @@ export function parseNestedAdOperationSnapshot(value: unknown): ParsedNestedAdOp
     user: parseSnapshotUser(record.user ?? record.User),
     account: parseSnapshotAccount(record.account ?? record.Account),
     group,
+    member: parseSnapshotMember(record.member ?? record.Member),
     ou: parseSnapshotOu(record.ou ?? record.Ou),
     membership: parseSnapshotMembership(record.membership ?? record.Membership),
     manager: parseSnapshotManager(record.manager ?? record.Manager),
@@ -562,6 +601,13 @@ export function resolveSnapshotUser(
   after: ParsedNestedAdOperationSnapshot | null,
 ): ParsedSnapshotUser | null {
   return after?.user ?? before?.user ?? null;
+}
+
+export function resolveSnapshotMember(
+  before: ParsedNestedAdOperationSnapshot | null,
+  after: ParsedNestedAdOperationSnapshot | null,
+): ParsedSnapshotMember | null {
+  return after?.member ?? before?.member ?? null;
 }
 
 export function resolveSnapshotGroup(
@@ -811,6 +857,7 @@ export function hasNestedSnapshotContent(snapshot: ParsedNestedAdOperationSnapsh
     snapshot.user ||
       snapshot.account ||
       snapshot.group ||
+      snapshot.member ||
       snapshot.ou ||
       snapshot.membership ||
       snapshot.manager ||
@@ -845,6 +892,9 @@ export function getSnapshotRenderStrategy(operationType: string): SnapshotRender
   }
   if (GROUP_MEMBERSHIP_OPERATION_TYPES.has(operationType)) {
     return "groupMembership";
+  }
+  if (GROUP_MEMBER_OPERATION_TYPES.has(operationType)) {
+    return "groupMember";
   }
   if (OU_MOVE_OPERATION_TYPES.has(operationType)) {
     return "ouMove";

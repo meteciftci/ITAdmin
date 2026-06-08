@@ -308,6 +308,114 @@ public sealed class AdManagementController(
             result.DeletedGroupId));
     }
 
+    [HttpGet("groups/{id}/members")]
+    [RequirePermission(AdManagementPermissions.GroupsView)]
+    public async Task<ActionResult<AdGroupMembersListResponse>> GetGroupMembers(
+        [FromRoute] string id,
+        [FromQuery] string? search,
+        [FromQuery] string? type,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Guid.TryParse(id, out var objectGuid))
+        {
+            return BadRequest(new { message = "Geçersiz grup kimliği." });
+        }
+
+        var result = await adGroupDirectoryService.GetGroupMembersAsync(
+            new AppModels.AdGroupMembersListQuery(objectGuid, search, type, pageNumber, pageSize),
+            cancellationToken);
+
+        if (!result.IsSuccess || result.Page is null)
+        {
+            return MapDirectoryFailure(result.Message, result.FailureKind);
+        }
+
+        return Ok(new AdGroupMembersListResponse(
+            result.Page.Items.Select(MapGroupMemberListItem).ToList(),
+            result.Page.PageNumber,
+            result.Page.PageSize,
+            result.Page.MemberCount,
+            result.Page.HasNextPage));
+    }
+
+    [HttpGet("groups/{id}/member-candidates")]
+    [RequirePermission(AdManagementPermissions.GroupsManageMembers)]
+    public async Task<ActionResult<AdGroupMemberCandidatesResponse>> SearchGroupMemberCandidates(
+        [FromRoute] string id,
+        [FromQuery] string? search,
+        [FromQuery] string? types,
+        [FromQuery] int pageSize = 50,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Guid.TryParse(id, out var objectGuid))
+        {
+            return BadRequest(new { message = "Geçersiz grup kimliği." });
+        }
+
+        var typeList = string.IsNullOrWhiteSpace(types)
+            ? Array.Empty<string>()
+            : types.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        var result = await adGroupDirectoryService.SearchGroupMemberCandidatesAsync(
+            new AppModels.AdGroupMemberCandidatesQuery(objectGuid, search, typeList, pageSize),
+            cancellationToken);
+
+        if (!result.IsSuccess || result.Items is null)
+        {
+            return MapDirectoryFailure(result.Message, result.FailureKind);
+        }
+
+        return Ok(new AdGroupMemberCandidatesResponse(
+            result.Items.Select(MapGroupMemberCandidateItem).ToList()));
+    }
+
+    [HttpPost("groups/{id}/members")]
+    [RequirePermission(AdManagementPermissions.GroupsManageMembers)]
+    public async Task<ActionResult<AdGroupMemberOperationResponse>> AddGroupMember(
+        [FromRoute] string id,
+        [FromBody] AddAdGroupMemberRequest request,
+        CancellationToken cancellationToken = default) =>
+        await ExecuteGroupMemberOperationAsync(
+            id,
+            request.MemberDistinguishedName,
+            request.MemberType,
+            (groupId, memberDn, memberType, cancellation) =>
+                adGroupDirectoryService.AddGroupMemberAsync(
+                    new AppModels.AddAdGroupMemberRequest(
+                        groupId,
+                        memberDn,
+                        memberType,
+                        ResolveActorUserId(User),
+                        ResolveActorUserName(User),
+                        ResolveIpAddress(),
+                        ResolveUserAgent()),
+                    cancellation),
+            cancellationToken);
+
+    [HttpDelete("groups/{id}/members")]
+    [RequirePermission(AdManagementPermissions.GroupsManageMembers)]
+    public async Task<ActionResult<AdGroupMemberOperationResponse>> RemoveGroupMember(
+        [FromRoute] string id,
+        [FromBody] RemoveAdGroupMemberRequest request,
+        CancellationToken cancellationToken = default) =>
+        await ExecuteGroupMemberOperationAsync(
+            id,
+            request.MemberDistinguishedName,
+            memberType: null,
+            (groupId, memberDn, _, cancellation) =>
+                adGroupDirectoryService.RemoveGroupMemberAsync(
+                    new AppModels.RemoveAdGroupMemberRequest(
+                        groupId,
+                        memberDn,
+                        ResolveActorUserId(User),
+                        ResolveActorUserName(User),
+                        ResolveIpAddress(),
+                        ResolveUserAgent()),
+                    cancellation),
+            cancellationToken);
+
     [HttpGet("group-organizational-units")]
     [RequirePermission(AdManagementPermissions.GroupsCreate)]
     public async Task<ActionResult<AdOrganizationalUnitSearchResponse>> SearchGroupOrganizationalUnits(
@@ -1271,6 +1379,97 @@ public sealed class AdManagementController(
             item.SamAccountName,
             item.DistinguishedName,
             item.Description);
+
+    private static AdGroupMemberListItemResponse MapGroupMemberListItem(AppModels.AdGroupMemberListItem item) =>
+        new(
+            item.Id,
+            item.Type,
+            item.DisplayName,
+            item.Name,
+            item.Cn,
+            item.SamAccountName,
+            item.UserPrincipalName,
+            item.DNSHostName,
+            item.Description,
+            item.DistinguishedName,
+            item.IsDirectMember);
+
+    private static AdGroupMemberCandidateItemResponse MapGroupMemberCandidateItem(
+        AppModels.AdGroupMemberCandidateItem item) =>
+        new(
+            item.Id,
+            item.Type,
+            item.DisplayName,
+            item.Name,
+            item.Cn,
+            item.SamAccountName,
+            item.UserPrincipalName,
+            item.DNSHostName,
+            item.Description,
+            item.DistinguishedName,
+            item.IsAlreadyDirectMember,
+            item.IsEnabled);
+
+    private async Task<ActionResult<AdGroupMemberOperationResponse>> ExecuteGroupMemberOperationAsync(
+        string id,
+        string memberDistinguishedName,
+        string? memberType,
+        Func<Guid, string, string?, CancellationToken, Task<AppModels.AdGroupMemberOperationResult>> operation,
+        CancellationToken cancellationToken)
+    {
+        if (!Guid.TryParse(id, out var objectGuid))
+        {
+            return BadRequest(new AdGroupMemberOperationResponse(
+                false,
+                "Geçersiz grup kimliği.",
+                id,
+                null,
+                null,
+                memberDistinguishedName,
+                null));
+        }
+
+        if (string.IsNullOrWhiteSpace(memberDistinguishedName))
+        {
+            return BadRequest(new AdGroupMemberOperationResponse(
+                false,
+                "Üye kimliği zorunludur.",
+                id,
+                null,
+                null,
+                memberDistinguishedName,
+                null));
+        }
+
+        var result = await operation(
+            objectGuid,
+            memberDistinguishedName.Trim(),
+            memberType,
+            cancellationToken);
+
+        var response = new AdGroupMemberOperationResponse(
+            result.IsSuccess,
+            result.Message,
+            result.GroupId,
+            result.GroupDistinguishedName,
+            result.GroupName,
+            result.MemberDistinguishedName,
+            result.MemberName);
+
+        if (result.IsSuccess)
+        {
+            return Ok(response);
+        }
+
+        return result.FailureKind switch
+        {
+            AppModels.AdDirectoryFailureKind.NotFound => NotFound(response),
+            AppModels.AdDirectoryFailureKind.ConnectionFailed => StatusCode(
+                StatusCodes.Status503ServiceUnavailable,
+                response),
+            _ => BadRequest(response),
+        };
+    }
 
     private static AdUserDetailResponse MapUserDetail(AppModels.AdUserDetail item) =>
         new(

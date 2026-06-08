@@ -343,6 +343,8 @@ describe("getSnapshotRenderStrategy", () => {
     assert.equal(getSnapshotRenderStrategy("GroupCreate"), "groupCreate");
     assert.equal(getSnapshotRenderStrategy("GroupUpdate"), "groupUpdate");
     assert.equal(getSnapshotRenderStrategy("GroupDelete"), "groupDelete");
+    assert.equal(getSnapshotRenderStrategy("GroupMemberAdd"), "groupMember");
+    assert.equal(getSnapshotRenderStrategy("GroupMemberRemove"), "groupMember");
   });
 
   it("falls back to generic for unknown operation types", () => {
@@ -354,6 +356,65 @@ describe("getSnapshotRenderStrategy", () => {
 
   it("keeps UserGroupAdd on groupMembership strategy", () => {
     assert.equal(getSnapshotRenderStrategy("UserGroupAdd"), "groupMembership");
+  });
+
+  it("keeps GroupMemberAdd on groupMember strategy", () => {
+    assert.equal(getSnapshotRenderStrategy("GroupMemberAdd"), "groupMember");
+    assert.equal(getSnapshotRenderStrategy("GroupMemberRemove"), "groupMember");
+    assert.notEqual(getSnapshotRenderStrategy("GroupMemberAdd"), "generic");
+  });
+});
+
+describe("parseNestedAdOperationSnapshot group member snapshots", () => {
+  it("parses member snapshot fields", () => {
+    const parsed = parseNestedAdOperationSnapshot(
+      JSON.stringify({
+        operation: "GroupMemberAdd",
+        group: {
+          id: "550e8400-e29b-41d4-a716-446655440000",
+          displayName: "VPN Users",
+          name: "vpn-users",
+          samAccountName: "vpn-users",
+          distinguishedName: "CN=VPN Users,DC=example,DC=com",
+        },
+        member: {
+          id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+          type: "User",
+          displayName: "Mete Çiftçi",
+          samAccountName: "mete.ciftci",
+          userPrincipalName: "mete.ciftci@mugla.bel.tr",
+          distinguishedName: "CN=Mete,DC=example,DC=com",
+        },
+        membership: { isDirectMember: false },
+      }),
+    );
+
+    assert.equal(parsed?.member?.samAccountName, "mete.ciftci");
+    assert.equal(parsed?.member?.type, "User");
+    assert.equal(parsed?.membership?.isDirectMember, false);
+  });
+
+  it("builds membership comparison for GroupMemberAdd", () => {
+    const before = parseNestedAdOperationSnapshot(
+      JSON.stringify({
+        operation: "GroupMemberAdd",
+        membership: { isDirectMember: false },
+      }),
+    );
+    const after = parseNestedAdOperationSnapshot(
+      JSON.stringify({
+        operation: "GroupMemberAdd",
+        membership: { isDirectMember: true },
+      }),
+    );
+
+    const rows = buildMembershipComparisonRows(before, after, (value) =>
+      value === null || value === undefined ? null : value ? "yes" : "no",
+    );
+
+    assert.equal(rows[0]?.before, "no");
+    assert.equal(rows[0]?.after, "yes");
+    assert.equal(rows[0]?.changed, true);
   });
 });
 

@@ -27,4 +27,20 @@ public interface IAdGroupDirectoryService
     Task<DeleteAdGroupResult> DeleteGroupAsync(
         DeleteAdGroupRequest request,
         CancellationToken cancellationToken = default);
+
+    Task<AdGroupMembersListResult> GetGroupMembersAsync(
+        AdGroupMembersListQuery query,
+        CancellationToken cancellationToken = default);
+
+    Task<AdGroupMemberCandidatesResult> SearchGroupMemberCandidatesAsync(
+        AdGroupMemberCandidatesQuery query,
+        CancellationToken cancellationToken = default);
+
+    Task<AdGroupMemberOperationResult> AddGroupMemberAsync(
+        AddAdGroupMemberRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<AdGroupMemberOperationResult> RemoveGroupMemberAsync(
+        RemoveAdGroupMemberRequest request,
+        CancellationToken cancellationToken = default);
 }

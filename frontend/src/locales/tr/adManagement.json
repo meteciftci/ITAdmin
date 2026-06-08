@@ -518,6 +518,30 @@
         "membersEmpty": "Üye bulunamadı",
         "memberOfEmpty": "Üye olunan grup bulunamadı",
         "truncatedNotice": "Sonuçlar sınırlandırıldı. Daha fazla kayıt olabilir."
+      },
+      "members": {
+        "searchPlaceholder": "Üyelerde ara",
+        "typeFilter": "Tür",
+        "types": {
+          "all": "Tümü",
+          "user": "Kullanıcı",
+          "group": "Grup",
+          "computer": "Bilgisayar"
+        },
+        "add": "Üye Ekle",
+        "remove": "Üyelikten Çıkar",
+        "addTitle": "Gruba Üye Ekle",
+        "addDescription": "Kullanıcı, grup veya bilgisayar arayarak bu security group'a üye ekleyin.",
+        "removeTitle": "Üyeliği Kaldır",
+        "removeDescription": "Bu işlem sadece doğrudan grup üyeliğini kaldırır.",
+        "addSuccess": "Üye gruba eklendi.",
+        "removeSuccess": "Üye gruptan çıkarıldı.",
+        "addError": "Üye gruba eklenemedi.",
+        "removeError": "Üye gruptan çıkarılamadı.",
+        "searchCandidatesPlaceholder": "Kullanıcı, grup veya bilgisayar ara",
+        "selectCandidate": "Eklenecek üyeyi seçin",
+        "noCandidates": "Uygun üye bulunamadı.",
+        "noMembers": "Bu grupta doğrudan üye yok."
       }
     }
   }

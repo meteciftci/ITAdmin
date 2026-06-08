@@ -51,7 +51,9 @@
       "UserAccountExpirationUpdate": "Account expiration update",
       "GroupCreate": "Create group",
       "GroupUpdate": "Update group",
-      "GroupDelete": "Delete group"
+      "GroupDelete": "Delete group",
+      "GroupMemberAdd": "Add group member",
+      "GroupMemberRemove": "Remove group member"
     },
     "statuses": {
       "Succeeded": "Succeeded",
@@ -122,6 +124,8 @@
       "lockStatus": "Lock Status",
       "group": "Group",
       "groupMembership": "Group Membership",
+      "member": "Member",
+      "groupMember": "Group Membership",
       "ouMove": "OU Move",
       "userManagerUpdate": "Manager Update",
       "userAccountExpirationUpdate": "Account Expiration Update",
@@ -157,7 +161,9 @@
         "neverExpires": "Never Expires",
         "accountExpiresAt": "Account Expires At",
         "memberCount": "Member Count",
-        "memberOfCount": "Member Of Count"
+        "memberOfCount": "Member Of Count",
+        "memberType": "Member Type",
+        "dNSHostName": "DNS Hostname"
       }
     },
     "empty": {

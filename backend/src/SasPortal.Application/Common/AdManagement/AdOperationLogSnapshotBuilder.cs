@@ -74,6 +74,76 @@ public static class AdOperationLogSnapshotBuilder
             },
             SerializerOptions);
 
+    public static string BuildGroupMemberOperationRequestSummary(
+        string operationType,
+        string groupId,
+        string? groupName,
+        string? groupSamAccountName,
+        string? groupDistinguishedName,
+        string memberType,
+        string? memberName,
+        string? memberSamAccountName,
+        string memberDistinguishedName) =>
+        JsonSerializer.Serialize(
+            new
+            {
+                operation = operationType,
+                groupId,
+                groupName,
+                groupSamAccountName,
+                groupDistinguishedName,
+                memberType,
+                memberName,
+                memberSamAccountName,
+                memberDistinguishedName,
+            },
+            SerializerOptions);
+
+    public static string BuildGroupMemberOperationBeforeSnapshot(
+        string operationType,
+        AdGroupDetail group,
+        AdGroupMemberSnapshotInfo member,
+        bool isDirectMember) =>
+        JsonSerializer.Serialize(
+            new
+            {
+                operation = operationType,
+                group = CreateGroupSnapshotBody(group),
+                member = CreateMemberSnapshotBody(member),
+                membership = new { isDirectMember },
+            },
+            SerializerOptions);
+
+    public static string BuildGroupMemberOperationAfterSnapshot(
+        string operationType,
+        AdGroupDetail group,
+        AdGroupMemberSnapshotInfo member,
+        bool isDirectMember) =>
+        JsonSerializer.Serialize(
+            new
+            {
+                operation = operationType,
+                group = CreateGroupSnapshotBody(group),
+                member = CreateMemberSnapshotBody(member),
+                membership = new { isDirectMember },
+            },
+            SerializerOptions);
+
+    internal static object CreateMemberSnapshotBody(AdGroupMemberSnapshotInfo member) =>
+        new
+        {
+            id = member.Id,
+            type = member.Type,
+            displayName = member.DisplayName,
+            name = member.Name,
+            cn = member.Cn,
+            samAccountName = member.SamAccountName,
+            userPrincipalName = member.UserPrincipalName,
+            dNSHostName = member.DNSHostName,
+            description = member.Description,
+            distinguishedName = member.DistinguishedName,
+        };
+
     public static string BuildUserOuMoveRequestSummary(
         Guid userId,
         string targetOuDistinguishedName) =>

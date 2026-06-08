@@ -47,12 +47,19 @@ export function getAdGroupMemberPrimaryLabel(member: AdGroupDisplayFields): stri
   return getAdGroupPrimaryLabel(member);
 }
 
+export type AdGroupMemberLabelFields = AdGroupDisplayFields & {
+  userPrincipalName?: string | null;
+  dNSHostName?: string | null;
+};
+
 export function getAdGroupMemberSecondaryLabel(
-  member: AdGroupDisplayFields,
+  member: AdGroupMemberLabelFields,
   primaryLabel: string,
 ): string | null {
   for (const candidate of [
     normalizeLabel(member.samAccountName),
+    normalizeLabel(member.userPrincipalName),
+    normalizeLabel(member.dNSHostName),
     normalizeLabel(member.name),
   ]) {
     if (candidate && !labelsEqual(candidate, primaryLabel)) {
