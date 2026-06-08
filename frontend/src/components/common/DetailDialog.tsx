@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -39,7 +40,7 @@ export function DetailDialog({
             </div>
           ) : null}
         </DialogHeader>
-        <div className="max-h-[70vh] space-y-4 overflow-y-auto p-4">{children}</div>
+        <DialogBody className="max-h-[70vh] overflow-y-auto">{children}</DialogBody>
       </DialogContent>
     </Dialog>
   );

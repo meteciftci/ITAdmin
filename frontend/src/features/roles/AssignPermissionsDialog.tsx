@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { FormError } from "@/components/common/FormError";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -120,7 +121,7 @@ export function AssignPermissionsDialog({
             {t("roles:assignPermissions.description")}
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 p-4">
+        <DialogBody>
           <FormError message={errorMessage} />
 
           {isSystemRole ? (
@@ -188,7 +189,7 @@ export function AssignPermissionsDialog({
               {t("roles:assignPermissions.noPermissions")}
             </p>
           ) : null}
-        </div>
+        </DialogBody>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             {t("common:actions.cancel")}

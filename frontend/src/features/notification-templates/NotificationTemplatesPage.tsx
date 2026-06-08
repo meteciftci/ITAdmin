@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { createNotificationTemplateColumns } from "@/features/notification-templates/notification-template-columns";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogFooter,
   DialogHeader,
@@ -180,7 +181,8 @@ export function NotificationTemplatesPage() {
                 : t("notificationTemplates:dialog.createTitle")}
             </DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4 py-2 md:grid-cols-2">
+          <DialogBody>
+          <div className="grid gap-4 md:grid-cols-2">
             <Field label={t("notificationTemplates:fields.moduleKey")}>
               <Input
                 value={form.moduleKey}
@@ -247,6 +249,7 @@ export function NotificationTemplatesPage() {
               {t("notificationTemplates:fields.variablesHint")}
             </p>
           </div>
+          </DialogBody>
           {canUpdate ? (
             <DialogFooter>
               <Button variant="outline" onClick={() => setDialogOpen(false)}>

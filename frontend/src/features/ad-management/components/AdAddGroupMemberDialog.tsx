@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -129,7 +130,7 @@ export function AdAddGroupMemberDialog({ open, groupId, onOpenChange }: Props) {
           <DialogDescription>{t("adManagement:groups.members.addDescription")}</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <DialogBody>
           <div className="grid gap-4 md:grid-cols-[1fr_180px]">
             <div className="space-y-2">
               <Label htmlFor="group-member-search">
@@ -234,7 +235,7 @@ export function AdAddGroupMemberDialog({ open, groupId, onOpenChange }: Props) {
               </p>
             </div>
           ) : null}
-        </div>
+        </DialogBody>
 
         <DialogFooter>
           <Button

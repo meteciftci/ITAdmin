@@ -8,6 +8,7 @@ import { AdOperationLogSnapshotDetail } from "@/features/ad-management/component
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -102,7 +103,7 @@ export function AdOperationLogDetailDialog({
           <DialogDescription>{t("detail.description")}</DialogDescription>
         </DialogHeader>
 
-        <div className="max-h-[75vh] space-y-6 overflow-y-auto p-4 text-sm">
+        <DialogBody className="max-h-[75vh] space-y-6 overflow-y-auto text-sm">
           {isLoading ? (
             <p className="text-muted-foreground">{t("common:table.loading")}</p>
           ) : null}
@@ -196,7 +197,7 @@ export function AdOperationLogDetailDialog({
               />
             </>
           ) : null}
-        </div>
+        </DialogBody>
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

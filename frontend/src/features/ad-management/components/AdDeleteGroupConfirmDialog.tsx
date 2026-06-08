@@ -7,6 +7,7 @@ import { LoadingState } from "@/components/common/LoadingState";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -147,6 +148,7 @@ export function AdDeleteGroupConfirmDialog({
           <DialogDescription>{t("adManagement:groups.delete.description")}</DialogDescription>
         </DialogHeader>
 
+        <DialogBody>
         {groupQuery.isLoading ? <LoadingState /> : null}
 
         {groupQuery.isError ? (
@@ -189,6 +191,7 @@ export function AdDeleteGroupConfirmDialog({
             </div>
           </div>
         ) : null}
+        </DialogBody>
 
         <DialogFooter>
           <Button

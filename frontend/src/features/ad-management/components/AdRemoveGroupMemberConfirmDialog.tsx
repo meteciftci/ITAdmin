@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -49,6 +50,7 @@ export function AdRemoveGroupMemberConfirmDialog({
           <DialogDescription>{t("adManagement:groups.members.removeDescription")}</DialogDescription>
         </DialogHeader>
 
+        <DialogBody>
         {member ? (
           <div className="space-y-3 rounded-md border bg-muted/20 p-3 text-sm">
             <div>
@@ -80,6 +82,7 @@ export function AdRemoveGroupMemberConfirmDialog({
             </div>
           </div>
         ) : null}
+        </DialogBody>
 
         <DialogFooter>
           <Button

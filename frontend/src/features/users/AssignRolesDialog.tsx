@@ -5,6 +5,7 @@ import { FormError } from "@/components/common/FormError";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -137,7 +138,7 @@ export function AssignRolesDialog({
           <DialogTitle>{dialogTitle}</DialogTitle>
           <DialogDescription>{t("users:assignRoles.description")}</DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 p-4">
+        <DialogBody>
           <FormError message={errorMessage} />
 
           {rolesQuery.isLoading ? (
@@ -191,7 +192,7 @@ export function AssignRolesDialog({
               {t("users:assignRoles.noRoles")}
             </p>
           ) : null}
-        </div>
+        </DialogBody>
         <DialogFooter>
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
             {t("common:actions.cancel")}

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogFooter,
   DialogHeader,
@@ -176,7 +177,7 @@ function DialogContents({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 p-4">
+        <DialogBody>
           <FormError message={errorMessage} />
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-1.5">
@@ -341,7 +342,7 @@ function DialogContents({
               </p>
             </div>
           </div>
-        </div>
+        </DialogBody>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
             {t("common:actions.cancel")}

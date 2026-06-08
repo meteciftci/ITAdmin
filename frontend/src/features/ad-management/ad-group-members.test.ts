@@ -73,6 +73,19 @@ describe("Ad group member management UI", () => {
     assert.match(apiSource, /member-candidates/);
   });
 
+  it("uses DialogBody for add member dialog content spacing", () => {
+    const dialogSource = readFileSync(
+      new URL("./components/AdAddGroupMemberDialog.tsx", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(dialogSource, /DialogBody/);
+    assert.doesNotMatch(
+      dialogSource,
+      /<DialogHeader>[\s\S]*?<div className="space-y-4">/,
+    );
+  });
+
   it("requires minimum search length before candidate query in add dialog", () => {
     const dialogSource = readFileSync(
       new URL("./components/AdAddGroupMemberDialog.tsx", import.meta.url),

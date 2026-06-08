@@ -5,6 +5,7 @@ import { FormError } from "@/components/common/FormError";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -83,7 +84,7 @@ export function AddUserDialog({ open, onOpenChange, onCreated }: AddUserDialogPr
           <DialogTitle>{t("users:add.title")}</DialogTitle>
           <DialogDescription>{t("users:add.description")}</DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 p-4">
+        <DialogBody>
           <FormError message={errorMessage} />
           <div className="space-y-2">
             <Input
@@ -150,7 +151,7 @@ export function AddUserDialog({ open, onOpenChange, onCreated }: AddUserDialogPr
               {t("users:add.noResults")}
             </p>
           ) : null}
-        </div>
+        </DialogBody>
         <DialogFooter>
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
             {t("common:actions.close")}

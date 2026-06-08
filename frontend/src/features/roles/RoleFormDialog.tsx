@@ -7,6 +7,7 @@ import { FormError } from "@/components/common/FormError";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -156,7 +157,7 @@ export function RoleFormDialog({
             {t("roles:description")}
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 p-4">
+        <DialogBody>
           <FormError message={errorMessage} />
 
           {isSystemRole ? (
@@ -209,7 +210,7 @@ export function RoleFormDialog({
             onCheckedChange={setIsActive}
             disabled={isSystemRole || saveMutation.isPending}
           />
-        </div>
+        </DialogBody>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             {t("common:actions.cancel")}

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -42,7 +43,7 @@ export function LogDetailDialog({
           <DialogDescription>{descriptionLabel}</DialogDescription>
         </DialogHeader>
 
-        <div className="max-h-[70vh] space-y-4 overflow-y-auto p-4 text-sm">
+        <DialogBody className="max-h-[70vh] overflow-y-auto text-sm">
           <div className="grid gap-3 md:grid-cols-2">
             {rows.map((row) => (
               <div key={row.label} className="space-y-1">
@@ -60,7 +61,7 @@ export function LogDetailDialog({
               {description || "-"}
             </div>
           </div>
-        </div>
+        </DialogBody>
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
