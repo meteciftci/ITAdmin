@@ -488,4 +488,110 @@ public sealed class AdOperationLogStandardTests
 
         Assert.Equal(AdUserUpdateDiagnosticCodes.PreflightFailed, code);
     }
+
+    [Fact]
+    public void GroupCreate_AfterSnapshot_UsesNestedOperationAndGroupFormat()
+    {
+        var json = AdOperationLogSnapshotBuilder.BuildGroupCreateAfterSnapshot(CreateSampleGroupDetail());
+
+        using var document = JsonDocument.Parse(json);
+        var root = document.RootElement;
+
+        Assert.Equal(AdManagementOperationTypes.GroupCreate, root.GetProperty("operation").GetString());
+        Assert.True(root.TryGetProperty("group", out var group));
+        Assert.Equal("550e8400-e29b-41d4-a716-446655440000", group.GetProperty("id").GetString());
+        Assert.Equal("VPN Users", group.GetProperty("displayName").GetString());
+        Assert.Equal("vpn-users", group.GetProperty("name").GetString());
+        Assert.Equal("VPN Users", group.GetProperty("cn").GetString());
+        Assert.Equal("vpn-users", group.GetProperty("samAccountName").GetString());
+        Assert.Equal("VPN access group", group.GetProperty("description").GetString());
+        Assert.Equal("CN=VPN Users,OU=Groups,DC=corp,DC=local", group.GetProperty("distinguishedName").GetString());
+        Assert.Equal("Global", group.GetProperty("groupScope").GetString());
+        Assert.True(group.GetProperty("securityEnabled").GetBoolean());
+        Assert.Equal(-2147483646, group.GetProperty("groupType").GetInt32());
+    }
+
+    [Fact]
+    public void GroupUpdate_BeforeAndAfterSnapshots_UseNestedOperationAndGroupFormat()
+    {
+        var before = CreateSampleGroupDetail(
+            name: "vpn-users-old",
+            cn: "VPN Users Old",
+            samAccountName: "vpn-users-old",
+            distinguishedName: "CN=VPN Users Old,OU=Groups,DC=corp,DC=local",
+            description: "Old description");
+
+        var after = CreateSampleGroupDetail(
+            name: "vpn-users",
+            cn: "VPN Users",
+            samAccountName: "vpn-users",
+            distinguishedName: "CN=VPN Users,OU=Groups,DC=corp,DC=local",
+            description: "Updated description");
+
+        var beforeJson = AdGroupUpdateSnapshotBuilder.Build(before);
+        var afterJson = AdGroupUpdateSnapshotBuilder.Build(after);
+
+        using var beforeDocument = JsonDocument.Parse(beforeJson);
+        using var afterDocument = JsonDocument.Parse(afterJson);
+
+        Assert.Equal(AdManagementOperationTypes.GroupUpdate, beforeDocument.RootElement.GetProperty("operation").GetString());
+        Assert.Equal(AdManagementOperationTypes.GroupUpdate, afterDocument.RootElement.GetProperty("operation").GetString());
+        Assert.True(beforeDocument.RootElement.TryGetProperty("group", out var beforeGroup));
+        Assert.True(afterDocument.RootElement.TryGetProperty("group", out var afterGroup));
+        Assert.False(beforeDocument.RootElement.TryGetProperty("id", out _));
+        Assert.Equal("vpn-users-old", beforeGroup.GetProperty("name").GetString());
+        Assert.Equal("vpn-users", afterGroup.GetProperty("name").GetString());
+        Assert.Equal("CN=VPN Users Old,OU=Groups,DC=corp,DC=local", beforeGroup.GetProperty("distinguishedName").GetString());
+        Assert.Equal("CN=VPN Users,OU=Groups,DC=corp,DC=local", afterGroup.GetProperty("distinguishedName").GetString());
+    }
+
+    [Fact]
+    public void GroupUpdate_RequestSummary_ContainsOperation()
+    {
+        var request = new UpdateAdGroupRequest(
+            GroupId: Guid.Parse("550e8400-e29b-41d4-a716-446655440000"),
+            DisplayName: "VPN Users",
+            Name: "vpn-users",
+            SamAccountName: "vpn-users",
+            Description: "Updated description",
+            ActorUserId: null,
+            ActorUserName: null,
+            ActorIpAddress: null,
+            ActorUserAgent: null);
+
+        var json = AdGroupUpdateSnapshotBuilder.BuildRequestSummary(request);
+
+        using var document = JsonDocument.Parse(json);
+        Assert.Equal(AdManagementOperationTypes.GroupUpdate, document.RootElement.GetProperty("operation").GetString());
+        Assert.Equal("vpn-users", document.RootElement.GetProperty("name").GetString());
+    }
+
+    private static AdGroupDetail CreateSampleGroupDetail(
+        string id = "550e8400-e29b-41d4-a716-446655440000",
+        string name = "vpn-users",
+        string? cn = "VPN Users",
+        string? samAccountName = "vpn-users",
+        string distinguishedName = "CN=VPN Users,OU=Groups,DC=corp,DC=local",
+        string? description = "VPN access group") =>
+        new(
+            Id: id,
+            DistinguishedName: distinguishedName,
+            DisplayName: "VPN Users",
+            Name: name,
+            Cn: cn,
+            SamAccountName: samAccountName,
+            Description: description,
+            GroupScope: "Global",
+            SecurityEnabled: true,
+            GroupType: -2147483646,
+            WhenCreated: null,
+            WhenChanged: null,
+            ManagedByDistinguishedName: null,
+            ManagedByDisplayName: null,
+            MemberCount: 0,
+            MemberOfCount: 0,
+            Members: Array.Empty<AdGroupMemberItem>(),
+            MemberOf: Array.Empty<AdGroupMemberItem>(),
+            MembersTruncated: false,
+            MemberOfTruncated: false);
 }

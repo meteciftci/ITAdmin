@@ -530,24 +530,34 @@ public static class AdOperationLogSnapshotBuilder
             },
             SerializerOptions);
 
-    public static string BuildGroupCreateAfterSnapshot(AdGroupDetail group) =>
-        JsonSerializer.Serialize(
-            new
-            {
-                operation = AdManagementOperationTypes.GroupCreate,
-                group = new
+    public static string BuildGroupOperationSnapshot(string operationType, AdGroupDetail? group) =>
+        group is null
+            ? "{}"
+            : JsonSerializer.Serialize(
+                new
                 {
-                    id = group.Id,
-                    samAccountName = group.SamAccountName,
-                    displayName = group.DisplayName,
-                    name = group.Name,
-                    distinguishedName = group.DistinguishedName,
-                    groupScope = group.GroupScope,
-                    securityEnabled = group.SecurityEnabled,
-                    groupType = group.GroupType,
+                    operation = operationType,
+                    group = CreateGroupSnapshotBody(group),
                 },
-            },
-            SerializerOptions);
+                SerializerOptions);
+
+    public static string BuildGroupCreateAfterSnapshot(AdGroupDetail group) =>
+        BuildGroupOperationSnapshot(AdManagementOperationTypes.GroupCreate, group);
+
+    internal static object CreateGroupSnapshotBody(AdGroupDetail group) =>
+        new
+        {
+            id = group.Id,
+            displayName = group.DisplayName,
+            name = group.Name,
+            cn = group.Cn,
+            samAccountName = group.SamAccountName,
+            description = group.Description,
+            distinguishedName = group.DistinguishedName,
+            groupScope = group.GroupScope,
+            securityEnabled = group.SecurityEnabled,
+            groupType = group.GroupType,
+        };
 
     public static string BuildCreateRequestSummary(CreateAdUserRequest request)
     {

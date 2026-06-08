@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using SasPortal.Application.Common.Constants;
 using SasPortal.Application.Common.Models;
 
 namespace SasPortal.Application.Common.AdManagement;
@@ -13,28 +14,15 @@ public static class AdGroupUpdateSnapshotBuilder
     };
 
     public static string Build(AdGroupDetail? group) =>
-        group is null
-            ? "{}"
-            : JsonSerializer.Serialize(
-                new
-                {
-                    id = group.Id,
-                    distinguishedName = group.DistinguishedName,
-                    displayName = group.DisplayName,
-                    name = group.Name,
-                    cn = group.Cn,
-                    samAccountName = group.SamAccountName,
-                    description = group.Description,
-                    groupScope = group.GroupScope,
-                    securityEnabled = group.SecurityEnabled,
-                    groupType = group.GroupType,
-                },
-                SerializerOptions);
+        AdOperationLogSnapshotBuilder.BuildGroupOperationSnapshot(
+            AdManagementOperationTypes.GroupUpdate,
+            group);
 
     public static string BuildRequestSummary(UpdateAdGroupRequest request) =>
         JsonSerializer.Serialize(
             new
             {
+                operation = AdManagementOperationTypes.GroupUpdate,
                 displayName = request.DisplayName,
                 name = request.Name,
                 samAccountName = request.SamAccountName,

@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
 import {
   buildAccountStatusComparisonRows,
   buildCoreFieldComparisonRows,
   buildGenericSnapshotEntries,
+  buildGroupComparisonRows,
   buildLockStatusComparisonRows,
   buildMappedAttributeComparisonRows,
   buildMembershipComparisonRows,
@@ -338,6 +340,8 @@ describe("getSnapshotRenderStrategy", () => {
     assert.equal(getSnapshotRenderStrategy("UserOuMove"), "ouMove");
     assert.equal(getSnapshotRenderStrategy("UserManagerUpdate"), "userManagerUpdate");
     assert.equal(getSnapshotRenderStrategy("UserAccountExpirationUpdate"), "userAccountExpirationUpdate");
+    assert.equal(getSnapshotRenderStrategy("GroupCreate"), "groupCreate");
+    assert.equal(getSnapshotRenderStrategy("GroupUpdate"), "groupUpdate");
   });
 
   it("falls back to generic for unknown operation types", () => {
@@ -349,6 +353,112 @@ describe("getSnapshotRenderStrategy", () => {
 
   it("keeps UserGroupAdd on groupMembership strategy", () => {
     assert.equal(getSnapshotRenderStrategy("UserGroupAdd"), "groupMembership");
+  });
+});
+
+describe("parseNestedAdOperationSnapshot group snapshots", () => {
+  const nestedGroupSnapshot = {
+    operation: "GroupUpdate",
+    group: {
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      displayName: "VPN Users",
+      name: "vpn-users",
+      cn: "VPN Users",
+      samAccountName: "vpn-users",
+      description: "VPN access group",
+      distinguishedName: "CN=VPN Users,OU=Groups,DC=corp,DC=local",
+      groupScope: "Global",
+      securityEnabled: true,
+      groupType: -2147483646,
+    },
+  };
+
+  it("parses nested group fields", () => {
+    const parsed = parseNestedAdOperationSnapshot(JSON.stringify(nestedGroupSnapshot));
+
+    assert.ok(parsed?.group);
+    assert.equal(parsed?.group?.id, "550e8400-e29b-41d4-a716-446655440000");
+    assert.equal(parsed?.group?.displayName, "VPN Users");
+    assert.equal(parsed?.group?.name, "vpn-users");
+    assert.equal(parsed?.group?.cn, "VPN Users");
+    assert.equal(parsed?.group?.samAccountName, "vpn-users");
+    assert.equal(parsed?.group?.description, "VPN access group");
+    assert.equal(parsed?.group?.distinguishedName, "CN=VPN Users,OU=Groups,DC=corp,DC=local");
+    assert.equal(parsed?.group?.groupScope, "Global");
+    assert.equal(parsed?.group?.securityEnabled, true);
+    assert.equal(parsed?.group?.groupType, -2147483646);
+  });
+
+  it("builds group comparison rows for rename scenario", () => {
+    const before = parseNestedAdOperationSnapshot(
+      JSON.stringify({
+        operation: "GroupUpdate",
+        group: {
+          name: "vpn-users-old",
+          cn: "VPN Users Old",
+          distinguishedName: "CN=VPN Users Old,OU=Groups,DC=corp,DC=local",
+          samAccountName: "vpn-users-old",
+        },
+      }),
+    );
+    const after = parseNestedAdOperationSnapshot(
+      JSON.stringify({
+        operation: "GroupUpdate",
+        group: {
+          name: "vpn-users",
+          cn: "VPN Users",
+          distinguishedName: "CN=VPN Users,OU=Groups,DC=corp,DC=local",
+          samAccountName: "vpn-users",
+        },
+      }),
+    );
+
+    const rows = buildGroupComparisonRows(
+      before,
+      after,
+      (value) => formatSnapshotBoolean(value, booleanLabels),
+    );
+
+    const nameRow = rows.find((row) => row.key === "name");
+    const cnRow = rows.find((row) => row.key === "cn");
+    const dnRow = rows.find((row) => row.key === "distinguishedName");
+
+    assert.equal(nameRow?.changed, true);
+    assert.equal(cnRow?.changed, true);
+    assert.equal(dnRow?.changed, true);
+    assert.equal(dnRow?.monoBefore, true);
+    assert.equal(dnRow?.monoAfter, true);
+  });
+});
+
+describe("AdOperationLogSnapshotDetail group render wiring", () => {
+  it("uses dedicated group create/update sections instead of generic fallback", () => {
+    const detailSource = readFileSync(
+      new URL("./components/AdOperationLogSnapshotDetail.tsx", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(detailSource, /GroupCreateSnapshotSections/);
+    assert.match(detailSource, /GroupUpdateSnapshotSections/);
+    assert.match(detailSource, /case "groupCreate"/);
+    assert.match(detailSource, /case "groupUpdate"/);
+    assert.match(detailSource, /buildGroupComparisonRows/);
+    assert.match(detailSource, /ComparisonTable/);
+    assert.match(detailSource, /getGroupFieldEntries/);
+  });
+});
+
+describe("adOperationLogs group snapshot locale labels", () => {
+  it("includes TR group log labels", () => {
+    const trLocale = readFileSync(
+      new URL("../../locales/tr/adOperationLogs.json", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(trLocale, /"createdGroup": "Oluşturulan Grup"/);
+    assert.match(trLocale, /"groupUpdate": "Grup Bilgileri"/);
+    assert.match(trLocale, /"groupDisplayName": "Grup Görünen Ad"/);
+    assert.match(trLocale, /"groupName": "Grup Adı"/);
   });
 });
 

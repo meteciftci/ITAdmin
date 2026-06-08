@@ -239,9 +239,31 @@ export type ParsedSnapshotAccount = {
 };
 
 export type ParsedSnapshotGroup = {
+  id: string | null;
+  displayName: string | null;
   name: string | null;
+  cn: string | null;
+  samAccountName: string | null;
+  description: string | null;
   distinguishedName: string | null;
+  groupScope: string | null;
+  securityEnabled: boolean | null;
+  groupType: number | null;
 };
+
+export const SNAPSHOT_GROUP_COMPARISON_FIELD_KEYS = [
+  "displayName",
+  "name",
+  "cn",
+  "samAccountName",
+  "description",
+  "distinguishedName",
+  "groupScope",
+  "securityEnabled",
+  "groupType",
+] as const;
+
+export type SnapshotGroupComparisonFieldKey = (typeof SNAPSHOT_GROUP_COMPARISON_FIELD_KEYS)[number];
 
 export type ParsedSnapshotOu = {
   distinguishedName: string | null;
@@ -287,6 +309,8 @@ export type GenericSnapshotEntry = {
 export type SnapshotRenderStrategy =
   | "userUpdate"
   | "userCreate"
+  | "groupCreate"
+  | "groupUpdate"
   | "accountStatus"
   | "lockStatus"
   | "groupMembership"
@@ -382,6 +406,21 @@ function parseSnapshotOu(value: unknown): ParsedSnapshotOu | null {
   return ou.distinguishedName !== null ? ou : null;
 }
 
+function hasParsedSnapshotGroupContent(group: ParsedSnapshotGroup): boolean {
+  return (
+    group.id !== null ||
+    group.displayName !== null ||
+    group.name !== null ||
+    group.cn !== null ||
+    group.samAccountName !== null ||
+    group.description !== null ||
+    group.distinguishedName !== null ||
+    group.groupScope !== null ||
+    group.securityEnabled !== null ||
+    group.groupType !== null
+  );
+}
+
 function parseSnapshotGroup(value: unknown): ParsedSnapshotGroup | null {
   const record = readRecord(value);
   if (!record) {
@@ -389,11 +428,28 @@ function parseSnapshotGroup(value: unknown): ParsedSnapshotGroup | null {
   }
 
   const group: ParsedSnapshotGroup = {
+    id: formatSnapshotValue(record.id ?? record.Id),
+    displayName: formatSnapshotValue(record.displayName ?? record.DisplayName),
     name: formatSnapshotValue(record.name ?? record.Name),
+    cn: formatSnapshotValue(record.cn ?? record.Cn),
+    samAccountName: formatSnapshotValue(record.samAccountName ?? record.SamAccountName),
+    description: formatSnapshotValue(record.description ?? record.Description),
     distinguishedName: formatSnapshotValue(record.distinguishedName ?? record.DistinguishedName),
+    groupScope: formatSnapshotValue(record.groupScope ?? record.GroupScope),
+    securityEnabled: readBoolean(record.securityEnabled ?? record.SecurityEnabled),
+    groupType: readNumber(record.groupType ?? record.GroupType),
   };
 
-  return Object.values(group).some((entry) => entry !== null) ? group : null;
+  return hasParsedSnapshotGroupContent(group) ? group : null;
+}
+
+function tryParseFlatGroupSnapshot(record: Record<string, unknown>): ParsedSnapshotGroup | null {
+  const operation = formatSnapshotValue(record.operation ?? record.Operation);
+  if (operation !== "GroupCreate" && operation !== "GroupUpdate") {
+    return null;
+  }
+
+  return parseSnapshotGroup(record);
 }
 
 function parseSnapshotMembership(value: unknown): ParsedSnapshotMembership | null {
@@ -473,11 +529,15 @@ export function parseNestedAdOperationSnapshot(value: unknown): ParsedNestedAdOp
     return null;
   }
 
+  const operation = formatSnapshotValue(record.operation ?? record.Operation);
+  const nestedGroup = parseSnapshotGroup(record.group ?? record.Group);
+  const group = nestedGroup ?? tryParseFlatGroupSnapshot(record);
+
   return {
-    operation: formatSnapshotValue(record.operation ?? record.Operation),
+    operation,
     user: parseSnapshotUser(record.user ?? record.User),
     account: parseSnapshotAccount(record.account ?? record.Account),
-    group: parseSnapshotGroup(record.group ?? record.Group),
+    group,
     ou: parseSnapshotOu(record.ou ?? record.Ou),
     membership: parseSnapshotMembership(record.membership ?? record.Membership),
     manager: parseSnapshotManager(record.manager ?? record.Manager),
@@ -674,6 +734,51 @@ export function buildAccountExpirationComparisonRows(
   return rows.filter((row) => row.before !== null || row.after !== null);
 }
 
+export function buildGroupComparisonRows(
+  before: ParsedNestedAdOperationSnapshot | null,
+  after: ParsedNestedAdOperationSnapshot | null,
+  formatBoolean: (value: boolean | null | undefined) => string | null,
+): SnapshotComparisonRow[] {
+  const beforeGroup = before?.group ?? null;
+  const afterGroup = after?.group ?? null;
+
+  const rows = [
+    buildComparisonRow("displayName", beforeGroup?.displayName ?? null, afterGroup?.displayName ?? null),
+    buildComparisonRow("name", beforeGroup?.name ?? null, afterGroup?.name ?? null),
+    buildComparisonRow("cn", beforeGroup?.cn ?? null, afterGroup?.cn ?? null),
+    buildComparisonRow(
+      "samAccountName",
+      beforeGroup?.samAccountName ?? null,
+      afterGroup?.samAccountName ?? null,
+    ),
+    buildComparisonRow(
+      "description",
+      beforeGroup?.description ?? null,
+      afterGroup?.description ?? null,
+    ),
+    buildComparisonRow(
+      "distinguishedName",
+      beforeGroup?.distinguishedName ?? null,
+      afterGroup?.distinguishedName ?? null,
+      true,
+      true,
+    ),
+    buildComparisonRow("groupScope", beforeGroup?.groupScope ?? null, afterGroup?.groupScope ?? null),
+    buildComparisonRow(
+      "securityEnabled",
+      formatBoolean(beforeGroup?.securityEnabled),
+      formatBoolean(afterGroup?.securityEnabled),
+    ),
+    buildComparisonRow(
+      "groupType",
+      beforeGroup?.groupType != null ? String(beforeGroup.groupType) : null,
+      afterGroup?.groupType != null ? String(afterGroup.groupType) : null,
+    ),
+  ];
+
+  return rows.filter((row) => row.before !== null || row.after !== null);
+}
+
 export function buildMembershipComparisonRows(
   before: ParsedNestedAdOperationSnapshot | null,
   after: ParsedNestedAdOperationSnapshot | null,
@@ -715,6 +820,12 @@ export function getSnapshotRenderStrategy(operationType: string): SnapshotRender
   }
   if (operationType === "CreateUser") {
     return "userCreate";
+  }
+  if (operationType === "GroupCreate") {
+    return "groupCreate";
+  }
+  if (operationType === "GroupUpdate") {
+    return "groupUpdate";
   }
   if (ACCOUNT_STATUS_OPERATION_TYPES.has(operationType)) {
     return "accountStatus";

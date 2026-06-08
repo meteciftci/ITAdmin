@@ -13,6 +13,7 @@ import {
   buildAccountStatusComparisonRows,
   buildCoreFieldComparisonRows,
   buildGenericSnapshotSections,
+  buildGroupComparisonRows,
   buildLockStatusComparisonRows,
   buildManagerComparisonRows,
   buildMappedAttributeComparisonRows,
@@ -20,6 +21,7 @@ import {
   buildOuMoveComparisonRows,
   formatSnapshotBoolean,
   getSnapshotRenderStrategy,
+  hasNestedSnapshotContent,
   hasSnapshotContent,
   parseAdOperationSnapshot,
   parseNestedAdOperationSnapshot,
@@ -27,7 +29,9 @@ import {
   resolveSnapshotGroup,
   resolveSnapshotUser,
   type GenericSnapshotEntry,
+  type ParsedSnapshotGroup,
   type SnapshotCoreFieldKey,
+  type SnapshotGroupComparisonFieldKey,
 } from "@/features/ad-management/parse-ad-operation-snapshot";
 
 type AdOperationLogSnapshotDetailProps = {
@@ -47,6 +51,73 @@ function getAccountFieldLabel(t: TFunction<"adOperationLogs">, fieldKey: string)
   const translationKey = `snapshotSections.fields.${fieldKey}` as const;
   const translated = t(translationKey, { defaultValue: "" });
   return translated || fieldKey;
+}
+
+function getGroupFieldLabel(t: TFunction<"adOperationLogs">, fieldKey: string): string {
+  const labelKey =
+    fieldKey === "displayName"
+      ? "groupDisplayName"
+      : fieldKey === "name"
+        ? "groupName"
+        : fieldKey;
+  const translationKey = `snapshotSections.fields.${labelKey}` as const;
+  const translated = t(translationKey, { defaultValue: "" });
+  return translated || fieldKey;
+}
+
+function getGroupFieldEntries(
+  t: TFunction<"adOperationLogs">,
+  group: ParsedSnapshotGroup | null,
+  formatBoolean: (value: boolean | null | undefined) => string | null,
+) {
+  if (!group) {
+    return [];
+  }
+
+  return [
+    {
+      key: "groupDisplayName",
+      label: t("snapshotSections.fields.groupDisplayName"),
+      value: group.displayName,
+    },
+    {
+      key: "groupName",
+      label: t("snapshotSections.fields.groupName"),
+      value: group.name,
+    },
+    { key: "cn", label: t("snapshotSections.fields.cn"), value: group.cn },
+    {
+      key: "samAccountName",
+      label: t("snapshotSections.fields.samAccountName"),
+      value: group.samAccountName,
+    },
+    {
+      key: "description",
+      label: t("snapshotSections.fields.description"),
+      value: group.description,
+    },
+    {
+      key: "distinguishedName",
+      label: t("snapshotSections.fields.distinguishedName"),
+      value: group.distinguishedName,
+      mono: true,
+    },
+    {
+      key: "groupScope",
+      label: t("snapshotSections.fields.groupScope"),
+      value: group.groupScope,
+    },
+    {
+      key: "securityEnabled",
+      label: t("snapshotSections.fields.securityEnabled"),
+      value: formatBoolean(group.securityEnabled),
+    },
+    {
+      key: "groupType",
+      label: t("snapshotSections.fields.groupType"),
+      value: group.groupType != null ? String(group.groupType) : null,
+    },
+  ];
 }
 
 function getUserFieldEntries(
@@ -672,6 +743,101 @@ function UserCreateSnapshotSections({
   );
 }
 
+function GroupCreateSnapshotSections({
+  afterSnapshotJson,
+  noneLabel,
+  t,
+}: {
+  afterSnapshotJson: string | null | undefined;
+  noneLabel: string;
+  t: TFunction<"adOperationLogs">;
+}) {
+  const booleanLabels = useMemo(
+    () => ({ yes: t("snapshotSections.boolean.yes"), no: t("snapshotSections.boolean.no") }),
+    [t],
+  );
+  const formatBoolean = useMemo(
+    () => (value: boolean | null | undefined) => formatSnapshotBoolean(value, booleanLabels),
+    [booleanLabels],
+  );
+
+  const afterSnapshot = useMemo(
+    () => parseNestedAdOperationSnapshot(afterSnapshotJson),
+    [afterSnapshotJson],
+  );
+
+  return (
+    <section className="space-y-3 border-t pt-4">
+      <h3 className="text-sm font-medium">{t("snapshotSections.createdGroup")}</h3>
+      <KeyValueGrid
+        entries={getGroupFieldEntries(t, afterSnapshot?.group ?? null, formatBoolean)}
+        noneLabel={noneLabel}
+      />
+    </section>
+  );
+}
+
+function GroupUpdateSnapshotSections({
+  beforeSnapshotJson,
+  afterSnapshotJson,
+  noneLabel,
+  emptyDash,
+  t,
+}: {
+  beforeSnapshotJson: string | null | undefined;
+  afterSnapshotJson: string | null | undefined;
+  noneLabel: string;
+  emptyDash: string;
+  t: TFunction<"adOperationLogs">;
+}) {
+  const booleanLabels = useMemo(
+    () => ({ yes: t("snapshotSections.boolean.yes"), no: t("snapshotSections.boolean.no") }),
+    [t],
+  );
+  const formatBoolean = useMemo(
+    () => (value: boolean | null | undefined) => formatSnapshotBoolean(value, booleanLabels),
+    [booleanLabels],
+  );
+
+  const beforeSnapshot = useMemo(
+    () => parseNestedAdOperationSnapshot(beforeSnapshotJson),
+    [beforeSnapshotJson],
+  );
+  const afterSnapshot = useMemo(
+    () => parseNestedAdOperationSnapshot(afterSnapshotJson),
+    [afterSnapshotJson],
+  );
+  const groupRows = useMemo(
+    () => buildGroupComparisonRows(beforeSnapshot, afterSnapshot, formatBoolean),
+    [beforeSnapshot, afterSnapshot, formatBoolean],
+  );
+
+  const hasAnySnapshot =
+    hasNestedSnapshotContent(beforeSnapshot) ||
+    hasNestedSnapshotContent(afterSnapshot) ||
+    Boolean(beforeSnapshotJson?.trim()) ||
+    Boolean(afterSnapshotJson?.trim());
+
+  return (
+    <section className="space-y-3 border-t pt-4">
+      <h3 className="text-sm font-medium">{t("snapshotSections.groupUpdate")}</h3>
+      {hasAnySnapshot ? (
+        <ComparisonTable
+          rows={groupRows}
+          getFieldLabel={(key) => getGroupFieldLabel(t, key as SnapshotGroupComparisonFieldKey)}
+          emptyLabel={emptyDash}
+          noneLabel={noneLabel}
+        />
+      ) : (
+        <span className="text-muted-foreground">{noneLabel}</span>
+      )}
+      {!afterSnapshotJson?.trim() && beforeSnapshotJson?.trim() ? (
+        <p className="text-xs text-muted-foreground">{t("comparison.afterMissing")}</p>
+      ) : null}
+    </section>
+  );
+}
+
 function GenericSnapshotSections({
   beforeSnapshotJson,
   afterSnapshotJson,
@@ -819,6 +985,24 @@ export function AdOperationLogSnapshotDetail({
       case "userCreate":
         return (
           <UserCreateSnapshotSections
+            afterSnapshotJson={afterSnapshotJson}
+            noneLabel={noneLabel}
+            emptyDash={emptyDash}
+            t={t}
+          />
+        );
+      case "groupCreate":
+        return (
+          <GroupCreateSnapshotSections
+            afterSnapshotJson={afterSnapshotJson}
+            noneLabel={noneLabel}
+            t={t}
+          />
+        );
+      case "groupUpdate":
+        return (
+          <GroupUpdateSnapshotSections
+            beforeSnapshotJson={beforeSnapshotJson}
             afterSnapshotJson={afterSnapshotJson}
             noneLabel={noneLabel}
             emptyDash={emptyDash}
