@@ -15,7 +15,6 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { SectionCard } from "@/components/common/SectionCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { buttonVariants } from "@/components/ui/button-variants";
 import { isGuidLike } from "@/features/ad-management/ad-user-detail-utils";
 import {
   getAdGroupMemberPrimaryLabel,
@@ -29,7 +28,7 @@ import {
   getAdGroupTypeLabel,
 } from "@/features/ad-management/ad-group-labels";
 import { buildAdGroupEditPath } from "@/features/ad-management/ad-group-detail-path";
-import { adDetailEditButtonClass } from "@/features/ad-management/ad-user-detail-button-styles";
+import { adDetailActionButtonSizingClass, adDetailEditButtonClass, adDetailOutlineButtonClass } from "@/features/ad-management/ad-user-detail-button-styles";
 import {
   buildAdGroupDetailReturnState,
   resolveAdGroupReturnPath,
@@ -168,7 +167,7 @@ export function AdGroupDetailPage() {
             <div className="flex flex-wrap items-center gap-2">
               <Link
                 to={returnPath}
-                className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+                className={adDetailOutlineButtonClass}
               >
                 {t("adManagement:groups.actions.back")}
               </Link>
@@ -176,6 +175,7 @@ export function AdGroupDetailPage() {
                 type="button"
                 variant="outline"
                 size="sm"
+                className={adDetailActionButtonSizingClass}
                 onClick={() => groupQuery.refetch()}
                 disabled={groupQuery.isFetching}
               >

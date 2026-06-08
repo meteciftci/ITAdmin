@@ -7,7 +7,6 @@ import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { RowActions } from "@/components/common/RowActions";
 import { Button } from "@/components/ui/button";
-import { buttonVariants } from "@/components/ui/button-variants";
 import {
   DropdownMenuItem,
   DropdownMenuSeparator,
@@ -21,9 +20,12 @@ import {
   unlockAdUser,
 } from "@/features/ad-management/api";
 import type { AdUserAccountConfirmAction, AdUserDetail } from "@/features/ad-management/types";
-import { adDetailEditButtonClass } from "@/features/ad-management/ad-user-detail-button-styles";
+import {
+  adDetailActionButtonSizingClass,
+  adDetailEditButtonClass,
+  adDetailOutlineButtonClass,
+} from "@/features/ad-management/ad-user-detail-button-styles";
 import { getApiErrorMessage } from "@/lib/api-error";
-import { cn } from "@/lib/utils";
 
 type Props = {
   user: AdUserDetail;
@@ -128,7 +130,7 @@ export function AdUserDetailHeaderActions({
       <div className="flex flex-wrap items-center gap-2">
         <Link
           to={AD_USERS_LIST_PATH}
-          className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+          className={adDetailOutlineButtonClass}
         >
           {t("adManagement:users.detail.page.back")}
         </Link>
@@ -136,6 +138,7 @@ export function AdUserDetailHeaderActions({
           type="button"
           variant="outline"
           size="sm"
+          className={adDetailActionButtonSizingClass}
           onClick={onRefresh}
           disabled={isFetching}
         >

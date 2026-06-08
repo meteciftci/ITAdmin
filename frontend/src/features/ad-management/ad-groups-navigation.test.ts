@@ -199,6 +199,8 @@ describe("ad groups route and menu wiring", () => {
     assert.match(pageSource, /buildAdGroupEditPath/);
     assert.match(detailSource, /buildAdGroupDetailReturnState\(group\.id\)/);
     assert.match(detailSource, /adDetailEditButtonClass/);
+    assert.match(detailSource, /adDetailOutlineButtonClass/);
+    assert.match(detailSource, /adDetailActionButtonSizingClass/);
     assert.doesNotMatch(detailSource, /state=\{location\.state\}/);
   });
 

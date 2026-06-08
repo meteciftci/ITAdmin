@@ -1,13 +1,18 @@
 import { buttonVariants } from "@/components/ui/button-variants";
 import { cn } from "@/lib/utils";
 
-const detailActionButtonBase = cn(
-  buttonVariants({ size: "sm" }),
+export const adDetailActionButtonSizingClass = cn(
   "inline-flex h-8 min-h-8 items-center justify-center px-3 text-sm",
 );
 
+export const adDetailOutlineButtonClass = cn(
+  buttonVariants({ variant: "outline", size: "sm" }),
+  adDetailActionButtonSizingClass,
+);
+
 export const adDetailEditButtonClass = cn(
-  detailActionButtonBase,
+  buttonVariants({ size: "sm" }),
+  adDetailActionButtonSizingClass,
   "border border-amber-500/30 bg-amber-500/15 text-amber-700 hover:bg-amber-500/25",
   "dark:bg-amber-500/15 dark:text-amber-300 dark:hover:bg-amber-500/25",
 );
@@ -16,13 +21,15 @@ export const adDetailEditButtonClass = cn(
 export const adUserDetailEditButtonClass = adDetailEditButtonClass;
 
 export const adUserDetailManagerChangeButtonClass = cn(
-  detailActionButtonBase,
+  buttonVariants({ size: "sm" }),
+  adDetailActionButtonSizingClass,
   "border border-sky-500/30 bg-sky-500/15 text-sky-800 hover:bg-sky-500/25",
   "dark:bg-sky-500/15 dark:text-sky-300 dark:hover:bg-sky-500/25",
 );
 
 export const adUserDetailManagerClearButtonClass = cn(
-  detailActionButtonBase,
+  buttonVariants({ size: "sm" }),
+  adDetailActionButtonSizingClass,
   "border border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20",
   "dark:bg-destructive/15 dark:text-red-300 dark:hover:bg-destructive/25",
 );
