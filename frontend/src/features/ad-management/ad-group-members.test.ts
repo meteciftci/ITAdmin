@@ -20,8 +20,8 @@ describe("Ad group member management UI", () => {
     assert.match(sectionSource, /groups\.members\.descriptionManage/);
     assert.match(sectionSource, /groups\.members\.descriptionView/);
     assert.match(sectionSource, /groups\.detail\.memberCount/);
-    assert.match(sectionSource, /tabIndex=\{-1\}/);
-    assert.match(sectionSource, /forwardRef/);
+    assert.doesNotMatch(sectionSource, /forwardRef/);
+    assert.doesNotMatch(sectionSource, /scroll-mt-4/);
     assert.match(trLocale, /"descriptionManage": "Doğrudan grup üyelerini görüntüleyin, ekleyin veya çıkarın."/);
     assert.match(enLocale, /"descriptionManage": "View, add, or remove direct group members."/);
   });
@@ -41,30 +41,36 @@ describe("Ad group member management UI", () => {
     assert.match(sectionSource, /groups\.members\.remove/);
     assert.match(detailSource, /canManageMembers=\{canManageMembers\}/);
     assert.match(detailSource, /groups\.actions\.manageMembers/);
-    assert.match(detailSource, /scrollToMembersSection/);
+    assert.match(detailSource, /buildAdGroupMembersPath\(group\.id\)/);
     assert.doesNotMatch(detailSource, /groups\.members\.add/);
   });
 
-  it("scrolls members section through app layout container with scheduled deep-link retries", () => {
+  it("renders members section first when section=members without scroll helpers", () => {
     const detailSource = readFileSync(
       new URL("./AdGroupDetailPage.tsx", import.meta.url),
       "utf8",
     );
 
-    assert.match(detailSource, /searchParams\.get\("section"\)/);
-    assert.match(detailSource, /data-app-scroll-container='true'/);
-    assert.match(detailSource, /scrollElementIntoAppContainer/);
-    assert.match(detailSource, /scrollContainer\.scrollTo/);
-    assert.match(detailSource, /scrollIntoView\(\{ behavior, block: "start" \}\)/);
-    assert.match(detailSource, /const scheduleScroll = \(delay: number, behavior: ScrollBehavior\)/);
-    assert.match(detailSource, /scheduleScroll\(0, "auto"\)/);
-    assert.match(detailSource, /scheduleScroll\(600, "auto"\)/);
+    assert.match(detailSource, /isMembersSectionFocused = searchParams\.get\("section"\) === "members"/);
+    assert.match(detailSource, /const summarySection = group \?/);
+    assert.match(detailSource, /const membersSection = group \?/);
+    assert.doesNotMatch(detailSource, /\{\(\(\) =>/);
     assert.match(
       detailSource,
-      /if \(didScroll && delay >= 300\) \{[\s\S]*lastMembersScrollKeyRef\.current = navigationKey/,
+      /isMembersSectionFocused \? \([\s\S]*\{membersSection\}[\s\S]*\{summarySection\}/,
     );
-    assert.match(detailSource, /scrollToMembersSection\("smooth"\)/);
-    assert.match(detailSource, /if \(!element\) \{[\s\S]*return false/);
+    assert.match(
+      detailSource,
+      /: \([\s\S]*\{summarySection\}[\s\S]*\{membersSection\}/,
+    );
+    assert.match(detailSource, /navigate\(buildAdGroupMembersPath\(group\.id\)/);
+    assert.doesNotMatch(detailSource, /scrollIntoView/);
+    assert.doesNotMatch(detailSource, /scrollToMembersSection/);
+    assert.doesNotMatch(detailSource, /scrollElementIntoAppContainer/);
+    assert.doesNotMatch(detailSource, /membersSectionRef/);
+    assert.doesNotMatch(detailSource, /scheduleScroll/);
+    assert.doesNotMatch(detailSource, /requestAnimationFrame/);
+    assert.doesNotMatch(detailSource, /setTimeout/);
   });
 
   it("uses member column header in members list and keeps selectCandidate in add dialog only", () => {

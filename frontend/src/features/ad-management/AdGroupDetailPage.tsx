@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -29,7 +29,10 @@ import {
   getAdGroupScopeLabel,
   getAdGroupTypeLabel,
 } from "@/features/ad-management/ad-group-labels";
-import { buildAdGroupEditPath } from "@/features/ad-management/ad-group-detail-path";
+import {
+  buildAdGroupEditPath,
+  buildAdGroupMembersPath,
+} from "@/features/ad-management/ad-group-detail-path";
 import { adDetailActionButtonSizingClass, adDetailEditButtonClass, adDetailOutlineButtonClass } from "@/features/ad-management/ad-user-detail-button-styles";
 import {
   buildAdGroupDetailReturnState,
@@ -45,33 +48,6 @@ import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useA
 import type { AdGroupMemberItem } from "@/features/ad-management/types";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { cn } from "@/lib/utils";
-
-const APP_SCROLL_CONTAINER_SELECTOR = "[data-app-scroll-container='true']";
-const APP_SCROLL_OFFSET = 16;
-
-function scrollElementIntoAppContainer(
-  element: HTMLElement,
-  behavior: ScrollBehavior = "smooth",
-): boolean {
-  const scrollContainer = element.closest(APP_SCROLL_CONTAINER_SELECTOR) as HTMLElement | null;
-
-  if (!scrollContainer) {
-    element.scrollIntoView({ behavior, block: "start" });
-    return true;
-  }
-
-  const containerRect = scrollContainer.getBoundingClientRect();
-  const elementRect = element.getBoundingClientRect();
-  const nextTop =
-    scrollContainer.scrollTop + elementRect.top - containerRect.top - APP_SCROLL_OFFSET;
-
-  scrollContainer.scrollTo({
-    top: Math.max(0, nextTop),
-    behavior,
-  });
-
-  return true;
-}
 
 function MemberList({
   items,
@@ -147,9 +123,8 @@ export function AdGroupDetailPage() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const membersSectionRef = useRef<HTMLDivElement>(null);
-  const lastMembersScrollKeyRef = useRef<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const isMembersSectionFocused = searchParams.get("section") === "members";
   const moduleStatus = useAdManagementModuleStatus();
   const hasValidId = Boolean(groupId?.trim()) && isGuidLike(groupId);
   const returnPath = resolveAdGroupReturnPath(location.state, AD_GROUPS_LIST_PATH);
@@ -177,68 +152,116 @@ export function AdGroupDetailPage() {
     return secondaryLabel ?? group.samAccountName ?? group.distinguishedName;
   }, [group, secondaryLabel]);
 
-  const scrollToMembersSection = useCallback((behavior: ScrollBehavior = "smooth") => {
-    const element = membersSectionRef.current;
-    if (!element) {
-      return false;
-    }
-
-    scrollElementIntoAppContainer(element, behavior);
-    element.focus({ preventScroll: true });
-    return true;
-  }, []);
-
-  useEffect(() => {
-    if (!group || searchParams.get("section") !== "members") {
-      return;
-    }
-
-    const navigationKey = `${location.key}:members`;
-    if (lastMembersScrollKeyRef.current === navigationKey) {
-      return;
-    }
-
-    let cancelled = false;
-    const timeouts: number[] = [];
-
-    const scheduleScroll = (delay: number, behavior: ScrollBehavior) => {
-      const timeoutId = window.setTimeout(() => {
-        if (cancelled) {
-          return;
-        }
-
-        window.requestAnimationFrame(() => {
-          if (cancelled) {
-            return;
-          }
-
-          const didScroll = scrollToMembersSection(behavior);
-          if (didScroll && delay >= 300) {
-            lastMembersScrollKeyRef.current = navigationKey;
-          }
-        });
-      }, delay);
-
-      timeouts.push(timeoutId);
-    };
-
-    scheduleScroll(0, "auto");
-    scheduleScroll(100, "auto");
-    scheduleScroll(300, "auto");
-    scheduleScroll(600, "auto");
-
-    return () => {
-      cancelled = true;
-      timeouts.forEach((timeoutId) => {
-        window.clearTimeout(timeoutId);
-      });
-    };
-  }, [group, location.key, scrollToMembersSection, searchParams]);
-
   const isNotFound =
     groupQuery.isError
     && groupQuery.error instanceof AxiosError
     && groupQuery.error.response?.status === 404;
+
+  const summarySection = group ? (
+    <SectionCard title={t("adManagement:groups.detail.summaryTitle")}>
+      <div className="grid gap-3 md:grid-cols-2">
+        <AdUserDetailField
+          label={t("adManagement:groups.table.displayName")}
+          value={group.displayName}
+        />
+        <AdUserDetailField
+          label={t("adManagement:groups.table.name")}
+          value={group.name}
+        />
+        <AdUserDetailField
+          label={t("adManagement:groups.table.cn")}
+          value={group.cn}
+        />
+        <AdUserDetailField
+          label={t("adManagement:groups.table.samAccountName")}
+          value={group.samAccountName}
+        />
+        <AdUserDetailField
+          label={t("adManagement:groups.table.description")}
+          value={group.description}
+        />
+        <AdUserDetailField label={t("adManagement:groups.table.scope")}>
+          <Badge variant="secondary">
+            {getAdGroupScopeLabel(t, group.groupScope)}
+          </Badge>
+        </AdUserDetailField>
+        <AdUserDetailField label={t("adManagement:groups.detail.securityEnabled")}>
+          <Badge variant={group.securityEnabled ? "default" : "outline"}>
+            {getAdGroupTypeLabel(t, group.securityEnabled)}
+          </Badge>
+        </AdUserDetailField>
+      </div>
+    </SectionCard>
+  ) : null;
+
+  const technicalSection = group ? (
+    <SectionCard title={t("adManagement:groups.detail.technicalTitle")}>
+      <div className="grid gap-3 md:grid-cols-2">
+        <AdUserDetailField
+          label={t("adManagement:groups.detail.objectGuid")}
+          value={group.id}
+          valueClassName="break-all font-mono text-xs"
+        />
+        <AdUserDetailField
+          label={t("adManagement:groups.table.distinguishedName")}
+          value={group.distinguishedName}
+          valueClassName="break-all font-mono text-xs"
+        />
+        <AdUserDetailField
+          label={t("adManagement:groups.detail.groupType")}
+          value={
+            group.groupType === null || group.groupType === undefined
+              ? null
+              : String(group.groupType)
+          }
+          valueClassName="font-mono text-xs"
+        />
+        <AdUserDetailField label={t("adManagement:groups.detail.whenCreated")}>
+          <DateTimeText value={group.whenCreated} />
+        </AdUserDetailField>
+        <AdUserDetailField label={t("adManagement:groups.detail.whenChanged")}>
+          <DateTimeText value={group.whenChanged} />
+        </AdUserDetailField>
+        <AdUserDetailField
+          label={t("adManagement:groups.detail.managedBy")}
+          value={group.managedByDisplayName ?? group.managedByDistinguishedName}
+          valueClassName="break-all"
+        />
+        {group.managedByDisplayName && group.managedByDistinguishedName ? (
+          <AdUserDetailField
+            label={t("adManagement:groups.detail.managedByDn")}
+            value={group.managedByDistinguishedName}
+            valueClassName="break-all font-mono text-xs"
+          />
+        ) : null}
+      </div>
+    </SectionCard>
+  ) : null;
+
+  const membersSection = group ? (
+    <AdGroupMembersSection
+      groupId={group.id}
+      groupName={primaryLabel}
+      memberCount={group.memberCount}
+      canManageMembers={canManageMembers}
+      enabled={moduleStatus.isOperational}
+    />
+  ) : null;
+
+  const memberOfSection = group ? (
+    <SectionCard
+      title={t("adManagement:groups.detail.memberOfTitle")}
+      description={t("adManagement:groups.detail.memberOfCount", {
+        count: group.memberOfCount,
+      })}
+    >
+      <MemberList
+        items={group.memberOf}
+        truncated={group.memberOfTruncated}
+        emptyTitle={t("adManagement:groups.detail.memberOfEmpty")}
+      />
+    </SectionCard>
+  ) : null;
 
   if (!hasValidId) {
     return (
@@ -289,7 +312,18 @@ export function AdGroupDetailPage() {
               {(canManageMembers || canDeleteGroup) && group ? (
                 <RowActions label={t("adManagement:groups.detail.actions.operations")}>
                   {canManageMembers ? (
-                    <DropdownMenuItem onClick={() => scrollToMembersSection("smooth")}>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        if (!group) {
+                          return;
+                        }
+
+                        navigate(buildAdGroupMembersPath(group.id), {
+                          replace: isMembersSectionFocused,
+                          state: buildAdGroupDetailReturnState(group.id),
+                        });
+                      }}
+                    >
                       {t("adManagement:groups.actions.manageMembers")}
                     </DropdownMenuItem>
                   ) : null}
@@ -327,106 +361,21 @@ export function AdGroupDetailPage() {
         ) : null}
 
         {group ? (
-          <>
-            <SectionCard title={t("adManagement:groups.detail.summaryTitle")}>
-              <div className="grid gap-3 md:grid-cols-2">
-                <AdUserDetailField
-                  label={t("adManagement:groups.table.displayName")}
-                  value={group.displayName}
-                />
-                <AdUserDetailField
-                  label={t("adManagement:groups.table.name")}
-                  value={group.name}
-                />
-                <AdUserDetailField
-                  label={t("adManagement:groups.table.cn")}
-                  value={group.cn}
-                />
-                <AdUserDetailField
-                  label={t("adManagement:groups.table.samAccountName")}
-                  value={group.samAccountName}
-                />
-                <AdUserDetailField
-                  label={t("adManagement:groups.table.description")}
-                  value={group.description}
-                />
-                <AdUserDetailField label={t("adManagement:groups.table.scope")}>
-                  <Badge variant="secondary">
-                    {getAdGroupScopeLabel(t, group.groupScope)}
-                  </Badge>
-                </AdUserDetailField>
-                <AdUserDetailField label={t("adManagement:groups.detail.securityEnabled")}>
-                  <Badge variant={group.securityEnabled ? "default" : "outline"}>
-                    {getAdGroupTypeLabel(t, group.securityEnabled)}
-                  </Badge>
-                </AdUserDetailField>
-              </div>
-            </SectionCard>
-
-            <SectionCard title={t("adManagement:groups.detail.technicalTitle")}>
-              <div className="grid gap-3 md:grid-cols-2">
-                <AdUserDetailField
-                  label={t("adManagement:groups.detail.objectGuid")}
-                  value={group.id}
-                  valueClassName="break-all font-mono text-xs"
-                />
-                <AdUserDetailField
-                  label={t("adManagement:groups.table.distinguishedName")}
-                  value={group.distinguishedName}
-                  valueClassName="break-all font-mono text-xs"
-                />
-                <AdUserDetailField
-                  label={t("adManagement:groups.detail.groupType")}
-                  value={
-                    group.groupType === null || group.groupType === undefined
-                      ? null
-                      : String(group.groupType)
-                  }
-                  valueClassName="font-mono text-xs"
-                />
-                <AdUserDetailField label={t("adManagement:groups.detail.whenCreated")}>
-                  <DateTimeText value={group.whenCreated} />
-                </AdUserDetailField>
-                <AdUserDetailField label={t("adManagement:groups.detail.whenChanged")}>
-                  <DateTimeText value={group.whenChanged} />
-                </AdUserDetailField>
-                <AdUserDetailField
-                  label={t("adManagement:groups.detail.managedBy")}
-                  value={group.managedByDisplayName ?? group.managedByDistinguishedName}
-                  valueClassName="break-all"
-                />
-                {group.managedByDisplayName && group.managedByDistinguishedName ? (
-                  <AdUserDetailField
-                    label={t("adManagement:groups.detail.managedByDn")}
-                    value={group.managedByDistinguishedName}
-                    valueClassName="break-all font-mono text-xs"
-                  />
-                ) : null}
-              </div>
-            </SectionCard>
-
-            <AdGroupMembersSection
-              ref={membersSectionRef}
-              groupId={group.id}
-              groupName={primaryLabel}
-              memberCount={group.memberCount}
-              canManageMembers={canManageMembers}
-              enabled={moduleStatus.isOperational}
-            />
-
-            <SectionCard
-              title={t("adManagement:groups.detail.memberOfTitle")}
-              description={t("adManagement:groups.detail.memberOfCount", {
-                count: group.memberOfCount,
-              })}
-            >
-              <MemberList
-                items={group.memberOf}
-                truncated={group.memberOfTruncated}
-                emptyTitle={t("adManagement:groups.detail.memberOfEmpty")}
-              />
-            </SectionCard>
-          </>
+          isMembersSectionFocused ? (
+            <>
+              {membersSection}
+              {summarySection}
+              {technicalSection}
+              {memberOfSection}
+            </>
+          ) : (
+            <>
+              {summarySection}
+              {technicalSection}
+              {membersSection}
+              {memberOfSection}
+            </>
+          )
         ) : null}
       </section>
 

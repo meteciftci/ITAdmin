@@ -153,11 +153,12 @@ describe("ad groups route and menu wiring", () => {
     assert.match(detailSource, /AdDeleteGroupConfirmDialog/);
     assert.match(detailSource, /canManageMembers/);
     assert.match(detailSource, /groups\.actions\.manageMembers/);
-    assert.match(detailSource, /scrollToMembersSection/);
-    assert.match(detailSource, /searchParams\.get\("section"\)/);
-    assert.match(detailSource, /scrollElementIntoAppContainer/);
-    assert.match(detailSource, /scheduleScroll\(0, "auto"\)/);
-    assert.match(detailSource, /lastMembersScrollKeyRef\.current = navigationKey/);
+    assert.match(detailSource, /buildAdGroupMembersPath\(group\.id\)/);
+    assert.match(detailSource, /isMembersSectionFocused = searchParams\.get\("section"\) === "members"/);
+    assert.match(detailSource, /const membersSection = group \?/);
+    assert.doesNotMatch(detailSource, /\{\(\(\) =>/);
+    assert.doesNotMatch(detailSource, /scrollToMembersSection/);
+    assert.doesNotMatch(detailSource, /scrollIntoView/);
     assert.match(detailSource, /AdGroupMembersSection/);
     assert.match(detailSource, /AdManagement\.Groups\.ManageMembers/);
     assert.match(columnsSource, /canManageMembers/);

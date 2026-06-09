@@ -1,4 +1,4 @@
-import { forwardRef, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useTranslation } from "react-i18next";
@@ -49,16 +49,13 @@ type Props = {
   enabled: boolean;
 };
 
-export const AdGroupMembersSection = forwardRef<HTMLDivElement, Props>(function AdGroupMembersSection(
-  {
-    groupId,
-    groupName,
-    memberCount,
-    canManageMembers,
-    enabled,
-  },
-  ref,
-) {
+export function AdGroupMembersSection({
+  groupId,
+  groupName,
+  memberCount,
+  canManageMembers,
+  enabled,
+}: Props) {
   const { t } = useTranslation(["adManagement", "common", "errors"]);
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
@@ -192,7 +189,7 @@ export const AdGroupMembersSection = forwardRef<HTMLDivElement, Props>(function 
   });
 
   return (
-    <div ref={ref} tabIndex={-1} className="scroll-mt-4 outline-none">
+    <>
       <SectionCard
         title={t("adManagement:groups.detail.membersTitle")}
         description={sectionDescription}
@@ -320,6 +317,6 @@ export const AdGroupMembersSection = forwardRef<HTMLDivElement, Props>(function 
           />
         </>
       ) : null}
-    </div>
+    </>
   );
-});
+}
