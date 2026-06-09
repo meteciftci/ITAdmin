@@ -46,6 +46,33 @@ import type { AdGroupMemberItem } from "@/features/ad-management/types";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { cn } from "@/lib/utils";
 
+const APP_SCROLL_CONTAINER_SELECTOR = "[data-app-scroll-container='true']";
+const APP_SCROLL_OFFSET = 16;
+
+function scrollElementIntoAppContainer(
+  element: HTMLElement,
+  behavior: ScrollBehavior = "smooth",
+): boolean {
+  const scrollContainer = element.closest(APP_SCROLL_CONTAINER_SELECTOR) as HTMLElement | null;
+
+  if (!scrollContainer) {
+    element.scrollIntoView({ behavior, block: "start" });
+    return true;
+  }
+
+  const containerRect = scrollContainer.getBoundingClientRect();
+  const elementRect = element.getBoundingClientRect();
+  const nextTop =
+    scrollContainer.scrollTop + elementRect.top - containerRect.top - APP_SCROLL_OFFSET;
+
+  scrollContainer.scrollTo({
+    top: Math.max(0, nextTop),
+    behavior,
+  });
+
+  return true;
+}
+
 function MemberList({
   items,
   truncated,
@@ -156,7 +183,7 @@ export function AdGroupDetailPage() {
       return false;
     }
 
-    element.scrollIntoView({ behavior, block: "start" });
+    scrollElementIntoAppContainer(element, behavior);
     element.focus({ preventScroll: true });
     return true;
   }, []);
@@ -172,40 +199,39 @@ export function AdGroupDetailPage() {
     }
 
     let cancelled = false;
-    let frameId = 0;
-    let timeoutId: number | undefined;
-    let attempts = 0;
+    const timeouts: number[] = [];
 
-    const tryScroll = () => {
-      if (cancelled) {
-        return;
-      }
+    const scheduleScroll = (delay: number, behavior: ScrollBehavior) => {
+      const timeoutId = window.setTimeout(() => {
+        if (cancelled) {
+          return;
+        }
 
-      attempts += 1;
+        window.requestAnimationFrame(() => {
+          if (cancelled) {
+            return;
+          }
 
-      const didScroll = scrollToMembersSection();
-      if (didScroll) {
-        lastMembersScrollKeyRef.current = navigationKey;
-        return;
-      }
+          const didScroll = scrollToMembersSection(behavior);
+          if (didScroll && delay >= 300) {
+            lastMembersScrollKeyRef.current = navigationKey;
+          }
+        });
+      }, delay);
 
-      if (attempts < 5) {
-        timeoutId = window.setTimeout(() => {
-          frameId = window.requestAnimationFrame(tryScroll);
-        }, 50);
-      }
+      timeouts.push(timeoutId);
     };
 
-    frameId = window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(tryScroll);
-    });
+    scheduleScroll(0, "auto");
+    scheduleScroll(100, "auto");
+    scheduleScroll(300, "auto");
+    scheduleScroll(600, "auto");
 
     return () => {
       cancelled = true;
-      window.cancelAnimationFrame(frameId);
-      if (timeoutId !== undefined) {
+      timeouts.forEach((timeoutId) => {
         window.clearTimeout(timeoutId);
-      }
+      });
     };
   }, [group, location.key, scrollToMembersSection, searchParams]);
 
@@ -263,7 +289,7 @@ export function AdGroupDetailPage() {
               {(canManageMembers || canDeleteGroup) && group ? (
                 <RowActions label={t("adManagement:groups.detail.actions.operations")}>
                   {canManageMembers ? (
-                    <DropdownMenuItem onClick={() => scrollToMembersSection()}>
+                    <DropdownMenuItem onClick={() => scrollToMembersSection("smooth")}>
                       {t("adManagement:groups.actions.manageMembers")}
                     </DropdownMenuItem>
                   ) : null}

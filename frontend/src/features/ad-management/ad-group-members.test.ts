@@ -45,24 +45,25 @@ describe("Ad group member management UI", () => {
     assert.doesNotMatch(detailSource, /groups\.members\.add/);
   });
 
-  it("retries members section scroll until target is ready for section=members navigation", () => {
+  it("scrolls members section through app layout container with scheduled deep-link retries", () => {
     const detailSource = readFileSync(
       new URL("./AdGroupDetailPage.tsx", import.meta.url),
       "utf8",
     );
 
     assert.match(detailSource, /searchParams\.get\("section"\)/);
-    assert.match(detailSource, /const tryScroll = \(\) =>/);
-    assert.match(detailSource, /const didScroll = scrollToMembersSection\(\)/);
+    assert.match(detailSource, /data-app-scroll-container='true'/);
+    assert.match(detailSource, /scrollElementIntoAppContainer/);
+    assert.match(detailSource, /scrollContainer\.scrollTo/);
+    assert.match(detailSource, /scrollIntoView\(\{ behavior, block: "start" \}\)/);
+    assert.match(detailSource, /const scheduleScroll = \(delay: number, behavior: ScrollBehavior\)/);
+    assert.match(detailSource, /scheduleScroll\(0, "auto"\)/);
+    assert.match(detailSource, /scheduleScroll\(600, "auto"\)/);
     assert.match(
       detailSource,
-      /const didScroll = scrollToMembersSection\(\)[\s\S]*lastMembersScrollKeyRef\.current = navigationKey/,
+      /if \(didScroll && delay >= 300\) \{[\s\S]*lastMembersScrollKeyRef\.current = navigationKey/,
     );
-    assert.doesNotMatch(
-      detailSource,
-      /lastMembersScrollKeyRef\.current = navigationKey;\s*const frameId = requestAnimationFrame/,
-    );
-    assert.match(detailSource, /scrollIntoView\(\{ behavior, block: "start" \}\)/);
+    assert.match(detailSource, /scrollToMembersSection\("smooth"\)/);
     assert.match(detailSource, /if \(!element\) \{[\s\S]*return false/);
   });
 
