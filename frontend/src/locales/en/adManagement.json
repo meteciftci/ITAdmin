@@ -429,6 +429,7 @@
       "actions": {
         "detail": "Detail",
         "edit": "Edit",
+        "manageMembers": "Manage Memberships",
         "delete": "Delete",
         "back": "Back"
       },
@@ -520,6 +521,8 @@
         "truncatedNotice": "Results are limited. More records may exist."
       },
       "members": {
+        "descriptionManage": "View, add, or remove direct group members.",
+        "descriptionView": "View direct group members.",
         "searchPlaceholder": "Search members",
         "typeFilter": "Type",
         "types": {

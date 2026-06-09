@@ -16,6 +16,7 @@ import { buildAdGroupsListReturnState } from "@/features/ad-management/ad-groups
 import {
   buildAdGroupDetailPath,
   buildAdGroupEditPath,
+  buildAdGroupMembersPath,
 } from "@/features/ad-management/ad-group-detail-path";
 import {
   AD_MANAGEMENT_GROUPS_QUERY_KEY,
@@ -35,6 +36,7 @@ export function AdGroupsPage() {
   const currentUser = useAuthStore((state) => state.user);
   const canCreateGroup = canAccess(currentUser, "AdManagement.Groups.Create");
   const canUpdateGroup = canAccess(currentUser, "AdManagement.Groups.Update");
+  const canManageMembers = canAccess(currentUser, "AdManagement.Groups.ManageMembers");
   const canDeleteGroup = canAccess(currentUser, "AdManagement.Groups.Delete");
   const [deleteGroupId, setDeleteGroupId] = useState<string | null>(null);
   const moduleStatus = useAdManagementModuleStatus();
@@ -69,6 +71,7 @@ export function AdGroupsPage() {
       createAdGroupColumns({
         t,
         canUpdateGroup,
+        canManageMembers,
         canDeleteGroup,
         onDetail: (group) => {
           navigate(buildAdGroupDetailPath(group.id), {
@@ -80,11 +83,16 @@ export function AdGroupsPage() {
             state: buildAdGroupsListReturnState(),
           });
         },
+        onManageMembers: (group) => {
+          navigate(buildAdGroupMembersPath(group.id), {
+            state: buildAdGroupsListReturnState(),
+          });
+        },
         onDelete: (group) => {
           setDeleteGroupId(group.id);
         },
       }),
-    [t, navigate, canUpdateGroup, canDeleteGroup],
+    [t, navigate, canUpdateGroup, canManageMembers, canDeleteGroup],
   );
 
   const table = useServerDataTable({

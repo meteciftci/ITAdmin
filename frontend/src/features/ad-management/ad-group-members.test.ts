@@ -3,6 +3,29 @@ import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
 describe("Ad group member management UI", () => {
+  it("describes member management purpose in section card description", () => {
+    const sectionSource = readFileSync(
+      new URL("./components/AdGroupMembersSection.tsx", import.meta.url),
+      "utf8",
+    );
+    const trLocale = readFileSync(
+      new URL("../../locales/tr/adManagement.json", import.meta.url),
+      "utf8",
+    );
+    const enLocale = readFileSync(
+      new URL("../../locales/en/adManagement.json", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(sectionSource, /groups\.members\.descriptionManage/);
+    assert.match(sectionSource, /groups\.members\.descriptionView/);
+    assert.match(sectionSource, /groups\.detail\.memberCount/);
+    assert.match(sectionSource, /tabIndex=\{-1\}/);
+    assert.match(sectionSource, /forwardRef/);
+    assert.match(trLocale, /"descriptionManage": "Doğrudan grup üyelerini görüntüleyin, ekleyin veya çıkarın."/);
+    assert.match(enLocale, /"descriptionManage": "View, add, or remove direct group members."/);
+  });
+
   it("shows add member action only when ManageMembers permission is available", () => {
     const sectionSource = readFileSync(
       new URL("./components/AdGroupMembersSection.tsx", import.meta.url),
@@ -17,6 +40,9 @@ describe("Ad group member management UI", () => {
     assert.match(sectionSource, /groups\.members\.add/);
     assert.match(sectionSource, /groups\.members\.remove/);
     assert.match(detailSource, /canManageMembers=\{canManageMembers\}/);
+    assert.match(detailSource, /groups\.actions\.manageMembers/);
+    assert.match(detailSource, /scrollToMembersSection/);
+    assert.doesNotMatch(detailSource, /groups\.members\.add/);
   });
 
   it("uses member column header in members list and keeps selectCandidate in add dialog only", () => {

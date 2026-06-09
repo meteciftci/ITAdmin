@@ -429,6 +429,7 @@
       "actions": {
         "detail": "Detay",
         "edit": "Düzenle",
+        "manageMembers": "Üyelikleri Yönet",
         "delete": "Sil",
         "back": "Geri Dön"
       },
@@ -520,6 +521,8 @@
         "truncatedNotice": "Sonuçlar sınırlandırıldı. Daha fazla kayıt olabilir."
       },
       "members": {
+        "descriptionManage": "Doğrudan grup üyelerini görüntüleyin, ekleyin veya çıkarın.",
+        "descriptionView": "Doğrudan grup üyelerini görüntüleyin.",
         "searchPlaceholder": "Üyelerde ara",
         "typeFilter": "Tür",
         "types": {

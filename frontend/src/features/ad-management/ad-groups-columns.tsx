@@ -18,18 +18,22 @@ import type { AdGroupListItem } from "@/features/ad-management/types";
 type CreateAdGroupColumnsOptions = {
   t: TFunction;
   canUpdateGroup: boolean;
+  canManageMembers: boolean;
   canDeleteGroup: boolean;
   onDetail: (group: AdGroupListItem) => void;
   onEdit: (group: AdGroupListItem) => void;
+  onManageMembers: (group: AdGroupListItem) => void;
   onDelete: (group: AdGroupListItem) => void;
 };
 
 export function createAdGroupColumns({
   t,
   canUpdateGroup,
+  canManageMembers,
   canDeleteGroup,
   onDetail,
   onEdit,
+  onManageMembers,
   onDelete,
 }: CreateAdGroupColumnsOptions): ColumnDef<AdGroupListItem, unknown>[] {
   return [
@@ -96,6 +100,11 @@ export function createAdGroupColumns({
           {canUpdateGroup ? (
             <DropdownMenuItem onClick={() => onEdit(row.original)}>
               {t("adManagement:groups.actions.edit")}
+            </DropdownMenuItem>
+          ) : null}
+          {canManageMembers ? (
+            <DropdownMenuItem onClick={() => onManageMembers(row.original)}>
+              {t("adManagement:groups.actions.manageMembers")}
             </DropdownMenuItem>
           ) : null}
           {canDeleteGroup ? (

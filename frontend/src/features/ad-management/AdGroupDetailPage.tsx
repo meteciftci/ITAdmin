@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AxiosError } from "axios";
 
@@ -16,7 +16,7 @@ import { SectionCard } from "@/components/common/SectionCard";
 import { Badge } from "@/components/ui/badge";
 import { RowActions } from "@/components/common/RowActions";
 import { Button } from "@/components/ui/button";
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { isGuidLike } from "@/features/ad-management/ad-user-detail-utils";
 import {
   getAdGroupMemberPrimaryLabel,
@@ -118,7 +118,10 @@ export function AdGroupDetailPage() {
   const canManageMembers = canAccess(currentUser, "AdManagement.Groups.ManageMembers");
   const { id: groupId } = useParams<{ id: string }>();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const membersSectionRef = useRef<HTMLDivElement>(null);
+  const lastMembersScrollKeyRef = useRef<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const moduleStatus = useAdManagementModuleStatus();
   const hasValidId = Boolean(groupId?.trim()) && isGuidLike(groupId);
@@ -146,6 +149,31 @@ export function AdGroupDetailPage() {
 
     return secondaryLabel ?? group.samAccountName ?? group.distinguishedName;
   }, [group, secondaryLabel]);
+
+  const scrollToMembersSection = useCallback(() => {
+    membersSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    membersSectionRef.current?.focus({ preventScroll: true });
+  }, []);
+
+  useEffect(() => {
+    if (!group || searchParams.get("section") !== "members") {
+      return;
+    }
+
+    const navigationKey = `${location.key}:members`;
+    if (lastMembersScrollKeyRef.current === navigationKey) {
+      return;
+    }
+
+    lastMembersScrollKeyRef.current = navigationKey;
+    const frameId = requestAnimationFrame(() => {
+      scrollToMembersSection();
+    });
+
+    return () => {
+      cancelAnimationFrame(frameId);
+    };
+  }, [group, location.key, scrollToMembersSection, searchParams]);
 
   const isNotFound =
     groupQuery.isError
@@ -198,14 +226,24 @@ export function AdGroupDetailPage() {
                   {t("adManagement:groups.actions.edit")}
                 </Link>
               ) : null}
-              {canDeleteGroup && group ? (
+              {(canManageMembers || canDeleteGroup) && group ? (
                 <RowActions label={t("adManagement:groups.detail.actions.operations")}>
-                  <DropdownMenuItem
-                    className="text-destructive focus:text-destructive"
-                    onClick={() => setDeleteDialogOpen(true)}
-                  >
-                    {t("adManagement:groups.actions.delete")}
-                  </DropdownMenuItem>
+                  {canManageMembers ? (
+                    <DropdownMenuItem onClick={scrollToMembersSection}>
+                      {t("adManagement:groups.actions.manageMembers")}
+                    </DropdownMenuItem>
+                  ) : null}
+                  {canDeleteGroup ? (
+                    <>
+                      {canManageMembers ? <DropdownMenuSeparator /> : null}
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onClick={() => setDeleteDialogOpen(true)}
+                      >
+                        {t("adManagement:groups.actions.delete")}
+                      </DropdownMenuItem>
+                    </>
+                  ) : null}
                 </RowActions>
               ) : null}
             </div>
@@ -308,6 +346,7 @@ export function AdGroupDetailPage() {
             </SectionCard>
 
             <AdGroupMembersSection
+              ref={membersSectionRef}
               groupId={group.id}
               groupName={primaryLabel}
               memberCount={group.memberCount}

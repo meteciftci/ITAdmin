@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { forwardRef, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useTranslation } from "react-i18next";
@@ -49,13 +49,16 @@ type Props = {
   enabled: boolean;
 };
 
-export function AdGroupMembersSection({
-  groupId,
-  groupName,
-  memberCount,
-  canManageMembers,
-  enabled,
-}: Props) {
+export const AdGroupMembersSection = forwardRef<HTMLDivElement, Props>(function AdGroupMembersSection(
+  {
+    groupId,
+    groupName,
+    memberCount,
+    canManageMembers,
+    enabled,
+  },
+  ref,
+) {
   const { t } = useTranslation(["adManagement", "common", "errors"]);
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
@@ -116,6 +119,11 @@ export function AdGroupMembersSection({
   const rangeStart = totalCount === 0 ? 0 : (pageNumber - 1) * pageSize + 1;
   const rangeEnd = totalCount === 0 ? 0 : Math.min(pageNumber * pageSize, totalCount);
   const hasActiveFilters = search.trim().length > 0 || typeFilter !== "all";
+  const memberCountText = t("adManagement:groups.detail.memberCount", { count: totalCount });
+  const purposeText = canManageMembers
+    ? t("adManagement:groups.members.descriptionManage")
+    : t("adManagement:groups.members.descriptionView");
+  const sectionDescription = `${memberCountText} · ${purposeText}`;
 
   const columns = useMemo((): ColumnDef<AdGroupMemberListItem, unknown>[] => {
     const memberColumns: ColumnDef<AdGroupMemberListItem, unknown>[] = [
@@ -184,10 +192,10 @@ export function AdGroupMembersSection({
   });
 
   return (
-    <>
+    <div ref={ref} tabIndex={-1} className="scroll-mt-4 outline-none">
       <SectionCard
         title={t("adManagement:groups.detail.membersTitle")}
-        description={t("adManagement:groups.detail.memberCount", { count: totalCount })}
+        description={sectionDescription}
         actions={
           canManageMembers ? (
             <Button type="button" size="sm" onClick={() => setAddDialogOpen(true)}>
@@ -312,6 +320,6 @@ export function AdGroupMembersSection({
           />
         </>
       ) : null}
-    </>
+    </div>
   );
-}
+});

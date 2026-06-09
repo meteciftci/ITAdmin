@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
-import { buildAdGroupDetailPath } from "./ad-group-detail-path.ts";
+import {
+  buildAdGroupDetailPath,
+  buildAdGroupMembersPath,
+} from "./ad-group-detail-path.ts";
 import {
   getAdGroupPrimaryLabel,
   getAdGroupSecondaryLabel,
@@ -21,6 +24,17 @@ const listPath = AD_GROUPS_LIST_PATH;
 describe("ad groups navigation", () => {
   it("builds group detail path", () => {
     assert.equal(buildAdGroupDetailPath(groupId), `${listPath}/${groupId}`);
+  });
+
+  it("builds group members path with section query param", () => {
+    assert.equal(
+      buildAdGroupMembersPath(groupId),
+      `${listPath}/${groupId}?section=members`,
+    );
+    assert.equal(
+      buildAdGroupDetailPath(groupId, { section: "members" }),
+      `${listPath}/${groupId}?section=members`,
+    );
   });
 
   it("returns detail path from detail return state", () => {
@@ -129,14 +143,24 @@ describe("ad groups route and menu wiring", () => {
     assert.match(detailSource, /getAdGroupMemberPrimaryLabel/);
     assert.match(detailSource, /membersTruncated|memberOfTruncated/);
     assert.doesNotMatch(detailSource, /AddUserToGroup|RemoveUserFromGroup|manageGroups/i);
+    assert.match(pageSource, /canManageMembers/);
+    assert.match(pageSource, /AdManagement\.Groups\.ManageMembers/);
+    assert.match(pageSource, /buildAdGroupMembersPath/);
     assert.match(pageSource, /canDeleteGroup/);
     assert.match(pageSource, /AdDeleteGroupConfirmDialog/);
     assert.match(detailSource, /canDeleteGroup/);
     assert.match(detailSource, /groups\.actions\.delete/);
     assert.match(detailSource, /AdDeleteGroupConfirmDialog/);
     assert.match(detailSource, /canManageMembers/);
+    assert.match(detailSource, /groups\.actions\.manageMembers/);
+    assert.match(detailSource, /scrollToMembersSection/);
+    assert.match(detailSource, /searchParams\.get\("section"\)/);
     assert.match(detailSource, /AdGroupMembersSection/);
     assert.match(detailSource, /AdManagement\.Groups\.ManageMembers/);
+    assert.match(columnsSource, /canManageMembers/);
+    assert.match(columnsSource, /onManageMembers/);
+    assert.match(columnsSource, /groups\.actions\.manageMembers/);
+    assert.doesNotMatch(columnsSource, /groups\.members\.add|groups\.members\.remove/);
   });
 
   it("does not render separate name, cn, samAccountName, or distinguishedName list columns", () => {
@@ -191,9 +215,12 @@ describe("ad groups route and menu wiring", () => {
     assert.match(actionsSection, /canUpdateGroup/);
     assert.match(actionsSection, /groups\.actions\.edit/);
     assert.doesNotMatch(actionsSection, /groups\.actions\.create/);
+    assert.match(actionsSection, /canManageMembers/);
+    assert.match(actionsSection, /groups\.actions\.manageMembers/);
     assert.match(actionsSection, /canDeleteGroup/);
     assert.match(actionsSection, /groups\.actions\.delete/);
     assert.match(actionsSection, /DropdownMenuSeparator/);
+    assert.doesNotMatch(actionsSection, /groups\.members\.add|groups\.members\.remove/);
   });
 
   it("navigates to edit from list with list return state and from detail with detail return state", () => {
