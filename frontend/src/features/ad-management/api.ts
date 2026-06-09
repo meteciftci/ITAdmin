@@ -19,6 +19,8 @@ import type {
   AdUserGroupOperationResponse,
   MoveAdUserOuRequest,
   MoveAdUserOuResponse,
+  MoveAdGroupOuRequest,
+  MoveAdGroupOuResponse,
   AdGroupSearchResponse,
   CreateAdUserRequest,
   CreateAdUserResponse,
@@ -210,6 +212,17 @@ export const deleteAdGroup = async (groupId: string): Promise<DeleteAdGroupRespo
   return data;
 };
 
+export const moveAdGroupOu = async (
+  groupId: string,
+  payload: MoveAdGroupOuRequest,
+): Promise<MoveAdGroupOuResponse> => {
+  const { data } = await apiClient.post<MoveAdGroupOuResponse>(
+    `/ad-management/groups/${groupId}/move-ou`,
+    payload,
+  );
+  return data;
+};
+
 export const searchGroupOrganizationalUnits = async (params: {
   search?: string;
   pageSize?: number;
@@ -231,6 +244,15 @@ export async function invalidateAdManagementGroupQueries(
 ): Promise<void> {
   await queryClient.invalidateQueries({
     queryKey: AD_MANAGEMENT_GROUPS_QUERY_KEY,
+  });
+}
+
+export async function invalidateAdGroupOuMoveQueries(
+  queryClient: QueryClient,
+): Promise<void> {
+  await invalidateAdManagementGroupQueries(queryClient);
+  await queryClient.invalidateQueries({
+    queryKey: AD_OPERATION_LOGS_QUERY_KEY,
   });
 }
 

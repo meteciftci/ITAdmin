@@ -47,6 +47,7 @@
       "UserGroupAdd": "Add to group",
       "UserGroupRemove": "Remove from group",
       "UserOuMove": "Move OU",
+      "GroupMoveOu": "Move group OU",
       "UserManagerUpdate": "Manager update",
       "UserAccountExpirationUpdate": "Account expiration update",
       "GroupCreate": "Create group",

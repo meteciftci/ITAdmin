@@ -430,8 +430,25 @@
         "detail": "Detail",
         "edit": "Edit",
         "manageMembers": "Manage Memberships",
+        "moveOu": "Move OU",
         "delete": "Delete",
         "back": "Back"
+      },
+      "moveOu": {
+        "title": "Move Group to OU",
+        "description": "Move the group to another OU within the allowed OU scope.",
+        "currentOu": "Current OU",
+        "targetOu": "Target OU",
+        "submit": "Move",
+        "success": "Group moved to OU.",
+        "error": "Group could not be moved to OU.",
+        "sameOu": "Target OU cannot be the same as the current OU.",
+        "sections": {
+          "groupSummary": "Group summary"
+        },
+        "warnings": {
+          "groupsSearchBaseScope": "The group can only be moved to OUs within the groups search base scope."
+        }
       },
       "delete": {
         "title": "Delete Group",

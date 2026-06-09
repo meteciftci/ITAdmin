@@ -430,8 +430,25 @@
         "detail": "Detay",
         "edit": "Düzenle",
         "manageMembers": "Üyelikleri Yönet",
+        "moveOu": "OU Taşı",
         "delete": "Sil",
         "back": "Geri Dön"
+      },
+      "moveOu": {
+        "title": "Grubu OU'ya Taşı",
+        "description": "Grubu izinli OU kapsamı içinde başka bir OU'ya taşıyın.",
+        "currentOu": "Mevcut OU",
+        "targetOu": "Hedef OU",
+        "submit": "Taşı",
+        "success": "Grup OU'ya taşındı.",
+        "error": "Grup OU'ya taşınamadı.",
+        "sameOu": "Hedef OU mevcut OU ile aynı olamaz.",
+        "sections": {
+          "groupSummary": "Grup özeti"
+        },
+        "warnings": {
+          "groupsSearchBaseScope": "Grup yalnızca gruplar arama base kapsamındaki OU'lara taşınabilir."
+        }
       },
       "delete": {
         "title": "Grubu Sil",

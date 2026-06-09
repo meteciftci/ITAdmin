@@ -503,6 +503,22 @@ export type MoveAdUserOuResponse = {
   targetOuDistinguishedName: string | null;
 };
 
+export type MoveAdGroupOuRequest = {
+  targetOuDistinguishedName: string;
+};
+
+export type MoveAdGroupOuResponse = {
+  success: boolean;
+  message: string;
+  groupId: string;
+  displayName: string | null;
+  name: string | null;
+  samAccountName: string | null;
+  distinguishedName: string | null;
+  previousDistinguishedName: string | null;
+  targetOuDistinguishedName: string | null;
+};
+
 export type AdUserGroupMembershipItem = {
   distinguishedName: string;
   displayName: string | null;

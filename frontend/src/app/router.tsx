@@ -137,6 +137,11 @@ const AdEditGroupPage = lazy(() =>
     default: module.AdEditGroupPage,
   })),
 );
+const AdMoveGroupOuPage = lazy(() =>
+  import("@/features/ad-management/AdMoveGroupOuPage").then((module) => ({
+    default: module.AdMoveGroupOuPage,
+  })),
+);
 const ErrorPage = lazy(() =>
   import("@/pages/ErrorPage").then((module) => ({ default: module.ErrorPage })),
 );
@@ -562,6 +567,20 @@ export const router = createBrowserRouter([
           <AppLayout>
             <LazyRoute>
               <AdEditGroupPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/ad-management/groups/:id/move-ou",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission="AdManagement.Groups.MoveOu">
+          <AppLayout>
+            <LazyRoute>
+              <AdMoveGroupOuPage />
             </LazyRoute>
           </AppLayout>
         </RequirePermission>

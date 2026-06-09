@@ -308,6 +308,77 @@ public sealed class AdManagementController(
             result.DeletedGroupId));
     }
 
+    [HttpPost("groups/{id}/move-ou")]
+    [RequirePermission(AdManagementPermissions.GroupsMoveOu)]
+    public async Task<ActionResult<MoveAdGroupOuResponse>> MoveGroupOu(
+        [FromRoute] string id,
+        [FromBody] MoveAdGroupOuRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Guid.TryParse(id, out var objectGuid))
+        {
+            return BadRequest(new MoveAdGroupOuResponse(
+                false,
+                "Geçersiz grup kimliği.",
+                id,
+                null,
+                null,
+                null,
+                null,
+                null,
+                request.TargetOuDistinguishedName));
+        }
+
+        if (string.IsNullOrWhiteSpace(request.TargetOuDistinguishedName))
+        {
+            return BadRequest(new MoveAdGroupOuResponse(
+                false,
+                "Hedef OU seçimi zorunludur.",
+                id,
+                null,
+                null,
+                null,
+                null,
+                null,
+                request.TargetOuDistinguishedName));
+        }
+
+        var result = await adGroupDirectoryService.MoveGroupOuAsync(
+            new AppModels.MoveAdGroupOuRequest(
+                objectGuid,
+                request.TargetOuDistinguishedName.Trim(),
+                ResolveActorUserId(User),
+                ResolveActorUserName(User),
+                ResolveIpAddress(),
+                ResolveUserAgent()),
+            cancellationToken);
+
+        var response = new MoveAdGroupOuResponse(
+            result.IsSuccess,
+            result.Message,
+            result.GroupId ?? id,
+            result.DisplayName,
+            result.Name,
+            result.SamAccountName,
+            result.DistinguishedName,
+            result.PreviousDistinguishedName,
+            result.TargetOuDistinguishedName);
+
+        if (result.IsSuccess)
+        {
+            return Ok(response);
+        }
+
+        return result.FailureKind switch
+        {
+            AppModels.AdDirectoryFailureKind.NotFound => NotFound(response),
+            AppModels.AdDirectoryFailureKind.ConnectionFailed => StatusCode(
+                StatusCodes.Status503ServiceUnavailable,
+                response),
+            _ => BadRequest(response),
+        };
+    }
+
     [HttpGet("groups/{id}/members")]
     [RequirePermission(AdManagementPermissions.GroupsView)]
     public async Task<ActionResult<AdGroupMembersListResponse>> GetGroupMembers(
@@ -417,7 +488,9 @@ public sealed class AdManagementController(
             cancellationToken);
 
     [HttpGet("group-organizational-units")]
-    [RequirePermission(AdManagementPermissions.GroupsCreate)]
+    [RequireAnyPermission(
+        AdManagementPermissions.GroupsCreate,
+        AdManagementPermissions.GroupsMoveOu)]
     public async Task<ActionResult<AdOrganizationalUnitSearchResponse>> SearchGroupOrganizationalUnits(
         [FromQuery] string? search,
         [FromQuery] int pageSize = 50,

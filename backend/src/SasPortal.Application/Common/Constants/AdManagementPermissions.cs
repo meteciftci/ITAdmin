@@ -18,6 +18,7 @@ public static class AdManagementPermissions
     public const string GroupsUpdate = "AdManagement.Groups.Update";
     public const string GroupsDelete = "AdManagement.Groups.Delete";
     public const string GroupsManageMembers = "AdManagement.Groups.ManageMembers";
+    public const string GroupsMoveOu = "AdManagement.Groups.MoveOu";
     public const string UsersMoveOu = "AdManagement.Users.MoveOu";
     public const string OperationLogsView = "AdOperationLogs.View";
 }

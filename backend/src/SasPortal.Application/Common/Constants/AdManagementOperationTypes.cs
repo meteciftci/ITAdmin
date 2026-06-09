@@ -22,6 +22,7 @@ public static class AdManagementOperationTypes
     public const string GroupDelete = "GroupDelete";
     public const string GroupMemberAdd = "GroupMemberAdd";
     public const string GroupMemberRemove = "GroupMemberRemove";
+    public const string GroupMoveOu = "GroupMoveOu";
 }
 
 public static class AdManagementTargetUserTypes

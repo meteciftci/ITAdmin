@@ -186,6 +186,40 @@ public static class AdOperationLogSnapshotBuilder
             },
             SerializerOptions);
 
+    public static string BuildGroupOuMoveRequestSummary(
+        Guid groupId,
+        string? sourceDistinguishedName,
+        string targetOuDistinguishedName) =>
+        JsonSerializer.Serialize(
+            new
+            {
+                operation = AdManagementOperationTypes.GroupMoveOu,
+                groupId = groupId.ToString("D"),
+                sourceDistinguishedName,
+                targetOuDistinguishedName,
+            },
+            SerializerOptions);
+
+    public static string BuildGroupOuMoveBeforeSnapshot(AdGroupDetail group, string? parentOuDistinguishedName) =>
+        JsonSerializer.Serialize(
+            new
+            {
+                operation = AdManagementOperationTypes.GroupMoveOu,
+                group = CreateGroupSnapshotBody(group),
+                ou = new { distinguishedName = parentOuDistinguishedName },
+            },
+            SerializerOptions);
+
+    public static string BuildGroupOuMoveAfterSnapshot(AdGroupDetail group, string? parentOuDistinguishedName) =>
+        JsonSerializer.Serialize(
+            new
+            {
+                operation = AdManagementOperationTypes.GroupMoveOu,
+                group = CreateGroupSnapshotBody(group),
+                ou = new { distinguishedName = parentOuDistinguishedName },
+            },
+            SerializerOptions);
+
     public static string BuildUserManagerUpdateRequestSummary(
         Guid userId,
         Guid? managerUserId,

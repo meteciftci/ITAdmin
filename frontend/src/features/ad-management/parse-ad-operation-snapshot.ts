@@ -341,7 +341,7 @@ const ACCOUNT_STATUS_OPERATION_TYPES = new Set(["UserEnable", "UserDisable"]);
 const LOCK_STATUS_OPERATION_TYPES = new Set(["UserUnlock"]);
 const GROUP_MEMBERSHIP_OPERATION_TYPES = new Set(["UserGroupAdd", "UserGroupRemove"]);
 const GROUP_MEMBER_OPERATION_TYPES = new Set(["GroupMemberAdd", "GroupMemberRemove"]);
-const OU_MOVE_OPERATION_TYPES = new Set(["UserOuMove"]);
+const OU_MOVE_OPERATION_TYPES = new Set(["UserOuMove", "GroupMoveOu"]);
 const USER_MANAGER_UPDATE_OPERATION_TYPES = new Set(["UserManagerUpdate"]);
 const USER_ACCOUNT_EXPIRATION_UPDATE_OPERATION_TYPES = new Set(["UserAccountExpirationUpdate"]);
 
@@ -714,6 +714,11 @@ export function buildOuMoveComparisonRows(
   before: ParsedNestedAdOperationSnapshot | null,
   after: ParsedNestedAdOperationSnapshot | null,
 ): SnapshotComparisonRow[] {
+  const beforeIdentityDn =
+    before?.user?.distinguishedName ?? before?.group?.distinguishedName ?? null;
+  const afterIdentityDn =
+    after?.user?.distinguishedName ?? after?.group?.distinguishedName ?? null;
+
   const rows = [
     buildComparisonRow(
       "ou",
@@ -724,8 +729,8 @@ export function buildOuMoveComparisonRows(
     ),
     buildComparisonRow(
       "distinguishedName",
-      before?.user?.distinguishedName ?? null,
-      after?.user?.distinguishedName ?? null,
+      beforeIdentityDn,
+      afterIdentityDn,
       true,
       true,
     ),

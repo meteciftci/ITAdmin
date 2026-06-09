@@ -32,6 +32,7 @@ import {
 import {
   buildAdGroupEditPath,
   buildAdGroupMembersPath,
+  buildAdGroupMoveOuPath,
 } from "@/features/ad-management/ad-group-detail-path";
 import { adDetailActionButtonSizingClass, adDetailEditButtonClass, adDetailOutlineButtonClass } from "@/features/ad-management/ad-user-detail-button-styles";
 import {
@@ -119,6 +120,7 @@ export function AdGroupDetailPage() {
   const canUpdateGroup = canAccess(currentUser, "AdManagement.Groups.Update");
   const canDeleteGroup = canAccess(currentUser, "AdManagement.Groups.Delete");
   const canManageMembers = canAccess(currentUser, "AdManagement.Groups.ManageMembers");
+  const canMoveOu = canAccess(currentUser, "AdManagement.Groups.MoveOu");
   const { id: groupId } = useParams<{ id: string }>();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -309,7 +311,7 @@ export function AdGroupDetailPage() {
                   {t("adManagement:groups.actions.edit")}
                 </Link>
               ) : null}
-              {(canManageMembers || canDeleteGroup) && group ? (
+              {(canManageMembers || canMoveOu || canDeleteGroup) && group ? (
                 <RowActions label={t("adManagement:groups.detail.actions.operations")}>
                   {canManageMembers ? (
                     <DropdownMenuItem
@@ -327,9 +329,24 @@ export function AdGroupDetailPage() {
                       {t("adManagement:groups.actions.manageMembers")}
                     </DropdownMenuItem>
                   ) : null}
+                  {canMoveOu ? (
+                    <DropdownMenuItem
+                      onClick={() => {
+                        if (!group) {
+                          return;
+                        }
+
+                        navigate(buildAdGroupMoveOuPath(group.id), {
+                          state: buildAdGroupDetailReturnState(group.id),
+                        });
+                      }}
+                    >
+                      {t("adManagement:groups.actions.moveOu")}
+                    </DropdownMenuItem>
+                  ) : null}
                   {canDeleteGroup ? (
                     <>
-                      {canManageMembers ? <DropdownMenuSeparator /> : null}
+                      {canManageMembers || canMoveOu ? <DropdownMenuSeparator /> : null}
                       <DropdownMenuItem
                         className="text-destructive focus:text-destructive"
                         onClick={() => setDeleteDialogOpen(true)}

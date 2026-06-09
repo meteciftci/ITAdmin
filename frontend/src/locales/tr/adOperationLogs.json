@@ -47,6 +47,7 @@
       "UserGroupAdd": "Gruba ekleme",
       "UserGroupRemove": "Gruptan çıkarma",
       "UserOuMove": "OU taşıma",
+      "GroupMoveOu": "Grup OU taşıma",
       "UserManagerUpdate": "Manager güncelleme",
       "UserAccountExpirationUpdate": "Hesap bitiş tarihi güncelleme",
       "GroupCreate": "Grup oluşturma",

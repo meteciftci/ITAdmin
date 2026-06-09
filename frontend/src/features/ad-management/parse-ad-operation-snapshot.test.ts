@@ -245,6 +245,36 @@ describe("parseNestedAdOperationSnapshot", () => {
     assert.equal(snapshot?.ou?.distinguishedName, "OU=Target,DC=corp,DC=local");
   });
 
+  it("builds ou move comparison rows for GroupMoveOu snapshots", () => {
+    const before = parseNestedAdOperationSnapshot(
+      JSON.stringify({
+        operation: "GroupMoveOu",
+        group: {
+          distinguishedName: "CN=VPN Users,OU=Source,OU=Groups,DC=corp,DC=local",
+        },
+        ou: { distinguishedName: "OU=Source,OU=Groups,DC=corp,DC=local" },
+      }),
+    );
+    const after = parseNestedAdOperationSnapshot(
+      JSON.stringify({
+        operation: "GroupMoveOu",
+        group: {
+          distinguishedName: "CN=VPN Users,OU=Target,OU=Groups,DC=corp,DC=local",
+        },
+        ou: { distinguishedName: "OU=Target,OU=Groups,DC=corp,DC=local" },
+      }),
+    );
+
+    const rows = buildOuMoveComparisonRows(before, after);
+    const ouRow = rows.find((row) => row.key === "ou");
+    const dnRow = rows.find((row) => row.key === "distinguishedName");
+
+    assert.equal(ouRow?.before, "OU=Source,OU=Groups,DC=corp,DC=local");
+    assert.equal(ouRow?.after, "OU=Target,OU=Groups,DC=corp,DC=local");
+    assert.equal(dnRow?.before, "CN=VPN Users,OU=Source,OU=Groups,DC=corp,DC=local");
+    assert.equal(dnRow?.after, "CN=VPN Users,OU=Target,OU=Groups,DC=corp,DC=local");
+  });
+
   it("builds membership comparison for UserGroupRemove", () => {
     const before = parseNestedAdOperationSnapshot(
       JSON.stringify({ membership: { isDirectMember: true } }),
@@ -338,6 +368,7 @@ describe("getSnapshotRenderStrategy", () => {
     assert.equal(getSnapshotRenderStrategy("UserGroupAdd"), "groupMembership");
     assert.equal(getSnapshotRenderStrategy("UserGroupRemove"), "groupMembership");
     assert.equal(getSnapshotRenderStrategy("UserOuMove"), "ouMove");
+    assert.equal(getSnapshotRenderStrategy("GroupMoveOu"), "ouMove");
     assert.equal(getSnapshotRenderStrategy("UserManagerUpdate"), "userManagerUpdate");
     assert.equal(getSnapshotRenderStrategy("UserAccountExpirationUpdate"), "userAccountExpirationUpdate");
     assert.equal(getSnapshotRenderStrategy("GroupCreate"), "groupCreate");

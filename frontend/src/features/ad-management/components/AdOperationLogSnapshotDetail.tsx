@@ -408,12 +408,14 @@ function LockStatusSnapshotSections({
 }
 
 function OuMoveSnapshotSections({
+  operationType,
   beforeSnapshotJson,
   afterSnapshotJson,
   noneLabel,
   emptyDash,
   t,
 }: {
+  operationType: string;
   beforeSnapshotJson: string | null | undefined;
   afterSnapshotJson: string | null | undefined;
   noneLabel: string;
@@ -432,9 +434,22 @@ function OuMoveSnapshotSections({
     () => resolveSnapshotUser(beforeSnapshot, afterSnapshot),
     [beforeSnapshot, afterSnapshot],
   );
+  const group = useMemo(
+    () => resolveSnapshotGroup(beforeSnapshot, afterSnapshot),
+    [beforeSnapshot, afterSnapshot],
+  );
   const ouMoveRows = useMemo(
     () => buildOuMoveComparisonRows(beforeSnapshot, afterSnapshot),
     [beforeSnapshot, afterSnapshot],
+  );
+  const isGroupMove = operationType === "GroupMoveOu";
+  const booleanLabels = useMemo(
+    () => ({ yes: t("snapshotSections.boolean.yes"), no: t("snapshotSections.boolean.no") }),
+    [t],
+  );
+  const formatBoolean = useMemo(
+    () => (value: boolean | null | undefined) => formatSnapshotBoolean(value, booleanLabels),
+    [booleanLabels],
   );
 
   const getOuMoveFieldLabel = (key: string) => {
@@ -450,8 +465,17 @@ function OuMoveSnapshotSections({
   return (
     <>
       <section className="space-y-3 border-t pt-4">
-        <h3 className="text-sm font-medium">{t("snapshotSections.user")}</h3>
-        <KeyValueGrid entries={getUserFieldEntries(t, user)} noneLabel={noneLabel} />
+        <h3 className="text-sm font-medium">
+          {isGroupMove ? t("snapshotSections.group") : t("snapshotSections.user")}
+        </h3>
+        <KeyValueGrid
+          entries={
+            isGroupMove
+              ? getGroupFieldEntries(t, group, formatBoolean)
+              : getUserFieldEntries(t, user)
+          }
+          noneLabel={noneLabel}
+        />
       </section>
 
       <section className="space-y-3 border-t pt-4">
@@ -1146,6 +1170,7 @@ export function AdOperationLogSnapshotDetail({
       case "ouMove":
         return (
           <OuMoveSnapshotSections
+            operationType={operationType}
             beforeSnapshotJson={beforeSnapshotJson}
             afterSnapshotJson={afterSnapshotJson}
             noneLabel={noneLabel}
