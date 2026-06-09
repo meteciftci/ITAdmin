@@ -150,9 +150,15 @@ export function AdGroupDetailPage() {
     return secondaryLabel ?? group.samAccountName ?? group.distinguishedName;
   }, [group, secondaryLabel]);
 
-  const scrollToMembersSection = useCallback(() => {
-    membersSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    membersSectionRef.current?.focus({ preventScroll: true });
+  const scrollToMembersSection = useCallback((behavior: ScrollBehavior = "smooth") => {
+    const element = membersSectionRef.current;
+    if (!element) {
+      return false;
+    }
+
+    element.scrollIntoView({ behavior, block: "start" });
+    element.focus({ preventScroll: true });
+    return true;
   }, []);
 
   useEffect(() => {
@@ -165,13 +171,41 @@ export function AdGroupDetailPage() {
       return;
     }
 
-    lastMembersScrollKeyRef.current = navigationKey;
-    const frameId = requestAnimationFrame(() => {
-      scrollToMembersSection();
+    let cancelled = false;
+    let frameId = 0;
+    let timeoutId: number | undefined;
+    let attempts = 0;
+
+    const tryScroll = () => {
+      if (cancelled) {
+        return;
+      }
+
+      attempts += 1;
+
+      const didScroll = scrollToMembersSection();
+      if (didScroll) {
+        lastMembersScrollKeyRef.current = navigationKey;
+        return;
+      }
+
+      if (attempts < 5) {
+        timeoutId = window.setTimeout(() => {
+          frameId = window.requestAnimationFrame(tryScroll);
+        }, 50);
+      }
+    };
+
+    frameId = window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(tryScroll);
     });
 
     return () => {
-      cancelAnimationFrame(frameId);
+      cancelled = true;
+      window.cancelAnimationFrame(frameId);
+      if (timeoutId !== undefined) {
+        window.clearTimeout(timeoutId);
+      }
     };
   }, [group, location.key, scrollToMembersSection, searchParams]);
 
@@ -229,7 +263,7 @@ export function AdGroupDetailPage() {
               {(canManageMembers || canDeleteGroup) && group ? (
                 <RowActions label={t("adManagement:groups.detail.actions.operations")}>
                   {canManageMembers ? (
-                    <DropdownMenuItem onClick={scrollToMembersSection}>
+                    <DropdownMenuItem onClick={() => scrollToMembersSection()}>
                       {t("adManagement:groups.actions.manageMembers")}
                     </DropdownMenuItem>
                   ) : null}

@@ -45,6 +45,27 @@ describe("Ad group member management UI", () => {
     assert.doesNotMatch(detailSource, /groups\.members\.add/);
   });
 
+  it("retries members section scroll until target is ready for section=members navigation", () => {
+    const detailSource = readFileSync(
+      new URL("./AdGroupDetailPage.tsx", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(detailSource, /searchParams\.get\("section"\)/);
+    assert.match(detailSource, /const tryScroll = \(\) =>/);
+    assert.match(detailSource, /const didScroll = scrollToMembersSection\(\)/);
+    assert.match(
+      detailSource,
+      /const didScroll = scrollToMembersSection\(\)[\s\S]*lastMembersScrollKeyRef\.current = navigationKey/,
+    );
+    assert.doesNotMatch(
+      detailSource,
+      /lastMembersScrollKeyRef\.current = navigationKey;\s*const frameId = requestAnimationFrame/,
+    );
+    assert.match(detailSource, /scrollIntoView\(\{ behavior, block: "start" \}\)/);
+    assert.match(detailSource, /if \(!element\) \{[\s\S]*return false/);
+  });
+
   it("uses member column header in members list and keeps selectCandidate in add dialog only", () => {
     const sectionSource = readFileSync(
       new URL("./components/AdGroupMembersSection.tsx", import.meta.url),

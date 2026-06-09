@@ -155,6 +155,8 @@ describe("ad groups route and menu wiring", () => {
     assert.match(detailSource, /groups\.actions\.manageMembers/);
     assert.match(detailSource, /scrollToMembersSection/);
     assert.match(detailSource, /searchParams\.get\("section"\)/);
+    assert.match(detailSource, /const tryScroll = \(\) =>/);
+    assert.match(detailSource, /lastMembersScrollKeyRef\.current = navigationKey/);
     assert.match(detailSource, /AdGroupMembersSection/);
     assert.match(detailSource, /AdManagement\.Groups\.ManageMembers/);
     assert.match(columnsSource, /canManageMembers/);
