@@ -19,9 +19,12 @@ public partial class Program
 {
     public static WebApplication CreateWebApplication(
         string[] args,
-        Action<WebApplicationBuilder>? configureBuilder = null)
+        Action<WebApplicationBuilder>? configureBuilder = null,
+        WebApplicationOptions? options = null)
     {
-        var builder = WebApplication.CreateBuilder(args);
+        var builder = options is null
+            ? WebApplication.CreateBuilder(args)
+            : WebApplication.CreateBuilder(options);
 
         configureBuilder?.Invoke(builder);
 

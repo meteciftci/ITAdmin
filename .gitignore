@@ -495,3 +495,4 @@ dist/
 # Runtime branding uploads (keep folder structure only)
 backend/src/SasPortal.Api/wwwroot/uploads/branding/*
 !backend/src/SasPortal.Api/wwwroot/uploads/branding/.gitkeep
+test-sastest.zsh
