@@ -579,7 +579,11 @@
       "filters": {
         "active": "Active",
         "disabled": "Disabled",
-        "all": "All"
+        "all": "All",
+        "operatingSystem": "Operating system",
+        "operatingSystemAll": "All operating systems",
+        "operatingSystemLoading": "Loading operating systems",
+        "operatingSystemLoadFailed": "Could not load operating system options"
       },
       "status": {
         "enabled": "Active",

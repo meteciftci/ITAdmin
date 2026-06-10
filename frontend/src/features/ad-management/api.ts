@@ -47,6 +47,7 @@ import type {
   AdGroupMemberOperationResponse,
   AdComputerDetail,
   AdComputerListResponse,
+  AdComputerOperatingSystemOptionsResponse,
   GetAdComputersParams,
 } from "@/features/ad-management/types";
 
@@ -65,6 +66,12 @@ export const AD_MANAGEMENT_USERS_QUERY_KEY = ["ad-management", "users"] as const
 export const AD_MANAGEMENT_GROUPS_QUERY_KEY = ["ad-management", "groups"] as const;
 
 export const AD_MANAGEMENT_COMPUTERS_QUERY_KEY = ["ad-management", "computers"] as const;
+
+export const AD_COMPUTER_OPERATING_SYSTEMS_QUERY_KEY = [
+  "ad-management",
+  "computers",
+  "operating-systems",
+] as const;
 
 export const AD_MANAGEMENT_GROUP_MEMBERS_QUERY_KEY = [
   "ad-management",
@@ -199,10 +206,18 @@ export const getAdComputers = async (
     params: {
       search: params.search,
       status: params.status ?? "active",
+      operatingSystem: params.operatingSystem?.trim() || undefined,
       pageNumber: params.pageNumber ?? 1,
       pageSize: params.pageSize ?? 20,
     },
   });
+  return data;
+};
+
+export const getAdComputerOperatingSystems = async (): Promise<AdComputerOperatingSystemOptionsResponse> => {
+  const { data } = await apiClient.get<AdComputerOperatingSystemOptionsResponse>(
+    "/ad-management/computer-operating-systems",
+  );
   return data;
 };
 

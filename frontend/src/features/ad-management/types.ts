@@ -401,6 +401,10 @@ export type AdComputerListResponse = {
   hasNextPage: boolean;
 };
 
+export type AdComputerOperatingSystemOptionsResponse = {
+  items: string[];
+};
+
 export type AdComputerMemberOfItem = {
   distinguishedName: string;
   name: string | null;
@@ -435,6 +439,7 @@ export type AdComputerDetail = {
 export type GetAdComputersParams = {
   search?: string;
   status?: AdComputerStatusFilter;
+  operatingSystem?: string;
   pageNumber?: number;
   pageSize?: number;
 };

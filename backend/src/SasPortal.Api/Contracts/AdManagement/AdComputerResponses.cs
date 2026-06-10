@@ -16,6 +16,9 @@ public sealed record AdComputerListResponse(
     int PageSize,
     bool HasNextPage);
 
+public sealed record AdComputerOperatingSystemOptionsResponse(
+    IReadOnlyList<string> Items);
+
 public sealed record AdComputerMemberOfItemResponse(
     string DistinguishedName,
     string? Name,

@@ -62,6 +62,10 @@ public sealed partial class AdUserDirectoryService : IAdComputerDirectoryService
         CancellationToken cancellationToken = default) =>
         SearchComputerOrganizationalUnitsInternalAsync(query, cancellationToken);
 
+    public Task<AdComputerOperatingSystemOptionsResult> GetComputerOperatingSystemsAsync(
+        CancellationToken cancellationToken = default) =>
+        GetComputerOperatingSystemsInternalAsync(cancellationToken);
+
     private async Task<AdComputerDirectoryListResult> SearchComputersInternalAsync(
         AdComputerListQuery query,
         CancellationToken cancellationToken)
@@ -103,7 +107,8 @@ public sealed partial class AdUserDirectoryService : IAdComputerDirectoryService
             using var ldapConnection = CreateBoundConnection(connectionResult.Context);
             var filter = AdLdapComputerFilterHelper.BuildComputerDirectorySearchFilter(
                 query.Search!.Trim(),
-                query.Status);
+                query.Status,
+                query.OperatingSystem);
             var items = new List<AdComputerListItem>(pageSize);
             byte[]? cookie = null;
             var hasNextPage = false;
@@ -163,6 +168,117 @@ public sealed partial class AdUserDirectoryService : IAdComputerDirectoryService
         catch (Exception)
         {
             return ComputerListConnectionFailed();
+        }
+    }
+
+    private async Task<AdComputerOperatingSystemOptionsResult> GetComputerOperatingSystemsInternalAsync(
+        CancellationToken cancellationToken)
+    {
+        var connectionResult = await ResolveConnectionAsync(cancellationToken);
+        if (!connectionResult.IsSuccess || connectionResult.Context is null)
+        {
+            return new AdComputerOperatingSystemOptionsResult(
+                false,
+                connectionResult.Message,
+                null,
+                connectionResult.FailureKind);
+        }
+
+        var computersSearchBase = AdLdapComputerSearchBases.ResolveRequiredComputersSearchBase(
+            connectionResult.Context.Connection);
+        if (string.IsNullOrWhiteSpace(computersSearchBase))
+        {
+            return new AdComputerOperatingSystemOptionsResult(
+                false,
+                AdManagementNotConfiguredMessage,
+                null,
+                AdDirectoryFailureKind.NotConfigured);
+        }
+
+        try
+        {
+            using var ldapConnection = CreateBoundConnection(connectionResult.Context);
+            var filter = AdLdapComputerFilterHelper.BuildComputerOperatingSystemOptionsFilter();
+            var collectedValues = new List<string>();
+            var seen = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            byte[]? cookie = null;
+            var pagesScanned = 0;
+
+            while (pagesScanned < AdComputerDirectoryLimits.OperatingSystemOptionsMaxPages)
+            {
+                pagesScanned++;
+                var searchRequest = new SearchRequest(
+                    computersSearchBase,
+                    filter,
+                    SearchScope.Subtree,
+                    "operatingSystem")
+                {
+                    TimeLimit = LdapOperationTimeout,
+                };
+
+                var pageControl = new PageResultRequestControl(AdComputerDirectoryLimits.OperatingSystemOptionsPageSize)
+                {
+                    Cookie = cookie,
+                };
+                searchRequest.Controls.Add(pageControl);
+
+                var response = (SearchResponse)ldapConnection.SendRequest(searchRequest);
+                if (response.ResultCode != ResultCode.Success)
+                {
+                    return ComputerOperatingSystemOptionsConnectionFailed();
+                }
+
+                foreach (SearchResultEntry entry in response.Entries)
+                {
+                    var operatingSystem = GetFirstString(entry, "operatingSystem");
+                    if (string.IsNullOrWhiteSpace(operatingSystem))
+                    {
+                        continue;
+                    }
+
+                    var trimmed = operatingSystem.Trim();
+                    if (seen.TryAdd(trimmed, trimmed))
+                    {
+                        collectedValues.Add(trimmed);
+                    }
+
+                    if (seen.Count >= AdComputerDirectoryLimits.OperatingSystemOptionsMaxCount)
+                    {
+                        break;
+                    }
+                }
+
+                if (seen.Count >= AdComputerDirectoryLimits.OperatingSystemOptionsMaxCount)
+                {
+                    break;
+                }
+
+                var pageResponse = response.Controls
+                    .OfType<PageResultResponseControl>()
+                    .FirstOrDefault();
+                cookie = pageResponse?.Cookie;
+                if (cookie is not { Length: > 0 })
+                {
+                    break;
+                }
+            }
+
+            var items = AdComputerOperatingSystemOptionsNormalizer.NormalizeDistinctSorted(
+                collectedValues,
+                AdComputerDirectoryLimits.OperatingSystemOptionsMaxCount);
+
+            return new AdComputerOperatingSystemOptionsResult(
+                true,
+                string.Empty,
+                new AdComputerOperatingSystemOptionsPage(items));
+        }
+        catch (LdapException)
+        {
+            return ComputerOperatingSystemOptionsConnectionFailed();
+        }
+        catch (Exception)
+        {
+            return ComputerOperatingSystemOptionsConnectionFailed();
         }
     }
 
@@ -521,5 +637,8 @@ public sealed partial class AdUserDirectoryService : IAdComputerDirectoryService
         new(false, ComputersQueryFailedMessage, null, AdDirectoryFailureKind.ConnectionFailed);
 
     private static AdOrganizationalUnitSearchResult ComputerOuConnectionFailed() =>
+        new(false, ComputersQueryFailedMessage, null, AdDirectoryFailureKind.ConnectionFailed);
+
+    private static AdComputerOperatingSystemOptionsResult ComputerOperatingSystemOptionsConnectionFailed() =>
         new(false, ComputersQueryFailedMessage, null, AdDirectoryFailureKind.ConnectionFailed);
 }

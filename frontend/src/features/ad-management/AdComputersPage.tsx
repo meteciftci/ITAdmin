@@ -33,7 +33,9 @@ export function AdComputersPage() {
   const normalizedSearch = listState.search.trim();
   const canSearch = normalizedSearch.length >= MIN_SEARCH_LENGTH;
   const effectiveSearch = canSearch ? normalizedSearch : undefined;
-  const activeFilterCount = listState.status !== AD_COMPUTERS_LIST_DEFAULTS.status ? 1 : 0;
+  const activeFilterCount =
+    (listState.status !== AD_COMPUTERS_LIST_DEFAULTS.status ? 1 : 0)
+    + (listState.operatingSystem.trim() ? 1 : 0);
 
   const computersQuery = useQuery({
     queryKey: [
@@ -41,6 +43,7 @@ export function AdComputersPage() {
       "list",
       effectiveSearch,
       listState.status,
+      listState.operatingSystem,
       listState.pageNumber,
       listState.pageSize,
     ],
@@ -48,6 +51,7 @@ export function AdComputersPage() {
       getAdComputers({
         search: effectiveSearch,
         status: listState.status,
+        operatingSystem: listState.operatingSystem.trim() || undefined,
         pageNumber: listState.pageNumber,
         pageSize: listState.pageSize,
       }),

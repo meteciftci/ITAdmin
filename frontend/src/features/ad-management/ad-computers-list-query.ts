@@ -5,6 +5,7 @@ export const AD_COMPUTERS_LIST_STORAGE_KEY = "sasportal.adManagement.computers.l
 export type AdComputersListState = {
   search: string;
   status: AdComputerStatusFilter;
+  operatingSystem: string;
   pageNumber: number;
   pageSize: number;
 };
@@ -12,6 +13,7 @@ export type AdComputersListState = {
 export const AD_COMPUTERS_LIST_DEFAULTS: AdComputersListState = {
   search: "",
   status: "active",
+  operatingSystem: "",
   pageNumber: 1,
   pageSize: 20,
 };
@@ -35,6 +37,10 @@ export function normalizeAdComputersListState(
   return {
     search: typeof state?.search === "string" ? state.search : AD_COMPUTERS_LIST_DEFAULTS.search,
     status,
+    operatingSystem:
+      typeof state?.operatingSystem === "string"
+        ? state.operatingSystem
+        : AD_COMPUTERS_LIST_DEFAULTS.operatingSystem,
     pageNumber: parsePositiveInt(state?.pageNumber, AD_COMPUTERS_LIST_DEFAULTS.pageNumber),
     pageSize: parsePageSize(state?.pageSize),
   };
@@ -54,6 +60,7 @@ export function parseAdComputersListStateFromSession(raw: string | null): AdComp
     return normalizeAdComputersListState({
       search: typeof parsed.search === "string" ? parsed.search : parsed.q,
       status: parsed.status,
+      operatingSystem: parsed.operatingSystem,
       pageNumber: parsed.pageNumber ?? parsed.page,
       pageSize: parsed.pageSize,
     });

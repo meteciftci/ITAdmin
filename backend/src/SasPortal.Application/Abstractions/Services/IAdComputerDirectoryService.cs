@@ -15,4 +15,7 @@ public interface IAdComputerDirectoryService
     Task<AdOrganizationalUnitSearchResult> SearchComputerOrganizationalUnitsAsync(
         AdOrganizationalUnitSearchQuery query,
         CancellationToken cancellationToken = default);
+
+    Task<AdComputerOperatingSystemOptionsResult> GetComputerOperatingSystemsAsync(
+        CancellationToken cancellationToken = default);
 }

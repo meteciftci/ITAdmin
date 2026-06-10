@@ -579,7 +579,11 @@
       "filters": {
         "active": "Etkin",
         "disabled": "Devre dışı",
-        "all": "Tümü"
+        "all": "Tümü",
+        "operatingSystem": "İşletim sistemi",
+        "operatingSystemAll": "Tüm işletim sistemleri",
+        "operatingSystemLoading": "İşletim sistemleri yükleniyor",
+        "operatingSystemLoadFailed": "İşletim sistemi seçenekleri alınamadı"
       },
       "status": {
         "enabled": "Etkin",

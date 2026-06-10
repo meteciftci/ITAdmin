@@ -3,8 +3,18 @@ namespace SasPortal.Application.Common.Models;
 public sealed record AdComputerListQuery(
     string? Search,
     AdUserStatusFilter Status,
+    string? OperatingSystem,
     int PageNumber,
     int PageSize);
+
+public sealed record AdComputerOperatingSystemOptionsPage(
+    IReadOnlyList<string> Items);
+
+public sealed record AdComputerOperatingSystemOptionsResult(
+    bool IsSuccess,
+    string Message,
+    AdComputerOperatingSystemOptionsPage? Page,
+    AdDirectoryFailureKind? FailureKind = null);
 
 public sealed record AdComputerListItem(
     string Id,

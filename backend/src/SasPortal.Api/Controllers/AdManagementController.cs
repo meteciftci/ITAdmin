@@ -222,13 +222,19 @@ public sealed class AdManagementController(
     public async Task<ActionResult<AdComputerListResponse>> ListComputers(
         [FromQuery] string? search,
         [FromQuery] string? status,
+        [FromQuery] string? operatingSystem,
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
         var statusFilter = ParseUserStatusFilter(status);
         var result = await adComputerDirectoryService.SearchComputersAsync(
-            new AppModels.AdComputerListQuery(search, statusFilter, pageNumber, pageSize),
+            new AppModels.AdComputerListQuery(
+                search,
+                statusFilter,
+                string.IsNullOrWhiteSpace(operatingSystem) ? null : operatingSystem.Trim(),
+                pageNumber,
+                pageSize),
             cancellationToken);
 
         if (!result.IsSuccess || result.Page is null)
@@ -261,6 +267,20 @@ public sealed class AdManagementController(
         }
 
         return Ok(MapComputerDetail(result.Computer));
+    }
+
+    [HttpGet("computer-operating-systems")]
+    [RequirePermission(AdManagementPermissions.ComputersView)]
+    public async Task<ActionResult<AdComputerOperatingSystemOptionsResponse>> GetComputerOperatingSystems(
+        CancellationToken cancellationToken = default)
+    {
+        var result = await adComputerDirectoryService.GetComputerOperatingSystemsAsync(cancellationToken);
+        if (!result.IsSuccess || result.Page is null)
+        {
+            return MapDirectoryFailure(result.Message, result.FailureKind);
+        }
+
+        return Ok(new AdComputerOperatingSystemOptionsResponse(result.Page.Items));
     }
 
     [HttpGet("computer-organizational-units")]

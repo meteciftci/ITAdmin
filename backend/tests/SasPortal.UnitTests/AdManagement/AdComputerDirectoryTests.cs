@@ -228,4 +228,122 @@ public sealed class AdComputerDirectoryTests
         Assert.False(AdLdapAttributeCatalog.IsSearchTermValid(null));
         Assert.True(AdLdapAttributeCatalog.IsSearchTermValid("pc"));
     }
+
+    [Fact]
+    public void GetComputerOperatingSystemsEndpoint_RequiresComputersViewPermission()
+    {
+        var method = typeof(AdManagementController)
+            .GetMethod(nameof(AdManagementController.GetComputerOperatingSystems));
+        Assert.NotNull(method);
+
+        var permissionAttribute = method.GetCustomAttribute<RequirePermissionAttribute>();
+        Assert.Equal(
+            RequirePermissionAttribute.PolicyPrefix + AdManagementPermissions.ComputersView,
+            permissionAttribute?.Policy);
+    }
+
+    [Fact]
+    public void BuildComputerOperatingSystemOptionsFilter_UsesSafeComputerFilter()
+    {
+        var filter = AdLdapComputerFilterHelper.BuildComputerOperatingSystemOptionsFilter();
+
+        Assert.Equal(AdLdapComputerFilterHelper.ComputerOperatingSystemOptionsBaseFilter, filter);
+        Assert.Contains("(objectCategory=computer)", filter, StringComparison.Ordinal);
+        Assert.Contains("(operatingSystem=*)", filter, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BuildComputerDirectorySearchFilter_WithoutOperatingSystem_DoesNotIncludeExactClause()
+    {
+        var filter = AdLdapComputerFilterHelper.BuildComputerDirectorySearchFilter(
+            "pc",
+            AdUserStatusFilter.All);
+
+        Assert.DoesNotMatch(filter, @"\(operatingSystem=[^*]");
+    }
+
+    [Fact]
+    public void BuildComputerDirectorySearchFilter_WithOperatingSystem_IncludesEscapedExactClause()
+    {
+        var filter = AdLdapComputerFilterHelper.BuildComputerDirectorySearchFilter(
+            "pc",
+            AdUserStatusFilter.All,
+            "Windows 10 Enterprise");
+
+        Assert.Contains("(operatingSystem=Windows 10 Enterprise)", filter, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BuildComputerDirectorySearchFilter_WithOperatingSystem_EscapesSpecialCharacters()
+    {
+        var filter = AdLdapComputerFilterHelper.BuildComputerDirectorySearchFilter(
+            "pc",
+            AdUserStatusFilter.All,
+            "Windows (10)*");
+
+        Assert.Contains("(operatingSystem=Windows \\2810\\29\\2a)", filter, StringComparison.Ordinal);
+        Assert.DoesNotContain("(operatingSystem=Windows (10)*)", filter, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void NormalizeOperatingSystemOptions_ExcludesNullAndEmptyValues()
+    {
+        var items = AdComputerOperatingSystemOptionsNormalizer.NormalizeDistinctSorted(
+        [
+            null,
+            "",
+            "   ",
+            "Windows 10",
+        ]);
+
+        Assert.Single(items);
+        Assert.Equal("Windows 10", items[0]);
+    }
+
+    [Fact]
+    public void NormalizeOperatingSystemOptions_IsCaseInsensitiveDistinct()
+    {
+        var items = AdComputerOperatingSystemOptionsNormalizer.NormalizeDistinctSorted(
+        [
+            "windows 10",
+            "Windows 10",
+            "WINDOWS 10",
+        ]);
+
+        Assert.Single(items);
+    }
+
+    [Fact]
+    public void NormalizeOperatingSystemOptions_SortsAlphabetically()
+    {
+        var items = AdComputerOperatingSystemOptionsNormalizer.NormalizeDistinctSorted(
+        [
+            "Windows Server 2022",
+            "Windows 10",
+            "Windows 11",
+        ]);
+
+        Assert.Equal(
+            ["Windows 10", "Windows 11", "Windows Server 2022"],
+            items);
+    }
+
+    [Fact]
+    public void NormalizeOperatingSystemOptions_TrimsValues()
+    {
+        var items = AdComputerOperatingSystemOptionsNormalizer.NormalizeDistinctSorted(
+        [
+            "  Windows 10  ",
+        ]);
+
+        Assert.Equal(["Windows 10"], items);
+    }
+
+    [Fact]
+    public void OperatingSystemOptionsLimits_ArePositive()
+    {
+        Assert.True(AdComputerDirectoryLimits.OperatingSystemOptionsMaxCount > 0);
+        Assert.True(AdComputerDirectoryLimits.OperatingSystemOptionsPageSize > 0);
+        Assert.True(AdComputerDirectoryLimits.OperatingSystemOptionsMaxPages > 0);
+    }
 }

@@ -4,7 +4,16 @@ namespace SasPortal.Application.Common.AdManagement;
 
 public static class AdLdapComputerFilterHelper
 {
-    public static string BuildComputerDirectorySearchFilter(string searchTerm, AdUserStatusFilter status)
+    public const string ComputerOperatingSystemOptionsBaseFilter =
+        "(&(objectCategory=computer)(objectClass=computer)(operatingSystem=*))";
+
+    public static string BuildComputerOperatingSystemOptionsFilter() =>
+        ComputerOperatingSystemOptionsBaseFilter;
+
+    public static string BuildComputerDirectorySearchFilter(
+        string searchTerm,
+        AdUserStatusFilter status,
+        string? operatingSystem = null)
     {
         var parts = new List<string>
         {
@@ -18,6 +27,12 @@ public static class AdLdapComputerFilterHelper
             AdUserStatusFilter.Disabled => "(userAccountControl:1.2.840.113556.1.4.803:=2)",
             _ => string.Empty,
         });
+
+        if (!string.IsNullOrWhiteSpace(operatingSystem))
+        {
+            var escapedOperatingSystem = AdLdapFilterHelper.EscapeFilterValue(operatingSystem.Trim());
+            parts.Add($"(operatingSystem={escapedOperatingSystem})");
+        }
 
         var escaped = AdLdapFilterHelper.EscapeFilterValue(searchTerm.Trim());
         parts.Add(

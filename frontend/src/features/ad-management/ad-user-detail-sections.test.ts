@@ -31,6 +31,7 @@ describe("AdUserAccountExpirationSection", () => {
     assert.equal(source.includes('adManagement:users.actions.edit'), true);
     assert.equal(source.includes("accountExpiresDate"), true);
     assert.equal(source.includes("AD_USER_FORM_ACTIONS_CLASSNAME"), true);
+    assert.match(source, /clearLabel=\{t\("common:actions\.clear"\)\}/);
   });
 });
 
