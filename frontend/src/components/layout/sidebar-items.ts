@@ -8,6 +8,7 @@ import {
   House,
   KeyRound,
   ListTree,
+  Monitor,
   Network,
   Shield,
   ShieldAlert,
@@ -112,12 +113,24 @@ function isAdManagementGroupsVisible(
   return isAdManagementModuleOperational(moduleState);
 }
 
+function isAdManagementComputersVisible(
+  user: CurrentUser | null,
+  moduleState?: AdManagementModuleSidebarState,
+): boolean {
+  if (!canAccess(user, "AdManagement.Computers.View")) {
+    return false;
+  }
+
+  return isAdManagementModuleOperational(moduleState);
+}
+
 function isAdManagementSectionVisible(
   user: CurrentUser | null,
   moduleState?: AdManagementModuleSidebarState,
 ): boolean {
   return isAdManagementUsersVisible(user, moduleState)
-    || isAdManagementGroupsVisible(user, moduleState);
+    || isAdManagementGroupsVisible(user, moduleState)
+    || isAdManagementComputersVisible(user, moduleState);
 }
 
 export const getSidebarGroups = (
@@ -157,6 +170,12 @@ export const getSidebarGroups = (
             to: "/ad-management/groups",
             icon: Shield,
             visible: isAdManagementGroupsVisible(user, adManagementModule),
+          },
+          {
+            titleKey: "items.adManagementComputers",
+            to: "/ad-management/computers",
+            icon: Monitor,
+            visible: isAdManagementComputersVisible(user, adManagementModule),
           },
         ],
       },

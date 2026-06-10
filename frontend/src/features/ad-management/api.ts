@@ -45,6 +45,9 @@ import type {
   AddAdGroupMemberRequest,
   RemoveAdGroupMemberRequest,
   AdGroupMemberOperationResponse,
+  AdComputerDetail,
+  AdComputerListResponse,
+  GetAdComputersParams,
 } from "@/features/ad-management/types";
 
 export const AD_MANAGEMENT_SETTINGS_QUERY_KEY = [
@@ -60,6 +63,8 @@ export const AD_MANAGEMENT_MAPPINGS_QUERY_KEY = [
 export const AD_MANAGEMENT_USERS_QUERY_KEY = ["ad-management", "users"] as const;
 
 export const AD_MANAGEMENT_GROUPS_QUERY_KEY = ["ad-management", "groups"] as const;
+
+export const AD_MANAGEMENT_COMPUTERS_QUERY_KEY = ["ad-management", "computers"] as const;
 
 export const AD_MANAGEMENT_GROUP_MEMBERS_QUERY_KEY = [
   "ad-management",
@@ -186,6 +191,49 @@ export const getAdGroupById = async (id: string): Promise<AdGroupDetail> => {
   const { data } = await apiClient.get<AdGroupDetail>(`/ad-management/groups/${id}`);
   return data;
 };
+
+export const getAdComputers = async (
+  params: GetAdComputersParams,
+): Promise<AdComputerListResponse> => {
+  const { data } = await apiClient.get<AdComputerListResponse>("/ad-management/computers", {
+    params: {
+      search: params.search,
+      status: params.status ?? "active",
+      pageNumber: params.pageNumber ?? 1,
+      pageSize: params.pageSize ?? 20,
+    },
+  });
+  return data;
+};
+
+export const getAdComputerById = async (id: string): Promise<AdComputerDetail> => {
+  const { data } = await apiClient.get<AdComputerDetail>(`/ad-management/computers/${id}`);
+  return data;
+};
+
+export const searchComputerOrganizationalUnits = async (
+  search?: string,
+  pageSize = 50,
+): Promise<AdOrganizationalUnitSearchResponse> => {
+  const { data } = await apiClient.get<AdOrganizationalUnitSearchResponse>(
+    "/ad-management/computer-organizational-units",
+    {
+      params: {
+        search,
+        pageSize,
+      },
+    },
+  );
+  return data;
+};
+
+export async function invalidateAdManagementComputerQueries(
+  queryClient: QueryClient,
+): Promise<void> {
+  await queryClient.invalidateQueries({
+    queryKey: AD_MANAGEMENT_COMPUTERS_QUERY_KEY,
+  });
+}
 
 export const createAdGroup = async (
   payload: CreateAdGroupRequest,

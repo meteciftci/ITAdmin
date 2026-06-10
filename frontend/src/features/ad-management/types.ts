@@ -381,6 +381,64 @@ export type GetAdGroupsParams = {
   pageSize?: number;
 };
 
+export type AdComputerStatusFilter = "active" | "disabled" | "all";
+
+export type AdComputerListItem = {
+  id: string;
+  name: string;
+  samAccountName: string | null;
+  dnsHostName: string | null;
+  operatingSystem: string | null;
+  distinguishedName: string;
+  isEnabled: boolean;
+  whenChanged: string | null;
+};
+
+export type AdComputerListResponse = {
+  items: AdComputerListItem[];
+  pageNumber: number;
+  pageSize: number;
+  hasNextPage: boolean;
+};
+
+export type AdComputerMemberOfItem = {
+  distinguishedName: string;
+  name: string | null;
+  samAccountName: string | null;
+};
+
+export type AdComputerDetail = {
+  id: string;
+  name: string;
+  cn: string | null;
+  samAccountName: string | null;
+  dnsHostName: string | null;
+  distinguishedName: string;
+  parentOuDistinguishedName: string | null;
+  description: string | null;
+  operatingSystem: string | null;
+  operatingSystemVersion: string | null;
+  operatingSystemServicePack: string | null;
+  managedByDistinguishedName: string | null;
+  managedByDisplayName: string | null;
+  lastLogonAt: string | null;
+  whenCreated: string | null;
+  whenChanged: string | null;
+  userAccountControl: number | null;
+  isEnabled: boolean;
+  primaryGroupId: number | null;
+  memberOfCount: number;
+  memberOf: AdComputerMemberOfItem[];
+  memberOfTruncated: boolean;
+};
+
+export type GetAdComputersParams = {
+  search?: string;
+  status?: AdComputerStatusFilter;
+  pageNumber?: number;
+  pageSize?: number;
+};
+
 export type CreateAdGroupRequest = {
   displayName: string;
   name: string;

@@ -571,6 +571,69 @@
         "noCandidates": "Uygun üye bulunamadı.",
         "noMembers": "Bu grupta doğrudan üye yok."
       }
+    },
+    "computers": {
+      "title": "Bilgisayarlar",
+      "description": "Active Directory bilgisayarlarını görüntüleyin ve arayın.",
+      "searchPlaceholder": "Bilgisayar ara...",
+      "filters": {
+        "active": "Etkin",
+        "disabled": "Devre dışı",
+        "all": "Tümü"
+      },
+      "status": {
+        "enabled": "Etkin",
+        "disabled": "Devre dışı"
+      },
+      "table": {
+        "computer": "Bilgisayar",
+        "samAccountName": "sAMAccountName",
+        "dnsHostName": "DNS adı",
+        "operatingSystem": "İşletim sistemi",
+        "status": "Durum",
+        "lastChanged": "Son Değişiklik",
+        "actions": "İşlemler"
+      },
+      "actions": {
+        "detail": "Detay",
+        "back": "Geri Dön"
+      },
+      "empty": {
+        "searchRequiredTitle": "Arama gerekli",
+        "searchRequired": "Bilgisayar aramak için en az 2 karakter girin.",
+        "title": "Bilgisayar bulunamadı",
+        "description": "Arama kriterlerinize uygun bilgisayar bulunamadı."
+      },
+      "errors": {
+        "notFound": "Bilgisayar bulunamadı",
+        "loadFailed": "Bilgisayarlar yüklenemedi",
+        "detailFailed": "Bilgisayar detayı yüklenemedi"
+      },
+      "detail": {
+        "pageTitle": "Bilgisayar Detayı",
+        "summaryTitle": "Bilgisayar Özeti",
+        "operatingSystemTitle": "İşletim Sistemi Bilgileri",
+        "technicalTitle": "Dizin ve Teknik Bilgiler",
+        "memberOfTitle": "Üye Olduğu Gruplar",
+        "accountStatusCard": "Hesap Durumu",
+        "lastLogon": "Son Oturum Açma",
+        "whenCreated": "Oluşturulma Tarihi",
+        "whenChanged": "Değiştirilme Tarihi",
+        "cn": "CN",
+        "description": "Açıklama",
+        "managedBy": "Yönetici",
+        "managedByDn": "Yönetici DN",
+        "operatingSystemVersion": "İşletim Sistemi Sürümü",
+        "operatingSystemServicePack": "Servis Paketi",
+        "objectGuid": "objectGUID",
+        "distinguishedName": "Distinguished Name",
+        "parentOu": "Üst OU",
+        "userAccountControl": "userAccountControl",
+        "primaryGroupId": "primaryGroupID",
+        "memberOfCount": "Üye olunan grup sayısı: {{count}}",
+        "memberOfEmpty": "Üye olunan grup bulunamadı",
+        "truncatedNotice": "Sonuçlar sınırlandırıldı. Daha fazla kayıt olabilir."
+      }
     }
   }
 }

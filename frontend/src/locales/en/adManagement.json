@@ -571,6 +571,69 @@
         "noCandidates": "No suitable member found.",
         "noMembers": "This group has no direct members."
       }
+    },
+    "computers": {
+      "title": "Computers",
+      "description": "View and search Active Directory computers.",
+      "searchPlaceholder": "Search computers...",
+      "filters": {
+        "active": "Active",
+        "disabled": "Disabled",
+        "all": "All"
+      },
+      "status": {
+        "enabled": "Active",
+        "disabled": "Disabled"
+      },
+      "table": {
+        "computer": "Computer",
+        "samAccountName": "sAMAccountName",
+        "dnsHostName": "DNS host name",
+        "operatingSystem": "Operating system",
+        "status": "Status",
+        "lastChanged": "Last changed",
+        "actions": "Actions"
+      },
+      "actions": {
+        "detail": "Detail",
+        "back": "Back"
+      },
+      "empty": {
+        "searchRequiredTitle": "Search required",
+        "searchRequired": "Enter at least 2 characters to search computers.",
+        "title": "No computers found",
+        "description": "No computers matched your search criteria."
+      },
+      "errors": {
+        "notFound": "Computer not found",
+        "loadFailed": "Failed to load computers",
+        "detailFailed": "Failed to load computer detail"
+      },
+      "detail": {
+        "pageTitle": "Computer Detail",
+        "summaryTitle": "Computer Summary",
+        "operatingSystemTitle": "Operating System Information",
+        "technicalTitle": "Directory and Technical Information",
+        "memberOfTitle": "Group Memberships",
+        "accountStatusCard": "Account Status",
+        "lastLogon": "Last Logon",
+        "whenCreated": "Created",
+        "whenChanged": "Last Changed",
+        "cn": "CN",
+        "description": "Description",
+        "managedBy": "Managed By",
+        "managedByDn": "Managed By DN",
+        "operatingSystemVersion": "Operating System Version",
+        "operatingSystemServicePack": "Service Pack",
+        "objectGuid": "objectGUID",
+        "distinguishedName": "Distinguished Name",
+        "parentOu": "Parent OU",
+        "userAccountControl": "userAccountControl",
+        "primaryGroupId": "primaryGroupID",
+        "memberOfCount": "Member of group count: {{count}}",
+        "memberOfEmpty": "No group memberships found",
+        "truncatedNotice": "Results were truncated. More records may exist."
+      }
     }
   }
 }

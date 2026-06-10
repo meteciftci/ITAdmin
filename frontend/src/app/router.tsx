@@ -142,6 +142,16 @@ const AdMoveGroupOuPage = lazy(() =>
     default: module.AdMoveGroupOuPage,
   })),
 );
+const AdComputersPage = lazy(() =>
+  import("@/features/ad-management/AdComputersPage").then((module) => ({
+    default: module.AdComputersPage,
+  })),
+);
+const AdComputerDetailPage = lazy(() =>
+  import("@/features/ad-management/AdComputerDetailPage").then((module) => ({
+    default: module.AdComputerDetailPage,
+  })),
+);
 const ErrorPage = lazy(() =>
   import("@/pages/ErrorPage").then((module) => ({ default: module.ErrorPage })),
 );
@@ -595,6 +605,34 @@ export const router = createBrowserRouter([
           <AppLayout>
             <LazyRoute>
               <AdGroupDetailPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/ad-management/computers",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission="AdManagement.Computers.View">
+          <AppLayout>
+            <LazyRoute>
+              <AdComputersPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/ad-management/computers/:id",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission="AdManagement.Computers.View">
+          <AppLayout>
+            <LazyRoute>
+              <AdComputerDetailPage />
             </LazyRoute>
           </AppLayout>
         </RequirePermission>

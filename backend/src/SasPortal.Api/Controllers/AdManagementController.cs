@@ -23,7 +23,8 @@ public sealed class AdManagementController(
     IAdUserOuMoveService adUserOuMoveService,
     IAdUserManagerUpdateService adUserManagerUpdateService,
     IAdUserAccountExpirationUpdateService adUserAccountExpirationUpdateService,
-    IAdGroupDirectoryService adGroupDirectoryService) : ControllerBase
+    IAdGroupDirectoryService adGroupDirectoryService,
+    IAdComputerDirectoryService adComputerDirectoryService) : ControllerBase
 {
     [HttpGet("settings")]
     [RequirePermission(AdManagementPermissions.SettingsView)]
@@ -214,6 +215,80 @@ public sealed class AdManagementController(
         }
 
         return Ok(MapGroupDetail(result.Group));
+    }
+
+    [HttpGet("computers")]
+    [RequirePermission(AdManagementPermissions.ComputersView)]
+    public async Task<ActionResult<AdComputerListResponse>> ListComputers(
+        [FromQuery] string? search,
+        [FromQuery] string? status,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var statusFilter = ParseUserStatusFilter(status);
+        var result = await adComputerDirectoryService.SearchComputersAsync(
+            new AppModels.AdComputerListQuery(search, statusFilter, pageNumber, pageSize),
+            cancellationToken);
+
+        if (!result.IsSuccess || result.Page is null)
+        {
+            return MapDirectoryFailure(result.Message, result.FailureKind);
+        }
+
+        return Ok(new AdComputerListResponse(
+            result.Page.Items.Select(MapComputerListItem).ToList(),
+            result.Page.PageNumber,
+            result.Page.PageSize,
+            result.Page.HasNextPage));
+    }
+
+    [HttpGet("computers/{id}")]
+    [RequirePermission(AdManagementPermissions.ComputersView)]
+    public async Task<ActionResult<AdComputerDetailResponse>> GetComputerById(
+        [FromRoute] string id,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Guid.TryParse(id, out var objectGuid))
+        {
+            return BadRequest(new { message = "Geçersiz bilgisayar kimliği." });
+        }
+
+        var result = await adComputerDirectoryService.GetComputerByIdAsync(objectGuid, cancellationToken);
+        if (!result.IsSuccess || result.Computer is null)
+        {
+            return MapDirectoryFailure(result.Message, result.FailureKind);
+        }
+
+        return Ok(MapComputerDetail(result.Computer));
+    }
+
+    [HttpGet("computer-organizational-units")]
+    [RequirePermission(AdManagementPermissions.ComputersView)]
+    public async Task<ActionResult<AdOrganizationalUnitSearchResponse>> SearchComputerOrganizationalUnits(
+        [FromQuery] string? search,
+        [FromQuery] int pageSize = 50,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await adComputerDirectoryService.SearchComputerOrganizationalUnitsAsync(
+            new AppModels.AdOrganizationalUnitSearchQuery(search, pageSize),
+            cancellationToken);
+
+        if (!result.IsSuccess || result.Page is null)
+        {
+            return MapDirectoryFailure(result.Message, result.FailureKind);
+        }
+
+        return Ok(new AdOrganizationalUnitSearchResponse(
+            result.Page.Items
+                .Select(item => new AdOrganizationalUnitListItemResponse(
+                    item.DistinguishedName,
+                    item.Name,
+                    item.DisplayName,
+                    item.Ou,
+                    item.Label))
+                .ToList(),
+            result.Page.HasMore));
     }
 
     [HttpPost("groups")]
@@ -1407,6 +1482,46 @@ public sealed class AdManagementController(
             item.WhenCreated,
             item.WhenChanged,
             item.LastLogonAt);
+
+    private static AdComputerListItemResponse MapComputerListItem(AppModels.AdComputerListItem item) =>
+        new(
+            item.Id,
+            item.Name,
+            item.SamAccountName,
+            item.DnsHostName,
+            item.OperatingSystem,
+            item.DistinguishedName,
+            item.IsEnabled,
+            item.WhenChanged);
+
+    private static AdComputerDetailResponse MapComputerDetail(AppModels.AdComputerDetail item) =>
+        new(
+            item.Id,
+            item.Name,
+            item.Cn,
+            item.SamAccountName,
+            item.DnsHostName,
+            item.DistinguishedName,
+            item.ParentOuDistinguishedName,
+            item.Description,
+            item.OperatingSystem,
+            item.OperatingSystemVersion,
+            item.OperatingSystemServicePack,
+            item.ManagedByDistinguishedName,
+            item.ManagedByDisplayName,
+            item.LastLogonAt,
+            item.WhenCreated,
+            item.WhenChanged,
+            item.UserAccountControl,
+            item.IsEnabled,
+            item.PrimaryGroupId,
+            item.MemberOfCount,
+            item.MemberOf.Select(MapComputerMemberOfItem).ToList(),
+            item.MemberOfTruncated);
+
+    private static AdComputerMemberOfItemResponse MapComputerMemberOfItem(
+        AppModels.AdComputerMemberOfItem item) =>
+        new(item.DistinguishedName, item.Name, item.SamAccountName);
 
     private static AdGroupListItemResponse MapGroupListItem(AppModels.AdGroupListItem item) =>
         new(

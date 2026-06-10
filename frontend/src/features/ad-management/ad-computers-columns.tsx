@@ -1,0 +1,87 @@
+import type { ColumnDef } from "@tanstack/react-table";
+import type { TFunction } from "i18next";
+
+import { DateTimeText } from "@/components/common/DateTimeText";
+import { RowActions } from "@/components/common/RowActions";
+import type { DataTableColumnMeta } from "@/components/common/data-table";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import {
+  getAdComputerPrimaryLabel,
+  getAdComputerSecondaryLabel,
+} from "@/features/ad-management/ad-computer-display-labels";
+import { AdComputerStatusBadge } from "@/features/ad-management/components/AdComputerStatusBadge";
+import type { AdComputerListItem } from "@/features/ad-management/types";
+
+type CreateAdComputerColumnsOptions = {
+  t: TFunction;
+  onDetail: (computer: AdComputerListItem) => void;
+};
+
+export function createAdComputerColumns({
+  t,
+  onDetail,
+}: CreateAdComputerColumnsOptions): ColumnDef<AdComputerListItem, unknown>[] {
+  return [
+    {
+      id: "computer",
+      header: () => t("adManagement:computers.table.computer"),
+      cell: ({ row }) => {
+        const computer = row.original;
+        const primaryLabel = getAdComputerPrimaryLabel(computer);
+        const secondaryLabel = getAdComputerSecondaryLabel(computer, primaryLabel);
+
+        return (
+          <div className="space-y-0.5" title={computer.distinguishedName}>
+            <p className="font-medium" title={computer.distinguishedName}>
+              {primaryLabel}
+            </p>
+            {secondaryLabel ? (
+              <p
+                className="truncate text-xs text-muted-foreground"
+                title={secondaryLabel}
+              >
+                {secondaryLabel}
+              </p>
+            ) : null}
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "dnsHostName",
+      header: () => t("adManagement:computers.table.dnsHostName"),
+      meta: { truncate: true } satisfies DataTableColumnMeta,
+      cell: ({ row }) => row.original.dnsHostName || "-",
+    },
+    {
+      accessorKey: "operatingSystem",
+      header: () => t("adManagement:computers.table.operatingSystem"),
+      meta: { truncate: true } satisfies DataTableColumnMeta,
+      cell: ({ row }) => row.original.operatingSystem || "-",
+    },
+    {
+      id: "status",
+      header: () => t("adManagement:computers.table.status"),
+      meta: { align: "center" } satisfies DataTableColumnMeta,
+      cell: ({ row }) => <AdComputerStatusBadge isEnabled={row.original.isEnabled} />,
+    },
+    {
+      id: "whenChanged",
+      header: () => t("adManagement:computers.table.lastChanged"),
+      meta: { align: "center" } satisfies DataTableColumnMeta,
+      cell: ({ row }) => <DateTimeText value={row.original.whenChanged} />,
+    },
+    {
+      id: "actions",
+      header: () => t("adManagement:computers.table.actions"),
+      meta: { isAction: true, align: "center" } satisfies DataTableColumnMeta,
+      cell: ({ row }) => (
+        <RowActions>
+          <DropdownMenuItem onClick={() => onDetail(row.original)}>
+            {t("adManagement:computers.actions.detail")}
+          </DropdownMenuItem>
+        </RowActions>
+      ),
+    },
+  ];
+}

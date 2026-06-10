@@ -11,6 +11,7 @@
       "adManagement": "AD Yönetim",
       "adManagementUsers": "Kullanıcılar",
       "adManagementGroups": "Gruplar",
+      "adManagementComputers": "Bilgisayarlar",
       "adManagementUsersCreate": "AD kullanıcısı oluştur",
       "adManagementUsersEdit": "AD kullanıcısı düzenle",
       "adManagementUserGroups": "Grup Üyelikleri",
