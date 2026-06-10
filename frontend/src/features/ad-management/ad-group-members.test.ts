@@ -157,8 +157,20 @@ describe("Ad group member management UI", () => {
       new URL("./components/AdRemoveGroupMemberConfirmDialog.tsx", import.meta.url),
       "utf8",
     );
+    const trLocale = readFileSync(
+      new URL("../../locales/tr/adManagement.json", import.meta.url),
+      "utf8",
+    );
+    const enLocale = readFileSync(
+      new URL("../../locales/en/adManagement.json", import.meta.url),
+      "utf8",
+    );
 
     assert.match(dialogSource, /groups\.members\.removeDescription/);
+    assert.match(dialogSource, /groups\.members\.memberToRemove/);
+    assert.doesNotMatch(dialogSource, /groups\.members\.selectCandidate/);
+    assert.match(trLocale, /"memberToRemove": "Kaldırılacak üye"/);
+    assert.match(enLocale, /"memberToRemove": "Member to remove"/);
     assert.match(dialogSource, /variant="destructive"/);
   });
 

@@ -414,11 +414,11 @@
         "global": "Global",
         "domainLocal": "Domain Local",
         "universal": "Universal",
-        "unknown": "Unknown"
+        "unknown": "Bilinmeyen"
       },
       "type": {
-        "security": "Security",
-        "distribution": "Distribution"
+        "security": "Güvenlik",
+        "distribution": "Dağıtım"
       },
       "memberTypes": {
         "user": "Kullanıcı",
@@ -489,6 +489,9 @@
           "open": "Grup Oluştur",
           "submit": "Oluştur"
         },
+        "warnings": {
+          "ldapsRequired": "AD yazma işlemleri için LDAPS bağlantısı gereklidir. AD Yönetim ayarlarında SSL etkin değilse grup oluşturulamaz."
+        },
         "messages": {
           "created": "Grup oluşturuldu",
           "createFailed": "Grup oluşturulamadı"
@@ -524,7 +527,7 @@
         "technicalTitle": "Teknik AD Bilgileri",
         "membersTitle": "Üyeler",
         "memberOfTitle": "Üye Olduğu Gruplar",
-        "securityEnabled": "Security Group",
+        "securityEnabled": "Güvenlik Grubu",
         "groupType": "Grup Türü",
         "objectGuid": "objectGUID",
         "whenCreated": "Oluşturulma Tarihi",
@@ -560,6 +563,7 @@
         "removeError": "Üye gruptan çıkarılamadı.",
         "searchCandidatesPlaceholder": "Kullanıcı, grup veya bilgisayar ara",
         "selectCandidate": "Eklenecek üyeyi seçin",
+        "memberToRemove": "Kaldırılacak üye",
         "memberColumn": "Üye",
         "actionsColumn": "İşlemler",
         "searchNoResults": "Aramaya uygun üye bulunamadı.",

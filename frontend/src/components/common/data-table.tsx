@@ -75,8 +75,7 @@ export type DataTablePaginationProps<TData> =
 
 const DEFAULT_PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
-const ACTION_COLUMN_WIDTH_CLASS =
-  "w-[112px] min-w-[112px] max-w-[112px] whitespace-nowrap";
+const ACTION_COLUMN_WIDTH_CLASS = "w-0 whitespace-nowrap overflow-visible";
 
 function getEffectiveAlign(
   meta: DataTableColumnMeta | undefined,

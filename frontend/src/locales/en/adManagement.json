@@ -489,6 +489,9 @@
           "open": "Create Group",
           "submit": "Create"
         },
+        "warnings": {
+          "ldapsRequired": "LDAPS is required for AD write operations. If SSL is not enabled in AD Management settings, group creation is disabled."
+        },
         "messages": {
           "created": "Group created",
           "createFailed": "Group could not be created"
@@ -560,6 +563,7 @@
         "removeError": "Member could not be removed from the group.",
         "searchCandidatesPlaceholder": "Search user, group, or computer",
         "selectCandidate": "Select a member to add",
+        "memberToRemove": "Member to remove",
         "memberColumn": "Member",
         "actionsColumn": "Actions",
         "searchNoResults": "No members matched your search.",

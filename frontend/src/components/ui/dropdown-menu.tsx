@@ -80,11 +80,18 @@ export function DropdownMenuRoot({
   useEffect(() => {
     if (!open) return;
 
-    updatePosition();
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      updatePosition();
+      raf2 = requestAnimationFrame(updatePosition);
+    });
+
     window.addEventListener("resize", updatePosition);
     window.addEventListener("scroll", updatePosition, true);
 
     return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, true);
     };

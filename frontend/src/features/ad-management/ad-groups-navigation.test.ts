@@ -301,4 +301,25 @@ describe("ad groups route and menu wiring", () => {
     assert.doesNotMatch(trLocale, /"whenChanged": "When Changed"/);
     assert.doesNotMatch(trLocale, /"managedBy": "Managed By"/);
   });
+
+  it("uses group-specific LDAPS warning on create page instead of user password message", () => {
+    const createPageSource = readFileSync(
+      new URL("./AdGroupCreatePage.tsx", import.meta.url),
+      "utf8",
+    );
+    const trLocale = readFileSync(
+      new URL("../../locales/tr/adManagement.json", import.meta.url),
+      "utf8",
+    );
+    const enLocale = readFileSync(
+      new URL("../../locales/en/adManagement.json", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(createPageSource, /groups\.create\.warnings\.ldapsRequired/);
+    assert.doesNotMatch(createPageSource, /users\.create\.ldapsRequired/);
+    assert.doesNotMatch(createPageSource, /users\.create\.warnings\.ldapsRequired/);
+    assert.match(trLocale, /"ldapsRequired": "AD yazma işlemleri için LDAPS bağlantısı gereklidir/);
+    assert.match(enLocale, /"ldapsRequired": "LDAPS is required for AD write operations/);
+  });
 });

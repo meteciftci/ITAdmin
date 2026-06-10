@@ -58,7 +58,7 @@ export function AdRemoveGroupMemberConfirmDialog({
               <p className="font-medium">{groupName ?? "-"}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">{t("adManagement:groups.members.selectCandidate")}</p>
+              <p className="text-xs text-muted-foreground">{t("adManagement:groups.members.memberToRemove")}</p>
               <div className="mt-1 flex flex-wrap items-center gap-2">
                 <p className="font-medium">{primaryLabel}</p>
                 <Badge variant="outline">{getAdGroupMemberTypeLabel(t, member.type)}</Badge>

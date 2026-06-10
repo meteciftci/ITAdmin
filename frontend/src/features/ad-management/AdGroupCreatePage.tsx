@@ -124,7 +124,7 @@ export function AdGroupCreatePage() {
         <SectionCard title={t("adManagement:groups.create.formTitle")}>
           {!useSsl ? (
             <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-muted-foreground">
-              {t("adManagement:users.create.ldapsRequired")}
+              {t("adManagement:groups.create.warnings.ldapsRequired")}
             </p>
           ) : null}
 

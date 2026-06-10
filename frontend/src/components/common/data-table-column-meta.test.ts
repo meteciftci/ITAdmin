@@ -19,9 +19,9 @@ describe("data-table column meta", () => {
     assert.match(dataTableSource, /getAlignClassName\(getEffectiveAlign\(meta\)\)/);
   });
 
-  it("applies fixed width classes for isAction columns", () => {
+  it("applies compact width classes for isAction columns", () => {
     assert.match(dataTableSource, /ACTION_COLUMN_WIDTH_CLASS/);
-    assert.match(dataTableSource, /w-\[112px\] min-w-\[112px\] max-w-\[112px\]/);
+    assert.match(dataTableSource, /w-0 whitespace-nowrap overflow-visible/);
     assert.match(dataTableSource, /meta\?\.isAction \? ACTION_COLUMN_WIDTH_CLASS/);
     assert.match(dataTableSource, /meta\?\.isAction && ACTION_COLUMN_WIDTH_CLASS/);
   });
