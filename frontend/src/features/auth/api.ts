@@ -68,6 +68,18 @@ export const getCurrentUser = async (): Promise<CurrentUser> => {
   return data;
 };
 
+/**
+ * Rotates cookie JWT from the server, then reloads /auth/me for updated roles/permissions.
+ */
+export const syncAuthenticatedUserSession = async (): Promise<CurrentUser | null> => {
+  const refresh = await refreshToken();
+  if (!refresh.isSuccess) {
+    return null;
+  }
+
+  return getCurrentUser();
+};
+
 export type UpdateCurrentUserPreferencesRequest = {
   preferredLanguage: string;
 };

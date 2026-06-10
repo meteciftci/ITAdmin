@@ -3,7 +3,6 @@
     "groups": {
       "main": "Ana",
       "modules": "Modüller",
-      "administration": "Yönetim",
       "monitoring": "İzleme",
       "system": "Sistem"
     },

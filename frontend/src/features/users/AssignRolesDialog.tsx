@@ -12,10 +12,27 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { syncAuthenticatedUserSession } from "@/features/auth/api";
+import { useAuthStore } from "@/features/auth/auth-store";
 import { getRoles, getUserById, updateUserRoles } from "@/features/users/api";
 import type { RoleListItem, UserListItem } from "@/features/users/types";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { useTranslation } from "react-i18next";
+
+const LAST_ACTIVE_SUPER_ADMIN_MESSAGE =
+  "The last active SuperAdmin user cannot lose the SuperAdmin role.";
+
+function resolveAssignRolesErrorMessage(
+  error: unknown,
+  t: (key: string) => string,
+): string {
+  const rawMessage = getApiErrorMessage(error, "");
+  if (rawMessage === LAST_ACTIVE_SUPER_ADMIN_MESSAGE) {
+    return t("users:assignRoles.errors.lastActiveSuperAdmin");
+  }
+
+  return rawMessage || t("users:assignRoles.error");
+}
 
 type AssignRolesDialogProps = {
   open: boolean;
@@ -32,6 +49,9 @@ export function AssignRolesDialog({
 }: AssignRolesDialogProps) {
   const { t } = useTranslation(["users", "common"]);
   const queryClient = useQueryClient();
+  const currentUser = useAuthStore((state) => state.user);
+  const setUser = useAuthStore((state) => state.setUser);
+  const clearAuth = useAuthStore((state) => state.clearAuth);
   const [selectedRoleIdsOverride, setSelectedRoleIdsOverride] = useState<string[] | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -52,19 +72,31 @@ export function AssignRolesDialog({
       if (!user) throw new Error("No selected user");
       return updateUserRoles(user.id, { roleIds });
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       setErrorMessage(null);
       queryClient.invalidateQueries({ queryKey: ["users", "list"] });
       if (user) {
         queryClient.invalidateQueries({ queryKey: ["users", "detail", user.id] });
       }
+
+      if (user && currentUser?.userId === user.id) {
+        try {
+          const refreshedUser = await syncAuthenticatedUserSession();
+          if (refreshedUser) {
+            setUser(refreshedUser);
+          } else {
+            clearAuth();
+          }
+        } catch {
+          clearAuth();
+        }
+      }
+
       onUpdated();
       onOpenChange(false);
     },
     onError: (error) => {
-      setErrorMessage(
-        getApiErrorMessage(error, t("users:assignRoles.error")),
-      );
+      setErrorMessage(resolveAssignRolesErrorMessage(error, t));
     },
   });
 

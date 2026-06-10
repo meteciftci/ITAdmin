@@ -455,14 +455,6 @@ public sealed class UserService(
             var willHaveSuperAdmin = requestedRoles.Any(x =>
                 string.Equals(x.Code, SystemRoles.SuperAdmin, StringComparison.OrdinalIgnoreCase));
 
-            if (request.ActorUserId.HasValue &&
-                request.ActorUserId.Value == user.Id &&
-                currentlyHasSuperAdmin &&
-                !willHaveSuperAdmin)
-            {
-                return new UpdateUserRolesResult(false, "You cannot remove your own SuperAdmin role.", null);
-            }
-
             if (user.IsActive &&
                 currentlyHasSuperAdmin &&
                 !willHaveSuperAdmin)
@@ -572,21 +564,20 @@ public sealed class UserService(
     private async Task<bool> HasAnotherActiveSuperAdminExcludingAsync(
         Guid excludedUserId,
         CancellationToken cancellationToken) =>
-        await context.PortalUsers
-            .AsNoTracking()
-            .Where(u =>
-                u.Id != excludedUserId &&
-                !u.IsDeleted &&
-                u.IsActive)
-            .AnyAsync(u =>
-                    u.UserRoles.Any(ur =>
-                        ur.PortalRole.IsActive &&
-                        !ur.PortalRole.IsDeleted &&
-                        string.Equals(
-                            ur.PortalRole.Code,
-                            SystemRoles.SuperAdmin,
-                            StringComparison.OrdinalIgnoreCase)),
-                cancellationToken);
+        await (
+            from userRole in context.PortalUserRoles.IgnoreQueryFilters().AsNoTracking()
+            join user in context.PortalUsers.IgnoreQueryFilters().AsNoTracking()
+                on userRole.PortalUserId equals user.Id
+            join role in context.PortalRoles.IgnoreQueryFilters().AsNoTracking()
+                on userRole.PortalRoleId equals role.Id
+            where userRole.PortalUserId != excludedUserId
+                  && !user.IsDeleted
+                  && user.IsActive
+                  && !role.IsDeleted
+                  && role.IsActive
+                  && role.Code == SystemRoles.SuperAdmin
+            select userRole.PortalUserId
+        ).AnyAsync(cancellationToken);
 
     private static bool UserHasActiveSuperAdminRole(PortalUser user) =>
         user.UserRoles.Any(ur =>

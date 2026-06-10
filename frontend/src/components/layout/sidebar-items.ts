@@ -163,32 +163,6 @@ export const getSidebarGroups = (
     ],
   },
   {
-    labelKey: "groups.administration",
-    items: [
-      {
-        kind: "link",
-        titleKey: "items.users",
-        to: "/users",
-        icon: Users,
-        visible: canAccess(user, "Users.View"),
-      },
-      {
-        kind: "link",
-        titleKey: "items.roles",
-        to: "/roles",
-        icon: Shield,
-        visible: canAccess(user, "Roles.View"),
-      },
-      {
-        kind: "link",
-        titleKey: "items.permissions",
-        to: "/permissions",
-        icon: KeyRound,
-        visible: canAccess(user, "Permissions.View"),
-      },
-    ],
-  },
-  {
     labelKey: "groups.monitoring",
     items: [
       {
@@ -232,6 +206,27 @@ export const getSidebarGroups = (
   {
     labelKey: "groups.system",
     items: [
+      {
+        kind: "link",
+        titleKey: "items.users",
+        to: "/users",
+        icon: Users,
+        visible: canAccess(user, "Users.View"),
+      },
+      {
+        kind: "link",
+        titleKey: "items.roles",
+        to: "/roles",
+        icon: Shield,
+        visible: canAccess(user, "Roles.View"),
+      },
+      {
+        kind: "link",
+        titleKey: "items.permissions",
+        to: "/permissions",
+        icon: KeyRound,
+        visible: canAccess(user, "Permissions.View"),
+      },
       {
         kind: "collapsible",
         titleKey: "items.settings",

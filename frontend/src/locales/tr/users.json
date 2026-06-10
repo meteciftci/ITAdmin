@@ -87,7 +87,10 @@
       "save": "Kaydet",
       "saving": "Kaydediliyor...",
       "noRoles": "Aktif rol bulunamadı.",
-      "error": "Kullanıcı rolleri güncellenemedi."
+      "error": "Kullanıcı rolleri güncellenemedi.",
+      "errors": {
+        "lastActiveSuperAdmin": "Bu kullanıcı son aktif SuperAdmin kullanıcısıdır. SuperAdmin rolünü kaldırmadan önce başka bir aktif kullanıcıya bu rolü atayın."
+      }
     }
   }
 }

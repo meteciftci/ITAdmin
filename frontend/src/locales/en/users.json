@@ -87,7 +87,10 @@
       "save": "Save",
       "saving": "Saving...",
       "noRoles": "No active roles found.",
-      "error": "User roles could not be updated."
+      "error": "User roles could not be updated.",
+      "errors": {
+        "lastActiveSuperAdmin": "This user is the last active SuperAdmin. Assign the SuperAdmin role to another active user before removing it."
+      }
     }
   }
 }
