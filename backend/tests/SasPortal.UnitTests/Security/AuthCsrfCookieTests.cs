@@ -39,6 +39,19 @@ public sealed class AuthCsrfCookieTests
     }
 
     [Fact]
+    public void Append_includes_secure_for_http_request_in_production_environment()
+    {
+        var ctx = AuthCookieSecurityResolverTests.CreateHttpContextForEnvironment("Production");
+        ctx.Request.Scheme = "http";
+        ctx.Request.IsHttps = false;
+
+        AuthCsrfCookie.Append(ctx.Response.Cookies, ctx.Request, "x", DateTimeOffset.UtcNow.AddMinutes(30));
+
+        var raw = string.Join('\n', ctx.Response.Headers.SetCookie.ToArray());
+        Assert.Contains("secure", raw, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Delete_emits_set_cookie_for_same_path()
     {
         var ctx = new DefaultHttpContext();

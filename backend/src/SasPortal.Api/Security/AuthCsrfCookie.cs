@@ -12,18 +12,8 @@ public static class AuthCsrfCookie
 
     public const string CookiePath = "/";
 
-    public static CookieOptions CreateOptions(HttpRequest request, DateTimeOffset? expiresUtc)
-    {
-        var secure = request.IsHttps;
-        return new CookieOptions
-        {
-            HttpOnly = false,
-            Secure = secure,
-            SameSite = SameSiteMode.Lax,
-            Path = CookiePath,
-            Expires = expiresUtc?.UtcDateTime,
-        };
-    }
+    public static CookieOptions CreateOptions(HttpRequest request, DateTimeOffset? expiresUtc) =>
+        AuthCookieOptionsFactory.Create(request, httpOnly: false, CookiePath, expiresUtc);
 
     public static void Append(
         IResponseCookies cookies,

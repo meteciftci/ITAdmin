@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.RateLimiting;
 using SasPortal.Api.Contracts.Auth;
 using SasPortal.Api.Security;
 using SasPortal.Application.Abstractions.Services;
@@ -30,6 +31,7 @@ public sealed class AuthController(IAuthService authService, ISettingsService se
 
     [HttpPost("login")]
     [AllowAnonymous]
+    [EnableRateLimiting(LoginRateLimiting.PolicyName)]
     public async Task<ActionResult<LoginResponse>> Login(
         [FromBody] LoginRequest request,
         CancellationToken cancellationToken)
@@ -43,10 +45,8 @@ public sealed class AuthController(IAuthService authService, ISettingsService se
                 request.RememberMe),
             cancellationToken);
 
-        var response = new LoginResponse(
-            result.IsSuccess,
-            result.Message,
-            result.ErrorCode);
+        // Client message is sanitized centrally; detailed failure reasons stay in SecurityLog.
+        var response = LoginClientResponse.Create(result);
 
         if (result.IsSuccess)
         {

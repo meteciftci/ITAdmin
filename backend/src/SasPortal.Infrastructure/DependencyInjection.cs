@@ -15,8 +15,22 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddDataProtection()
-            .SetApplicationName("SAS Portal");
+        var dataProtectionSettings = DataProtectionSettings.Load(configuration);
+
+        var dataProtectionBuilder = services.AddDataProtection()
+            .SetApplicationName(dataProtectionSettings.ApplicationName);
+
+        if (dataProtectionSettings.PersistKeysToFileSystem)
+        {
+            dataProtectionBuilder.PersistKeysToFileSystem(new DirectoryInfo(dataProtectionSettings.KeysPath!));
+        }
+
+        if (dataProtectionSettings.ProtectKeysWithCertificate)
+        {
+            var certificate = DataProtectionCertificateLoader.LoadByThumbprint(
+                dataProtectionSettings.CertificateThumbprint!);
+            dataProtectionBuilder.ProtectKeysWithCertificate(certificate);
+        }
 
         services.AddHttpClient("NotificationProviders");
 

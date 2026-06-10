@@ -12,18 +12,8 @@ public static class AuthAccessCookie
 
     public const string CookiePath = "/api";
 
-    public static CookieOptions CreateOptions(HttpRequest request, DateTimeOffset? expiresUtc)
-    {
-        var secure = request.IsHttps;
-        return new CookieOptions
-        {
-            HttpOnly = true,
-            Secure = secure,
-            SameSite = SameSiteMode.Lax,
-            Path = CookiePath,
-            Expires = expiresUtc?.UtcDateTime,
-        };
-    }
+    public static CookieOptions CreateOptions(HttpRequest request, DateTimeOffset? expiresUtc) =>
+        AuthCookieOptionsFactory.Create(request, httpOnly: true, CookiePath, expiresUtc);
 
     public static void Append(
         IResponseCookies cookies,

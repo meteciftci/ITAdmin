@@ -19,21 +19,12 @@ public static class AuthRefreshCookie
 
     /// <summary>
     /// Builds cookie flags shared by append and delete so browsers reliably clear the cookie.
-    /// <see cref="CookieOptions.Secure"/> is tied to <see cref="HttpRequest.IsHttps"/> so
-    /// <c>http://localhost</c> development keeps working without extra configuration.
+    /// The <c>Secure</c> flag is resolved through <see cref="AuthCookieSecurityResolver"/>:
+    /// always on in production, request-scheme based elsewhere so <c>http://localhost</c>
+    /// development keeps working without extra configuration.
     /// </summary>
-    public static CookieOptions CreateOptions(HttpRequest request, DateTimeOffset? expiresUtc)
-    {
-        var secure = request.IsHttps;
-        return new CookieOptions
-        {
-            HttpOnly = true,
-            Secure = secure,
-            SameSite = SameSiteMode.Lax,
-            Path = CookiePath,
-            Expires = expiresUtc?.UtcDateTime,
-        };
-    }
+    public static CookieOptions CreateOptions(HttpRequest request, DateTimeOffset? expiresUtc) =>
+        AuthCookieOptionsFactory.Create(request, httpOnly: true, CookiePath, expiresUtc);
 
     public static void Append(
         IResponseCookies cookies,

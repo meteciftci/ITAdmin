@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
+using SasPortal.Api.Middlewares;
 using SasPortal.Api.Authorization;
 using SasPortal.Api.Extensions;
 using SasPortal.Api.HostedServices;
@@ -28,6 +31,13 @@ public partial class Program
         });
 
         builder.Services.AddControllers();
+
+        // IIS / reverse proxy support: honor X-Forwarded-For / X-Forwarded-Proto only from
+        // proxies declared in configuration (safe loopback-only default when config is empty).
+        builder.Services.Configure<ForwardedHeadersOptions>(options =>
+            ForwardedHeadersSetup.Apply(options, builder.Configuration));
+
+        builder.Services.AddLoginRateLimiting(builder.Configuration);
         builder.Services.AddApplication();
         builder.Services.AddInfrastructure(builder.Configuration);
         builder.Services.AddPersistence(builder.Configuration);
@@ -72,6 +82,10 @@ public partial class Program
 
         var app = builder.Build();
 
+        // Forwarded headers must run first so downstream middleware (HTTPS redirect, cookies,
+        // rate limiting, logging) observe the real client IP and original scheme.
+        app.UseForwardedHeaders();
+
         app.UseGlobalExceptionHandling();
 
         if (app.Environment.IsDevelopment())
@@ -79,9 +93,18 @@ public partial class Program
             app.MapOpenApi();
         }
 
+        if (app.Environment.IsProduction())
+        {
+            app.UseHsts();
+        }
+
         app.UseHttpsRedirection();
+        app.UseSecurityHeaders();
         app.UseDefaultFiles();
         app.UseStaticFiles();
+
+        app.UseLoginRateLimitPartitioning();
+        app.UseRateLimiter();
 
         app.UseAuthentication();
         app.UseCsrfProtection();

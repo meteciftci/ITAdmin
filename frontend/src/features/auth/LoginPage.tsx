@@ -132,6 +132,10 @@ export function LoginPage() {
         return t("login.unexpectedServiceError");
       }
 
+      if (status === 429) {
+        return t("login.tooManyAttempts");
+      }
+
       if (status === 401) {
         return t("login.error");
       }
