@@ -112,4 +112,149 @@ public sealed class LoginRateLimitingTests
         Assert.Null(userName);
         Assert.Equal(0, ctx.Request.Body.Position);
     }
+
+    [Fact]
+    public async Task ReadUserNameAsync_returns_null_when_declared_content_length_exceeds_limit()
+    {
+        var ctx = new DefaultHttpContext();
+        ctx.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes("""{"userName":"x"}"""));
+        ctx.Request.ContentLength = (64 * 1024) + 1;
+
+        var userName = await LoginRateLimiting.ReadUserNameAsync(ctx.Request, CancellationToken.None);
+
+        Assert.Null(userName);
+    }
+
+    [Fact]
+    public async Task ReadUserNameAsync_returns_null_without_throwing_for_oversized_body_with_unknown_content_length()
+    {
+        var ctx = new DefaultHttpContext();
+        var padding = new string('a', (64 * 1024) + 512);
+        var body = Encoding.UTF8.GetBytes($$"""{"padding":"{{padding}}","userName":"x"}""");
+        // Non-seekable so EnableBuffering's bufferLimit applies while reading.
+        ctx.Request.Body = new NonSeekableStream(new MemoryStream(body));
+        ctx.Request.ContentLength = null;
+
+        var userName = await LoginRateLimiting.ReadUserNameAsync(ctx.Request, CancellationToken.None);
+
+        Assert.Null(userName);
+    }
+
+    [Fact]
+    public async Task ReadUserNameAsync_returns_null_for_missing_user_name_property()
+    {
+        var ctx = new DefaultHttpContext();
+        var body = Encoding.UTF8.GetBytes("""{"password":"x","rememberMe":false}""");
+        ctx.Request.Body = new MemoryStream(body);
+        ctx.Request.ContentLength = body.Length;
+
+        var userName = await LoginRateLimiting.ReadUserNameAsync(ctx.Request, CancellationToken.None);
+
+        Assert.Null(userName);
+        Assert.Equal(0, ctx.Request.Body.Position);
+    }
+
+    [Fact]
+    public async Task ReadUserNameAsync_reads_user_name_from_non_seekable_body()
+    {
+        var ctx = new DefaultHttpContext();
+        var body = Encoding.UTF8.GetBytes("""{"userName":"mete.ciftci","password":"x"}""");
+        ctx.Request.Body = new NonSeekableStream(new MemoryStream(body));
+        ctx.Request.ContentLength = body.Length;
+
+        var userName = await LoginRateLimiting.ReadUserNameAsync(ctx.Request, CancellationToken.None);
+
+        Assert.Equal("mete.ciftci", userName);
+    }
+
+    [Fact]
+    public async Task ReadUserNameAsync_returns_null_when_body_read_and_rewind_both_fail()
+    {
+        var ctx = new DefaultHttpContext();
+        // Claims to be seekable so EnableBuffering leaves it unwrapped, then fails on both
+        // read and rewind. The method must swallow both and fall back to null.
+        ctx.Request.Body = new FaultyStream();
+        ctx.Request.ContentLength = 10;
+
+        var userName = await LoginRateLimiting.ReadUserNameAsync(ctx.Request, CancellationToken.None);
+
+        Assert.Null(userName);
+    }
+
+    [Fact]
+    public async Task ReadUserNameAsync_does_not_throw_when_rewind_is_not_supported()
+    {
+        var ctx = new DefaultHttpContext();
+        var body = Encoding.UTF8.GetBytes("""{"userName":"x"}""");
+        ctx.Request.Body = new NonRewindableSeekableStream(new MemoryStream(body));
+        ctx.Request.ContentLength = body.Length;
+
+        var userName = await LoginRateLimiting.ReadUserNameAsync(ctx.Request, CancellationToken.None);
+
+        Assert.Equal("x", userName);
+    }
+
+    private sealed class NonSeekableStream(Stream inner) : Stream
+    {
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        public override int Read(byte[] buffer, int offset, int count) => inner.Read(buffer, offset, count);
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
+            inner.ReadAsync(buffer, offset, count, cancellationToken);
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default) =>
+            inner.ReadAsync(buffer, cancellationToken);
+        public override void Flush() { }
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    }
+
+    private sealed class FaultyStream : Stream
+    {
+        public override bool CanRead => true;
+        public override bool CanSeek => true;
+        public override bool CanWrite => false;
+        public override long Length => 10;
+        public override long Position
+        {
+            get => 0;
+            set => throw new NotSupportedException("Rewind is not supported.");
+        }
+
+        public override int Read(byte[] buffer, int offset, int count) =>
+            throw new IOException("Body stream is broken.");
+        public override void Flush() { }
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    }
+
+    private sealed class NonRewindableSeekableStream(MemoryStream inner) : Stream
+    {
+        public override bool CanRead => true;
+        public override bool CanSeek => true;
+        public override bool CanWrite => false;
+        public override long Length => inner.Length;
+        public override long Position
+        {
+            get => inner.Position;
+            set => throw new NotSupportedException("Rewind is not supported.");
+        }
+
+        public override int Read(byte[] buffer, int offset, int count) => inner.Read(buffer, offset, count);
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default) =>
+            inner.ReadAsync(buffer, cancellationToken);
+        public override void Flush() { }
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    }
 }

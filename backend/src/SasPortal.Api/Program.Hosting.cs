@@ -103,6 +103,10 @@ public partial class Program
         app.UseDefaultFiles();
         app.UseStaticFiles();
 
+        // Explicit routing so the endpoint (and its [EnableRateLimiting] metadata) is resolved
+        // before the rate limiter runs; the limiter only engages for the login endpoint.
+        app.UseRouting();
+
         app.UseLoginRateLimitPartitioning();
         app.UseRateLimiter();
 

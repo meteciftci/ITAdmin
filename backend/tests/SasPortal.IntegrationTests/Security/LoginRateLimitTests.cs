@@ -64,7 +64,7 @@ public sealed class LoginRateLimitTests : IDisposable
     }
 
     [Fact]
-    public async Task Refresh_and_logout_endpoints_are_not_login_rate_limited()
+    public async Task Other_auth_endpoints_are_not_login_rate_limited()
     {
         for (var attempt = 0; attempt <= PermitLimit; attempt++)
         {
@@ -76,6 +76,9 @@ public sealed class LoginRateLimitTests : IDisposable
 
         var logout = await _client.PostAsJsonAsync("/api/auth/logout", new { refreshToken = "x" });
         Assert.NotEqual(HttpStatusCode.TooManyRequests, logout.StatusCode);
+
+        var me = await _client.GetAsync("/api/auth/me");
+        Assert.NotEqual(HttpStatusCode.TooManyRequests, me.StatusCode);
     }
 
     private Task<HttpResponseMessage> PostLoginAsync(string userName) =>

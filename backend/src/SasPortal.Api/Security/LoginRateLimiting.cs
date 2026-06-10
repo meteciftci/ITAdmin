@@ -76,20 +76,25 @@ public static class LoginRateLimiting
 
     /// <summary>
     /// Reads the user name from the buffered login body so the partition key can include it.
-    /// Failures (oversized, malformed or missing JSON) simply yield <c>null</c>; the request
-    /// then falls back to IP-only partitioning and model binding handles the bad body later.
+    /// This is a best-effort inspection: oversized, malformed, unreadable or aborted bodies
+    /// yield <c>null</c> instead of an exception, the partition key falls back to IP-only and
+    /// model binding handles the bad body later. The password is never materialized or logged.
     /// </summary>
     public static async Task<string?> ReadUserNameAsync(HttpRequest request, CancellationToken cancellationToken)
     {
+        // Declared oversized bodies are skipped up front; bodies without a Content-Length are
+        // still read, but EnableBuffering's bufferLimit caps them so an attacker cannot stream
+        // an unbounded body through this inspection (the overflow surfaces as an IOException
+        // which is swallowed below).
         if (request.ContentLength is > MaxInspectedBodyBytes)
         {
             return null;
         }
 
-        request.EnableBuffering(bufferThreshold: (int)MaxInspectedBodyBytes, bufferLimit: MaxInspectedBodyBytes);
-
         try
         {
+            request.EnableBuffering(bufferThreshold: (int)MaxInspectedBodyBytes, bufferLimit: MaxInspectedBodyBytes);
+
             using var document = await JsonDocument.ParseAsync(request.Body, cancellationToken: cancellationToken);
 
             if (document.RootElement.ValueKind == JsonValueKind.Object &&
@@ -101,13 +106,46 @@ public static class LoginRateLimiting
 
             return null;
         }
-        catch (JsonException)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // Client aborted the request; let the pipeline observe the aborted request instead
+            // of failing here with a 500.
+            return null;
+        }
+        catch (Exception exception) when (IsSafeBodyReadException(exception))
         {
             return null;
         }
         finally
         {
-            request.Body.Position = 0;
+            TryRewindBody(request);
+        }
+    }
+
+    /// <summary>
+    /// Body read failures that must degrade to IP-only partitioning instead of bubbling up
+    /// as a 500: malformed JSON, transport/buffering errors (including the buffer-limit
+    /// overflow), unsupported or already-disposed body streams.
+    /// </summary>
+    private static bool IsSafeBodyReadException(Exception exception) =>
+        exception is JsonException
+            or IOException
+            or InvalidDataException
+            or NotSupportedException
+            or ObjectDisposedException;
+
+    private static void TryRewindBody(HttpRequest request)
+    {
+        try
+        {
+            if (request.Body.CanSeek)
+            {
+                request.Body.Position = 0;
+            }
+        }
+        catch (Exception exception) when (IsSafeBodyReadException(exception))
+        {
+            // Rewind is best-effort; a broken stream will fail again in model binding.
         }
     }
 
