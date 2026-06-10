@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { getAuthSessionOptions, getCurrentUser, login } from "@/features/auth/api";
 import { useAuthStore } from "@/features/auth/auth-store";
 import { AUTH_SESSION_OPTIONS_QUERY_KEY } from "@/features/auth/query-keys";
+import type { LoginRouteReason } from "@/features/auth/self-role-change-relogin";
 import { PublicLanguageSwitcher } from "@/features/auth/PublicLanguageSwitcher";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { i18n, normalizeLanguage } from "@/app/i18n";
@@ -55,7 +56,7 @@ const shouldClearAuthAfterLoginFailure = (error: unknown): boolean => {
 };
 
 type LoginLocationState = {
-  reason?: string;
+  reason?: LoginRouteReason;
 };
 
 export function LoginPage() {
@@ -74,16 +75,20 @@ export function LoginPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   // Read the reason once during initial render so we can show a one-shot idle-timeout notice
   // without calling setState in an effect.
-  const [idleExpiredMessage] = useState<string | null>(() => {
+  const [routeNoticeMessage] = useState<string | null>(() => {
     const state = location.state as LoginLocationState | null;
-    return state?.reason === "idleTimeout"
-      ? t("auth:sessionTimeout.expiredMessage")
-      : null;
+    if (state?.reason === "idleTimeout") {
+      return t("auth:sessionTimeout.expiredMessage");
+    }
+    if (state?.reason === "permissionsChanged") {
+      return t("auth:permissionsChanged.reloginMessage");
+    }
+    return null;
   });
 
   useEffect(() => {
     const state = location.state as LoginLocationState | null;
-    if (state?.reason === "idleTimeout") {
+    if (state?.reason === "idleTimeout" || state?.reason === "permissionsChanged") {
       navigate(location.pathname, { replace: true, state: null });
     }
     // We only care about cleaning up the router state once on mount.
@@ -217,9 +222,9 @@ export function LoginPage() {
           </CardHeader>
           <CardContent>
             <form className="space-y-4" onSubmit={onSubmit}>
-              {idleExpiredMessage ? (
+              {routeNoticeMessage ? (
                 <Alert>
-                  <AlertDescription>{idleExpiredMessage}</AlertDescription>
+                  <AlertDescription>{routeNoticeMessage}</AlertDescription>
                 </Alert>
               ) : null}
 

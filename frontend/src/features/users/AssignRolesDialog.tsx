@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 
 import { FormError } from "@/components/common/FormError";
 import { Button } from "@/components/ui/button";
@@ -12,8 +13,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { syncAuthenticatedUserSession } from "@/features/auth/api";
 import { useAuthStore } from "@/features/auth/auth-store";
+import {
+  enforceReloginAfterSelfRoleChange,
+  isSelfRoleTarget,
+} from "@/features/auth/self-role-change-relogin";
 import { getRoles, getUserById, updateUserRoles } from "@/features/users/api";
 import type { RoleListItem, UserListItem } from "@/features/users/types";
 import { getApiErrorMessage } from "@/lib/api-error";
@@ -49,9 +53,8 @@ export function AssignRolesDialog({
 }: AssignRolesDialogProps) {
   const { t } = useTranslation(["users", "common"]);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const currentUser = useAuthStore((state) => state.user);
-  const setUser = useAuthStore((state) => state.setUser);
-  const clearAuth = useAuthStore((state) => state.clearAuth);
   const [selectedRoleIdsOverride, setSelectedRoleIdsOverride] = useState<string[] | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -74,22 +77,20 @@ export function AssignRolesDialog({
     },
     onSuccess: async () => {
       setErrorMessage(null);
+
+      const isSelfRoleUpdate = Boolean(
+        user && isSelfRoleTarget(currentUser?.userId, user.id),
+      );
+
+      if (isSelfRoleUpdate) {
+        onOpenChange(false);
+        await enforceReloginAfterSelfRoleChange(queryClient, navigate);
+        return;
+      }
+
       queryClient.invalidateQueries({ queryKey: ["users", "list"] });
       if (user) {
         queryClient.invalidateQueries({ queryKey: ["users", "detail", user.id] });
-      }
-
-      if (user && currentUser?.userId === user.id) {
-        try {
-          const refreshedUser = await syncAuthenticatedUserSession();
-          if (refreshedUser) {
-            setUser(refreshedUser);
-          } else {
-            clearAuth();
-          }
-        } catch {
-          clearAuth();
-        }
       }
 
       onUpdated();
