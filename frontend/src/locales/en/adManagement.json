@@ -604,7 +604,62 @@
         "enable": "Enable",
         "disable": "Disable",
         "moveOu": "Move OU",
-        "delete": "Delete"
+        "delete": "Delete",
+        "manageGroups": "Manage Groups"
+      },
+      "groups": {
+        "pageTitle": "Computer group memberships",
+        "pageHeading": "Direct group memberships",
+        "pageDescription": "Manage the AD security groups this computer is a direct member of.",
+        "protected": "Group membership cannot be changed for this computer account.",
+        "sections": {
+          "computerSummary": "Computer summary",
+          "addGroup": "Add to Group",
+          "addGroupDescription": "Search and select the AD security group to add this computer to.",
+          "currentMemberships": "Direct group memberships",
+          "currentMembershipsDescription": "Security groups this computer is a direct member of."
+        },
+        "fields": {
+          "searchGroup": "Search group",
+          "searchGroupPlaceholder": "Search groups...",
+          "selectGroup": "Select a group to add",
+          "membershipSearchPlaceholder": "Search by group name, sAMAccountName, or DN"
+        },
+        "pagination": {
+          "rangeInfo": "{{start}}-{{end}} of {{total}} groups"
+        },
+        "table": {
+          "groupName": "Group name",
+          "samAccountName": "sAMAccountName",
+          "description": "Description",
+          "distinguishedName": "Distinguished Name"
+        },
+        "actions": {
+          "addToGroup": "Add to Group",
+          "removeFromGroup": "Remove from Group"
+        },
+        "confirm": {
+          "removeTitle": "Remove membership",
+          "removeDescription": "Computer {{computer}} will be removed from group {{group}}.",
+          "removeConfirm": "Remove from Group"
+        },
+        "messages": {
+          "membershipAdded": "Computer was added to the group.",
+          "membershipRemoved": "Computer was removed from the group.",
+          "addFailed": "Computer could not be added to the group.",
+          "removeFailed": "Computer could not be removed from the group."
+        },
+        "empty": {
+          "noMembershipsTitle": "No group memberships",
+          "noMembershipsDescription": "No direct group memberships were found for this computer.",
+          "noCandidates": "No suitable group was found.",
+          "searchNoResultsTitle": "No results",
+          "searchNoResultsDescription": "No group memberships matched your search criteria."
+        },
+        "errors": {
+          "loadFailed": "Failed to load computer group memberships",
+          "candidateSearchFailed": "Failed to search group candidates"
+        }
       },
       "delete": {
         "title": "Delete computer account?",

@@ -54,7 +54,9 @@
       "ComputerDisable": "Computer disable",
       "ComputerUpdate": "Computer update",
       "ComputerMoveOu": "Computer OU move",
-      "ComputerDelete": "Computer delete"
+      "ComputerDelete": "Computer delete",
+      "ComputerGroupAdd": "Add computer to group",
+      "ComputerGroupRemove": "Remove computer from group"
     },
     "statuses": {
       "Succeeded": "Succeeded",

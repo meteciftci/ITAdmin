@@ -15,6 +15,9 @@ public static class AdComputerAccountGuard
     public const string ProtectedComputerDeleteMessage =
         "Bu bilgisayar hesabı silinemez.";
 
+    public const string ProtectedComputerGroupMembershipMessage =
+        "Bu bilgisayar hesabında grup üyeliği değiştirilemez.";
+
     public static bool IsProtectedComputer(
         int? primaryGroupId,
         int? userAccountControl,

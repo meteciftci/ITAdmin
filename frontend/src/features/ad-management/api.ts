@@ -53,6 +53,10 @@ import type {
   AdComputerListResponse,
   AdComputerOperatingSystemOptionsResponse,
   GetAdComputersParams,
+  AdComputerGroupMembershipResponse,
+  AdComputerGroupCandidateSearchResponse,
+  AdComputerGroupMutationRequest,
+  AdComputerGroupOperationResponse,
 } from "@/features/ad-management/types";
 
 export const AD_MANAGEMENT_SETTINGS_QUERY_KEY = [
@@ -95,6 +99,12 @@ export const AD_MANAGEMENT_USER_EFFECTIVE_GROUPS_QUERY_KEY = [
   "ad-management",
   "users",
   "effective-groups",
+] as const;
+
+export const AD_MANAGEMENT_COMPUTER_GROUPS_QUERY_KEY = [
+  "ad-management",
+  "computers",
+  "groups",
 ] as const;
 
 export async function invalidateAdManagementUserQueries(
@@ -613,4 +623,56 @@ export async function invalidateAdUserGroupsQuery(
     queryKey: [...AD_MANAGEMENT_USER_GROUPS_QUERY_KEY, userId],
   });
   await invalidateAdManagementUserQueries(queryClient);
+}
+
+export const getAdComputerGroups = async (
+  computerId: string,
+): Promise<AdComputerGroupMembershipResponse> => {
+  const { data } = await apiClient.get<AdComputerGroupMembershipResponse>(
+    `/ad-management/computers/${computerId}/groups`,
+  );
+  return data;
+};
+
+export const searchAdComputerGroupCandidates = async (
+  computerId: string,
+  query: string,
+): Promise<AdComputerGroupCandidateSearchResponse> => {
+  const { data } = await apiClient.get<AdComputerGroupCandidateSearchResponse>(
+    `/ad-management/computers/${computerId}/group-candidates`,
+    { params: { query } },
+  );
+  return data;
+};
+
+export const addAdComputerToGroup = async (
+  computerId: string,
+  payload: AdComputerGroupMutationRequest,
+): Promise<AdComputerGroupOperationResponse> => {
+  const { data } = await apiClient.post<AdComputerGroupOperationResponse>(
+    `/ad-management/computers/${computerId}/groups`,
+    payload,
+  );
+  return data;
+};
+
+export const removeAdComputerFromGroup = async (
+  computerId: string,
+  payload: AdComputerGroupMutationRequest,
+): Promise<AdComputerGroupOperationResponse> => {
+  const { data } = await apiClient.delete<AdComputerGroupOperationResponse>(
+    `/ad-management/computers/${computerId}/groups`,
+    { data: payload },
+  );
+  return data;
+};
+
+export async function invalidateAdComputerGroupsQuery(
+  queryClient: QueryClient,
+  computerId: string,
+): Promise<void> {
+  await queryClient.invalidateQueries({
+    queryKey: [...AD_MANAGEMENT_COMPUTER_GROUPS_QUERY_KEY, computerId],
+  });
+  await invalidateAdManagementComputerQueries(queryClient);
 }

@@ -70,6 +70,8 @@ export const AD_OPERATION_LOG_OPERATION_TYPES = [
   "ComputerUpdate",
   "ComputerMoveOu",
   "ComputerDelete",
+  "ComputerGroupAdd",
+  "ComputerGroupRemove",
 ] as const;
 
 export const AD_OPERATION_LOG_STATUSES = [

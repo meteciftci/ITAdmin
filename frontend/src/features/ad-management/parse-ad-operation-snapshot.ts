@@ -356,7 +356,12 @@ const ACCOUNT_STATUS_OPERATION_TYPES = new Set([
   "ComputerDisable",
 ]);
 const LOCK_STATUS_OPERATION_TYPES = new Set(["UserUnlock"]);
-const GROUP_MEMBERSHIP_OPERATION_TYPES = new Set(["UserGroupAdd", "UserGroupRemove"]);
+const GROUP_MEMBERSHIP_OPERATION_TYPES = new Set([
+  "UserGroupAdd",
+  "UserGroupRemove",
+  "ComputerGroupAdd",
+  "ComputerGroupRemove",
+]);
 const GROUP_MEMBER_OPERATION_TYPES = new Set(["GroupMemberAdd", "GroupMemberRemove"]);
 const OU_MOVE_OPERATION_TYPES = new Set(["UserOuMove", "GroupMoveOu", "ComputerMoveOu"]);
 const USER_MANAGER_UPDATE_OPERATION_TYPES = new Set(["UserManagerUpdate"]);

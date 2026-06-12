@@ -94,6 +94,7 @@ export function AdComputerDetailPage() {
   const canEnableComputer = canAccess(currentUser, "AdManagement.Computers.Enable");
   const canDisableComputer = canAccess(currentUser, "AdManagement.Computers.Disable");
   const canDeleteComputer = canAccess(currentUser, "AdManagement.Computers.Delete");
+  const canManageGroups = canAccess(currentUser, "AdManagement.Computers.Groups.View");
   const hasValidId = Boolean(computerId?.trim()) && isGuidLike(computerId);
   const returnPath = resolveAdComputerReturnPath(location.state, AD_COMPUTERS_LIST_PATH);
 
@@ -306,6 +307,7 @@ export function AdComputerDetailPage() {
                 canEnableComputer={canEnableComputer}
                 canDisableComputer={canDisableComputer}
                 canDeleteComputer={canDeleteComputer}
+                canManageGroups={canManageGroups}
               />
             ) : null
           }

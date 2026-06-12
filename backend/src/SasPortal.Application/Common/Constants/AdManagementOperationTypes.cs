@@ -28,6 +28,8 @@ public static class AdManagementOperationTypes
     public const string ComputerUpdate = "ComputerUpdate";
     public const string ComputerMoveOu = "ComputerMoveOu";
     public const string ComputerDelete = "ComputerDelete";
+    public const string ComputerGroupAdd = "ComputerGroupAdd";
+    public const string ComputerGroupRemove = "ComputerGroupRemove";
 }
 
 public static class AdManagementTargetComputerTypes

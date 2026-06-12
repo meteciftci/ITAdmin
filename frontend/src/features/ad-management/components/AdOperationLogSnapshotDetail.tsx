@@ -861,6 +861,10 @@ function GroupMembershipSnapshotSections({
     () => resolveSnapshotUser(beforeSnapshot, afterSnapshot),
     [beforeSnapshot, afterSnapshot],
   );
+  const computer = useMemo(
+    () => resolveSnapshotComputer(beforeSnapshot, afterSnapshot),
+    [beforeSnapshot, afterSnapshot],
+  );
   const group = useMemo(
     () => resolveSnapshotGroup(beforeSnapshot, afterSnapshot),
     [beforeSnapshot, afterSnapshot],
@@ -869,6 +873,9 @@ function GroupMembershipSnapshotSections({
     () => buildMembershipComparisonRows(beforeSnapshot, afterSnapshot, formatBoolean),
     [beforeSnapshot, afterSnapshot, formatBoolean],
   );
+  const operationType = afterSnapshot?.operation ?? beforeSnapshot?.operation ?? null;
+  const isComputerGroupMembership =
+    operationType === "ComputerGroupAdd" || operationType === "ComputerGroupRemove";
 
   const groupEntries = [
     {
@@ -886,10 +893,17 @@ function GroupMembershipSnapshotSections({
 
   return (
     <>
-      <section className="space-y-3 border-t pt-4">
-        <h3 className="text-sm font-medium">{t("snapshotSections.user")}</h3>
-        <KeyValueGrid entries={getUserFieldEntries(t, user)} noneLabel={noneLabel} />
-      </section>
+      {isComputerGroupMembership ? (
+        <section className="space-y-3 border-t pt-4">
+          <h3 className="text-sm font-medium">{t("snapshotSections.computer")}</h3>
+          <KeyValueGrid entries={getComputerFieldEntries(t, computer)} noneLabel={noneLabel} />
+        </section>
+      ) : (
+        <section className="space-y-3 border-t pt-4">
+          <h3 className="text-sm font-medium">{t("snapshotSections.user")}</h3>
+          <KeyValueGrid entries={getUserFieldEntries(t, user)} noneLabel={noneLabel} />
+        </section>
+      )}
 
       <section className="space-y-3 border-t pt-4">
         <h3 className="text-sm font-medium">{t("snapshotSections.group")}</h3>

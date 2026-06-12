@@ -7,3 +7,7 @@ export function buildAdComputerDetailPath(computerId: string): string {
 export function buildAdComputerMoveOuPath(computerId: string): string {
   return `${AD_COMPUTERS_LIST_PATH}/${computerId}/move-ou`;
 }
+
+export function buildAdComputerGroupsPath(computerId: string): string {
+  return `${AD_COMPUTERS_LIST_PATH}/${computerId}/groups`;
+}

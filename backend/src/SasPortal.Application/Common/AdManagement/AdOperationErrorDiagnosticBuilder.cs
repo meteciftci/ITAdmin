@@ -360,6 +360,8 @@ public static class AdOperationErrorDiagnosticBuilder
             AdManagementOperationTypes.ComputerUpdate => AdOperationDiagnosticCodes.ComputerUpdateFailed,
             AdManagementOperationTypes.ComputerMoveOu => AdOperationDiagnosticCodes.ComputerOuMoveFailed,
             AdManagementOperationTypes.ComputerDelete => AdOperationDiagnosticCodes.ComputerDeleteFailed,
+            AdManagementOperationTypes.ComputerGroupAdd => AdOperationDiagnosticCodes.ComputerGroupAddFailed,
+            AdManagementOperationTypes.ComputerGroupRemove => AdOperationDiagnosticCodes.ComputerGroupRemoveFailed,
             _ => null,
         };
 

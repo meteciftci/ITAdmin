@@ -9,7 +9,10 @@ import { RowActions } from "@/components/common/RowActions";
 import { Button } from "@/components/ui/button";
 import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { isAdComputerAccountOperationRestricted } from "@/features/ad-management/ad-computer-account-guard";
-import { buildAdComputerMoveOuPath } from "@/features/ad-management/ad-computer-detail-path";
+import {
+  buildAdComputerGroupsPath,
+  buildAdComputerMoveOuPath,
+} from "@/features/ad-management/ad-computer-detail-path";
 import { buildAdComputerDetailReturnState } from "@/features/ad-management/ad-computers-return-path";
 import {
   adDetailActionButtonSizingClass,
@@ -42,6 +45,7 @@ type Props = {
   canEnableComputer: boolean;
   canDisableComputer: boolean;
   canDeleteComputer: boolean;
+  canManageGroups: boolean;
 };
 
 export function AdComputerDetailHeaderActions({
@@ -54,6 +58,7 @@ export function AdComputerDetailHeaderActions({
   canEnableComputer,
   canDisableComputer,
   canDeleteComputer,
+  canManageGroups,
 }: Props) {
   const { t } = useTranslation(["adManagement", "common", "errors"]);
   const queryClient = useQueryClient();
@@ -192,6 +197,21 @@ export function AdComputerDetailHeaderActions({
         >
           {t("common:actions.refresh")}
         </Button>
+        {canManageGroups ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className={adDetailActionButtonSizingClass}
+            onClick={() =>
+              navigate(buildAdComputerGroupsPath(computer.id), {
+                state: buildAdComputerDetailReturnState(computer.id),
+              })
+            }
+          >
+            {t("adManagement:computers.actions.manageGroups")}
+          </Button>
+        ) : null}
         {showUpdate ? (
           <Button
             type="button"

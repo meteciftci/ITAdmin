@@ -28,7 +28,8 @@ public sealed class AdManagementController(
     IAdComputerAccountOperationService adComputerAccountOperationService,
     IAdComputerUpdateService adComputerUpdateService,
     IAdComputerOuMoveService adComputerOuMoveService,
-    IAdComputerDeleteService adComputerDeleteService) : ControllerBase
+    IAdComputerDeleteService adComputerDeleteService,
+    IAdComputerGroupMembershipService adComputerGroupMembershipService) : ControllerBase
 {
     [HttpGet("settings")]
     [RequirePermission(AdManagementPermissions.SettingsView)]
@@ -370,6 +371,108 @@ public sealed class AdManagementController(
 
         return MapComputerOperationActionResult(result.IsSuccess, result.Message, result.Computer, result.FailureKind);
     }
+
+    [HttpGet("computers/{id}/groups")]
+    [RequirePermission(AdManagementPermissions.ComputersGroupsView)]
+    public async Task<ActionResult<AdComputerDirectGroupMembershipsResponse>> GetComputerGroups(
+        [FromRoute] string id,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Guid.TryParse(id, out var objectGuid))
+        {
+            return BadRequest(new { message = "Geçersiz bilgisayar kimliği." });
+        }
+
+        var result = await adComputerGroupMembershipService.GetComputerGroupsAsync(
+            new AppModels.AdComputerGroupMembershipRequest(
+                objectGuid,
+                ResolveActorUserId(User),
+                ResolveActorUserName(User),
+                ResolveIpAddress(),
+                ResolveUserAgent()),
+            cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return MapDirectoryFailure(result.Message, result.FailureKind);
+        }
+
+        return Ok(MapComputerGroupMemberships(result));
+    }
+
+    [HttpGet("computers/{id}/group-candidates")]
+    [RequirePermission(AdManagementPermissions.ComputersGroupsAdd)]
+    public async Task<ActionResult<AdComputerGroupCandidateSearchResponse>> SearchComputerGroupCandidates(
+        [FromRoute] string id,
+        [FromQuery] string? query,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Guid.TryParse(id, out var objectGuid))
+        {
+            return BadRequest(new { message = "Geçersiz bilgisayar kimliği." });
+        }
+
+        var result = await adComputerGroupMembershipService.SearchGroupCandidatesAsync(
+            new AppModels.AdComputerGroupSearchRequest(objectGuid, query),
+            cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return MapDirectoryFailure(result.Message, result.FailureKind);
+        }
+
+        return Ok(new AdComputerGroupCandidateSearchResponse(
+            result.Items?
+                .Select(item => new AdComputerGroupCandidateItemResponse(
+                    item.DistinguishedName,
+                    item.DisplayName,
+                    item.Name,
+                    item.SamAccountName,
+                    item.Description))
+                .ToList() ?? []));
+    }
+
+    [HttpPost("computers/{id}/groups")]
+    [RequirePermission(AdManagementPermissions.ComputersGroupsAdd)]
+    public async Task<ActionResult<AdComputerGroupOperationResponse>> AddComputerToGroup(
+        [FromRoute] string id,
+        [FromBody] AdComputerGroupMutationRequest request,
+        CancellationToken cancellationToken = default) =>
+        await ExecuteComputerGroupOperationAsync(
+            id,
+            request.GroupDistinguishedName,
+            (computerId, groupDn, cancellation) =>
+                adComputerGroupMembershipService.AddComputerToGroupAsync(
+                    new AppModels.AddAdComputerToGroupRequest(
+                        computerId,
+                        groupDn,
+                        ResolveActorUserId(User),
+                        ResolveActorUserName(User),
+                        ResolveIpAddress(),
+                        ResolveUserAgent()),
+                    cancellation),
+            cancellationToken);
+
+    [HttpDelete("computers/{id}/groups")]
+    [RequirePermission(AdManagementPermissions.ComputersGroupsRemove)]
+    public async Task<ActionResult<AdComputerGroupOperationResponse>> RemoveComputerFromGroup(
+        [FromRoute] string id,
+        [FromBody] AdComputerGroupMutationRequest request,
+        CancellationToken cancellationToken = default) =>
+        await ExecuteComputerGroupOperationAsync(
+            id,
+            request.GroupDistinguishedName,
+            (computerId, groupDn, cancellation) =>
+                adComputerGroupMembershipService.RemoveComputerFromGroupAsync(
+                    new AppModels.RemoveAdComputerFromGroupRequest(
+                        computerId,
+                        groupDn,
+                        ResolveActorUserId(User),
+                        ResolveActorUserName(User),
+                        ResolveIpAddress(),
+                        ResolveUserAgent()),
+                    cancellation),
+            cancellationToken);
 
     [HttpDelete("computers/{id}")]
     [RequirePermission(AdManagementPermissions.ComputersDelete)]
@@ -1435,6 +1538,90 @@ public sealed class AdManagementController(
             "all" => AppModels.AdUserStatusFilter.All,
             _ => AppModels.AdUserStatusFilter.Active,
         };
+
+    private async Task<ActionResult<AdComputerGroupOperationResponse>> ExecuteComputerGroupOperationAsync(
+        string id,
+        string groupDistinguishedName,
+        Func<Guid, string, CancellationToken, Task<AppModels.AdComputerGroupOperationResult>> operation,
+        CancellationToken cancellationToken)
+    {
+        if (!Guid.TryParse(id, out var objectGuid))
+        {
+            return BadRequest(new AdComputerGroupOperationResponse(
+                false,
+                "Geçersiz bilgisayar kimliği.",
+                id,
+                null,
+                null,
+                groupDistinguishedName,
+                null,
+                null,
+                null));
+        }
+
+        if (string.IsNullOrWhiteSpace(groupDistinguishedName))
+        {
+            return BadRequest(new AdComputerGroupOperationResponse(
+                false,
+                "Grup kimliği zorunludur.",
+                id,
+                null,
+                null,
+                groupDistinguishedName,
+                null,
+                null,
+                null));
+        }
+
+        var result = await operation(
+            objectGuid,
+            groupDistinguishedName.Trim(),
+            cancellationToken);
+
+        var response = new AdComputerGroupOperationResponse(
+            result.IsSuccess,
+            result.Message,
+            result.ComputerId,
+            result.ComputerName,
+            result.ComputerSamAccountName,
+            result.GroupDistinguishedName,
+            result.GroupName,
+            result.GroupDisplayName,
+            result.GroupSamAccountName);
+
+        if (result.IsSuccess)
+        {
+            return Ok(response);
+        }
+
+        return result.FailureKind switch
+        {
+            AppModels.AdDirectoryFailureKind.NotFound => NotFound(response),
+            AppModels.AdDirectoryFailureKind.ConnectionFailed => StatusCode(
+                StatusCodes.Status503ServiceUnavailable,
+                response),
+            _ => BadRequest(response),
+        };
+    }
+
+    private static AdComputerDirectGroupMembershipsResponse MapComputerGroupMemberships(
+        AppModels.AdComputerGroupMembershipResult result) =>
+        new(
+            result.ComputerId ?? string.Empty,
+            result.Name,
+            result.SamAccountName,
+            result.DnsHostName,
+            result.DistinguishedName,
+            result.Groups?
+                .Select(group => new AdComputerGroupMembershipItemResponse(
+                    group.Id,
+                    group.DistinguishedName,
+                    group.DisplayName,
+                    group.Name,
+                    group.SamAccountName,
+                    group.Description,
+                    group.IsDirect))
+                .ToList() ?? []);
 
     private async Task<ActionResult<AdUserGroupOperationResponse>> ExecuteGroupOperationAsync(
         string id,

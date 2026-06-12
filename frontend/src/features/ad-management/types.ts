@@ -688,6 +688,53 @@ export type AdUserGroupMutationRequest = {
   groupDistinguishedName: string;
 };
 
+export type AdComputerGroupMembershipItem = {
+  id: string;
+  distinguishedName: string;
+  displayName: string | null;
+  name: string;
+  samAccountName: string | null;
+  description: string | null;
+  isDirect: boolean;
+};
+
+export type AdComputerGroupMembershipResponse = {
+  computerId: string;
+  name: string | null;
+  samAccountName: string | null;
+  dnsHostName: string | null;
+  distinguishedName: string | null;
+  groups: AdComputerGroupMembershipItem[];
+};
+
+export type AdComputerGroupCandidateItem = {
+  distinguishedName: string;
+  displayName: string | null;
+  name: string;
+  samAccountName: string | null;
+  description: string | null;
+};
+
+export type AdComputerGroupCandidateSearchResponse = {
+  items: AdComputerGroupCandidateItem[];
+};
+
+export type AdComputerGroupMutationRequest = {
+  groupDistinguishedName: string;
+};
+
+export type AdComputerGroupOperationResponse = {
+  success: boolean;
+  message: string;
+  computerId: string | null;
+  computerName: string | null;
+  computerSamAccountName: string | null;
+  groupDistinguishedName: string | null;
+  groupName: string | null;
+  groupDisplayName: string | null;
+  groupSamAccountName: string | null;
+};
+
 export type UpdateAdUserManagerRequest = {
   managerUserId: string | null;
   clearManager: boolean;

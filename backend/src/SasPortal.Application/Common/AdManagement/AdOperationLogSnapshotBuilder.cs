@@ -74,6 +74,75 @@ public static class AdOperationLogSnapshotBuilder
             },
             SerializerOptions);
 
+    public static string BuildComputerGroupMembershipRequestSummary(
+        string operationType,
+        Guid computerId,
+        string groupDistinguishedName,
+        string? groupName = null) =>
+        JsonSerializer.Serialize(
+            new
+            {
+                operation = operationType,
+                computerId = computerId.ToString("D"),
+                groupDistinguishedName,
+                groupName,
+            },
+            SerializerOptions);
+
+    public static string BuildComputerGroupMembershipBeforeSnapshot(
+        string operationType,
+        string computerId,
+        string? samAccountName,
+        string? name,
+        string? distinguishedName,
+        string? groupId,
+        string? groupDisplayName,
+        string? groupName,
+        string? groupSamAccountName,
+        string? groupDistinguishedName,
+        bool isDirectMember) =>
+        JsonSerializer.Serialize(
+            new
+            {
+                operation = operationType,
+                computer = BuildComputerSnapshot(computerId, samAccountName, name, distinguishedName),
+                group = BuildComputerGroupMembershipGroupSnapshot(
+                    groupId,
+                    groupDisplayName,
+                    groupName,
+                    groupSamAccountName,
+                    groupDistinguishedName),
+                membership = new { isDirectMember },
+            },
+            SerializerOptions);
+
+    public static string BuildComputerGroupMembershipAfterSnapshot(
+        string operationType,
+        string computerId,
+        string? samAccountName,
+        string? name,
+        string? distinguishedName,
+        string? groupId,
+        string? groupDisplayName,
+        string? groupName,
+        string? groupSamAccountName,
+        string? groupDistinguishedName,
+        bool isDirectMember) =>
+        JsonSerializer.Serialize(
+            new
+            {
+                operation = operationType,
+                computer = BuildComputerSnapshot(computerId, samAccountName, name, distinguishedName),
+                group = BuildComputerGroupMembershipGroupSnapshot(
+                    groupId,
+                    groupDisplayName,
+                    groupName,
+                    groupSamAccountName,
+                    groupDistinguishedName),
+                membership = new { isDirectMember },
+            },
+            SerializerOptions);
+
     public static string BuildGroupMemberOperationRequestSummary(
         string operationType,
         string groupId,
@@ -998,6 +1067,21 @@ public static class AdOperationLogSnapshotBuilder
         {
             name = groupName,
             distinguishedName = groupDistinguishedName,
+        };
+
+    private static object BuildComputerGroupMembershipGroupSnapshot(
+        string? groupId,
+        string? displayName,
+        string? name,
+        string? samAccountName,
+        string? distinguishedName) =>
+        new
+        {
+            id = groupId,
+            displayName,
+            name,
+            samAccountName,
+            distinguishedName,
         };
 
     private static object? BuildManagerSnapshot(AdUserManagerSnapshotInfo? manager) =>

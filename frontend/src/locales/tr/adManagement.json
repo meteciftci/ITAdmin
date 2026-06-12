@@ -604,7 +604,62 @@
         "enable": "Etkinleştir",
         "disable": "Devre dışı bırak",
         "moveOu": "OU Taşı",
-        "delete": "Sil"
+        "delete": "Sil",
+        "manageGroups": "Grupları Yönet"
+      },
+      "groups": {
+        "pageTitle": "Bilgisayar grup üyelikleri",
+        "pageHeading": "Doğrudan grup üyelikleri",
+        "pageDescription": "Bilgisayarın doğrudan üye olduğu AD güvenlik gruplarını yönetin.",
+        "protected": "Bu bilgisayar hesabında grup üyeliği değiştirilemez.",
+        "sections": {
+          "computerSummary": "Bilgisayar özeti",
+          "addGroup": "Gruba Ekle",
+          "addGroupDescription": "Bilgisayarı eklemek istediğiniz AD güvenlik grubunu arayın ve seçin.",
+          "currentMemberships": "Doğrudan grup üyelikleri",
+          "currentMembershipsDescription": "Bilgisayarın doğrudan üye olduğu güvenlik grupları."
+        },
+        "fields": {
+          "searchGroup": "Grup ara",
+          "searchGroupPlaceholder": "Grup ara...",
+          "selectGroup": "Eklenecek grubu seçin",
+          "membershipSearchPlaceholder": "Grup adı, sAMAccountName veya DN ara"
+        },
+        "pagination": {
+          "rangeInfo": "{{start}}-{{end}} / {{total}} grup"
+        },
+        "table": {
+          "groupName": "Grup adı",
+          "samAccountName": "sAMAccountName",
+          "description": "Açıklama",
+          "distinguishedName": "Distinguished Name"
+        },
+        "actions": {
+          "addToGroup": "Gruba Ekle",
+          "removeFromGroup": "Üyelikten Çıkar"
+        },
+        "confirm": {
+          "removeTitle": "Üyelikten çıkar",
+          "removeDescription": "{{computer}} bilgisayarı {{group}} grubundan çıkarılacak.",
+          "removeConfirm": "Üyelikten Çıkar"
+        },
+        "messages": {
+          "membershipAdded": "Bilgisayar gruba eklendi.",
+          "membershipRemoved": "Bilgisayar gruptan çıkarıldı.",
+          "addFailed": "Bilgisayar gruba eklenemedi.",
+          "removeFailed": "Bilgisayar gruptan çıkarılamadı."
+        },
+        "empty": {
+          "noMembershipsTitle": "Grup üyeliği yok",
+          "noMembershipsDescription": "Bu bilgisayarın doğrudan üye olduğu grup bulunamadı.",
+          "noCandidates": "Uygun grup bulunamadı.",
+          "searchNoResultsTitle": "Sonuç bulunamadı",
+          "searchNoResultsDescription": "Arama kriterlerinize uygun grup üyeliği bulunamadı."
+        },
+        "errors": {
+          "loadFailed": "Bilgisayar grup üyelikleri yüklenemedi",
+          "candidateSearchFailed": "Grup adayları aranamadı"
+        }
       },
       "delete": {
         "title": "Bilgisayar hesabı silinsin mi?",

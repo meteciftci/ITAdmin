@@ -54,7 +54,9 @@
       "ComputerDisable": "Bilgisayar devre dışı bırakma",
       "ComputerUpdate": "Bilgisayar güncelleme",
       "ComputerMoveOu": "Bilgisayar OU taşıma",
-      "ComputerDelete": "Bilgisayar silme"
+      "ComputerDelete": "Bilgisayar silme",
+      "ComputerGroupAdd": "Bilgisayarı gruba ekleme",
+      "ComputerGroupRemove": "Bilgisayarı gruptan çıkarma"
     },
     "statuses": {
       "Succeeded": "Başarılı",
