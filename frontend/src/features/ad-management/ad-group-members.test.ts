@@ -73,7 +73,7 @@ describe("Ad group member management UI", () => {
     assert.doesNotMatch(detailSource, /setTimeout/);
   });
 
-  it("uses member column header in members list and keeps selectCandidate in add dialog only", () => {
+  it("uses member column header in members list and keeps multi-select chips in add dialog only", () => {
     const sectionSource = readFileSync(
       new URL("./components/AdGroupMembersSection.tsx", import.meta.url),
       "utf8",
@@ -84,8 +84,9 @@ describe("Ad group member management UI", () => {
     );
 
     assert.match(sectionSource, /groups\.members\.memberColumn/);
-    assert.doesNotMatch(sectionSource, /groups\.members\.selectCandidate/);
-    assert.match(dialogSource, /groups\.members\.selectCandidate/);
+    assert.doesNotMatch(sectionSource, /membershipMultiSelect\.selectedMembers/);
+    assert.match(dialogSource, /membershipMultiSelect\.selectedMembers/);
+    assert.match(dialogSource, /selectedCandidates/);
   });
 
   it("renders member-specific search placeholder and range info", () => {
@@ -148,7 +149,9 @@ describe("Ad group member management UI", () => {
 
     assert.match(dialogSource, /MIN_SEARCH_LENGTH = 2/);
     assert.match(dialogSource, /search\.trim\(\)\.length >= MIN_SEARCH_LENGTH/);
-    assert.match(dialogSource, /!selectedCandidate \|\| addMutation\.isPending/);
+    assert.match(dialogSource, /selectedCandidates\.length === 0 \|\| addMutation\.isPending/);
+    assert.match(dialogSource, /runSequentialMembershipAdd/);
+    assert.match(dialogSource, /addAdGroupMember/);
     assert.match(dialogSource, /invalidateAdGroupMemberQueries/);
   });
 

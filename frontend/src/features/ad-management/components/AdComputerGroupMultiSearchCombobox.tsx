@@ -19,16 +19,16 @@ const MIN_SEARCH_LENGTH = 2;
 
 type Props = {
   computerId: string;
-  value: AdComputerGroupCandidateItem | null;
-  onChange: (group: AdComputerGroupCandidateItem | null) => void;
+  selectedItems: AdComputerGroupCandidateItem[];
+  onSelectedItemsChange: (items: AdComputerGroupCandidateItem[]) => void;
   disabledGroupDns: ReadonlySet<string>;
   disabled?: boolean;
 };
 
-export function AdComputerGroupSearchCombobox({
+export function AdComputerGroupMultiSearchCombobox({
   computerId,
-  value,
-  onChange,
+  selectedItems,
+  onSelectedItemsChange,
   disabledGroupDns,
   disabled,
 }: Props) {
@@ -39,6 +39,11 @@ export function AdComputerGroupSearchCombobox({
   const normalizedSearch = debouncedSearch.trim();
   const canSearch = normalizedSearch.length >= MIN_SEARCH_LENGTH;
 
+  const selectedDns = useMemo(
+    () => new Set(selectedItems.map((item) => item.distinguishedName)),
+    [selectedItems],
+  );
+
   const groupsQuery = useQuery({
     queryKey: ["ad-management", "computers", computerId, "group-candidates", normalizedSearch],
     queryFn: () => searchAdComputerGroupCandidates(computerId, normalizedSearch),
@@ -48,20 +53,21 @@ export function AdComputerGroupSearchCombobox({
   const items = useMemo(() => groupsQuery.data?.items ?? [], [groupsQuery.data]);
 
   const triggerLabel = useMemo(() => {
-    if (!value) {
+    if (selectedItems.length === 0) {
       return "";
     }
 
-    return formatAdGroupSelectionPrimaryLabel(value);
-  }, [value]);
+    return t("adManagement:membershipMultiSelect.groupsSelectedCount", {
+      count: selectedItems.length,
+    });
+  }, [selectedItems.length, t]);
 
   function handleSelect(item: AdComputerGroupCandidateItem) {
-    if (disabledGroupDns.has(item.distinguishedName)) {
+    if (disabledGroupDns.has(item.distinguishedName) || selectedDns.has(item.distinguishedName)) {
       return;
     }
 
-    onChange(item);
-    setOpen(false);
+    onSelectedItemsChange([...selectedItems, item]);
     setSearch("");
   }
 
@@ -121,6 +127,8 @@ export function AdComputerGroupSearchCombobox({
             {canSearch && groupsQuery.isSuccess
               ? items.map((item) => {
                   const isMember = disabledGroupDns.has(item.distinguishedName);
+                  const isSelected = selectedDns.has(item.distinguishedName);
+                  const isDisabled = isMember || isSelected;
                   const primaryLabel = formatAdGroupSelectionPrimaryLabel(item);
                   const secondaryLabel = formatAdGroupSelectionSecondaryLabel(item);
 
@@ -128,11 +136,11 @@ export function AdComputerGroupSearchCombobox({
                     <button
                       key={item.distinguishedName}
                       type="button"
-                      disabled={isMember || disabled}
+                      disabled={isDisabled || disabled}
                       onClick={() => handleSelect(item)}
                       className={cn(
                         "flex w-full min-w-0 flex-col gap-0.5 rounded-md px-2 py-2 text-left text-sm",
-                        isMember
+                        isDisabled
                           ? "cursor-not-allowed opacity-50"
                           : "hover:bg-muted/60",
                       )}

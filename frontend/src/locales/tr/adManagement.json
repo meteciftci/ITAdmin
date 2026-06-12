@@ -766,6 +766,27 @@
           "operations": "İşlemler"
         }
       }
+    },
+    "membershipMultiSelect": {
+      "selectedGroups": "Seçilen gruplar",
+      "selectedMembers": "Seçilen üyeler",
+      "noGroupsSelected": "Seçili grup yok",
+      "noMembersSelected": "Seçili üye yok",
+      "removeSelection": "Seçimi kaldır",
+      "addSelected": "Seçilenleri ekle",
+      "groupsSelectedCount": "{{count}} grup seçildi",
+      "membersSelectedCount": "{{count}} üye seçildi",
+      "partialSuccess": "{{successCount}} kayıt eklendi, {{failedCount}} kayıt eklenemedi.",
+      "allGroupsAdded": "Seçilen tüm gruplar eklendi.",
+      "allMembersAdded": "Seçilen tüm üyeler eklendi.",
+      "someGroupsFailed": "Bazı gruplar eklenemedi.",
+      "someMembersFailed": "Bazı üyeler eklenemedi.",
+      "allFailed": "Hiçbir kayıt eklenemedi.",
+      "alreadyDirectGroupMember": "Bu grup zaten doğrudan üye.",
+      "alreadyDirectMember": "Bu üye zaten doğrudan üye.",
+      "selectAtLeastOneGroup": "En az bir grup seçin.",
+      "selectAtLeastOneMember": "En az bir üye seçin.",
+      "failedItemsTitle": "Eklenemeyen kayıtlar"
     }
   }
 }

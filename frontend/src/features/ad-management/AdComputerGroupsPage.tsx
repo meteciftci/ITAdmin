@@ -36,8 +36,15 @@ import {
 import {
   filterAdUserGroupMemberships,
   formatAdGroupSelectionPrimaryLabel,
+  formatAdGroupSelectionSecondaryLabel,
 } from "@/features/ad-management/ad-group-display";
-import { AdComputerGroupSearchCombobox } from "@/features/ad-management/components/AdComputerGroupSearchCombobox";
+import { AdComputerGroupMultiSearchCombobox } from "@/features/ad-management/components/AdComputerGroupMultiSearchCombobox";
+import { AdMembershipSelectionChips } from "@/features/ad-management/components/AdMembershipSelectionChips";
+import {
+  notifySequentialAddResults,
+  partitionSequentialAddResults,
+  runSequentialMembershipAdd,
+} from "@/features/ad-management/run-sequential-membership-add";
 import { AdManagementModuleStateGuard } from "@/features/ad-management/components/AdManagementModuleStateGuard";
 import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useAdManagementModuleStatus";
 import type {
@@ -64,7 +71,7 @@ export function AdComputerGroupsPage() {
   const canAddGroup = canAccess(currentUser, "AdManagement.Computers.Groups.Add");
   const canRemoveGroup = canAccess(currentUser, "AdManagement.Computers.Groups.Remove");
 
-  const [selectedGroup, setSelectedGroup] = useState<AdComputerGroupCandidateItem | null>(null);
+  const [selectedGroups, setSelectedGroups] = useState<AdComputerGroupCandidateItem[]>([]);
   const [removeTarget, setRemoveTarget] = useState<AdComputerGroupMembershipItem | null>(null);
   const [membershipSearch, setMembershipSearch] = useState("");
   const [pageNumber, setPageNumber] = useState(1);
@@ -118,19 +125,31 @@ export function AdComputerGroupsPage() {
   }, [filteredGroups, pageSize, safePageNumber]);
 
   const addMutation = useMutation({
-    mutationFn: (groupDistinguishedName: string) =>
-      addAdComputerToGroup(computerId!, { groupDistinguishedName }),
-    onSuccess: async (response) => {
-      if (!response.success) {
-        toast.error(t("adManagement:computers.groups.messages.addFailed"));
-        return;
-      }
-
-      toast.success(
-        response.message || t("adManagement:computers.groups.messages.membershipAdded"),
+    mutationFn: async (groups: AdComputerGroupCandidateItem[]) => {
+      const results = await runSequentialMembershipAdd(groups, (group) =>
+        addAdComputerToGroup(computerId!, { groupDistinguishedName: group.distinguishedName }),
       );
-      setSelectedGroup(null);
-      await invalidateAdComputerGroupsQuery(queryClient, computerId!);
+      return partitionSequentialAddResults(results);
+    },
+    onSuccess: async ({ results, succeeded, failed }) => {
+      notifySequentialAddResults({
+        t,
+        results,
+        allSuccessMessageKey: "adManagement:membershipMultiSelect.allGroupsAdded",
+        partialSuccessMessageKey: "adManagement:membershipMultiSelect.partialSuccess",
+        allFailedMessageKey: "adManagement:computers.groups.messages.addFailed",
+        getDefaultErrorMessage: () => t("adManagement:computers.groups.messages.addFailed"),
+      });
+
+      setSelectedGroups((current) =>
+        current.filter((group) =>
+          failed.some((item) => item.distinguishedName === group.distinguishedName),
+        ),
+      );
+
+      if (succeeded.length > 0) {
+        await invalidateAdComputerGroupsQuery(queryClient, computerId!);
+      }
     },
     onError: (error) => {
       toast.error(
@@ -260,38 +279,45 @@ export function AdComputerGroupsPage() {
                 description={t("adManagement:computers.groups.sections.addGroupDescription")}
               >
                 <div className="space-y-4">
-                  <AdComputerGroupSearchCombobox
+                  <AdComputerGroupMultiSearchCombobox
                     computerId={computerId!}
-                    value={selectedGroup}
-                    onChange={setSelectedGroup}
+                    selectedItems={selectedGroups}
+                    onSelectedItemsChange={setSelectedGroups}
                     disabledGroupDns={memberGroupDns}
                     disabled={addMutation.isPending}
                   />
-                  {selectedGroup ? (
-                    <div className="rounded-md border bg-muted/20 p-3 text-sm">
-                      <p className="font-medium">
-                        {formatAdGroupSelectionPrimaryLabel(selectedGroup)}
-                      </p>
-                      <p
-                        className="mt-1 break-all font-mono text-xs text-muted-foreground"
-                        title={selectedGroup.distinguishedName}
-                      >
-                        {selectedGroup.distinguishedName}
-                      </p>
-                    </div>
-                  ) : null}
+                  <AdMembershipSelectionChips
+                    title={t("adManagement:membershipMultiSelect.selectedGroups")}
+                    emptyMessage={t("adManagement:membershipMultiSelect.noGroupsSelected")}
+                    items={selectedGroups.map((group) => {
+                      const primaryLabel = formatAdGroupSelectionPrimaryLabel(group);
+                      return {
+                        key: group.distinguishedName,
+                        primaryLabel,
+                        secondaryLabel: formatAdGroupSelectionSecondaryLabel(group),
+                        distinguishedName: group.distinguishedName,
+                      };
+                    })}
+                    onRemove={(key) => {
+                      setSelectedGroups((current) =>
+                        current.filter((group) => group.distinguishedName !== key),
+                      );
+                    }}
+                    disabled={addMutation.isPending}
+                    removeAriaLabel={t("adManagement:membershipMultiSelect.removeSelection")}
+                  />
                   <Button
                     type="button"
-                    disabled={!selectedGroup || addMutation.isPending}
+                    disabled={selectedGroups.length === 0 || addMutation.isPending}
                     onClick={() => {
-                      if (!selectedGroup) {
+                      if (selectedGroups.length === 0) {
                         return;
                       }
 
-                      addMutation.mutate(selectedGroup.distinguishedName);
+                      addMutation.mutate(selectedGroups);
                     }}
                   >
-                    {t("adManagement:computers.groups.actions.addToGroup")}
+                    {t("adManagement:membershipMultiSelect.addSelected")}
                   </Button>
                 </div>
               </SectionCard>

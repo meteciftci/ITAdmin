@@ -30,6 +30,12 @@ import {
   invalidateAdGroupMemberQueries,
   searchAdGroupMemberCandidates,
 } from "@/features/ad-management/api";
+import { AdMembershipSelectionChips } from "@/features/ad-management/components/AdMembershipSelectionChips";
+import {
+  notifySequentialAddResults,
+  partitionSequentialAddResults,
+  runSequentialMembershipAdd,
+} from "@/features/ad-management/run-sequential-membership-add";
 import type {
   AdGroupMemberCandidateItem,
   AdGroupMemberCandidateType,
@@ -50,9 +56,7 @@ export function AdAddGroupMemberDialog({ open, groupId, onOpenChange }: Props) {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | AdGroupMemberCandidateType>("all");
-  const [selectedCandidate, setSelectedCandidate] = useState<AdGroupMemberCandidateItem | null>(
-    null,
-  );
+  const [selectedCandidates, setSelectedCandidates] = useState<AdGroupMemberCandidateItem[]>([]);
 
   const candidateTypes = useMemo<AdGroupMemberCandidateType[] | undefined>(() => {
     if (typeFilter === "all") {
@@ -61,11 +65,16 @@ export function AdAddGroupMemberDialog({ open, groupId, onOpenChange }: Props) {
     return [typeFilter];
   }, [typeFilter]);
 
+  const selectedDns = useMemo(
+    () => new Set(selectedCandidates.map((candidate) => candidate.distinguishedName)),
+    [selectedCandidates],
+  );
+
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
       setSearch("");
       setTypeFilter("all");
-      setSelectedCandidate(null);
+      setSelectedCandidates([]);
     }
     onOpenChange(nextOpen);
   };
@@ -88,24 +97,38 @@ export function AdAddGroupMemberDialog({ open, groupId, onOpenChange }: Props) {
   });
 
   const addMutation = useMutation({
-    mutationFn: (candidate: AdGroupMemberCandidateItem) =>
-      addAdGroupMember(groupId, {
-        memberDistinguishedName: candidate.distinguishedName,
-        memberType: normalizeCandidateType(candidate.type),
-      }),
-    onSuccess: async (response) => {
-      if (!response.success) {
-        toast.error(
-          response.message || t("adManagement:groups.members.addError"),
-        );
-        return;
+    mutationFn: async (candidates: AdGroupMemberCandidateItem[]) => {
+      const results = await runSequentialMembershipAdd(candidates, (candidate) =>
+        addAdGroupMember(groupId, {
+          memberDistinguishedName: candidate.distinguishedName,
+          memberType: normalizeCandidateType(candidate.type),
+        }),
+      );
+      return partitionSequentialAddResults(results);
+    },
+    onSuccess: async ({ results, succeeded, failed }) => {
+      notifySequentialAddResults({
+        t,
+        results,
+        allSuccessMessageKey: "adManagement:membershipMultiSelect.allMembersAdded",
+        partialSuccessMessageKey: "adManagement:membershipMultiSelect.partialSuccess",
+        allFailedMessageKey: "adManagement:groups.members.addError",
+        getDefaultErrorMessage: () => t("adManagement:groups.members.addError"),
+      });
+
+      setSelectedCandidates((current) =>
+        current.filter((candidate) =>
+          failed.some((item) => item.distinguishedName === candidate.distinguishedName),
+        ),
+      );
+
+      if (succeeded.length > 0) {
+        await invalidateAdGroupMemberQueries(queryClient, groupId);
       }
 
-      toast.success(
-        response.message || t("adManagement:groups.members.addSuccess"),
-      );
-      await invalidateAdGroupMemberQueries(queryClient, groupId);
-      handleOpenChange(false);
+      if (failed.length === 0) {
+        handleOpenChange(false);
+      }
     },
     onError: (error) => {
       toast.error(
@@ -115,12 +138,14 @@ export function AdAddGroupMemberDialog({ open, groupId, onOpenChange }: Props) {
   });
 
   const candidates = candidatesQuery.data?.items ?? [];
-  const selectedPrimaryLabel = selectedCandidate
-    ? getAdGroupMemberPrimaryLabel(selectedCandidate)
-    : null;
-  const selectedSecondaryLabel = selectedCandidate && selectedPrimaryLabel
-    ? getAdGroupMemberSecondaryLabel(selectedCandidate, selectedPrimaryLabel)
-    : null;
+
+  function handleSelectCandidate(candidate: AdGroupMemberCandidateItem) {
+    if (candidate.isAlreadyDirectMember || selectedDns.has(candidate.distinguishedName)) {
+      return;
+    }
+
+    setSelectedCandidates((current) => [...current, candidate]);
+  }
 
   return (
     <Dialog open={open}>
@@ -139,12 +164,10 @@ export function AdAddGroupMemberDialog({ open, groupId, onOpenChange }: Props) {
               <Input
                 id="group-member-search"
                 value={search}
-                onChange={(event) => {
-                  setSearch(event.target.value);
-                  setSelectedCandidate(null);
-                }}
+                onChange={(event) => setSearch(event.target.value)}
                 placeholder={t("adManagement:groups.members.searchCandidatesPlaceholder")}
                 disabled={addMutation.isPending}
+                autoFocus
               />
             </div>
             <div className="space-y-2">
@@ -156,7 +179,6 @@ export function AdAddGroupMemberDialog({ open, groupId, onOpenChange }: Props) {
                 value={typeFilter}
                 onChange={(event) => {
                   setTypeFilter(event.target.value as "all" | AdGroupMemberCandidateType);
-                  setSelectedCandidate(null);
                 }}
                 disabled={addMutation.isPending}
               >
@@ -184,19 +206,23 @@ export function AdAddGroupMemberDialog({ open, groupId, onOpenChange }: Props) {
                 {candidates.map((candidate) => {
                   const primaryLabel = getAdGroupMemberPrimaryLabel(candidate);
                   const secondaryLabel = getAdGroupMemberSecondaryLabel(candidate, primaryLabel);
-                  const isSelected =
-                    selectedCandidate?.distinguishedName === candidate.distinguishedName;
+                  const isAlreadyMember = candidate.isAlreadyDirectMember;
+                  const isSelected = selectedDns.has(candidate.distinguishedName);
+                  const isDisabled = isAlreadyMember || isSelected;
 
                   return (
                     <button
                       key={candidate.distinguishedName}
                       type="button"
                       className={cn(
-                        "w-full rounded-md border px-3 py-2 text-left transition-colors hover:bg-muted/30",
+                        "w-full rounded-md border px-3 py-2 text-left transition-colors",
+                        isDisabled
+                          ? "cursor-not-allowed opacity-50"
+                          : "hover:bg-muted/30",
                         isSelected && "border-primary bg-muted/40",
                       )}
-                      onClick={() => setSelectedCandidate(candidate)}
-                      disabled={addMutation.isPending}
+                      onClick={() => handleSelectCandidate(candidate)}
+                      disabled={isDisabled || addMutation.isPending}
                     >
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="font-medium">{primaryLabel}</p>
@@ -209,6 +235,17 @@ export function AdAddGroupMemberDialog({ open, groupId, onOpenChange }: Props) {
                           {secondaryLabel}
                         </p>
                       ) : null}
+                      <p
+                        className="mt-1 truncate font-mono text-xs text-muted-foreground"
+                        title={candidate.distinguishedName}
+                      >
+                        {candidate.distinguishedName}
+                      </p>
+                      {isAlreadyMember ? (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {t("adManagement:membershipMultiSelect.alreadyDirectMember")}
+                        </p>
+                      ) : null}
                     </button>
                   );
                 })}
@@ -216,25 +253,26 @@ export function AdAddGroupMemberDialog({ open, groupId, onOpenChange }: Props) {
             )
           ) : null}
 
-          {selectedCandidate ? (
-            <div className="rounded-md border bg-muted/20 p-3 text-sm">
-              <p className="text-xs text-muted-foreground">
-                {t("adManagement:groups.members.selectCandidate")}
-              </p>
-              <p className="mt-1 font-medium">{selectedPrimaryLabel}</p>
-              {selectedSecondaryLabel ? (
-                <p className="truncate text-xs text-muted-foreground" title={selectedSecondaryLabel}>
-                  {selectedSecondaryLabel}
-                </p>
-              ) : null}
-              <p
-                className="mt-2 break-all font-mono text-xs text-muted-foreground"
-                title={selectedCandidate.distinguishedName}
-              >
-                {selectedCandidate.distinguishedName}
-              </p>
-            </div>
-          ) : null}
+          <AdMembershipSelectionChips
+            title={t("adManagement:membershipMultiSelect.selectedMembers")}
+            emptyMessage={t("adManagement:membershipMultiSelect.noMembersSelected")}
+            items={selectedCandidates.map((candidate) => {
+              const primaryLabel = getAdGroupMemberPrimaryLabel(candidate);
+              return {
+                key: candidate.distinguishedName,
+                primaryLabel,
+                secondaryLabel: getAdGroupMemberSecondaryLabel(candidate, primaryLabel),
+                distinguishedName: candidate.distinguishedName,
+              };
+            })}
+            onRemove={(key) => {
+              setSelectedCandidates((current) =>
+                current.filter((candidate) => candidate.distinguishedName !== key),
+              );
+            }}
+            disabled={addMutation.isPending}
+            removeAriaLabel={t("adManagement:membershipMultiSelect.removeSelection")}
+          />
         </DialogBody>
 
         <DialogFooter>
@@ -249,14 +287,14 @@ export function AdAddGroupMemberDialog({ open, groupId, onOpenChange }: Props) {
           <Button
             type="button"
             onClick={() => {
-              if (!selectedCandidate) {
+              if (selectedCandidates.length === 0) {
                 return;
               }
-              addMutation.mutate(selectedCandidate);
+              addMutation.mutate(selectedCandidates);
             }}
-            disabled={!selectedCandidate || addMutation.isPending}
+            disabled={selectedCandidates.length === 0 || addMutation.isPending}
           >
-            {t("adManagement:groups.members.add")}
+            {t("adManagement:membershipMultiSelect.addSelected")}
           </Button>
         </DialogFooter>
       </DialogContent>

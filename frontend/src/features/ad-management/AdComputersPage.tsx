@@ -16,6 +16,7 @@ import { AD_COMPUTERS_LIST_DEFAULTS } from "@/features/ad-management/ad-computer
 import { createAdComputerColumns } from "@/features/ad-management/ad-computers-columns";
 import {
   buildAdComputerDetailPath,
+  buildAdComputerGroupsPath,
   buildAdComputerMoveOuPath,
 } from "@/features/ad-management/ad-computer-detail-path";
 import { buildAdComputersListReturnState } from "@/features/ad-management/ad-computers-return-path";
@@ -56,6 +57,7 @@ export function AdComputersPage() {
   const canDisableComputer = canAccess(currentUser, "AdManagement.Computers.Disable");
   const canDeleteComputer = canAccess(currentUser, "AdManagement.Computers.Delete");
   const canMoveOu = canAccess(currentUser, "AdManagement.Computers.MoveOu");
+  const canManageGroups = canAccess(currentUser, "AdManagement.Computers.Groups.View");
   const navigate = useNavigate();
   const { listState, listPath, updateListState, clearListState } = useAdComputerListState();
   const [confirmTarget, setConfirmTarget] = useState<AccountConfirmTarget | null>(null);
@@ -99,8 +101,14 @@ export function AdComputersPage() {
         canEnableComputer,
         canDeleteComputer,
         canMoveOu,
+        canManageGroups,
         onDetail: (computer) => {
           navigate(buildAdComputerDetailPath(computer.id), {
+            state: buildAdComputersListReturnState(),
+          });
+        },
+        onManageGroups: (computer) => {
+          navigate(buildAdComputerGroupsPath(computer.id), {
             state: buildAdComputersListReturnState(),
           });
         },
@@ -113,7 +121,7 @@ export function AdComputersPage() {
         onEnable: (computer) => setConfirmTarget({ computer, action: "enable" }),
         onDelete: (computer) => setDeleteTarget(computer),
       }),
-    [t, canDisableComputer, canEnableComputer, canDeleteComputer, canMoveOu, navigate],
+    [t, canDisableComputer, canEnableComputer, canDeleteComputer, canMoveOu, canManageGroups, navigate],
   );
 
   const table = useServerDataTable({

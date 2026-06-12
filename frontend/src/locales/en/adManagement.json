@@ -766,6 +766,27 @@
           "operations": "Operations"
         }
       }
+    },
+    "membershipMultiSelect": {
+      "selectedGroups": "Selected groups",
+      "selectedMembers": "Selected members",
+      "noGroupsSelected": "No groups selected",
+      "noMembersSelected": "No members selected",
+      "removeSelection": "Remove selection",
+      "addSelected": "Add selected",
+      "groupsSelectedCount": "{{count}} groups selected",
+      "membersSelectedCount": "{{count}} members selected",
+      "partialSuccess": "{{successCount}} records added, {{failedCount}} records could not be added.",
+      "allGroupsAdded": "All selected groups were added.",
+      "allMembersAdded": "All selected members were added.",
+      "someGroupsFailed": "Some groups could not be added.",
+      "someMembersFailed": "Some members could not be added.",
+      "allFailed": "No records could be added.",
+      "alreadyDirectGroupMember": "This group is already a direct member.",
+      "alreadyDirectMember": "This member is already a direct member.",
+      "selectAtLeastOneGroup": "Select at least one group.",
+      "selectAtLeastOneMember": "Select at least one member.",
+      "failedItemsTitle": "Records that could not be added"
     }
   }
 }

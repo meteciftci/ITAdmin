@@ -45,11 +45,14 @@ describe("ad computer groups source inspection", () => {
     const pageSource = readFileSync(new URL("./AdComputerGroupsPage.tsx", import.meta.url), "utf8");
     assert.match(pageSource, /getAdComputerById/);
     assert.match(pageSource, /getAdComputerGroups/);
+    assert.match(pageSource, /AdComputerGroupMultiSearchCombobox/);
     const comboboxSource = readFileSync(
       new URL("./components/AdComputerGroupSearchCombobox.tsx", import.meta.url),
       "utf8",
     );
     assert.match(comboboxSource, /searchAdComputerGroupCandidates/);
+    assert.match(comboboxSource, /matchTriggerWidth/);
+    assert.match(comboboxSource, /autoFocus/);
     assert.match(pageSource, /removeAdComputerFromGroup/);
     assert.match(pageSource, /invalidateAdComputerGroupsQuery/);
     assert.match(pageSource, /ConfirmDialog/);

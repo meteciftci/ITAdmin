@@ -30,8 +30,15 @@ import {
 import {
   filterAdUserGroupMemberships,
   formatAdGroupSelectionPrimaryLabel,
+  formatAdGroupSelectionSecondaryLabel,
 } from "@/features/ad-management/ad-group-display";
-import { AdGroupSearchCombobox } from "@/features/ad-management/components/AdGroupSearchCombobox";
+import { AdGroupMultiSearchCombobox } from "@/features/ad-management/components/AdGroupMultiSearchCombobox";
+import { AdMembershipSelectionChips } from "@/features/ad-management/components/AdMembershipSelectionChips";
+import {
+  notifySequentialAddResults,
+  partitionSequentialAddResults,
+  runSequentialMembershipAdd,
+} from "@/features/ad-management/run-sequential-membership-add";
 import { AdManagementModuleStateGuard } from "@/features/ad-management/components/AdManagementModuleStateGuard";
 import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useAdManagementModuleStatus";
 import type {
@@ -64,7 +71,7 @@ export function AdUserGroupsPage() {
   const canAddGroup = canAccess(currentUser, "AdManagement.Users.Groups.Add");
   const canRemoveGroup = canAccess(currentUser, "AdManagement.Users.Groups.Remove");
 
-  const [selectedGroup, setSelectedGroup] = useState<AdGroupSearchItem | null>(null);
+  const [selectedGroups, setSelectedGroups] = useState<AdGroupSearchItem[]>([]);
   const [removeTarget, setRemoveTarget] = useState<AdUserGroupMembershipItem | null>(null);
   const [membershipSearch, setMembershipSearch] = useState("");
   const [pageNumber, setPageNumber] = useState(1);
@@ -106,19 +113,31 @@ export function AdUserGroupsPage() {
   }, [filteredGroups, pageSize, safePageNumber]);
 
   const addMutation = useMutation({
-    mutationFn: (groupDistinguishedName: string) =>
-      addAdUserToGroup(userId!, { groupDistinguishedName }),
-    onSuccess: async (response) => {
-      if (!response.success) {
-        toast.error(t("adManagement:users.groups.messages.operationFailed"));
-        return;
-      }
-
-      toast.success(
-        response.message || t("adManagement:users.groups.messages.membershipAdded"),
+    mutationFn: async (groups: AdGroupSearchItem[]) => {
+      const results = await runSequentialMembershipAdd(groups, (group) =>
+        addAdUserToGroup(userId!, { groupDistinguishedName: group.distinguishedName }),
       );
-      setSelectedGroup(null);
-      await invalidateAdUserGroupsQuery(queryClient, userId!);
+      return partitionSequentialAddResults(results);
+    },
+    onSuccess: async ({ results, succeeded, failed }) => {
+      notifySequentialAddResults({
+        t,
+        results,
+        allSuccessMessageKey: "adManagement:membershipMultiSelect.allGroupsAdded",
+        partialSuccessMessageKey: "adManagement:membershipMultiSelect.partialSuccess",
+        allFailedMessageKey: "adManagement:users.groups.messages.operationFailed",
+        getDefaultErrorMessage: () => t("adManagement:users.groups.messages.operationFailed"),
+      });
+
+      setSelectedGroups((current) =>
+        current.filter((group) =>
+          failed.some((item) => item.distinguishedName === group.distinguishedName),
+        ),
+      );
+
+      if (succeeded.length > 0) {
+        await invalidateAdUserGroupsQuery(queryClient, userId!);
+      }
     },
     onError: (error) => {
       toast.error(
@@ -235,37 +254,44 @@ export function AdUserGroupsPage() {
                 description={t("adManagement:users.groups.sections.addGroupDescription")}
               >
                 <div className="space-y-4">
-                  <AdGroupSearchCombobox
-                    value={selectedGroup}
-                    onChange={setSelectedGroup}
+                  <AdGroupMultiSearchCombobox
+                    selectedItems={selectedGroups}
+                    onSelectedItemsChange={setSelectedGroups}
                     disabledGroupDns={memberGroupDns}
                     disabled={addMutation.isPending}
                   />
-                  {selectedGroup ? (
-                    <div className="rounded-md border bg-muted/20 p-3 text-sm">
-                      <p className="font-medium">
-                        {formatAdGroupSelectionPrimaryLabel(selectedGroup)}
-                      </p>
-                      <p
-                        className="mt-1 break-all font-mono text-xs text-muted-foreground"
-                        title={selectedGroup.distinguishedName}
-                      >
-                        {selectedGroup.distinguishedName}
-                      </p>
-                    </div>
-                  ) : null}
+                  <AdMembershipSelectionChips
+                    title={t("adManagement:membershipMultiSelect.selectedGroups")}
+                    emptyMessage={t("adManagement:membershipMultiSelect.noGroupsSelected")}
+                    items={selectedGroups.map((group) => {
+                      const primaryLabel = formatAdGroupSelectionPrimaryLabel(group);
+                      return {
+                        key: group.distinguishedName,
+                        primaryLabel,
+                        secondaryLabel: formatAdGroupSelectionSecondaryLabel(group),
+                        distinguishedName: group.distinguishedName,
+                      };
+                    })}
+                    onRemove={(key) => {
+                      setSelectedGroups((current) =>
+                        current.filter((group) => group.distinguishedName !== key),
+                      );
+                    }}
+                    disabled={addMutation.isPending}
+                    removeAriaLabel={t("adManagement:membershipMultiSelect.removeSelection")}
+                  />
                   <Button
                     type="button"
-                    disabled={!selectedGroup || addMutation.isPending}
+                    disabled={selectedGroups.length === 0 || addMutation.isPending}
                     onClick={() => {
-                      if (!selectedGroup) {
+                      if (selectedGroups.length === 0) {
                         return;
                       }
 
-                      addMutation.mutate(selectedGroup.distinguishedName);
+                      addMutation.mutate(selectedGroups);
                     }}
                   >
-                    {t("adManagement:users.groups.actions.addToGroup")}
+                    {t("adManagement:membershipMultiSelect.addSelected")}
                   </Button>
                 </div>
               </SectionCard>

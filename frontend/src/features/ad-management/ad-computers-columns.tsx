@@ -18,7 +18,9 @@ type CreateAdComputerColumnsOptions = {
   canEnableComputer: boolean;
   canDeleteComputer: boolean;
   canMoveOu: boolean;
+  canManageGroups: boolean;
   onDetail: (computer: AdComputerListItem) => void;
+  onManageGroups: (computer: AdComputerListItem) => void;
   onMoveOu: (computer: AdComputerListItem) => void;
   onDisable: (computer: AdComputerListItem) => void;
   onEnable: (computer: AdComputerListItem) => void;
@@ -31,7 +33,9 @@ export function createAdComputerColumns({
   canEnableComputer,
   canDeleteComputer,
   canMoveOu,
+  canManageGroups,
   onDetail,
+  onManageGroups,
   onMoveOu,
   onDisable,
   onEnable,
@@ -98,6 +102,11 @@ export function createAdComputerColumns({
             <DropdownMenuItem onClick={() => onDetail(computer)}>
               {t("common:actions.detail")}
             </DropdownMenuItem>
+            {canManageGroups ? (
+              <DropdownMenuItem onClick={() => onManageGroups(computer)}>
+                {t("adManagement:computers.actions.manageGroups")}
+              </DropdownMenuItem>
+            ) : null}
             {canMoveOu ? (
               <>
                 <DropdownMenuSeparator />

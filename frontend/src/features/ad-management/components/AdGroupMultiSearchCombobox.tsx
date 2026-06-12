@@ -10,25 +10,23 @@ import {
   formatAdGroupSelectionPrimaryLabel,
   formatAdGroupSelectionSecondaryLabel,
 } from "@/features/ad-management/ad-group-display";
-import { searchAdComputerGroupCandidates } from "@/features/ad-management/api";
-import type { AdComputerGroupCandidateItem } from "@/features/ad-management/types";
+import { searchAdGroups } from "@/features/ad-management/api";
+import type { AdGroupSearchItem } from "@/features/ad-management/types";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { cn } from "@/lib/utils";
 
 const MIN_SEARCH_LENGTH = 2;
 
 type Props = {
-  computerId: string;
-  value: AdComputerGroupCandidateItem | null;
-  onChange: (group: AdComputerGroupCandidateItem | null) => void;
+  selectedItems: AdGroupSearchItem[];
+  onSelectedItemsChange: (items: AdGroupSearchItem[]) => void;
   disabledGroupDns: ReadonlySet<string>;
   disabled?: boolean;
 };
 
-export function AdComputerGroupSearchCombobox({
-  computerId,
-  value,
-  onChange,
+export function AdGroupMultiSearchCombobox({
+  selectedItems,
+  onSelectedItemsChange,
   disabledGroupDns,
   disabled,
 }: Props) {
@@ -39,35 +37,41 @@ export function AdComputerGroupSearchCombobox({
   const normalizedSearch = debouncedSearch.trim();
   const canSearch = normalizedSearch.length >= MIN_SEARCH_LENGTH;
 
+  const selectedDns = useMemo(
+    () => new Set(selectedItems.map((item) => item.distinguishedName)),
+    [selectedItems],
+  );
+
   const groupsQuery = useQuery({
-    queryKey: ["ad-management", "computers", computerId, "group-candidates", normalizedSearch],
-    queryFn: () => searchAdComputerGroupCandidates(computerId, normalizedSearch),
+    queryKey: ["ad-management", "groups", "search", normalizedSearch],
+    queryFn: () => searchAdGroups(normalizedSearch),
     enabled: open && canSearch && !disabled,
   });
 
   const items = useMemo(() => groupsQuery.data?.items ?? [], [groupsQuery.data]);
 
   const triggerLabel = useMemo(() => {
-    if (!value) {
+    if (selectedItems.length === 0) {
       return "";
     }
 
-    return formatAdGroupSelectionPrimaryLabel(value);
-  }, [value]);
+    return t("adManagement:membershipMultiSelect.groupsSelectedCount", {
+      count: selectedItems.length,
+    });
+  }, [selectedItems.length, t]);
 
-  function handleSelect(item: AdComputerGroupCandidateItem) {
-    if (disabledGroupDns.has(item.distinguishedName)) {
+  function handleSelect(item: AdGroupSearchItem) {
+    if (disabledGroupDns.has(item.distinguishedName) || selectedDns.has(item.distinguishedName)) {
       return;
     }
 
-    onChange(item);
-    setOpen(false);
+    onSelectedItemsChange([...selectedItems, item]);
     setSearch("");
   }
 
   return (
     <div className="space-y-1.5">
-      <Label>{t("adManagement:computers.groups.fields.searchGroup")}</Label>
+      <Label>{t("adManagement:users.groups.fields.searchGroup")}</Label>
       <Popover open={open} onOpenChange={setOpen}>
         <div className="w-full [&>span]:flex [&>span]:w-full">
           <PopoverTrigger asChild>
@@ -85,7 +89,7 @@ export function AdComputerGroupSearchCombobox({
                   !triggerLabel && "text-muted-foreground",
                 )}
               >
-                {triggerLabel || t("adManagement:computers.groups.fields.selectGroup")}
+                {triggerLabel || t("adManagement:users.groups.fields.selectGroup")}
               </span>
               <ChevronDown className="ml-2 size-4 shrink-0 opacity-60" />
             </button>
@@ -95,32 +99,29 @@ export function AdComputerGroupSearchCombobox({
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder={t("adManagement:computers.groups.fields.searchGroupPlaceholder")}
+            placeholder={t("adManagement:users.groups.fields.searchGroupPlaceholder")}
             disabled={disabled}
             autoFocus
           />
           <div className="mt-2 max-h-56 overflow-y-auto">
             {!canSearch ? (
               <p className="px-2 py-3 text-sm text-muted-foreground">
-                {t("adManagement:computers.empty.searchRequired")}
+                {t("adManagement:users.groups.empty.searchMinLength")}
               </p>
             ) : null}
             {canSearch && groupsQuery.isLoading ? (
               <p className="px-2 py-3 text-sm text-muted-foreground">{t("common:loading")}</p>
             ) : null}
-            {canSearch && groupsQuery.isError ? (
-              <p className="px-2 py-3 text-sm text-destructive">
-                {t("adManagement:computers.groups.errors.candidateSearchFailed")}
-              </p>
-            ) : null}
-            {canSearch && groupsQuery.isSuccess && items.length === 0 ? (
+            {canSearch && !groupsQuery.isLoading && items.length === 0 ? (
               <p className="px-2 py-3 text-sm text-muted-foreground">
-                {t("adManagement:computers.groups.empty.noCandidates")}
+                {t("adManagement:users.groups.empty.groupNotFound")}
               </p>
             ) : null}
-            {canSearch && groupsQuery.isSuccess
+            {canSearch && !groupsQuery.isLoading
               ? items.map((item) => {
                   const isMember = disabledGroupDns.has(item.distinguishedName);
+                  const isSelected = selectedDns.has(item.distinguishedName);
+                  const isDisabled = isMember || isSelected;
                   const primaryLabel = formatAdGroupSelectionPrimaryLabel(item);
                   const secondaryLabel = formatAdGroupSelectionSecondaryLabel(item);
 
@@ -128,11 +129,11 @@ export function AdComputerGroupSearchCombobox({
                     <button
                       key={item.distinguishedName}
                       type="button"
-                      disabled={isMember || disabled}
+                      disabled={isDisabled}
                       onClick={() => handleSelect(item)}
                       className={cn(
                         "flex w-full min-w-0 flex-col gap-0.5 rounded-md px-2 py-2 text-left text-sm",
-                        isMember
+                        isDisabled
                           ? "cursor-not-allowed opacity-50"
                           : "hover:bg-muted/60",
                       )}
