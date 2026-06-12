@@ -53,7 +53,8 @@
       "ComputerEnable": "Bilgisayar etkinleştirme",
       "ComputerDisable": "Bilgisayar devre dışı bırakma",
       "ComputerUpdate": "Bilgisayar güncelleme",
-      "ComputerMoveOu": "Bilgisayar OU taşıma"
+      "ComputerMoveOu": "Bilgisayar OU taşıma",
+      "ComputerDelete": "Bilgisayar silme"
     },
     "statuses": {
       "Succeeded": "Başarılı",

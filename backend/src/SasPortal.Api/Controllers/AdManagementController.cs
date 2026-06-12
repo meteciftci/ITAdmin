@@ -27,7 +27,8 @@ public sealed class AdManagementController(
     IAdComputerDirectoryService adComputerDirectoryService,
     IAdComputerAccountOperationService adComputerAccountOperationService,
     IAdComputerUpdateService adComputerUpdateService,
-    IAdComputerOuMoveService adComputerOuMoveService) : ControllerBase
+    IAdComputerOuMoveService adComputerOuMoveService,
+    IAdComputerDeleteService adComputerDeleteService) : ControllerBase
 {
     [HttpGet("settings")]
     [RequirePermission(AdManagementPermissions.SettingsView)]
@@ -368,6 +369,44 @@ public sealed class AdManagementController(
             cancellationToken);
 
         return MapComputerOperationActionResult(result.IsSuccess, result.Message, result.Computer, result.FailureKind);
+    }
+
+    [HttpDelete("computers/{id}")]
+    [RequirePermission(AdManagementPermissions.ComputersDelete)]
+    public async Task<ActionResult<DeleteAdComputerResponse>> DeleteComputer(
+        [FromRoute] string id,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Guid.TryParse(id, out var objectGuid))
+        {
+            return BadRequest(new DeleteAdComputerResponse(
+                false,
+                "Geçersiz bilgisayar kimliği.",
+                null,
+                null,
+                null));
+        }
+
+        var result = await adComputerDeleteService.DeleteComputerAsync(
+            new AppModels.DeleteAdComputerRequest(
+                objectGuid,
+                ResolveActorUserId(User),
+                ResolveActorUserName(User),
+                ResolveIpAddress(),
+                ResolveUserAgent()),
+            cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return MapDirectoryFailure(result.Message, result.FailureKind);
+        }
+
+        return Ok(new DeleteAdComputerResponse(
+            true,
+            result.Message,
+            result.DeletedComputerId,
+            result.DeletedComputerName,
+            result.DeletedDistinguishedName));
     }
 
     [HttpGet("computer-organizational-units")]

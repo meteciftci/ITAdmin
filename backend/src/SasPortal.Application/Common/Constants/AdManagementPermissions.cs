@@ -24,6 +24,7 @@ public static class AdManagementPermissions
     public const string ComputersMoveOu = "AdManagement.Computers.MoveOu";
     public const string ComputersEnable = "AdManagement.Computers.Enable";
     public const string ComputersDisable = "AdManagement.Computers.Disable";
+    public const string ComputersDelete = "AdManagement.Computers.Delete";
     public const string UsersMoveOu = "AdManagement.Users.MoveOu";
     public const string OperationLogsView = "AdOperationLogs.View";
 }

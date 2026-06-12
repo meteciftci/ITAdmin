@@ -452,6 +452,14 @@ export type AdComputerAccountOperationResponse = {
   computer: AdComputerDetail | null;
 };
 
+export type DeleteAdComputerResponse = {
+  success: boolean;
+  message: string;
+  deletedComputerId: string | null;
+  deletedComputerName: string | null;
+  deletedDistinguishedName: string | null;
+};
+
 export type UpdateAdComputerRequest = {
   description: string | null;
 };

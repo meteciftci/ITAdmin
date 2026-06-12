@@ -603,7 +603,19 @@
         "back": "Geri Dön",
         "enable": "Etkinleştir",
         "disable": "Devre dışı bırak",
-        "moveOu": "OU Taşı"
+        "moveOu": "OU Taşı",
+        "delete": "Sil"
+      },
+      "delete": {
+        "title": "Bilgisayar hesabı silinsin mi?",
+        "description": "{{name}} bilgisayar hesabı Active Directory'den silinecek.",
+        "impact": "Bu işlem bilgisayarın domain kaynaklarına erişimini kaldırır.",
+        "confirmLabel": "Onay metni",
+        "confirmPlaceholder": "{{name}}",
+        "confirmHint": "Silme işlemini onaylamak için \"{{name}}\" yazın.",
+        "protected": "Bu bilgisayar hesabı silinemez.",
+        "success": "Bilgisayar hesabı silindi.",
+        "error": "Bilgisayar hesabı silinemedi."
       },
       "updateDescription": {
         "title": "Bilgisayar açıklamasını güncelle",

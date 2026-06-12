@@ -22,11 +22,13 @@ import { buildAdComputersListReturnState } from "@/features/ad-management/ad-com
 import { getAdComputerPrimaryLabel } from "@/features/ad-management/ad-computer-display-labels";
 import {
   AD_MANAGEMENT_COMPUTERS_QUERY_KEY,
+  deleteAdComputer,
   disableAdComputer,
   enableAdComputer,
   getAdComputers,
   invalidateAdManagementComputerQueries,
 } from "@/features/ad-management/api";
+import { AdComputerDeleteConfirmDialog } from "@/features/ad-management/components/AdComputerDeleteConfirmDialog";
 import { AdComputersSearchToolbar } from "@/features/ad-management/components/AdComputersSearchToolbar";
 import { AdManagementModuleStateGuard } from "@/features/ad-management/components/AdManagementModuleStateGuard";
 import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useAdManagementModuleStatus";
@@ -52,10 +54,12 @@ export function AdComputersPage() {
   const moduleStatus = useAdManagementModuleStatus();
   const canEnableComputer = canAccess(currentUser, "AdManagement.Computers.Enable");
   const canDisableComputer = canAccess(currentUser, "AdManagement.Computers.Disable");
+  const canDeleteComputer = canAccess(currentUser, "AdManagement.Computers.Delete");
   const canMoveOu = canAccess(currentUser, "AdManagement.Computers.MoveOu");
   const navigate = useNavigate();
   const { listState, listPath, updateListState, clearListState } = useAdComputerListState();
   const [confirmTarget, setConfirmTarget] = useState<AccountConfirmTarget | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AdComputerListItem | null>(null);
 
   const normalizedSearch = listState.search.trim();
   const canSearch = normalizedSearch.length >= MIN_SEARCH_LENGTH;
@@ -93,6 +97,7 @@ export function AdComputersPage() {
         t,
         canDisableComputer,
         canEnableComputer,
+        canDeleteComputer,
         canMoveOu,
         onDetail: (computer) => {
           navigate(buildAdComputerDetailPath(computer.id), {
@@ -106,8 +111,9 @@ export function AdComputersPage() {
         },
         onDisable: (computer) => setConfirmTarget({ computer, action: "disable" }),
         onEnable: (computer) => setConfirmTarget({ computer, action: "enable" }),
+        onDelete: (computer) => setDeleteTarget(computer),
       }),
-    [t, canDisableComputer, canEnableComputer, canMoveOu, navigate],
+    [t, canDisableComputer, canEnableComputer, canDeleteComputer, canMoveOu, navigate],
   );
 
   const table = useServerDataTable({
@@ -118,6 +124,23 @@ export function AdComputersPage() {
       : listState.pageNumber,
     pageIndex: listState.pageNumber - 1,
     pageSize: listState.pageSize,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (computerId: string) => deleteAdComputer(computerId),
+    onSuccess: async (response) => {
+      if (!response.success) {
+        toast.error(t("adManagement:computers.delete.error"));
+        return;
+      }
+
+      await invalidateAdManagementComputerQueries(queryClient);
+      toast.success(response.message || t("adManagement:computers.delete.success"));
+      setDeleteTarget(null);
+    },
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, t("adManagement:computers.delete.error")));
+    },
   });
 
   const accountOperationMutation = useMutation({
@@ -270,6 +293,24 @@ export function AdComputersPage() {
           </div>
         </SectionCard>
       </section>
+
+      <AdComputerDeleteConfirmDialog
+        open={deleteTarget !== null}
+        computerId={deleteTarget?.id ?? ""}
+        computerLabel={deleteTarget ? getAdComputerPrimaryLabel(deleteTarget) : ""}
+        samAccountName={deleteTarget?.samAccountName}
+        isDeleting={deleteMutation.isPending}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteTarget(null);
+          }
+        }}
+        onConfirm={() => {
+          if (deleteTarget) {
+            deleteMutation.mutate(deleteTarget.id);
+          }
+        }}
+      />
 
       <ConfirmDialog
         open={confirmTarget !== null}

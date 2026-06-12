@@ -16,8 +16,10 @@ import {
   adDetailEditButtonClass,
   adDetailOutlineButtonClass,
 } from "@/features/ad-management/ad-user-detail-button-styles";
+import { AdComputerDeleteConfirmDialog } from "@/features/ad-management/components/AdComputerDeleteConfirmDialog";
 import { AdComputerUpdateDescriptionDialog } from "@/features/ad-management/components/AdComputerUpdateDescriptionDialog";
 import {
+  deleteAdComputer,
   disableAdComputer,
   enableAdComputer,
   invalidateAdManagementComputerQueries,
@@ -39,6 +41,7 @@ type Props = {
   canMoveOu: boolean;
   canEnableComputer: boolean;
   canDisableComputer: boolean;
+  canDeleteComputer: boolean;
 };
 
 export function AdComputerDetailHeaderActions({
@@ -50,18 +53,21 @@ export function AdComputerDetailHeaderActions({
   canMoveOu,
   canEnableComputer,
   canDisableComputer,
+  canDeleteComputer,
 }: Props) {
   const { t } = useTranslation(["adManagement", "common", "errors"]);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [confirmAction, setConfirmAction] = useState<AdComputerAccountConfirmAction | null>(null);
   const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const isProtected = isAdComputerAccountOperationRestricted(computer);
   const showUpdate = canUpdateComputer && !isProtected;
   const showMoveOu = canMoveOu && !isProtected;
   const showEnable = canEnableComputer && !computer.isEnabled && !isProtected;
   const showDisable = canDisableComputer && computer.isEnabled && !isProtected;
-  const hasAccountOperations = showEnable || showDisable;
+  const showDelete = canDeleteComputer && !isProtected;
+  const hasAccountOperations = showEnable || showDisable || showDelete;
   const computerLabel = getAdComputerPrimaryLabel(computer);
 
   const accountOperationMutation = useMutation({
@@ -100,6 +106,24 @@ export function AdComputerDetailHeaderActions({
             : t("adManagement:computers.messages.disableFailed"),
         ),
       );
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteAdComputer(computer.id),
+    onSuccess: async (response) => {
+      if (!response.success) {
+        toast.error(t("adManagement:computers.delete.error"));
+        return;
+      }
+
+      await invalidateAdManagementComputerQueries(queryClient);
+      toast.success(response.message || t("adManagement:computers.delete.success"));
+      setIsDeleteDialogOpen(false);
+      navigate(returnPath);
+    },
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, t("adManagement:computers.delete.error")));
     },
   });
 
@@ -206,6 +230,17 @@ export function AdComputerDetailHeaderActions({
                 {t("adManagement:computers.actions.disable")}
               </DropdownMenuItem>
             ) : null}
+            {showDelete ? (
+              <>
+                {(showEnable || showDisable) ? <DropdownMenuSeparator /> : null}
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => setIsDeleteDialogOpen(true)}
+                >
+                  {t("common:actions.delete")}
+                </DropdownMenuItem>
+              </>
+            ) : null}
           </RowActions>
         ) : null}
       </div>
@@ -228,6 +263,16 @@ export function AdComputerDetailHeaderActions({
             accountOperationMutation.mutate(confirmAction);
           }
         }}
+      />
+
+      <AdComputerDeleteConfirmDialog
+        open={isDeleteDialogOpen}
+        computerId={computer.id}
+        computerLabel={computerLabel}
+        samAccountName={computer.samAccountName}
+        isDeleting={deleteMutation.isPending}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={() => deleteMutation.mutate()}
       />
 
       <AdComputerUpdateDescriptionDialog

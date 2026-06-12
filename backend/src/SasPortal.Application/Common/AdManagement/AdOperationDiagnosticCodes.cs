@@ -28,4 +28,5 @@ public static class AdOperationDiagnosticCodes
     public const string GroupOuMoveFailed = "AD_GROUP_OU_MOVE_FAILED";
     public const string ComputerUpdateFailed = "AD_COMPUTER_UPDATE_FAILED";
     public const string ComputerOuMoveFailed = "AD_COMPUTER_OU_MOVE_FAILED";
+    public const string ComputerDeleteFailed = "AD_COMPUTER_DELETE_FAILED";
 }

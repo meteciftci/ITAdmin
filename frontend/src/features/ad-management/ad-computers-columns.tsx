@@ -16,22 +16,26 @@ type CreateAdComputerColumnsOptions = {
   t: TFunction;
   canDisableComputer: boolean;
   canEnableComputer: boolean;
+  canDeleteComputer: boolean;
   canMoveOu: boolean;
   onDetail: (computer: AdComputerListItem) => void;
   onMoveOu: (computer: AdComputerListItem) => void;
   onDisable: (computer: AdComputerListItem) => void;
   onEnable: (computer: AdComputerListItem) => void;
+  onDelete: (computer: AdComputerListItem) => void;
 };
 
 export function createAdComputerColumns({
   t,
   canDisableComputer,
   canEnableComputer,
+  canDeleteComputer,
   canMoveOu,
   onDetail,
   onMoveOu,
   onDisable,
   onEnable,
+  onDelete,
 }: CreateAdComputerColumnsOptions): ColumnDef<AdComputerListItem, unknown>[] {
   return [
     {
@@ -103,7 +107,8 @@ export function createAdComputerColumns({
               </>
             ) : null}
             {(canDisableComputer && computer.isEnabled)
-            || (canEnableComputer && !computer.isEnabled) ? (
+            || (canEnableComputer && !computer.isEnabled)
+            || canDeleteComputer ? (
               <>
                 <DropdownMenuSeparator />
                 {canDisableComputer && computer.isEnabled ? (
@@ -114,6 +119,14 @@ export function createAdComputerColumns({
                 {canEnableComputer && !computer.isEnabled ? (
                   <DropdownMenuItem onClick={() => onEnable(computer)}>
                     {t("adManagement:computers.actions.enable")}
+                  </DropdownMenuItem>
+                ) : null}
+                {canDeleteComputer ? (
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => onDelete(computer)}
+                  >
+                    {t("common:actions.delete")}
                   </DropdownMenuItem>
                 ) : null}
               </>

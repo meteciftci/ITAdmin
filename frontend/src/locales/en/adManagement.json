@@ -603,7 +603,19 @@
         "back": "Back",
         "enable": "Enable",
         "disable": "Disable",
-        "moveOu": "Move OU"
+        "moveOu": "Move OU",
+        "delete": "Delete"
+      },
+      "delete": {
+        "title": "Delete computer account?",
+        "description": "The computer account {{name}} will be deleted from Active Directory.",
+        "impact": "This operation removes the computer's access to domain resources.",
+        "confirmLabel": "Confirmation text",
+        "confirmPlaceholder": "{{name}}",
+        "confirmHint": "Type \"{{name}}\" to confirm deletion.",
+        "protected": "This computer account cannot be deleted.",
+        "success": "Computer account deleted.",
+        "error": "Computer account could not be deleted."
       },
       "updateDescription": {
         "title": "Update computer description",

@@ -46,6 +46,7 @@ import type {
   RemoveAdGroupMemberRequest,
   AdGroupMemberOperationResponse,
   AdComputerAccountOperationResponse,
+  DeleteAdComputerResponse,
   MoveAdComputerOuRequest,
   UpdateAdComputerRequest,
   AdComputerDetail,
@@ -281,6 +282,15 @@ export const moveAdComputerOu = async (
   const { data } = await apiClient.post<AdComputerAccountOperationResponse>(
     `/ad-management/computers/${computerId}/move-ou`,
     payload,
+  );
+  return data;
+};
+
+export const deleteAdComputer = async (
+  computerId: string,
+): Promise<DeleteAdComputerResponse> => {
+  const { data } = await apiClient.delete<DeleteAdComputerResponse>(
+    `/ad-management/computers/${computerId}`,
   );
   return data;
 };

@@ -12,6 +12,9 @@ public static class AdComputerAccountGuard
     public const string ProtectedComputerWriteOperationMessage =
         "Bu bilgisayar hesabı üzerinde bu işlem yapılamaz.";
 
+    public const string ProtectedComputerDeleteMessage =
+        "Bu bilgisayar hesabı silinemez.";
+
     public static bool IsProtectedComputer(
         int? primaryGroupId,
         int? userAccountControl,

@@ -181,7 +181,7 @@ describe("ad computers route and menu wiring", () => {
     assert.match(detailActionsSource, /updateAdComputer/);
     assert.doesNotMatch(detailActionsSource, /AdComputerMoveOuDialog/);
     assert.doesNotMatch(detailActionsSource, /moveAdComputerOu/);
-    assert.doesNotMatch(detailSource, /actions\.delete|manageMembers|canDelete/i);
+    assert.doesNotMatch(detailSource, /manageMembers/i);
   });
 
   it("uses correct API endpoints and parameters", () => {
@@ -211,6 +211,8 @@ describe("ad computers route and menu wiring", () => {
     assert.match(apiSource, /apiClient\.put<AdComputerAccountOperationResponse>/);
     assert.match(apiSource, /\/ad-management\/computers\/\$\{computerId\}\/move-ou/);
     assert.match(apiSource, /AD_OPERATION_LOGS_QUERY_KEY/);
+    assert.match(apiSource, /export const deleteAdComputer/);
+    assert.match(apiSource, /apiClient\.delete<DeleteAdComputerResponse>/);
   });
 });
 
@@ -307,6 +309,8 @@ describe("ad computer account operations i18n and operation logs", () => {
     assert.equal(enLogs.adOperationLogs.operations.ComputerDisable, "Computer disable");
     assert.equal(enLogs.adOperationLogs.operations.ComputerUpdate, "Computer update");
     assert.equal(enLogs.adOperationLogs.operations.ComputerMoveOu, "Computer OU move");
+    assert.equal(trLogs.adOperationLogs.operations.ComputerDelete, "Bilgisayar silme");
+    assert.equal(enLogs.adOperationLogs.operations.ComputerDelete, "Computer delete");
   });
 
   it("does not leave raw i18n keys in computer operation UI sources", () => {
@@ -317,6 +321,7 @@ describe("ad computer account operations i18n and operation logs", () => {
       readFileSync(new URL("./components/AdComputerUpdateDescriptionDialog.tsx", import.meta.url), "utf8"),
       readFileSync(new URL("./AdMoveComputerOuPage.tsx", import.meta.url), "utf8"),
       readFileSync(new URL("./components/AdComputerMoveOuForm.tsx", import.meta.url), "utf8"),
+      readFileSync(new URL("./components/AdComputerDeleteConfirmDialog.tsx", import.meta.url), "utf8"),
     ];
 
     for (const source of sources) {

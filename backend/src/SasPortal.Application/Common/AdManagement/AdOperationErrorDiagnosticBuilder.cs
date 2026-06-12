@@ -359,6 +359,7 @@ public static class AdOperationErrorDiagnosticBuilder
             AdManagementOperationTypes.GroupMoveOu => AdOperationDiagnosticCodes.GroupOuMoveFailed,
             AdManagementOperationTypes.ComputerUpdate => AdOperationDiagnosticCodes.ComputerUpdateFailed,
             AdManagementOperationTypes.ComputerMoveOu => AdOperationDiagnosticCodes.ComputerOuMoveFailed,
+            AdManagementOperationTypes.ComputerDelete => AdOperationDiagnosticCodes.ComputerDeleteFailed,
             _ => null,
         };
 

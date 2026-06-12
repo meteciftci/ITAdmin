@@ -570,6 +570,51 @@ public static class AdOperationLogSnapshotBuilder
             },
             SerializerOptions);
 
+    public static string BuildComputerDeleteRequestSummary(Guid computerId) =>
+        JsonSerializer.Serialize(
+            new
+            {
+                operation = AdManagementOperationTypes.ComputerDelete,
+                computerId = computerId.ToString("D"),
+            },
+            SerializerOptions);
+
+    public static string BuildComputerDeleteBeforeSnapshot(
+        string computerId,
+        string? samAccountName,
+        string? name,
+        string? distinguishedName,
+        bool isEnabled,
+        int? userAccountControl,
+        int? primaryGroupId) =>
+        JsonSerializer.Serialize(
+            new
+            {
+                operation = AdManagementOperationTypes.ComputerDelete,
+                computer = BuildComputerSnapshot(computerId, samAccountName, name, distinguishedName),
+                account = new
+                {
+                    isEnabled,
+                    userAccountControl,
+                    primaryGroupId,
+                },
+            },
+            SerializerOptions);
+
+    public static string BuildComputerDeleteAfterSnapshot(
+        string computerId,
+        string? samAccountName,
+        string? name,
+        string? distinguishedName) =>
+        JsonSerializer.Serialize(
+            new
+            {
+                operation = AdManagementOperationTypes.ComputerDelete,
+                deleted = true,
+                computer = BuildComputerSnapshot(computerId, samAccountName, name, distinguishedName),
+            },
+            SerializerOptions);
+
     private static object BuildComputerSnapshot(
         string computerId,
         string? samAccountName,
