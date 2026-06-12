@@ -236,6 +236,16 @@ export type ParsedSnapshotAccount = {
   isLocked: boolean | null;
   userAccountControl: number | null;
   lockoutTime: string | null;
+  primaryGroupId: number | null;
+};
+
+export type ParsedSnapshotComputer = {
+  id: string | null;
+  samAccountName: string | null;
+  name: string | null;
+  displayName?: string | null;
+  dNSHostName?: string | null;
+  distinguishedName: string | null;
 };
 
 export type ParsedSnapshotGroup = {
@@ -304,6 +314,7 @@ export type ParsedSnapshotAccountExpiration = {
 export type ParsedNestedAdOperationSnapshot = {
   operation: string | null;
   user: ParsedSnapshotUser | null;
+  computer: ParsedSnapshotComputer | null;
   account: ParsedSnapshotAccount | null;
   group: ParsedSnapshotGroup | null;
   member: ParsedSnapshotMember | null;
@@ -328,6 +339,7 @@ export type SnapshotRenderStrategy =
   | "groupCreate"
   | "groupUpdate"
   | "groupDelete"
+  | "computerDelete"
   | "accountStatus"
   | "lockStatus"
   | "groupMembership"
@@ -413,9 +425,30 @@ function parseSnapshotAccount(value: unknown): ParsedSnapshotAccount | null {
     isLocked: readBoolean(record.isLocked ?? record.IsLocked),
     userAccountControl: readNumber(record.userAccountControl ?? record.UserAccountControl),
     lockoutTime: formatSnapshotValue(record.lockoutTime ?? record.LockoutTime),
+    primaryGroupId: readNumber(record.primaryGroupId ?? record.PrimaryGroupId),
   };
 
   return Object.values(account).some((entry) => entry !== null) ? account : null;
+}
+
+function parseSnapshotComputer(value: unknown): ParsedSnapshotComputer | null {
+  const record = readRecord(value);
+  if (!record) {
+    return null;
+  }
+
+  const computer: ParsedSnapshotComputer = {
+    id: formatSnapshotValue(record.id ?? record.Id),
+    samAccountName: formatSnapshotValue(record.samAccountName ?? record.SamAccountName),
+    name: formatSnapshotValue(record.name ?? record.Name),
+    displayName: formatSnapshotValue(record.displayName ?? record.DisplayName),
+    dNSHostName: formatSnapshotValue(record.dNSHostName ?? record.DNSHostName),
+    distinguishedName: formatSnapshotValue(record.distinguishedName ?? record.DistinguishedName),
+  };
+
+  return Object.values(computer).some((entry) => entry !== null && entry !== undefined)
+    ? computer
+    : null;
 }
 
 function parseSnapshotOu(value: unknown): ParsedSnapshotOu | null {
@@ -583,10 +616,12 @@ export function parseNestedAdOperationSnapshot(value: unknown): ParsedNestedAdOp
   const operation = formatSnapshotValue(record.operation ?? record.Operation);
   const nestedGroup = parseSnapshotGroup(record.group ?? record.Group);
   const group = nestedGroup ?? tryParseFlatGroupSnapshot(record);
+  const computerSource = record.computer ?? record.Computer;
 
   return {
     operation,
-    user: parseSnapshotUser(record.user ?? record.User ?? record.computer ?? record.Computer),
+    user: parseSnapshotUser(record.user ?? record.User ?? computerSource),
+    computer: parseSnapshotComputer(computerSource),
     account: parseSnapshotAccount(record.account ?? record.Account),
     group,
     member: parseSnapshotMember(record.member ?? record.Member),
@@ -607,6 +642,23 @@ export function resolveSnapshotUser(
   after: ParsedNestedAdOperationSnapshot | null,
 ): ParsedSnapshotUser | null {
   return after?.user ?? before?.user ?? null;
+}
+
+export function resolveSnapshotComputer(
+  before: ParsedNestedAdOperationSnapshot | null,
+  after: ParsedNestedAdOperationSnapshot | null,
+): ParsedSnapshotComputer | null {
+  return after?.computer ?? before?.computer ?? null;
+}
+
+export function readSnapshotDeletedFlag(
+  snapshot: ParsedNestedAdOperationSnapshot | null,
+): boolean | null {
+  if (!snapshot) {
+    return null;
+  }
+
+  return readBoolean(snapshot.rawRecord.deleted ?? snapshot.rawRecord.Deleted);
 }
 
 export function resolveSnapshotMember(
@@ -870,6 +922,7 @@ export function hasNestedSnapshotContent(snapshot: ParsedNestedAdOperationSnapsh
 
   return Boolean(
     snapshot.user ||
+      snapshot.computer ||
       snapshot.account ||
       snapshot.group ||
       snapshot.member ||
@@ -898,6 +951,9 @@ export function getSnapshotRenderStrategy(operationType: string): SnapshotRender
   }
   if (operationType === "GroupDelete") {
     return "groupDelete";
+  }
+  if (operationType === "ComputerDelete") {
+    return "computerDelete";
   }
   if (ACCOUNT_STATUS_OPERATION_TYPES.has(operationType)) {
     return "accountStatus";

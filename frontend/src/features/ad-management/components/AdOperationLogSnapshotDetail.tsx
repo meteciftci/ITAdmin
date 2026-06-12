@@ -26,10 +26,13 @@ import {
   parseAdOperationSnapshot,
   parseNestedAdOperationSnapshot,
   parseRequestSummaryEntries,
+  readSnapshotDeletedFlag,
+  resolveSnapshotComputer,
   resolveSnapshotGroup,
   resolveSnapshotMember,
   resolveSnapshotUser,
   type GenericSnapshotEntry,
+  type ParsedSnapshotComputer,
   type ParsedSnapshotGroup,
   type SnapshotCoreFieldKey,
   type SnapshotGroupComparisonFieldKey,
@@ -167,6 +170,71 @@ function getUserFieldEntries(
       label: t("snapshotSections.fields.distinguishedName"),
       value: user.distinguishedName,
       mono: true,
+    },
+  ];
+}
+
+function getComputerFieldEntries(
+  t: TFunction<"adOperationLogs">,
+  computer: ParsedSnapshotComputer | null,
+) {
+  if (!computer) {
+    return [];
+  }
+
+  return [
+    {
+      key: "computerId",
+      label: t("snapshotSections.fields.computerId"),
+      value: computer.id,
+    },
+    {
+      key: "name",
+      label: t("snapshotSections.fields.name"),
+      value: computer.name,
+    },
+    {
+      key: "samAccountName",
+      label: t("snapshotSections.fields.samAccountName"),
+      value: computer.samAccountName,
+    },
+    {
+      key: "distinguishedName",
+      label: t("snapshotSections.fields.distinguishedName"),
+      value: computer.distinguishedName,
+      mono: true,
+    },
+  ];
+}
+
+function getComputerDeleteAccountFieldEntries(
+  t: TFunction<"adOperationLogs">,
+  account: {
+    isEnabled: boolean | null;
+    userAccountControl: number | null;
+    primaryGroupId: number | null;
+  } | null,
+  formatBoolean: (value: boolean | null | undefined) => string | null,
+) {
+  if (!account) {
+    return [];
+  }
+
+  return [
+    {
+      key: "isEnabled",
+      label: t("snapshotSections.fields.isEnabled"),
+      value: formatBoolean(account.isEnabled),
+    },
+    {
+      key: "userAccountControl",
+      label: t("snapshotSections.fields.userAccountControl"),
+      value: account.userAccountControl != null ? String(account.userAccountControl) : null,
+    },
+    {
+      key: "primaryGroupId",
+      label: t("snapshotSections.fields.primaryGroupId"),
+      value: account.primaryGroupId != null ? String(account.primaryGroupId) : null,
     },
   ];
 }
@@ -953,6 +1021,82 @@ function GroupCreateSnapshotSections({
   );
 }
 
+function ComputerDeleteSnapshotSections({
+  beforeSnapshotJson,
+  afterSnapshotJson,
+  noneLabel,
+  t,
+}: {
+  beforeSnapshotJson: string | null | undefined;
+  afterSnapshotJson: string | null | undefined;
+  noneLabel: string;
+  t: TFunction<"adOperationLogs">;
+}) {
+  const booleanLabels = useMemo(
+    () => ({ yes: t("snapshotSections.boolean.yes"), no: t("snapshotSections.boolean.no") }),
+    [t],
+  );
+  const formatBoolean = useMemo(
+    () => (value: boolean | null | undefined) => formatSnapshotBoolean(value, booleanLabels),
+    [booleanLabels],
+  );
+
+  const beforeSnapshot = useMemo(
+    () => parseNestedAdOperationSnapshot(beforeSnapshotJson),
+    [beforeSnapshotJson],
+  );
+  const afterSnapshot = useMemo(
+    () => parseNestedAdOperationSnapshot(afterSnapshotJson),
+    [afterSnapshotJson],
+  );
+  const computer = useMemo(
+    () => resolveSnapshotComputer(beforeSnapshot, afterSnapshot),
+    [beforeSnapshot, afterSnapshot],
+  );
+  const deletedFlag = useMemo(
+    () => readSnapshotDeletedFlag(afterSnapshot),
+    [afterSnapshot],
+  );
+
+  return (
+    <>
+      <section className="space-y-3 border-t pt-4">
+        <h3 className="text-sm font-medium">{t("snapshotSections.deletedComputer")}</h3>
+        <KeyValueGrid
+          entries={getComputerFieldEntries(t, computer)}
+          noneLabel={noneLabel}
+        />
+      </section>
+
+      <section className="space-y-3 border-t pt-4">
+        <h3 className="text-sm font-medium">{t("snapshotSections.accountStatus")}</h3>
+        <KeyValueGrid
+          entries={getComputerDeleteAccountFieldEntries(
+            t,
+            beforeSnapshot?.account ?? null,
+            formatBoolean,
+          )}
+          noneLabel={noneLabel}
+        />
+      </section>
+
+      <section className="space-y-3 border-t pt-4">
+        <h3 className="text-sm font-medium">{t("snapshotSections.deleteResult")}</h3>
+        <KeyValueGrid
+          entries={[
+            {
+              key: "deleted",
+              label: t("snapshotSections.fields.deleted"),
+              value: formatBoolean(deletedFlag),
+            },
+          ]}
+          noneLabel={noneLabel}
+        />
+      </section>
+    </>
+  );
+}
+
 function GroupDeleteSnapshotSections({
   beforeSnapshotJson,
   noneLabel,
@@ -1234,6 +1378,15 @@ export function AdOperationLogSnapshotDetail({
         return (
           <GroupDeleteSnapshotSections
             beforeSnapshotJson={beforeSnapshotJson}
+            noneLabel={noneLabel}
+            t={t}
+          />
+        );
+      case "computerDelete":
+        return (
+          <ComputerDeleteSnapshotSections
+            beforeSnapshotJson={beforeSnapshotJson}
+            afterSnapshotJson={afterSnapshotJson}
             noneLabel={noneLabel}
             t={t}
           />

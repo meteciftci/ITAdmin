@@ -135,6 +135,8 @@
       "createdGroup": "Oluşturulan Grup",
       "groupUpdate": "Grup Bilgileri",
       "deletedGroup": "Silinen Grup",
+      "deletedComputer": "Silinen bilgisayar",
+      "deleteResult": "Silme sonucu",
       "notifications": "Bildirimler",
       "boolean": {
         "yes": "Evet",
@@ -142,6 +144,8 @@
       },
       "fields": {
         "userId": "User ID",
+        "computerId": "Bilgisayar ID",
+        "name": "Ad",
         "samAccountName": "sAMAccountName",
         "userPrincipalName": "UPN",
         "displayName": "Görünen Ad",
@@ -159,6 +163,8 @@
         "isEnabled": "Aktif mi",
         "isLocked": "Kilitli mi",
         "userAccountControl": "User Account Control",
+        "primaryGroupId": "primaryGroupID",
+        "deleted": "Silindi",
         "lockoutTime": "Lockout Time",
         "neverExpires": "Süresiz",
         "accountExpiresAt": "Hesap Bitiş Tarihi",

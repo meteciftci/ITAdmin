@@ -135,6 +135,8 @@
       "createdGroup": "Created Group",
       "groupUpdate": "Group Information",
       "deletedGroup": "Deleted Group",
+      "deletedComputer": "Deleted computer",
+      "deleteResult": "Delete result",
       "notifications": "Notifications",
       "boolean": {
         "yes": "Yes",
@@ -142,6 +144,8 @@
       },
       "fields": {
         "userId": "User ID",
+        "computerId": "Computer ID",
+        "name": "Name",
         "samAccountName": "sAMAccountName",
         "userPrincipalName": "UPN",
         "displayName": "Display name",
@@ -159,6 +163,8 @@
         "isEnabled": "Enabled",
         "isLocked": "Locked",
         "userAccountControl": "User Account Control",
+        "primaryGroupId": "primaryGroupID",
+        "deleted": "Deleted",
         "lockoutTime": "Lockout Time",
         "neverExpires": "Never Expires",
         "accountExpiresAt": "Account Expires At",

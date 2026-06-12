@@ -13,6 +13,9 @@ import {
   buildOuMoveComparisonRows,
   formatSnapshotBoolean,
   getSnapshotRenderStrategy,
+  hasNestedSnapshotContent,
+  readSnapshotDeletedFlag,
+  resolveSnapshotComputer,
   parseAdOperationSnapshot,
   parseNestedAdOperationSnapshot,
   parseRequestSummaryEntries,
@@ -374,6 +377,10 @@ describe("getSnapshotRenderStrategy", () => {
     assert.equal(getSnapshotRenderStrategy("GroupCreate"), "groupCreate");
     assert.equal(getSnapshotRenderStrategy("GroupUpdate"), "groupUpdate");
     assert.equal(getSnapshotRenderStrategy("GroupDelete"), "groupDelete");
+    assert.equal(getSnapshotRenderStrategy("ComputerDelete"), "computerDelete");
+    assert.equal(getSnapshotRenderStrategy("ComputerEnable"), "accountStatus");
+    assert.equal(getSnapshotRenderStrategy("ComputerDisable"), "accountStatus");
+    assert.equal(getSnapshotRenderStrategy("ComputerMoveOu"), "ouMove");
     assert.equal(getSnapshotRenderStrategy("GroupMemberAdd"), "groupMember");
     assert.equal(getSnapshotRenderStrategy("GroupMemberRemove"), "groupMember");
   });
@@ -393,6 +400,73 @@ describe("getSnapshotRenderStrategy", () => {
     assert.equal(getSnapshotRenderStrategy("GroupMemberAdd"), "groupMember");
     assert.equal(getSnapshotRenderStrategy("GroupMemberRemove"), "groupMember");
     assert.notEqual(getSnapshotRenderStrategy("GroupMemberAdd"), "generic");
+    assert.notEqual(getSnapshotRenderStrategy("ComputerDelete"), "generic");
+  });
+});
+
+describe("parseNestedAdOperationSnapshot ComputerDelete snapshots", () => {
+  const beforeSnapshot = {
+    operation: "ComputerDelete",
+    computer: {
+      id: "11111111-2222-3333-4444-555555555555",
+      samAccountName: "PC-01$",
+      name: "PC-01",
+      distinguishedName: "CN=PC-01,OU=Computers,DC=corp,DC=local",
+    },
+    account: {
+      isEnabled: true,
+      userAccountControl: 4098,
+      primaryGroupId: 515,
+    },
+  };
+
+  const afterSnapshot = {
+    operation: "ComputerDelete",
+    deleted: true,
+    computer: {
+      id: "11111111-2222-3333-4444-555555555555",
+      samAccountName: "PC-01$",
+      name: "PC-01",
+      distinguishedName: "CN=PC-01,OU=Computers,DC=corp,DC=local",
+    },
+  };
+
+  it("parses ComputerDelete computer and account fields in before snapshot", () => {
+    const parsed = parseNestedAdOperationSnapshot(JSON.stringify(beforeSnapshot));
+
+    assert.equal(parsed?.operation, "ComputerDelete");
+    assert.equal(parsed?.computer?.id, "11111111-2222-3333-4444-555555555555");
+    assert.equal(parsed?.computer?.samAccountName, "PC-01$");
+    assert.equal(parsed?.computer?.name, "PC-01");
+    assert.equal(
+      parsed?.computer?.distinguishedName,
+      "CN=PC-01,OU=Computers,DC=corp,DC=local",
+    );
+    assert.equal(parsed?.account?.isEnabled, true);
+    assert.equal(parsed?.account?.userAccountControl, 4098);
+    assert.equal(parsed?.account?.primaryGroupId, 515);
+    assert.equal(parsed?.user?.samAccountName, "PC-01$");
+  });
+
+  it("preserves deleted flag on after snapshot raw record", () => {
+    const parsed = parseNestedAdOperationSnapshot(JSON.stringify(afterSnapshot));
+
+    assert.equal(readSnapshotDeletedFlag(parsed), true);
+    assert.equal(parsed?.rawRecord.deleted, true);
+  });
+
+  it("resolves deleted computer from before and after snapshots", () => {
+    const before = parseNestedAdOperationSnapshot(JSON.stringify(beforeSnapshot));
+    const after = parseNestedAdOperationSnapshot(JSON.stringify(afterSnapshot));
+
+    assert.equal(resolveSnapshotComputer(before, after)?.name, "PC-01");
+    assert.equal(resolveSnapshotComputer(before, null)?.samAccountName, "PC-01$");
+  });
+
+  it("reports nested snapshot content when computer field exists", () => {
+    const parsed = parseNestedAdOperationSnapshot(JSON.stringify(beforeSnapshot));
+
+    assert.equal(hasNestedSnapshotContent(parsed), true);
   });
 });
 
@@ -563,6 +637,32 @@ describe("AdOperationLogSnapshotDetail group render wiring", () => {
   });
 });
 
+describe("AdOperationLogSnapshotDetail ComputerDelete render wiring", () => {
+  it("uses dedicated ComputerDelete sections instead of generic fallback", () => {
+    const detailSource = readFileSync(
+      new URL("./components/AdOperationLogSnapshotDetail.tsx", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(detailSource, /ComputerDeleteSnapshotSections/);
+    assert.match(detailSource, /case "computerDelete"/);
+    assert.match(detailSource, /snapshotSections\.deletedComputer/);
+    assert.match(detailSource, /snapshotSections\.deleteResult/);
+    assert.match(detailSource, /getComputerFieldEntries/);
+    assert.match(detailSource, /getComputerDeleteAccountFieldEntries/);
+    assert.match(detailSource, /KeyValueGrid/);
+    assert.match(detailSource, /resolveSnapshotComputer/);
+    assert.match(detailSource, /readSnapshotDeletedFlag/);
+    assert.doesNotMatch(
+      detailSource.slice(
+        detailSource.indexOf("function ComputerDeleteSnapshotSections"),
+        detailSource.indexOf("function GroupDeleteSnapshotSections"),
+      ),
+      /GenericSnapshotSections/,
+    );
+  });
+});
+
 describe("adOperationLogs group snapshot locale labels", () => {
   it("includes TR group log labels", () => {
     const trLocale = readFileSync(
@@ -578,6 +678,27 @@ describe("adOperationLogs group snapshot locale labels", () => {
     assert.match(trLocale, /"memberOfCount": "Üye Olduğu Grup Sayısı"/);
     assert.match(trLocale, /"groupDisplayName": "Grup Görünen Ad"/);
     assert.match(trLocale, /"groupName": "Grup Adı"/);
+  });
+
+  it("includes TR ComputerDelete snapshot labels", () => {
+    const trLocale = readFileSync(
+      new URL("../../locales/tr/adOperationLogs.json", import.meta.url),
+      "utf8",
+    );
+    const enLocale = readFileSync(
+      new URL("../../locales/en/adOperationLogs.json", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(trLocale, /"deletedComputer": "Silinen bilgisayar"/);
+    assert.match(trLocale, /"deleteResult": "Silme sonucu"/);
+    assert.match(trLocale, /"computerId": "Bilgisayar ID"/);
+    assert.match(trLocale, /"primaryGroupId": "primaryGroupID"/);
+    assert.match(trLocale, /"deleted": "Silindi"/);
+    assert.match(trLocale, /"ComputerDelete": "Bilgisayar silme"/);
+    assert.match(enLocale, /"deletedComputer": "Deleted computer"/);
+    assert.match(enLocale, /"deleteResult": "Delete result"/);
+    assert.match(enLocale, /"ComputerDelete": "Computer delete"/);
   });
 });
 
