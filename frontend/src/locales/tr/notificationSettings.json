@@ -6,10 +6,6 @@
       "providers": "Sağlayıcılar",
       "templates": "Şablonlar"
     },
-    "channels": {
-      "sms": "SMS",
-      "email": "E-posta"
-    },
     "sections": {
       "general": "Genel Bilgiler",
       "content": "Şablon İçeriği",

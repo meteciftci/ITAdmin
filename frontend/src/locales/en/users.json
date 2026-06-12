@@ -8,15 +8,8 @@
     "search": {
       "placeholder": "Search users..."
     },
-    "filters": {
-      "active": "Active",
-      "passive": "Passive",
-      "all": "All"
-    },
     "actions": {
       "addUser": "Add User",
-      "refresh": "Refresh",
-      "detail": "Detail",
       "activate": "Activate",
       "deactivate": "Deactivate",
       "assignRoles": "Assign Roles"

@@ -8,12 +8,7 @@
     "filters": {
       "searchPlaceholder": "Search security logs...",
       "eventTypeFilterPlaceholder": "Select event type",
-      "severityFilterPlaceholder": "Select severity",
-      "searchOptions": "Search options...",
-      "clearSelection": "Clear selection",
-      "noOptions": "No options found",
-      "dateRangePlaceholder": "Select date range",
-      "clearDateRange": "Clear"
+      "severityFilterPlaceholder": "Select severity"
     },
     "table": {
       "createdAt": "Created At",
@@ -23,9 +18,6 @@
       "ipAddress": "IP Address",
       "description": "Description",
       "actions": "Actions"
-    },
-    "actions": {
-      "detail": "Detail"
     },
     "detail": {
       "title": "Security Log Detail",

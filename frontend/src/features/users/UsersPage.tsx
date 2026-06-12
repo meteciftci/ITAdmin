@@ -181,7 +181,7 @@ export function UsersPage() {
                 ? [
                     {
                       id: "status",
-                      label: t("users:table.status"),
+                      label: t("common:fields.status"),
                       value: t(`common:status.${statusFilter}`),
                       onRemove: () => {
                         setStatusFilter("active");

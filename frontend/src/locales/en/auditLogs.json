@@ -9,11 +9,6 @@
       "searchPlaceholder": "Search audit logs...",
       "actionFilterPlaceholder": "Select action",
       "entityNameFilterPlaceholder": "Select entity name",
-      "searchOptions": "Search options...",
-      "clearSelection": "Clear selection",
-      "noOptions": "No options found",
-      "dateRangePlaceholder": "Select date range",
-      "clearDateRange": "Clear",
       "clearAll": "Clear filters",
       "activeCount": "Active filters: {{count}}",
       "minSearchLengthHint": "Enter at least 3 characters to search."
@@ -27,9 +22,6 @@
       "actorUserName": "User",
       "ipAddress": "IP Address",
       "actions": "Actions"
-    },
-    "actions": {
-      "detail": "Detail"
     },
     "detail": {
       "title": "Audit Log Detail",

@@ -3,10 +3,6 @@
     "title": "Notification Providers",
     "description": "Configure SMS and email providers.",
     "readOnlyNotice": "You have view-only access on this screen. Update permission is required to make changes.",
-    "tabs": {
-      "sms": "SMS",
-      "email": "Email"
-    },
     "fields": {
       "active": "Active",
       "provider": "Provider",

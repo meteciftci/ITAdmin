@@ -16,9 +16,7 @@
       "targetObjectGuidLabel": "Target Object GUID",
       "targetObjectGuidPlaceholder": "550e8400-e29b-41d4-a716-446655440000",
       "actorLabel": "Actor",
-      "actorPlaceholder": "Actor username",
-      "dateRangePlaceholder": "Select date range",
-      "clearDateRange": "Clear"
+      "actorPlaceholder": "Actor username"
     },
     "table": {
       "createdAt": "Date",
@@ -29,9 +27,6 @@
       "domainController": "Domain Controller",
       "errorSummary": "Error Summary",
       "actions": "Actions"
-    },
-    "actions": {
-      "detail": "Detail"
     },
     "operations": {
       "SettingsUpdated": "Settings update",

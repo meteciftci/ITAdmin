@@ -169,8 +169,8 @@ common.actions.cancel
 common.actions.delete
 common.status.active
 common.status.passive
-common.table.filters
-common.table.clearFilters
+common.dataTable.filters
+common.dataTable.clearFilters
 navigation.dashboard
 navigation.adManagement
 users.title
@@ -178,7 +178,7 @@ users.actions.addUser
 roles.messages.roleCreated
 adManagement.groups.title
 notifications.templates.createTitle
-auditLogs.filters.dateRangePlaceholder
+common.dateRange.placeholder
 ```
 
 Kurallar:
@@ -201,8 +201,11 @@ Ortak metinler `common` namespace altında tutulur.
 ```text
 common.actions
 common.status
-common.table
-common.filters
+common.dateRange
+common.select
+common.fields
+common.channels
+common.dataTable
 common.pagination
 common.dialog
 common.form
@@ -226,18 +229,43 @@ common.actions.delete
 common.actions.confirm
 common.actions.clear
 common.actions.search
+common.actions.detail
+common.actions.create
+common.actions.update
 
-common.table.filters
-common.table.clearFilters
-common.table.activeFilters
-common.table.noResults
-common.table.loading
-common.table.pageSize
-common.table.page
-common.table.nextPage
-common.table.previousPage
-common.table.firstPage
-common.table.lastPage
+common.status.active
+common.status.passive
+common.status.all
+
+common.dateRange.placeholder
+common.dateRange.clear
+
+common.select.searchOptions
+common.select.clearSelection
+common.select.noOptions
+
+common.fields.name
+common.fields.description
+common.fields.status
+common.fields.actions
+common.fields.date
+common.fields.code
+common.fields.type
+
+common.channels.sms
+common.channels.email
+
+common.dataTable.filters
+common.dataTable.clearFilters
+common.dataTable.activeFilters
+common.dataTable.noResults
+common.dataTable.loading
+common.pagination.pageSize
+common.pagination.pageOnly
+common.pagination.next
+common.pagination.previous
+common.pagination.first
+common.pagination.last
 ```
 
 Kurallar:
@@ -245,6 +273,11 @@ Kurallar:
 * DataTable, filter panel, pagination gibi ortak component metinleri `common` altında olmalıdır.
 * Her feature kendi “Filtreler”, “Sayfa boyutu”, “Sonuç bulunamadı” metnini tekrar etmez.
 * Feature özel empty state varsa feature namespace kullanabilir.
+* Genel UI action/status/dateRange/select/field/channel label’ları önce `common` namespace içinde aranmalıdır.
+* `common`’da yoksa ve metin domain özel değilse `common`’a eklenmelidir.
+* Modül locale dosyalarına yalnızca domain/modül özel metinler eklenmelidir.
+* Aynı görünen metin farklı context anlamı taşıyorsa ortaklaştırılmamalıdır (ör. AD computer `disabled` ≠ `common.status.passive`).
+* Locale dosyaları modül bazlı ayrı tutulmalıdır; tek `tr.json` / `en.json` dosyasına birleştirilmemelidir.
 
 ---
 

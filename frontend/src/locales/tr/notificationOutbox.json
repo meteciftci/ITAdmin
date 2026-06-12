@@ -10,10 +10,6 @@
       "statusAll": "Tüm durumlar",
       "searchPlaceholder": "Alıcı veya konu ara (en az 3 karakter)"
     },
-    "channels": {
-      "sms": "SMS",
-      "email": "E-posta"
-    },
     "statuses": {
       "pending": "Bekliyor",
       "processing": "İşleniyor",
@@ -34,7 +30,6 @@
       "actions": "İşlemler"
     },
     "actions": {
-      "detail": "Detay",
       "retry": "Yeniden dene",
       "cancel": "İptal et"
     },

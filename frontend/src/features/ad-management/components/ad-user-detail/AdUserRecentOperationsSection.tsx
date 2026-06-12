@@ -165,7 +165,7 @@ export function AdUserRecentOperationsSection({ userId, enabled }: Props) {
                             setDetailOpen(true);
                           }}
                         >
-                          {t("adOperationLogs:actions.detail")}
+                          {t("common:actions.detail")}
                         </Button>
                       </td>
                     </tr>

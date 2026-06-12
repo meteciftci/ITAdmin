@@ -104,11 +104,11 @@ export function createAdUserColumns({
             <DropdownMenuLabel>{t("common:actions.actions")}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => onDetail(user)}>
-              {t("adManagement:users.actions.detail")}
+              {t("common:actions.detail")}
             </DropdownMenuItem>
             {canUpdateUser ? (
               <DropdownMenuItem onClick={() => onEdit(user)}>
-                {t("adManagement:users.actions.edit")}
+                {t("common:actions.edit")}
               </DropdownMenuItem>
             ) : null}
             {canManageGroups ? (

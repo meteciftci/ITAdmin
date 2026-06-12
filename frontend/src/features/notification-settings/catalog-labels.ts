@@ -40,11 +40,11 @@ export function getCatalogVariableExample(
 
 export function getChannelLabel(t: TFunction, channel: string): string {
   if (channel === "Sms") {
-    return t("notificationSettings:channels.sms");
+    return t("common:channels.sms");
   }
 
   if (channel === "Email") {
-    return t("notificationSettings:channels.email");
+    return t("common:channels.email");
   }
 
   return channel;

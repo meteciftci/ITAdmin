@@ -9,17 +9,11 @@
       "placeholder": "Search roles..."
     },
     "filters": {
-      "active": "Active",
-      "passive": "Passive",
-      "all": "All",
       "system": "System",
       "custom": "Custom"
     },
     "actions": {
       "addRole": "Add Role",
-      "refresh": "Refresh",
-      "detail": "Detail",
-      "edit": "Edit",
       "activate": "Activate",
       "deactivate": "Deactivate",
       "assignPermissions": "Assign Permissions"

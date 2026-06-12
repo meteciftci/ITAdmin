@@ -203,8 +203,8 @@ export function NotificationTemplatesPage() {
                 onChange={(e) => updateField("channel", e.target.value)}
                 disabled={!canUpdate}
               >
-                <option value="Sms">SMS</option>
-                <option value="Email">{t("notificationTemplates:channels.email")}</option>
+                <option value="Sms">{t("common:channels.sms")}</option>
+                <option value="Email">{t("common:channels.email")}</option>
               </Select>
             </Field>
             <Field label={t("notificationTemplates:fields.name")}>

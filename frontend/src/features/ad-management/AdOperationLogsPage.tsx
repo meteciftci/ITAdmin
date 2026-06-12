@@ -280,8 +280,8 @@ export function AdOperationLogsPage() {
                     setDateRange(value);
                     setPageNumber(1);
                   }}
-                  placeholder={t("filters.dateRangePlaceholder")}
-                  clearLabel={t("filters.clearDateRange")}
+                  placeholder={t("common:dateRange.placeholder")}
+                  clearLabel={t("common:dateRange.clear")}
                   locale={calendarLocale}
                 />
               </div>

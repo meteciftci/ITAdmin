@@ -10,10 +10,6 @@
       "statusAll": "All statuses",
       "searchPlaceholder": "Search recipient or subject (min 3 characters)"
     },
-    "channels": {
-      "sms": "SMS",
-      "email": "Email"
-    },
     "statuses": {
       "pending": "Pending",
       "processing": "Processing",
@@ -34,7 +30,6 @@
       "actions": "Actions"
     },
     "actions": {
-      "detail": "Details",
       "retry": "Retry",
       "cancel": "Cancel"
     },

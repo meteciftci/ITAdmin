@@ -8,12 +8,7 @@
     "filters": {
       "searchPlaceholder": "Security log ara...",
       "eventTypeFilterPlaceholder": "Olay tipi seçin",
-      "severityFilterPlaceholder": "Seviye seçin",
-      "searchOptions": "Seçeneklerde ara...",
-      "clearSelection": "Seçimi temizle",
-      "noOptions": "Seçenek bulunamadı",
-      "dateRangePlaceholder": "Tarih aralığı seçin",
-      "clearDateRange": "Temizle"
+      "severityFilterPlaceholder": "Seviye seçin"
     },
     "table": {
       "createdAt": "Tarih",
@@ -23,9 +18,6 @@
       "ipAddress": "IP Adresi",
       "description": "Açıklama",
       "actions": "İşlemler"
-    },
-    "actions": {
-      "detail": "Detay"
     },
     "detail": {
       "title": "Security Log Detayı",

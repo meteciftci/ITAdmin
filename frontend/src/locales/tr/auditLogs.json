@@ -9,11 +9,6 @@
       "searchPlaceholder": "Audit log ara...",
       "actionFilterPlaceholder": "Aksiyon seçin",
       "entityNameFilterPlaceholder": "Varlık adı seçin",
-      "searchOptions": "Seçeneklerde ara...",
-      "clearSelection": "Seçimi temizle",
-      "noOptions": "Seçenek bulunamadı",
-      "dateRangePlaceholder": "Tarih aralığı seçin",
-      "clearDateRange": "Temizle",
       "clearAll": "Filtreleri temizle",
       "activeCount": "Aktif filtreler: {{count}}",
       "minSearchLengthHint": "Arama için en az 3 karakter girin."
@@ -27,9 +22,6 @@
       "actorUserName": "Kullanıcı",
       "ipAddress": "IP Adresi",
       "actions": "İşlemler"
-    },
-    "actions": {
-      "detail": "Detay"
     },
     "detail": {
       "title": "Audit Log Detayı",

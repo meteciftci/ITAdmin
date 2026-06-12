@@ -16,9 +16,7 @@
       "targetObjectGuidLabel": "Target Object GUID",
       "targetObjectGuidPlaceholder": "550e8400-e29b-41d4-a716-446655440000",
       "actorLabel": "Aktör",
-      "actorPlaceholder": "Aktör kullanıcı adı",
-      "dateRangePlaceholder": "Tarih aralığı seçin",
-      "clearDateRange": "Temizle"
+      "actorPlaceholder": "Aktör kullanıcı adı"
     },
     "table": {
       "createdAt": "Tarih",
@@ -29,9 +27,6 @@
       "domainController": "Domain Controller",
       "errorSummary": "Hata Özeti",
       "actions": "İşlemler"
-    },
-    "actions": {
-      "detail": "Detay"
     },
     "operations": {
       "SettingsUpdated": "Ayar güncelleme",

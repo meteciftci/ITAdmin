@@ -6,9 +6,6 @@
     "sections": {
       "list": "Template list"
     },
-    "channels": {
-      "email": "Email"
-    },
     "columns": {
       "module": "Module",
       "event": "Event",

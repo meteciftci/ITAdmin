@@ -6,9 +6,6 @@
     "sections": {
       "list": "Şablon listesi"
     },
-    "channels": {
-      "email": "E-posta"
-    },
     "columns": {
       "module": "Modül",
       "event": "Olay",

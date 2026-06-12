@@ -39,23 +39,23 @@ export function createRoleColumns({
   return [
     {
       accessorKey: "name",
-      header: () => t("roles:table.name"),
+      header: () => t("common:fields.name"),
     },
     {
       accessorKey: "code",
-      header: () => t("roles:table.code"),
+      header: () => t("common:fields.code"),
       cell: ({ row }) => <CodeBadge>{row.original.code}</CodeBadge>,
     },
     {
       accessorKey: "description",
-      header: () => t("roles:table.description"),
+      header: () => t("common:fields.description"),
       cell: ({ row }) => (
         <span className="line-clamp-2">{row.original.description || "-"}</span>
       ),
     },
     {
       id: "type",
-      header: () => t("roles:table.type"),
+      header: () => t("common:fields.type"),
       cell: ({ row }) => {
         const isSystemRole = row.original.isSystem;
         return (
@@ -67,7 +67,7 @@ export function createRoleColumns({
     },
     {
       id: "status",
-      header: () => t("roles:table.status"),
+      header: () => t("common:fields.status"),
       cell: ({ row }) => <StatusBadge isActive={row.original.isActive} />,
     },
     {
@@ -77,7 +77,7 @@ export function createRoleColumns({
     },
     {
       id: "actions",
-      header: () => t("roles:table.actions"),
+      header: () => t("common:fields.actions"),
       meta: { isAction: true } satisfies DataTableColumnMeta,
       cell: ({ row }) => {
         const role = row.original;
@@ -92,11 +92,11 @@ export function createRoleColumns({
             <DropdownMenuLabel>{t("common:actions.actions")}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => onDetail(role)}>
-              {t("roles:actions.detail")}
+              {t("common:actions.detail")}
             </DropdownMenuItem>
             {canEditRole ? (
               <DropdownMenuItem onClick={() => onEdit(role)}>
-                {t("roles:actions.edit")}
+                {t("common:actions.edit")}
               </DropdownMenuItem>
             ) : null}
             {canChangeStatus ? (

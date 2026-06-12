@@ -174,8 +174,8 @@ export function NotificationOutboxPage() {
                   className="w-full"
                 >
                   <option value="">{t("notificationOutbox:filters.channelAll")}</option>
-                  <option value="Sms">{t("notificationOutbox:channels.sms")}</option>
-                  <option value="Email">{t("notificationOutbox:channels.email")}</option>
+                  <option value="Sms">{t("common:channels.sms")}</option>
+                  <option value="Email">{t("common:channels.email")}</option>
                 </Select>
                 <Select
                   value={status}

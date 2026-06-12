@@ -134,11 +134,11 @@ export function createAdOperationLogColumns({
     },
     {
       id: "actions",
-      header: () => t("adOperationLogs:table.actions"),
+      header: () => t("common:fields.actions"),
       cell: ({ row }) => (
         <div className="text-right">
           <Button type="button" variant="ghost" size="sm" onClick={() => onDetail(row.original)}>
-            {t("adOperationLogs:actions.detail")}
+            {t("common:actions.detail")}
           </Button>
         </div>
       ),

@@ -3,10 +3,6 @@
     "title": "Bildirim Sağlayıcıları",
     "description": "SMS ve e-posta sağlayıcılarını yapılandırın.",
     "readOnlyNotice": "Bu ekranda yalnızca görüntüleme yetkiniz var. Değişiklik yapmak için güncelleme yetkisi gerekir.",
-    "tabs": {
-      "sms": "SMS",
-      "email": "E-posta"
-    },
     "fields": {
       "active": "Aktif",
       "provider": "Sağlayıcı",

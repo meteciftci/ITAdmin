@@ -86,11 +86,11 @@ export function createSecurityLogColumns({
     },
     {
       id: "actions",
-      header: () => t("securityLogs:table.actions"),
+      header: () => t("common:fields.actions"),
       meta: { isAction: true } satisfies DataTableColumnMeta,
       cell: ({ row }) => (
         <Button type="button" variant="outline" size="sm" onClick={() => onDetail(row.original)}>
-          {t("securityLogs:actions.detail")}
+          {t("common:actions.detail")}
         </Button>
       ),
     },

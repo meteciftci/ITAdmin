@@ -78,7 +78,7 @@ export function createAdComputerColumns({
       cell: ({ row }) => (
         <RowActions>
           <DropdownMenuItem onClick={() => onDetail(row.original)}>
-            {t("adManagement:computers.actions.detail")}
+            {t("common:actions.detail")}
           </DropdownMenuItem>
         </RowActions>
       ),

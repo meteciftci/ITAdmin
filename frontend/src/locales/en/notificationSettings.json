@@ -6,10 +6,6 @@
       "providers": "Providers",
       "templates": "Templates"
     },
-    "channels": {
-      "sms": "SMS",
-      "email": "Email"
-    },
     "sections": {
       "general": "General Information",
       "content": "Template Content",

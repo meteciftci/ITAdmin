@@ -99,11 +99,11 @@ export function createAdGroupColumns({
       cell: ({ row }) => (
         <RowActions>
           <DropdownMenuItem onClick={() => onDetail(row.original)}>
-            {t("adManagement:groups.actions.detail")}
+            {t("common:actions.detail")}
           </DropdownMenuItem>
           {canUpdateGroup ? (
             <DropdownMenuItem onClick={() => onEdit(row.original)}>
-              {t("adManagement:groups.actions.edit")}
+              {t("common:actions.edit")}
             </DropdownMenuItem>
           ) : null}
           {canManageMembers ? (
@@ -123,7 +123,7 @@ export function createAdGroupColumns({
                 className="text-destructive focus:text-destructive"
                 onClick={() => onDelete(row.original)}
               >
-                {t("adManagement:groups.actions.delete")}
+                {t("common:actions.delete")}
               </DropdownMenuItem>
             </>
           ) : null}

@@ -137,7 +137,7 @@ describe("ad groups route and menu wiring", () => {
     assert.match(columnsSource, /getAdGroupPrimaryLabel/);
     assert.match(columnsSource, /groups\.table\.group/);
     assert.match(columnsSource, /canUpdateGroup/);
-    assert.match(columnsSource, /groups\.actions\.edit/);
+    assert.match(columnsSource, /common:actions\.edit/);
     assert.doesNotMatch(columnsSource, /groups\.actions\.create|AddUserToGroup|RemoveUserFromGroup/i);
     assert.match(detailSource, /getAdGroupPrimaryLabel/);
     assert.match(detailSource, /getAdGroupMemberPrimaryLabel/);
@@ -215,14 +215,14 @@ describe("ad groups route and menu wiring", () => {
     assert.match(scopeSection, /align: "center"/);
     assert.match(typeSection, /align: "center"/);
     assert.match(actionsSection, /isAction: true, align: "center"/);
-    assert.match(actionsSection, /groups\.actions\.detail/);
+    assert.match(actionsSection, /common:actions\.detail/);
     assert.match(actionsSection, /canUpdateGroup/);
-    assert.match(actionsSection, /groups\.actions\.edit/);
+    assert.match(actionsSection, /common:actions\.edit/);
     assert.doesNotMatch(actionsSection, /groups\.actions\.create/);
     assert.match(actionsSection, /canManageMembers/);
     assert.match(actionsSection, /groups\.actions\.manageMembers/);
     assert.match(actionsSection, /canDeleteGroup/);
-    assert.match(actionsSection, /groups\.actions\.delete/);
+    assert.match(actionsSection, /common:actions\.delete/);
     assert.match(actionsSection, /DropdownMenuSeparator/);
     assert.doesNotMatch(actionsSection, /groups\.members\.add|groups\.members\.remove/);
   });

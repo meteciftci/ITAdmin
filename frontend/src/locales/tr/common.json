@@ -12,12 +12,41 @@
       "confirm": "Onayla",
       "clear": "Temizle",
       "more": "Daha fazla",
-      "actions": "İşlemler"
+      "actions": "İşlemler",
+      "detail": "Detay",
+      "edit": "Düzenle",
+      "delete": "Sil",
+      "remove": "Kaldır",
+      "add": "Ekle",
+      "create": "Oluştur",
+      "update": "Güncelle"
     },
     "status": {
       "active": "Aktif",
       "passive": "Pasif",
       "all": "Tümü"
+    },
+    "dateRange": {
+      "placeholder": "Tarih aralığı seçin",
+      "clear": "Temizle"
+    },
+    "select": {
+      "searchOptions": "Seçeneklerde ara...",
+      "clearSelection": "Seçimi temizle",
+      "noOptions": "Seçenek bulunamadı"
+    },
+    "fields": {
+      "name": "Ad",
+      "description": "Açıklama",
+      "status": "Durum",
+      "actions": "İşlemler",
+      "date": "Tarih",
+      "code": "Kod",
+      "type": "Tür"
+    },
+    "channels": {
+      "sms": "SMS",
+      "email": "E-posta"
     },
     "language": {
       "turkish": "Türkçe",

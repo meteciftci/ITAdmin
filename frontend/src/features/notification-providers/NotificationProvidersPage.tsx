@@ -9,7 +9,7 @@ import { useAuthStore } from "@/features/auth/auth-store";
 import { canAccess } from "@/lib/permissions";
 
 export function NotificationProvidersPage() {
-  const { t } = useTranslation(["notificationProviders"]);
+  const { t } = useTranslation(["notificationProviders", "common"]);
   const user = useAuthStore((state) => state.user);
   const canUpdate = canAccess(user, "NotificationProviders.Update");
 
@@ -29,8 +29,8 @@ export function NotificationProvidersPage() {
       <SectionCard>
         <Tabs defaultValue="sms">
           <TabsList>
-            <TabsTrigger value="sms">{t("notificationProviders:tabs.sms")}</TabsTrigger>
-            <TabsTrigger value="email">{t("notificationProviders:tabs.email")}</TabsTrigger>
+            <TabsTrigger value="sms">{t("common:channels.sms")}</TabsTrigger>
+            <TabsTrigger value="email">{t("common:channels.email")}</TabsTrigger>
           </TabsList>
           <TabsContent value="sms" className="mt-4">
             <SmsProviderSettingsTab readOnly={!canUpdate} />

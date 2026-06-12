@@ -9,17 +9,11 @@
       "placeholder": "Rol ara..."
     },
     "filters": {
-      "active": "Aktif",
-      "passive": "Pasif",
-      "all": "Tümü",
       "system": "Sistem",
       "custom": "Özel"
     },
     "actions": {
       "addRole": "Rol Ekle",
-      "refresh": "Yenile",
-      "detail": "Detay",
-      "edit": "Düzenle",
       "activate": "Aktife Al",
       "deactivate": "Pasife Al",
       "assignPermissions": "İzin Ata"

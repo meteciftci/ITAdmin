@@ -12,12 +12,41 @@
       "confirm": "Confirm",
       "clear": "Clear",
       "more": "More",
-      "actions": "Actions"
+      "actions": "Actions",
+      "detail": "Detail",
+      "edit": "Edit",
+      "delete": "Delete",
+      "remove": "Remove",
+      "add": "Add",
+      "create": "Create",
+      "update": "Update"
     },
     "status": {
       "active": "Active",
       "passive": "Passive",
       "all": "All"
+    },
+    "dateRange": {
+      "placeholder": "Select date range",
+      "clear": "Clear"
+    },
+    "select": {
+      "searchOptions": "Search options...",
+      "clearSelection": "Clear selection",
+      "noOptions": "No options found"
+    },
+    "fields": {
+      "name": "Name",
+      "description": "Description",
+      "status": "Status",
+      "actions": "Actions",
+      "date": "Date",
+      "code": "Code",
+      "type": "Type"
+    },
+    "channels": {
+      "sms": "SMS",
+      "email": "Email"
     },
     "language": {
       "turkish": "Turkish",

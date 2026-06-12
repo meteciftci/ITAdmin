@@ -8,15 +8,8 @@
     "search": {
       "placeholder": "Kullanıcı ara..."
     },
-    "filters": {
-      "active": "Aktif",
-      "passive": "Pasif",
-      "all": "Tümü"
-    },
     "actions": {
       "addUser": "Kullanıcı Ekle",
-      "refresh": "Yenile",
-      "detail": "Detay",
       "activate": "Aktife Al",
       "deactivate": "Pasife Al",
       "assignRoles": "Rol Ata"

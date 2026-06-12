@@ -67,7 +67,7 @@ export function createNotificationOutboxColumns({
     },
     {
       id: "status",
-      header: () => t("notificationOutbox:columns.status"),
+      header: () => t("common:fields.status"),
       cell: ({ row }) => (
         <Badge variant={getStatusVariant(row.original.status)}>
           {t(`notificationOutbox:statuses.${row.original.status.toLowerCase()}`, {
@@ -101,14 +101,14 @@ export function createNotificationOutboxColumns({
     },
     {
       id: "actions",
-      header: () => t("notificationOutbox:columns.actions"),
+      header: () => t("common:fields.actions"),
       meta: { isAction: true } satisfies DataTableColumnMeta,
       cell: ({ row }) => {
         const item = row.original;
         return (
           <div className="flex flex-wrap gap-2">
             <Button size="sm" variant="outline" onClick={() => onDetail(item)}>
-              {t("notificationOutbox:actions.detail")}
+              {t("common:actions.detail")}
             </Button>
             {canRetry && item.status === "Failed" ? (
               <Button size="sm" variant="secondary" onClick={() => onRetry(item)}>

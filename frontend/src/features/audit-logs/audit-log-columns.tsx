@@ -115,11 +115,11 @@ export function createAuditLogColumns({
     },
     {
       id: "actions",
-      header: () => t("auditLogs:table.actions"),
+      header: () => t("common:fields.actions"),
       meta: { isAction: true } satisfies DataTableColumnMeta,
       cell: ({ row }) => (
         <Button type="button" variant="outline" size="sm" onClick={() => onDetail(row.original)}>
-          {t("auditLogs:actions.detail")}
+          {t("common:actions.detail")}
         </Button>
       ),
     },

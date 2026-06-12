@@ -132,7 +132,7 @@ describe("ad computers route and menu wiring", () => {
     assert.doesNotMatch(toolbarSource, /canCreate|actions\.create|actions\.edit|actions\.delete|moveOu/i);
     assert.doesNotMatch(pageSource, /canCreate|canUpdate|canDelete|canEnable|canDisable|canMoveOu/);
     assert.match(columnsSource, /getAdComputerPrimaryLabel/);
-    assert.match(columnsSource, /computers\.actions\.detail/);
+    assert.match(columnsSource, /common:actions\.detail/);
     assert.doesNotMatch(columnsSource, /computers\.actions\.(edit|delete|enable|disable)/);
     assert.match(detailSource, /computers\.detail\.summaryTitle/);
     assert.match(detailSource, /computers\.detail\.technicalTitle/);

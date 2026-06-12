@@ -175,24 +175,24 @@ export function AuditLogsPage() {
                   options={actionOptions}
                   selectedValues={selectedActions}
                   onChange={handleActionFilterChange}
-                  clearLabel={t("auditLogs:filters.clearSelection")}
-                  emptyLabel={t("auditLogs:filters.noOptions")}
-                  searchPlaceholder={t("auditLogs:filters.searchOptions")}
+                  clearLabel={t("common:select.clearSelection")}
+                  emptyLabel={t("common:select.noOptions")}
+                  searchPlaceholder={t("common:select.searchOptions")}
                 />
                 <MultiSelectFilter
                   placeholder={t("auditLogs:filters.entityNameFilterPlaceholder")}
                   options={entityNameOptions}
                   selectedValues={selectedEntityNames}
                   onChange={handleEntityNameFilterChange}
-                  clearLabel={t("auditLogs:filters.clearSelection")}
-                  emptyLabel={t("auditLogs:filters.noOptions")}
-                  searchPlaceholder={t("auditLogs:filters.searchOptions")}
+                  clearLabel={t("common:select.clearSelection")}
+                  emptyLabel={t("common:select.noOptions")}
+                  searchPlaceholder={t("common:select.searchOptions")}
                 />
                 <DateRangePicker
                   value={dateRange}
                   onChange={handleDateRangeChange}
-                  placeholder={t("auditLogs:filters.dateRangePlaceholder")}
-                  clearLabel={t("auditLogs:filters.clearDateRange")}
+                  placeholder={t("common:dateRange.placeholder")}
+                  clearLabel={t("common:dateRange.clear")}
                   locale={calendarLocale}
                 />
               </div>

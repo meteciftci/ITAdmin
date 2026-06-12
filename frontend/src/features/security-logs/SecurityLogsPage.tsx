@@ -165,24 +165,24 @@ export function SecurityLogsPage() {
                   options={eventTypeOptions}
                   selectedValues={selectedEventTypes}
                   onChange={handleEventTypeFilterChange}
-                  clearLabel={t("securityLogs:filters.clearSelection")}
-                  emptyLabel={t("securityLogs:filters.noOptions")}
-                  searchPlaceholder={t("securityLogs:filters.searchOptions")}
+                  clearLabel={t("common:select.clearSelection")}
+                  emptyLabel={t("common:select.noOptions")}
+                  searchPlaceholder={t("common:select.searchOptions")}
                 />
                 <MultiSelectFilter
                   placeholder={t("securityLogs:filters.severityFilterPlaceholder")}
                   options={severityOptions}
                   selectedValues={selectedSeverities}
                   onChange={handleSeverityFilterChange}
-                  clearLabel={t("securityLogs:filters.clearSelection")}
-                  emptyLabel={t("securityLogs:filters.noOptions")}
-                  searchPlaceholder={t("securityLogs:filters.searchOptions")}
+                  clearLabel={t("common:select.clearSelection")}
+                  emptyLabel={t("common:select.noOptions")}
+                  searchPlaceholder={t("common:select.searchOptions")}
                 />
                 <DateRangePicker
                   value={dateRange}
                   onChange={handleDateRangeChange}
-                  placeholder={t("securityLogs:filters.dateRangePlaceholder")}
-                  clearLabel={t("securityLogs:filters.clearDateRange")}
+                  placeholder={t("common:dateRange.placeholder")}
+                  clearLabel={t("common:dateRange.clear")}
                   locale={calendarLocale}
                 />
               </div>

@@ -60,7 +60,7 @@ export function createUserColumns({
     },
     {
       id: "status",
-      header: () => t("users:table.status"),
+      header: () => t("common:fields.status"),
       cell: ({ row }) => <StatusBadge isActive={row.original.isActive} />,
     },
     {
@@ -70,7 +70,7 @@ export function createUserColumns({
     },
     {
       id: "actions",
-      header: () => t("users:table.actions"),
+      header: () => t("common:fields.actions"),
       meta: { isAction: true } satisfies DataTableColumnMeta,
       cell: ({ row }) => {
         const user = row.original;
@@ -79,7 +79,7 @@ export function createUserColumns({
             <DropdownMenuLabel>{t("common:actions.actions")}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => onDetail(user)}>
-              {t("users:actions.detail")}
+              {t("common:actions.detail")}
             </DropdownMenuItem>
             {canUpdate ? (
               <DropdownMenuItem
