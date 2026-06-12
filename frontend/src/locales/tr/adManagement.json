@@ -617,6 +617,8 @@
       },
       "moveOu": {
         "title": "Bilgisayar OU taşı",
+        "pageTitle": "Bilgisayar OU Taşı",
+        "pageDescription": "Bilgisayar hesabını izinli OU kapsamı içinde başka bir OU'ya taşıyın.",
         "currentOu": "Mevcut OU",
         "targetOu": "Hedef OU",
         "targetOuPlaceholder": "Hedef OU seçin",
@@ -625,6 +627,21 @@
         "targetOuLoadFailed": "OU listesi yüklenemedi",
         "description": "{{name}} bilgisayarı seçilen OU altına taşınacak.",
         "sameOu": "Aynı OU seçilemez.",
+        "protected": "Bu bilgisayar hesabı taşınamaz.",
+        "protectedTitle": "OU taşıma kullanılamıyor",
+        "sections": {
+          "computerSummary": "Bilgisayar özeti",
+          "targetOu": "Hedef OU"
+        },
+        "fields": {
+          "name": "Bilgisayar adı",
+          "samAccountName": "sAMAccountName",
+          "dnsHostName": "DNS adı",
+          "currentDn": "Distinguished Name"
+        },
+        "actions": {
+          "submit": "Taşı"
+        },
         "messages": {
           "moved": "Bilgisayar OU taşıma işlemi tamamlandı.",
           "moveFailed": "Bilgisayar OU taşıma işlemi başarısız oldu.",

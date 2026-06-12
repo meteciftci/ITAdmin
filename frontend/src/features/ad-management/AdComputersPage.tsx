@@ -14,7 +14,10 @@ import { LoadingState } from "@/components/common/LoadingState";
 import { SectionCard } from "@/components/common/SectionCard";
 import { AD_COMPUTERS_LIST_DEFAULTS } from "@/features/ad-management/ad-computers-list-query";
 import { createAdComputerColumns } from "@/features/ad-management/ad-computers-columns";
-import { buildAdComputerDetailPath } from "@/features/ad-management/ad-computer-detail-path";
+import {
+  buildAdComputerDetailPath,
+  buildAdComputerMoveOuPath,
+} from "@/features/ad-management/ad-computer-detail-path";
 import { buildAdComputersListReturnState } from "@/features/ad-management/ad-computers-return-path";
 import { getAdComputerPrimaryLabel } from "@/features/ad-management/ad-computer-display-labels";
 import {
@@ -49,6 +52,7 @@ export function AdComputersPage() {
   const moduleStatus = useAdManagementModuleStatus();
   const canEnableComputer = canAccess(currentUser, "AdManagement.Computers.Enable");
   const canDisableComputer = canAccess(currentUser, "AdManagement.Computers.Disable");
+  const canMoveOu = canAccess(currentUser, "AdManagement.Computers.MoveOu");
   const navigate = useNavigate();
   const { listState, listPath, updateListState, clearListState } = useAdComputerListState();
   const [confirmTarget, setConfirmTarget] = useState<AccountConfirmTarget | null>(null);
@@ -89,15 +93,21 @@ export function AdComputersPage() {
         t,
         canDisableComputer,
         canEnableComputer,
+        canMoveOu,
         onDetail: (computer) => {
           navigate(buildAdComputerDetailPath(computer.id), {
+            state: buildAdComputersListReturnState(),
+          });
+        },
+        onMoveOu: (computer) => {
+          navigate(buildAdComputerMoveOuPath(computer.id), {
             state: buildAdComputersListReturnState(),
           });
         },
         onDisable: (computer) => setConfirmTarget({ computer, action: "disable" }),
         onEnable: (computer) => setConfirmTarget({ computer, action: "enable" }),
       }),
-    [t, canDisableComputer, canEnableComputer, navigate],
+    [t, canDisableComputer, canEnableComputer, canMoveOu, navigate],
   );
 
   const table = useServerDataTable({

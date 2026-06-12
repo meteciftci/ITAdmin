@@ -7,7 +7,10 @@ import {
   normalizeAdComputersListState,
   parseAdComputersListStateFromSession,
 } from "./ad-computers-list-query.ts";
-import { buildAdComputerDetailPath } from "./ad-computer-detail-path.ts";
+import {
+  buildAdComputerDetailPath,
+  buildAdComputerMoveOuPath,
+} from "./ad-computer-detail-path.ts";
 import {
   getAdComputerPrimaryLabel,
   getAdComputerSecondaryLabel,
@@ -26,6 +29,13 @@ const listPath = AD_COMPUTERS_LIST_PATH;
 describe("ad computers navigation", () => {
   it("builds computer detail path", () => {
     assert.equal(buildAdComputerDetailPath(computerId), `${listPath}/${computerId}`);
+  });
+
+  it("builds computer move OU path", () => {
+    assert.equal(
+      buildAdComputerMoveOuPath(computerId),
+      `${listPath}/${computerId}/move-ou`,
+    );
   });
 
   it("returns detail path from detail return state", () => {
@@ -83,8 +93,11 @@ describe("ad computers route and menu wiring", () => {
     );
 
     assert.match(routerSource, /path: "\/ad-management\/computers"/);
+    assert.match(routerSource, /path: "\/ad-management\/computers\/:id\/move-ou"/);
     assert.match(routerSource, /path: "\/ad-management\/computers\/:id"/);
     assert.match(routerSource, /RequirePermission permission="AdManagement\.Computers\.View"/);
+    assert.match(routerSource, /RequirePermission permission="AdManagement\.Computers\.MoveOu"/);
+    assert.match(routerSource, /AdMoveComputerOuPage/);
   });
 
   it("shows computers menu item only for computers permission", () => {
@@ -138,6 +151,8 @@ describe("ad computers route and menu wiring", () => {
     assert.match(detailSource, /AdManagement\.Computers\.MoveOu/);
     assert.match(pageSource, /AdManagement\.Computers\.Enable/);
     assert.match(pageSource, /AdManagement\.Computers\.Disable/);
+    assert.match(pageSource, /AdManagement\.Computers\.MoveOu/);
+    assert.match(pageSource, /buildAdComputerMoveOuPath/);
     assert.match(pageSource, /invalidateAdManagementComputerQueries/);
     assert.match(pageSource, /computers\.confirm\.enableTitle/);
     assert.match(pageSource, /common:actions\.confirm/);
@@ -145,6 +160,9 @@ describe("ad computers route and menu wiring", () => {
     assert.match(columnsSource, /common:actions\.detail/);
     assert.match(columnsSource, /computers\.actions\.enable/);
     assert.match(columnsSource, /computers\.actions\.disable/);
+    assert.match(columnsSource, /canMoveOu/);
+    assert.match(columnsSource, /onMoveOu/);
+    assert.match(columnsSource, /computers\.actions\.moveOu/);
     assert.match(columnsSource, /canEnableComputer && !computer\.isEnabled/);
     assert.match(columnsSource, /canDisableComputer && computer\.isEnabled/);
     assert.match(detailSource, /computers\.detail\.summaryTitle/);
@@ -158,10 +176,11 @@ describe("ad computers route and menu wiring", () => {
     assert.match(detailActionsSource, /isAdComputerAccountOperationRestricted/);
     assert.match(detailActionsSource, /common:actions\.edit/);
     assert.match(detailActionsSource, /computers\.actions\.moveOu/);
+    assert.match(detailActionsSource, /buildAdComputerMoveOuPath/);
     assert.match(detailActionsSource, /computers\.updateDescription\./);
-    assert.match(detailActionsSource, /computers\.moveOu\./);
     assert.match(detailActionsSource, /updateAdComputer/);
-    assert.match(detailActionsSource, /moveAdComputerOu/);
+    assert.doesNotMatch(detailActionsSource, /AdComputerMoveOuDialog/);
+    assert.doesNotMatch(detailActionsSource, /moveAdComputerOu/);
     assert.doesNotMatch(detailSource, /actions\.delete|manageMembers|canDelete/i);
   });
 
@@ -236,7 +255,12 @@ describe("ad computer account operations i18n and operation logs", () => {
         computers: {
           actions: { moveOu: string };
           updateDescription: { title: string; messages: { updated: string } };
-          moveOu: { title: string; messages: { moved: string }; sameOu: string };
+          moveOu: {
+            pageTitle: string;
+            title: string;
+            messages: { moved: string };
+            sameOu: string;
+          };
         };
       };
     };
@@ -247,16 +271,23 @@ describe("ad computer account operations i18n and operation logs", () => {
         computers: {
           actions: { moveOu: string };
           updateDescription: { title: string; messages: { updated: string } };
-          moveOu: { title: string; messages: { moved: string }; sameOu: string };
+          moveOu: {
+            pageTitle: string;
+            title: string;
+            messages: { moved: string };
+            sameOu: string;
+          };
         };
       };
     };
 
     assert.equal(trAdManagement.adManagement.computers.actions.moveOu, "OU Taşı");
     assert.match(trAdManagement.adManagement.computers.updateDescription.title, /açıklama/i);
+    assert.match(trAdManagement.adManagement.computers.moveOu.pageTitle, /OU Taşı/i);
     assert.match(trAdManagement.adManagement.computers.moveOu.title, /OU taşı/i);
     assert.equal(enAdManagement.adManagement.computers.actions.moveOu, "Move OU");
     assert.match(enAdManagement.adManagement.computers.updateDescription.title, /description/i);
+    assert.match(enAdManagement.adManagement.computers.moveOu.pageTitle, /Move Computer OU/i);
     assert.match(enAdManagement.adManagement.computers.moveOu.title, /Move computer OU/i);
   });
 
@@ -284,13 +315,14 @@ describe("ad computer account operations i18n and operation logs", () => {
       readFileSync(new URL("./ad-computers-columns.tsx", import.meta.url), "utf8"),
       readFileSync(new URL("./components/AdComputerDetailHeaderActions.tsx", import.meta.url), "utf8"),
       readFileSync(new URL("./components/AdComputerUpdateDescriptionDialog.tsx", import.meta.url), "utf8"),
-      readFileSync(new URL("./components/AdComputerMoveOuDialog.tsx", import.meta.url), "utf8"),
+      readFileSync(new URL("./AdMoveComputerOuPage.tsx", import.meta.url), "utf8"),
+      readFileSync(new URL("./components/AdComputerMoveOuForm.tsx", import.meta.url), "utf8"),
     ];
 
     for (const source of sources) {
       assert.doesNotMatch(source, /"computers\.actions\.enable"/);
       assert.doesNotMatch(source, /"computers\.confirm\.enableTitle"/);
-      assert.match(source, /t\("adManagement:computers\./);
+      assert.match(source, /t\("(adManagement:)?computers\./);
     }
   });
 });

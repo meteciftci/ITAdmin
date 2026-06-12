@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -9,18 +9,18 @@ import { RowActions } from "@/components/common/RowActions";
 import { Button } from "@/components/ui/button";
 import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { isAdComputerAccountOperationRestricted } from "@/features/ad-management/ad-computer-account-guard";
+import { buildAdComputerMoveOuPath } from "@/features/ad-management/ad-computer-detail-path";
+import { buildAdComputerDetailReturnState } from "@/features/ad-management/ad-computers-return-path";
 import {
   adDetailActionButtonSizingClass,
   adDetailEditButtonClass,
   adDetailOutlineButtonClass,
 } from "@/features/ad-management/ad-user-detail-button-styles";
-import { AdComputerMoveOuDialog } from "@/features/ad-management/components/AdComputerMoveOuDialog";
 import { AdComputerUpdateDescriptionDialog } from "@/features/ad-management/components/AdComputerUpdateDescriptionDialog";
 import {
   disableAdComputer,
   enableAdComputer,
   invalidateAdManagementComputerQueries,
-  moveAdComputerOu,
   updateAdComputer,
 } from "@/features/ad-management/api";
 import type {
@@ -53,15 +53,15 @@ export function AdComputerDetailHeaderActions({
 }: Props) {
   const { t } = useTranslation(["adManagement", "common", "errors"]);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [confirmAction, setConfirmAction] = useState<AdComputerAccountConfirmAction | null>(null);
   const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
-  const [isMoveOuDialogOpen, setIsMoveOuDialogOpen] = useState(false);
   const isProtected = isAdComputerAccountOperationRestricted(computer);
   const showUpdate = canUpdateComputer && !isProtected;
   const showMoveOu = canMoveOu && !isProtected;
   const showEnable = canEnableComputer && !computer.isEnabled && !isProtected;
   const showDisable = canDisableComputer && computer.isEnabled && !isProtected;
-  const hasOperations = showUpdate || showMoveOu || showEnable || showDisable;
+  const hasAccountOperations = showEnable || showDisable;
   const computerLabel = getAdComputerPrimaryLabel(computer);
 
   const accountOperationMutation = useMutation({
@@ -128,30 +128,6 @@ export function AdComputerDetailHeaderActions({
     },
   });
 
-  const moveOuMutation = useMutation({
-    mutationFn: (targetOuDistinguishedName: string) =>
-      moveAdComputerOu(computer.id, { targetOuDistinguishedName }),
-    onSuccess: async (response) => {
-      if (!response.success) {
-        toast.error(t("adManagement:computers.moveOu.messages.moveFailed"));
-        return;
-      }
-
-      await invalidateAdManagementComputerQueries(queryClient);
-      const fallbackMessage = response.message?.includes("zaten")
-        || response.message?.toLowerCase().includes("already")
-        ? t("adManagement:computers.moveOu.messages.alreadyInOu")
-        : t("adManagement:computers.moveOu.messages.moved");
-      toast.success(response.message || fallbackMessage);
-      setIsMoveOuDialogOpen(false);
-    },
-    onError: (error) => {
-      toast.error(
-        getApiErrorMessage(error, t("adManagement:computers.moveOu.messages.moveFailed")),
-      );
-    },
-  });
-
   const confirmCopy = useMemo(() => {
     if (!confirmAction) {
       return { title: "", description: "", variant: "default" as const };
@@ -208,12 +184,16 @@ export function AdComputerDetailHeaderActions({
             variant="outline"
             size="sm"
             className={adDetailActionButtonSizingClass}
-            onClick={() => setIsMoveOuDialogOpen(true)}
+            onClick={() =>
+              navigate(buildAdComputerMoveOuPath(computer.id), {
+                state: buildAdComputerDetailReturnState(computer.id),
+              })
+            }
           >
             {t("adManagement:computers.actions.moveOu")}
           </Button>
         ) : null}
-        {hasOperations && (showEnable || showDisable) ? (
+        {hasAccountOperations ? (
           <RowActions label={t("adManagement:computers.detail.actions.operations")}>
             {showEnable ? (
               <DropdownMenuItem onClick={() => setConfirmAction("enable")}>
@@ -257,15 +237,6 @@ export function AdComputerDetailHeaderActions({
         isSaving={updateDescriptionMutation.isPending}
         onOpenChange={setIsUpdateDialogOpen}
         onSubmit={(description) => updateDescriptionMutation.mutate(description)}
-      />
-
-      <AdComputerMoveOuDialog
-        key={`move-${computer.id}-${isMoveOuDialogOpen ? "open" : "closed"}`}
-        open={isMoveOuDialogOpen}
-        computer={computer}
-        isSaving={moveOuMutation.isPending}
-        onOpenChange={setIsMoveOuDialogOpen}
-        onSubmit={(targetOuDistinguishedName) => moveOuMutation.mutate(targetOuDistinguishedName)}
       />
     </>
   );

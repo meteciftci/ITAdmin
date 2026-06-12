@@ -617,6 +617,8 @@
       },
       "moveOu": {
         "title": "Move computer OU",
+        "pageTitle": "Move Computer OU",
+        "pageDescription": "Move the computer account to another OU within the allowed OU scope.",
         "currentOu": "Current OU",
         "targetOu": "Target OU",
         "targetOuPlaceholder": "Select target OU",
@@ -625,6 +627,21 @@
         "targetOuLoadFailed": "Could not load organizational units",
         "description": "Computer {{name}} will be moved under the selected OU.",
         "sameOu": "The same OU cannot be selected.",
+        "protected": "This computer account cannot be moved.",
+        "protectedTitle": "OU move unavailable",
+        "sections": {
+          "computerSummary": "Computer summary",
+          "targetOu": "Target OU"
+        },
+        "fields": {
+          "name": "Computer name",
+          "samAccountName": "sAMAccountName",
+          "dnsHostName": "DNS host name",
+          "currentDn": "Distinguished name"
+        },
+        "actions": {
+          "submit": "Move"
+        },
         "messages": {
           "moved": "Computer OU move completed.",
           "moveFailed": "Computer OU move failed.",

@@ -16,7 +16,9 @@ type CreateAdComputerColumnsOptions = {
   t: TFunction;
   canDisableComputer: boolean;
   canEnableComputer: boolean;
+  canMoveOu: boolean;
   onDetail: (computer: AdComputerListItem) => void;
+  onMoveOu: (computer: AdComputerListItem) => void;
   onDisable: (computer: AdComputerListItem) => void;
   onEnable: (computer: AdComputerListItem) => void;
 };
@@ -25,7 +27,9 @@ export function createAdComputerColumns({
   t,
   canDisableComputer,
   canEnableComputer,
+  canMoveOu,
   onDetail,
+  onMoveOu,
   onDisable,
   onEnable,
 }: CreateAdComputerColumnsOptions): ColumnDef<AdComputerListItem, unknown>[] {
@@ -90,6 +94,14 @@ export function createAdComputerColumns({
             <DropdownMenuItem onClick={() => onDetail(computer)}>
               {t("common:actions.detail")}
             </DropdownMenuItem>
+            {canMoveOu ? (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => onMoveOu(computer)}>
+                  {t("adManagement:computers.actions.moveOu")}
+                </DropdownMenuItem>
+              </>
+            ) : null}
             {(canDisableComputer && computer.isEnabled)
             || (canEnableComputer && !computer.isEnabled) ? (
               <>
