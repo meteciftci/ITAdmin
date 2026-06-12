@@ -600,7 +600,21 @@
       },
       "actions": {
         "detail": "Detail",
-        "back": "Back"
+        "back": "Back",
+        "enable": "Enable",
+        "disable": "Disable"
+      },
+      "confirm": {
+        "enableTitle": "Enable computer account?",
+        "disableTitle": "Disable computer account?",
+        "enableDescription": "The computer account {{name}} will be enabled.",
+        "disableDescription": "The computer account {{name}} will be disabled. This may affect the computer's access to domain resources."
+      },
+      "messages": {
+        "enabled": "Computer account enabled.",
+        "disabled": "Computer account disabled.",
+        "enableFailed": "Computer account could not be enabled.",
+        "disableFailed": "Computer account could not be disabled."
       },
       "empty": {
         "searchRequiredTitle": "Search required",
@@ -636,7 +650,10 @@
         "primaryGroupId": "primaryGroupID",
         "memberOfCount": "Member of group count: {{count}}",
         "memberOfEmpty": "No group memberships found",
-        "truncatedNotice": "Results were truncated. More records may exist."
+        "truncatedNotice": "Results were truncated. More records may exist.",
+        "actions": {
+          "operations": "Operations"
+        }
       }
     }
   }

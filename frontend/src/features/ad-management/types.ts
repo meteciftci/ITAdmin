@@ -444,6 +444,14 @@ export type GetAdComputersParams = {
   pageSize?: number;
 };
 
+export type AdComputerAccountConfirmAction = "enable" | "disable";
+
+export type AdComputerAccountOperationResponse = {
+  success: boolean;
+  message: string;
+  computer: AdComputerDetail | null;
+};
+
 export type CreateAdGroupRequest = {
   displayName: string;
   name: string;

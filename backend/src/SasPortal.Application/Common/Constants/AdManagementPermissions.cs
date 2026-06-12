@@ -20,6 +20,8 @@ public static class AdManagementPermissions
     public const string GroupsManageMembers = "AdManagement.Groups.ManageMembers";
     public const string GroupsMoveOu = "AdManagement.Groups.MoveOu";
     public const string ComputersView = "AdManagement.Computers.View";
+    public const string ComputersEnable = "AdManagement.Computers.Enable";
+    public const string ComputersDisable = "AdManagement.Computers.Disable";
     public const string UsersMoveOu = "AdManagement.Users.MoveOu";
     public const string OperationLogsView = "AdOperationLogs.View";
 }

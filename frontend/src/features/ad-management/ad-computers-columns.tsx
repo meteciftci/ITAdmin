@@ -4,7 +4,7 @@ import type { TFunction } from "i18next";
 import { DateTimeText } from "@/components/common/DateTimeText";
 import { RowActions } from "@/components/common/RowActions";
 import type { DataTableColumnMeta } from "@/components/common/data-table";
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import {
   getAdComputerPrimaryLabel,
   getAdComputerSecondaryLabel,
@@ -14,12 +14,20 @@ import type { AdComputerListItem } from "@/features/ad-management/types";
 
 type CreateAdComputerColumnsOptions = {
   t: TFunction;
+  canDisableComputer: boolean;
+  canEnableComputer: boolean;
   onDetail: (computer: AdComputerListItem) => void;
+  onDisable: (computer: AdComputerListItem) => void;
+  onEnable: (computer: AdComputerListItem) => void;
 };
 
 export function createAdComputerColumns({
   t,
+  canDisableComputer,
+  canEnableComputer,
   onDetail,
+  onDisable,
+  onEnable,
 }: CreateAdComputerColumnsOptions): ColumnDef<AdComputerListItem, unknown>[] {
   return [
     {
@@ -75,13 +83,32 @@ export function createAdComputerColumns({
       id: "actions",
       header: () => t("adManagement:computers.table.actions"),
       meta: { isAction: true, align: "center" } satisfies DataTableColumnMeta,
-      cell: ({ row }) => (
-        <RowActions>
-          <DropdownMenuItem onClick={() => onDetail(row.original)}>
-            {t("common:actions.detail")}
-          </DropdownMenuItem>
-        </RowActions>
-      ),
+      cell: ({ row }) => {
+        const computer = row.original;
+        return (
+          <RowActions>
+            <DropdownMenuItem onClick={() => onDetail(computer)}>
+              {t("common:actions.detail")}
+            </DropdownMenuItem>
+            {(canDisableComputer && computer.isEnabled)
+            || (canEnableComputer && !computer.isEnabled) ? (
+              <>
+                <DropdownMenuSeparator />
+                {canDisableComputer && computer.isEnabled ? (
+                  <DropdownMenuItem onClick={() => onDisable(computer)}>
+                    {t("adManagement:computers.actions.disable")}
+                  </DropdownMenuItem>
+                ) : null}
+                {canEnableComputer && !computer.isEnabled ? (
+                  <DropdownMenuItem onClick={() => onEnable(computer)}>
+                    {t("adManagement:computers.actions.enable")}
+                  </DropdownMenuItem>
+                ) : null}
+              </>
+            ) : null}
+          </RowActions>
+        );
+      },
     },
   ];
 }

@@ -109,7 +109,7 @@ describe("ad computers route and menu wiring", () => {
     assert.match(sidebarSource, /isAdManagementComputersVisible\(user, moduleState\)/);
   });
 
-  it("uses read-only list toolbar and detail-only actions", () => {
+  it("uses list toolbar and account operation actions with permissions", () => {
     const pageSource = readFileSync(
       new URL("./AdComputersPage.tsx", import.meta.url),
       "utf8",
@@ -126,18 +126,31 @@ describe("ad computers route and menu wiring", () => {
       new URL("./AdComputerDetailPage.tsx", import.meta.url),
       "utf8",
     );
+    const detailActionsSource = readFileSync(
+      new URL("./components/AdComputerDetailHeaderActions.tsx", import.meta.url),
+      "utf8",
+    );
 
     assert.match(toolbarSource, /searchPlaceholder=\{t\("adManagement:computers\.searchPlaceholder"\)\}/);
     assert.match(toolbarSource, /computers\.filters\.active/);
     assert.doesNotMatch(toolbarSource, /canCreate|actions\.create|actions\.edit|actions\.delete|moveOu/i);
-    assert.doesNotMatch(pageSource, /canCreate|canUpdate|canDelete|canEnable|canDisable|canMoveOu/);
+    assert.match(pageSource, /AdManagement\.Computers\.Enable/);
+    assert.match(pageSource, /AdManagement\.Computers\.Disable/);
+    assert.match(pageSource, /invalidateAdManagementComputerQueries/);
+    assert.match(pageSource, /computers\.confirm\.enableTitle/);
+    assert.match(pageSource, /common:actions\.confirm/);
     assert.match(columnsSource, /getAdComputerPrimaryLabel/);
     assert.match(columnsSource, /common:actions\.detail/);
-    assert.doesNotMatch(columnsSource, /computers\.actions\.(edit|delete|enable|disable)/);
+    assert.match(columnsSource, /computers\.actions\.enable/);
+    assert.match(columnsSource, /computers\.actions\.disable/);
+    assert.match(columnsSource, /canEnableComputer && !computer\.isEnabled/);
+    assert.match(columnsSource, /canDisableComputer && computer\.isEnabled/);
     assert.match(detailSource, /computers\.detail\.summaryTitle/);
     assert.match(detailSource, /computers\.detail\.technicalTitle/);
     assert.match(detailSource, /computers\.detail\.operatingSystemTitle/);
     assert.match(detailSource, /memberOfTruncated/);
+    assert.match(detailActionsSource, /computers\.confirm\.disableDescription/);
+    assert.match(detailActionsSource, /invalidateAdManagementComputerQueries/);
     assert.doesNotMatch(detailSource, /actions\.edit|actions\.delete|moveOu|manageMembers|canUpdate|canDelete/i);
   });
 
@@ -159,6 +172,72 @@ describe("ad computers route and menu wiring", () => {
     assert.match(apiSource, /export const getAdComputerOperatingSystems/);
     assert.match(apiSource, /operatingSystem: params\.operatingSystem/);
     assert.match(apiSource, /AD_COMPUTER_OPERATING_SYSTEMS_QUERY_KEY/);
+    assert.match(apiSource, /export const enableAdComputer/);
+    assert.match(apiSource, /export const disableAdComputer/);
+    assert.match(apiSource, /\/ad-management\/computers\/\$\{computerId\}\/enable/);
+    assert.match(apiSource, /\/ad-management\/computers\/\$\{computerId\}\/disable/);
+  });
+});
+
+describe("ad computer account operations i18n and operation logs", () => {
+  it("defines computer operation keys in TR and EN adManagement locales", () => {
+    const trAdManagement = JSON.parse(
+      readFileSync(new URL("../../locales/tr/adManagement.json", import.meta.url), "utf8"),
+    ) as {
+      adManagement: {
+        computers: {
+          actions: { enable: string; disable: string };
+          confirm: { enableTitle: string; disableTitle: string };
+          messages: { enabled: string; disabled: string };
+        };
+      };
+    };
+    const enAdManagement = JSON.parse(
+      readFileSync(new URL("../../locales/en/adManagement.json", import.meta.url), "utf8"),
+    ) as {
+      adManagement: {
+        computers: {
+          actions: { enable: string; disable: string };
+          confirm: { enableTitle: string; disableTitle: string };
+          messages: { enabled: string; disabled: string };
+        };
+      };
+    };
+
+    assert.equal(trAdManagement.adManagement.computers.actions.enable, "Etkinleştir");
+    assert.equal(trAdManagement.adManagement.computers.actions.disable, "Devre dışı bırak");
+    assert.equal(enAdManagement.adManagement.computers.actions.enable, "Enable");
+    assert.equal(enAdManagement.adManagement.computers.actions.disable, "Disable");
+    assert.match(trAdManagement.adManagement.computers.confirm.enableTitle, /etkinleştir/i);
+    assert.match(enAdManagement.adManagement.computers.confirm.enableTitle, /enable/i);
+  });
+
+  it("supports ComputerEnable and ComputerDisable in operation log labels", () => {
+    const trLogs = JSON.parse(
+      readFileSync(new URL("../../locales/tr/adOperationLogs.json", import.meta.url), "utf8"),
+    ) as { adOperationLogs: { operations: Record<string, string> } };
+    const enLogs = JSON.parse(
+      readFileSync(new URL("../../locales/en/adOperationLogs.json", import.meta.url), "utf8"),
+    ) as { adOperationLogs: { operations: Record<string, string> } };
+
+    assert.equal(trLogs.adOperationLogs.operations.ComputerEnable, "Bilgisayar etkinleştirme");
+    assert.equal(trLogs.adOperationLogs.operations.ComputerDisable, "Bilgisayar devre dışı bırakma");
+    assert.equal(enLogs.adOperationLogs.operations.ComputerEnable, "Computer enable");
+    assert.equal(enLogs.adOperationLogs.operations.ComputerDisable, "Computer disable");
+  });
+
+  it("does not leave raw i18n keys in computer operation UI sources", () => {
+    const sources = [
+      readFileSync(new URL("./AdComputersPage.tsx", import.meta.url), "utf8"),
+      readFileSync(new URL("./ad-computers-columns.tsx", import.meta.url), "utf8"),
+      readFileSync(new URL("./components/AdComputerDetailHeaderActions.tsx", import.meta.url), "utf8"),
+    ];
+
+    for (const source of sources) {
+      assert.doesNotMatch(source, /"computers\.actions\.enable"/);
+      assert.doesNotMatch(source, /"computers\.confirm\.enableTitle"/);
+      assert.match(source, /t\("adManagement:computers\./);
+    }
   });
 });
 

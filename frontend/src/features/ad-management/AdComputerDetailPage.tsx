@@ -1,21 +1,22 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useLocation, useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AxiosError } from "axios";
 
+import { useAuthStore } from "@/features/auth/auth-store";
+import { canAccess } from "@/lib/permissions";
 import { DateTimeText } from "@/components/common/DateTimeText";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ErrorState } from "@/components/common/ErrorState";
 import { LoadingState } from "@/components/common/LoadingState";
 import { PageHeader } from "@/components/common/PageHeader";
 import { SectionCard } from "@/components/common/SectionCard";
-import { Button } from "@/components/ui/button";
 import {
   getAdComputerPrimaryLabel,
   getAdComputerSecondaryLabel,
 } from "@/features/ad-management/ad-computer-display-labels";
-import { adDetailActionButtonSizingClass, adDetailOutlineButtonClass } from "@/features/ad-management/ad-user-detail-button-styles";
+import { AdComputerDetailHeaderActions } from "@/features/ad-management/components/AdComputerDetailHeaderActions";
 import { isGuidLike } from "@/features/ad-management/ad-user-detail-utils";
 import { resolveAdComputerReturnPath } from "@/features/ad-management/ad-computers-return-path";
 import { AD_COMPUTERS_LIST_PATH } from "@/features/ad-management/ad-computers-list-path";
@@ -86,7 +87,10 @@ export function AdComputerDetailPage() {
   const { t } = useTranslation(["adManagement", "common", "errors"]);
   const { id: computerId } = useParams<{ id: string }>();
   const location = useLocation();
+  const currentUser = useAuthStore((state) => state.user);
   const moduleStatus = useAdManagementModuleStatus();
+  const canEnableComputer = canAccess(currentUser, "AdManagement.Computers.Enable");
+  const canDisableComputer = canAccess(currentUser, "AdManagement.Computers.Disable");
   const hasValidId = Boolean(computerId?.trim()) && isGuidLike(computerId);
   const returnPath = resolveAdComputerReturnPath(location.state, AD_COMPUTERS_LIST_PATH);
 
@@ -288,24 +292,16 @@ export function AdComputerDetailPage() {
           title={pageTitle}
           description={pageDescription}
           actions={
-            <div className="flex flex-wrap items-center gap-2">
-              <Link
-                to={returnPath}
-                className={adDetailOutlineButtonClass}
-              >
-                {t("adManagement:computers.actions.back")}
-              </Link>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className={adDetailActionButtonSizingClass}
-                onClick={() => computerQuery.refetch()}
-                disabled={computerQuery.isFetching}
-              >
-                {t("common:actions.refresh")}
-              </Button>
-            </div>
+            computer ? (
+              <AdComputerDetailHeaderActions
+                computer={computer}
+                returnPath={returnPath}
+                isFetching={computerQuery.isFetching}
+                onRefresh={() => computerQuery.refetch()}
+                canEnableComputer={canEnableComputer}
+                canDisableComputer={canDisableComputer}
+              />
+            ) : null
           }
         />
 

@@ -49,7 +49,9 @@
       "GroupUpdate": "Grup güncelleme",
       "GroupDelete": "Grup silme",
       "GroupMemberAdd": "Grup üyesi ekleme",
-      "GroupMemberRemove": "Grup üyesi çıkarma"
+      "GroupMemberRemove": "Grup üyesi çıkarma",
+      "ComputerEnable": "Bilgisayar etkinleştirme",
+      "ComputerDisable": "Bilgisayar devre dışı bırakma"
     },
     "statuses": {
       "Succeeded": "Başarılı",

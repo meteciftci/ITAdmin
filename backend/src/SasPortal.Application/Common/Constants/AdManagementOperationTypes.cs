@@ -23,6 +23,13 @@ public static class AdManagementOperationTypes
     public const string GroupMemberAdd = "GroupMemberAdd";
     public const string GroupMemberRemove = "GroupMemberRemove";
     public const string GroupMoveOu = "GroupMoveOu";
+    public const string ComputerEnable = "ComputerEnable";
+    public const string ComputerDisable = "ComputerDisable";
+}
+
+public static class AdManagementTargetComputerTypes
+{
+    public const string AdComputer = "AdComputer";
 }
 
 public static class AdManagementTargetUserTypes

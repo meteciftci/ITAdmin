@@ -65,6 +65,8 @@ export const AD_OPERATION_LOG_OPERATION_TYPES = [
   "UserGroupAdd",
   "UserGroupRemove",
   "UserOuMove",
+  "ComputerEnable",
+  "ComputerDisable",
 ] as const;
 
 export const AD_OPERATION_LOG_STATUSES = [

@@ -45,6 +45,7 @@ import type {
   AddAdGroupMemberRequest,
   RemoveAdGroupMemberRequest,
   AdGroupMemberOperationResponse,
+  AdComputerAccountOperationResponse,
   AdComputerDetail,
   AdComputerListResponse,
   AdComputerOperatingSystemOptionsResponse,
@@ -223,6 +224,24 @@ export const getAdComputerOperatingSystems = async (): Promise<AdComputerOperati
 
 export const getAdComputerById = async (id: string): Promise<AdComputerDetail> => {
   const { data } = await apiClient.get<AdComputerDetail>(`/ad-management/computers/${id}`);
+  return data;
+};
+
+export const enableAdComputer = async (
+  computerId: string,
+): Promise<AdComputerAccountOperationResponse> => {
+  const { data } = await apiClient.post<AdComputerAccountOperationResponse>(
+    `/ad-management/computers/${computerId}/enable`,
+  );
+  return data;
+};
+
+export const disableAdComputer = async (
+  computerId: string,
+): Promise<AdComputerAccountOperationResponse> => {
+  const { data } = await apiClient.post<AdComputerAccountOperationResponse>(
+    `/ad-management/computers/${computerId}/disable`,
+  );
   return data;
 };
 

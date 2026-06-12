@@ -98,6 +98,27 @@ public static class AdOperationErrorDiagnosticBuilder
                 PartialUpdate: false,
                 RollbackStatus: AdUserUpdateRollbackStatus.NotRequired));
 
+    public static string BuildComputerAccountOperationFailureJson(
+        string operationType,
+        string step,
+        Guid targetObjectGuid,
+        string? targetDistinguishedName,
+        string? englishMessageOverride = null,
+        int? ldapResultCode = null,
+        int? ldapExceptionErrorCode = null,
+        string? ldapDiagnosticMessage = null,
+        string? normalizedReasonOverride = null) =>
+        BuildAccountOperationFailureJson(
+            operationType,
+            step,
+            targetObjectGuid,
+            targetDistinguishedName,
+            englishMessageOverride,
+            ldapResultCode,
+            ldapExceptionErrorCode,
+            ldapDiagnosticMessage,
+            normalizedReasonOverride);
+
     public static string BuildUserManagerUpdateFailureJson(
         string step,
         Guid? targetObjectGuid,

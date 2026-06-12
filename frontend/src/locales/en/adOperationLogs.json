@@ -49,7 +49,9 @@
       "GroupUpdate": "Update group",
       "GroupDelete": "Delete group",
       "GroupMemberAdd": "Add group member",
-      "GroupMemberRemove": "Remove group member"
+      "GroupMemberRemove": "Remove group member",
+      "ComputerEnable": "Computer enable",
+      "ComputerDisable": "Computer disable"
     },
     "statuses": {
       "Succeeded": "Succeeded",

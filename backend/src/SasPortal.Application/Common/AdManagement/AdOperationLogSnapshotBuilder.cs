@@ -418,6 +418,87 @@ public static class AdOperationLogSnapshotBuilder
             SerializerOptions);
     }
 
+    public static string BuildComputerAccountRequestSummary(
+        string operationType,
+        Guid computerId,
+        bool? requestedEnabled = null)
+    {
+        if (requestedEnabled is null)
+        {
+            return JsonSerializer.Serialize(
+                new { operation = operationType, computerId = computerId.ToString("D") },
+                SerializerOptions);
+        }
+
+        return JsonSerializer.Serialize(
+            new
+            {
+                operation = operationType,
+                computerId = computerId.ToString("D"),
+                requestedEnabled,
+            },
+            SerializerOptions);
+    }
+
+    public static string BuildComputerAccountBeforeSnapshot(
+        string operationType,
+        string computerId,
+        string? samAccountName,
+        string? name,
+        string? distinguishedName,
+        bool isEnabled,
+        int? userAccountControl,
+        int? primaryGroupId) =>
+        JsonSerializer.Serialize(
+            new
+            {
+                operation = operationType,
+                computer = BuildComputerSnapshot(computerId, samAccountName, name, distinguishedName),
+                account = new
+                {
+                    isEnabled,
+                    userAccountControl,
+                    primaryGroupId,
+                },
+            },
+            SerializerOptions);
+
+    public static string BuildComputerAccountAfterSnapshot(
+        string operationType,
+        string computerId,
+        string? samAccountName,
+        string? name,
+        string? distinguishedName,
+        bool isEnabled,
+        int? userAccountControl,
+        int? primaryGroupId) =>
+        JsonSerializer.Serialize(
+            new
+            {
+                operation = operationType,
+                computer = BuildComputerSnapshot(computerId, samAccountName, name, distinguishedName),
+                account = new
+                {
+                    isEnabled,
+                    userAccountControl,
+                    primaryGroupId,
+                },
+            },
+            SerializerOptions);
+
+    private static object BuildComputerSnapshot(
+        string computerId,
+        string? samAccountName,
+        string? name,
+        string? distinguishedName) =>
+        new
+        {
+            id = computerId,
+            samAccountName,
+            name,
+            distinguishedName,
+        };
+
     public static string BuildSettingsSnapshot(
         AdManagementSettings entity,
         IReadOnlyList<string> preferredDomainControllers,

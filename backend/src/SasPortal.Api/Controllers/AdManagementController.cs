@@ -24,7 +24,8 @@ public sealed class AdManagementController(
     IAdUserManagerUpdateService adUserManagerUpdateService,
     IAdUserAccountExpirationUpdateService adUserAccountExpirationUpdateService,
     IAdGroupDirectoryService adGroupDirectoryService,
-    IAdComputerDirectoryService adComputerDirectoryService) : ControllerBase
+    IAdComputerDirectoryService adComputerDirectoryService,
+    IAdComputerAccountOperationService adComputerAccountOperationService) : ControllerBase
 {
     [HttpGet("settings")]
     [RequirePermission(AdManagementPermissions.SettingsView)]
@@ -282,6 +283,26 @@ public sealed class AdManagementController(
 
         return Ok(new AdComputerOperatingSystemOptionsResponse(result.Page.Items));
     }
+
+    [HttpPost("computers/{id}/enable")]
+    [RequirePermission(AdManagementPermissions.ComputersEnable)]
+    public async Task<ActionResult<AdComputerAccountOperationResponse>> EnableComputer(
+        [FromRoute] string id,
+        CancellationToken cancellationToken = default) =>
+        await ExecuteComputerAccountOperationAsync(
+            id,
+            adComputerAccountOperationService.EnableComputerAsync,
+            cancellationToken);
+
+    [HttpPost("computers/{id}/disable")]
+    [RequirePermission(AdManagementPermissions.ComputersDisable)]
+    public async Task<ActionResult<AdComputerAccountOperationResponse>> DisableComputer(
+        [FromRoute] string id,
+        CancellationToken cancellationToken = default) =>
+        await ExecuteComputerAccountOperationAsync(
+            id,
+            adComputerAccountOperationService.DisableComputerAsync,
+            cancellationToken);
 
     [HttpGet("computer-organizational-units")]
     [RequirePermission(AdManagementPermissions.ComputersView)]
@@ -1418,6 +1439,55 @@ public sealed class AdManagementController(
             result.MaxDepth,
             result.Truncated,
             result.TruncatedReason);
+
+    private async Task<ActionResult<AdComputerAccountOperationResponse>> ExecuteComputerAccountOperationAsync(
+        string id,
+        Func<AppModels.AdComputerAccountOperationRequest, CancellationToken, Task<AppModels.AdComputerAccountOperationResult>> operation,
+        CancellationToken cancellationToken)
+    {
+        if (!Guid.TryParse(id, out var objectGuid))
+        {
+            return BadRequest(new AdComputerAccountOperationResponse(
+                false,
+                "Geçersiz bilgisayar kimliği.",
+                null));
+        }
+
+        var result = await operation(
+            new AppModels.AdComputerAccountOperationRequest(
+                objectGuid,
+                ResolveActorUserId(User),
+                ResolveActorUserName(User),
+                ResolveIpAddress(),
+                ResolveUserAgent()),
+            cancellationToken);
+
+        var response = MapComputerAccountOperationResponse(result);
+        if (result.IsSuccess)
+        {
+            return Ok(response);
+        }
+
+        return result.FailureKind switch
+        {
+            AppModels.AdDirectoryFailureKind.NotFound => NotFound(response),
+            AppModels.AdDirectoryFailureKind.ConnectionFailed => StatusCode(
+                StatusCodes.Status503ServiceUnavailable,
+                response),
+            AppModels.AdDirectoryFailureKind.Disabled
+                or AppModels.AdDirectoryFailureKind.NotConfigured
+                or AppModels.AdDirectoryFailureKind.MissingPassword
+                or AppModels.AdDirectoryFailureKind.InvalidRequest => BadRequest(response),
+            _ => BadRequest(response),
+        };
+    }
+
+    private static AdComputerAccountOperationResponse MapComputerAccountOperationResponse(
+        AppModels.AdComputerAccountOperationResult result) =>
+        new(
+            result.IsSuccess,
+            result.Message,
+            result.Computer is null ? null : MapComputerDetail(result.Computer));
 
     private async Task<ActionResult<AdUserAccountOperationResponse>> ExecuteAccountOperationAsync(
         string id,

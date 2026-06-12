@@ -600,7 +600,21 @@
       },
       "actions": {
         "detail": "Detay",
-        "back": "Geri Dön"
+        "back": "Geri Dön",
+        "enable": "Etkinleştir",
+        "disable": "Devre dışı bırak"
+      },
+      "confirm": {
+        "enableTitle": "Bilgisayar hesabı etkinleştirilsin mi?",
+        "disableTitle": "Bilgisayar hesabı devre dışı bırakılsın mı?",
+        "enableDescription": "{{name}} bilgisayar hesabı etkinleştirilecek.",
+        "disableDescription": "{{name}} bilgisayar hesabı devre dışı bırakılacak. Bu işlem bilgisayarın domain kaynaklarına erişimini etkileyebilir."
+      },
+      "messages": {
+        "enabled": "Bilgisayar hesabı etkinleştirildi.",
+        "disabled": "Bilgisayar hesabı devre dışı bırakıldı.",
+        "enableFailed": "Bilgisayar hesabı etkinleştirilemedi.",
+        "disableFailed": "Bilgisayar hesabı devre dışı bırakılamadı."
       },
       "empty": {
         "searchRequiredTitle": "Arama gerekli",
@@ -636,7 +650,10 @@
         "primaryGroupId": "primaryGroupID",
         "memberOfCount": "Üye olunan grup sayısı: {{count}}",
         "memberOfEmpty": "Üye olunan grup bulunamadı",
-        "truncatedNotice": "Sonuçlar sınırlandırıldı. Daha fazla kayıt olabilir."
+        "truncatedNotice": "Sonuçlar sınırlandırıldı. Daha fazla kayıt olabilir.",
+        "actions": {
+          "operations": "İşlemler"
+        }
       }
     }
   }

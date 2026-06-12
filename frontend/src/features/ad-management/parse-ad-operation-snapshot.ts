@@ -337,7 +337,12 @@ export type SnapshotRenderStrategy =
   | "userAccountExpirationUpdate"
   | "generic";
 
-const ACCOUNT_STATUS_OPERATION_TYPES = new Set(["UserEnable", "UserDisable"]);
+const ACCOUNT_STATUS_OPERATION_TYPES = new Set([
+  "UserEnable",
+  "UserDisable",
+  "ComputerEnable",
+  "ComputerDisable",
+]);
 const LOCK_STATUS_OPERATION_TYPES = new Set(["UserUnlock"]);
 const GROUP_MEMBERSHIP_OPERATION_TYPES = new Set(["UserGroupAdd", "UserGroupRemove"]);
 const GROUP_MEMBER_OPERATION_TYPES = new Set(["GroupMemberAdd", "GroupMemberRemove"]);
@@ -389,7 +394,8 @@ function parseSnapshotUser(value: unknown): ParsedSnapshotUser | null {
     id: formatSnapshotValue(record.id ?? record.Id),
     samAccountName: formatSnapshotValue(record.samAccountName ?? record.SamAccountName),
     userPrincipalName: formatSnapshotValue(record.userPrincipalName ?? record.UserPrincipalName),
-    displayName: formatSnapshotValue(record.displayName ?? record.DisplayName),
+    displayName: formatSnapshotValue(
+      record.displayName ?? record.DisplayName ?? record.name ?? record.Name),
     distinguishedName: formatSnapshotValue(record.distinguishedName ?? record.DistinguishedName),
   };
 
@@ -580,7 +586,7 @@ export function parseNestedAdOperationSnapshot(value: unknown): ParsedNestedAdOp
 
   return {
     operation,
-    user: parseSnapshotUser(record.user ?? record.User),
+    user: parseSnapshotUser(record.user ?? record.User ?? record.computer ?? record.Computer),
     account: parseSnapshotAccount(record.account ?? record.Account),
     group,
     member: parseSnapshotMember(record.member ?? record.Member),
