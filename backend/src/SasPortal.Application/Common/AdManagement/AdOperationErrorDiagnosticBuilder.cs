@@ -215,6 +215,54 @@ public static class AdOperationErrorDiagnosticBuilder
                 PartialUpdate: false,
                 RollbackStatus: AdUserUpdateRollbackStatus.NotRequired));
 
+    public static string BuildComputerUpdateFailureJson(
+        string step,
+        Guid? targetObjectGuid,
+        string? targetDistinguishedName,
+        string? englishMessageOverride = null,
+        int? ldapResultCode = null,
+        int? ldapExceptionErrorCode = null,
+        string? ldapDiagnosticMessage = null,
+        string? normalizedReasonOverride = null) =>
+        BuildJson(
+            new AdOperationFailureContext(
+                AdManagementOperationTypes.ComputerUpdate,
+                step,
+                DiagnosticCode: AdOperationDiagnosticCodes.ComputerUpdateFailed,
+                NormalizedReasonOverride: normalizedReasonOverride,
+                EnglishMessageOverride: englishMessageOverride,
+                LdapResultCode: ldapResultCode,
+                LdapExceptionErrorCode: ldapExceptionErrorCode,
+                LdapDiagnosticMessage: ldapDiagnosticMessage,
+                TargetObjectGuid: targetObjectGuid,
+                TargetDistinguishedName: targetDistinguishedName,
+                PartialUpdate: false,
+                RollbackStatus: AdUserUpdateRollbackStatus.NotRequired));
+
+    public static string BuildComputerOuMoveFailureJson(
+        string step,
+        Guid? targetObjectGuid,
+        string? targetDistinguishedName,
+        string? englishMessageOverride = null,
+        int? ldapResultCode = null,
+        int? ldapExceptionErrorCode = null,
+        string? ldapDiagnosticMessage = null,
+        string? normalizedReasonOverride = null) =>
+        BuildJson(
+            new AdOperationFailureContext(
+                AdManagementOperationTypes.ComputerMoveOu,
+                step,
+                DiagnosticCode: AdOperationDiagnosticCodes.ComputerOuMoveFailed,
+                NormalizedReasonOverride: normalizedReasonOverride,
+                EnglishMessageOverride: englishMessageOverride,
+                LdapResultCode: ldapResultCode,
+                LdapExceptionErrorCode: ldapExceptionErrorCode,
+                LdapDiagnosticMessage: ldapDiagnosticMessage,
+                TargetObjectGuid: targetObjectGuid,
+                TargetDistinguishedName: targetDistinguishedName,
+                PartialUpdate: false,
+                RollbackStatus: AdUserUpdateRollbackStatus.NotRequired));
+
     public static string BuildCreateGroupFailureJson(
         string step,
         string? englishMessageOverride = null,
@@ -309,6 +357,8 @@ public static class AdOperationErrorDiagnosticBuilder
             AdManagementOperationTypes.GroupMemberAdd => AdOperationDiagnosticCodes.GroupMemberAddFailed,
             AdManagementOperationTypes.GroupMemberRemove => AdOperationDiagnosticCodes.GroupMemberRemoveFailed,
             AdManagementOperationTypes.GroupMoveOu => AdOperationDiagnosticCodes.GroupOuMoveFailed,
+            AdManagementOperationTypes.ComputerUpdate => AdOperationDiagnosticCodes.ComputerUpdateFailed,
+            AdManagementOperationTypes.ComputerMoveOu => AdOperationDiagnosticCodes.ComputerOuMoveFailed,
             _ => null,
         };
 

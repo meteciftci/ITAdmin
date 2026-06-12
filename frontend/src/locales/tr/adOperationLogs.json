@@ -51,7 +51,9 @@
       "GroupMemberAdd": "Grup üyesi ekleme",
       "GroupMemberRemove": "Grup üyesi çıkarma",
       "ComputerEnable": "Bilgisayar etkinleştirme",
-      "ComputerDisable": "Bilgisayar devre dışı bırakma"
+      "ComputerDisable": "Bilgisayar devre dışı bırakma",
+      "ComputerUpdate": "Bilgisayar güncelleme",
+      "ComputerMoveOu": "Bilgisayar OU taşıma"
     },
     "statuses": {
       "Succeeded": "Başarılı",
@@ -118,6 +120,7 @@
     },
     "snapshotSections": {
       "user": "Kullanıcı",
+      "computer": "Bilgisayar",
       "accountStatus": "Hesap Durumu",
       "lockStatus": "Kilit Durumu",
       "group": "Grup",

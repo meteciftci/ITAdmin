@@ -51,7 +51,9 @@
       "GroupMemberAdd": "Add group member",
       "GroupMemberRemove": "Remove group member",
       "ComputerEnable": "Computer enable",
-      "ComputerDisable": "Computer disable"
+      "ComputerDisable": "Computer disable",
+      "ComputerUpdate": "Computer update",
+      "ComputerMoveOu": "Computer OU move"
     },
     "statuses": {
       "Succeeded": "Succeeded",
@@ -118,6 +120,7 @@
     },
     "snapshotSections": {
       "user": "User",
+      "computer": "Computer",
       "accountStatus": "Account Status",
       "lockStatus": "Lock Status",
       "group": "Group",

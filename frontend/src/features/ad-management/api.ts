@@ -46,6 +46,8 @@ import type {
   RemoveAdGroupMemberRequest,
   AdGroupMemberOperationResponse,
   AdComputerAccountOperationResponse,
+  MoveAdComputerOuRequest,
+  UpdateAdComputerRequest,
   AdComputerDetail,
   AdComputerListResponse,
   AdComputerOperatingSystemOptionsResponse,
@@ -261,11 +263,36 @@ export const searchComputerOrganizationalUnits = async (
   return data;
 };
 
+export const updateAdComputer = async (
+  computerId: string,
+  payload: UpdateAdComputerRequest,
+): Promise<AdComputerAccountOperationResponse> => {
+  const { data } = await apiClient.put<AdComputerAccountOperationResponse>(
+    `/ad-management/computers/${computerId}`,
+    payload,
+  );
+  return data;
+};
+
+export const moveAdComputerOu = async (
+  computerId: string,
+  payload: MoveAdComputerOuRequest,
+): Promise<AdComputerAccountOperationResponse> => {
+  const { data } = await apiClient.post<AdComputerAccountOperationResponse>(
+    `/ad-management/computers/${computerId}/move-ou`,
+    payload,
+  );
+  return data;
+};
+
 export async function invalidateAdManagementComputerQueries(
   queryClient: QueryClient,
 ): Promise<void> {
   await queryClient.invalidateQueries({
     queryKey: AD_MANAGEMENT_COMPUTERS_QUERY_KEY,
+  });
+  await queryClient.invalidateQueries({
+    queryKey: AD_OPERATION_LOGS_QUERY_KEY,
   });
 }
 

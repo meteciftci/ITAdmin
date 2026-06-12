@@ -418,6 +418,90 @@ public static class AdOperationLogSnapshotBuilder
             SerializerOptions);
     }
 
+    public static string BuildComputerUpdateRequestSummary(
+        Guid computerId,
+        string? description) =>
+        JsonSerializer.Serialize(
+            new
+            {
+                operation = AdManagementOperationTypes.ComputerUpdate,
+                computerId = computerId.ToString("D"),
+                description,
+            },
+            SerializerOptions);
+
+    public static string BuildComputerUpdateBeforeSnapshot(
+        string computerId,
+        string? samAccountName,
+        string? name,
+        string? distinguishedName,
+        string? description) =>
+        JsonSerializer.Serialize(
+            new
+            {
+                operation = AdManagementOperationTypes.ComputerUpdate,
+                computer = BuildComputerSnapshot(computerId, samAccountName, name, distinguishedName),
+                description,
+            },
+            SerializerOptions);
+
+    public static string BuildComputerUpdateAfterSnapshot(
+        string computerId,
+        string? samAccountName,
+        string? name,
+        string? distinguishedName,
+        string? description) =>
+        JsonSerializer.Serialize(
+            new
+            {
+                operation = AdManagementOperationTypes.ComputerUpdate,
+                computer = BuildComputerSnapshot(computerId, samAccountName, name, distinguishedName),
+                description,
+            },
+            SerializerOptions);
+
+    public static string BuildComputerOuMoveRequestSummary(
+        Guid computerId,
+        string targetOuDistinguishedName) =>
+        JsonSerializer.Serialize(
+            new
+            {
+                operation = AdManagementOperationTypes.ComputerMoveOu,
+                computerId = computerId.ToString("D"),
+                targetOuDistinguishedName,
+            },
+            SerializerOptions);
+
+    public static string BuildComputerOuMoveBeforeSnapshot(
+        string computerId,
+        string? samAccountName,
+        string? name,
+        string? distinguishedName,
+        string? parentOuDistinguishedName) =>
+        JsonSerializer.Serialize(
+            new
+            {
+                operation = AdManagementOperationTypes.ComputerMoveOu,
+                computer = BuildComputerSnapshot(computerId, samAccountName, name, distinguishedName),
+                ou = new { distinguishedName = parentOuDistinguishedName },
+            },
+            SerializerOptions);
+
+    public static string BuildComputerOuMoveAfterSnapshot(
+        string computerId,
+        string? samAccountName,
+        string? name,
+        string? distinguishedName,
+        string? parentOuDistinguishedName) =>
+        JsonSerializer.Serialize(
+            new
+            {
+                operation = AdManagementOperationTypes.ComputerMoveOu,
+                computer = BuildComputerSnapshot(computerId, samAccountName, name, distinguishedName),
+                ou = new { distinguishedName = parentOuDistinguishedName },
+            },
+            SerializerOptions);
+
     public static string BuildComputerAccountRequestSummary(
         string operationType,
         Guid computerId,

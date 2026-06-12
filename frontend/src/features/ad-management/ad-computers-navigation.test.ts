@@ -134,6 +134,8 @@ describe("ad computers route and menu wiring", () => {
     assert.match(toolbarSource, /searchPlaceholder=\{t\("adManagement:computers\.searchPlaceholder"\)\}/);
     assert.match(toolbarSource, /computers\.filters\.active/);
     assert.doesNotMatch(toolbarSource, /canCreate|actions\.create|actions\.edit|actions\.delete|moveOu/i);
+    assert.match(detailSource, /AdManagement\.Computers\.Update/);
+    assert.match(detailSource, /AdManagement\.Computers\.MoveOu/);
     assert.match(pageSource, /AdManagement\.Computers\.Enable/);
     assert.match(pageSource, /AdManagement\.Computers\.Disable/);
     assert.match(pageSource, /invalidateAdManagementComputerQueries/);
@@ -151,7 +153,16 @@ describe("ad computers route and menu wiring", () => {
     assert.match(detailSource, /memberOfTruncated/);
     assert.match(detailActionsSource, /computers\.confirm\.disableDescription/);
     assert.match(detailActionsSource, /invalidateAdManagementComputerQueries/);
-    assert.doesNotMatch(detailSource, /actions\.edit|actions\.delete|moveOu|manageMembers|canUpdate|canDelete/i);
+    assert.match(detailActionsSource, /canUpdateComputer/);
+    assert.match(detailActionsSource, /canMoveOu/);
+    assert.match(detailActionsSource, /isAdComputerAccountOperationRestricted/);
+    assert.match(detailActionsSource, /common:actions\.edit/);
+    assert.match(detailActionsSource, /computers\.actions\.moveOu/);
+    assert.match(detailActionsSource, /computers\.updateDescription\./);
+    assert.match(detailActionsSource, /computers\.moveOu\./);
+    assert.match(detailActionsSource, /updateAdComputer/);
+    assert.match(detailActionsSource, /moveAdComputerOu/);
+    assert.doesNotMatch(detailSource, /actions\.delete|manageMembers|canDelete/i);
   });
 
   it("uses correct API endpoints and parameters", () => {
@@ -176,6 +187,11 @@ describe("ad computers route and menu wiring", () => {
     assert.match(apiSource, /export const disableAdComputer/);
     assert.match(apiSource, /\/ad-management\/computers\/\$\{computerId\}\/enable/);
     assert.match(apiSource, /\/ad-management\/computers\/\$\{computerId\}\/disable/);
+    assert.match(apiSource, /export const updateAdComputer/);
+    assert.match(apiSource, /export const moveAdComputerOu/);
+    assert.match(apiSource, /apiClient\.put<AdComputerAccountOperationResponse>/);
+    assert.match(apiSource, /\/ad-management\/computers\/\$\{computerId\}\/move-ou/);
+    assert.match(apiSource, /AD_OPERATION_LOGS_QUERY_KEY/);
   });
 });
 
@@ -212,7 +228,39 @@ describe("ad computer account operations i18n and operation logs", () => {
     assert.match(enAdManagement.adManagement.computers.confirm.enableTitle, /enable/i);
   });
 
-  it("supports ComputerEnable and ComputerDisable in operation log labels", () => {
+  it("supports computer update and move OU keys in TR and EN adManagement locales", () => {
+    const trAdManagement = JSON.parse(
+      readFileSync(new URL("../../locales/tr/adManagement.json", import.meta.url), "utf8"),
+    ) as {
+      adManagement: {
+        computers: {
+          actions: { moveOu: string };
+          updateDescription: { title: string; messages: { updated: string } };
+          moveOu: { title: string; messages: { moved: string }; sameOu: string };
+        };
+      };
+    };
+    const enAdManagement = JSON.parse(
+      readFileSync(new URL("../../locales/en/adManagement.json", import.meta.url), "utf8"),
+    ) as {
+      adManagement: {
+        computers: {
+          actions: { moveOu: string };
+          updateDescription: { title: string; messages: { updated: string } };
+          moveOu: { title: string; messages: { moved: string }; sameOu: string };
+        };
+      };
+    };
+
+    assert.equal(trAdManagement.adManagement.computers.actions.moveOu, "OU Taşı");
+    assert.match(trAdManagement.adManagement.computers.updateDescription.title, /açıklama/i);
+    assert.match(trAdManagement.adManagement.computers.moveOu.title, /OU taşı/i);
+    assert.equal(enAdManagement.adManagement.computers.actions.moveOu, "Move OU");
+    assert.match(enAdManagement.adManagement.computers.updateDescription.title, /description/i);
+    assert.match(enAdManagement.adManagement.computers.moveOu.title, /Move computer OU/i);
+  });
+
+  it("supports ComputerEnable, ComputerDisable, ComputerUpdate and ComputerMoveOu in operation log labels", () => {
     const trLogs = JSON.parse(
       readFileSync(new URL("../../locales/tr/adOperationLogs.json", import.meta.url), "utf8"),
     ) as { adOperationLogs: { operations: Record<string, string> } };
@@ -222,8 +270,12 @@ describe("ad computer account operations i18n and operation logs", () => {
 
     assert.equal(trLogs.adOperationLogs.operations.ComputerEnable, "Bilgisayar etkinleştirme");
     assert.equal(trLogs.adOperationLogs.operations.ComputerDisable, "Bilgisayar devre dışı bırakma");
+    assert.equal(trLogs.adOperationLogs.operations.ComputerUpdate, "Bilgisayar güncelleme");
+    assert.equal(trLogs.adOperationLogs.operations.ComputerMoveOu, "Bilgisayar OU taşıma");
     assert.equal(enLogs.adOperationLogs.operations.ComputerEnable, "Computer enable");
     assert.equal(enLogs.adOperationLogs.operations.ComputerDisable, "Computer disable");
+    assert.equal(enLogs.adOperationLogs.operations.ComputerUpdate, "Computer update");
+    assert.equal(enLogs.adOperationLogs.operations.ComputerMoveOu, "Computer OU move");
   });
 
   it("does not leave raw i18n keys in computer operation UI sources", () => {
@@ -231,6 +283,8 @@ describe("ad computer account operations i18n and operation logs", () => {
       readFileSync(new URL("./AdComputersPage.tsx", import.meta.url), "utf8"),
       readFileSync(new URL("./ad-computers-columns.tsx", import.meta.url), "utf8"),
       readFileSync(new URL("./components/AdComputerDetailHeaderActions.tsx", import.meta.url), "utf8"),
+      readFileSync(new URL("./components/AdComputerUpdateDescriptionDialog.tsx", import.meta.url), "utf8"),
+      readFileSync(new URL("./components/AdComputerMoveOuDialog.tsx", import.meta.url), "utf8"),
     ];
 
     for (const source of sources) {

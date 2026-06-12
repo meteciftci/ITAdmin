@@ -443,6 +443,7 @@ function OuMoveSnapshotSections({
     [beforeSnapshot, afterSnapshot],
   );
   const isGroupMove = operationType === "GroupMoveOu";
+  const isComputerMove = operationType === "ComputerMoveOu";
   const booleanLabels = useMemo(
     () => ({ yes: t("snapshotSections.boolean.yes"), no: t("snapshotSections.boolean.no") }),
     [t],
@@ -466,7 +467,11 @@ function OuMoveSnapshotSections({
     <>
       <section className="space-y-3 border-t pt-4">
         <h3 className="text-sm font-medium">
-          {isGroupMove ? t("snapshotSections.group") : t("snapshotSections.user")}
+          {isGroupMove
+            ? t("snapshotSections.group")
+            : isComputerMove
+              ? t("snapshotSections.computer")
+              : t("snapshotSections.user")}
         </h3>
         <KeyValueGrid
           entries={

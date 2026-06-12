@@ -452,6 +452,14 @@ export type AdComputerAccountOperationResponse = {
   computer: AdComputerDetail | null;
 };
 
+export type UpdateAdComputerRequest = {
+  description: string | null;
+};
+
+export type MoveAdComputerOuRequest = {
+  targetOuDistinguishedName: string;
+};
+
 export type CreateAdGroupRequest = {
   displayName: string;
   name: string;

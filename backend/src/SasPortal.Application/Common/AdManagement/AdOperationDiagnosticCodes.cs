@@ -26,4 +26,6 @@ public static class AdOperationDiagnosticCodes
     public const string GroupMemberRemoveFailed = "AD_GROUP_MEMBER_REMOVE_FAILED";
     public const string GroupMemberRemovePreflightFailed = "AD_GROUP_MEMBER_REMOVE_PREFLIGHT_FAILED";
     public const string GroupOuMoveFailed = "AD_GROUP_OU_MOVE_FAILED";
+    public const string ComputerUpdateFailed = "AD_COMPUTER_UPDATE_FAILED";
+    public const string ComputerOuMoveFailed = "AD_COMPUTER_OU_MOVE_FAILED";
 }

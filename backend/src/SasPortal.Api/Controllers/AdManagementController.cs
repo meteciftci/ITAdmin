@@ -25,7 +25,9 @@ public sealed class AdManagementController(
     IAdUserAccountExpirationUpdateService adUserAccountExpirationUpdateService,
     IAdGroupDirectoryService adGroupDirectoryService,
     IAdComputerDirectoryService adComputerDirectoryService,
-    IAdComputerAccountOperationService adComputerAccountOperationService) : ControllerBase
+    IAdComputerAccountOperationService adComputerAccountOperationService,
+    IAdComputerUpdateService adComputerUpdateService,
+    IAdComputerOuMoveService adComputerOuMoveService) : ControllerBase
 {
     [HttpGet("settings")]
     [RequirePermission(AdManagementPermissions.SettingsView)]
@@ -303,6 +305,70 @@ public sealed class AdManagementController(
             id,
             adComputerAccountOperationService.DisableComputerAsync,
             cancellationToken);
+
+    [HttpPut("computers/{id}")]
+    [RequirePermission(AdManagementPermissions.ComputersUpdate)]
+    public async Task<ActionResult<AdComputerAccountOperationResponse>> UpdateComputer(
+        [FromRoute] string id,
+        [FromBody] UpdateAdComputerRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Guid.TryParse(id, out var objectGuid))
+        {
+            return BadRequest(new AdComputerAccountOperationResponse(
+                false,
+                "Geçersiz bilgisayar kimliği.",
+                null));
+        }
+
+        var result = await adComputerUpdateService.UpdateComputerAsync(
+            new AppModels.UpdateAdComputerRequest(
+                objectGuid,
+                request.Description,
+                ResolveActorUserId(User),
+                ResolveActorUserName(User),
+                ResolveIpAddress(),
+                ResolveUserAgent()),
+            cancellationToken);
+
+        return MapComputerOperationActionResult(result.IsSuccess, result.Message, result.Computer, result.FailureKind);
+    }
+
+    [HttpPost("computers/{id}/move-ou")]
+    [RequirePermission(AdManagementPermissions.ComputersMoveOu)]
+    public async Task<ActionResult<AdComputerAccountOperationResponse>> MoveComputerOu(
+        [FromRoute] string id,
+        [FromBody] MoveAdComputerOuRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Guid.TryParse(id, out var objectGuid))
+        {
+            return BadRequest(new AdComputerAccountOperationResponse(
+                false,
+                "Geçersiz bilgisayar kimliği.",
+                null));
+        }
+
+        if (string.IsNullOrWhiteSpace(request.TargetOuDistinguishedName))
+        {
+            return BadRequest(new AdComputerAccountOperationResponse(
+                false,
+                "Hedef OU seçimi zorunludur.",
+                null));
+        }
+
+        var result = await adComputerOuMoveService.MoveOuAsync(
+            new AppModels.MoveAdComputerOuRequest(
+                objectGuid,
+                request.TargetOuDistinguishedName.Trim(),
+                ResolveActorUserId(User),
+                ResolveActorUserName(User),
+                ResolveIpAddress(),
+                ResolveUserAgent()),
+            cancellationToken);
+
+        return MapComputerOperationActionResult(result.IsSuccess, result.Message, result.Computer, result.FailureKind);
+    }
 
     [HttpGet("computer-organizational-units")]
     [RequirePermission(AdManagementPermissions.ComputersView)]
@@ -1488,6 +1554,36 @@ public sealed class AdManagementController(
             result.IsSuccess,
             result.Message,
             result.Computer is null ? null : MapComputerDetail(result.Computer));
+
+    private ActionResult<AdComputerAccountOperationResponse> MapComputerOperationActionResult(
+        bool isSuccess,
+        string message,
+        AppModels.AdComputerDetail? computer,
+        AppModels.AdDirectoryFailureKind? failureKind)
+    {
+        var response = new AdComputerAccountOperationResponse(
+            isSuccess,
+            message,
+            computer is null ? null : MapComputerDetail(computer));
+
+        if (isSuccess)
+        {
+            return Ok(response);
+        }
+
+        return failureKind switch
+        {
+            AppModels.AdDirectoryFailureKind.NotFound => NotFound(response),
+            AppModels.AdDirectoryFailureKind.ConnectionFailed => StatusCode(
+                StatusCodes.Status503ServiceUnavailable,
+                response),
+            AppModels.AdDirectoryFailureKind.Disabled
+                or AppModels.AdDirectoryFailureKind.NotConfigured
+                or AppModels.AdDirectoryFailureKind.MissingPassword
+                or AppModels.AdDirectoryFailureKind.InvalidRequest => BadRequest(response),
+            _ => BadRequest(response),
+        };
+    }
 
     private async Task<ActionResult<AdUserAccountOperationResponse>> ExecuteAccountOperationAsync(
         string id,

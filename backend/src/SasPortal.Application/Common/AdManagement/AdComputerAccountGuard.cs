@@ -9,6 +9,9 @@ public static class AdComputerAccountGuard
     public const string ProtectedComputerMessage =
         "Bu bilgisayar hesabı üzerinde etkinleştirme veya devre dışı bırakma işlemi yapılamaz.";
 
+    public const string ProtectedComputerWriteOperationMessage =
+        "Bu bilgisayar hesabı üzerinde bu işlem yapılamaz.";
+
     public static bool IsProtectedComputer(
         int? primaryGroupId,
         int? userAccountControl,

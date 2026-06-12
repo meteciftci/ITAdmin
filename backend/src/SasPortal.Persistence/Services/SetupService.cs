@@ -60,6 +60,8 @@ public sealed class SetupService(
         ("AdManagement", "AdManagement.Users.Groups.Remove", "Remove AD users from groups."),
         ("AdManagement", "AdManagement.Groups.View", "View AD management security groups."),
         ("AdManagement", "AdManagement.Computers.View", "View AD management directory computers."),
+        ("AdManagement", "AdManagement.Computers.Update", "Update AD management directory computer attributes."),
+        ("AdManagement", "AdManagement.Computers.MoveOu", "Move AD management directory computers between OUs."),
         ("AdManagement", "AdManagement.Computers.Enable", "Enable AD management directory computer accounts."),
         ("AdManagement", "AdManagement.Computers.Disable", "Disable AD management directory computer accounts."),
         ("AdManagement", "AdManagement.Groups.Create", "Create AD management security groups."),

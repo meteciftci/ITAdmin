@@ -89,6 +89,8 @@ export function AdComputerDetailPage() {
   const location = useLocation();
   const currentUser = useAuthStore((state) => state.user);
   const moduleStatus = useAdManagementModuleStatus();
+  const canUpdateComputer = canAccess(currentUser, "AdManagement.Computers.Update");
+  const canMoveOu = canAccess(currentUser, "AdManagement.Computers.MoveOu");
   const canEnableComputer = canAccess(currentUser, "AdManagement.Computers.Enable");
   const canDisableComputer = canAccess(currentUser, "AdManagement.Computers.Disable");
   const hasValidId = Boolean(computerId?.trim()) && isGuidLike(computerId);
@@ -298,6 +300,8 @@ export function AdComputerDetailPage() {
                 returnPath={returnPath}
                 isFetching={computerQuery.isFetching}
                 onRefresh={() => computerQuery.refetch()}
+                canUpdateComputer={canUpdateComputer}
+                canMoveOu={canMoveOu}
                 canEnableComputer={canEnableComputer}
                 canDisableComputer={canDisableComputer}
               />

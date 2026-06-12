@@ -602,7 +602,34 @@
         "detail": "Detail",
         "back": "Back",
         "enable": "Enable",
-        "disable": "Disable"
+        "disable": "Disable",
+        "moveOu": "Move OU"
+      },
+      "updateDescription": {
+        "title": "Update computer description",
+        "fieldLabel": "Description",
+        "clearHint": "If description is left empty, the current description will be cleared.",
+        "messages": {
+          "updated": "Computer description updated.",
+          "updateFailed": "Computer description could not be updated.",
+          "noChanges": "No changes were made to the computer description."
+        }
+      },
+      "moveOu": {
+        "title": "Move computer OU",
+        "currentOu": "Current OU",
+        "targetOu": "Target OU",
+        "targetOuPlaceholder": "Select target OU",
+        "targetOuSearch": "Search OUs...",
+        "targetOuEmpty": "No organizational units found",
+        "targetOuLoadFailed": "Could not load organizational units",
+        "description": "Computer {{name}} will be moved under the selected OU.",
+        "sameOu": "The same OU cannot be selected.",
+        "messages": {
+          "moved": "Computer OU move completed.",
+          "moveFailed": "Computer OU move failed.",
+          "alreadyInOu": "The computer is already in the selected OU."
+        }
       },
       "confirm": {
         "enableTitle": "Enable computer account?",

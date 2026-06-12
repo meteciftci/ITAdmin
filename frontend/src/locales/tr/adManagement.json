@@ -602,7 +602,34 @@
         "detail": "Detay",
         "back": "Geri Dön",
         "enable": "Etkinleştir",
-        "disable": "Devre dışı bırak"
+        "disable": "Devre dışı bırak",
+        "moveOu": "OU Taşı"
+      },
+      "updateDescription": {
+        "title": "Bilgisayar açıklamasını güncelle",
+        "fieldLabel": "Açıklama",
+        "clearHint": "Açıklama boş bırakılırsa mevcut açıklama temizlenir.",
+        "messages": {
+          "updated": "Bilgisayar açıklaması güncellendi.",
+          "updateFailed": "Bilgisayar açıklaması güncellenemedi.",
+          "noChanges": "Bilgisayar açıklamasında değişiklik yok."
+        }
+      },
+      "moveOu": {
+        "title": "Bilgisayar OU taşı",
+        "currentOu": "Mevcut OU",
+        "targetOu": "Hedef OU",
+        "targetOuPlaceholder": "Hedef OU seçin",
+        "targetOuSearch": "OU ara...",
+        "targetOuEmpty": "OU bulunamadı",
+        "targetOuLoadFailed": "OU listesi yüklenemedi",
+        "description": "{{name}} bilgisayarı seçilen OU altına taşınacak.",
+        "sameOu": "Aynı OU seçilemez.",
+        "messages": {
+          "moved": "Bilgisayar OU taşıma işlemi tamamlandı.",
+          "moveFailed": "Bilgisayar OU taşıma işlemi başarısız oldu.",
+          "alreadyInOu": "Bilgisayar zaten seçilen OU içinde."
+        }
       },
       "confirm": {
         "enableTitle": "Bilgisayar hesabı etkinleştirilsin mi?",

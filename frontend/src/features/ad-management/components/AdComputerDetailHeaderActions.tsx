@@ -11,12 +11,17 @@ import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdow
 import { isAdComputerAccountOperationRestricted } from "@/features/ad-management/ad-computer-account-guard";
 import {
   adDetailActionButtonSizingClass,
+  adDetailEditButtonClass,
   adDetailOutlineButtonClass,
 } from "@/features/ad-management/ad-user-detail-button-styles";
+import { AdComputerMoveOuDialog } from "@/features/ad-management/components/AdComputerMoveOuDialog";
+import { AdComputerUpdateDescriptionDialog } from "@/features/ad-management/components/AdComputerUpdateDescriptionDialog";
 import {
   disableAdComputer,
   enableAdComputer,
   invalidateAdManagementComputerQueries,
+  moveAdComputerOu,
+  updateAdComputer,
 } from "@/features/ad-management/api";
 import type {
   AdComputerAccountConfirmAction,
@@ -30,6 +35,8 @@ type Props = {
   returnPath: string;
   isFetching: boolean;
   onRefresh: () => void;
+  canUpdateComputer: boolean;
+  canMoveOu: boolean;
   canEnableComputer: boolean;
   canDisableComputer: boolean;
 };
@@ -39,16 +46,22 @@ export function AdComputerDetailHeaderActions({
   returnPath,
   isFetching,
   onRefresh,
+  canUpdateComputer,
+  canMoveOu,
   canEnableComputer,
   canDisableComputer,
 }: Props) {
   const { t } = useTranslation(["adManagement", "common", "errors"]);
   const queryClient = useQueryClient();
   const [confirmAction, setConfirmAction] = useState<AdComputerAccountConfirmAction | null>(null);
+  const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
+  const [isMoveOuDialogOpen, setIsMoveOuDialogOpen] = useState(false);
   const isProtected = isAdComputerAccountOperationRestricted(computer);
+  const showUpdate = canUpdateComputer && !isProtected;
+  const showMoveOu = canMoveOu && !isProtected;
   const showEnable = canEnableComputer && !computer.isEnabled && !isProtected;
   const showDisable = canDisableComputer && computer.isEnabled && !isProtected;
-  const hasOperations = showEnable || showDisable;
+  const hasOperations = showUpdate || showMoveOu || showEnable || showDisable;
   const computerLabel = getAdComputerPrimaryLabel(computer);
 
   const accountOperationMutation = useMutation({
@@ -86,6 +99,55 @@ export function AdComputerDetailHeaderActions({
             ? t("adManagement:computers.messages.enableFailed")
             : t("adManagement:computers.messages.disableFailed"),
         ),
+      );
+    },
+  });
+
+  const updateDescriptionMutation = useMutation({
+    mutationFn: (description: string | null) =>
+      updateAdComputer(computer.id, { description }),
+    onSuccess: async (response) => {
+      if (!response.success) {
+        toast.error(t("adManagement:computers.updateDescription.messages.updateFailed"));
+        return;
+      }
+
+      await invalidateAdManagementComputerQueries(queryClient);
+      toast.success(
+        response.message || t("adManagement:computers.updateDescription.messages.updated"),
+      );
+      setIsUpdateDialogOpen(false);
+    },
+    onError: (error) => {
+      toast.error(
+        getApiErrorMessage(
+          error,
+          t("adManagement:computers.updateDescription.messages.updateFailed"),
+        ),
+      );
+    },
+  });
+
+  const moveOuMutation = useMutation({
+    mutationFn: (targetOuDistinguishedName: string) =>
+      moveAdComputerOu(computer.id, { targetOuDistinguishedName }),
+    onSuccess: async (response) => {
+      if (!response.success) {
+        toast.error(t("adManagement:computers.moveOu.messages.moveFailed"));
+        return;
+      }
+
+      await invalidateAdManagementComputerQueries(queryClient);
+      const fallbackMessage = response.message?.includes("zaten")
+        || response.message?.toLowerCase().includes("already")
+        ? t("adManagement:computers.moveOu.messages.alreadyInOu")
+        : t("adManagement:computers.moveOu.messages.moved");
+      toast.success(response.message || fallbackMessage);
+      setIsMoveOuDialogOpen(false);
+    },
+    onError: (error) => {
+      toast.error(
+        getApiErrorMessage(error, t("adManagement:computers.moveOu.messages.moveFailed")),
       );
     },
   });
@@ -130,7 +192,28 @@ export function AdComputerDetailHeaderActions({
         >
           {t("common:actions.refresh")}
         </Button>
-        {hasOperations ? (
+        {showUpdate ? (
+          <Button
+            type="button"
+            size="sm"
+            className={adDetailEditButtonClass}
+            onClick={() => setIsUpdateDialogOpen(true)}
+          >
+            {t("common:actions.edit")}
+          </Button>
+        ) : null}
+        {showMoveOu ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className={adDetailActionButtonSizingClass}
+            onClick={() => setIsMoveOuDialogOpen(true)}
+          >
+            {t("adManagement:computers.actions.moveOu")}
+          </Button>
+        ) : null}
+        {hasOperations && (showEnable || showDisable) ? (
           <RowActions label={t("adManagement:computers.detail.actions.operations")}>
             {showEnable ? (
               <DropdownMenuItem onClick={() => setConfirmAction("enable")}>
@@ -165,6 +248,24 @@ export function AdComputerDetailHeaderActions({
             accountOperationMutation.mutate(confirmAction);
           }
         }}
+      />
+
+      <AdComputerUpdateDescriptionDialog
+        key={`update-${computer.id}-${computer.description ?? ""}-${isUpdateDialogOpen ? "open" : "closed"}`}
+        open={isUpdateDialogOpen}
+        initialDescription={computer.description}
+        isSaving={updateDescriptionMutation.isPending}
+        onOpenChange={setIsUpdateDialogOpen}
+        onSubmit={(description) => updateDescriptionMutation.mutate(description)}
+      />
+
+      <AdComputerMoveOuDialog
+        key={`move-${computer.id}-${isMoveOuDialogOpen ? "open" : "closed"}`}
+        open={isMoveOuDialogOpen}
+        computer={computer}
+        isSaving={moveOuMutation.isPending}
+        onOpenChange={setIsMoveOuDialogOpen}
+        onSubmit={(targetOuDistinguishedName) => moveOuMutation.mutate(targetOuDistinguishedName)}
       />
     </>
   );

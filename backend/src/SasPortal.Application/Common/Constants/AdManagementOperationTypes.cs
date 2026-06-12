@@ -25,6 +25,8 @@ public static class AdManagementOperationTypes
     public const string GroupMoveOu = "GroupMoveOu";
     public const string ComputerEnable = "ComputerEnable";
     public const string ComputerDisable = "ComputerDisable";
+    public const string ComputerUpdate = "ComputerUpdate";
+    public const string ComputerMoveOu = "ComputerMoveOu";
 }
 
 public static class AdManagementTargetComputerTypes

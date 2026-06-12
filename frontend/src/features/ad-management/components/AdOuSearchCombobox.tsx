@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
+  searchComputerOrganizationalUnits,
   searchGroupOrganizationalUnits,
   searchOrganizationalUnits,
 } from "@/features/ad-management/api";
@@ -14,7 +15,7 @@ import type { AdOrganizationalUnitListItem } from "@/features/ad-management/type
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { cn } from "@/lib/utils";
 
-type OuSearchContext = "users" | "groups";
+type OuSearchContext = "users" | "groups" | "computers";
 
 type Props = {
   value: string | null;
@@ -57,9 +58,15 @@ export function AdOuSearchCombobox({
         pageSize: 50,
       };
 
-      return searchContext === "groups"
-        ? searchGroupOrganizationalUnits(params)
-        : searchOrganizationalUnits(params);
+      if (searchContext === "groups") {
+        return searchGroupOrganizationalUnits(params);
+      }
+
+      if (searchContext === "computers") {
+        return searchComputerOrganizationalUnits(params.search, params.pageSize);
+      }
+
+      return searchOrganizationalUnits(params);
     },
     enabled: open && !disabled,
   });
