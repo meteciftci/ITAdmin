@@ -33,7 +33,9 @@ import {
   resolveSnapshotUser,
   type GenericSnapshotEntry,
   type ParsedSnapshotComputer,
+  type ParsedSnapshotDeletedObject,
   type ParsedSnapshotGroup,
+  type ParsedSnapshotRestoredObject,
   type SnapshotCoreFieldKey,
   type SnapshotGroupComparisonFieldKey,
 } from "@/features/ad-management/parse-ad-operation-snapshot";
@@ -1035,6 +1037,223 @@ function GroupCreateSnapshotSections({
   );
 }
 
+function getDeletedObjectFieldEntries(
+  t: TFunction<"adOperationLogs">,
+  deletedObject: ParsedSnapshotDeletedObject | null,
+) {
+  if (!deletedObject) {
+    return [];
+  }
+
+  return [
+    { key: "objectId", label: t("snapshotSections.fields.objectId"), value: deletedObject.objectId, mono: true },
+    { key: "objectType", label: t("snapshotSections.fields.objectType"), value: deletedObject.objectType },
+    { key: "name", label: t("snapshotSections.fields.name"), value: deletedObject.name },
+    {
+      key: "displayName",
+      label: t("snapshotSections.fields.displayName"),
+      value: deletedObject.displayName,
+    },
+    {
+      key: "samAccountName",
+      label: t("snapshotSections.fields.samAccountName"),
+      value: deletedObject.samAccountName,
+    },
+    {
+      key: "userPrincipalName",
+      label: t("snapshotSections.fields.userPrincipalName"),
+      value: deletedObject.userPrincipalName,
+    },
+    {
+      key: "distinguishedName",
+      label: t("snapshotSections.fields.distinguishedName"),
+      value: deletedObject.distinguishedName,
+      mono: true,
+    },
+    {
+      key: "lastKnownParent",
+      label: t("snapshotSections.fields.lastKnownParent"),
+      value: deletedObject.lastKnownParent,
+      mono: true,
+    },
+    {
+      key: "lastKnownRdn",
+      label: t("snapshotSections.fields.lastKnownRdn"),
+      value: deletedObject.lastKnownRdn,
+      mono: true,
+    },
+    {
+      key: "objectClass",
+      label: t("snapshotSections.fields.objectClass"),
+      value: deletedObject.objectClass,
+      mono: true,
+    },
+    {
+      key: "whenChanged",
+      label: t("snapshotSections.fields.whenChanged"),
+      value: deletedObject.whenChanged,
+    },
+    {
+      key: "deletedAt",
+      label: t("snapshotSections.fields.deletedAt"),
+      value: deletedObject.deletedAt,
+    },
+  ];
+}
+
+function getRestoredObjectFieldEntries(
+  t: TFunction<"adOperationLogs">,
+  restoredObject: ParsedSnapshotRestoredObject | null,
+  formatBoolean: (value: boolean | null | undefined) => string | null,
+) {
+  if (!restoredObject) {
+    return [];
+  }
+
+  return [
+    { key: "objectId", label: t("snapshotSections.fields.objectId"), value: restoredObject.objectId, mono: true },
+    { key: "objectType", label: t("snapshotSections.fields.objectType"), value: restoredObject.objectType },
+    { key: "name", label: t("snapshotSections.fields.name"), value: restoredObject.name },
+    {
+      key: "samAccountName",
+      label: t("snapshotSections.fields.samAccountName"),
+      value: restoredObject.samAccountName,
+    },
+    {
+      key: "distinguishedName",
+      label: t("snapshotSections.fields.distinguishedName"),
+      value: restoredObject.distinguishedName,
+      mono: true,
+    },
+    {
+      key: "restored",
+      label: t("snapshotSections.fields.restored"),
+      value: formatBoolean(restoredObject.restored),
+    },
+    {
+      key: "restoredParent",
+      label: t("snapshotSections.fields.restoredParent"),
+      value: restoredObject.restoredParent,
+      mono: true,
+    },
+    {
+      key: "restoredRdn",
+      label: t("snapshotSections.fields.restoredRdn"),
+      value: restoredObject.restoredRdn,
+      mono: true,
+    },
+  ];
+}
+
+function DeletedObjectRestoreSnapshotSections({
+  beforeSnapshotJson,
+  afterSnapshotJson,
+  requestSummaryJson,
+  noneLabel,
+  t,
+}: {
+  beforeSnapshotJson: string | null | undefined;
+  afterSnapshotJson: string | null | undefined;
+  requestSummaryJson: string | null | undefined;
+  noneLabel: string;
+  t: TFunction<"adOperationLogs">;
+}) {
+  const booleanLabels = useMemo(
+    () => ({ yes: t("snapshotSections.boolean.yes"), no: t("snapshotSections.boolean.no") }),
+    [t],
+  );
+  const formatBoolean = useMemo(
+    () => (value: boolean | null | undefined) => formatSnapshotBoolean(value, booleanLabels),
+    [booleanLabels],
+  );
+
+  const beforeSnapshot = useMemo(
+    () => parseNestedAdOperationSnapshot(beforeSnapshotJson),
+    [beforeSnapshotJson],
+  );
+  const afterSnapshot = useMemo(
+    () => parseNestedAdOperationSnapshot(afterSnapshotJson),
+    [afterSnapshotJson],
+  );
+  const restoreTargetEntries = useMemo(() => {
+    const parsed = parseNestedAdOperationSnapshot(requestSummaryJson);
+    const restoreTarget = parsed?.rawRecord.restoreTarget ?? parsed?.rawRecord.RestoreTarget;
+    const record =
+      restoreTarget && typeof restoreTarget === "object" && !Array.isArray(restoreTarget)
+        ? (restoreTarget as Record<string, unknown>)
+        : null;
+
+    if (!record) {
+      return [];
+    }
+
+    return [
+      {
+        key: "lastKnownParent",
+        label: t("snapshotSections.fields.lastKnownParent"),
+        value:
+          typeof record.lastKnownParent === "string"
+            ? record.lastKnownParent
+            : typeof record.LastKnownParent === "string"
+              ? record.LastKnownParent
+              : null,
+        mono: true,
+      },
+      {
+        key: "lastKnownRdn",
+        label: t("snapshotSections.fields.lastKnownRdn"),
+        value:
+          typeof record.lastKnownRdn === "string"
+            ? record.lastKnownRdn
+            : typeof record.LastKnownRdn === "string"
+              ? record.LastKnownRdn
+              : null,
+        mono: true,
+      },
+      {
+        key: "restoredDistinguishedName",
+        label: t("snapshotSections.fields.restoredDistinguishedName"),
+        value:
+          typeof record.restoredDistinguishedName === "string"
+            ? record.restoredDistinguishedName
+            : typeof record.RestoredDistinguishedName === "string"
+              ? record.RestoredDistinguishedName
+              : null,
+        mono: true,
+      },
+    ];
+  }, [requestSummaryJson, t]);
+
+  return (
+    <>
+      <section className="space-y-3 border-t pt-4">
+        <h3 className="text-sm font-medium">{t("snapshotSections.deletedObject")}</h3>
+        <KeyValueGrid
+          entries={getDeletedObjectFieldEntries(t, beforeSnapshot?.deletedObject ?? null)}
+          noneLabel={noneLabel}
+        />
+      </section>
+
+      <section className="space-y-3 border-t pt-4">
+        <h3 className="text-sm font-medium">{t("snapshotSections.restoreTarget")}</h3>
+        <KeyValueGrid entries={restoreTargetEntries} noneLabel={noneLabel} />
+      </section>
+
+      <section className="space-y-3 border-t pt-4">
+        <h3 className="text-sm font-medium">{t("snapshotSections.restoredObject")}</h3>
+        <KeyValueGrid
+          entries={getRestoredObjectFieldEntries(
+            t,
+            afterSnapshot?.restoredObject ?? null,
+            formatBoolean,
+          )}
+          noneLabel={noneLabel}
+        />
+      </section>
+    </>
+  );
+}
+
 function ComputerDeleteSnapshotSections({
   beforeSnapshotJson,
   afterSnapshotJson,
@@ -1401,6 +1620,16 @@ export function AdOperationLogSnapshotDetail({
           <ComputerDeleteSnapshotSections
             beforeSnapshotJson={beforeSnapshotJson}
             afterSnapshotJson={afterSnapshotJson}
+            noneLabel={noneLabel}
+            t={t}
+          />
+        );
+      case "deletedObjectRestore":
+        return (
+          <DeletedObjectRestoreSnapshotSections
+            beforeSnapshotJson={beforeSnapshotJson}
+            afterSnapshotJson={afterSnapshotJson}
+            requestSummaryJson={requestSummaryJson}
             noneLabel={noneLabel}
             t={t}
           />

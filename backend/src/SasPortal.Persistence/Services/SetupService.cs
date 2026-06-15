@@ -69,6 +69,7 @@ public sealed class SetupService(
         ("AdManagement", "AdManagement.Computers.Groups.Add", "Add AD computers to groups."),
         ("AdManagement", "AdManagement.Computers.Groups.Remove", "Remove AD computers from groups."),
         ("AdManagement", "AdManagement.DeletedObjects.View", "View AD management deleted directory objects."),
+        ("AdManagement", "AdManagement.DeletedObjects.Restore", "Restore AD management deleted directory objects."),
         ("AdManagement", "AdManagement.Groups.Create", "Create AD management security groups."),
         ("AdManagement", "AdManagement.Groups.Update", "Update AD management security groups."),
         ("AdManagement", "AdManagement.Groups.Delete", "Delete AD management security groups."),

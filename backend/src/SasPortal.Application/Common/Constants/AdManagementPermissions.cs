@@ -30,5 +30,6 @@ public static class AdManagementPermissions
     public const string ComputersGroupsRemove = "AdManagement.Computers.Groups.Remove";
     public const string UsersMoveOu = "AdManagement.Users.MoveOu";
     public const string DeletedObjectsView = "AdManagement.DeletedObjects.View";
+    public const string DeletedObjectsRestore = "AdManagement.DeletedObjects.Restore";
     public const string OperationLogsView = "AdOperationLogs.View";
 }

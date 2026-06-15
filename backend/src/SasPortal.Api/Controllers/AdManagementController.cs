@@ -30,7 +30,8 @@ public sealed class AdManagementController(
     IAdComputerOuMoveService adComputerOuMoveService,
     IAdComputerDeleteService adComputerDeleteService,
     IAdComputerGroupMembershipService adComputerGroupMembershipService,
-    IAdDeletedObjectDirectoryService adDeletedObjectDirectoryService) : ControllerBase
+    IAdDeletedObjectDirectoryService adDeletedObjectDirectoryService,
+    IAdDeletedObjectRestoreService adDeletedObjectRestoreService) : ControllerBase
 {
     [HttpGet("settings")]
     [RequirePermission(AdManagementPermissions.SettingsView)]
@@ -326,6 +327,42 @@ public sealed class AdManagementController(
         }
 
         return Ok(MapDeletedObjectDetail(result.Object));
+    }
+
+    [HttpPost("deleted-objects/{id}/restore")]
+    [RequirePermission(AdManagementPermissions.DeletedObjectsRestore)]
+    public async Task<ActionResult<AdDeletedObjectRestoreResponse>> RestoreDeletedObject(
+        [FromRoute] string id,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Guid.TryParse(id, out var objectGuid))
+        {
+            return BadRequest(new { message = "Geçersiz silinen nesne kimliği." });
+        }
+
+        var result = await adDeletedObjectRestoreService.RestoreDeletedObjectAsync(
+            new AppModels.AdDeletedObjectRestoreRequest(
+                objectGuid,
+                ResolveActorUserId(User),
+                ResolveActorUserName(User),
+                ResolveIpAddress(),
+                ResolveUserAgent()),
+            cancellationToken);
+
+        if (!result.IsSuccess || result.RestoredObject is null)
+        {
+            return MapDirectoryFailure(result.Message, result.FailureKind);
+        }
+
+        return Ok(new AdDeletedObjectRestoreResponse(
+            true,
+            result.Message,
+            result.RestoredObject.ObjectId,
+            result.RestoredObject.ObjectType.ToString(),
+            result.RestoredObject.Name,
+            result.RestoredObject.SamAccountName,
+            result.RestoredObject.DistinguishedName,
+            result.RestoredObject.RestoredParent));
     }
 
     [HttpGet("computer-operating-systems")]

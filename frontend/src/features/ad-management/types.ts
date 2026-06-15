@@ -820,3 +820,14 @@ export type GetAdDeletedObjectsParams = {
   pageSize?: number;
   includeAll?: boolean;
 };
+
+export type AdDeletedObjectRestoreResponse = {
+  success: boolean;
+  message: string;
+  restoredObjectId: string | null;
+  restoredObjectType: AdDeletedObjectType | null;
+  restoredName: string | null;
+  restoredSamAccountName: string | null;
+  restoredDistinguishedName: string | null;
+  restoredLastKnownParent: string | null;
+};

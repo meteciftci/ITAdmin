@@ -59,6 +59,7 @@ import type {
   AdComputerGroupOperationResponse,
   AdDeletedObjectDetail,
   AdDeletedObjectListResponse,
+  AdDeletedObjectRestoreResponse,
   GetAdDeletedObjectsParams,
 } from "@/features/ad-management/types";
 
@@ -272,6 +273,28 @@ export const getAdDeletedObjectById = async (id: string): Promise<AdDeletedObjec
   );
   return data;
 };
+
+export const restoreAdDeletedObject = async (
+  id: string,
+): Promise<AdDeletedObjectRestoreResponse> => {
+  const { data } = await apiClient.post<AdDeletedObjectRestoreResponse>(
+    `/ad-management/deleted-objects/${id}/restore`,
+  );
+  return data;
+};
+
+export async function invalidateAdManagementDeletedObjectQueries(
+  queryClient: QueryClient,
+): Promise<void> {
+  await queryClient.invalidateQueries({ queryKey: AD_MANAGEMENT_DELETED_OBJECTS_QUERY_KEY });
+}
+
+export async function invalidateAdManagementDeletedObjectRestoreQueries(
+  queryClient: QueryClient,
+): Promise<void> {
+  await invalidateAdManagementDeletedObjectQueries(queryClient);
+  await queryClient.invalidateQueries({ queryKey: AD_OPERATION_LOGS_QUERY_KEY });
+}
 
 export const enableAdComputer = async (
   computerId: string,

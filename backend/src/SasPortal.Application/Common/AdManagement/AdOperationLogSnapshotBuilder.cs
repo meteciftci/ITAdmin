@@ -684,6 +684,86 @@ public static class AdOperationLogSnapshotBuilder
             },
             SerializerOptions);
 
+    public static string BuildDeletedObjectRestoreRequestSummary(
+        Guid objectGuid,
+        string lastKnownParent,
+        string lastKnownRdn,
+        string restoredDistinguishedName) =>
+        JsonSerializer.Serialize(
+            new
+            {
+                operation = AdManagementOperationTypes.DeletedObjectRestore,
+                objectGuid = objectGuid.ToString("D"),
+                restoreTarget = new
+                {
+                    lastKnownParent,
+                    lastKnownRdn,
+                    restoredDistinguishedName,
+                },
+            },
+            SerializerOptions);
+
+    public static string BuildDeletedObjectRestoreBeforeSnapshot(
+        string objectId,
+        AdDeletedObjectType objectType,
+        string? name,
+        string? displayName,
+        string? samAccountName,
+        string? userPrincipalName,
+        string distinguishedName,
+        string? lastKnownParent,
+        string? lastKnownRdn,
+        IReadOnlyList<string> objectClass,
+        DateTimeOffset? whenChanged,
+        DateTimeOffset? deletedAt) =>
+        JsonSerializer.Serialize(
+            new
+            {
+                operation = AdManagementOperationTypes.DeletedObjectRestore,
+                deletedObject = new
+                {
+                    objectId,
+                    objectType = objectType.ToString(),
+                    name,
+                    displayName,
+                    samAccountName,
+                    userPrincipalName,
+                    distinguishedName,
+                    lastKnownParent,
+                    lastKnownRdn,
+                    objectClass,
+                    whenChanged,
+                    deletedAt,
+                },
+            },
+            SerializerOptions);
+
+    public static string BuildDeletedObjectRestoreAfterSnapshot(
+        string objectId,
+        AdDeletedObjectType objectType,
+        string? name,
+        string? samAccountName,
+        string distinguishedName,
+        string restoredParent,
+        string restoredRdn) =>
+        JsonSerializer.Serialize(
+            new
+            {
+                operation = AdManagementOperationTypes.DeletedObjectRestore,
+                restoredObject = new
+                {
+                    objectId,
+                    objectType = objectType.ToString(),
+                    name,
+                    samAccountName,
+                    distinguishedName,
+                    restored = true,
+                    restoredParent,
+                    restoredRdn,
+                },
+            },
+            SerializerOptions);
+
     private static object BuildComputerSnapshot(
         string computerId,
         string? samAccountName,

@@ -311,6 +311,32 @@ export type ParsedSnapshotAccountExpiration = {
   accountExpiresDate: string | null;
 };
 
+export type ParsedSnapshotDeletedObject = {
+  objectId: string | null;
+  objectType: string | null;
+  name: string | null;
+  displayName: string | null;
+  samAccountName: string | null;
+  userPrincipalName: string | null;
+  distinguishedName: string | null;
+  lastKnownParent: string | null;
+  lastKnownRdn: string | null;
+  objectClass: string | null;
+  whenChanged: string | null;
+  deletedAt: string | null;
+};
+
+export type ParsedSnapshotRestoredObject = {
+  objectId: string | null;
+  objectType: string | null;
+  name: string | null;
+  samAccountName: string | null;
+  distinguishedName: string | null;
+  restored: boolean | null;
+  restoredParent: string | null;
+  restoredRdn: string | null;
+};
+
 export type ParsedNestedAdOperationSnapshot = {
   operation: string | null;
   user: ParsedSnapshotUser | null;
@@ -322,6 +348,8 @@ export type ParsedNestedAdOperationSnapshot = {
   membership: ParsedSnapshotMembership | null;
   manager: ParsedSnapshotManager | null;
   accountExpiration: ParsedSnapshotAccountExpiration | null;
+  deletedObject: ParsedSnapshotDeletedObject | null;
+  restoredObject: ParsedSnapshotRestoredObject | null;
   mappedAttributes: ParsedMappedSnapshotAttribute[];
   notifications: string | null;
   rawRecord: Record<string, unknown>;
@@ -340,6 +368,7 @@ export type SnapshotRenderStrategy =
   | "groupUpdate"
   | "groupDelete"
   | "computerDelete"
+  | "deletedObjectRestore"
   | "accountStatus"
   | "lockStatus"
   | "groupMembership"
@@ -599,6 +628,50 @@ function parseSnapshotAccountExpiration(value: unknown): ParsedSnapshotAccountEx
     : null;
 }
 
+function parseSnapshotDeletedObject(value: unknown): ParsedSnapshotDeletedObject | null {
+  const record = readRecord(value);
+  if (!record) {
+    return null;
+  }
+
+  const deletedObject: ParsedSnapshotDeletedObject = {
+    objectId: formatSnapshotValue(record.objectId ?? record.ObjectId),
+    objectType: formatSnapshotValue(record.objectType ?? record.ObjectType),
+    name: formatSnapshotValue(record.name ?? record.Name),
+    displayName: formatSnapshotValue(record.displayName ?? record.DisplayName),
+    samAccountName: formatSnapshotValue(record.samAccountName ?? record.SamAccountName),
+    userPrincipalName: formatSnapshotValue(record.userPrincipalName ?? record.UserPrincipalName),
+    distinguishedName: formatSnapshotValue(record.distinguishedName ?? record.DistinguishedName),
+    lastKnownParent: formatSnapshotValue(record.lastKnownParent ?? record.LastKnownParent),
+    lastKnownRdn: formatSnapshotValue(record.lastKnownRdn ?? record.LastKnownRdn),
+    objectClass: formatSnapshotValue(record.objectClass ?? record.ObjectClass),
+    whenChanged: formatSnapshotValue(record.whenChanged ?? record.WhenChanged),
+    deletedAt: formatSnapshotValue(record.deletedAt ?? record.DeletedAt),
+  };
+
+  return Object.values(deletedObject).some((entry) => entry !== null) ? deletedObject : null;
+}
+
+function parseSnapshotRestoredObject(value: unknown): ParsedSnapshotRestoredObject | null {
+  const record = readRecord(value);
+  if (!record) {
+    return null;
+  }
+
+  const restoredObject: ParsedSnapshotRestoredObject = {
+    objectId: formatSnapshotValue(record.objectId ?? record.ObjectId),
+    objectType: formatSnapshotValue(record.objectType ?? record.ObjectType),
+    name: formatSnapshotValue(record.name ?? record.Name),
+    samAccountName: formatSnapshotValue(record.samAccountName ?? record.SamAccountName),
+    distinguishedName: formatSnapshotValue(record.distinguishedName ?? record.DistinguishedName),
+    restored: readBoolean(record.restored ?? record.Restored),
+    restoredParent: formatSnapshotValue(record.restoredParent ?? record.RestoredParent),
+    restoredRdn: formatSnapshotValue(record.restoredRdn ?? record.RestoredRdn),
+  };
+
+  return Object.values(restoredObject).some((entry) => entry !== null) ? restoredObject : null;
+}
+
 export function parseNestedAdOperationSnapshot(value: unknown): ParsedNestedAdOperationSnapshot | null {
   if (value === null || value === undefined) {
     return null;
@@ -636,6 +709,8 @@ export function parseNestedAdOperationSnapshot(value: unknown): ParsedNestedAdOp
     accountExpiration: parseSnapshotAccountExpiration(
       record.accountExpiration ?? record.AccountExpiration,
     ),
+    deletedObject: parseSnapshotDeletedObject(record.deletedObject ?? record.DeletedObject),
+    restoredObject: parseSnapshotRestoredObject(record.restoredObject ?? record.RestoredObject),
     mappedAttributes: readMappedAttributes(record.mappedAttributes ?? record.MappedAttributes),
     notifications: formatSnapshotValue(record.notifications ?? record.Notifications),
     rawRecord: record,
@@ -959,6 +1034,9 @@ export function getSnapshotRenderStrategy(operationType: string): SnapshotRender
   }
   if (operationType === "ComputerDelete") {
     return "computerDelete";
+  }
+  if (operationType === "DeletedObjectRestore") {
+    return "deletedObjectRestore";
   }
   if (ACCOUNT_STATUS_OPERATION_TYPES.has(operationType)) {
     return "accountStatus";

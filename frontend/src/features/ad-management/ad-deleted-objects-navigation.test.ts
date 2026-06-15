@@ -82,11 +82,10 @@ describe("ad deleted objects navigation", () => {
     assert.match(pageSource, /DataTablePagination/);
     assert.match(pageSource, /mode="directory"/);
     assert.match(columnsSource, /common:actions\.detail/);
-    assert.doesNotMatch(pageSource, /restore/i);
-    assert.doesNotMatch(columnsSource, /restore/i);
+    assert.match(columnsSource, /deletedObjects\.actions\.restore/);
   });
 
-  it("detail page includes summary, location and technical sections without restore action", () => {
+  it("detail page includes summary, location and technical sections with header actions", () => {
     const detailSource = readFileSync(
       new URL("./AdDeletedObjectDetailPage.tsx", import.meta.url),
       "utf8",
@@ -96,9 +95,7 @@ describe("ad deleted objects navigation", () => {
     assert.match(detailSource, /deletedObjects\.sections\.location/);
     assert.match(detailSource, /deletedObjects\.sections\.technical/);
     assert.match(detailSource, /deletedObjects\.sections\.additionalAttributes/);
-    assert.match(detailSource, /common:actions\.back/);
-    assert.match(detailSource, /common:actions\.refresh/);
-    assert.doesNotMatch(detailSource, /restore/i);
+    assert.match(detailSource, /AdDeletedObjectDetailHeaderActions/);
   });
 
   it("uses correct API endpoints", () => {

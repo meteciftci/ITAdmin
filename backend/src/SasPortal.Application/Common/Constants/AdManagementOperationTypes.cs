@@ -30,6 +30,7 @@ public static class AdManagementOperationTypes
     public const string ComputerDelete = "ComputerDelete";
     public const string ComputerGroupAdd = "ComputerGroupAdd";
     public const string ComputerGroupRemove = "ComputerGroupRemove";
+    public const string DeletedObjectRestore = "DeletedObjectRestore";
 }
 
 public static class AdManagementTargetComputerTypes

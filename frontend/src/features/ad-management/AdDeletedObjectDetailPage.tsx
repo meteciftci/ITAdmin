@@ -11,7 +11,6 @@ import { LoadingState } from "@/components/common/LoadingState";
 import { PageHeader } from "@/components/common/PageHeader";
 import { SectionCard } from "@/components/common/SectionCard";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { isGuidLike } from "@/features/ad-management/ad-user-detail-utils";
 import {
   getAdDeletedObjectPrimaryLabel,
@@ -25,9 +24,10 @@ import {
   getAdDeletedObjectById,
 } from "@/features/ad-management/api";
 import { AdUserDetailField } from "@/features/ad-management/components/ad-user-detail/AdUserDetailField";
+import { AdDeletedObjectDetailHeaderActions } from "@/features/ad-management/components/AdDeletedObjectDetailHeaderActions";
 import { AdManagementModuleStateGuard } from "@/features/ad-management/components/AdManagementModuleStateGuard";
 import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useAdManagementModuleStatus";
-import { adDetailActionButtonSizingClass, adDetailOutlineButtonClass } from "@/features/ad-management/ad-user-detail-button-styles";
+import { adDetailOutlineButtonClass } from "@/features/ad-management/ad-user-detail-button-styles";
 import { getApiErrorMessage } from "@/lib/api-error";
 
 export function AdDeletedObjectDetailPage() {
@@ -129,21 +129,12 @@ export function AdDeletedObjectDetailPage() {
           title={pageTitle}
           description={pageDescription}
           actions={
-            <div className="flex flex-wrap items-center gap-2">
-              <Link to={returnPath} className={adDetailOutlineButtonClass}>
-                {t("common:actions.back")}
-              </Link>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className={adDetailActionButtonSizingClass}
-                onClick={() => detailQuery.refetch()}
-                disabled={detailQuery.isFetching}
-              >
-                {t("common:actions.refresh")}
-              </Button>
-            </div>
+            <AdDeletedObjectDetailHeaderActions
+              detail={detail}
+              returnPath={returnPath}
+              isFetching={detailQuery.isFetching}
+              onRefresh={() => detailQuery.refetch()}
+            />
           }
         />
 

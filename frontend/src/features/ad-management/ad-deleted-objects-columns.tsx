@@ -10,16 +10,21 @@ import {
   getAdDeletedObjectSecondaryLabel,
 } from "@/features/ad-management/ad-deleted-object-display-labels";
 import { getAdDeletedObjectTypeLabel } from "@/features/ad-management/ad-deleted-object-labels";
+import { canRestoreDeletedObject } from "@/features/ad-management/ad-deleted-object-restore-eligibility";
 import type { AdDeletedObjectListItem } from "@/features/ad-management/types";
 
 type CreateAdDeletedObjectColumnsOptions = {
   t: TFunction;
   onDetail: (item: AdDeletedObjectListItem) => void;
+  onRestore?: (item: AdDeletedObjectListItem) => void;
+  canRestore?: boolean;
 };
 
 export function createAdDeletedObjectColumns({
   t,
   onDetail,
+  onRestore,
+  canRestore = false,
 }: CreateAdDeletedObjectColumnsOptions): ColumnDef<AdDeletedObjectListItem, unknown>[] {
   return [
     {
@@ -95,6 +100,11 @@ export function createAdDeletedObjectColumns({
           <DropdownMenuItem onClick={() => onDetail(row.original)}>
             {t("common:actions.detail")}
           </DropdownMenuItem>
+          {canRestore && onRestore && canRestoreDeletedObject(row.original) ? (
+            <DropdownMenuItem onClick={() => onRestore(row.original)}>
+              {t("adManagement:deletedObjects.actions.restore")}
+            </DropdownMenuItem>
+          ) : null}
         </RowActions>
       ),
       meta: {

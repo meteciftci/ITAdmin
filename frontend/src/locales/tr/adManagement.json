@@ -829,7 +829,11 @@
       "errors": {
         "loadFailed": "Silinen nesneler yüklenemedi.",
         "detailFailed": "Silinen nesne detayı yüklenemedi.",
-        "notFound": "Silinen nesne bulunamadı."
+        "notFound": "Silinen nesne bulunamadı.",
+        "restoreFailed": "Silinen nesne geri yüklenemedi."
+      },
+      "success": {
+        "restore": "Silinen nesne geri yüklendi."
       },
       "warnings": {
         "restoreNotAvailable": "Geri yükleme bu fazda kullanılabilir değildir.",
@@ -838,7 +842,23 @@
       "actions": {
         "listAll": "Tüm silinen nesneleri listele",
         "listAllActive": "Tüm silinen nesneler listeleniyor",
-        "cancelListAll": "Tümünü listelemeyi kapat"
+        "cancelListAll": "Tümünü listelemeyi kapat",
+        "restore": "Geri Yükle"
+      },
+      "restore": {
+        "dialogTitle": "Silinen nesneyi geri yükle",
+        "dialogDescription": "Bu işlem silinen AD nesnesini son bilinen konumuna geri yükler.",
+        "confirmLabel": "Geri yüklemek için nesne adını yazın.",
+        "targetLocation": "Geri yüklenecek konum",
+        "restoredRdn": "Geri yüklenecek RDN",
+        "unsupportedType": "Bu nesne türü geri yüklenemez.",
+        "missingTarget": "Bu nesne için son bilinen konum bilgisi bulunamadı.",
+        "conflict": "Hedef konumda aynı ada sahip bir nesne bulunuyor."
+      },
+      "operationLogs": {
+        "operationTypes": {
+          "DeletedObjectRestore": "Silinen nesne geri yükleme"
+        }
       }
     },
     "membershipMultiSelect": {
