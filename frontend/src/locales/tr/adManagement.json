@@ -767,6 +767,74 @@
         }
       }
     },
+    "deletedObjects": {
+      "title": "Silinen Nesneler",
+      "description": "Active Directory üzerinde silinmiş kullanıcı, grup ve bilgisayar nesnelerini görüntüleyin.",
+      "list": {
+        "pageTitle": "Silinen Nesneler",
+        "pageDescription": "AD Deleted Objects kapsayıcısındaki silinmiş nesneleri görüntüleyin."
+      },
+      "detail": {
+        "pageTitle": "Silinen Nesne Detayı",
+        "pageDescription": "Silinen AD nesnesinin dizin ve teknik bilgilerini görüntüleyin."
+      },
+      "filters": {
+        "type": "Nesne türü",
+        "typeAll": "Tümü",
+        "typeUser": "Kullanıcı",
+        "typeGroup": "Grup",
+        "typeComputer": "Bilgisayar",
+        "typeUnknown": "Bilinmeyen"
+      },
+      "searchPlaceholder": "Ad, sAMAccountName, UPN veya DN ara...",
+      "table": {
+        "object": "Nesne",
+        "type": "Tür",
+        "lastKnownParent": "Son bilinen konum",
+        "distinguishedName": "Silinen DN",
+        "whenChanged": "Son değişiklik",
+        "actions": "İşlemler"
+      },
+      "sections": {
+        "summary": "Özet",
+        "location": "Silme ve konum bilgileri",
+        "technical": "Teknik bilgiler",
+        "additionalAttributes": "Ek bilgiler"
+      },
+      "fields": {
+        "objectGuid": "objectGUID",
+        "objectSid": "objectSID",
+        "objectClass": "objectClass",
+        "name": "Ad",
+        "displayName": "Görünen ad",
+        "samAccountName": "sAMAccountName",
+        "userPrincipalName": "UPN",
+        "description": "Açıklama",
+        "distinguishedName": "Distinguished Name",
+        "lastKnownParent": "Son bilinen konum",
+        "lastKnownRdn": "Son bilinen RDN",
+        "whenCreated": "Oluşturulma tarihi",
+        "whenChanged": "Son değişiklik",
+        "mail": "E-posta",
+        "department": "Departman",
+        "dnsHostName": "DNS adı",
+        "operatingSystem": "İşletim sistemi",
+        "memberOf": "Üye olduğu gruplar"
+      },
+      "empty": {
+        "title": "Silinen nesne bulunamadı",
+        "description": "Arama ve filtrelere uygun silinen AD nesnesi bulunamadı.",
+        "searchRequired": "Silinen nesneleri aramak için en az 2 karakter girin veya filtre seçin."
+      },
+      "errors": {
+        "loadFailed": "Silinen nesneler yüklenemedi.",
+        "detailFailed": "Silinen nesne detayı yüklenemedi.",
+        "notFound": "Silinen nesne bulunamadı."
+      },
+      "warnings": {
+        "restoreNotAvailable": "Geri yükleme bu fazda kullanılabilir değildir."
+      }
+    },
     "membershipMultiSelect": {
       "selectedGroups": "Seçilen gruplar",
       "selectedMembers": "Seçilen üyeler",

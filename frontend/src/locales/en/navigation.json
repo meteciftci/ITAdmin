@@ -12,6 +12,7 @@
       "adManagementUsers": "Users",
       "adManagementGroups": "Groups",
       "adManagementComputers": "Computers",
+      "adManagementDeletedObjects": "Deleted objects",
       "adManagementUsersCreate": "Create AD user",
       "adManagementUsersEdit": "Edit AD user",
       "adManagementUserGroups": "Group Memberships",

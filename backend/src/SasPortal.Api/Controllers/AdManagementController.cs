@@ -29,7 +29,8 @@ public sealed class AdManagementController(
     IAdComputerUpdateService adComputerUpdateService,
     IAdComputerOuMoveService adComputerOuMoveService,
     IAdComputerDeleteService adComputerDeleteService,
-    IAdComputerGroupMembershipService adComputerGroupMembershipService) : ControllerBase
+    IAdComputerGroupMembershipService adComputerGroupMembershipService,
+    IAdDeletedObjectDirectoryService adDeletedObjectDirectoryService) : ControllerBase
 {
     [HttpGet("settings")]
     [RequirePermission(AdManagementPermissions.SettingsView)]
@@ -272,6 +273,57 @@ public sealed class AdManagementController(
         }
 
         return Ok(MapComputerDetail(result.Computer));
+    }
+
+    [HttpGet("deleted-objects")]
+    [RequirePermission(AdManagementPermissions.DeletedObjectsView)]
+    public async Task<ActionResult<AdDeletedObjectListResponse>> ListDeletedObjects(
+        [FromQuery] string? search,
+        [FromQuery] string? type,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await adDeletedObjectDirectoryService.SearchDeletedObjectsAsync(
+            new AppModels.AdDeletedObjectSearchQuery(
+                search,
+                ParseDeletedObjectTypeFilter(type),
+                pageNumber,
+                pageSize),
+            cancellationToken);
+
+        if (!result.IsSuccess || result.Page is null)
+        {
+            return MapDirectoryFailure(result.Message, result.FailureKind);
+        }
+
+        return Ok(new AdDeletedObjectListResponse(
+            result.Page.Items.Select(MapDeletedObjectListItem).ToList(),
+            result.Page.PageNumber,
+            result.Page.PageSize,
+            result.Page.HasNextPage));
+    }
+
+    [HttpGet("deleted-objects/{id}")]
+    [RequirePermission(AdManagementPermissions.DeletedObjectsView)]
+    public async Task<ActionResult<AdDeletedObjectDetailResponse>> GetDeletedObjectById(
+        [FromRoute] string id,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Guid.TryParse(id, out var objectGuid))
+        {
+            return BadRequest(new { message = "Geçersiz silinen nesne kimliği." });
+        }
+
+        var result = await adDeletedObjectDirectoryService.GetDeletedObjectByIdAsync(
+            objectGuid,
+            cancellationToken);
+        if (!result.IsSuccess || result.Object is null)
+        {
+            return MapDirectoryFailure(result.Message, result.FailureKind);
+        }
+
+        return Ok(MapDeletedObjectDetail(result.Object));
     }
 
     [HttpGet("computer-operating-systems")]
@@ -1539,6 +1591,15 @@ public sealed class AdManagementController(
             _ => AppModels.AdUserStatusFilter.Active,
         };
 
+    private static AppModels.AdDeletedObjectTypeFilter ParseDeletedObjectTypeFilter(string? type) =>
+        type?.Trim().ToLowerInvariant() switch
+        {
+            "user" => AppModels.AdDeletedObjectTypeFilter.User,
+            "group" => AppModels.AdDeletedObjectTypeFilter.Group,
+            "computer" => AppModels.AdDeletedObjectTypeFilter.Computer,
+            _ => AppModels.AdDeletedObjectTypeFilter.All,
+        };
+
     private async Task<ActionResult<AdComputerGroupOperationResponse>> ExecuteComputerGroupOperationAsync(
         string id,
         string groupDistinguishedName,
@@ -1934,6 +1995,47 @@ public sealed class AdManagementController(
     private static AdComputerMemberOfItemResponse MapComputerMemberOfItem(
         AppModels.AdComputerMemberOfItem item) =>
         new(item.DistinguishedName, item.Name, item.SamAccountName);
+
+    private static AdDeletedObjectListItemResponse MapDeletedObjectListItem(
+        AppModels.AdDeletedObjectListItem item) =>
+        new(
+            item.Id,
+            item.ObjectType.ToString(),
+            item.Name,
+            item.DisplayName,
+            item.SamAccountName,
+            item.UserPrincipalName,
+            item.DistinguishedName,
+            item.LastKnownParent,
+            item.WhenChanged,
+            item.DeletedAt);
+
+    private static AdDeletedObjectDetailResponse MapDeletedObjectDetail(
+        AppModels.AdDeletedObjectDetail item) =>
+        new(
+            item.Id,
+            item.ObjectType.ToString(),
+            item.Name,
+            item.DisplayName,
+            item.SamAccountName,
+            item.UserPrincipalName,
+            item.Description,
+            item.DistinguishedName,
+            item.LastKnownParent,
+            item.LastKnownRdn,
+            item.ObjectClass,
+            item.ObjectSid,
+            item.WhenCreated,
+            item.WhenChanged,
+            item.DeletedAt,
+            item.Mail,
+            item.Department,
+            item.DnsHostName,
+            item.OperatingSystem,
+            item.MemberOfCount,
+            item.MemberOf,
+            item.MemberOfTruncated,
+            item.AdditionalAttributes);
 
     private static AdGroupListItemResponse MapGroupListItem(AppModels.AdGroupListItem item) =>
         new(

@@ -57,6 +57,9 @@ import type {
   AdComputerGroupCandidateSearchResponse,
   AdComputerGroupMutationRequest,
   AdComputerGroupOperationResponse,
+  AdDeletedObjectDetail,
+  AdDeletedObjectListResponse,
+  GetAdDeletedObjectsParams,
 } from "@/features/ad-management/types";
 
 export const AD_MANAGEMENT_SETTINGS_QUERY_KEY = [
@@ -74,6 +77,11 @@ export const AD_MANAGEMENT_USERS_QUERY_KEY = ["ad-management", "users"] as const
 export const AD_MANAGEMENT_GROUPS_QUERY_KEY = ["ad-management", "groups"] as const;
 
 export const AD_MANAGEMENT_COMPUTERS_QUERY_KEY = ["ad-management", "computers"] as const;
+
+export const AD_MANAGEMENT_DELETED_OBJECTS_QUERY_KEY = [
+  "ad-management",
+  "deleted-objects",
+] as const;
 
 export const AD_COMPUTER_OPERATING_SYSTEMS_QUERY_KEY = [
   "ad-management",
@@ -237,6 +245,30 @@ export const getAdComputerOperatingSystems = async (): Promise<AdComputerOperati
 
 export const getAdComputerById = async (id: string): Promise<AdComputerDetail> => {
   const { data } = await apiClient.get<AdComputerDetail>(`/ad-management/computers/${id}`);
+  return data;
+};
+
+export const getAdDeletedObjects = async (
+  params: GetAdDeletedObjectsParams,
+): Promise<AdDeletedObjectListResponse> => {
+  const { data } = await apiClient.get<AdDeletedObjectListResponse>(
+    "/ad-management/deleted-objects",
+    {
+      params: {
+        search: params.search,
+        type: params.type ?? "all",
+        pageNumber: params.pageNumber ?? 1,
+        pageSize: params.pageSize ?? 20,
+      },
+    },
+  );
+  return data;
+};
+
+export const getAdDeletedObjectById = async (id: string): Promise<AdDeletedObjectDetail> => {
+  const { data } = await apiClient.get<AdDeletedObjectDetail>(
+    `/ad-management/deleted-objects/${id}`,
+  );
   return data;
 };
 

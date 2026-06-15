@@ -162,6 +162,16 @@ const AdComputerGroupsPage = lazy(() =>
     default: module.AdComputerGroupsPage,
   })),
 );
+const AdDeletedObjectsPage = lazy(() =>
+  import("@/features/ad-management/AdDeletedObjectsPage").then((module) => ({
+    default: module.AdDeletedObjectsPage,
+  })),
+);
+const AdDeletedObjectDetailPage = lazy(() =>
+  import("@/features/ad-management/AdDeletedObjectDetailPage").then((module) => ({
+    default: module.AdDeletedObjectDetailPage,
+  })),
+);
 const ErrorPage = lazy(() =>
   import("@/pages/ErrorPage").then((module) => ({ default: module.ErrorPage })),
 );
@@ -671,6 +681,34 @@ export const router = createBrowserRouter([
           <AppLayout>
             <LazyRoute>
               <AdComputerDetailPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/ad-management/deleted-objects",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission="AdManagement.DeletedObjects.View">
+          <AppLayout>
+            <LazyRoute>
+              <AdDeletedObjectsPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/ad-management/deleted-objects/:id",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission="AdManagement.DeletedObjects.View">
+          <AppLayout>
+            <LazyRoute>
+              <AdDeletedObjectDetailPage />
             </LazyRoute>
           </AppLayout>
         </RequirePermission>

@@ -12,6 +12,7 @@
       "adManagementUsers": "Kullanıcılar",
       "adManagementGroups": "Gruplar",
       "adManagementComputers": "Bilgisayarlar",
+      "adManagementDeletedObjects": "Silinen Nesneler",
       "adManagementUsersCreate": "AD kullanıcısı oluştur",
       "adManagementUsersEdit": "AD kullanıcısı düzenle",
       "adManagementUserGroups": "Grup Üyelikleri",

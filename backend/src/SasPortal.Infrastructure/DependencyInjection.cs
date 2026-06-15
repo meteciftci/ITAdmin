@@ -53,6 +53,7 @@ public static class DependencyInjection
         services.AddScoped<IAdComputerOuMoveService>(sp => sp.GetRequiredService<AdUserDirectoryService>());
         services.AddScoped<IAdComputerDeleteService>(sp => sp.GetRequiredService<AdUserDirectoryService>());
         services.AddScoped<IAdComputerGroupMembershipService>(sp => sp.GetRequiredService<AdUserDirectoryService>());
+        services.AddScoped<IAdDeletedObjectDirectoryService>(sp => sp.GetRequiredService<AdUserDirectoryService>());
 
         services.AddScoped<ISmsProviderAdapter, CustomHttpSmsAdapter>();
         services.AddScoped<IEmailProviderAdapter, SmtpEmailProviderAdapter>();

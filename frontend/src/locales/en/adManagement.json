@@ -767,6 +767,74 @@
         }
       }
     },
+    "deletedObjects": {
+      "title": "Deleted objects",
+      "description": "View deleted Active Directory user, group, and computer objects.",
+      "list": {
+        "pageTitle": "Deleted objects",
+        "pageDescription": "View deleted objects in the AD Deleted Objects container."
+      },
+      "detail": {
+        "pageTitle": "Deleted object detail",
+        "pageDescription": "View directory and technical information for the deleted AD object."
+      },
+      "filters": {
+        "type": "Object type",
+        "typeAll": "All",
+        "typeUser": "User",
+        "typeGroup": "Group",
+        "typeComputer": "Computer",
+        "typeUnknown": "Unknown"
+      },
+      "searchPlaceholder": "Search name, sAMAccountName, UPN, or DN...",
+      "table": {
+        "object": "Object",
+        "type": "Type",
+        "lastKnownParent": "Last known parent",
+        "distinguishedName": "Deleted DN",
+        "whenChanged": "Last changed",
+        "actions": "Actions"
+      },
+      "sections": {
+        "summary": "Summary",
+        "location": "Deletion and location information",
+        "technical": "Technical information",
+        "additionalAttributes": "Additional information"
+      },
+      "fields": {
+        "objectGuid": "objectGUID",
+        "objectSid": "objectSID",
+        "objectClass": "objectClass",
+        "name": "Name",
+        "displayName": "Display name",
+        "samAccountName": "sAMAccountName",
+        "userPrincipalName": "UPN",
+        "description": "Description",
+        "distinguishedName": "Distinguished Name",
+        "lastKnownParent": "Last known parent",
+        "lastKnownRdn": "Last known RDN",
+        "whenCreated": "Created",
+        "whenChanged": "Last changed",
+        "mail": "Email",
+        "department": "Department",
+        "dnsHostName": "DNS host name",
+        "operatingSystem": "Operating system",
+        "memberOf": "Member of"
+      },
+      "empty": {
+        "title": "No deleted objects found",
+        "description": "No deleted AD objects matched the current search and filters.",
+        "searchRequired": "Enter at least 2 characters or choose a filter to search deleted objects."
+      },
+      "errors": {
+        "loadFailed": "Deleted objects could not be loaded.",
+        "detailFailed": "Deleted object detail could not be loaded.",
+        "notFound": "Deleted object was not found."
+      },
+      "warnings": {
+        "restoreNotAvailable": "Restore is not available in this phase."
+      }
+    },
     "membershipMultiSelect": {
       "selectedGroups": "Selected groups",
       "selectedMembers": "Selected members",

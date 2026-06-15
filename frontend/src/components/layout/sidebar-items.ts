@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  Archive,
   Activity,
   BellRing,
   Boxes,
@@ -124,13 +125,25 @@ function isAdManagementComputersVisible(
   return isAdManagementModuleOperational(moduleState);
 }
 
+function isAdManagementDeletedObjectsVisible(
+  user: CurrentUser | null,
+  moduleState?: AdManagementModuleSidebarState,
+): boolean {
+  if (!canAccess(user, "AdManagement.DeletedObjects.View")) {
+    return false;
+  }
+
+  return isAdManagementModuleOperational(moduleState);
+}
+
 function isAdManagementSectionVisible(
   user: CurrentUser | null,
   moduleState?: AdManagementModuleSidebarState,
 ): boolean {
   return isAdManagementUsersVisible(user, moduleState)
     || isAdManagementGroupsVisible(user, moduleState)
-    || isAdManagementComputersVisible(user, moduleState);
+    || isAdManagementComputersVisible(user, moduleState)
+    || isAdManagementDeletedObjectsVisible(user, moduleState);
 }
 
 export const getSidebarGroups = (
@@ -176,6 +189,12 @@ export const getSidebarGroups = (
             to: "/ad-management/computers",
             icon: Monitor,
             visible: isAdManagementComputersVisible(user, adManagementModule),
+          },
+          {
+            titleKey: "items.adManagementDeletedObjects",
+            to: "/ad-management/deleted-objects",
+            icon: Archive,
+            visible: isAdManagementDeletedObjectsVisible(user, adManagementModule),
           },
         ],
       },
