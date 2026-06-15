@@ -72,7 +72,9 @@ export function AdComputerDetailHeaderActions({
   const showEnable = canEnableComputer && !computer.isEnabled && !isProtected;
   const showDisable = canDisableComputer && computer.isEnabled && !isProtected;
   const showDelete = canDeleteComputer && !isProtected;
-  const hasAccountOperations = showEnable || showDisable || showDelete;
+  const hasMembershipActions = canManageGroups || showMoveOu;
+  const hasAccountStatusActions = showEnable || showDisable;
+  const hasOperations = hasMembershipActions || hasAccountStatusActions || showDelete;
   const computerLabel = getAdComputerPrimaryLabel(computer);
 
   const accountOperationMutation = useMutation({
@@ -197,21 +199,6 @@ export function AdComputerDetailHeaderActions({
         >
           {t("common:actions.refresh")}
         </Button>
-        {canManageGroups ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className={adDetailActionButtonSizingClass}
-            onClick={() =>
-              navigate(buildAdComputerGroupsPath(computer.id), {
-                state: buildAdComputerDetailReturnState(computer.id),
-              })
-            }
-          >
-            {t("adManagement:computers.actions.manageGroups")}
-          </Button>
-        ) : null}
         {showUpdate ? (
           <Button
             type="button"
@@ -222,29 +209,36 @@ export function AdComputerDetailHeaderActions({
             {t("common:actions.edit")}
           </Button>
         ) : null}
-        {showMoveOu ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className={adDetailActionButtonSizingClass}
-            onClick={() =>
-              navigate(buildAdComputerMoveOuPath(computer.id), {
-                state: buildAdComputerDetailReturnState(computer.id),
-              })
-            }
-          >
-            {t("adManagement:computers.actions.moveOu")}
-          </Button>
-        ) : null}
-        {hasAccountOperations ? (
+        {hasOperations ? (
           <RowActions label={t("adManagement:computers.detail.actions.operations")}>
+            {canManageGroups ? (
+              <DropdownMenuItem
+                onClick={() =>
+                  navigate(buildAdComputerGroupsPath(computer.id), {
+                    state: buildAdComputerDetailReturnState(computer.id),
+                  })
+                }
+              >
+                {t("adManagement:computers.actions.manageGroups")}
+              </DropdownMenuItem>
+            ) : null}
+            {showMoveOu ? (
+              <DropdownMenuItem
+                onClick={() =>
+                  navigate(buildAdComputerMoveOuPath(computer.id), {
+                    state: buildAdComputerDetailReturnState(computer.id),
+                  })
+                }
+              >
+                {t("adManagement:computers.actions.moveOu")}
+              </DropdownMenuItem>
+            ) : null}
+            {hasAccountStatusActions && hasMembershipActions ? <DropdownMenuSeparator /> : null}
             {showEnable ? (
               <DropdownMenuItem onClick={() => setConfirmAction("enable")}>
                 {t("adManagement:computers.actions.enable")}
               </DropdownMenuItem>
             ) : null}
-            {showEnable && showDisable ? <DropdownMenuSeparator /> : null}
             {showDisable ? (
               <DropdownMenuItem onClick={() => setConfirmAction("disable")}>
                 {t("adManagement:computers.actions.disable")}
@@ -252,7 +246,9 @@ export function AdComputerDetailHeaderActions({
             ) : null}
             {showDelete ? (
               <>
-                {(showEnable || showDisable) ? <DropdownMenuSeparator /> : null}
+                {(hasMembershipActions || hasAccountStatusActions) ? (
+                  <DropdownMenuSeparator />
+                ) : null}
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
                   onClick={() => setIsDeleteDialogOpen(true)}

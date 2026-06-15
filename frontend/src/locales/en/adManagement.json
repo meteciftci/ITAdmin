@@ -605,7 +605,7 @@
         "disable": "Disable",
         "moveOu": "Move OU",
         "delete": "Delete",
-        "manageGroups": "Manage Groups"
+        "manageGroups": "Manage group memberships"
       },
       "groups": {
         "pageTitle": "Computer group memberships",

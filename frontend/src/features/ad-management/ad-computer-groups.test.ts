@@ -31,14 +31,23 @@ describe("ad computer groups source inspection", () => {
     assert.match(detailSource, /canManageGroups/);
   });
 
-  it("detail header action navigates to groups route", () => {
+  it("detail header action navigates to groups route from operations menu", () => {
     const actionsSource = readFileSync(
       new URL("./components/AdComputerDetailHeaderActions.tsx", import.meta.url),
       "utf8",
     );
-    assert.match(actionsSource, /canManageGroups/);
-    assert.match(actionsSource, /buildAdComputerGroupsPath/);
-    assert.match(actionsSource, /manageGroups/);
+    const rowActionsBlock = actionsSource.slice(
+      actionsSource.indexOf("<RowActions"),
+      actionsSource.indexOf("</RowActions>") + "</RowActions>".length,
+    );
+
+    assert.match(rowActionsBlock, /canManageGroups/);
+    assert.match(rowActionsBlock, /buildAdComputerGroupsPath/);
+    assert.match(rowActionsBlock, /manageGroups/);
+    assert.doesNotMatch(
+      actionsSource,
+      /canManageGroups\s*\?\s*\(\s*<Button[\s\S]*buildAdComputerGroupsPath/,
+    );
   });
 
   it("groups page uses computer detail and groups queries", () => {
@@ -47,7 +56,7 @@ describe("ad computer groups source inspection", () => {
     assert.match(pageSource, /getAdComputerGroups/);
     assert.match(pageSource, /AdComputerGroupMultiSearchCombobox/);
     const comboboxSource = readFileSync(
-      new URL("./components/AdComputerGroupSearchCombobox.tsx", import.meta.url),
+      new URL("./components/AdComputerGroupMultiSearchCombobox.tsx", import.meta.url),
       "utf8",
     );
     assert.match(comboboxSource, /searchAdComputerGroupCandidates/);
@@ -87,7 +96,11 @@ describe("ad computer groups i18n", () => {
     const tr = JSON.parse(
       readFileSync(new URL("../../locales/tr/adManagement.json", import.meta.url), "utf8"),
     );
-    assert.equal(tr.adManagement.computers.actions.manageGroups, "Grupları Yönet");
+    assert.equal(tr.adManagement.computers.actions.manageGroups, "Grup üyeliklerini yönet");
+    assert.equal(
+      tr.adManagement.users.actions.manageGroups,
+      tr.adManagement.computers.actions.manageGroups,
+    );
     assert.equal(tr.adManagement.computers.groups.actions.addToGroup, "Gruba Ekle");
     assert.equal(tr.adManagement.computers.groups.protected, "Bu bilgisayar hesabında grup üyeliği değiştirilemez.");
   });
@@ -96,7 +109,11 @@ describe("ad computer groups i18n", () => {
     const en = JSON.parse(
       readFileSync(new URL("../../locales/en/adManagement.json", import.meta.url), "utf8"),
     );
-    assert.equal(en.adManagement.computers.actions.manageGroups, "Manage Groups");
+    assert.equal(en.adManagement.computers.actions.manageGroups, "Manage group memberships");
+    assert.equal(
+      en.adManagement.users.actions.manageGroups,
+      en.adManagement.computers.actions.manageGroups,
+    );
     assert.equal(en.adManagement.computers.groups.actions.addToGroup, "Add to Group");
   });
 

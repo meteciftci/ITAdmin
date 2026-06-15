@@ -23,9 +23,9 @@ describe("ad membership multi-select", () => {
     assert.match(columnsSource, /common:actions\.delete/);
   });
 
-  it("aligns computer group search combobox with user group combobox behavior", () => {
+  it("aligns computer group multi search combobox with user group combobox behavior", () => {
     const comboboxSource = readFileSync(
-      new URL("./components/AdComputerGroupSearchCombobox.tsx", import.meta.url),
+      new URL("./components/AdComputerGroupMultiSearchCombobox.tsx", import.meta.url),
       "utf8",
     );
 

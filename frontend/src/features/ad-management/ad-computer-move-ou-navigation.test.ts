@@ -73,14 +73,22 @@ describe("computer list and detail move OU actions", () => {
     assert.match(columnsSource, /computers\.actions\.disable/);
   });
 
-  it("navigates to move OU route from detail header actions", () => {
+  it("navigates to move OU route from detail operations menu", () => {
     const detailActionsSource = readFileSync(
       new URL("./components/AdComputerDetailHeaderActions.tsx", import.meta.url),
       "utf8",
     );
+    const rowActionsBlock = detailActionsSource.slice(
+      detailActionsSource.indexOf("<RowActions"),
+      detailActionsSource.indexOf("</RowActions>") + "</RowActions>".length,
+    );
 
-    assert.match(detailActionsSource, /buildAdComputerMoveOuPath/);
-    assert.match(detailActionsSource, /computers\.actions\.moveOu/);
+    assert.match(rowActionsBlock, /buildAdComputerMoveOuPath/);
+    assert.match(rowActionsBlock, /computers\.actions\.moveOu/);
+    assert.doesNotMatch(
+      detailActionsSource,
+      /showMoveOu\s*\?\s*\(\s*<Button[\s\S]*buildAdComputerMoveOuPath/,
+    );
     assert.doesNotMatch(detailActionsSource, /AdComputerMoveOuDialog/);
     assert.doesNotMatch(detailActionsSource, /moveAdComputerOu/);
   });
