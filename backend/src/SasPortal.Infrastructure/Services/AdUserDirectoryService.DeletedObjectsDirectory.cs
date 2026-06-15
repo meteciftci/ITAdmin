@@ -98,7 +98,7 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectDirectorySe
         var pageSize = AdLdapValueConverter.ClampPageSize(query.PageSize, min: 1);
         var pageNumber = AdLdapValueConverter.NormalizePageNumber(query.PageNumber);
 
-        if (!AdLdapDeletedObjectFilterHelper.IsQueryEnabled(query.Search, query.Type))
+        if (!AdLdapDeletedObjectFilterHelper.IsQueryEnabled(query.Search, query.Type, query.IncludeAll))
         {
             return new AdDeletedObjectSearchResult(
                 true,
@@ -131,7 +131,8 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectDirectorySe
             using var ldapConnection = CreateBoundConnection(connectionResult.Context);
             var filter = AdLdapDeletedObjectFilterHelper.BuildDeletedObjectSearchFilter(
                 query.Search,
-                query.Type);
+                query.Type,
+                query.IncludeAll);
             var items = new List<AdDeletedObjectListItem>(pageSize);
             byte[]? cookie = null;
             var hasNextPage = false;

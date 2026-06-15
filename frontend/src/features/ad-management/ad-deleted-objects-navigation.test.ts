@@ -7,6 +7,7 @@ import {
   AD_DELETED_OBJECTS_LIST_DEFAULTS,
   AD_DELETED_OBJECTS_LIST_PATH,
   normalizeAdDeletedObjectsListState,
+  parseAdDeletedObjectsListStateFromSession,
 } from "./ad-deleted-objects-list-query.ts";
 import {
   getAdDeletedObjectPrimaryLabel,
@@ -115,6 +116,110 @@ describe("ad deleted objects navigation", () => {
     assert.equal(normalized.type, "user");
     assert.equal(normalized.pageNumber, 2);
     assert.equal(AD_DELETED_OBJECTS_LIST_DEFAULTS.type, "all");
+    assert.equal(AD_DELETED_OBJECTS_LIST_DEFAULTS.includeAll, false);
+  });
+});
+
+describe("ad deleted objects list all", () => {
+  it("defaults includeAll to false in list state", () => {
+    assert.equal(AD_DELETED_OBJECTS_LIST_DEFAULTS.includeAll, false);
+    assert.equal(normalizeAdDeletedObjectsListState({}).includeAll, false);
+  });
+
+  it("parses includeAll from session state", () => {
+    const parsed = parseAdDeletedObjectsListStateFromSession(
+      JSON.stringify({ includeAll: true, type: "all", pageNumber: 1 }),
+    );
+    assert.equal(parsed.includeAll, true);
+  });
+
+  it("clears includeAll when normalizing without includeAll true", () => {
+    const normalized = normalizeAdDeletedObjectsListState({ includeAll: false });
+    assert.equal(normalized.includeAll, false);
+  });
+
+  it("list all action sets includeAll true with empty search and all type", () => {
+    const toolbarSource = readFileSync(
+      new URL("./components/AdDeletedObjectsSearchToolbar.tsx", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(toolbarSource, /deletedObjects\.actions\.listAll/);
+    assert.match(toolbarSource, /includeAll: true/);
+    assert.match(toolbarSource, /AD_DELETED_OBJECTS_LIST_DEFAULTS\.search/);
+    assert.match(toolbarSource, /AD_DELETED_OBJECTS_LIST_DEFAULTS\.type/);
+    assert.match(toolbarSource, /pageNumber: AD_DELETED_OBJECTS_LIST_DEFAULTS\.pageNumber/);
+  });
+
+  it("resets includeAll on search and type filter changes", () => {
+    const toolbarSource = readFileSync(
+      new URL("./components/AdDeletedObjectsSearchToolbar.tsx", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(toolbarSource, /search: debouncedSearch[\s\S]*includeAll: false/);
+    assert.match(toolbarSource, /type: event\.target\.value[\s\S]*includeAll: false/);
+  });
+
+  it("enables query when includeAll is true on list page", () => {
+    const pageSource = readFileSync(
+      new URL("./AdDeletedObjectsPage.tsx", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(pageSource, /listState\.includeAll/);
+    assert.match(pageSource, /normalizedSearch\.length >= MIN_SEARCH_LENGTH \|\| hasTypeFilter \|\| listState\.includeAll/);
+  });
+
+  it("sends includeAll through API and query key", () => {
+    const apiSource = readFileSync(new URL("./api.ts", import.meta.url), "utf8");
+    const pageSource = readFileSync(
+      new URL("./AdDeletedObjectsPage.tsx", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(apiSource, /includeAll: params\.includeAll/);
+    assert.match(pageSource, /includeAll: listState\.includeAll/);
+    assert.match(pageSource, /listState\.includeAll/);
+  });
+
+  it("shows list all active badge and warning when includeAll is true", () => {
+    const toolbarSource = readFileSync(
+      new URL("./components/AdDeletedObjectsSearchToolbar.tsx", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(toolbarSource, /deletedObjects\.actions\.listAllActive/);
+    assert.match(toolbarSource, /deletedObjects\.warnings\.listAll/);
+    assert.match(toolbarSource, /listState\.includeAll \?/);
+  });
+
+  it("does not disable refresh when includeAll is true", () => {
+    const toolbarSource = readFileSync(
+      new URL("./components/AdDeletedObjectsSearchToolbar.tsx", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(toolbarSource, /onClick=\{onRefresh\} disabled=\{!canSearch\}/);
+  });
+
+  it("preserves includeAll in list return path query", () => {
+    const listStateSource = readFileSync(
+      new URL("./use-ad-deleted-object-list-state.ts", import.meta.url),
+      "utf8",
+    );
+    const returnPathSource = readFileSync(
+      new URL("./ad-deleted-objects-return-path.ts", import.meta.url),
+      "utf8",
+    );
+    const pageSource = readFileSync(
+      new URL("./AdDeletedObjectsPage.tsx", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(listStateSource, /params\.set\("includeAll", "true"\)/);
+    assert.match(returnPathSource, /buildAdDeletedObjectsListReturnState\(/);
+    assert.match(pageSource, /buildAdDeletedObjectsListReturnState\(listPath\)/);
   });
 });
 
@@ -147,7 +252,8 @@ describe("ad deleted objects i18n", () => {
           detail: { pageTitle: string };
           filters: { typeUser: string; typeGroup: string; typeComputer: string };
           empty: { searchRequired: string };
-          warnings: { restoreNotAvailable: string };
+          warnings: { restoreNotAvailable: string; listAll: string };
+          actions: { listAll: string; listAllActive: string };
         };
       };
     };
@@ -161,7 +267,8 @@ describe("ad deleted objects i18n", () => {
           detail: { pageTitle: string };
           filters: { typeUser: string; typeGroup: string; typeComputer: string };
           empty: { searchRequired: string };
-          warnings: { restoreNotAvailable: string };
+          warnings: { restoreNotAvailable: string; listAll: string };
+          actions: { listAll: string; listAllActive: string };
         };
       };
     };
@@ -183,6 +290,18 @@ describe("ad deleted objects i18n", () => {
       trAdManagement.adManagement.deletedObjects.warnings.restoreNotAvailable,
       "Geri yükleme bu fazda kullanılabilir değildir.",
     );
+    assert.equal(
+      trAdManagement.adManagement.deletedObjects.actions.listAll,
+      "Tüm silinen nesneleri listele",
+    );
+    assert.equal(
+      trAdManagement.adManagement.deletedObjects.actions.listAllActive,
+      "Tüm silinen nesneler listeleniyor",
+    );
+    assert.equal(
+      trAdManagement.adManagement.deletedObjects.warnings.listAll,
+      "Bu görünüm, Deleted Objects kapsayıcısındaki desteklenen tüm silinen nesneleri sayfalı olarak listeler.",
+    );
 
     assert.equal(enAdManagement.adManagement.deletedObjects.title, "Deleted objects");
     assert.equal(enAdManagement.adManagement.deletedObjects.list.pageTitle, "Deleted objects");
@@ -200,6 +319,18 @@ describe("ad deleted objects i18n", () => {
     assert.equal(
       enAdManagement.adManagement.deletedObjects.warnings.restoreNotAvailable,
       "Restore is not available in this phase.",
+    );
+    assert.equal(
+      enAdManagement.adManagement.deletedObjects.actions.listAll,
+      "List all deleted objects",
+    );
+    assert.equal(
+      enAdManagement.adManagement.deletedObjects.actions.listAllActive,
+      "Listing all deleted objects",
+    );
+    assert.equal(
+      enAdManagement.adManagement.deletedObjects.warnings.listAll,
+      "This view lists all supported deleted objects in the Deleted Objects container with pagination.",
     );
   });
 

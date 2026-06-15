@@ -32,7 +32,8 @@ export function AdDeletedObjectsPage() {
 
   const normalizedSearch = listState.search.trim();
   const hasTypeFilter = listState.type !== AD_DELETED_OBJECTS_LIST_DEFAULTS.type;
-  const canSearch = normalizedSearch.length >= MIN_SEARCH_LENGTH || hasTypeFilter;
+  const canSearch =
+    normalizedSearch.length >= MIN_SEARCH_LENGTH || hasTypeFilter || listState.includeAll;
   const effectiveSearch = normalizedSearch.length >= MIN_SEARCH_LENGTH ? normalizedSearch : undefined;
   const activeFilterCount = hasTypeFilter ? 1 : 0;
 
@@ -42,6 +43,7 @@ export function AdDeletedObjectsPage() {
       "list",
       effectiveSearch,
       listState.type,
+      listState.includeAll,
       listState.pageNumber,
       listState.pageSize,
     ],
@@ -49,6 +51,7 @@ export function AdDeletedObjectsPage() {
       getAdDeletedObjects({
         search: effectiveSearch,
         type: listState.type,
+        includeAll: listState.includeAll,
         pageNumber: listState.pageNumber,
         pageSize: listState.pageSize,
       }),
@@ -63,11 +66,11 @@ export function AdDeletedObjectsPage() {
         t,
         onDetail: (item) => {
           navigate(buildAdDeletedObjectDetailPath(item.id), {
-            state: buildAdDeletedObjectsListReturnState(),
+            state: buildAdDeletedObjectsListReturnState(listPath),
           });
         },
       }),
-    [t, navigate],
+    [t, navigate, listPath],
   );
 
   const table = useServerDataTable({

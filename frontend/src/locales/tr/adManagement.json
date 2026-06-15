@@ -429,7 +429,7 @@
       "actions": {
         "detail": "Detay",
         "edit": "Düzenle",
-        "manageMembers": "Üyelikleri Yönet",
+        "manageMembers": "Üyeleri yönet",
         "moveOu": "OU Taşı",
         "delete": "Sil",
         "back": "Geri Dön"
@@ -832,7 +832,12 @@
         "notFound": "Silinen nesne bulunamadı."
       },
       "warnings": {
-        "restoreNotAvailable": "Geri yükleme bu fazda kullanılabilir değildir."
+        "restoreNotAvailable": "Geri yükleme bu fazda kullanılabilir değildir.",
+        "listAll": "Bu görünüm, Deleted Objects kapsayıcısındaki desteklenen tüm silinen nesneleri sayfalı olarak listeler."
+      },
+      "actions": {
+        "listAll": "Tüm silinen nesneleri listele",
+        "listAllActive": "Tüm silinen nesneler listeleniyor"
       }
     },
     "membershipMultiSelect": {

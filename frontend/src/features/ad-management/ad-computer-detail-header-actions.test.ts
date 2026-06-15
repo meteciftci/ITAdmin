@@ -138,6 +138,8 @@ describe("ad computer detail header action i18n", () => {
       readFileSync(new URL("../../locales/en/adManagement.json", import.meta.url), "utf8"),
     );
 
+    assert.equal(tr.adManagement.groups.actions.manageMembers, "Üyeleri yönet");
+    assert.equal(en.adManagement.groups.actions.manageMembers, "Manage members");
     assert.notEqual(
       tr.adManagement.groups.actions.manageMembers,
       tr.adManagement.users.actions.manageGroups,

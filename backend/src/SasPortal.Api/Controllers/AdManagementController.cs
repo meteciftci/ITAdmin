@@ -282,6 +282,7 @@ public sealed class AdManagementController(
         [FromQuery] string? type,
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20,
+        [FromQuery] bool includeAll = false,
         CancellationToken cancellationToken = default)
     {
         var result = await adDeletedObjectDirectoryService.SearchDeletedObjectsAsync(
@@ -289,7 +290,8 @@ public sealed class AdManagementController(
                 search,
                 ParseDeletedObjectTypeFilter(type),
                 pageNumber,
-                pageSize),
+                pageSize,
+                includeAll),
             cancellationToken);
 
         if (!result.IsSuccess || result.Page is null)

@@ -26,17 +26,23 @@ public static class AdLdapDeletedObjectFilterHelper
         return $"CN=Deleted Objects,{defaultNamingContext.Trim()}";
     }
 
-    public static bool IsQueryEnabled(string? search, AdDeletedObjectTypeFilter type) =>
-        type != AdDeletedObjectTypeFilter.All || AdLdapAttributeCatalog.IsSearchTermValid(search);
+    public static bool IsQueryEnabled(
+        string? search,
+        AdDeletedObjectTypeFilter type,
+        bool includeAll = false) =>
+        includeAll
+        || type != AdDeletedObjectTypeFilter.All
+        || AdLdapAttributeCatalog.IsSearchTermValid(search);
 
     public static string BuildDeletedObjectSearchFilter(
         string? search,
-        AdDeletedObjectTypeFilter type)
+        AdDeletedObjectTypeFilter type,
+        bool includeAll = false)
     {
         var parts = new List<string> { "(isDeleted=TRUE)" };
         parts.Add(BuildTypeFilter(type));
 
-        if (AdLdapAttributeCatalog.IsSearchTermValid(search))
+        if (!includeAll && AdLdapAttributeCatalog.IsSearchTermValid(search))
         {
             var escaped = AdLdapFilterHelper.EscapeFilterValue(search!.Trim());
             var searchClauses = SearchAttributeNames

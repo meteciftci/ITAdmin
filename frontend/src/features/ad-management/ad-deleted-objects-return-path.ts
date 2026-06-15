@@ -4,8 +4,10 @@ export type AdDeletedObjectReturnState = {
   returnPath?: string;
 };
 
-export function buildAdDeletedObjectsListReturnState(): AdDeletedObjectReturnState {
-  return { returnPath: AD_DELETED_OBJECTS_LIST_PATH };
+export function buildAdDeletedObjectsListReturnState(
+  listPath: string = AD_DELETED_OBJECTS_LIST_PATH,
+): AdDeletedObjectReturnState {
+  return { returnPath: listPath };
 }
 
 export function buildAdDeletedObjectDetailReturnState(id: string): AdDeletedObjectReturnState {

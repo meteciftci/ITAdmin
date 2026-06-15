@@ -178,6 +178,84 @@ public sealed class AdDeletedObjectDirectoryTests
     }
 
     [Fact]
+    public void IsQueryEnabled_AllowsIncludeAllWithoutSearchOrTypeFilter()
+    {
+        Assert.False(AdLdapDeletedObjectFilterHelper.IsQueryEnabled(null, AdDeletedObjectTypeFilter.All, includeAll: false));
+        Assert.True(AdLdapDeletedObjectFilterHelper.IsQueryEnabled(null, AdDeletedObjectTypeFilter.All, includeAll: true));
+    }
+
+    [Fact]
+    public void AdDeletedObjectSearchQuery_IncludesIncludeAllField()
+    {
+        var query = new AdDeletedObjectSearchQuery(
+            null,
+            AdDeletedObjectTypeFilter.All,
+            1,
+            20,
+            IncludeAll: true);
+
+        Assert.True(query.IncludeAll);
+    }
+
+    [Fact]
+    public void ListDeletedObjectsEndpoint_MapsIncludeAllQueryParameter()
+    {
+        var method = typeof(AdManagementController).GetMethod(nameof(AdManagementController.ListDeletedObjects));
+        Assert.NotNull(method);
+
+        var includeAllParameter = method.GetParameters()
+            .FirstOrDefault(parameter => string.Equals(parameter.Name, "includeAll", StringComparison.OrdinalIgnoreCase));
+        Assert.NotNull(includeAllParameter);
+        Assert.Equal(typeof(bool), includeAllParameter.ParameterType);
+    }
+
+    [Fact]
+    public void BuildDeletedObjectSearchFilter_IncludeAll_DoesNotAddWildcardSearchClause()
+    {
+        var filter = AdLdapDeletedObjectFilterHelper.BuildDeletedObjectSearchFilter(
+            "john",
+            AdDeletedObjectTypeFilter.All,
+            includeAll: true);
+
+        Assert.Contains("(isDeleted=TRUE)", filter, StringComparison.Ordinal);
+        Assert.DoesNotContain("john", filter, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("(name=*", filter, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BuildDeletedObjectSearchFilter_IncludeAll_StillIncludesSupportedTypeFilter()
+    {
+        var filter = AdLdapDeletedObjectFilterHelper.BuildDeletedObjectSearchFilter(
+            null,
+            AdDeletedObjectTypeFilter.All,
+            includeAll: true);
+
+        Assert.Contains("(isDeleted=TRUE)", filter, StringComparison.Ordinal);
+        Assert.Contains("(objectClass=group)", filter, StringComparison.Ordinal);
+        Assert.Contains("(objectClass=computer)", filter, StringComparison.Ordinal);
+        Assert.Contains("(!(objectClass=computer))", filter, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DeletedObjectsDirectorySource_UsesIncludeAllInQueryEnabledCheck()
+    {
+        var sourcePath = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "..",
+            "..",
+            "src",
+            "SasPortal.Infrastructure",
+            "Services",
+            "AdUserDirectoryService.DeletedObjectsDirectory.cs"));
+        var source = File.ReadAllText(sourcePath);
+
+        Assert.Contains("query.IncludeAll", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void DeletedObjectsDirectorySource_UsesShowDeletedControlAndDeletedObjectsBase()
     {
         var sourcePath = Path.GetFullPath(Path.Combine(

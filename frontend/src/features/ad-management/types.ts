@@ -818,4 +818,5 @@ export type GetAdDeletedObjectsParams = {
   type?: AdDeletedObjectTypeFilter;
   pageNumber?: number;
   pageSize?: number;
+  includeAll?: boolean;
 };

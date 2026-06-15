@@ -57,6 +57,9 @@ export function useAdDeletedObjectListState() {
     if (listState.pageSize !== AD_DELETED_OBJECTS_LIST_DEFAULTS.pageSize) {
       params.set("pageSize", String(listState.pageSize));
     }
+    if (listState.includeAll) {
+      params.set("includeAll", "true");
+    }
 
     const query = params.toString();
     return query ? `${AD_DELETED_OBJECTS_LIST_PATH}?${query}` : AD_DELETED_OBJECTS_LIST_PATH;

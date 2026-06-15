@@ -9,6 +9,7 @@ export const AD_DELETED_OBJECTS_LIST_DEFAULTS = {
   type: "all" as AdDeletedObjectTypeFilter,
   pageNumber: 1,
   pageSize: 20,
+  includeAll: false,
 };
 
 export type AdDeletedObjectsListState = {
@@ -16,6 +17,7 @@ export type AdDeletedObjectsListState = {
   type: AdDeletedObjectTypeFilter;
   pageNumber: number;
   pageSize: number;
+  includeAll: boolean;
 };
 
 export function normalizeAdDeletedObjectsListState(
@@ -36,6 +38,7 @@ export function normalizeAdDeletedObjectsListState(
       typeof value.pageSize === "number" && value.pageSize > 0
         ? value.pageSize
         : AD_DELETED_OBJECTS_LIST_DEFAULTS.pageSize,
+    includeAll: value.includeAll === true,
   };
 }
 

@@ -20,7 +20,8 @@ public sealed record AdDeletedObjectSearchQuery(
     string? Search,
     AdDeletedObjectTypeFilter Type,
     int PageNumber,
-    int PageSize);
+    int PageSize,
+    bool IncludeAll = false);
 
 public sealed record AdDeletedObjectListItem(
     string Id,

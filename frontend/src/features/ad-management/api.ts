@@ -259,6 +259,7 @@ export const getAdDeletedObjects = async (
         type: params.type ?? "all",
         pageNumber: params.pageNumber ?? 1,
         pageSize: params.pageSize ?? 20,
+        includeAll: params.includeAll ?? false,
       },
     },
   );

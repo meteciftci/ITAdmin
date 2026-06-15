@@ -429,7 +429,7 @@
       "actions": {
         "detail": "Detail",
         "edit": "Edit",
-        "manageMembers": "Manage Memberships",
+        "manageMembers": "Manage members",
         "moveOu": "Move OU",
         "delete": "Delete",
         "back": "Back"
@@ -832,7 +832,12 @@
         "notFound": "Deleted object was not found."
       },
       "warnings": {
-        "restoreNotAvailable": "Restore is not available in this phase."
+        "restoreNotAvailable": "Restore is not available in this phase.",
+        "listAll": "This view lists all supported deleted objects in the Deleted Objects container with pagination."
+      },
+      "actions": {
+        "listAll": "List all deleted objects",
+        "listAllActive": "Listing all deleted objects"
       }
     },
     "membershipMultiSelect": {
