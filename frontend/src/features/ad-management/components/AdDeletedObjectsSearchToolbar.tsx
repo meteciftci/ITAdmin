@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,16 +41,20 @@ export function AdDeletedObjectsSearchToolbar({
   /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
+    if (debouncedSearch !== searchInput) {
+      return;
+    }
+  
     if (debouncedSearch === listState.search) {
       return;
     }
-
+  
     onListStateChange({
       search: debouncedSearch,
       includeAll: false,
       pageNumber: AD_DELETED_OBJECTS_LIST_DEFAULTS.pageNumber,
     });
-  }, [debouncedSearch, listState.search, onListStateChange]);
+  }, [debouncedSearch, searchInput, listState.search, onListStateChange]);
 
   const handleListAll = () => {
     setSearchInput(AD_DELETED_OBJECTS_LIST_DEFAULTS.search);
@@ -57,6 +62,16 @@ export function AdDeletedObjectsSearchToolbar({
       search: AD_DELETED_OBJECTS_LIST_DEFAULTS.search,
       type: AD_DELETED_OBJECTS_LIST_DEFAULTS.type,
       includeAll: true,
+      pageNumber: AD_DELETED_OBJECTS_LIST_DEFAULTS.pageNumber,
+    });
+  };
+
+  const handleCancelListAll = () => {
+    setSearchInput(AD_DELETED_OBJECTS_LIST_DEFAULTS.search);
+    onListStateChange({
+      search: AD_DELETED_OBJECTS_LIST_DEFAULTS.search,
+      type: AD_DELETED_OBJECTS_LIST_DEFAULTS.type,
+      includeAll: false,
       pageNumber: AD_DELETED_OBJECTS_LIST_DEFAULTS.pageNumber,
     });
   };
@@ -118,9 +133,22 @@ export function AdDeletedObjectsSearchToolbar({
 
       {listState.includeAll ? (
         <div className="flex flex-wrap items-center gap-2 text-sm">
-          <Badge variant="secondary">
+          <Badge
+            variant="outline"
+            className="border-amber-500/40 bg-amber-500/10 text-amber-700 dark:border-amber-400/40 dark:bg-amber-400/10 dark:text-amber-300"
+          >
             {t("adManagement:deletedObjects.actions.listAllActive")}
           </Badge>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-8 shrink-0 text-amber-700 hover:bg-amber-500/10 hover:text-amber-800 dark:text-amber-300 dark:hover:bg-amber-400/10 dark:hover:text-amber-200"
+            onClick={handleCancelListAll}
+            aria-label={t("adManagement:deletedObjects.actions.cancelListAll")}
+          >
+            <X className="size-4" />
+          </Button>
           <span className="text-muted-foreground">
             {t("adManagement:deletedObjects.warnings.listAll")}
           </span>

@@ -223,6 +223,64 @@ describe("ad deleted objects list all", () => {
   });
 });
 
+describe("ad deleted objects list all cancel", () => {
+  it("shows cancel button with cancelListAll aria-label in active list all state", () => {
+    const toolbarSource = readFileSync(
+      new URL("./components/AdDeletedObjectsSearchToolbar.tsx", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(toolbarSource, /deletedObjects\.actions\.cancelListAll/);
+    assert.match(toolbarSource, /aria-label=\{t\("adManagement:deletedObjects\.actions\.cancelListAll"\)\}/);
+    assert.match(toolbarSource, /from "lucide-react"/);
+    assert.match(toolbarSource, /<X className="size-4" \/>/);
+    assert.match(toolbarSource, /variant="ghost"/);
+    assert.match(toolbarSource, /size="icon"/);
+    assert.match(toolbarSource, /onClick=\{handleCancelListAll\}/);
+  });
+
+  it("cancel action resets search input and list state defaults with includeAll false", () => {
+    const toolbarSource = readFileSync(
+      new URL("./components/AdDeletedObjectsSearchToolbar.tsx", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(toolbarSource, /const handleCancelListAll = \(\) => \{/);
+    assert.match(
+      toolbarSource,
+      /handleCancelListAll[\s\S]*setSearchInput\(AD_DELETED_OBJECTS_LIST_DEFAULTS\.search\)/,
+    );
+    assert.match(
+      toolbarSource,
+      /handleCancelListAll[\s\S]*search: AD_DELETED_OBJECTS_LIST_DEFAULTS\.search/,
+    );
+    assert.match(
+      toolbarSource,
+      /handleCancelListAll[\s\S]*type: AD_DELETED_OBJECTS_LIST_DEFAULTS\.type/,
+    );
+    assert.match(
+      toolbarSource,
+      /handleCancelListAll[\s\S]*includeAll: false/,
+    );
+    assert.match(
+      toolbarSource,
+      /handleCancelListAll[\s\S]*pageNumber: AD_DELETED_OBJECTS_LIST_DEFAULTS\.pageNumber/,
+    );
+  });
+
+  it("keeps existing list all and filter reset behaviors", () => {
+    const toolbarSource = readFileSync(
+      new URL("./components/AdDeletedObjectsSearchToolbar.tsx", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(toolbarSource, /handleListAll[\s\S]*includeAll: true/);
+    assert.match(toolbarSource, /search: debouncedSearch[\s\S]*includeAll: false/);
+    assert.match(toolbarSource, /type: event\.target\.value[\s\S]*includeAll: false/);
+    assert.match(toolbarSource, /onClick=\{onRefresh\} disabled=\{!canSearch\}/);
+  });
+});
+
 describe("ad deleted objects display labels", () => {
   it("uses displayName as primary label", () => {
     const item = {
@@ -253,7 +311,7 @@ describe("ad deleted objects i18n", () => {
           filters: { typeUser: string; typeGroup: string; typeComputer: string };
           empty: { searchRequired: string };
           warnings: { restoreNotAvailable: string; listAll: string };
-          actions: { listAll: string; listAllActive: string };
+          actions: { listAll: string; listAllActive: string; cancelListAll: string };
         };
       };
     };
@@ -268,7 +326,7 @@ describe("ad deleted objects i18n", () => {
           filters: { typeUser: string; typeGroup: string; typeComputer: string };
           empty: { searchRequired: string };
           warnings: { restoreNotAvailable: string; listAll: string };
-          actions: { listAll: string; listAllActive: string };
+          actions: { listAll: string; listAllActive: string; cancelListAll: string };
         };
       };
     };
@@ -299,6 +357,10 @@ describe("ad deleted objects i18n", () => {
       "Tüm silinen nesneler listeleniyor",
     );
     assert.equal(
+      trAdManagement.adManagement.deletedObjects.actions.cancelListAll,
+      "Tümünü listelemeyi kapat",
+    );
+    assert.equal(
       trAdManagement.adManagement.deletedObjects.warnings.listAll,
       "Bu görünüm, Deleted Objects kapsayıcısındaki desteklenen tüm silinen nesneleri sayfalı olarak listeler.",
     );
@@ -327,6 +389,10 @@ describe("ad deleted objects i18n", () => {
     assert.equal(
       enAdManagement.adManagement.deletedObjects.actions.listAllActive,
       "Listing all deleted objects",
+    );
+    assert.equal(
+      enAdManagement.adManagement.deletedObjects.actions.cancelListAll,
+      "Stop listing all",
     );
     assert.equal(
       enAdManagement.adManagement.deletedObjects.warnings.listAll,

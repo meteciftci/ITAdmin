@@ -837,7 +837,8 @@
       },
       "actions": {
         "listAll": "Tüm silinen nesneleri listele",
-        "listAllActive": "Tüm silinen nesneler listeleniyor"
+        "listAllActive": "Tüm silinen nesneler listeleniyor",
+        "cancelListAll": "Tümünü listelemeyi kapat"
       }
     },
     "membershipMultiSelect": {

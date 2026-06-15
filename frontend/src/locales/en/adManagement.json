@@ -837,7 +837,8 @@
       },
       "actions": {
         "listAll": "List all deleted objects",
-        "listAllActive": "Listing all deleted objects"
+        "listAllActive": "Listing all deleted objects",
+        "cancelListAll": "Stop listing all"
       }
     },
     "membershipMultiSelect": {
