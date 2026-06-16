@@ -48,6 +48,54 @@ public static class AdOperationErrorDiagnosticBuilder
         return JsonSerializer.Serialize(payload, SerializerOptions);
     }
 
+    public static string BuildDeletedObjectRestoreFailureJson(
+        string step,
+        Guid objectGuid,
+        string? sourceDeletedDistinguishedName,
+        string? restoredDistinguishedName,
+        string restoreOperationMode,
+        string? englishMessageOverride = null,
+        int? ldapResultCode = null,
+        int? ldapExceptionErrorCode = null,
+        string? ldapDiagnosticMessage = null,
+        string? normalizedReasonOverride = null)
+    {
+        var normalizedReason = normalizedReasonOverride
+            ?? AdUserUpdateOperationDiagnosticBuilder.ResolveNormalizedReason(
+                ldapResultCode,
+                ldapExceptionErrorCode,
+                ldapDiagnosticMessage,
+                attributeName: null);
+
+        var message = englishMessageOverride
+            ?? ResolveEnglishMessage(AdManagementOperationTypes.DeletedObjectRestore, normalizedReason);
+
+        var code = ResolveDefaultCode(AdManagementOperationTypes.DeletedObjectRestore) ?? "AD_OPERATION_FAILED";
+
+        return JsonSerializer.Serialize(
+            new
+            {
+                code,
+                operation = AdManagementOperationTypes.DeletedObjectRestore,
+                step,
+                normalizedReason,
+                ldapResultCode,
+                ldapExceptionErrorCode,
+                message,
+                ldapDiagnosticMessage = AdLdapDiagnosticSanitizer.SanitizeLdapDiagnosticMessage(
+                    ldapDiagnosticMessage),
+                targetObjectGuid = objectGuid.ToString("D"),
+                targetDistinguishedName = AdLdapDiagnosticSanitizer.SanitizeDistinguishedName(
+                    restoredDistinguishedName),
+                sourceDeletedDistinguishedName = AdLdapDiagnosticSanitizer.SanitizeDistinguishedName(
+                    sourceDeletedDistinguishedName),
+                restoreOperationMode,
+                partialUpdate = false,
+                rollbackStatus = AdUserUpdateRollbackStatus.NotRequired,
+            },
+            SerializerOptions);
+    }
+
     public static string BuildGroupMembershipFailureJson(
         string operationType,
         string step,

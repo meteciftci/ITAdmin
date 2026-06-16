@@ -689,7 +689,9 @@ public static class AdOperationLogSnapshotBuilder
         string lastKnownParent,
         string restoreRdn,
         string restoredDistinguishedName,
-        string? originalLastKnownRdn = null)
+        string? originalLastKnownRdn = null,
+        string? sourceDeletedDistinguishedName = null,
+        string restoreOperationMode = "ModifyRequestUndelete")
     {
         var original = string.IsNullOrWhiteSpace(originalLastKnownRdn)
             ? restoreRdn
@@ -700,6 +702,7 @@ public static class AdOperationLogSnapshotBuilder
             {
                 operation = AdManagementOperationTypes.DeletedObjectRestore,
                 objectGuid = objectGuid.ToString("D"),
+                restoreOperationMode,
                 restoreTarget = new
                 {
                     lastKnownParent,
@@ -707,6 +710,7 @@ public static class AdOperationLogSnapshotBuilder
                     originalLastKnownRdn = original,
                     restoreRdn,
                     restoredDistinguishedName,
+                    sourceDeletedDistinguishedName,
                 },
             },
             SerializerOptions);

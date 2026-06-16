@@ -94,7 +94,7 @@ public sealed class AdDeletedObjectRestoreTests
     }
 
     [Fact]
-    public void DeletedObjectRestoreService_UsesGuidLookupShowDeletedAndModifyDn()
+    public void DeletedObjectRestoreService_UsesGuidLookupShowDeletedAndModifyRequestUndelete()
     {
         var source = File.ReadAllText(
             Path.Combine(
@@ -107,8 +107,16 @@ public sealed class AdDeletedObjectRestoreTests
         Assert.Contains("lastKnownParent", source, StringComparison.Ordinal);
         Assert.Contains("msDS-LastKnownRDN", source, StringComparison.Ordinal);
         Assert.Contains("TryLoadDirectoryObjectByDn", source, StringComparison.Ordinal);
-        Assert.Contains("new ModifyDNRequest", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("ModifyDNRequest", source, StringComparison.Ordinal);
+        Assert.Contains("new ModifyRequest(deletedDistinguishedName)", source, StringComparison.Ordinal);
+        Assert.Contains("DirectoryAttributeOperation.Delete", source, StringComparison.Ordinal);
+        Assert.Contains("\"isDeleted\"", source, StringComparison.Ordinal);
+        Assert.Contains("DirectoryAttributeOperation.Replace", source, StringComparison.Ordinal);
+        Assert.Contains("\"distinguishedName\"", source, StringComparison.Ordinal);
+        Assert.Contains("distinguishedNameModification.Add(restoredDistinguishedName)", source, StringComparison.Ordinal);
         Assert.Contains("TryVerifyRestoredObject", source, StringComparison.Ordinal);
+        Assert.Contains("DeletedObjectRestoreOperationMode", source, StringComparison.Ordinal);
+        Assert.Contains("ModifyRequestUndelete", source, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -276,7 +284,7 @@ public sealed class AdDeletedObjectRestoreTests
     }
 
     [Fact]
-    public void DeletedObjectRestoreService_UsesNormalizedRestoreRdnForModifyDnConflictAndVerify()
+    public void DeletedObjectRestoreService_UsesNormalizedRestoreRdnForConflictAndVerify()
     {
         var source = File.ReadAllText(
             Path.Combine(
@@ -286,8 +294,31 @@ public sealed class AdDeletedObjectRestoreTests
         Assert.Contains("var restoreRdn = NormalizeDeletedObjectRestoreRdn(originalLastKnownRdn);", source, StringComparison.Ordinal);
         Assert.Contains("var restoredDistinguishedName = $\"{restoreRdn},{lastKnownParent}\";", source, StringComparison.Ordinal);
         Assert.Contains("ExecuteRestoreDeletedObject", source, StringComparison.Ordinal);
-        Assert.Contains("restoreRdn);", source, StringComparison.Ordinal);
+        Assert.Contains("beforeState.DistinguishedName,\n                    restoredDistinguishedName);", source, StringComparison.Ordinal);
         Assert.Contains("originalLastKnownRdn", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DeletedObjectRestoreFailureDiagnostic_IncludesOperationModeAndSourceTargetDns()
+    {
+        var restoreSource = File.ReadAllText(
+            Path.Combine(
+                FindRepositoryRoot(),
+                "backend/src/SasPortal.Infrastructure/Services/AdUserDirectoryService.DeletedObjectRestore.cs"));
+        var diagnosticSource = File.ReadAllText(
+            Path.Combine(
+                FindRepositoryRoot(),
+                "backend/src/SasPortal.Application/Common/AdManagement/AdOperationErrorDiagnosticBuilder.cs"));
+        var summarySource = File.ReadAllText(
+            Path.Combine(
+                FindRepositoryRoot(),
+                "backend/src/SasPortal.Application/Common/AdManagement/AdOperationLogSnapshotBuilder.cs"));
+
+        Assert.Contains("BuildDeletedObjectRestoreFailureJson", restoreSource, StringComparison.Ordinal);
+        Assert.Contains("sourceDeletedDistinguishedName", diagnosticSource, StringComparison.Ordinal);
+        Assert.Contains("restoreOperationMode", diagnosticSource, StringComparison.Ordinal);
+        Assert.Contains("restoreOperationMode", summarySource, StringComparison.Ordinal);
+        Assert.Contains("sourceDeletedDistinguishedName", summarySource, StringComparison.Ordinal);
     }
 
     [Fact]

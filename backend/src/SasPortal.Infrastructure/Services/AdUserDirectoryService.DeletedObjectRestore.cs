@@ -29,6 +29,7 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
         "AD deleted object restore operation succeeded but logging failed.";
     private const string DeletedObjectRestoreFailureLoggingFailedMessage =
         "AD deleted object restore operation failed but logging failed.";
+    private const string DeletedObjectRestoreOperationMode = "ModifyRequestUndelete";
 
     private static class AdDeletedObjectRestoreSteps
     {
@@ -79,7 +80,8 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                 BuildDeletedObjectRestoreFailureDiagnostic(
                     AdDeletedObjectRestoreSteps.LoadDeletedObject,
                     request.ObjectGuid,
-                    targetDistinguishedName: null,
+                    sourceDeletedDistinguishedName: null,
+                    restoredDistinguishedName: null,
                     englishMessageOverride: connectionResult.Message),
                 cancellationToken);
         }
@@ -98,7 +100,8 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                 BuildDeletedObjectRestoreFailureDiagnostic(
                     AdDeletedObjectRestoreSteps.LoadDeletedObject,
                     request.ObjectGuid,
-                    targetDistinguishedName: null,
+                    sourceDeletedDistinguishedName: null,
+                    restoredDistinguishedName: null,
                     englishMessageOverride: AdManagementNotConfiguredMessage,
                     normalizedReasonOverride: AdUserUpdateNormalizedReasons.InvalidRequest),
                 cancellationToken);
@@ -125,7 +128,8 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                     BuildDeletedObjectRestoreFailureDiagnostic(
                         AdDeletedObjectRestoreSteps.LoadDeletedObject,
                         request.ObjectGuid,
-                        targetDistinguishedName: null,
+                        sourceDeletedDistinguishedName: null,
+                    restoredDistinguishedName: null,
                         englishMessageOverride: "The deleted AD object could not be found.",
                         normalizedReasonOverride: AdUserUpdateNormalizedReasons.NoSuchObject),
                     cancellationToken);
@@ -144,7 +148,8 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                     BuildDeletedObjectRestoreFailureDiagnostic(
                         AdDeletedObjectRestoreSteps.ValidateRestoreTarget,
                         request.ObjectGuid,
-                        beforeState.DistinguishedName,
+                        sourceDeletedDistinguishedName: beforeState.DistinguishedName,
+                        restoredDistinguishedName: null,
                         englishMessageOverride: "The deleted AD object type is not supported for restore.",
                         normalizedReasonOverride: AdUserUpdateNormalizedReasons.InvalidRequest),
                     cancellationToken);
@@ -162,7 +167,8 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                     BuildDeletedObjectRestoreFailureDiagnostic(
                         AdDeletedObjectRestoreSteps.ValidateRestoreTarget,
                         request.ObjectGuid,
-                        beforeState.DistinguishedName,
+                        sourceDeletedDistinguishedName: beforeState.DistinguishedName,
+                        restoredDistinguishedName: null,
                         englishMessageOverride: "The deleted AD object is missing last known parent information.",
                         normalizedReasonOverride: AdUserUpdateNormalizedReasons.InvalidRequest),
                     cancellationToken);
@@ -180,7 +186,8 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                     BuildDeletedObjectRestoreFailureDiagnostic(
                         AdDeletedObjectRestoreSteps.ValidateRestoreTarget,
                         request.ObjectGuid,
-                        beforeState.DistinguishedName,
+                        sourceDeletedDistinguishedName: beforeState.DistinguishedName,
+                        restoredDistinguishedName: null,
                         englishMessageOverride: "The deleted AD object is missing last known RDN information.",
                         normalizedReasonOverride: AdUserUpdateNormalizedReasons.InvalidRequest),
                     cancellationToken);
@@ -199,7 +206,8 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                     BuildDeletedObjectRestoreFailureDiagnostic(
                         AdDeletedObjectRestoreSteps.ValidateRestoreTarget,
                         request.ObjectGuid,
-                        beforeState.DistinguishedName,
+                        sourceDeletedDistinguishedName: beforeState.DistinguishedName,
+                        restoredDistinguishedName: null,
                         englishMessageOverride:
                             $"The deleted AD object restore RDN contains a deleted marker. Original msDS-LastKnownRDN: {originalLastKnownRdn}",
                         normalizedReasonOverride: AdUserUpdateNormalizedReasons.InvalidDnSyntax),
@@ -218,7 +226,8 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                     BuildDeletedObjectRestoreFailureDiagnostic(
                         AdDeletedObjectRestoreSteps.ValidateRestoreTarget,
                         request.ObjectGuid,
-                        beforeState.DistinguishedName,
+                        sourceDeletedDistinguishedName: beforeState.DistinguishedName,
+                        restoredDistinguishedName: null,
                         englishMessageOverride:
                             $"The deleted AD object restore RDN is invalid. Original msDS-LastKnownRDN: {originalLastKnownRdn}",
                         normalizedReasonOverride: AdUserUpdateNormalizedReasons.InvalidDnSyntax),
@@ -237,7 +246,8 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                     BuildDeletedObjectRestoreFailureDiagnostic(
                         AdDeletedObjectRestoreSteps.ValidateRestoreTarget,
                         request.ObjectGuid,
-                        beforeState.DistinguishedName,
+                        sourceDeletedDistinguishedName: beforeState.DistinguishedName,
+                        restoredDistinguishedName: null,
                         englishMessageOverride: "The restore target is outside the domain naming context.",
                         normalizedReasonOverride: AdUserUpdateNormalizedReasons.InvalidDnSyntax),
                     cancellationToken);
@@ -254,7 +264,8 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                     BuildDeletedObjectRestoreFailureDiagnostic(
                         AdDeletedObjectRestoreSteps.CheckParentExists,
                         request.ObjectGuid,
-                        beforeState.DistinguishedName,
+                        sourceDeletedDistinguishedName: beforeState.DistinguishedName,
+                        restoredDistinguishedName: null,
                         englishMessageOverride: "The restore target parent could not be found.",
                         normalizedReasonOverride: AdUserUpdateNormalizedReasons.NoSuchObject),
                     cancellationToken);
@@ -272,7 +283,8 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                     BuildDeletedObjectRestoreFailureDiagnostic(
                         AdDeletedObjectRestoreSteps.CheckConflict,
                         request.ObjectGuid,
-                        beforeState.DistinguishedName,
+                        sourceDeletedDistinguishedName: beforeState.DistinguishedName,
+                        restoredDistinguishedName,
                         englishMessageOverride: "An object with the same name already exists in the target location.",
                         normalizedReasonOverride: AdUserUpdateNormalizedReasons.InvalidRequest),
                     cancellationToken);
@@ -283,8 +295,7 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                 ExecuteRestoreDeletedObject(
                     ldapConnection,
                     beforeState.DistinguishedName,
-                    lastKnownParent,
-                    restoreRdn);
+                    restoredDistinguishedName);
             }
             catch (RestoreDeletedObjectLdapException ex)
             {
@@ -297,7 +308,8 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                     BuildDeletedObjectRestoreFailureDiagnostic(
                         ex.Step,
                         request.ObjectGuid,
-                        beforeState.DistinguishedName,
+                        sourceDeletedDistinguishedName: beforeState.DistinguishedName,
+                        restoredDistinguishedName,
                         englishMessageOverride: ex.EnglishMessage,
                         ldapResultCode: ex.LdapResultCode,
                         ldapExceptionErrorCode: ex.LdapExceptionErrorCode,
@@ -322,6 +334,7 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                     BuildDeletedObjectRestoreFailureDiagnostic(
                         AdDeletedObjectRestoreSteps.VerifyRestored,
                         request.ObjectGuid,
+                        sourceDeletedDistinguishedName: beforeState.DistinguishedName,
                         restoredDistinguishedName,
                         englishMessageOverride: "The restored AD object could not be verified.",
                         normalizedReasonOverride: AdUserUpdateNormalizedReasons.Unknown),
@@ -336,6 +349,7 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                 lastKnownParent,
                 originalLastKnownRdn,
                 restoreRdn,
+                beforeState.DistinguishedName,
                 restoredDistinguishedName,
                 cancellationToken);
 
@@ -367,7 +381,8 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                 BuildDeletedObjectRestoreFailureDiagnostic(
                     ldapFailure.Step,
                     request.ObjectGuid,
-                    loadedBeforeState?.DistinguishedName,
+                    sourceDeletedDistinguishedName: loadedBeforeState?.DistinguishedName,
+                    restoredDistinguishedName: null,
                     englishMessageOverride: ldapFailure.EnglishMessage,
                     ldapResultCode: ldapFailure.LdapResultCode,
                     ldapExceptionErrorCode: ldapFailure.LdapExceptionErrorCode,
@@ -391,7 +406,8 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                 BuildDeletedObjectRestoreFailureDiagnostic(
                     failureStep,
                     request.ObjectGuid,
-                    loadedBeforeState?.DistinguishedName,
+                    sourceDeletedDistinguishedName: loadedBeforeState?.DistinguishedName,
+                    restoredDistinguishedName: null,
                     englishMessageOverride: ResolveDeletedObjectRestoreEnglishMessageFromLdapErrorCode(ex.ErrorCode),
                     ldapResultCode: ex.ErrorCode,
                     ldapExceptionErrorCode: ex.ErrorCode,
@@ -416,7 +432,8 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                 BuildDeletedObjectRestoreFailureDiagnostic(
                     AdDeletedObjectRestoreSteps.RestoreObject,
                     request.ObjectGuid,
-                    loadedBeforeState?.DistinguishedName,
+                    sourceDeletedDistinguishedName: loadedBeforeState?.DistinguishedName,
+                    restoredDistinguishedName: null,
                     englishMessageOverride: "The deleted AD object could not be restored.",
                     normalizedReasonOverride: AdUserUpdateNormalizedReasons.Unknown),
                 cancellationToken);
@@ -513,25 +530,37 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
     private static void ExecuteRestoreDeletedObject(
         LdapConnection ldapConnection,
         string deletedDistinguishedName,
-        string lastKnownParent,
-        string restoreRdn)
+        string restoredDistinguishedName)
     {
-        var modifyDnRequest = new ModifyDNRequest(
-            deletedDistinguishedName,
-            lastKnownParent,
-            restoreRdn);
+        var modifyRequest = new ModifyRequest(deletedDistinguishedName);
 
-        modifyDnRequest.Controls.Add(
+        modifyRequest.Controls.Add(
             new DirectoryControl(
                 AdLdapDeletedObjectFilterHelper.ShowDeletedControlOid,
                 null,
                 true,
                 true));
 
+        var isDeletedModification = new DirectoryAttributeModification
+        {
+            Name = "isDeleted",
+            Operation = DirectoryAttributeOperation.Delete,
+        };
+
+        var distinguishedNameModification = new DirectoryAttributeModification
+        {
+            Name = "distinguishedName",
+            Operation = DirectoryAttributeOperation.Replace,
+        };
+        distinguishedNameModification.Add(restoredDistinguishedName);
+
+        modifyRequest.Modifications.Add(isDeletedModification);
+        modifyRequest.Modifications.Add(distinguishedNameModification);
+
         DirectoryResponse response;
         try
         {
-            response = (DirectoryResponse)ldapConnection.SendRequest(modifyDnRequest);
+            response = (DirectoryResponse)ldapConnection.SendRequest(modifyRequest);
         }
         catch (DirectoryOperationException ex)
         {
@@ -711,6 +740,7 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
         string lastKnownParent,
         string originalLastKnownRdn,
         string restoreRdn,
+        string sourceDeletedDistinguishedName,
         string restoredDistinguishedName,
         CancellationToken cancellationToken)
     {
@@ -725,6 +755,7 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                 lastKnownParent,
                 originalLastKnownRdn,
                 restoreRdn,
+                sourceDeletedDistinguishedName,
                 restoredDistinguishedName,
                 errorDiagnosticJson: null,
                 cancellationToken);
@@ -755,8 +786,15 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
             restoredState: null,
             lastKnownParent: beforeState?.LastKnownParent,
             originalLastKnownRdn: beforeState?.LastKnownRdn,
-            restoreRdn: null,
-            restoredDistinguishedName: beforeState?.DistinguishedName,
+            restoreRdn: beforeState?.LastKnownRdn is null
+                ? null
+                : NormalizeDeletedObjectRestoreRdn(beforeState.LastKnownRdn),
+            sourceDeletedDistinguishedName: beforeState?.DistinguishedName,
+            restoredDistinguishedName: beforeState?.LastKnownParent is not null
+                && beforeState.LastKnownRdn is not null
+                && NormalizeDeletedObjectRestoreRdn(beforeState.LastKnownRdn) is { } normalizedRestoreRdn
+                ? $"{normalizedRestoreRdn},{beforeState.LastKnownParent.Trim()}"
+                : null,
             operationDiagnosticJson,
             cancellationToken);
     }
@@ -770,6 +808,7 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
         string? lastKnownParent,
         string? originalLastKnownRdn,
         string? restoreRdn,
+        string? sourceDeletedDistinguishedName,
         string? restoredDistinguishedName,
         string? errorDiagnosticJson,
         CancellationToken cancellationToken)
@@ -816,14 +855,18 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                 lastKnownParent,
                 effectiveRestoreRdn,
                 restoredDistinguishedName,
-                originalLastKnownRdn)
+                originalLastKnownRdn,
+                sourceDeletedDistinguishedName,
+                DeletedObjectRestoreOperationMode)
             : !isSuccess
                 ? AdOperationLogSnapshotBuilder.BuildDeletedObjectRestoreRequestSummary(
                     request.ObjectGuid,
                     lastKnownParent ?? string.Empty,
                     effectiveRestoreRdn,
                     restoredDistinguishedName ?? request.ObjectGuid.ToString("D"),
-                    originalLastKnownRdn)
+                    originalLastKnownRdn,
+                    sourceDeletedDistinguishedName,
+                    DeletedObjectRestoreOperationMode)
                 : null;
 
         await adOperationLogService.WriteAsync(
@@ -863,17 +906,19 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
     private static string BuildDeletedObjectRestoreFailureDiagnostic(
         string step,
         Guid objectGuid,
-        string? targetDistinguishedName,
+        string? sourceDeletedDistinguishedName,
+        string? restoredDistinguishedName,
         string? englishMessageOverride = null,
         int? ldapResultCode = null,
         int? ldapExceptionErrorCode = null,
         string? ldapDiagnosticMessage = null,
         string? normalizedReasonOverride = null) =>
-        AdOperationErrorDiagnosticBuilder.BuildGroupMembershipFailureJson(
-            AdManagementOperationTypes.DeletedObjectRestore,
+        AdOperationErrorDiagnosticBuilder.BuildDeletedObjectRestoreFailureJson(
             step,
             objectGuid,
-            targetDistinguishedName,
+            sourceDeletedDistinguishedName,
+            restoredDistinguishedName,
+            DeletedObjectRestoreOperationMode,
             englishMessageOverride,
             ldapResultCode,
             ldapExceptionErrorCode,
