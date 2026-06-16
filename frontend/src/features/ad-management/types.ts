@@ -203,6 +203,11 @@ export type AdDeletedObjectRestoreReadinessCheckStatus =
   | "Failed"
   | "NotChecked";
 
+export type AdDeletedObjectRestoreReadinessTextParams = Record<
+  string,
+  string | number | boolean
+>;
+
 export type AdDeletedObjectRestoreReadinessCheck = {
   key: string;
   status: AdDeletedObjectRestoreReadinessCheckStatus;
@@ -212,6 +217,12 @@ export type AdDeletedObjectRestoreReadinessCheck = {
   command: string | null;
   isBlocking: boolean;
   details: string | null;
+  titleKey: string;
+  titleParams?: AdDeletedObjectRestoreReadinessTextParams | null;
+  messageKey?: string | null;
+  messageParams?: AdDeletedObjectRestoreReadinessTextParams | null;
+  remediationKey?: string | null;
+  remediationParams?: AdDeletedObjectRestoreReadinessTextParams | null;
 };
 
 export type AdDeletedObjectRestoreReadinessResult = {
@@ -223,6 +234,8 @@ export type AdDeletedObjectRestoreReadinessResult = {
   checks: AdDeletedObjectRestoreReadinessCheck[];
   checkedAtUtc: string;
   domainController: string | null;
+  summaryKey: string;
+  summaryParams?: AdDeletedObjectRestoreReadinessTextParams | null;
 };
 
 export const AD_VALIDATION_TYPES = [

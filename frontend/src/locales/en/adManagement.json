@@ -904,16 +904,97 @@
           "loadFailed": "Restore prerequisites could not be loaded.",
           "verifyFailedTitle": "Restore prerequisites could not be verified.",
           "verifyFailedDescription": "Restore prerequisites could not be verified. Please try again.",
+          "summary": {
+            "ready": "Restore prerequisites are met.",
+            "warning": "Restore prerequisites contain warnings.",
+            "notReady": "Restore prerequisites are not met.",
+            "settingsIncomplete": "Restore prerequisites cannot be checked until AD management settings are completed.",
+            "moduleDisabled": "Restore prerequisites cannot be checked while the AD management module is disabled.",
+            "unexpectedFailure": "An unexpected error occurred while checking restore prerequisites."
+          },
+          "checks": {
+            "adManagementSettings": {
+              "title": "AD Management Settings",
+              "settingsIncomplete": {
+                "message": "AD management settings are incomplete.",
+                "remediation": "Complete AD management settings."
+              },
+              "moduleDisabled": {
+                "message": "AD management module is disabled.",
+                "remediation": "Enable the AD management module."
+              },
+              "connectionIncomplete": {
+                "message": "AD connection settings are incomplete.",
+                "remediation": "Complete domain and naming context settings."
+              },
+              "unexpectedFailure": {
+                "message": "An unexpected error occurred while checking restore prerequisites.",
+                "remediation": "Try again later or contact your administrator."
+              }
+            },
+            "powerShellTimeout": {
+              "title": "PowerShell Timeout",
+              "success": "PowerShellTimeoutSeconds is appropriate ({{configuredTimeoutSeconds}} seconds).",
+              "warning": "PowerShellTimeoutSeconds is low ({{configuredTimeoutSeconds}} seconds). At least {{timeoutWarningThresholdSeconds}} seconds is recommended.",
+              "failed": "PowerShellTimeoutSeconds value is invalid.",
+              "remediation": {
+                "invalidRange": "Set PowerShellTimeoutSeconds between {{minSeconds}} and {{maxSeconds}} seconds.",
+                "recommendHigher": "Use at least {{timeoutWarningThresholdSeconds}} seconds timeout for restore operations."
+              }
+            },
+            "activeDirectoryPowerShellModule": {
+              "title": "Active Directory PowerShell Module",
+              "success": "ActiveDirectory module is available.",
+              "failed": "ActiveDirectory module was not found.",
+              "remediation": "Install the RSAT Active Directory PowerShell module."
+            },
+            "restoreAdObjectCommand": {
+              "title": "Restore-ADObject Command",
+              "success": "Restore-ADObject command is available.",
+              "failed": "Restore-ADObject command was not found.",
+              "notChecked": "Could not be checked without the ActiveDirectory module.",
+              "remediation": "Ensure the ActiveDirectory module is installed."
+            },
+            "adwsPortConnectivity": {
+              "title": "ADWS Port Connectivity",
+              "success": "Connection to {{host}}:{{port}} succeeded.",
+              "failed": "Connection to {{host}}:{{port}} failed.",
+              "remediation": "Allow ADWS TCP {{port}} access."
+            },
+            "recycleBinFeature": {
+              "title": "Recycle Bin Feature",
+              "success": "Recycle Bin Feature is enabled.",
+              "disabled": "Recycle Bin Feature is disabled.",
+              "verificationFailed": "Recycle Bin Feature could not be verified.",
+              "remediation": "Enable Recycle Bin Feature manually."
+            },
+            "serviceAccountAdwsRead": {
+              "title": "Service Account ADWS Read",
+              "success": {
+                "serviceAccount": "Basic AD read via ADWS was verified with the service account.",
+                "processIdentity": "Basic AD read via ADWS was verified with the process identity."
+              },
+              "failed": {
+                "default": "AD read via ADWS failed.",
+                "accessDenied": "ADWS read access was denied.",
+                "timeout": "ADWS read timed out.",
+                "connection": "Could not connect to ADWS."
+              },
+              "notChecked": "Could not be checked without the ActiveDirectory module.",
+              "remediation": "Check service account credentials, ADWS access, and permissions."
+            },
+            "restorePermissionVerification": {
+              "title": "Restore Permission Verification",
+              "verified": "Restore permission was verified by a successful restore operation log.",
+              "notVerified": "Restore permission has not yet been verified by a successful restore operation log.",
+              "remediation": "For manual verification, delete a test object and restore it through the portal. This check will become successful after a successful operation log is created."
+            }
+          },
           "checkStatus": {
             "success": "Success",
             "warning": "Warning",
             "failed": "Failed",
             "notChecked": "Info"
-          },
-          "checkMessages": {
-            "restorePermissionVerified": "Restore permission was verified by a successful restore operation log.",
-            "restorePermissionNotVerified": "Restore permission has not yet been verified by a successful restore operation log.",
-            "restorePermissionRemediation": "For manual verification, delete a test object and restore it through the portal. This check will become successful after a successful operation log is created."
           }
         }
       },

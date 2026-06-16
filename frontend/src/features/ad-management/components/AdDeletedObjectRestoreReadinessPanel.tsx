@@ -11,6 +11,7 @@ import type {
   AdDeletedObjectRestoreReadinessResult,
   AdDeletedObjectRestoreReadinessStatus,
 } from "@/features/ad-management/types";
+import { translateReadinessText } from "@/features/ad-management/restore-readiness-i18n";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -83,6 +84,25 @@ function ReadinessCheckRow({ check }: { check: AdDeletedObjectRestoreReadinessCh
   const { t } = useTranslation(["adManagement", "common"]);
   const [copied, setCopied] = useState(false);
 
+  const title = translateReadinessText(
+    t,
+    check.titleKey,
+    check.titleParams,
+    check.title,
+  );
+  const message = translateReadinessText(
+    t,
+    check.messageKey,
+    check.messageParams,
+    check.message,
+  );
+  const remediation = translateReadinessText(
+    t,
+    check.remediationKey,
+    check.remediationParams,
+    check.remediation,
+  );
+
   async function handleCopyCommand() {
     if (!check.command?.trim()) {
       return;
@@ -106,20 +126,18 @@ function ReadinessCheckRow({ check }: { check: AdDeletedObjectRestoreReadinessCh
       )}
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="font-medium text-sm">{check.title}</div>
+        <div className="font-medium text-sm">{title}</div>
         <Badge variant={readinessCheckStatusBadgeVariant(check.status)}>
           {t(checkStatusLabelKey(check.status))}
         </Badge>
       </div>
-      {check.message ? (
-        <p className="text-sm text-muted-foreground">{t(check.message)}</p>
-      ) : null}
-      {check.remediation ? (
+      {message ? <p className="text-sm text-muted-foreground">{message}</p> : null}
+      {remediation ? (
         <p className="text-sm">
           <span className="font-medium">
             {t("adManagement:deletedObjects.restore.readiness.remediation")}:{" "}
           </span>
-          <span className="text-muted-foreground">{t(check.remediation)}</span>
+          <span className="text-muted-foreground">{remediation}</span>
         </p>
       ) : null}
       {check.command ? (
@@ -161,6 +179,13 @@ export function AdDeletedObjectRestoreReadinessPanel({
         ? "adManagement:deletedObjects.restore.readiness.warningTitle"
         : "adManagement:deletedObjects.restore.readiness.unavailableTitle";
 
+  const summary = translateReadinessText(
+    t,
+    result.summaryKey,
+    result.summaryParams,
+    result.summaryMessage,
+  );
+
   const warningKeys = new Set(result.warnings.map((check) => check.key));
   const checksToShow =
     result.status === "NotReady" && result.blockingReasons.length > 0
@@ -178,7 +203,7 @@ export function AdDeletedObjectRestoreReadinessPanel({
         )}
       >
         <h3 className="text-sm font-semibold">{t(titleKey)}</h3>
-        <p className="text-sm text-muted-foreground">{result.summaryMessage}</p>
+        {summary ? <p className="text-sm text-muted-foreground">{summary}</p> : null}
         {result.status === "NotReady" ? (
           <p className="text-sm text-muted-foreground">
             {t("adManagement:deletedObjects.restore.readiness.unavailableDescription")}

@@ -904,16 +904,97 @@
           "loadFailed": "Geri yükleme gereksinimleri yüklenemedi.",
           "verifyFailedTitle": "Restore gereksinimleri doğrulanamadı.",
           "verifyFailedDescription": "Geri yükleme gereksinimleri doğrulanamadı. Lütfen tekrar deneyin.",
+          "summary": {
+            "ready": "Geri yükleme gereksinimleri karşılanıyor.",
+            "warning": "Geri yükleme gereksinimleri uyarı içeriyor.",
+            "notReady": "Geri yükleme gereksinimleri karşılanmıyor.",
+            "settingsIncomplete": "AD yönetim ayarları tamamlanmadan restore gereksinimleri kontrol edilemez.",
+            "moduleDisabled": "AD yönetim modülü pasifken restore gereksinimleri kontrol edilemez.",
+            "unexpectedFailure": "Geri yükleme gereksinimleri kontrol edilirken beklenmeyen bir hata oluştu."
+          },
+          "checks": {
+            "adManagementSettings": {
+              "title": "AD Yönetim Ayarları",
+              "settingsIncomplete": {
+                "message": "AD yönetim ayarları tamamlanmamış.",
+                "remediation": "AD yönetim ayarlarını tamamlayın."
+              },
+              "moduleDisabled": {
+                "message": "AD yönetim modülü devre dışı.",
+                "remediation": "AD yönetim modülünü etkinleştirin."
+              },
+              "connectionIncomplete": {
+                "message": "AD bağlantı ayarları eksik.",
+                "remediation": "Domain ve naming context ayarlarını tamamlayın."
+              },
+              "unexpectedFailure": {
+                "message": "Geri yükleme gereksinimleri kontrol edilirken beklenmeyen bir hata oluştu.",
+                "remediation": "Daha sonra tekrar deneyin veya sistem yöneticinize başvurun."
+              }
+            },
+            "powerShellTimeout": {
+              "title": "PowerShell Zaman Aşımı",
+              "success": "PowerShellTimeoutSeconds değeri uygun ({{configuredTimeoutSeconds}} saniye).",
+              "warning": "PowerShellTimeoutSeconds değeri düşük ({{configuredTimeoutSeconds}} saniye). En az {{timeoutWarningThresholdSeconds}} saniye önerilir.",
+              "failed": "PowerShellTimeoutSeconds değeri geçersiz.",
+              "remediation": {
+                "invalidRange": "PowerShellTimeoutSeconds değerini {{minSeconds}} ile {{maxSeconds}} arasında ayarlayın.",
+                "recommendHigher": "Geri yükleme işlemleri için en az {{timeoutWarningThresholdSeconds}} saniye timeout kullanın."
+              }
+            },
+            "activeDirectoryPowerShellModule": {
+              "title": "Active Directory PowerShell Modülü",
+              "success": "ActiveDirectory modülü kullanılabilir.",
+              "failed": "ActiveDirectory modülü bulunamadı.",
+              "remediation": "RSAT Active Directory PowerShell modülünü yükleyin."
+            },
+            "restoreAdObjectCommand": {
+              "title": "Restore-ADObject Komutu",
+              "success": "Restore-ADObject komutu kullanılabilir.",
+              "failed": "Restore-ADObject komutu bulunamadı.",
+              "notChecked": "ActiveDirectory modülü olmadan kontrol edilemedi.",
+              "remediation": "ActiveDirectory modülünün yüklü olduğundan emin olun."
+            },
+            "adwsPortConnectivity": {
+              "title": "ADWS Port Bağlantısı",
+              "success": "{{host}}:{{port}} bağlantısı başarılı.",
+              "failed": "{{host}}:{{port}} bağlantısı başarısız.",
+              "remediation": "ADWS TCP {{port}} erişimine izin verin."
+            },
+            "recycleBinFeature": {
+              "title": "Recycle Bin Feature",
+              "success": "Recycle Bin Feature etkin.",
+              "disabled": "Recycle Bin Feature devre dışı.",
+              "verificationFailed": "Recycle Bin Feature doğrulanamadı.",
+              "remediation": "Recycle Bin Feature'ı manuel olarak etkinleştirin."
+            },
+            "serviceAccountAdwsRead": {
+              "title": "Service Account ADWS Okuma",
+              "success": {
+                "serviceAccount": "Service account ile ADWS üzerinden temel AD okuma doğrulandı.",
+                "processIdentity": "İşlem kimliği ile ADWS üzerinden temel AD okuma doğrulandı."
+              },
+              "failed": {
+                "default": "ADWS üzerinden AD okuma başarısız.",
+                "accessDenied": "ADWS okuma erişimi reddedildi.",
+                "timeout": "ADWS okuma zaman aşımına uğradı.",
+                "connection": "ADWS bağlantısı kurulamadı."
+              },
+              "notChecked": "ActiveDirectory modülü olmadan kontrol edilemedi.",
+              "remediation": "Service account kimlik bilgilerini, ADWS erişimini ve izinleri kontrol edin."
+            },
+            "restorePermissionVerification": {
+              "title": "Geri Yükleme İzni Doğrulaması",
+              "verified": "Geri yükleme yetkisi başarılı restore işlem logu ile doğrulandı.",
+              "notVerified": "Geri yükleme yetkisi henüz başarılı bir restore işlem logu ile doğrulanmadı.",
+              "remediation": "Manuel doğrulama için test bir nesneyi silip portal üzerinden geri yükleyin. Başarılı işlem logu oluştuğunda bu kontrol başarılı görünecektir."
+            }
+          },
           "checkStatus": {
             "success": "Başarılı",
             "warning": "Uyarı",
             "failed": "Başarısız",
             "notChecked": "Bilgi"
-          },
-          "checkMessages": {
-            "restorePermissionVerified": "Geri yükleme yetkisi başarılı restore işlem logu ile doğrulandı.",
-            "restorePermissionNotVerified": "Geri yükleme yetkisi henüz başarılı bir restore işlem logu ile doğrulanmadı.",
-            "restorePermissionRemediation": "Manuel doğrulama için test bir nesneyi silip portal üzerinden geri yükleyin. Başarılı işlem logu oluştuğunda bu kontrol başarılı görünecektir."
           }
         }
       },

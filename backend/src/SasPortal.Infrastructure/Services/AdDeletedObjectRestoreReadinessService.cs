@@ -19,15 +19,6 @@ public sealed class AdDeletedObjectRestoreReadinessService(
     private const int PowerShellTimeoutMinSeconds = 5;
     private const int PowerShellTimeoutMaxSeconds = 300;
 
-    private const string SettingsNotReadyMessage =
-        "AD yönetim ayarları tamamlanmadan silinen nesne geri yükleme gereksinimleri kontrol edilemez.";
-    private const string SettingsDisabledMessage =
-        "AD yönetim modülü etkin değil. Silinen nesne geri yükleme kullanılamaz.";
-    private const string ReadySummaryMessage = "Silinen nesne geri yükleme gereksinimleri hazır.";
-    private const string WarningSummaryMessage = "Silinen nesne geri yükleme gereksinimleri uyarı içeriyor.";
-    private const string NotReadySummaryMessage =
-        "Silinen nesne geri yükleme özelliği şu anda kullanılamıyor.";
-
     public async Task<AdDeletedObjectRestoreReadinessResult> CheckAsync(
         CancellationToken cancellationToken = default)
     {
@@ -40,17 +31,25 @@ public sealed class AdDeletedObjectRestoreReadinessService(
             if (!settings.IsConfigured)
             {
                 checks.Add(CreateSettingsCheck(
-                    SettingsNotReadyMessage,
-                    "AD yönetim ayarlarını tamamlayın ve kaydedin."));
-                return BuildResult(checks, checkedAt, null);
+                    AdDeletedObjectRestoreReadinessI18nKeys.Checks.AdManagementSettings.SettingsIncompleteMessage,
+                    AdDeletedObjectRestoreReadinessI18nKeys.Checks.AdManagementSettings.SettingsIncompleteRemediation));
+                return BuildResult(
+                    checks,
+                    checkedAt,
+                    null,
+                    AdDeletedObjectRestoreReadinessI18nKeys.Summary.SettingsIncomplete);
             }
 
             if (!settings.IsEnabled)
             {
                 checks.Add(CreateSettingsCheck(
-                    SettingsDisabledMessage,
-                    "AD yönetim modülünü etkinleştirin."));
-                return BuildResult(checks, checkedAt, null);
+                    AdDeletedObjectRestoreReadinessI18nKeys.Checks.AdManagementSettings.ModuleDisabledMessage,
+                    AdDeletedObjectRestoreReadinessI18nKeys.Checks.AdManagementSettings.ModuleDisabledRemediation));
+                return BuildResult(
+                    checks,
+                    checkedAt,
+                    null,
+                    AdDeletedObjectRestoreReadinessI18nKeys.Summary.ModuleDisabled);
             }
 
             var connection = await settingsService.GetConnectionParametersAsync(cancellationToken);
@@ -59,9 +58,13 @@ public sealed class AdDeletedObjectRestoreReadinessService(
                 || string.IsNullOrWhiteSpace(connection.DefaultNamingContext))
             {
                 checks.Add(CreateSettingsCheck(
-                    SettingsNotReadyMessage,
-                    "AD yönetim bağlantı ayarlarını tamamlayın."));
-                return BuildResult(checks, checkedAt, null);
+                    AdDeletedObjectRestoreReadinessI18nKeys.Checks.AdManagementSettings.ConnectionIncompleteMessage,
+                    AdDeletedObjectRestoreReadinessI18nKeys.Checks.AdManagementSettings.ConnectionIncompleteRemediation));
+                return BuildResult(
+                    checks,
+                    checkedAt,
+                    null,
+                    AdDeletedObjectRestoreReadinessI18nKeys.Summary.SettingsIncomplete);
             }
 
             var domainController = ResolvePrimaryHost(connection);
@@ -94,16 +97,16 @@ public sealed class AdDeletedObjectRestoreReadinessService(
             {
                 checks.Add(CreateNotCheckedCheck(
                     AdDeletedObjectRestoreReadinessCheckKeys.RestoreAdObjectCommand,
-                    "Restore-ADObject komutu",
-                    "Active Directory PowerShell modülü doğrulanamadı."));
+                    AdDeletedObjectRestoreReadinessI18nKeys.Checks.RestoreAdObjectCommand.Title,
+                    AdDeletedObjectRestoreReadinessI18nKeys.Checks.RestoreAdObjectCommand.NotChecked));
                 checks.Add(CreateNotCheckedCheck(
                     AdDeletedObjectRestoreReadinessCheckKeys.RecycleBinFeature,
-                    "AD Recycle Bin Feature",
-                    "Active Directory PowerShell modülü doğrulanamadı."));
+                    AdDeletedObjectRestoreReadinessI18nKeys.Checks.RecycleBinFeature.Title,
+                    AdDeletedObjectRestoreReadinessI18nKeys.Checks.RecycleBinFeature.VerificationFailed));
                 checks.Add(CreateNotCheckedCheck(
                     AdDeletedObjectRestoreReadinessCheckKeys.ServiceAccountAdwsRead,
-                    "ADWS temel okuma",
-                    "Active Directory PowerShell modülü doğrulanamadı."));
+                    AdDeletedObjectRestoreReadinessI18nKeys.Checks.ServiceAccountAdwsRead.Title,
+                    AdDeletedObjectRestoreReadinessI18nKeys.Checks.ServiceAccountAdwsRead.NotChecked));
             }
 
             checks.Add(await CheckAdwsPortConnectivityAsync(domainController, timeout, cancellationToken));
@@ -117,17 +120,21 @@ public sealed class AdDeletedObjectRestoreReadinessService(
                 ex,
                 "AD deleted object restore readiness check failed unexpectedly.");
 
-            checks.Add(new AdDeletedObjectRestoreReadinessCheck(
+            checks.Add(CreateCheck(
                 AdDeletedObjectRestoreReadinessCheckKeys.AdManagementSettings,
                 AdDeletedObjectRestoreReadinessCheckStatuses.Failed,
-                "Geri yükleme gereksinimleri",
-                "Geri yükleme gereksinimleri doğrulanamadı.",
-                "Bir süre sonra tekrar deneyin veya sistem yöneticinize başvurun.",
+                AdDeletedObjectRestoreReadinessI18nKeys.Checks.AdManagementSettings.Title,
+                AdDeletedObjectRestoreReadinessI18nKeys.Checks.AdManagementSettings.UnexpectedFailureMessage,
+                AdDeletedObjectRestoreReadinessI18nKeys.Checks.AdManagementSettings.UnexpectedFailureRemediation,
                 null,
                 true,
                 null));
 
-            return BuildResult(checks, checkedAt, null);
+            return BuildResult(
+                checks,
+                checkedAt,
+                null,
+                AdDeletedObjectRestoreReadinessI18nKeys.Summary.UnexpectedFailure);
         }
     }
 
@@ -140,39 +147,46 @@ public sealed class AdDeletedObjectRestoreReadinessService(
         if (configuredTimeoutSeconds < PowerShellTimeoutMinSeconds
             || configuredTimeoutSeconds > PowerShellTimeoutMaxSeconds)
         {
-            return new AdDeletedObjectRestoreReadinessCheck(
+            return CreateCheck(
                 AdDeletedObjectRestoreReadinessCheckKeys.PowerShellTimeout,
                 AdDeletedObjectRestoreReadinessCheckStatuses.Failed,
-                "PowerShell zaman aşımı",
-                "PowerShellTimeoutSeconds geçerli aralıkta değil.",
-                "PowerShell zaman aşımını 5 ile 300 saniye arasında ayarlayın.",
+                AdDeletedObjectRestoreReadinessI18nKeys.Checks.PowerShellTimeout.Title,
+                AdDeletedObjectRestoreReadinessI18nKeys.Checks.PowerShellTimeout.Failed,
+                AdDeletedObjectRestoreReadinessI18nKeys.Checks.PowerShellTimeout.RemediationInvalidRange,
                 null,
                 true,
-                null);
+                null,
+                CreateParams(
+                    ("minSeconds", PowerShellTimeoutMinSeconds),
+                    ("maxSeconds", PowerShellTimeoutMaxSeconds)));
         }
 
         if (configuredTimeoutSeconds < PowerShellTimeoutWarningThresholdSeconds)
         {
-            return new AdDeletedObjectRestoreReadinessCheck(
+            return CreateCheck(
                 AdDeletedObjectRestoreReadinessCheckKeys.PowerShellTimeout,
                 AdDeletedObjectRestoreReadinessCheckStatuses.Warning,
-                "PowerShell zaman aşımı",
-                $"PowerShellTimeoutSeconds değeri düşük ({configuredTimeoutSeconds}s).",
-                "Geri yükleme komutları için en az 10 saniye önerilir.",
+                AdDeletedObjectRestoreReadinessI18nKeys.Checks.PowerShellTimeout.Title,
+                AdDeletedObjectRestoreReadinessI18nKeys.Checks.PowerShellTimeout.Warning,
+                AdDeletedObjectRestoreReadinessI18nKeys.Checks.PowerShellTimeout.RemediationRecommendHigher,
                 null,
                 false,
-                null);
+                null,
+                CreateParams(
+                    ("configuredTimeoutSeconds", configuredTimeoutSeconds),
+                    ("timeoutWarningThresholdSeconds", PowerShellTimeoutWarningThresholdSeconds)));
         }
 
-        return new AdDeletedObjectRestoreReadinessCheck(
+        return CreateCheck(
             AdDeletedObjectRestoreReadinessCheckKeys.PowerShellTimeout,
             AdDeletedObjectRestoreReadinessCheckStatuses.Success,
-            "PowerShell zaman aşımı",
-            $"PowerShellTimeoutSeconds değeri uygun ({configuredTimeoutSeconds}s).",
+            AdDeletedObjectRestoreReadinessI18nKeys.Checks.PowerShellTimeout.Title,
+            AdDeletedObjectRestoreReadinessI18nKeys.Checks.PowerShellTimeout.Success,
             null,
             null,
             false,
-            null);
+            null,
+            CreateParams(("configuredTimeoutSeconds", configuredTimeoutSeconds)));
     }
 
     private async Task<AdDeletedObjectRestoreReadinessCheck> CheckActiveDirectoryModuleAsync(
@@ -182,18 +196,25 @@ public sealed class AdDeletedObjectRestoreReadinessService(
         var result = await powerShellProbe.CheckActiveDirectoryModuleAsync(request, cancellationToken);
         if (result.IsSuccess)
         {
-            return SuccessCheck(
+            return CreateCheck(
                 AdDeletedObjectRestoreReadinessCheckKeys.ActiveDirectoryPowerShellModule,
-                "Active Directory PowerShell modülü",
-                "Active Directory PowerShell modülü uygulama sunucusunda bulundu.");
+                AdDeletedObjectRestoreReadinessCheckStatuses.Success,
+                AdDeletedObjectRestoreReadinessI18nKeys.Checks.ActiveDirectoryPowerShellModule.Title,
+                AdDeletedObjectRestoreReadinessI18nKeys.Checks.ActiveDirectoryPowerShellModule.Success,
+                null,
+                null,
+                false,
+                null);
         }
 
-        return FailedCheck(
+        return CreateCheck(
             AdDeletedObjectRestoreReadinessCheckKeys.ActiveDirectoryPowerShellModule,
-            "Active Directory PowerShell modülü",
-            "Active Directory PowerShell modülü uygulama sunucusunda bulunamadı.",
-            "Uygulama sunucusunda RSAT Active Directory PowerShell modülünü yükleyin.",
+            AdDeletedObjectRestoreReadinessCheckStatuses.Failed,
+            AdDeletedObjectRestoreReadinessI18nKeys.Checks.ActiveDirectoryPowerShellModule.Title,
+            AdDeletedObjectRestoreReadinessI18nKeys.Checks.ActiveDirectoryPowerShellModule.Failed,
+            AdDeletedObjectRestoreReadinessI18nKeys.Checks.ActiveDirectoryPowerShellModule.Remediation,
             AdDeletedObjectRestoreReadinessCommandBuilder.BuildInstallRsatCommand(),
+            true,
             result.ErrorSummary);
     }
 
@@ -204,18 +225,25 @@ public sealed class AdDeletedObjectRestoreReadinessService(
         var result = await powerShellProbe.CheckRestoreAdObjectCommandAsync(request, cancellationToken);
         if (result.IsSuccess)
         {
-            return SuccessCheck(
+            return CreateCheck(
                 AdDeletedObjectRestoreReadinessCheckKeys.RestoreAdObjectCommand,
-                "Restore-ADObject komutu",
-                "Restore-ADObject komutu kullanılabilir.");
+                AdDeletedObjectRestoreReadinessCheckStatuses.Success,
+                AdDeletedObjectRestoreReadinessI18nKeys.Checks.RestoreAdObjectCommand.Title,
+                AdDeletedObjectRestoreReadinessI18nKeys.Checks.RestoreAdObjectCommand.Success,
+                null,
+                null,
+                false,
+                null);
         }
 
-        return FailedCheck(
+        return CreateCheck(
             AdDeletedObjectRestoreReadinessCheckKeys.RestoreAdObjectCommand,
-            "Restore-ADObject komutu",
-            "Restore-ADObject komutu bulunamadı.",
-            "Uygulama sunucusunda RSAT Active Directory PowerShell modülünü yükleyin.",
+            AdDeletedObjectRestoreReadinessCheckStatuses.Failed,
+            AdDeletedObjectRestoreReadinessI18nKeys.Checks.RestoreAdObjectCommand.Title,
+            AdDeletedObjectRestoreReadinessI18nKeys.Checks.RestoreAdObjectCommand.Failed,
+            AdDeletedObjectRestoreReadinessI18nKeys.Checks.RestoreAdObjectCommand.Remediation,
             "Get-Command Restore-ADObject",
+            true,
             result.ErrorSummary);
     }
 
@@ -231,21 +259,34 @@ public sealed class AdDeletedObjectRestoreReadinessService(
             timeout,
             cancellationToken);
 
+        var hostPortParams = CreateParams(
+            ("host", sanitizedHost),
+            ("port", AdwsPort));
+
         if (connected)
         {
-            return SuccessCheck(
+            return CreateCheck(
                 AdDeletedObjectRestoreReadinessCheckKeys.AdwsPortConnectivity,
-                "AD Web Services (9389)",
-                $"{sanitizedHost}:{AdwsPort} bağlantısı başarılı.");
+                AdDeletedObjectRestoreReadinessCheckStatuses.Success,
+                AdDeletedObjectRestoreReadinessI18nKeys.Checks.AdwsPortConnectivity.Title,
+                AdDeletedObjectRestoreReadinessI18nKeys.Checks.AdwsPortConnectivity.Success,
+                null,
+                null,
+                false,
+                null,
+                hostPortParams);
         }
 
-        return FailedCheck(
+        return CreateCheck(
             AdDeletedObjectRestoreReadinessCheckKeys.AdwsPortConnectivity,
-            "AD Web Services (9389)",
-            $"{sanitizedHost}:{AdwsPort} bağlantısı başarısız.",
-            "Uygulama sunucusundan domain controller üzerindeki AD Web Services TCP 9389 portuna erişim verin.",
+            AdDeletedObjectRestoreReadinessCheckStatuses.Failed,
+            AdDeletedObjectRestoreReadinessI18nKeys.Checks.AdwsPortConnectivity.Title,
+            AdDeletedObjectRestoreReadinessI18nKeys.Checks.AdwsPortConnectivity.Failed,
+            AdDeletedObjectRestoreReadinessI18nKeys.Checks.AdwsPortConnectivity.Remediation,
             AdDeletedObjectRestoreReadinessCommandBuilder.BuildTestNetConnectionCommand(sanitizedHost),
-            null);
+            true,
+            null,
+            hostPortParams);
     }
 
     private async Task<AdDeletedObjectRestoreReadinessCheck> CheckRecycleBinFeatureAsync(
@@ -256,24 +297,31 @@ public sealed class AdDeletedObjectRestoreReadinessService(
         var result = await powerShellProbe.CheckRecycleBinFeatureAsync(request, cancellationToken);
         if (result.IsSuccess)
         {
-            return SuccessCheck(
+            return CreateCheck(
                 AdDeletedObjectRestoreReadinessCheckKeys.RecycleBinFeature,
-                "AD Recycle Bin Feature",
-                "AD Recycle Bin Feature etkin.");
+                AdDeletedObjectRestoreReadinessCheckStatuses.Success,
+                AdDeletedObjectRestoreReadinessI18nKeys.Checks.RecycleBinFeature.Title,
+                AdDeletedObjectRestoreReadinessI18nKeys.Checks.RecycleBinFeature.Success,
+                null,
+                null,
+                false,
+                null);
         }
 
-        var message = ContainsToken(result.ErrorSummary, AdDeletedObjectRestoreReadinessPowerShellProbe.RecycleBinDisabledErrorToken)
-            ? "AD Recycle Bin Feature etkin değil."
-            : "AD Recycle Bin Feature durumu doğrulanamadı.";
+        var messageKey = ContainsToken(result.ErrorSummary, AdDeletedObjectRestoreReadinessPowerShellProbe.RecycleBinDisabledErrorToken)
+            ? AdDeletedObjectRestoreReadinessI18nKeys.Checks.RecycleBinFeature.Disabled
+            : AdDeletedObjectRestoreReadinessI18nKeys.Checks.RecycleBinFeature.VerificationFailed;
 
-        return FailedCheck(
+        return CreateCheck(
             AdDeletedObjectRestoreReadinessCheckKeys.RecycleBinFeature,
-            "AD Recycle Bin Feature",
-            message,
-            "AD Recycle Bin Feature forest seviyesinde etkinleştirilmelidir. Bu işlem AD yöneticisi tarafından bilinçli olarak yapılmalıdır.",
+            AdDeletedObjectRestoreReadinessCheckStatuses.Failed,
+            AdDeletedObjectRestoreReadinessI18nKeys.Checks.RecycleBinFeature.Title,
+            messageKey,
+            AdDeletedObjectRestoreReadinessI18nKeys.Checks.RecycleBinFeature.Remediation,
             AdDeletedObjectRestoreReadinessCommandBuilder.BuildEnableRecycleBinCommand(
                 request.DomainFqdn,
                 domainController),
+            true,
             result.ErrorSummary);
     }
 
@@ -285,26 +333,30 @@ public sealed class AdDeletedObjectRestoreReadinessService(
         var result = await powerShellProbe.CheckAdwsReadAsync(request, cancellationToken);
         if (result.IsSuccess)
         {
-            var credentialMode = !string.IsNullOrWhiteSpace(request.ServiceAccountUserName)
-                && !string.IsNullOrWhiteSpace(request.ServiceAccountPassword)
-                    ? "Service account"
-                    : "Process identity";
+            var usesServiceAccount = !string.IsNullOrWhiteSpace(request.ServiceAccountUserName)
+                && !string.IsNullOrWhiteSpace(request.ServiceAccountPassword);
 
-            return SuccessCheck(
+            return CreateCheck(
                 AdDeletedObjectRestoreReadinessCheckKeys.ServiceAccountAdwsRead,
-                "ADWS temel okuma",
-                $"{credentialMode} ile ADWS üzerinden temel AD okuma doğrulandı.");
+                AdDeletedObjectRestoreReadinessCheckStatuses.Success,
+                AdDeletedObjectRestoreReadinessI18nKeys.Checks.ServiceAccountAdwsRead.Title,
+                usesServiceAccount
+                    ? AdDeletedObjectRestoreReadinessI18nKeys.Checks.ServiceAccountAdwsRead.SuccessServiceAccount
+                    : AdDeletedObjectRestoreReadinessI18nKeys.Checks.ServiceAccountAdwsRead.SuccessProcessIdentity,
+                null,
+                null,
+                false,
+                null);
         }
 
-        var remediation = "Service account kimlik bilgilerini, ADWS erişimini ve yetkilerini kontrol edin.";
-        var message = ResolveAdwsReadFailureMessage(result.ErrorSummary);
-
-        return FailedCheck(
+        return CreateCheck(
             AdDeletedObjectRestoreReadinessCheckKeys.ServiceAccountAdwsRead,
-            "ADWS temel okuma",
-            message,
-            remediation,
+            AdDeletedObjectRestoreReadinessCheckStatuses.Failed,
+            AdDeletedObjectRestoreReadinessI18nKeys.Checks.ServiceAccountAdwsRead.Title,
+            ResolveAdwsReadFailureMessageKey(result.ErrorSummary),
+            AdDeletedObjectRestoreReadinessI18nKeys.Checks.ServiceAccountAdwsRead.Remediation,
             $"Get-ADRootDSE -Server {AdDeletedObjectRestoreReadinessCommandBuilder.SanitizeHost(domainController)}",
+            true,
             result.ErrorSummary);
     }
 
@@ -328,90 +380,87 @@ public sealed class AdDeletedObjectRestoreReadinessService(
 
         if (logs.Items.Count > 0)
         {
-            return new AdDeletedObjectRestoreReadinessCheck(
+            return CreateCheck(
                 AdDeletedObjectRestoreReadinessCheckKeys.RestorePermissionNotVerified,
                 AdDeletedObjectRestoreReadinessCheckStatuses.Success,
-                "Geri yükleme yetkisi",
-                "adManagement:deletedObjects.restore.readiness.checkMessages.restorePermissionVerified",
+                AdDeletedObjectRestoreReadinessI18nKeys.Checks.RestorePermissionVerification.Title,
+                AdDeletedObjectRestoreReadinessI18nKeys.Checks.RestorePermissionVerification.Verified,
                 null,
                 null,
                 false,
                 null);
         }
 
-        return new AdDeletedObjectRestoreReadinessCheck(
+        return CreateCheck(
             AdDeletedObjectRestoreReadinessCheckKeys.RestorePermissionNotVerified,
             AdDeletedObjectRestoreReadinessCheckStatuses.NotChecked,
-            "Geri yükleme yetkisi",
-            "adManagement:deletedObjects.restore.readiness.checkMessages.restorePermissionNotVerified",
-            "adManagement:deletedObjects.restore.readiness.checkMessages.restorePermissionRemediation",
+            AdDeletedObjectRestoreReadinessI18nKeys.Checks.RestorePermissionVerification.Title,
+            AdDeletedObjectRestoreReadinessI18nKeys.Checks.RestorePermissionVerification.NotVerified,
+            AdDeletedObjectRestoreReadinessI18nKeys.Checks.RestorePermissionVerification.Remediation,
             null,
             false,
             null);
     }
 
     private static AdDeletedObjectRestoreReadinessCheck CreateSettingsCheck(
-        string message,
-        string remediation) =>
-        new(
+        string messageKey,
+        string remediationKey) =>
+        CreateCheck(
             AdDeletedObjectRestoreReadinessCheckKeys.AdManagementSettings,
             AdDeletedObjectRestoreReadinessCheckStatuses.Failed,
-            "AD yönetim ayarları",
-            message,
-            remediation,
+            AdDeletedObjectRestoreReadinessI18nKeys.Checks.AdManagementSettings.Title,
+            messageKey,
+            remediationKey,
             null,
             true,
             null);
 
     private static AdDeletedObjectRestoreReadinessCheck CreateNotCheckedCheck(
         string key,
-        string title,
-        string message) =>
-        new(
+        string titleKey,
+        string messageKey) =>
+        CreateCheck(
             key,
             AdDeletedObjectRestoreReadinessCheckStatuses.NotChecked,
-            title,
-            message,
+            titleKey,
+            messageKey,
             null,
             null,
             false,
             null);
 
-    private static AdDeletedObjectRestoreReadinessCheck SuccessCheck(
+    private static AdDeletedObjectRestoreReadinessCheck CreateCheck(
         string key,
-        string title,
-        string message) =>
-        new(
-            key,
-            AdDeletedObjectRestoreReadinessCheckStatuses.Success,
-            title,
-            message,
-            null,
-            null,
-            false,
-            null);
-
-    private static AdDeletedObjectRestoreReadinessCheck FailedCheck(
-        string key,
-        string title,
-        string message,
-        string remediation,
+        string status,
+        string titleKey,
+        string? messageKey,
+        string? remediationKey,
         string? command,
-        string? details) =>
+        bool isBlocking,
+        string? details,
+        IReadOnlyDictionary<string, object>? messageParams = null) =>
         new(
             key,
-            AdDeletedObjectRestoreReadinessCheckStatuses.Failed,
-            title,
-            message,
-            remediation,
+            status,
+            titleKey,
+            messageKey,
+            remediationKey,
             command,
-            true,
-            details);
+            isBlocking,
+            details,
+            titleKey,
+            null,
+            messageKey,
+            messageParams,
+            remediationKey,
+            null);
 
     private static AdDeletedObjectRestoreReadinessResult BuildResult(
         IReadOnlyList<AdDeletedObjectRestoreReadinessCheck> checks,
         DateTimeOffset checkedAt,
-        string? domainController)
+        string? domainController,
+        string? summaryKeyOverride = null,
+        IReadOnlyDictionary<string, object>? summaryParams = null)
     {
         var blockingReasons = checks
             .Where(check => check.IsBlocking && check.Status == AdDeletedObjectRestoreReadinessCheckStatuses.Failed)
@@ -427,23 +476,29 @@ public sealed class AdDeletedObjectRestoreReadinessService(
                 ? AdDeletedObjectRestoreReadinessStatuses.Warning
                 : AdDeletedObjectRestoreReadinessStatuses.Ready;
 
-        var summaryMessage = status switch
+        var summaryKey = summaryKeyOverride ?? status switch
         {
-            AdDeletedObjectRestoreReadinessStatuses.Ready => ReadySummaryMessage,
-            AdDeletedObjectRestoreReadinessStatuses.Warning => WarningSummaryMessage,
-            _ => blockingReasons.FirstOrDefault()?.Message ?? NotReadySummaryMessage,
+            AdDeletedObjectRestoreReadinessStatuses.Ready => AdDeletedObjectRestoreReadinessI18nKeys.Summary.Ready,
+            AdDeletedObjectRestoreReadinessStatuses.Warning => AdDeletedObjectRestoreReadinessI18nKeys.Summary.Warning,
+            _ => AdDeletedObjectRestoreReadinessI18nKeys.Summary.NotReady,
         };
 
         return new AdDeletedObjectRestoreReadinessResult(
             isReady,
             status,
-            summaryMessage,
+            summaryKey,
             blockingReasons,
             warnings,
             checks,
             checkedAt,
-            domainController);
+            domainController,
+            summaryKey,
+            summaryParams);
     }
+
+    private static IReadOnlyDictionary<string, object> CreateParams(
+        params (string Key, object Value)[] entries) =>
+        entries.ToDictionary(entry => entry.Key, entry => entry.Value);
 
     private static TimeSpan ResolveReadinessTimeout(int configuredTimeoutSeconds)
     {
@@ -464,11 +519,11 @@ public sealed class AdDeletedObjectRestoreReadinessService(
         return connection.DomainFqdn ?? string.Empty;
     }
 
-    private static string ResolveAdwsReadFailureMessage(string? errorSummary)
+    private static string ResolveAdwsReadFailureMessageKey(string? errorSummary)
     {
         if (string.IsNullOrWhiteSpace(errorSummary))
         {
-            return "Service account ADWS üzerinden temel AD okuma doğrulamasını tamamlayamadı.";
+            return AdDeletedObjectRestoreReadinessI18nKeys.Checks.ServiceAccountAdwsRead.Failed;
         }
 
         var lower = errorSummary.ToLowerInvariant();
@@ -477,13 +532,13 @@ public sealed class AdDeletedObjectRestoreReadinessService(
             || lower.Contains("unauthorized", StringComparison.Ordinal)
             || lower.Contains("insufficient", StringComparison.Ordinal))
         {
-            return "Service account ADWS üzerinden temel AD okuma için yetkilendirme hatası aldı.";
+            return AdDeletedObjectRestoreReadinessI18nKeys.Checks.ServiceAccountAdwsRead.FailedAccessDenied;
         }
 
         if (lower.Contains("timed out", StringComparison.Ordinal)
             || lower.Contains("timeout", StringComparison.Ordinal))
         {
-            return "Service account ADWS üzerinden temel AD okuma zaman aşımına uğradı.";
+            return AdDeletedObjectRestoreReadinessI18nKeys.Checks.ServiceAccountAdwsRead.FailedTimeout;
         }
 
         if (lower.Contains("unavailable", StringComparison.Ordinal)
@@ -491,10 +546,10 @@ public sealed class AdDeletedObjectRestoreReadinessService(
             || lower.Contains("could not connect", StringComparison.Ordinal)
             || lower.Contains("server not operational", StringComparison.Ordinal))
         {
-            return "Service account ADWS sunucusuna bağlanamadı.";
+            return AdDeletedObjectRestoreReadinessI18nKeys.Checks.ServiceAccountAdwsRead.FailedConnection;
         }
 
-        return "Service account ADWS üzerinden temel AD okuma doğrulamasını tamamlayamadı.";
+        return AdDeletedObjectRestoreReadinessI18nKeys.Checks.ServiceAccountAdwsRead.Failed;
     }
 
     private static bool ContainsToken(string? value, string token) =>

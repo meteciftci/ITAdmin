@@ -189,8 +189,8 @@ public sealed class AdDeletedObjectRestoreReadinessServiceTests
             check =>
                 check.Key == AdDeletedObjectRestoreReadinessCheckKeys.RestorePermissionNotVerified
                 && check.Status == AdDeletedObjectRestoreReadinessCheckStatuses.Success
-                && check.Message
-                    == "adManagement:deletedObjects.restore.readiness.checkMessages.restorePermissionVerified");
+                && check.MessageKey
+                    == AdDeletedObjectRestoreReadinessI18nKeys.Checks.RestorePermissionVerification.Verified);
 
         Assert.Equal(1, operationLogService.GetLogsAsyncCallCount);
         Assert.Equal(
@@ -239,6 +239,117 @@ public sealed class AdDeletedObjectRestoreReadinessServiceTests
         Assert.DoesNotContain("SuperSecretPassword123!", serialized, StringComparison.Ordinal);
         Assert.DoesNotContain("password", serialized, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("credential", serialized, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ReadinessService_DoesNotContainRawTurkishUserFacingStrings()
+    {
+        var source = File.ReadAllText(
+            Path.Combine(
+                FindRepositoryRoot(),
+                "backend/src/SasPortal.Infrastructure/Services/AdDeletedObjectRestoreReadinessService.cs"));
+
+        Assert.DoesNotContain("Geri yükleme", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("bağlantısı başarılı", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("değeri uygun", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("doğrulandı", source, StringComparison.Ordinal);
+        Assert.Contains("AdDeletedObjectRestoreReadinessI18nKeys", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CheckAsync_WhenPowerShellTimeoutConfigured_ReturnsKeyWithSecondsParam()
+    {
+        var service = CreateService(
+            new FakePowerShellProbe
+            {
+                ModuleResult = SuccessProbe(),
+                RestoreCommandResult = SuccessProbe(),
+                RecycleBinResult = SuccessProbe(),
+                AdwsReadResult = SuccessProbe(),
+            },
+            new FakeAdwsPortConnectivityChecker(true),
+            settings: CreateSettings(powerShellTimeoutSeconds: 30));
+
+        var result = await service.CheckAsync();
+
+        var timeoutCheck = result.Checks.Single(
+            check => check.Key == AdDeletedObjectRestoreReadinessCheckKeys.PowerShellTimeout);
+        Assert.Equal(
+            AdDeletedObjectRestoreReadinessI18nKeys.Checks.PowerShellTimeout.Success,
+            timeoutCheck.MessageKey);
+        Assert.NotNull(timeoutCheck.MessageParams);
+        Assert.Equal(30, timeoutCheck.MessageParams!["configuredTimeoutSeconds"]);
+    }
+
+    [Fact]
+    public async Task CheckAsync_WhenAdwsPortBlocked_ReturnsHostPortParams()
+    {
+        var service = CreateService(
+            new FakePowerShellProbe
+            {
+                ModuleResult = SuccessProbe(),
+                RestoreCommandResult = SuccessProbe(),
+                RecycleBinResult = SuccessProbe(),
+                AdwsReadResult = SuccessProbe(),
+            },
+            new FakeAdwsPortConnectivityChecker(false));
+
+        var result = await service.CheckAsync();
+
+        var adwsCheck = result.BlockingReasons.Single(
+            check => check.Key == AdDeletedObjectRestoreReadinessCheckKeys.AdwsPortConnectivity);
+        Assert.Equal(
+            AdDeletedObjectRestoreReadinessI18nKeys.Checks.AdwsPortConnectivity.Failed,
+            adwsCheck.MessageKey);
+        Assert.NotNull(adwsCheck.MessageParams);
+        Assert.Equal("dc1.corp.example.com", adwsCheck.MessageParams!["host"]);
+        Assert.Equal(9389, adwsCheck.MessageParams!["port"]);
+    }
+
+    [Fact]
+    public async Task CheckAsync_WhenRecycleBinDisabled_ReturnsDisabledMessageKey()
+    {
+        var service = CreateService(
+            new FakePowerShellProbe
+            {
+                ModuleResult = SuccessProbe(),
+                RestoreCommandResult = SuccessProbe(),
+                RecycleBinResult = FailedProbe(
+                    AdDeletedObjectRestoreReadinessPowerShellProbe.RecycleBinDisabledErrorToken),
+            },
+            new FakeAdwsPortConnectivityChecker(true));
+
+        var result = await service.CheckAsync();
+
+        var recycleBinCheck = result.BlockingReasons.Single(
+            check => check.Key == AdDeletedObjectRestoreReadinessCheckKeys.RecycleBinFeature);
+        Assert.Equal(
+            AdDeletedObjectRestoreReadinessI18nKeys.Checks.RecycleBinFeature.Disabled,
+            recycleBinCheck.MessageKey);
+        Assert.Equal(
+            AdDeletedObjectRestoreReadinessI18nKeys.Checks.RecycleBinFeature.Remediation,
+            recycleBinCheck.RemediationKey);
+    }
+
+    [Fact]
+    public async Task CheckAsync_WhenAllChecksPass_ReturnsReadySummaryKey()
+    {
+        var service = CreateService(
+            new FakePowerShellProbe
+            {
+                ModuleResult = SuccessProbe(),
+                RestoreCommandResult = SuccessProbe(),
+                RecycleBinResult = SuccessProbe(),
+                AdwsReadResult = SuccessProbe(),
+            },
+            new FakeAdwsPortConnectivityChecker(true));
+
+        var result = await service.CheckAsync();
+
+        Assert.Equal(
+            AdDeletedObjectRestoreReadinessI18nKeys.Summary.Ready,
+            result.SummaryKey);
+        Assert.Equal(result.SummaryKey, result.SummaryMessage);
     }
 
     [Fact]

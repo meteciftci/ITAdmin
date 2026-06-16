@@ -8,7 +8,13 @@ public sealed record AdDeletedObjectRestoreReadinessCheckResponse(
     string? Remediation,
     string? Command,
     bool IsBlocking,
-    string? Details);
+    string? Details,
+    string TitleKey,
+    IReadOnlyDictionary<string, object>? TitleParams,
+    string? MessageKey,
+    IReadOnlyDictionary<string, object>? MessageParams,
+    string? RemediationKey,
+    IReadOnlyDictionary<string, object>? RemediationParams);
 
 public sealed record AdDeletedObjectRestoreReadinessResponse(
     bool IsReady,
@@ -18,4 +24,6 @@ public sealed record AdDeletedObjectRestoreReadinessResponse(
     IReadOnlyList<AdDeletedObjectRestoreReadinessCheckResponse> Warnings,
     IReadOnlyList<AdDeletedObjectRestoreReadinessCheckResponse> Checks,
     DateTimeOffset CheckedAtUtc,
-    string? DomainController);
+    string? DomainController,
+    string SummaryKey,
+    IReadOnlyDictionary<string, object>? SummaryParams);

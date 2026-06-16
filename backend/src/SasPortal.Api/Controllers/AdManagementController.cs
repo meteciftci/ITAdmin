@@ -1663,7 +1663,9 @@ public sealed class AdManagementController(
             result.Warnings.Select(MapRestoreReadinessCheck).ToList(),
             result.Checks.Select(MapRestoreReadinessCheck).ToList(),
             result.CheckedAtUtc,
-            result.DomainController);
+            result.DomainController,
+            result.SummaryKey,
+            result.SummaryParams);
 
     private static AdDeletedObjectRestoreReadinessCheckResponse MapRestoreReadinessCheck(
         AppModels.AdDeletedObjectRestoreReadinessCheck check) =>
@@ -1675,7 +1677,13 @@ public sealed class AdManagementController(
             check.Remediation,
             check.Command,
             check.IsBlocking,
-            check.Details);
+            check.Details,
+            check.TitleKey,
+            check.TitleParams,
+            check.MessageKey,
+            check.MessageParams,
+            check.RemediationKey,
+            check.RemediationParams);
 
     private static AppModels.AdUserStatusFilter ParseUserStatusFilter(string? status) =>
         status?.Trim().ToLowerInvariant() switch

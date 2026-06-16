@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 
 import trAdManagement from "../../locales/tr/adManagement.json" with { type: "json" };
 import enAdManagement from "../../locales/en/adManagement.json" with { type: "json" };
+import { translateReadinessText } from "./restore-readiness-i18n.ts";
 
 describe("deleted object restore readiness API", () => {
   const apiSource = readFileSync(new URL("./api.ts", import.meta.url), "utf8");
@@ -17,9 +18,13 @@ describe("deleted object restore readiness API", () => {
     assert.match(apiSource, /\/ad-management\/settings\/validate/);
   });
 
-  it("defines readiness result types and validation restoreReadiness field", () => {
+  it("defines readiness result types with key and params fields", () => {
     assert.match(typesSource, /AdDeletedObjectRestoreReadinessResult/);
     assert.match(typesSource, /AdDeletedObjectRestoreReadinessCheck/);
+    assert.match(typesSource, /summaryKey/);
+    assert.match(typesSource, /titleKey/);
+    assert.match(typesSource, /messageKey/);
+    assert.match(typesSource, /remediationKey/);
     assert.match(typesSource, /restoreReadiness\?:/);
   });
 });
@@ -65,6 +70,18 @@ describe("deleted object restore readiness page", () => {
     assert.match(panelSource, /warningKeys/);
     assert.match(panelSource, /!warningKeys\.has\(check\.key\)/);
   });
+
+  it("renders summary and check title through readiness i18n helper", () => {
+    assert.match(panelSource, /translateReadinessText/);
+    assert.match(panelSource, /result\.summaryKey/);
+    assert.match(panelSource, /check\.titleKey/);
+    assert.doesNotMatch(panelSource, /\{check\.title\}/);
+    assert.doesNotMatch(panelSource, /\{result\.summaryMessage\}/);
+  });
+
+  it("does not translate command field", () => {
+    assert.match(panelSource, /<code className="block flex-1[\s\S]*\{check\.command\}/);
+  });
 });
 
 describe("settings restore readiness card", () => {
@@ -87,9 +104,11 @@ describe("settings restore readiness card", () => {
 });
 
 describe("deleted object restore readiness i18n", () => {
+  const readiness = trAdManagement.adManagement.deletedObjects.restore.readiness;
+
   it("has parallel TR readiness keys", () => {
     assert.equal(
-      trAdManagement.adManagement.deletedObjects.restore.readiness.unavailableTitle,
+      readiness.unavailableTitle,
       "Silinen nesne geri yükleme özelliği şu anda kullanılamıyor.",
     );
     assert.equal(
@@ -100,21 +119,23 @@ describe("deleted object restore readiness i18n", () => {
       trAdManagement.adManagement.settings.restoreReadiness.check,
       "Gereksinimleri Kontrol Et",
     );
-
+    assert.equal(readiness.summary.ready, "Geri yükleme gereksinimleri karşılanıyor.");
     assert.equal(
-      trAdManagement.adManagement.deletedObjects.restore.readiness.checkMessages
-        .restorePermissionVerified,
+      readiness.checks.restorePermissionVerification.verified,
       "Geri yükleme yetkisi başarılı restore işlem logu ile doğrulandı.",
     );
+    assert.equal(readiness.checkStatus.notChecked, "Bilgi");
     assert.equal(
-      trAdManagement.adManagement.deletedObjects.restore.readiness.checkStatus.notChecked,
-      "Bilgi",
+      readiness.checks.adwsPortConnectivity.success,
+      "{{host}}:{{port}} bağlantısı başarılı.",
     );
   });
 
   it("has parallel EN readiness keys", () => {
+    const enReadiness = enAdManagement.adManagement.deletedObjects.restore.readiness;
+
     assert.equal(
-      enAdManagement.adManagement.deletedObjects.restore.readiness.unavailableTitle,
+      enReadiness.unavailableTitle,
       "Deleted object restore is currently unavailable.",
     );
     assert.equal(
@@ -125,15 +146,32 @@ describe("deleted object restore readiness i18n", () => {
       enAdManagement.adManagement.settings.restoreReadiness.check,
       "Check Prerequisites",
     );
-
+    assert.equal(enReadiness.summary.ready, "Restore prerequisites are met.");
     assert.equal(
-      enAdManagement.adManagement.deletedObjects.restore.readiness.checkMessages
-        .restorePermissionNotVerified,
+      enReadiness.checks.restorePermissionVerification.notVerified,
       "Restore permission has not yet been verified by a successful restore operation log.",
     );
+    assert.equal(enReadiness.checkStatus.notChecked, "Info");
     assert.equal(
-      enAdManagement.adManagement.deletedObjects.restore.readiness.checkStatus.notChecked,
-      "Info",
+      enReadiness.checks.powerShellTimeout.success,
+      "PowerShellTimeoutSeconds is appropriate ({{configuredTimeoutSeconds}} seconds).",
     );
+  });
+
+  it("interpolates readiness params through helper", () => {
+    const t = ((key: string, params?: Record<string, unknown>) => {
+      if (key === "adManagement:deletedObjects.restore.readiness.checks.adwsPortConnectivity.success") {
+        return `Connection to ${params?.host}:${params?.port} succeeded.`;
+      }
+      return key;
+    }) as never;
+
+    const text = translateReadinessText(
+      t,
+      "deletedObjects.restore.readiness.checks.adwsPortConnectivity.success",
+      { host: "dc1.muglabb.lcl", port: 9389 },
+    );
+
+    assert.equal(text, "Connection to dc1.muglabb.lcl:9389 succeeded.");
   });
 });
