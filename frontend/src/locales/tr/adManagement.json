@@ -848,12 +848,27 @@
       "restore": {
         "dialogTitle": "Silinen nesneyi geri yükle",
         "dialogDescription": "Bu işlem silinen AD nesnesini son bilinen konumuna geri yükler.",
+        "pageTitle": "Silinen nesneyi geri yükle",
+        "pageDescription": "Silinen AD nesnesini son bilinen konumuna geri yükleyin.",
         "confirmLabel": "Geri yüklemek için nesne adını yazın.",
         "targetLocation": "Geri yüklenecek konum",
         "restoredRdn": "Geri yüklenecek RDN",
+        "restoredDistinguishedName": "Geri yüklenecek DN",
         "unsupportedType": "Bu nesne türü geri yüklenemez.",
         "missingTarget": "Bu nesne için son bilinen konum bilgisi bulunamadı.",
-        "conflict": "Hedef konumda aynı ada sahip bir nesne bulunuyor."
+        "conflict": "Hedef konumda aynı ada sahip bir nesne bulunuyor.",
+        "sections": {
+          "deletedObject": "Silinen nesne",
+          "restoreTarget": "Geri yükleme hedefi",
+          "technical": "Teknik bilgiler"
+        },
+        "actions": {
+          "submit": "Geri Yükle"
+        },
+        "errors": {
+          "notRestorable": "Bu nesne geri yükleme için uygun değil.",
+          "notRestorableDescription": "Geri yükleme için desteklenen nesne türü, son bilinen konum ve RDN bilgisi gereklidir."
+        }
       },
       "operationLogs": {
         "operationTypes": {

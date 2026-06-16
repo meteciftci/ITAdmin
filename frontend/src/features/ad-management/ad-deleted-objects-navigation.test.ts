@@ -32,9 +32,12 @@ describe("ad deleted objects navigation", () => {
 
     assert.match(routerSource, /path: "\/ad-management\/deleted-objects"/);
     assert.match(routerSource, /path: "\/ad-management\/deleted-objects\/:id"/);
+    assert.match(routerSource, /path: "\/ad-management\/deleted-objects\/:id\/restore"/);
     assert.match(routerSource, /RequirePermission permission="AdManagement\.DeletedObjects\.View"/);
+    assert.match(routerSource, /RequirePermission permission="AdManagement\.DeletedObjects\.Restore"/);
     assert.match(routerSource, /AdDeletedObjectsPage/);
     assert.match(routerSource, /AdDeletedObjectDetailPage/);
+    assert.match(routerSource, /AdDeletedObjectRestorePage/);
   });
 
   it("shows deleted objects menu item only for deleted objects permission", () => {

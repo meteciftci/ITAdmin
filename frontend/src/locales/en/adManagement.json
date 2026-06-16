@@ -848,12 +848,27 @@
       "restore": {
         "dialogTitle": "Restore deleted object",
         "dialogDescription": "This restores the deleted AD object to its last known location.",
+        "pageTitle": "Restore deleted object",
+        "pageDescription": "Restore the deleted AD object to its last known location.",
         "confirmLabel": "Type the object name to restore it.",
         "targetLocation": "Restore target location",
         "restoredRdn": "Restored RDN",
+        "restoredDistinguishedName": "Restored DN",
         "unsupportedType": "This object type cannot be restored.",
         "missingTarget": "Last known location information is missing for this object.",
-        "conflict": "An object with the same name already exists in the target location."
+        "conflict": "An object with the same name already exists in the target location.",
+        "sections": {
+          "deletedObject": "Deleted object",
+          "restoreTarget": "Restore target",
+          "technical": "Technical information"
+        },
+        "actions": {
+          "submit": "Restore"
+        },
+        "errors": {
+          "notRestorable": "This object cannot be restored.",
+          "notRestorableDescription": "A supported object type, last known location, and RDN are required for restore."
+        }
       },
       "operationLogs": {
         "operationTypes": {

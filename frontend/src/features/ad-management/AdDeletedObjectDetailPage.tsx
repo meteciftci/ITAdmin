@@ -71,7 +71,8 @@ export function AdDeletedObjectDetailPage() {
   if (!hasValidId) {
     return (
       <AdManagementModuleStateGuard>
-        <ErrorState
+        <section className="mx-auto w-full max-w-7xl space-y-4">
+          <ErrorState
           title={t("adManagement:deletedObjects.errors.notFound")}
           description={t("adManagement:deletedObjects.errors.detailFailed")}
           retry={
@@ -80,6 +81,7 @@ export function AdDeletedObjectDetailPage() {
             </Link>
           }
         />
+        </section>
       </AdManagementModuleStateGuard>
     );
   }
@@ -87,7 +89,9 @@ export function AdDeletedObjectDetailPage() {
   if (moduleStatus.isOperational && detailQuery.isLoading) {
     return (
       <AdManagementModuleStateGuard>
-        <LoadingState />
+        <section className="mx-auto w-full max-w-7xl space-y-4">
+          <LoadingState />
+        </section>
       </AdManagementModuleStateGuard>
     );
   }
@@ -98,7 +102,8 @@ export function AdDeletedObjectDetailPage() {
 
     return (
       <AdManagementModuleStateGuard>
-        <ErrorState
+        <section className="mx-auto w-full max-w-7xl space-y-4">
+          <ErrorState
           title={
             isNotFound
               ? t("adManagement:deletedObjects.errors.notFound")
@@ -114,6 +119,7 @@ export function AdDeletedObjectDetailPage() {
             </Link>
           }
         />
+        </section>
       </AdManagementModuleStateGuard>
     );
   }
@@ -124,7 +130,7 @@ export function AdDeletedObjectDetailPage() {
 
   return (
     <AdManagementModuleStateGuard>
-      <section className="space-y-4">
+      <section className="mx-auto w-full max-w-7xl space-y-4">
         <PageHeader
           title={pageTitle}
           description={pageDescription}

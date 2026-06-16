@@ -172,6 +172,93 @@ public sealed class AdDeletedObjectRestoreTests
         Assert.Contains("AdLdapErrorNormalizer.Normalize", source, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void DeletedObjectRestoreService_CatchesDirectoryOperationException()
+    {
+        var source = File.ReadAllText(
+            Path.Combine(
+                FindRepositoryRoot(),
+                "backend/src/SasPortal.Infrastructure/Services/AdUserDirectoryService.DeletedObjectRestore.cs"));
+
+        Assert.Contains("catch (DirectoryOperationException ex)", source, StringComparison.Ordinal);
+        Assert.Contains("CreateRestoreDeletedObjectLdapExceptionFromDirectoryOperation", source, StringComparison.Ordinal);
+        Assert.Contains("exception.Response", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DeletedObjectRestoreService_VerifyFailureUsesInvalidRequestNotConnectionFailed()
+    {
+        var source = File.ReadAllText(
+            Path.Combine(
+                FindRepositoryRoot(),
+                "backend/src/SasPortal.Infrastructure/Services/AdUserDirectoryService.DeletedObjectRestore.cs"));
+
+        Assert.Contains("AdDeletedObjectRestoreSteps.VerifyRestored", source, StringComparison.Ordinal);
+        Assert.Contains("DeletedObjectRestoreVerifyFailedMessage", source, StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "AdDeletedObjectRestoreSteps.VerifyRestored,\n                        request.ObjectGuid,\n                        restoredDistinguishedName,\n                        englishMessageOverride: \"The restored AD object could not be verified.\",\n                        normalizedReasonOverride: AdUserUpdateNormalizedReasons.ConnectionFailed)",
+            source,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "AdDirectoryFailureKind.InvalidRequest,\n                    BuildDeletedObjectRestoreFailureDiagnostic(\n                        AdDeletedObjectRestoreSteps.VerifyRestored",
+            source,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DeletedObjectRestoreService_FailureLogWritesWhenBeforeStateNull()
+    {
+        var source = File.ReadAllText(
+            Path.Combine(
+                FindRepositoryRoot(),
+                "backend/src/SasPortal.Infrastructure/Services/AdUserDirectoryService.DeletedObjectRestore.cs"));
+
+        Assert.Contains("WriteDeletedObjectRestoreFailureLogsAsync", source, StringComparison.Ordinal);
+        Assert.Contains("beforeState: null", source, StringComparison.Ordinal);
+        Assert.Contains("request.ObjectGuid.ToString(\"D\")", source, StringComparison.Ordinal);
+        Assert.Contains("AdManagementOperationStatuses.Failed", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DeletedObjectRestoreService_MapsConnectionFailedOnlyForConnectionResultCodes()
+    {
+        var source = File.ReadAllText(
+            Path.Combine(
+                FindRepositoryRoot(),
+                "backend/src/SasPortal.Infrastructure/Services/AdUserDirectoryService.DeletedObjectRestore.cs"));
+
+        Assert.Contains("ResultCode.Unavailable", source, StringComparison.Ordinal);
+        Assert.Contains("AdDirectoryFailureKind.ConnectionFailed", source, StringComparison.Ordinal);
+        Assert.Contains("_ => AdDirectoryFailureKind.InvalidRequest", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AdOperationLogService_PersistsWriteAsyncEntries()
+    {
+        var source = File.ReadAllText(
+            Path.Combine(
+                FindRepositoryRoot(),
+                "backend/src/SasPortal.Persistence/Services/AdOperationLogService.cs"));
+
+        Assert.Contains("await context.AdOperationLogs.AddAsync(log, cancellationToken);", source, StringComparison.Ordinal);
+        Assert.Contains("await context.SaveChangesAsync(cancellationToken);", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DeletedObjectRestoreEndpoint_MapsDirectoryFailureKinds()
+    {
+        var source = File.ReadAllText(
+            Path.Combine(
+                FindRepositoryRoot(),
+                "backend/src/SasPortal.Api/Controllers/AdManagementController.cs"));
+
+        Assert.Contains("RestoreDeletedObject", source, StringComparison.Ordinal);
+        Assert.Contains("MapDirectoryFailure(result.Message, result.FailureKind)", source, StringComparison.Ordinal);
+        Assert.Contains("AdDirectoryFailureKind.ConnectionFailed => StatusCode(", source, StringComparison.Ordinal);
+        Assert.Contains("AdDirectoryFailureKind.InvalidRequest => BadRequest", source, StringComparison.Ordinal);
+        Assert.Contains("AdDirectoryFailureKind.NotFound => NotFound", source, StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

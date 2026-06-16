@@ -254,7 +254,7 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                     beforeState,
                     ex.FailureKind,
                     BuildDeletedObjectRestoreFailureDiagnostic(
-                        AdDeletedObjectRestoreSteps.RestoreObject,
+                        ex.Step,
                         request.ObjectGuid,
                         beforeState.DistinguishedName,
                         englishMessageOverride: ex.EnglishMessage,
@@ -277,13 +277,13 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                     DeletedObjectRestoreVerifyFailedMessage,
                     context.Connection,
                     beforeState,
-                    AdDirectoryFailureKind.ConnectionFailed,
+                    AdDirectoryFailureKind.InvalidRequest,
                     BuildDeletedObjectRestoreFailureDiagnostic(
                         AdDeletedObjectRestoreSteps.VerifyRestored,
                         request.ObjectGuid,
                         restoredDistinguishedName,
                         englishMessageOverride: "The restored AD object could not be verified.",
-                        normalizedReasonOverride: AdUserUpdateNormalizedReasons.ConnectionFailed),
+                        normalizedReasonOverride: AdUserUpdateNormalizedReasons.Unknown),
                     cancellationToken);
             }
 
@@ -309,21 +309,52 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                     lastKnownParent,
                     lastKnownRdn));
         }
+        catch (DirectoryOperationException ex)
+        {
+            var ldapFailure = CreateRestoreDeletedObjectLdapExceptionFromDirectoryOperation(
+                ex,
+                AdDeletedObjectRestoreSteps.RestoreObject,
+                "The deleted AD object could not be restored.");
+
+            return await FailDeletedObjectRestoreAsync(
+                request,
+                ldapFailure.UserMessage,
+                context.Connection,
+                loadedBeforeState,
+                ldapFailure.FailureKind,
+                BuildDeletedObjectRestoreFailureDiagnostic(
+                    ldapFailure.Step,
+                    request.ObjectGuid,
+                    loadedBeforeState?.DistinguishedName,
+                    englishMessageOverride: ldapFailure.EnglishMessage,
+                    ldapResultCode: ldapFailure.LdapResultCode,
+                    ldapExceptionErrorCode: ldapFailure.LdapExceptionErrorCode,
+                    ldapDiagnosticMessage: ldapFailure.LdapDiagnosticMessage,
+                    normalizedReasonOverride: ldapFailure.NormalizedReason),
+                cancellationToken);
+        }
         catch (LdapException ex)
         {
+            var failureKind = MapDeletedObjectRestoreFailureKindFromLdapErrorCode(ex.ErrorCode);
+            var failureStep = loadedBeforeState is null
+                ? AdDeletedObjectRestoreSteps.LoadDeletedObject
+                : AdDeletedObjectRestoreSteps.RestoreObject;
+
             return await FailDeletedObjectRestoreAsync(
                 request,
                 SanitizeDeletedObjectRestoreLdapError(ex),
                 context.Connection,
                 loadedBeforeState,
-                AdDirectoryFailureKind.ConnectionFailed,
+                failureKind,
                 BuildDeletedObjectRestoreFailureDiagnostic(
-                    AdDeletedObjectRestoreSteps.RestoreObject,
+                    failureStep,
                     request.ObjectGuid,
                     loadedBeforeState?.DistinguishedName,
+                    englishMessageOverride: ResolveDeletedObjectRestoreEnglishMessageFromLdapErrorCode(ex.ErrorCode),
                     ldapResultCode: ex.ErrorCode,
                     ldapExceptionErrorCode: ex.ErrorCode,
-                    ldapDiagnosticMessage: ex.Message),
+                    ldapDiagnosticMessage: ex.Message,
+                    normalizedReasonOverride: ResolveDeletedObjectRestoreNormalizedReasonFromLdapErrorCode(ex.ErrorCode)),
                 cancellationToken);
         }
         catch (Exception ex)
@@ -339,12 +370,13 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                 DeletedObjectRestoreFailedMessage,
                 context.Connection,
                 loadedBeforeState,
-                AdDirectoryFailureKind.ConnectionFailed,
+                AdDirectoryFailureKind.InvalidRequest,
                 BuildDeletedObjectRestoreFailureDiagnostic(
                     AdDeletedObjectRestoreSteps.RestoreObject,
                     request.ObjectGuid,
                     loadedBeforeState?.DistinguishedName,
-                    englishMessageOverride: "The deleted AD object could not be restored."),
+                    englishMessageOverride: "The deleted AD object could not be restored.",
+                    normalizedReasonOverride: AdUserUpdateNormalizedReasons.Unknown),
                 cancellationToken);
         }
     }
@@ -454,7 +486,19 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                 true,
                 true));
 
-        var response = (DirectoryResponse)ldapConnection.SendRequest(modifyDnRequest);
+        DirectoryResponse response;
+        try
+        {
+            response = (DirectoryResponse)ldapConnection.SendRequest(modifyDnRequest);
+        }
+        catch (DirectoryOperationException ex)
+        {
+            throw CreateRestoreDeletedObjectLdapExceptionFromDirectoryOperation(
+                ex,
+                AdDeletedObjectRestoreSteps.RestoreObject,
+                "The deleted AD object could not be restored.");
+        }
+
         if (response.ResultCode != ResultCode.Success)
         {
             var userMessage = AdLdapErrorNormalizer.Normalize((int)response.ResultCode, response.ErrorMessage);
@@ -463,6 +507,7 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                 MapDeletedObjectRestoreFailureKind(response.ResultCode),
                 ResolveDeletedObjectRestoreNormalizedReason(response.ResultCode),
                 ResolveDeletedObjectRestoreEnglishMessage(response.ResultCode),
+                AdDeletedObjectRestoreSteps.RestoreObject,
                 (int)response.ResultCode,
                 (int)response.ResultCode,
                 response.ErrorMessage);
@@ -536,8 +581,27 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                 or ResultCode.NamingViolation
                 or ResultCode.UnwillingToPerform => AdDirectoryFailureKind.InvalidRequest,
             ResultCode.InsufficientAccessRights => AdDirectoryFailureKind.InvalidRequest,
-            _ => AdDirectoryFailureKind.ConnectionFailed,
+            ResultCode.Unavailable
+                or ResultCode.TimeLimitExceeded
+                or ResultCode.Busy => AdDirectoryFailureKind.ConnectionFailed,
+            _ => AdDirectoryFailureKind.InvalidRequest,
         };
+
+    private static AdDirectoryFailureKind MapDeletedObjectRestoreFailureKindFromLdapErrorCode(int ldapErrorCode)
+    {
+        if (ldapErrorCode is 81 or 91 or 52 or 85)
+        {
+            return AdDirectoryFailureKind.ConnectionFailed;
+        }
+
+        return MapDeletedObjectRestoreFailureKind((ResultCode)ldapErrorCode);
+    }
+
+    private static string ResolveDeletedObjectRestoreNormalizedReasonFromLdapErrorCode(int ldapErrorCode) =>
+        ResolveDeletedObjectRestoreNormalizedReason((ResultCode)ldapErrorCode);
+
+    private static string ResolveDeletedObjectRestoreEnglishMessageFromLdapErrorCode(int ldapErrorCode) =>
+        ResolveDeletedObjectRestoreEnglishMessage((ResultCode)ldapErrorCode);
 
     private static string ResolveDeletedObjectRestoreNormalizedReason(ResultCode resultCode) =>
         resultCode switch
@@ -704,7 +768,13 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                 lastKnownParent,
                 lastKnownRdn,
                 restoredDistinguishedName)
-            : null;
+            : !isSuccess
+                ? AdOperationLogSnapshotBuilder.BuildDeletedObjectRestoreRequestSummary(
+                    request.ObjectGuid,
+                    lastKnownParent ?? string.Empty,
+                    lastKnownRdn ?? string.Empty,
+                    restoredDistinguishedName ?? request.ObjectGuid.ToString("D"))
+                : null;
 
         await adOperationLogService.WriteAsync(
             new AdOperationLogEntry
@@ -761,9 +831,36 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
             normalizedReasonOverride);
 
     private static string SanitizeDeletedObjectRestoreLdapError(LdapException exception) =>
-        string.IsNullOrWhiteSpace(exception.Message)
-            ? DeletedObjectRestoreFailedMessage
+        AdLdapErrorNormalizer.Normalize(exception.ErrorCode, exception.Message);
+
+    private static RestoreDeletedObjectLdapException CreateRestoreDeletedObjectLdapExceptionFromDirectoryOperation(
+        DirectoryOperationException exception,
+        string step,
+        string englishMessageFallback)
+    {
+        var response = exception.Response;
+        var ldapResultCode = response is not null ? (int)response.ResultCode : (int?)null;
+        var diagnosticMessage = response?.ErrorMessage ?? exception.Message;
+        var userMessage = ldapResultCode is not null
+            ? AdLdapErrorNormalizer.Normalize(ldapResultCode.Value, diagnosticMessage)
             : DeletedObjectRestoreFailedMessage;
+
+        return new RestoreDeletedObjectLdapException(
+            userMessage,
+            ldapResultCode is not null
+                ? MapDeletedObjectRestoreFailureKind(response!.ResultCode)
+                : AdDirectoryFailureKind.InvalidRequest,
+            ldapResultCode is not null
+                ? ResolveDeletedObjectRestoreNormalizedReason(response!.ResultCode)
+                : AdUserUpdateNormalizedReasons.Unknown,
+            ldapResultCode is not null
+                ? ResolveDeletedObjectRestoreEnglishMessage(response!.ResultCode)
+                : englishMessageFallback,
+            step,
+            ldapResultCode,
+            ldapResultCode,
+            diagnosticMessage);
+    }
 
     private sealed record AdDeletedObjectRestoreState(
         string ObjectId,
@@ -784,6 +881,7 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
         AdDirectoryFailureKind failureKind,
         string normalizedReason,
         string englishMessage,
+        string step,
         int? ldapResultCode = null,
         int? ldapExceptionErrorCode = null,
         string? ldapDiagnosticMessage = null) : Exception(userMessage)
@@ -792,6 +890,7 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
         public AdDirectoryFailureKind FailureKind { get; } = failureKind;
         public string NormalizedReason { get; } = normalizedReason;
         public string EnglishMessage { get; } = englishMessage;
+        public string Step { get; } = step;
         public int? LdapResultCode { get; } = ldapResultCode;
         public int? LdapExceptionErrorCode { get; } = ldapExceptionErrorCode;
         public string? LdapDiagnosticMessage { get; } = ldapDiagnosticMessage;

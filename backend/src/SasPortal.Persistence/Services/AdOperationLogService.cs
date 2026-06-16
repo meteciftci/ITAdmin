@@ -58,6 +58,7 @@ public sealed class AdOperationLogService(AppDbContext context) : IAdOperationLo
         };
 
         await context.AdOperationLogs.AddAsync(log, cancellationToken);
+        await context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<PagedResult<AdOperationLogListItem>> GetLogsAsync(

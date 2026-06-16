@@ -172,6 +172,11 @@ const AdDeletedObjectDetailPage = lazy(() =>
     default: module.AdDeletedObjectDetailPage,
   })),
 );
+const AdDeletedObjectRestorePage = lazy(() =>
+  import("@/features/ad-management/AdDeletedObjectRestorePage").then((module) => ({
+    default: module.AdDeletedObjectRestorePage,
+  })),
+);
 const ErrorPage = lazy(() =>
   import("@/pages/ErrorPage").then((module) => ({ default: module.ErrorPage })),
 );
@@ -709,6 +714,20 @@ export const router = createBrowserRouter([
           <AppLayout>
             <LazyRoute>
               <AdDeletedObjectDetailPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/ad-management/deleted-objects/:id/restore",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission="AdManagement.DeletedObjects.Restore">
+          <AppLayout>
+            <LazyRoute>
+              <AdDeletedObjectRestorePage />
             </LazyRoute>
           </AppLayout>
         </RequirePermission>

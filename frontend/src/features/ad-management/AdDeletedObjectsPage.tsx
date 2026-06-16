@@ -1,8 +1,7 @@
-import { useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 
 import { DataTable, DataTablePagination } from "@/components/common/data-table";
 import { useServerDataTable } from "@/components/common/data-table-hooks";
@@ -11,24 +10,22 @@ import { LoadingState } from "@/components/common/LoadingState";
 import { SectionCard } from "@/components/common/SectionCard";
 import { AD_DELETED_OBJECTS_LIST_DEFAULTS } from "@/features/ad-management/ad-deleted-objects-list-query";
 import { createAdDeletedObjectColumns } from "@/features/ad-management/ad-deleted-objects-columns";
-import { buildAdDeletedObjectDetailPath } from "@/features/ad-management/ad-deleted-object-detail-path";
+import {
+  buildAdDeletedObjectDetailPath,
+  buildAdDeletedObjectRestorePath,
+} from "@/features/ad-management/ad-deleted-object-detail-path";
 import { buildAdDeletedObjectsListReturnState } from "@/features/ad-management/ad-deleted-objects-return-path";
 import {
   AD_MANAGEMENT_DELETED_OBJECTS_QUERY_KEY,
   getAdDeletedObjects,
-  invalidateAdManagementDeletedObjectRestoreQueries,
-  restoreAdDeletedObject,
 } from "@/features/ad-management/api";
-import { AdDeletedObjectRestoreConfirmDialog } from "@/features/ad-management/components/AdDeletedObjectRestoreConfirmDialog";
 import { AdDeletedObjectsSearchToolbar } from "@/features/ad-management/components/AdDeletedObjectsSearchToolbar";
 import { AdManagementModuleStateGuard } from "@/features/ad-management/components/AdManagementModuleStateGuard";
 import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useAdManagementModuleStatus";
 import { useAdDeletedObjectListState } from "@/features/ad-management/use-ad-deleted-object-list-state";
 import { createApiErrorRouteState, getErrorRoutePath } from "@/lib/route-error";
 import { canAccess } from "@/lib/permissions";
-import { getApiErrorMessage } from "@/lib/api-error";
 import { useAuthStore } from "@/features/auth/auth-store";
-import type { AdDeletedObjectListItem } from "@/features/ad-management/types";
 
 const MIN_SEARCH_LENGTH = 2;
 
@@ -36,10 +33,8 @@ export function AdDeletedObjectsPage() {
   const { t } = useTranslation(["adManagement", "common", "errors"]);
   const moduleStatus = useAdManagementModuleStatus();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const user = useAuthStore((state) => state.user);
   const { listState, listPath, updateListState, clearListState } = useAdDeletedObjectListState();
-  const [restoreTarget, setRestoreTarget] = useState<AdDeletedObjectListItem | null>(null);
   const canRestore = canAccess(user, "AdManagement.DeletedObjects.Restore");
 
   const normalizedSearch = listState.search.trim();
@@ -72,23 +67,6 @@ export function AdDeletedObjectsPage() {
 
   const items = useMemo(() => deletedObjectsQuery.data?.items ?? [], [deletedObjectsQuery.data]);
 
-  const restoreMutation = useMutation({
-    mutationFn: (objectId: string) => restoreAdDeletedObject(objectId),
-    onSuccess: async (response) => {
-      if (!response.success) {
-        toast.error(t("adManagement:deletedObjects.errors.restoreFailed"));
-        return;
-      }
-
-      await invalidateAdManagementDeletedObjectRestoreQueries(queryClient);
-      toast.success(response.message || t("adManagement:deletedObjects.success.restore"));
-      setRestoreTarget(null);
-    },
-    onError: (error) => {
-      toast.error(getApiErrorMessage(error, t("adManagement:deletedObjects.errors.restoreFailed")));
-    },
-  });
-
   const columns = useMemo(
     () =>
       createAdDeletedObjectColumns({
@@ -99,7 +77,11 @@ export function AdDeletedObjectsPage() {
             state: buildAdDeletedObjectsListReturnState(listPath),
           });
         },
-        onRestore: (item) => setRestoreTarget(item),
+        onRestore: (item) => {
+          navigate(buildAdDeletedObjectRestorePath(item.id), {
+            state: { returnPath: listPath },
+          });
+        },
       }),
     [t, navigate, listPath, canRestore],
   );
@@ -191,22 +173,6 @@ export function AdDeletedObjectsPage() {
           </div>
         </SectionCard>
       </section>
-
-      <AdDeletedObjectRestoreConfirmDialog
-        open={restoreTarget !== null}
-        target={restoreTarget}
-        isRestoring={restoreMutation.isPending}
-        onOpenChange={(open) => {
-          if (!open) {
-            setRestoreTarget(null);
-          }
-        }}
-        onConfirm={() => {
-          if (restoreTarget) {
-            restoreMutation.mutate(restoreTarget.id);
-          }
-        }}
-      />
     </AdManagementModuleStateGuard>
   );
 }

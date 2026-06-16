@@ -23,6 +23,26 @@ describe("restoreAdDeletedObject API", () => {
   });
 });
 
+describe("deleted object restore routing", () => {
+  const routerSource = readFileSync(new URL("../../app/router.tsx", import.meta.url), "utf8");
+  const pathSource = readFileSync(
+    new URL("./ad-deleted-object-detail-path.ts", import.meta.url),
+    "utf8",
+  );
+
+  it("includes restore route with lazy import and permission guard", () => {
+    assert.match(routerSource, /path: "\/ad-management\/deleted-objects\/:id\/restore"/);
+    assert.match(routerSource, /AdDeletedObjectRestorePage/);
+    assert.match(routerSource, /RequirePermission permission="AdManagement\.DeletedObjects\.Restore"/);
+    assert.match(routerSource, /lazy\(\(\) =>\s*\n\s*import\("@\/features\/ad-management\/AdDeletedObjectRestorePage"\)/);
+  });
+
+  it("builds restore path helper", () => {
+    assert.match(pathSource, /buildAdDeletedObjectRestorePath/);
+    assert.match(pathSource, /\/restore/);
+  });
+});
+
 describe("deleted object restore list actions", () => {
   const columnsSource = readFileSync(
     new URL("./ad-deleted-objects-columns.tsx", import.meta.url),
@@ -35,10 +55,11 @@ describe("deleted object restore list actions", () => {
     assert.match(columnsSource, /canRestoreDeletedObject/);
   });
 
-  it("uses permission controlled restore on list page", () => {
+  it("navigates to restore page with returnPath instead of opening dialog", () => {
     assert.match(pageSource, /AdManagement\.DeletedObjects\.Restore/);
-    assert.match(pageSource, /AdDeletedObjectRestoreConfirmDialog/);
-    assert.match(pageSource, /invalidateAdManagementDeletedObjectRestoreQueries/);
+    assert.match(pageSource, /buildAdDeletedObjectRestorePath/);
+    assert.match(pageSource, /state: \{ returnPath: listPath \}/);
+    assert.doesNotMatch(pageSource, /AdDeletedObjectRestoreConfirmDialog/);
   });
 });
 
@@ -55,12 +76,54 @@ describe("deleted object restore detail actions", () => {
   it("uses permission controlled restore action on detail header", () => {
     assert.match(detailActionsSource, /AdManagement\.DeletedObjects\.Restore/);
     assert.match(detailActionsSource, /canRestoreDeletedObject/);
-    assert.match(detailActionsSource, /AdDeletedObjectRestoreConfirmDialog/);
+    assert.match(detailActionsSource, /buildAdDeletedObjectRestorePath/);
+    assert.doesNotMatch(detailActionsSource, /AdDeletedObjectRestoreConfirmDialog/);
     assert.match(detailPageSource, /AdDeletedObjectDetailHeaderActions/);
   });
 
-  it("navigates to returnPath after successful restore", () => {
-    assert.match(detailActionsSource, /navigate\(returnPath\)/);
+  it("navigates to restore page with returnPath", () => {
+    assert.match(detailActionsSource, /state: \{ returnPath \}/);
+  });
+});
+
+describe("deleted object restore page workflow", () => {
+  const restorePageSource = readFileSync(
+    new URL("./AdDeletedObjectRestorePage.tsx", import.meta.url),
+    "utf8",
+  );
+
+  it("loads detail and uses typed confirmation from primary label", () => {
+    assert.match(restorePageSource, /getAdDeletedObjectById/);
+    assert.match(restorePageSource, /getAdDeletedObjectPrimaryLabel/);
+    assert.match(restorePageSource, /confirmValue\.trim\(\)\.toLowerCase\(\)/);
+    assert.match(restorePageSource, /canRestoreDeletedObject/);
+  });
+
+  it("submits restore and handles success navigation and query invalidation", () => {
+    assert.match(restorePageSource, /restoreAdDeletedObject/);
+    assert.match(restorePageSource, /invalidateAdManagementDeletedObjectRestoreQueries/);
+    assert.match(restorePageSource, /navigate\(returnPath\)/);
+    assert.match(restorePageSource, /getApiErrorMessage/);
+  });
+
+  it("shows not restorable state instead of form when ineligible", () => {
+    assert.match(restorePageSource, /deletedObjects\.restore\.errors\.notRestorable/);
+    assert.match(restorePageSource, /deletedObjects\.restore\.errors\.notRestorableDescription/);
+  });
+
+  it("uses constrained page container width", () => {
+    assert.match(restorePageSource, /mx-auto w-full max-w-3xl space-y-4/);
+  });
+});
+
+describe("deleted object detail layout", () => {
+  const detailPageSource = readFileSync(
+    new URL("./AdDeletedObjectDetailPage.tsx", import.meta.url),
+    "utf8",
+  );
+
+  it("uses max-width container for detail states", () => {
+    assert.match(detailPageSource, /mx-auto w-full max-w-7xl space-y-4/);
   });
 });
 
@@ -77,26 +140,20 @@ describe("deleted object restore eligibility", () => {
   });
 });
 
-describe("deleted object restore typed confirmation", () => {
-  const dialogSource = readFileSync(
-    new URL("./components/AdDeletedObjectRestoreConfirmDialog.tsx", import.meta.url),
-    "utf8",
-  );
-
-  it("requires primary label typed confirmation", () => {
-    assert.match(dialogSource, /getAdDeletedObjectPrimaryLabel/);
-    assert.match(dialogSource, /confirmValue\.trim\(\)\.toLowerCase\(\)/);
-    assert.match(dialogSource, /deletedObjects\.restore\.dialogTitle/);
-    assert.match(dialogSource, /deletedObjects\.restore\.targetLocation/);
-  });
-});
-
 describe("deleted object restore i18n", () => {
-  it("has parallel TR restore keys", () => {
+  it("has parallel TR restore page keys", () => {
     assert.equal(trAdManagement.adManagement.deletedObjects.actions.restore, "Geri Yükle");
     assert.equal(
-      trAdManagement.adManagement.deletedObjects.restore.dialogTitle,
+      trAdManagement.adManagement.deletedObjects.restore.pageTitle,
       "Silinen nesneyi geri yükle",
+    );
+    assert.equal(
+      trAdManagement.adManagement.deletedObjects.restore.pageDescription,
+      "Silinen AD nesnesini son bilinen konumuna geri yükleyin.",
+    );
+    assert.equal(
+      trAdManagement.adManagement.deletedObjects.restore.actions.submit,
+      "Geri Yükle",
     );
     assert.equal(
       trAdManagement.adManagement.deletedObjects.success.restore,
@@ -112,11 +169,19 @@ describe("deleted object restore i18n", () => {
     );
   });
 
-  it("has parallel EN restore keys", () => {
+  it("has parallel EN restore page keys", () => {
     assert.equal(enAdManagement.adManagement.deletedObjects.actions.restore, "Restore");
     assert.equal(
-      enAdManagement.adManagement.deletedObjects.restore.dialogTitle,
+      enAdManagement.adManagement.deletedObjects.restore.pageTitle,
       "Restore deleted object",
+    );
+    assert.equal(
+      enAdManagement.adManagement.deletedObjects.restore.pageDescription,
+      "Restore the deleted AD object to its last known location.",
+    );
+    assert.equal(
+      enAdManagement.adManagement.deletedObjects.restore.actions.submit,
+      "Restore",
     );
     assert.equal(
       enAdManagement.adManagement.deletedObjects.success.restore,
