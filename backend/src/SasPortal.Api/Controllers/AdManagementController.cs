@@ -31,7 +31,8 @@ public sealed class AdManagementController(
     IAdComputerDeleteService adComputerDeleteService,
     IAdComputerGroupMembershipService adComputerGroupMembershipService,
     IAdDeletedObjectDirectoryService adDeletedObjectDirectoryService,
-    IAdDeletedObjectRestoreService adDeletedObjectRestoreService) : ControllerBase
+    IAdDeletedObjectRestoreService adDeletedObjectRestoreService,
+    IAdDeletedObjectRestoreReadinessService adDeletedObjectRestoreReadinessService) : ControllerBase
 {
     [HttpGet("settings")]
     [RequirePermission(AdManagementPermissions.SettingsView)]
@@ -118,7 +119,18 @@ public sealed class AdManagementController(
             primaryDc,
             cancellationToken);
 
-        return Ok(MapValidation(result));
+        var restoreReadiness = await adDeletedObjectRestoreReadinessService.CheckAsync(cancellationToken);
+
+        return Ok(MapValidation(result, restoreReadiness));
+    }
+
+    [HttpGet("deleted-objects/restore-readiness")]
+    [RequirePermission(AdManagementPermissions.DeletedObjectsRestore)]
+    public async Task<ActionResult<AdDeletedObjectRestoreReadinessResponse>> GetDeletedObjectRestoreReadiness(
+        CancellationToken cancellationToken)
+    {
+        var result = await adDeletedObjectRestoreReadinessService.CheckAsync(cancellationToken);
+        return Ok(MapRestoreReadiness(result));
     }
 
     private static string? ResolvePrimaryDomainController(
@@ -1629,14 +1641,41 @@ public sealed class AdManagementController(
             item.MaskingStrategy,
             item.SortOrder);
 
-    private static AdManagementValidationResponse MapValidation(AppModels.AdManagementValidationResult result) =>
+    private static AdManagementValidationResponse MapValidation(
+        AppModels.AdManagementValidationResult result,
+        AppModels.AdDeletedObjectRestoreReadinessResult? restoreReadiness = null) =>
         new(
             result.IsValid,
             result.Message,
             result.CheckedAt,
             result.Details
                 .Select(d => new AdManagementValidationDetailResponse(d.Key, d.Status, d.Message))
-                .ToList());
+                .ToList(),
+            restoreReadiness is null ? null : MapRestoreReadiness(restoreReadiness));
+
+    private static AdDeletedObjectRestoreReadinessResponse MapRestoreReadiness(
+        AppModels.AdDeletedObjectRestoreReadinessResult result) =>
+        new(
+            result.IsReady,
+            result.Status,
+            result.SummaryMessage,
+            result.BlockingReasons.Select(MapRestoreReadinessCheck).ToList(),
+            result.Warnings.Select(MapRestoreReadinessCheck).ToList(),
+            result.Checks.Select(MapRestoreReadinessCheck).ToList(),
+            result.CheckedAtUtc,
+            result.DomainController);
+
+    private static AdDeletedObjectRestoreReadinessCheckResponse MapRestoreReadinessCheck(
+        AppModels.AdDeletedObjectRestoreReadinessCheck check) =>
+        new(
+            check.Key,
+            check.Status,
+            check.Title,
+            check.Message,
+            check.Remediation,
+            check.Command,
+            check.IsBlocking,
+            check.Details);
 
     private static AppModels.AdUserStatusFilter ParseUserStatusFilter(string? status) =>
         status?.Trim().ToLowerInvariant() switch

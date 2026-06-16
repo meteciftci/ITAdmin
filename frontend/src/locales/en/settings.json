@@ -297,7 +297,8 @@
         "passwordKeepHint": "Leaving the password field empty keeps the existing password.",
         "clearPassword": "Clear stored password",
         "actions": {
-          "save": "Save AD settings"
+          "save": "Save AD settings",
+          "validate": "Validate settings"
         },
         "lastValidation": "Last validation: {{status}} - {{message}}",
         "messages": {

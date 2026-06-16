@@ -13,6 +13,32 @@ namespace SasPortal.UnitTests.AdManagement;
 public sealed class AdDeletedObjectRestoreTests
 {
     [Fact]
+    public void RestoreReadinessEndpoint_RequiresDeletedObjectsRestorePermission()
+    {
+        var method = typeof(AdManagementController).GetMethod(
+            nameof(AdManagementController.GetDeletedObjectRestoreReadiness));
+        Assert.NotNull(method);
+
+        var permissionAttribute = method.GetCustomAttribute<RequirePermissionAttribute>();
+        Assert.Equal(
+            RequirePermissionAttribute.PolicyPrefix + AdManagementPermissions.DeletedObjectsRestore,
+            permissionAttribute?.Policy);
+    }
+
+    [Fact]
+    public void RestoreReadinessService_IsRegisteredInDependencyInjection()
+    {
+        var source = File.ReadAllText(
+            Path.Combine(
+                FindRepositoryRoot(),
+                "backend/src/SasPortal.Infrastructure/DependencyInjection.cs"));
+
+        Assert.Contains("IAdDeletedObjectRestoreReadinessService", source, StringComparison.Ordinal);
+        Assert.Contains("AdDeletedObjectRestoreReadinessService", source, StringComparison.Ordinal);
+        Assert.Contains("IAdwsPortConnectivityChecker", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void DeletedObjectsRestorePermissionConstant_IsDefined()
     {
         Assert.Equal("AdManagement.DeletedObjects.Restore", AdManagementPermissions.DeletedObjectsRestore);

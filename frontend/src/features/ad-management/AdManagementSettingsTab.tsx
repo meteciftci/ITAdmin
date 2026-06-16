@@ -20,6 +20,7 @@ import { getAdManagementSaveErrorMessage } from "@/features/ad-management/ad-man
 import { AdAttributeMappingDialog, type AdAttributeMappingDialogFormState } from "@/features/ad-management/components/AdAttributeMappingDialog";
 import { AdAttributeMappingsSection } from "@/features/ad-management/components/AdAttributeMappingsSection";
 import { AdManagementConnectionForm } from "@/features/ad-management/components/AdManagementConnectionForm";
+import { AdDeletedObjectRestoreReadinessCard } from "@/features/ad-management/components/AdDeletedObjectRestoreReadinessCard";
 import { AdManagementNotificationsForm } from "@/features/ad-management/components/AdManagementNotificationsForm";
 import { AdUserCreationDefaultsForm } from "@/features/ad-management/components/AdUserCreationDefaultsForm";
 import type {
@@ -300,6 +301,10 @@ export function AdManagementSettingsTab({ readOnly }: Props) {
                 payload,
                 t("settings:adManagement.connection.messages.saveSuccess"),
               )}
+          />
+          <AdDeletedObjectRestoreReadinessCard
+            settings={settingsQuery.data}
+            readOnly={readOnly}
           />
         </TabsContent>
 

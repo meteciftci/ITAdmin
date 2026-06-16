@@ -886,12 +886,49 @@
           "notRestorable": "Bu nesne geri yükleme için uygun değil.",
           "notRestorableDescription": "Geri yükleme için desteklenen nesne türü, son bilinen konum ve RDN bilgisi gereklidir.",
           "targetPathRequired": "Farklı OU'ya geri yüklemek için hedef OU seçilmelidir."
+        },
+        "readiness": {
+          "unavailableTitle": "Silinen nesne geri yükleme özelliği şu anda kullanılamıyor.",
+          "unavailableDescription": "Geri yükleme işlemine devam etmek için eksik gereksinimleri tamamlayın.",
+          "warningTitle": "Geri yükleme gereksinimleri uyarı içeriyor.",
+          "readyTitle": "Geri yükleme gereksinimleri hazır.",
+          "blockingReasons": "Engelleyen nedenler",
+          "warnings": "Uyarılar",
+          "remediation": "Çözüm",
+          "command": "Kontrol / çözüm komutu",
+          "copyCommand": "Komutu kopyala",
+          "commandCopied": "Komut kopyalandı.",
+          "commandCopyFailed": "Komut kopyalanamadı.",
+          "retry": "Tekrar Kontrol Et",
+          "goToSettings": "AD Ayarlarına Git",
+          "loadFailed": "Geri yükleme gereksinimleri yüklenemedi.",
+          "verifyFailedTitle": "Restore gereksinimleri doğrulanamadı.",
+          "verifyFailedDescription": "Geri yükleme gereksinimleri doğrulanamadı. Lütfen tekrar deneyin.",
+          "checkStatus": {
+            "success": "Başarılı",
+            "warning": "Uyarı",
+            "failed": "Başarısız",
+            "notChecked": "Kontrol edilmedi"
+          }
         }
       },
       "operationLogs": {
         "operationTypes": {
           "DeletedObjectRestore": "Silinen nesne geri yükleme"
         }
+      }
+    },
+    "settings": {
+      "restoreReadiness": {
+        "title": "Silinen Nesne Geri Yükleme Gereksinimleri",
+        "description": "Restore-ADObject için gerekli sunucu, ADWS ve Recycle Bin gereksinimlerini kontrol edin.",
+        "check": "Gereksinimleri Kontrol Et",
+        "ready": "Hazır",
+        "warning": "Uyarı",
+        "notReady": "Hazır değil",
+        "checksTitle": "Kontrol sonuçları",
+        "settingsIncomplete": "AD yönetim ayarları tamamlanmadan restore gereksinimleri kontrol edilemez.",
+        "moduleDisabled": "AD yönetim modülü pasifken restore gereksinimleri kontrol edilemez."
       }
     },
     "membershipMultiSelect": {

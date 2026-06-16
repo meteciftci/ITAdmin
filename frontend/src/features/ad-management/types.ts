@@ -192,6 +192,37 @@ export type AdManagementValidationResult = {
   message: string;
   checkedAt: string;
   details: AdManagementValidationDetail[];
+  restoreReadiness?: AdDeletedObjectRestoreReadinessResult | null;
+};
+
+export type AdDeletedObjectRestoreReadinessStatus = "Ready" | "Warning" | "NotReady";
+
+export type AdDeletedObjectRestoreReadinessCheckStatus =
+  | "Success"
+  | "Warning"
+  | "Failed"
+  | "NotChecked";
+
+export type AdDeletedObjectRestoreReadinessCheck = {
+  key: string;
+  status: AdDeletedObjectRestoreReadinessCheckStatus;
+  title: string;
+  message: string | null;
+  remediation: string | null;
+  command: string | null;
+  isBlocking: boolean;
+  details: string | null;
+};
+
+export type AdDeletedObjectRestoreReadinessResult = {
+  isReady: boolean;
+  status: AdDeletedObjectRestoreReadinessStatus;
+  summaryMessage: string;
+  blockingReasons: AdDeletedObjectRestoreReadinessCheck[];
+  warnings: AdDeletedObjectRestoreReadinessCheck[];
+  checks: AdDeletedObjectRestoreReadinessCheck[];
+  checkedAtUtc: string;
+  domainController: string | null;
 };
 
 export const AD_VALIDATION_TYPES = [

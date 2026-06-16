@@ -9,4 +9,5 @@ public sealed record AdManagementValidationResponse(
     bool IsValid,
     string Message,
     DateTimeOffset CheckedAt,
-    IReadOnlyList<AdManagementValidationDetailResponse> Details);
+    IReadOnlyList<AdManagementValidationDetailResponse> Details,
+    AdDeletedObjectRestoreReadinessResponse? RestoreReadiness = null);

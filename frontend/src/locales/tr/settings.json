@@ -297,7 +297,8 @@
         "passwordKeepHint": "Parola alanı boş bırakılırsa mevcut parola korunur.",
         "clearPassword": "Mevcut parolayı temizle",
         "actions": {
-          "save": "AD ayarlarını kaydet"
+          "save": "AD ayarlarını kaydet",
+          "validate": "Ayarları doğrula"
         },
         "lastValidation": "Son doğrulama: {{status}} - {{message}}",
         "messages": {

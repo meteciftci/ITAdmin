@@ -30,10 +30,13 @@ import { isGuidLike } from "@/features/ad-management/ad-user-detail-utils";
 import { AD_USER_FORM_ACTIONS_CLASSNAME } from "@/features/ad-management/ad-form-actions";
 import {
   AD_MANAGEMENT_DELETED_OBJECTS_QUERY_KEY,
+  AD_MANAGEMENT_DELETED_OBJECT_RESTORE_READINESS_QUERY_KEY,
   getAdDeletedObjectById,
+  getAdDeletedObjectRestoreReadiness,
   invalidateAdManagementDeletedObjectRestoreQueries,
   restoreAdDeletedObject,
 } from "@/features/ad-management/api";
+import { AdDeletedObjectRestoreReadinessPanel } from "@/features/ad-management/components/AdDeletedObjectRestoreReadinessPanel";
 import { AdOuSearchCombobox } from "@/features/ad-management/components/AdOuSearchCombobox";
 import { AdManagementModuleStateGuard } from "@/features/ad-management/components/AdManagementModuleStateGuard";
 import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useAdManagementModuleStatus";
@@ -88,13 +91,32 @@ export function AdDeletedObjectRestorePage() {
     refetchOnMount: "always",
   });
 
+  const readinessQuery = useQuery({
+    queryKey: AD_MANAGEMENT_DELETED_OBJECT_RESTORE_READINESS_QUERY_KEY,
+    queryFn: getAdDeletedObjectRestoreReadiness,
+    enabled: hasValidId && moduleStatus.isOperational,
+    staleTime: 0,
+    refetchOnMount: "always",
+  });
+
+  const readiness = readinessQuery.data;
   const detail = detailQuery.data;
+  const isRestorable = detail ? canRestoreDeletedObject(detail) : false;
+  const canShowRestoreForm =
+    detailQuery.isSuccess
+    && detail
+    && isRestorable
+    && readinessQuery.isSuccess
+    && readiness
+    && readiness.isReady;
+  const canShowReadinessWarningBanner =
+    readinessQuery.isSuccess && readiness && readiness.isReady && readiness.status === "Warning";
+
   const confirmation = detail ? getAdDeletedObjectRestoreConfirmationValue(detail) : null;
   const expectedConfirmValue = confirmation?.value ?? "";
   const isConfirmMatch =
     expectedConfirmValue.length > 0
     && confirmValue.trim().toLowerCase() === expectedConfirmValue.toLowerCase();
-  const isRestorable = detail ? canRestoreDeletedObject(detail) : false;
 
   const normalizedRestoreRdn = useMemo(
     () => normalizeDeletedObjectRestoreRdn(detail?.lastKnownRdn),
@@ -217,7 +239,43 @@ export function AdDeletedObjectRestorePage() {
           />
         ) : null}
 
-        {detailQuery.isSuccess && detail && isRestorable ? (
+        {detailQuery.isSuccess && detail && isRestorable && readinessQuery.isLoading ? (
+          <LoadingState />
+        ) : null}
+
+        {detailQuery.isSuccess && detail && isRestorable && readinessQuery.isError ? (
+          <ErrorState
+            title={t("adManagement:deletedObjects.restore.readiness.verifyFailedTitle")}
+            description={t("adManagement:deletedObjects.restore.readiness.verifyFailedDescription")}
+            retry={
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => readinessQuery.refetch()}
+                disabled={readinessQuery.isFetching}
+              >
+                {t("adManagement:deletedObjects.restore.readiness.retry")}
+              </Button>
+            }
+          />
+        ) : null}
+
+        {detailQuery.isSuccess
+        && detail
+        && isRestorable
+        && readinessQuery.isSuccess
+        && readiness
+        && !readiness.isReady ? (
+          <AdDeletedObjectRestoreReadinessPanel
+            result={readiness}
+            showSettingsLink
+            onRetry={() => readinessQuery.refetch()}
+            isRetrying={readinessQuery.isFetching}
+          />
+        ) : null}
+
+        {canShowRestoreForm && detail ? (
           <form
             className="space-y-4"
             onSubmit={(event) => {
@@ -229,6 +287,10 @@ export function AdDeletedObjectRestorePage() {
               restoreMutation.mutate();
             }}
           >
+            {canShowReadinessWarningBanner && readiness ? (
+              <AdDeletedObjectRestoreReadinessPanel result={readiness} showAllChecks={false} />
+            ) : null}
+
             <SectionCard title={t("adManagement:deletedObjects.restore.sections.deletedObject")}>
               <div className="grid gap-4 sm:grid-cols-2">
                 <SummaryField

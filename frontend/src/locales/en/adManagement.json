@@ -886,12 +886,49 @@
           "notRestorable": "This object cannot be restored.",
           "notRestorableDescription": "A supported object type, last known location, and RDN are required for restore.",
           "targetPathRequired": "Select a target OU to restore to another location."
+        },
+        "readiness": {
+          "unavailableTitle": "Deleted object restore is currently unavailable.",
+          "unavailableDescription": "Complete the missing prerequisites before continuing.",
+          "warningTitle": "Restore prerequisites contain warnings.",
+          "readyTitle": "Restore prerequisites are ready.",
+          "blockingReasons": "Blocking reasons",
+          "warnings": "Warnings",
+          "remediation": "Remediation",
+          "command": "Check / remediation command",
+          "copyCommand": "Copy command",
+          "commandCopied": "Command copied.",
+          "commandCopyFailed": "Could not copy command.",
+          "retry": "Check Again",
+          "goToSettings": "Go to AD Settings",
+          "loadFailed": "Restore prerequisites could not be loaded.",
+          "verifyFailedTitle": "Restore prerequisites could not be verified.",
+          "verifyFailedDescription": "Restore prerequisites could not be verified. Please try again.",
+          "checkStatus": {
+            "success": "Success",
+            "warning": "Warning",
+            "failed": "Failed",
+            "notChecked": "Not checked"
+          }
         }
       },
       "operationLogs": {
         "operationTypes": {
           "DeletedObjectRestore": "Deleted object restore"
         }
+      }
+    },
+    "settings": {
+      "restoreReadiness": {
+        "title": "Deleted Object Restore Prerequisites",
+        "description": "Check server, ADWS, and Recycle Bin requirements for Restore-ADObject.",
+        "check": "Check Prerequisites",
+        "ready": "Ready",
+        "warning": "Warning",
+        "notReady": "Not ready",
+        "checksTitle": "Check results",
+        "settingsIncomplete": "Restore prerequisites cannot be checked until AD management settings are completed.",
+        "moduleDisabled": "Restore prerequisites cannot be checked while the AD management module is disabled."
       }
     },
     "membershipMultiSelect": {

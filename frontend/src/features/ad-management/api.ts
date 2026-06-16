@@ -61,6 +61,8 @@ import type {
   AdDeletedObjectDetail,
   AdDeletedObjectListResponse,
   AdDeletedObjectRestoreResponse,
+  AdDeletedObjectRestoreReadinessResult,
+  AdManagementValidationResult,
   GetAdDeletedObjectsParams,
 } from "@/features/ad-management/types";
 
@@ -83,6 +85,12 @@ export const AD_MANAGEMENT_COMPUTERS_QUERY_KEY = ["ad-management", "computers"] 
 export const AD_MANAGEMENT_DELETED_OBJECTS_QUERY_KEY = [
   "ad-management",
   "deleted-objects",
+] as const;
+
+export const AD_MANAGEMENT_DELETED_OBJECT_RESTORE_READINESS_QUERY_KEY = [
+  "ad-management",
+  "deleted-objects",
+  "restore-readiness",
 ] as const;
 
 export const AD_COMPUTER_OPERATING_SYSTEMS_QUERY_KEY = [
@@ -285,6 +293,22 @@ export const restoreAdDeletedObject = async (
   );
   return data;
 };
+
+export const getAdDeletedObjectRestoreReadiness =
+  async (): Promise<AdDeletedObjectRestoreReadinessResult> => {
+    const { data } = await apiClient.get<AdDeletedObjectRestoreReadinessResult>(
+      "/ad-management/deleted-objects/restore-readiness",
+    );
+    return data;
+  };
+
+export const validateAdManagementSettings =
+  async (): Promise<AdManagementValidationResult> => {
+    const { data } = await apiClient.post<AdManagementValidationResult>(
+      "/ad-management/settings/validate",
+    );
+    return data;
+  };
 
 export async function invalidateAdManagementDeletedObjectQueries(
   queryClient: QueryClient,
