@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
 import type {
@@ -16,19 +17,52 @@ type Props = {
   result: AdDeletedObjectRestoreReadinessResult;
   showSettingsLink?: boolean;
   showAllChecks?: boolean;
+  showRetry?: boolean;
   onRetry?: () => void;
   isRetrying?: boolean;
   className?: string;
 };
 
-function statusContainerClass(status: AdDeletedObjectRestoreReadinessStatus): string {
+function readinessStatusContainerClass(
+  status: AdDeletedObjectRestoreReadinessStatus,
+): string {
   switch (status) {
     case "Ready":
-      return "border-emerald-500/40 bg-emerald-500/10";
+      return "border-emerald-500/50 bg-emerald-500/10";
     case "Warning":
-      return "border-amber-500/40 bg-amber-500/10";
+      return "border-amber-500/50 bg-amber-500/10";
     default:
-      return "border-destructive/40 bg-destructive/10";
+      return "border-destructive/50 bg-destructive/10";
+  }
+}
+
+function readinessCheckRowContainerClass(
+  status: AdDeletedObjectRestoreReadinessCheck["status"],
+): string {
+  switch (status) {
+    case "Success":
+      return "border-emerald-500/50 bg-emerald-500/10";
+    case "Warning":
+      return "border-amber-500/50 bg-amber-500/10";
+    case "Failed":
+      return "border-destructive/50 bg-destructive/10";
+    default:
+      return "border-blue-500/40 bg-blue-500/5 dark:bg-blue-500/10";
+  }
+}
+
+function readinessCheckStatusBadgeVariant(
+  status: AdDeletedObjectRestoreReadinessCheck["status"],
+): "success" | "warning" | "destructive" | "info" {
+  switch (status) {
+    case "Success":
+      return "success";
+    case "Warning":
+      return "warning";
+    case "Failed":
+      return "destructive";
+    default:
+      return "info";
   }
 }
 
@@ -65,22 +99,27 @@ function ReadinessCheckRow({ check }: { check: AdDeletedObjectRestoreReadinessCh
   }
 
   return (
-    <div className="rounded-md border bg-card/60 p-3 space-y-2">
+    <div
+      className={cn(
+        "rounded-md border p-3 space-y-2",
+        readinessCheckRowContainerClass(check.status),
+      )}
+    >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="font-medium text-sm">{check.title}</div>
-        <span className="text-xs text-muted-foreground">
+        <Badge variant={readinessCheckStatusBadgeVariant(check.status)}>
           {t(checkStatusLabelKey(check.status))}
-        </span>
+        </Badge>
       </div>
       {check.message ? (
-        <p className="text-sm text-muted-foreground">{check.message}</p>
+        <p className="text-sm text-muted-foreground">{t(check.message)}</p>
       ) : null}
       {check.remediation ? (
         <p className="text-sm">
           <span className="font-medium">
             {t("adManagement:deletedObjects.restore.readiness.remediation")}:{" "}
           </span>
-          <span className="text-muted-foreground">{check.remediation}</span>
+          <span className="text-muted-foreground">{t(check.remediation)}</span>
         </p>
       ) : null}
       {check.command ? (
@@ -108,6 +147,7 @@ export function AdDeletedObjectRestoreReadinessPanel({
   result,
   showSettingsLink = false,
   showAllChecks = true,
+  showRetry = true,
   onRetry,
   isRetrying = false,
   className,
@@ -121,14 +161,22 @@ export function AdDeletedObjectRestoreReadinessPanel({
         ? "adManagement:deletedObjects.restore.readiness.warningTitle"
         : "adManagement:deletedObjects.restore.readiness.unavailableTitle";
 
-  const reasonsToShow =
+  const warningKeys = new Set(result.warnings.map((check) => check.key));
+  const checksToShow =
     result.status === "NotReady" && result.blockingReasons.length > 0
       ? result.blockingReasons
-      : result.checks;
+      : result.status === "Warning"
+        ? result.checks.filter((check) => !warningKeys.has(check.key))
+        : result.checks;
 
   return (
     <div className={cn("space-y-4", className)}>
-      <div className={cn("rounded-lg border p-4 space-y-2", statusContainerClass(result.status))}>
+      <div
+        className={cn(
+          "rounded-lg border p-4 space-y-2",
+          readinessStatusContainerClass(result.status),
+        )}
+      >
         <h3 className="text-sm font-semibold">{t(titleKey)}</h3>
         <p className="text-sm text-muted-foreground">{result.summaryMessage}</p>
         {result.status === "NotReady" ? (
@@ -164,7 +212,7 @@ export function AdDeletedObjectRestoreReadinessPanel({
         </div>
       ) : null}
 
-      {result.status !== "NotReady" && showAllChecks && reasonsToShow.length > 0 ? (
+      {result.status !== "NotReady" && showAllChecks && checksToShow.length > 0 ? (
         <div className="space-y-2">
           {result.status === "Ready" ? (
             <h4 className="text-sm font-medium">
@@ -172,7 +220,7 @@ export function AdDeletedObjectRestoreReadinessPanel({
             </h4>
           ) : null}
           <div className="space-y-2">
-            {reasonsToShow.map((check) => (
+            {checksToShow.map((check) => (
               <ReadinessCheckRow key={check.key} check={check} />
             ))}
           </div>
@@ -180,7 +228,7 @@ export function AdDeletedObjectRestoreReadinessPanel({
       ) : null}
 
       <div className="flex flex-wrap gap-2">
-        {onRetry ? (
+        {showRetry && onRetry ? (
           <Button type="button" variant="outline" onClick={onRetry} disabled={isRetrying}>
             {t("adManagement:deletedObjects.restore.readiness.retry")}
           </Button>

@@ -24,8 +24,9 @@ public sealed class AdDeletedObjectRestoreReadinessServiceTests
         var result = await service.CheckAsync();
 
         Assert.True(result.IsReady);
-        Assert.Equal(AdDeletedObjectRestoreReadinessStatuses.Warning, result.Status);
+        Assert.Equal(AdDeletedObjectRestoreReadinessStatuses.Ready, result.Status);
         Assert.Empty(result.BlockingReasons);
+        Assert.Empty(result.Warnings);
     }
 
     [Fact]
@@ -135,7 +136,7 @@ public sealed class AdDeletedObjectRestoreReadinessServiceTests
     }
 
     [Fact]
-    public async Task CheckAsync_IncludesRestorePermissionUnknownWarning()
+    public async Task CheckAsync_WhenRestorePermissionOperationLogMissing_ReturnsNotChecked()
     {
         var service = CreateService(
             new FakePowerShellProbe
@@ -149,11 +150,57 @@ public sealed class AdDeletedObjectRestoreReadinessServiceTests
 
         var result = await service.CheckAsync();
 
-        Assert.Contains(
+        Assert.DoesNotContain(
             result.Warnings,
             check => check.Key == AdDeletedObjectRestoreReadinessCheckKeys.RestorePermissionNotVerified);
-        Assert.Equal(AdDeletedObjectRestoreReadinessStatuses.Warning, result.Status);
+        Assert.Contains(
+            result.Checks,
+            check =>
+                check.Key == AdDeletedObjectRestoreReadinessCheckKeys.RestorePermissionNotVerified
+                && check.Status == AdDeletedObjectRestoreReadinessCheckStatuses.NotChecked);
+        Assert.Equal(AdDeletedObjectRestoreReadinessStatuses.Ready, result.Status);
         Assert.True(result.IsReady);
+    }
+
+    [Fact]
+    public async Task CheckAsync_WhenSuccessfulRestoreOperationLogExists_RestoresPermissionCheckIsSuccess()
+    {
+        var operationLogService = new FakeAdOperationLogService(hasSucceededRestoreLog: true);
+        var service = CreateService(
+            new FakePowerShellProbe
+            {
+                ModuleResult = SuccessProbe(),
+                RestoreCommandResult = SuccessProbe(),
+                RecycleBinResult = SuccessProbe(),
+                AdwsReadResult = SuccessProbe(),
+            },
+            new FakeAdwsPortConnectivityChecker(true),
+            operationLogService: operationLogService);
+
+        var result = await service.CheckAsync();
+
+        Assert.Equal(AdDeletedObjectRestoreReadinessStatuses.Ready, result.Status);
+        Assert.True(result.IsReady);
+        Assert.Empty(result.BlockingReasons);
+        Assert.Empty(result.Warnings);
+
+        Assert.Contains(
+            result.Checks,
+            check =>
+                check.Key == AdDeletedObjectRestoreReadinessCheckKeys.RestorePermissionNotVerified
+                && check.Status == AdDeletedObjectRestoreReadinessCheckStatuses.Success
+                && check.Message
+                    == "adManagement:deletedObjects.restore.readiness.checkMessages.restorePermissionVerified");
+
+        Assert.Equal(1, operationLogService.GetLogsAsyncCallCount);
+        Assert.Equal(
+            AdManagementOperationTypes.DeletedObjectRestore,
+            operationLogService.LastQuery?.OperationType);
+        Assert.Equal(
+            AdManagementOperationStatuses.Succeeded,
+            operationLogService.LastQuery?.Status);
+        Assert.Equal(1, operationLogService.LastQuery?.PageNumber);
+        Assert.Equal(1, operationLogService.LastQuery?.PageSize);
     }
 
     [Fact]
@@ -224,14 +271,72 @@ public sealed class AdDeletedObjectRestoreReadinessServiceTests
         FakePowerShellProbe powerShellProbe,
         FakeAdwsPortConnectivityChecker portChecker,
         AdManagementSettingsModel? settings = null,
-        string? connectionPassword = "secret")
+        string? connectionPassword = "secret",
+        FakeAdOperationLogService? operationLogService = null)
     {
         var effectiveSettings = settings ?? CreateSettings();
+        var opLogService = operationLogService ?? new FakeAdOperationLogService(hasSucceededRestoreLog: false);
         return new AdDeletedObjectRestoreReadinessService(
             new FakeAdManagementSettingsService(effectiveSettings, connectionPassword),
             portChecker,
             powerShellProbe,
+            opLogService,
             Microsoft.Extensions.Logging.Abstractions.NullLogger<AdDeletedObjectRestoreReadinessService>.Instance);
+    }
+
+    private sealed class FakeAdOperationLogService(bool hasSucceededRestoreLog) : IAdOperationLogService
+    {
+        public int GetLogsAsyncCallCount { get; private set; }
+
+        public AdOperationLogListQuery? LastQuery { get; private set; }
+
+        public Task WriteAsync(
+            AdOperationLogEntry entry,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<PagedResult<AdOperationLogListItem>> GetLogsAsync(
+            AdOperationLogListQuery query,
+            CancellationToken cancellationToken = default)
+        {
+            GetLogsAsyncCallCount++;
+            LastQuery = query;
+
+            var items = hasSucceededRestoreLog
+                ? new List<AdOperationLogListItem>
+                {
+                    new(
+                        Guid.NewGuid(),
+                        DateTimeOffset.UtcNow,
+                        AdManagementOperationTypes.DeletedObjectRestore,
+                        AdManagementOperationStatuses.Succeeded,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        false,
+                        false,
+                        false,
+                        false),
+                }
+                : new List<AdOperationLogListItem>();
+
+            return Task.FromResult(
+                new PagedResult<AdOperationLogListItem>(
+                    items,
+                    query.PageNumber,
+                    query.PageSize,
+                    items.Count,
+                    1));
+        }
+
+        public Task<AdOperationLogDetail?> GetLogByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
+            Task.FromResult<AdOperationLogDetail?>(null);
     }
 
     private static AdManagementSettingsModel CreateSettings(

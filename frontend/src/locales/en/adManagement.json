@@ -908,7 +908,12 @@
             "success": "Success",
             "warning": "Warning",
             "failed": "Failed",
-            "notChecked": "Not checked"
+            "notChecked": "Info"
+          },
+          "checkMessages": {
+            "restorePermissionVerified": "Restore permission was verified by a successful restore operation log.",
+            "restorePermissionNotVerified": "Restore permission has not yet been verified by a successful restore operation log.",
+            "restorePermissionRemediation": "For manual verification, delete a test object and restore it through the portal. This check will become successful after a successful operation log is created."
           }
         }
       },

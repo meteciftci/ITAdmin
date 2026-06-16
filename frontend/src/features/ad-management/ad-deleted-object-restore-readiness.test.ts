@@ -60,6 +60,11 @@ describe("deleted object restore readiness page", () => {
     assert.match(panelSource, /navigator\.clipboard\.writeText/);
     assert.match(panelSource, /<code/);
   });
+
+  it("avoids duplicate warning checks in checks list", () => {
+    assert.match(panelSource, /warningKeys/);
+    assert.match(panelSource, /!warningKeys\.has\(check\.key\)/);
+  });
 });
 
 describe("settings restore readiness card", () => {
@@ -76,7 +81,8 @@ describe("settings restore readiness card", () => {
     assert.match(settingsTabSource, /AdDeletedObjectRestoreReadinessCard/);
     assert.match(cardSource, /settings\.restoreReadiness\.title/);
     assert.match(cardSource, /settings\.restoreReadiness\.check/);
-    assert.match(cardSource, /validateAdManagementSettings/);
+    assert.match(cardSource, /showRetry={false}/);
+    assert.doesNotMatch(cardSource, /validateAdManagementSettings/);
   });
 });
 
@@ -94,6 +100,16 @@ describe("deleted object restore readiness i18n", () => {
       trAdManagement.adManagement.settings.restoreReadiness.check,
       "Gereksinimleri Kontrol Et",
     );
+
+    assert.equal(
+      trAdManagement.adManagement.deletedObjects.restore.readiness.checkMessages
+        .restorePermissionVerified,
+      "Geri yükleme yetkisi başarılı restore işlem logu ile doğrulandı.",
+    );
+    assert.equal(
+      trAdManagement.adManagement.deletedObjects.restore.readiness.checkStatus.notChecked,
+      "Bilgi",
+    );
   });
 
   it("has parallel EN readiness keys", () => {
@@ -108,6 +124,16 @@ describe("deleted object restore readiness i18n", () => {
     assert.equal(
       enAdManagement.adManagement.settings.restoreReadiness.check,
       "Check Prerequisites",
+    );
+
+    assert.equal(
+      enAdManagement.adManagement.deletedObjects.restore.readiness.checkMessages
+        .restorePermissionNotVerified,
+      "Restore permission has not yet been verified by a successful restore operation log.",
+    );
+    assert.equal(
+      enAdManagement.adManagement.deletedObjects.restore.readiness.checkStatus.notChecked,
+      "Info",
     );
   });
 });

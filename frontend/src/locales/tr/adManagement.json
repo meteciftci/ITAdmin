@@ -908,7 +908,12 @@
             "success": "Başarılı",
             "warning": "Uyarı",
             "failed": "Başarısız",
-            "notChecked": "Kontrol edilmedi"
+            "notChecked": "Bilgi"
+          },
+          "checkMessages": {
+            "restorePermissionVerified": "Geri yükleme yetkisi başarılı restore işlem logu ile doğrulandı.",
+            "restorePermissionNotVerified": "Geri yükleme yetkisi henüz başarılı bir restore işlem logu ile doğrulanmadı.",
+            "restorePermissionRemediation": "Manuel doğrulama için test bir nesneyi silip portal üzerinden geri yükleyin. Başarılı işlem logu oluştuğunda bu kontrol başarılı görünecektir."
           }
         }
       },

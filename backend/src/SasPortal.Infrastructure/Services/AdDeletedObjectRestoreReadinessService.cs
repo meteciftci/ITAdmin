@@ -10,6 +10,7 @@ public sealed class AdDeletedObjectRestoreReadinessService(
     IAdManagementSettingsService settingsService,
     IAdwsPortConnectivityChecker adwsPortConnectivityChecker,
     IAdDeletedObjectRestoreReadinessPowerShellProbe powerShellProbe,
+    IAdOperationLogService operationLogService,
     ILogger<AdDeletedObjectRestoreReadinessService> logger) : IAdDeletedObjectRestoreReadinessService
 {
     private const int AdwsPort = 9389;
@@ -106,7 +107,7 @@ public sealed class AdDeletedObjectRestoreReadinessService(
             }
 
             checks.Add(await CheckAdwsPortConnectivityAsync(domainController, timeout, cancellationToken));
-            checks.Add(CreateRestorePermissionWarningCheck());
+            checks.Add(await CheckRestorePermissionViaOperationLogAsync(cancellationToken));
 
             return BuildResult(checks, checkedAt, domainController);
         }
@@ -307,16 +308,47 @@ public sealed class AdDeletedObjectRestoreReadinessService(
             result.ErrorSummary);
     }
 
-    private static AdDeletedObjectRestoreReadinessCheck CreateRestorePermissionWarningCheck() =>
-        new(
+    private async Task<AdDeletedObjectRestoreReadinessCheck> CheckRestorePermissionViaOperationLogAsync(
+        CancellationToken cancellationToken)
+    {
+        var logs = await operationLogService.GetLogsAsync(
+            new AdOperationLogListQuery(
+                AdManagementOperationTypes.DeletedObjectRestore,
+                AdManagementOperationStatuses.Succeeded,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                PageNumber: 1,
+                PageSize: 1),
+            cancellationToken);
+
+        if (logs.Items.Count > 0)
+        {
+            return new AdDeletedObjectRestoreReadinessCheck(
+                AdDeletedObjectRestoreReadinessCheckKeys.RestorePermissionNotVerified,
+                AdDeletedObjectRestoreReadinessCheckStatuses.Success,
+                "Geri yükleme yetkisi",
+                "adManagement:deletedObjects.restore.readiness.checkMessages.restorePermissionVerified",
+                null,
+                null,
+                false,
+                null);
+        }
+
+        return new AdDeletedObjectRestoreReadinessCheck(
             AdDeletedObjectRestoreReadinessCheckKeys.RestorePermissionNotVerified,
-            AdDeletedObjectRestoreReadinessCheckStatuses.Warning,
+            AdDeletedObjectRestoreReadinessCheckStatuses.NotChecked,
             "Geri yükleme yetkisi",
-            "Restore yetkisi destructive olmayan bir testle tam doğrulanamadı.",
-            "Service account'a silinen nesneleri geri yükleme yetkisi verildiğinden emin olun.",
+            "adManagement:deletedObjects.restore.readiness.checkMessages.restorePermissionNotVerified",
+            "adManagement:deletedObjects.restore.readiness.checkMessages.restorePermissionRemediation",
             null,
             false,
             null);
+    }
 
     private static AdDeletedObjectRestoreReadinessCheck CreateSettingsCheck(
         string message,
@@ -385,10 +417,7 @@ public sealed class AdDeletedObjectRestoreReadinessService(
             .Where(check => check.IsBlocking && check.Status == AdDeletedObjectRestoreReadinessCheckStatuses.Failed)
             .ToList();
         var warnings = checks
-            .Where(check =>
-                check.Status == AdDeletedObjectRestoreReadinessCheckStatuses.Warning
-                || (check.Key == AdDeletedObjectRestoreReadinessCheckKeys.RestorePermissionNotVerified
-                    && check.Status == AdDeletedObjectRestoreReadinessCheckStatuses.Warning))
+            .Where(check => check.Status == AdDeletedObjectRestoreReadinessCheckStatuses.Warning)
             .ToList();
 
         var isReady = blockingReasons.Count == 0;

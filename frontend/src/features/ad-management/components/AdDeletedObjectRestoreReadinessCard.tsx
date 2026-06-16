@@ -5,9 +5,7 @@ import { LoadingState } from "@/components/common/LoadingState";
 import { Button } from "@/components/ui/button";
 import {
   AD_MANAGEMENT_DELETED_OBJECT_RESTORE_READINESS_QUERY_KEY,
-  AD_MANAGEMENT_SETTINGS_QUERY_KEY,
   getAdDeletedObjectRestoreReadiness,
-  validateAdManagementSettings,
 } from "@/features/ad-management/api";
 import { AdDeletedObjectRestoreReadinessPanel } from "@/features/ad-management/components/AdDeletedObjectRestoreReadinessPanel";
 import type { AdManagementSettings } from "@/features/ad-management/types";
@@ -18,7 +16,7 @@ type Props = {
 };
 
 export function AdDeletedObjectRestoreReadinessCard({ settings, readOnly }: Props) {
-  const { t } = useTranslation(["adManagement", "settings", "common"]);
+  const { t } = useTranslation(["adManagement", "common"]);
   const queryClient = useQueryClient();
 
   const readinessQuery = useQuery({
@@ -28,21 +26,6 @@ export function AdDeletedObjectRestoreReadinessCard({ settings, readOnly }: Prop
     refetchOnWindowFocus: false,
   });
 
-  const validateMutation = useMutation({
-    mutationFn: validateAdManagementSettings,
-    onSuccess: async (validation) => {
-      await queryClient.invalidateQueries({ queryKey: AD_MANAGEMENT_SETTINGS_QUERY_KEY });
-      if (validation.restoreReadiness) {
-        queryClient.setQueryData(
-          AD_MANAGEMENT_DELETED_OBJECT_RESTORE_READINESS_QUERY_KEY,
-          validation.restoreReadiness,
-        );
-      } else {
-        await readinessQuery.refetch();
-      }
-    },
-  });
-
   const checkMutation = useMutation({
     mutationFn: getAdDeletedObjectRestoreReadiness,
     onSuccess: (result) => {
@@ -50,13 +33,9 @@ export function AdDeletedObjectRestoreReadinessCard({ settings, readOnly }: Prop
     },
   });
 
-  const activeResult =
-    validateMutation.data?.restoreReadiness
-    ?? checkMutation.data
-    ?? readinessQuery.data;
+  const activeResult = checkMutation.data ?? readinessQuery.data;
 
-  const isChecking =
-    validateMutation.isPending || checkMutation.isPending || readinessQuery.isFetching;
+  const isChecking = checkMutation.isPending || readinessQuery.isFetching;
 
   if (!settings?.isConfigured) {
     return (
@@ -78,26 +57,15 @@ export function AdDeletedObjectRestoreReadinessCard({ settings, readOnly }: Prop
           </p>
         </div>
         {!readOnly ? (
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={isChecking || !settings.isEnabled}
-              onClick={() => validateMutation.mutate()}
-            >
-              {t("settings:adManagement.connection.actions.validate")}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={isChecking || !settings.isEnabled}
-              onClick={() => checkMutation.mutate()}
-            >
-              {t("adManagement:settings.restoreReadiness.check")}
-            </Button>
-          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={isChecking || !settings.isEnabled}
+            onClick={() => checkMutation.mutate()}
+          >
+            {t("adManagement:settings.restoreReadiness.check")}
+          </Button>
         ) : null}
       </div>
 
@@ -120,8 +88,7 @@ export function AdDeletedObjectRestoreReadinessCard({ settings, readOnly }: Prop
       {settings.isEnabled && activeResult ? (
         <AdDeletedObjectRestoreReadinessPanel
           result={activeResult}
-          onRetry={() => checkMutation.mutate()}
-          isRetrying={isChecking}
+          showRetry={false}
         />
       ) : null}
     </div>
