@@ -16,6 +16,8 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
         "Bu nesne için son bilinen konum bilgisi bulunamadı.";
     private const string DeletedObjectRestoreMissingRdnMessage =
         "Bu nesne için son bilinen RDN bilgisi bulunamadı.";
+    private const string DeletedObjectRestoreInvalidRdnMessage =
+        "Bu nesne için geçerli geri yükleme RDN bilgisi bulunamadı.";
     private const string DeletedObjectRestoreParentNotFoundMessage = "Geri yükleme hedefi bulunamadı.";
     private const string DeletedObjectRestoreConflictMessage =
         "Hedef konumda aynı ada sahip bir nesne bulunuyor.";
@@ -184,6 +186,45 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                     cancellationToken);
             }
 
+            var originalLastKnownRdn = lastKnownRdn;
+
+            if (ContainsDeletedObjectRestoreRdnMarker(originalLastKnownRdn))
+            {
+                return await FailDeletedObjectRestoreAsync(
+                    request,
+                    DeletedObjectRestoreInvalidRdnMessage,
+                    context.Connection,
+                    beforeState,
+                    AdDirectoryFailureKind.InvalidRequest,
+                    BuildDeletedObjectRestoreFailureDiagnostic(
+                        AdDeletedObjectRestoreSteps.ValidateRestoreTarget,
+                        request.ObjectGuid,
+                        beforeState.DistinguishedName,
+                        englishMessageOverride:
+                            $"The deleted AD object restore RDN contains a deleted marker. Original msDS-LastKnownRDN: {originalLastKnownRdn}",
+                        normalizedReasonOverride: AdUserUpdateNormalizedReasons.InvalidDnSyntax),
+                    cancellationToken);
+            }
+
+            var restoreRdn = NormalizeDeletedObjectRestoreRdn(originalLastKnownRdn);
+            if (string.IsNullOrWhiteSpace(restoreRdn) || !IsValidDeletedObjectRestoreRdn(restoreRdn))
+            {
+                return await FailDeletedObjectRestoreAsync(
+                    request,
+                    DeletedObjectRestoreInvalidRdnMessage,
+                    context.Connection,
+                    beforeState,
+                    AdDirectoryFailureKind.InvalidRequest,
+                    BuildDeletedObjectRestoreFailureDiagnostic(
+                        AdDeletedObjectRestoreSteps.ValidateRestoreTarget,
+                        request.ObjectGuid,
+                        beforeState.DistinguishedName,
+                        englishMessageOverride:
+                            $"The deleted AD object restore RDN is invalid. Original msDS-LastKnownRDN: {originalLastKnownRdn}",
+                        normalizedReasonOverride: AdUserUpdateNormalizedReasons.InvalidDnSyntax),
+                    cancellationToken);
+            }
+
             if (!IsValidRestoreTargetDistinguishedName(lastKnownParent)
                 || !AdLdapDnHelper.IsEqualOrDescendantOf(lastKnownParent, namingContext))
             {
@@ -219,7 +260,7 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                     cancellationToken);
             }
 
-            var restoredDistinguishedName = $"{lastKnownRdn},{lastKnownParent}";
+            var restoredDistinguishedName = $"{restoreRdn},{lastKnownParent}";
             if (TryLoadDirectoryObjectByDn(ldapConnection, restoredDistinguishedName))
             {
                 return await FailDeletedObjectRestoreAsync(
@@ -243,7 +284,7 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                     ldapConnection,
                     beforeState.DistinguishedName,
                     lastKnownParent,
-                    lastKnownRdn);
+                    restoreRdn);
             }
             catch (RestoreDeletedObjectLdapException ex)
             {
@@ -293,7 +334,8 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                 beforeState,
                 restoredState,
                 lastKnownParent,
-                lastKnownRdn,
+                originalLastKnownRdn,
+                restoreRdn,
                 restoredDistinguishedName,
                 cancellationToken);
 
@@ -307,7 +349,7 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                     restoredState.SamAccountName,
                     restoredState.DistinguishedName,
                     lastKnownParent,
-                    lastKnownRdn));
+                    restoreRdn));
         }
         catch (DirectoryOperationException ex)
         {
@@ -472,12 +514,12 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
         LdapConnection ldapConnection,
         string deletedDistinguishedName,
         string lastKnownParent,
-        string lastKnownRdn)
+        string restoreRdn)
     {
         var modifyDnRequest = new ModifyDNRequest(
             deletedDistinguishedName,
             lastKnownParent,
-            lastKnownRdn);
+            restoreRdn);
 
         modifyDnRequest.Controls.Add(
             new DirectoryControl(
@@ -667,7 +709,8 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
         AdDeletedObjectRestoreState beforeState,
         AdDeletedObjectRestoreState restoredState,
         string lastKnownParent,
-        string lastKnownRdn,
+        string originalLastKnownRdn,
+        string restoreRdn,
         string restoredDistinguishedName,
         CancellationToken cancellationToken)
     {
@@ -680,7 +723,8 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                 beforeState,
                 restoredState,
                 lastKnownParent,
-                lastKnownRdn,
+                originalLastKnownRdn,
+                restoreRdn,
                 restoredDistinguishedName,
                 errorDiagnosticJson: null,
                 cancellationToken);
@@ -710,7 +754,8 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
             beforeState,
             restoredState: null,
             lastKnownParent: beforeState?.LastKnownParent,
-            lastKnownRdn: beforeState?.LastKnownRdn,
+            originalLastKnownRdn: beforeState?.LastKnownRdn,
+            restoreRdn: null,
             restoredDistinguishedName: beforeState?.DistinguishedName,
             operationDiagnosticJson,
             cancellationToken);
@@ -723,7 +768,8 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
         AdDeletedObjectRestoreState? beforeState,
         AdDeletedObjectRestoreState? restoredState,
         string? lastKnownParent,
-        string? lastKnownRdn,
+        string? originalLastKnownRdn,
+        string? restoreRdn,
         string? restoredDistinguishedName,
         string? errorDiagnosticJson,
         CancellationToken cancellationToken)
@@ -747,7 +793,7 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
         var afterSnapshot = string.Equals(status, AdManagementOperationStatuses.Succeeded, StringComparison.Ordinal)
             && restoredState is not null
             && !string.IsNullOrWhiteSpace(lastKnownParent)
-            && !string.IsNullOrWhiteSpace(lastKnownRdn)
+            && !string.IsNullOrWhiteSpace(restoreRdn)
             ? AdOperationLogSnapshotBuilder.BuildDeletedObjectRestoreAfterSnapshot(
                 restoredState.ObjectId,
                 restoredState.ObjectType,
@@ -755,25 +801,29 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                 restoredState.SamAccountName,
                 restoredState.DistinguishedName,
                 lastKnownParent,
-                lastKnownRdn)
+                restoreRdn)
             : null;
 
         var isSuccess = string.Equals(status, AdManagementOperationStatuses.Succeeded, StringComparison.Ordinal);
-        var requestSummary = beforeState is not null
-            && !string.IsNullOrWhiteSpace(lastKnownParent)
-            && !string.IsNullOrWhiteSpace(lastKnownRdn)
+        var effectiveRestoreRdn = restoreRdn
+            ?? NormalizeDeletedObjectRestoreRdn(originalLastKnownRdn)
+            ?? string.Empty;
+        var requestSummary = !string.IsNullOrWhiteSpace(lastKnownParent)
             && !string.IsNullOrWhiteSpace(restoredDistinguishedName)
+            && (!string.IsNullOrWhiteSpace(effectiveRestoreRdn) || !isSuccess)
             ? AdOperationLogSnapshotBuilder.BuildDeletedObjectRestoreRequestSummary(
                 request.ObjectGuid,
                 lastKnownParent,
-                lastKnownRdn,
-                restoredDistinguishedName)
+                effectiveRestoreRdn,
+                restoredDistinguishedName,
+                originalLastKnownRdn)
             : !isSuccess
                 ? AdOperationLogSnapshotBuilder.BuildDeletedObjectRestoreRequestSummary(
                     request.ObjectGuid,
                     lastKnownParent ?? string.Empty,
-                    lastKnownRdn ?? string.Empty,
-                    restoredDistinguishedName ?? request.ObjectGuid.ToString("D"))
+                    effectiveRestoreRdn,
+                    restoredDistinguishedName ?? request.ObjectGuid.ToString("D"),
+                    originalLastKnownRdn)
                 : null;
 
         await adOperationLogService.WriteAsync(
@@ -829,6 +879,106 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
             ldapExceptionErrorCode,
             ldapDiagnosticMessage,
             normalizedReasonOverride);
+
+    private static string? NormalizeDeletedObjectRestoreRdn(string? lastKnownRdn)
+    {
+        if (string.IsNullOrWhiteSpace(lastKnownRdn))
+        {
+            return null;
+        }
+
+        var trimmed = lastKnownRdn.Trim();
+        if (ContainsDeletedObjectRestoreRdnMarker(trimmed))
+        {
+            return null;
+        }
+
+        if (HasDeletedObjectRestoreRdnAttributePrefix(trimmed))
+        {
+            return trimmed;
+        }
+
+        return AdLdapDnHelper.BuildCommonNameRdn(trimmed);
+    }
+
+    private static bool ContainsDeletedObjectRestoreRdnMarker(string value) =>
+        value.Contains('\0', StringComparison.Ordinal)
+        || value.Contains("ADEL:", StringComparison.OrdinalIgnoreCase)
+        || value.Contains(@"\0ADEL", StringComparison.OrdinalIgnoreCase);
+
+    private static bool HasDeletedObjectRestoreRdnAttributePrefix(string value)
+    {
+        var equalsIndex = value.IndexOf('=');
+        if (equalsIndex <= 0)
+        {
+            return false;
+        }
+
+        var attributeType = value[..equalsIndex].Trim();
+        if (attributeType.Length == 0)
+        {
+            return false;
+        }
+
+        foreach (var character in attributeType)
+        {
+            if (!char.IsLetterOrDigit(character) && character != '-')
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool IsValidDeletedObjectRestoreRdn(string restoreRdn)
+    {
+        if (string.IsNullOrWhiteSpace(restoreRdn))
+        {
+            return false;
+        }
+
+        var trimmed = restoreRdn.Trim();
+        if (!trimmed.Contains('=', StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if (!HasDeletedObjectRestoreRdnAttributePrefix(trimmed))
+        {
+            return false;
+        }
+
+        return !ContainsUnescapedRdnComponentSeparator(trimmed);
+    }
+
+    private static bool ContainsUnescapedRdnComponentSeparator(string rdn)
+    {
+        var inQuotes = false;
+
+        for (var index = 0; index < rdn.Length; index++)
+        {
+            var character = rdn[index];
+            if (character == '\\' && index + 1 < rdn.Length)
+            {
+                index++;
+                continue;
+            }
+
+            if (character == '"')
+            {
+                inQuotes = !inQuotes;
+                continue;
+            }
+
+            if (!inQuotes && character == ',')
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     private static string SanitizeDeletedObjectRestoreLdapError(LdapException exception) =>
         AdLdapErrorNormalizer.Normalize(exception.ErrorCode, exception.Message);

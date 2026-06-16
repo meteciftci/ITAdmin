@@ -4,6 +4,7 @@ using SasPortal.Api.Controllers;
 using SasPortal.Application.Common.AdManagement;
 using SasPortal.Application.Common.Constants;
 using SasPortal.Application.Common.Models;
+using SasPortal.Infrastructure.Services;
 using SasPortal.Persistence.Services;
 
 namespace SasPortal.UnitTests.AdManagement;
@@ -258,6 +259,96 @@ public sealed class AdDeletedObjectRestoreTests
         Assert.Contains("AdDirectoryFailureKind.InvalidRequest => BadRequest", source, StringComparison.Ordinal);
         Assert.Contains("AdDirectoryFailureKind.NotFound => NotFound", source, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void DeletedObjectRestoreService_DefinesNormalizeDeletedObjectRestoreRdnHelper()
+    {
+        var source = File.ReadAllText(
+            Path.Combine(
+                FindRepositoryRoot(),
+                "backend/src/SasPortal.Infrastructure/Services/AdUserDirectoryService.DeletedObjectRestore.cs"));
+
+        Assert.Contains("NormalizeDeletedObjectRestoreRdn", source, StringComparison.Ordinal);
+        Assert.Contains("AdLdapDnHelper.BuildCommonNameRdn", source, StringComparison.Ordinal);
+        Assert.Contains("ContainsDeletedObjectRestoreRdnMarker", source, StringComparison.Ordinal);
+        Assert.Contains("IsValidDeletedObjectRestoreRdn", source, StringComparison.Ordinal);
+        Assert.Contains("DeletedObjectRestoreInvalidRdnMessage", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DeletedObjectRestoreService_UsesNormalizedRestoreRdnForModifyDnConflictAndVerify()
+    {
+        var source = File.ReadAllText(
+            Path.Combine(
+                FindRepositoryRoot(),
+                "backend/src/SasPortal.Infrastructure/Services/AdUserDirectoryService.DeletedObjectRestore.cs"));
+
+        Assert.Contains("var restoreRdn = NormalizeDeletedObjectRestoreRdn(originalLastKnownRdn);", source, StringComparison.Ordinal);
+        Assert.Contains("var restoredDistinguishedName = $\"{restoreRdn},{lastKnownParent}\";", source, StringComparison.Ordinal);
+        Assert.Contains("ExecuteRestoreDeletedObject", source, StringComparison.Ordinal);
+        Assert.Contains("restoreRdn);", source, StringComparison.Ordinal);
+        Assert.Contains("originalLastKnownRdn", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DeletedObjectRestoreRequestSummary_PreservesOriginalAndNormalizedRdn()
+    {
+        var source = File.ReadAllText(
+            Path.Combine(
+                FindRepositoryRoot(),
+                "backend/src/SasPortal.Application/Common/AdManagement/AdOperationLogSnapshotBuilder.cs"));
+
+        Assert.Contains("originalLastKnownRdn", source, StringComparison.Ordinal);
+        Assert.Contains("restoreRdn", source, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("test_grup", "CN=test_grup")]
+    [InlineData("CN=test_grup", "CN=test_grup")]
+    [InlineData("OU=_Groups", "OU=_Groups")]
+    public void NormalizeDeletedObjectRestoreRdn_ConvertsBareValuesToCommonNameRdn(string input, string expected)
+    {
+        var normalized = InvokeNormalizeDeletedObjectRestoreRdn(input);
+        Assert.Equal(expected, normalized);
+    }
+
+    [Fact]
+    public void NormalizeDeletedObjectRestoreRdn_EscapesSpecialCharactersUsingAdLdapDnHelper()
+    {
+        var normalized = InvokeNormalizeDeletedObjectRestoreRdn("Ali, Veli");
+        Assert.Equal(AdLdapDnHelper.BuildCommonNameRdn("Ali, Veli"), normalized);
+    }
+
+    [Theory]
+    [InlineData("test\0ADEL:guid")]
+    [InlineData(@"CN=foo\0ADEL:guid")]
+    [InlineData("nameADEL:guid")]
+    public void NormalizeDeletedObjectRestoreRdn_ReturnsNullForDeletedMarkerValues(string input)
+    {
+        var normalized = InvokeNormalizeDeletedObjectRestoreRdn(input);
+        Assert.Null(normalized);
+    }
+
+    [Fact]
+    public void IsValidDeletedObjectRestoreRdn_RejectsMultiComponentRdnValues()
+    {
+        Assert.False(InvokeIsValidDeletedObjectRestoreRdn("CN=test,CN=test2"));
+        Assert.True(InvokeIsValidDeletedObjectRestoreRdn(AdLdapDnHelper.BuildCommonNameRdn("Ali, Veli")));
+    }
+
+    private static string? InvokeNormalizeDeletedObjectRestoreRdn(string? input) =>
+        typeof(AdUserDirectoryService)
+            .GetMethod(
+                "NormalizeDeletedObjectRestoreRdn",
+                BindingFlags.Static | BindingFlags.NonPublic)!
+            .Invoke(null, [input]) as string;
+
+    private static bool InvokeIsValidDeletedObjectRestoreRdn(string restoreRdn) =>
+        (bool)typeof(AdUserDirectoryService)
+            .GetMethod(
+                "IsValidDeletedObjectRestoreRdn",
+                BindingFlags.Static | BindingFlags.NonPublic)!
+            .Invoke(null, [restoreRdn])!;
 
     private static string FindRepositoryRoot()
     {

@@ -687,9 +687,15 @@ public static class AdOperationLogSnapshotBuilder
     public static string BuildDeletedObjectRestoreRequestSummary(
         Guid objectGuid,
         string lastKnownParent,
-        string lastKnownRdn,
-        string restoredDistinguishedName) =>
-        JsonSerializer.Serialize(
+        string restoreRdn,
+        string restoredDistinguishedName,
+        string? originalLastKnownRdn = null)
+    {
+        var original = string.IsNullOrWhiteSpace(originalLastKnownRdn)
+            ? restoreRdn
+            : originalLastKnownRdn.Trim();
+
+        return JsonSerializer.Serialize(
             new
             {
                 operation = AdManagementOperationTypes.DeletedObjectRestore,
@@ -697,11 +703,14 @@ public static class AdOperationLogSnapshotBuilder
                 restoreTarget = new
                 {
                     lastKnownParent,
-                    lastKnownRdn,
+                    lastKnownRdn = original,
+                    originalLastKnownRdn = original,
+                    restoreRdn,
                     restoredDistinguishedName,
                 },
             },
             SerializerOptions);
+    }
 
     public static string BuildDeletedObjectRestoreBeforeSnapshot(
         string objectId,
