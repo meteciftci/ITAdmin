@@ -854,9 +854,21 @@
         "targetLocation": "Geri yüklenecek konum",
         "restoredRdn": "Geri yüklenecek RDN",
         "restoredDistinguishedName": "Geri yüklenecek DN",
+        "expectedDistinguishedName": "Beklenen geri yükleme DN",
         "unsupportedType": "Bu nesne türü geri yüklenemez.",
         "missingTarget": "Bu nesne için son bilinen konum bilgisi bulunamadı.",
         "conflict": "Hedef konumda aynı ada sahip bir nesne bulunuyor.",
+        "targetMode": {
+          "label": "Geri yükleme hedefi",
+          "originalLocation": "Son bilinen konuma geri yükle",
+          "targetPath": "Farklı OU'ya geri yükle"
+        },
+        "targetPath": {
+          "label": "Hedef OU",
+          "placeholder": "Hedef OU seçin",
+          "description": "Nesne seçilen OU altında geri yüklenecek.",
+          "loadFailed": "Hedef OU listesi yüklenemedi."
+        },
         "sections": {
           "deletedObject": "Silinen nesne",
           "restoreTarget": "Geri yükleme hedefi",
@@ -867,7 +879,8 @@
         },
         "errors": {
           "notRestorable": "Bu nesne geri yükleme için uygun değil.",
-          "notRestorableDescription": "Geri yükleme için desteklenen nesne türü, son bilinen konum ve RDN bilgisi gereklidir."
+          "notRestorableDescription": "Geri yükleme için desteklenen nesne türü, son bilinen konum ve RDN bilgisi gereklidir.",
+          "targetPathRequired": "Farklı OU'ya geri yüklemek için hedef OU seçilmelidir."
         }
       },
       "operationLogs": {

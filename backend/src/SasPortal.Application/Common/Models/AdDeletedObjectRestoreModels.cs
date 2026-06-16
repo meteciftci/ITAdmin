@@ -5,7 +5,9 @@ public sealed record AdDeletedObjectRestoreRequest(
     Guid? ActorUserId,
     string? ActorUserName,
     string? ActorIpAddress,
-    string? ActorUserAgent);
+    string? ActorUserAgent,
+    AdDeletedObjectRestoreTargetMode RestoreTargetMode = AdDeletedObjectRestoreTargetMode.OriginalLocation,
+    string? TargetPathDistinguishedName = null);
 
 public sealed record AdDeletedObjectRestoreItem(
     string ObjectId,

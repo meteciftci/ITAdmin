@@ -9,11 +9,19 @@ import enLogs from "../../locales/en/adOperationLogs.json" with { type: "json" }
 
 describe("restoreAdDeletedObject API", () => {
   const apiSource = readFileSync(new URL("./api.ts", import.meta.url), "utf8");
+  const typesSource = readFileSync(
+    new URL("./ad-deleted-object-restore-types.ts", import.meta.url),
+    "utf8",
+  );
 
-  it("posts to deleted object restore endpoint", () => {
+  it("posts to deleted object restore endpoint with optional payload", () => {
     assert.match(apiSource, /restoreAdDeletedObject/);
     assert.match(apiSource, /\/ad-management\/deleted-objects\/\$\{id\}\/restore/);
     assert.match(apiSource, /AdDeletedObjectRestoreResponse/);
+    assert.match(apiSource, /payload\?: RestoreAdDeletedObjectRequest/);
+    assert.match(typesSource, /AdDeletedObjectRestoreTargetMode/);
+    assert.match(typesSource, /OriginalLocation/);
+    assert.match(typesSource, /TargetPath/);
   });
 
   it("invalidates deleted objects and operation logs queries", () => {
@@ -99,8 +107,15 @@ describe("deleted object restore page workflow", () => {
     assert.match(restorePageSource, /canRestoreDeletedObject/);
   });
 
-  it("submits restore and handles success navigation and query invalidation", () => {
+  it("submits restore with target mode payload and handles success navigation", () => {
     assert.match(restorePageSource, /restoreAdDeletedObject/);
+    assert.match(restorePageSource, /restoreTargetMode/);
+    assert.match(restorePageSource, /OriginalLocation/);
+    assert.match(restorePageSource, /TargetPath/);
+    assert.match(restorePageSource, /AdOuSearchCombobox/);
+    assert.match(restorePageSource, /targetPathDistinguishedName/);
+    assert.match(restorePageSource, /isTargetPathReady/);
+    assert.match(restorePageSource, /expectedDistinguishedName/);
     assert.match(restorePageSource, /invalidateAdManagementDeletedObjectRestoreQueries/);
     assert.match(restorePageSource, /navigate\(returnPath\)/);
     assert.match(restorePageSource, /getApiErrorMessage/);
@@ -164,8 +179,12 @@ describe("deleted object restore i18n", () => {
       "Silinen nesne geri yüklenemedi.",
     );
     assert.equal(
-      trAdManagement.adManagement.deletedObjects.operationLogs.operationTypes.DeletedObjectRestore,
-      "Silinen nesne geri yükleme",
+      trAdManagement.adManagement.deletedObjects.restore.targetMode.originalLocation,
+      "Son bilinen konuma geri yükle",
+    );
+    assert.equal(
+      trAdManagement.adManagement.deletedObjects.restore.errors.targetPathRequired,
+      "Farklı OU'ya geri yüklemek için hedef OU seçilmelidir.",
     );
   });
 
@@ -194,6 +213,14 @@ describe("deleted object restore i18n", () => {
     assert.equal(
       enAdManagement.adManagement.deletedObjects.operationLogs.operationTypes.DeletedObjectRestore,
       "Deleted object restore",
+    );
+    assert.equal(
+      enAdManagement.adManagement.deletedObjects.restore.targetMode.targetPath,
+      "Restore to another OU",
+    );
+    assert.equal(
+      enAdManagement.adManagement.deletedObjects.restore.errors.targetPathRequired,
+      "Select a target OU to restore to another location.",
     );
   });
 

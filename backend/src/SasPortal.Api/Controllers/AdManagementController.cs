@@ -333,6 +333,7 @@ public sealed class AdManagementController(
     [RequirePermission(AdManagementPermissions.DeletedObjectsRestore)]
     public async Task<ActionResult<AdDeletedObjectRestoreResponse>> RestoreDeletedObject(
         [FromRoute] string id,
+        [FromBody] AdDeletedObjectRestoreRequestBody? body,
         CancellationToken cancellationToken = default)
     {
         if (!Guid.TryParse(id, out var objectGuid))
@@ -340,13 +341,17 @@ public sealed class AdManagementController(
             return BadRequest(new { message = "Geçersiz silinen nesne kimliği." });
         }
 
+        var restoreTargetMode = body?.RestoreTargetMode ?? AppModels.AdDeletedObjectRestoreTargetMode.OriginalLocation;
+
         var result = await adDeletedObjectRestoreService.RestoreDeletedObjectAsync(
             new AppModels.AdDeletedObjectRestoreRequest(
                 objectGuid,
                 ResolveActorUserId(User),
                 ResolveActorUserName(User),
                 ResolveIpAddress(),
-                ResolveUserAgent()),
+                ResolveUserAgent(),
+                restoreTargetMode,
+                body?.TargetPathDistinguishedName),
             cancellationToken);
 
         if (!result.IsSuccess || result.RestoredObject is null)

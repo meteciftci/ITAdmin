@@ -63,4 +63,7 @@ public static class AdLdapDiagnosticSanitizer
 
         return trimmed;
     }
+
+    public static string? SanitizePowerShellErrorSummary(string? message) =>
+        SanitizeLdapDiagnosticMessage(message);
 }

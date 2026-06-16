@@ -1,6 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 
 import { defaultAdManagementNotificationSettings } from "@/features/ad-management/ad-management-settings-payload";
+import type { RestoreAdDeletedObjectRequest } from "@/features/ad-management/ad-deleted-object-restore-types";
 import { AD_OPERATION_LOGS_QUERY_KEY } from "@/features/ad-management/operation-logs-api";
 import { apiClient } from "@/lib/api-client";
 
@@ -276,9 +277,11 @@ export const getAdDeletedObjectById = async (id: string): Promise<AdDeletedObjec
 
 export const restoreAdDeletedObject = async (
   id: string,
+  payload?: RestoreAdDeletedObjectRequest,
 ): Promise<AdDeletedObjectRestoreResponse> => {
   const { data } = await apiClient.post<AdDeletedObjectRestoreResponse>(
     `/ad-management/deleted-objects/${id}/restore`,
+    payload ?? undefined,
   );
   return data;
 };

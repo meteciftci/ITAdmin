@@ -854,9 +854,21 @@
         "targetLocation": "Restore target location",
         "restoredRdn": "Restored RDN",
         "restoredDistinguishedName": "Restored DN",
+        "expectedDistinguishedName": "Expected restored DN",
         "unsupportedType": "This object type cannot be restored.",
         "missingTarget": "Last known location information is missing for this object.",
         "conflict": "An object with the same name already exists in the target location.",
+        "targetMode": {
+          "label": "Restore target",
+          "originalLocation": "Restore to last known location",
+          "targetPath": "Restore to another OU"
+        },
+        "targetPath": {
+          "label": "Target OU",
+          "placeholder": "Select target OU",
+          "description": "The object will be restored under the selected OU.",
+          "loadFailed": "Target OU list could not be loaded."
+        },
         "sections": {
           "deletedObject": "Deleted object",
           "restoreTarget": "Restore target",
@@ -867,7 +879,8 @@
         },
         "errors": {
           "notRestorable": "This object cannot be restored.",
-          "notRestorableDescription": "A supported object type, last known location, and RDN are required for restore."
+          "notRestorableDescription": "A supported object type, last known location, and RDN are required for restore.",
+          "targetPathRequired": "Select a target OU to restore to another location."
         }
       },
       "operationLogs": {

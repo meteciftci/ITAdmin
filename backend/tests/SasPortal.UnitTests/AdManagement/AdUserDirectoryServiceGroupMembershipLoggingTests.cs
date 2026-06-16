@@ -148,6 +148,7 @@ public sealed class AdUserDirectoryServiceGroupMembershipLoggingTests
       adOperationLogService,
       auditLogWriter,
       new StubAdManagementNotificationEnqueueService(),
+      new StubAdDeletedObjectRestoreCommandRunner(),
       NullLogger<AdUserDirectoryService>.Instance);
 
   private static async Task<AdUserGroupOperationResult> InvokeCompleteGroupOperationAsync(
@@ -384,5 +385,19 @@ public sealed class AdUserDirectoryServiceGroupMembershipLoggingTests
       AdManagementAccountOperationNotificationRequest request,
       CancellationToken cancellationToken = default) =>
       throw new NotSupportedException();
+  }
+
+  private sealed class StubAdDeletedObjectRestoreCommandRunner : IAdDeletedObjectRestoreCommandRunner
+  {
+    public Task<AdDeletedObjectRestoreCommandResult> ExecuteRestoreAsync(
+      AdDeletedObjectRestoreCommandRequest request,
+      CancellationToken cancellationToken = default) =>
+      Task.FromResult(new AdDeletedObjectRestoreCommandResult(
+        true,
+        "ProcessIdentity",
+        0,
+        0,
+        null,
+        null));
   }
 }

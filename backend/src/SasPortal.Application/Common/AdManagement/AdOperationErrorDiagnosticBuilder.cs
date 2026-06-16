@@ -60,7 +60,15 @@ public static class AdOperationErrorDiagnosticBuilder
         string? ldapDiagnosticMessage = null,
         string? normalizedReasonOverride = null,
         string? sourceDnResolution = null,
-        bool? sourceDnVerified = null)
+        bool? sourceDnVerified = null,
+        string? command = null,
+        string? restoreTargetMode = null,
+        string? server = null,
+        string? targetPathDistinguishedName = null,
+        string? sanitizedPowerShellError = null,
+        int? powerShellExitCode = null,
+        long? elapsedMs = null,
+        string? credentialMode = null)
     {
         var normalizedReason = normalizedReasonOverride
             ?? AdUserUpdateOperationDiagnosticBuilder.ResolveNormalizedReason(
@@ -94,6 +102,15 @@ public static class AdOperationErrorDiagnosticBuilder
                 restoreOperationMode,
                 sourceDnResolution,
                 sourceDnVerified,
+                command,
+                restoreTargetMode,
+                server,
+                targetPathDistinguishedName = AdLdapDiagnosticSanitizer.SanitizeDistinguishedName(
+                    targetPathDistinguishedName),
+                sanitizedPowerShellError,
+                powerShellExitCode,
+                elapsedMs,
+                credentialMode,
                 partialUpdate = false,
                 rollbackStatus = AdUserUpdateRollbackStatus.NotRequired,
             },
