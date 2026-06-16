@@ -691,7 +691,9 @@ public static class AdOperationLogSnapshotBuilder
         string restoredDistinguishedName,
         string? originalLastKnownRdn = null,
         string? sourceDeletedDistinguishedName = null,
-        string restoreOperationMode = "ModifyRequestUndelete")
+        string restoreOperationMode = "ModifyRequestUndelete",
+        string? sourceDnResolution = null,
+        bool? sourceDnVerified = null)
     {
         var original = string.IsNullOrWhiteSpace(originalLastKnownRdn)
             ? restoreRdn
@@ -711,6 +713,8 @@ public static class AdOperationLogSnapshotBuilder
                     restoreRdn,
                     restoredDistinguishedName,
                     sourceDeletedDistinguishedName,
+                    sourceDnResolution,
+                    sourceDnVerified,
                 },
             },
             SerializerOptions);

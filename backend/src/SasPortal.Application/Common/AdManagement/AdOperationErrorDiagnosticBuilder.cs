@@ -58,7 +58,9 @@ public static class AdOperationErrorDiagnosticBuilder
         int? ldapResultCode = null,
         int? ldapExceptionErrorCode = null,
         string? ldapDiagnosticMessage = null,
-        string? normalizedReasonOverride = null)
+        string? normalizedReasonOverride = null,
+        string? sourceDnResolution = null,
+        bool? sourceDnVerified = null)
     {
         var normalizedReason = normalizedReasonOverride
             ?? AdUserUpdateOperationDiagnosticBuilder.ResolveNormalizedReason(
@@ -90,6 +92,8 @@ public static class AdOperationErrorDiagnosticBuilder
                 sourceDeletedDistinguishedName = AdLdapDiagnosticSanitizer.SanitizeDistinguishedName(
                     sourceDeletedDistinguishedName),
                 restoreOperationMode,
+                sourceDnResolution,
+                sourceDnVerified,
                 partialUpdate = false,
                 rollbackStatus = AdUserUpdateRollbackStatus.NotRequired,
             },

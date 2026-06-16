@@ -1,3 +1,4 @@
+using System.DirectoryServices.Protocols;
 using System.Reflection;
 using SasPortal.Api.Authorization;
 using SasPortal.Api.Controllers;
@@ -107,6 +108,11 @@ public sealed class AdDeletedObjectRestoreTests
         Assert.Contains("lastKnownParent", source, StringComparison.Ordinal);
         Assert.Contains("msDS-LastKnownRDN", source, StringComparison.Ordinal);
         Assert.Contains("TryLoadDirectoryObjectByDn", source, StringComparison.Ordinal);
+        Assert.Contains("TryLoadDeletedDirectoryObjectByDn", source, StringComparison.Ordinal);
+        Assert.Contains("ResolveDeletedObjectSourceDistinguishedName", source, StringComparison.Ordinal);
+        Assert.Contains("entry.DistinguishedName", source, StringComparison.Ordinal);
+        Assert.Contains("AdDeletedObjectRestoreSteps.VerifyDeletedSource", source, StringComparison.Ordinal);
+        Assert.Contains("DeletedObjectRestoreSourceNotVerifiedMessage", source, StringComparison.Ordinal);
         Assert.DoesNotContain("ModifyDNRequest", source, StringComparison.Ordinal);
         Assert.Contains("new ModifyRequest(deletedDistinguishedName)", source, StringComparison.Ordinal);
         Assert.Contains("DirectoryAttributeOperation.Delete", source, StringComparison.Ordinal);
@@ -114,9 +120,23 @@ public sealed class AdDeletedObjectRestoreTests
         Assert.Contains("DirectoryAttributeOperation.Replace", source, StringComparison.Ordinal);
         Assert.Contains("\"distinguishedName\"", source, StringComparison.Ordinal);
         Assert.Contains("distinguishedNameModification.Add(restoredDistinguishedName)", source, StringComparison.Ordinal);
+        Assert.Contains("modifyRequest.Modifications.Add(distinguishedNameModification);", source, StringComparison.Ordinal);
+        Assert.Contains("modifyRequest.Modifications.Add(isDeletedModification);", source, StringComparison.Ordinal);
+        Assert.True(
+            source.IndexOf(
+                "modifyRequest.Modifications.Add(distinguishedNameModification);",
+                StringComparison.Ordinal)
+            < source.IndexOf(
+                "modifyRequest.Modifications.Add(isDeletedModification);",
+                StringComparison.Ordinal));
         Assert.Contains("TryVerifyRestoredObject", source, StringComparison.Ordinal);
         Assert.Contains("DeletedObjectRestoreOperationMode", source, StringComparison.Ordinal);
         Assert.Contains("ModifyRequestUndelete", source, StringComparison.Ordinal);
+        Assert.Contains("SearchScope.Base", source, StringComparison.Ordinal);
+        Assert.Contains("DeletedObjectRestoreSourceDnResolutionEntryDistinguishedName", source, StringComparison.Ordinal);
+        Assert.Contains("DeletedObjectRestoreSourceDnResolutionAttributeFallback", source, StringComparison.Ordinal);
+        Assert.Contains("sourceDnResolution", source, StringComparison.Ordinal);
+        Assert.Contains("sourceDnVerified", source, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -317,8 +337,42 @@ public sealed class AdDeletedObjectRestoreTests
         Assert.Contains("BuildDeletedObjectRestoreFailureJson", restoreSource, StringComparison.Ordinal);
         Assert.Contains("sourceDeletedDistinguishedName", diagnosticSource, StringComparison.Ordinal);
         Assert.Contains("restoreOperationMode", diagnosticSource, StringComparison.Ordinal);
+        Assert.Contains("sourceDnResolution", diagnosticSource, StringComparison.Ordinal);
+        Assert.Contains("sourceDnVerified", diagnosticSource, StringComparison.Ordinal);
         Assert.Contains("restoreOperationMode", summarySource, StringComparison.Ordinal);
         Assert.Contains("sourceDeletedDistinguishedName", summarySource, StringComparison.Ordinal);
+        Assert.Contains("sourceDnResolution", summarySource, StringComparison.Ordinal);
+        Assert.Contains("sourceDnVerified", summarySource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ResolveDeletedObjectSourceDistinguishedName_PrefersEntryDistinguishedName()
+    {
+        var method = typeof(AdUserDirectoryService).GetMethod(
+            "ResolveDeletedObjectSourceDistinguishedName",
+            BindingFlags.Static | BindingFlags.NonPublic);
+        Assert.NotNull(method);
+
+        var parameters = method.GetParameters();
+        Assert.Equal(3, parameters.Length);
+        Assert.Equal(typeof(SearchResultEntry), parameters[0].ParameterType);
+        Assert.True(parameters[1].IsOut);
+        Assert.True(parameters[2].IsOut);
+    }
+
+    [Fact]
+    public void DeletedObjectRestoreService_SourceVerificationFailureMapsToNotFound()
+    {
+        var source = File.ReadAllText(
+            Path.Combine(
+                FindRepositoryRoot(),
+                "backend/src/SasPortal.Infrastructure/Services/AdUserDirectoryService.DeletedObjectRestore.cs"));
+
+        Assert.Contains(
+            "AdDirectoryFailureKind.NotFound,\n                    BuildDeletedObjectRestoreFailureDiagnostic(\n                        AdDeletedObjectRestoreSteps.VerifyDeletedSource",
+            source,
+            StringComparison.Ordinal);
+        Assert.Contains("Silinen nesne geri yükleme için doğrulanamadı.", source, StringComparison.Ordinal);
     }
 
     [Fact]
