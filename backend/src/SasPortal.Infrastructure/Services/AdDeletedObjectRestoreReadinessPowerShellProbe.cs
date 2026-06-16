@@ -50,6 +50,16 @@ if (-not (Get-Command Restore-ADObject -ErrorAction SilentlyContinue)) {{
         CancellationToken cancellationToken = default)
     {
         var server = AdDeletedObjectRestoreReadinessCommandBuilder.SanitizeHost(request.Server);
+        var usesCredential = !string.IsNullOrWhiteSpace(request.ServiceAccountUserName)
+            && !string.IsNullOrWhiteSpace(request.ServiceAccountPassword);
+
+        var credentialParam = usesCredential ? "-Credential $credential" : string.Empty;
+        var credentialSetupScript = usesCredential
+            ? @"
+$credential = New-Object System.Management.Automation.PSCredential($bindIdentity, $securePassword)
+"
+            : string.Empty;
+
         return Task.Run(
             () => ExecuteScript(
                 request,
@@ -58,12 +68,17 @@ if (-not (Get-Module -ListAvailable -Name '{ActiveDirectoryModuleName}')) {{
     throw '{ModuleMissingErrorToken}'
 }}
 Import-Module {ActiveDirectoryModuleName} -ErrorAction Stop
-$feature = Get-ADOptionalFeature -Filter 'name -eq ""Recycle Bin Feature""' -Server '{server}' -ErrorAction Stop
-if ($null -eq $feature -or -not $feature.Enabled) {{
+$server = '{server}'
+{credentialSetupScript}
+$feature = Get-ADOptionalFeature -Identity 'Recycle Bin Feature' -Server $server {credentialParam} -Properties EnabledScopes -ErrorAction Stop
+if ($null -eq $feature.EnabledScopes -or $feature.EnabledScopes.Count -le 0) {{
     throw '{RecycleBinDisabledErrorToken}'
 }}
 ",
-                cancellationToken),
+                cancellationToken,
+                usesCredential
+                    ? CreateCredentialVariables(request)
+                    : null),
             cancellationToken);
     }
 

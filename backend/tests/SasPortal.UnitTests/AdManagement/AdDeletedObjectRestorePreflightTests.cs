@@ -129,6 +129,35 @@ public sealed class AdDeletedObjectRestorePreflightTests
         Assert.Contains("ResolveDeletedObjectRestorePowerShellFailureMessage", source, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void DeletedObjectRestoreReadinessPowerShellProbe_RecycleBinChecksIdentityAndEnabledScopes()
+    {
+        var source = File.ReadAllText(
+            Path.Combine(
+                FindRepositoryRoot(),
+                "backend/src/SasPortal.Infrastructure/Services/AdDeletedObjectRestoreReadinessPowerShellProbe.cs"));
+
+        Assert.Contains("Get-ADOptionalFeature", source, StringComparison.Ordinal);
+        Assert.Contains("-Identity 'Recycle Bin Feature'", source, StringComparison.Ordinal);
+        Assert.Contains("-Properties EnabledScopes", source, StringComparison.Ordinal);
+        Assert.Contains("EnabledScopes.Count", source, StringComparison.Ordinal);
+        Assert.Contains("EnabledScopes.Count -le 0", source, StringComparison.Ordinal);
+        Assert.Contains("RecycleBinFeatureDisabled", source, StringComparison.Ordinal);
+
+        Assert.Contains(
+            "-Credential $credential",
+            source,
+            StringComparison.Ordinal);
+
+        Assert.DoesNotContain("-Filter 'name -eq", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("-not $feature.Enabled", source, StringComparison.Ordinal);
+
+        Assert.Contains(
+            "New-Object System.Management.Automation.PSCredential($bindIdentity, $securePassword)",
+            source,
+            StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
