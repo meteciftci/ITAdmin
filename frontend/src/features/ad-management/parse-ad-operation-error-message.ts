@@ -1,4 +1,4 @@
-import { unwrapJsonLikeString } from "@/lib/parse-json-like-value";
+import { unwrapJsonLikeString } from "../../lib/parse-json-like-value.ts";
 
 export type AdOperationErrorDiagnostic = {
   code?: string;
@@ -13,6 +13,15 @@ export type AdOperationErrorDiagnostic = {
   rollbackStatus?: string;
   targetObjectGuid?: string;
   ldapDiagnosticMessage?: string;
+  command?: string;
+  restoreOperationMode?: string;
+  restoreTargetMode?: string;
+  server?: string;
+  targetPathDistinguishedName?: string;
+  credentialMode?: string;
+  sanitizedPowerShellError?: string;
+  powerShellExitCode?: number;
+  elapsedMs?: number;
 };
 
 export type ParsedAdOperationErrorMessage =
@@ -59,6 +68,15 @@ function mapDiagnosticPayload(payload: Record<string, unknown>): AdOperationErro
     rollbackStatus: readOptionalString(payload.rollbackStatus),
     targetObjectGuid: readOptionalString(payload.targetObjectGuid),
     ldapDiagnosticMessage: readOptionalString(payload.ldapDiagnosticMessage),
+    command: readOptionalString(payload.command),
+    restoreOperationMode: readOptionalString(payload.restoreOperationMode),
+    restoreTargetMode: readOptionalString(payload.restoreTargetMode),
+    server: readOptionalString(payload.server),
+    targetPathDistinguishedName: readOptionalString(payload.targetPathDistinguishedName),
+    credentialMode: readOptionalString(payload.credentialMode),
+    sanitizedPowerShellError: readOptionalString(payload.sanitizedPowerShellError),
+    powerShellExitCode: readOptionalNumber(payload.powerShellExitCode),
+    elapsedMs: readOptionalNumber(payload.elapsedMs),
   };
 }
 

@@ -4,6 +4,7 @@ using SasPortal.Application.Abstractions.Services;
 using SasPortal.Application.Common.AdManagement;
 using SasPortal.Application.Common.Constants;
 using SasPortal.Application.Common.Models;
+using SasPortal.Infrastructure.Ldap;
 
 namespace SasPortal.Infrastructure.Services;
 
@@ -697,13 +698,12 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                 true,
                 true));
 
-        var response = (SearchResponse)ldapConnection.SendRequest(searchRequest);
-        if (response.ResultCode != ResultCode.Success || response.Entries.Count == 0)
+        if (!TrySendBaseDnSearch(ldapConnection, searchRequest, out var response))
         {
             return false;
         }
 
-        var entry = response.Entries[0];
+        var entry = response!.Entries[0];
         return TryGetObjectGuid(entry, out var resolvedGuid) && resolvedGuid == expectedObjectGuid;
     }
 
@@ -719,8 +719,7 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
             TimeLimit = LdapOperationTimeout,
         };
 
-        var response = (SearchResponse)ldapConnection.SendRequest(searchRequest);
-        return response.ResultCode == ResultCode.Success && response.Entries.Count > 0;
+        return TrySendBaseDnSearch(ldapConnection, searchRequest, out _);
     }
 
     private static bool TryLoadRestoreTargetOrganizationalUnitByDn(
@@ -738,7 +737,34 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
             TimeLimit = LdapOperationTimeout,
         };
 
-        var response = (SearchResponse)ldapConnection.SendRequest(searchRequest);
+        return TrySendBaseDnSearch(ldapConnection, searchRequest, out _);
+    }
+
+    private static bool TrySendBaseDnSearch(
+        LdapConnection ldapConnection,
+        SearchRequest searchRequest,
+        out SearchResponse? response)
+    {
+        response = null;
+
+        try
+        {
+            response = (SearchResponse)ldapConnection.SendRequest(searchRequest);
+        }
+        catch (DirectoryOperationException ex) when (AdLdapNoSuchObjectHelper.IsDirectoryNoSuchObject(ex))
+        {
+            return false;
+        }
+        catch (LdapException ex) when (AdLdapNoSuchObjectHelper.IsLdapNoSuchObject(ex))
+        {
+            return false;
+        }
+
+        if (AdLdapNoSuchObjectHelper.IsNoSuchObjectResultCode(response.ResultCode))
+        {
+            return false;
+        }
+
         return response.ResultCode == ResultCode.Success && response.Entries.Count > 0;
     }
 

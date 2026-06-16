@@ -62,6 +62,42 @@ export function AdOperationLogDetailDialog({
           { label: t("diagnostic.attribute"), value: parsedError.diagnostic.attribute },
           { label: t("diagnostic.reason"), value: parsedError.diagnostic.normalizedReason },
           { label: t("diagnostic.message"), value: parsedError.diagnostic.message },
+          { label: t("diagnostic.command"), value: parsedError.diagnostic.command },
+          {
+            label: t("diagnostic.restoreOperationMode"),
+            value: parsedError.diagnostic.restoreOperationMode,
+          },
+          {
+            label: t("diagnostic.restoreTargetMode"),
+            value: parsedError.diagnostic.restoreTargetMode,
+          },
+          { label: t("diagnostic.server"), value: parsedError.diagnostic.server },
+          {
+            label: t("diagnostic.targetPathDistinguishedName"),
+            value: parsedError.diagnostic.targetPathDistinguishedName,
+          },
+          {
+            label: t("diagnostic.credentialMode"),
+            value: parsedError.diagnostic.credentialMode,
+          },
+          {
+            label: t("diagnostic.sanitizedPowerShellError"),
+            value: parsedError.diagnostic.sanitizedPowerShellError,
+          },
+          {
+            label: t("diagnostic.powerShellExitCode"),
+            value:
+              parsedError.diagnostic.powerShellExitCode !== undefined
+                ? String(parsedError.diagnostic.powerShellExitCode)
+                : undefined,
+          },
+          {
+            label: t("diagnostic.elapsedMs"),
+            value:
+              parsedError.diagnostic.elapsedMs !== undefined
+                ? String(parsedError.diagnostic.elapsedMs)
+                : undefined,
+          },
           {
             label: t("diagnostic.ldapResultCode"),
             value:
@@ -92,7 +128,7 @@ export function AdOperationLogDetailDialog({
             label: t("diagnostic.ldapDiagnosticMessage"),
             value: parsedError.diagnostic.ldapDiagnosticMessage,
           },
-        ]
+        ].filter((row) => row.value !== undefined && row.value !== "")
       : [];
 
   return (

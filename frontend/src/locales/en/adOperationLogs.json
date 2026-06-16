@@ -77,7 +77,16 @@
       "partialUpdate": "Partial Update",
       "rollbackStatus": "Rollback Status",
       "targetObjectGuid": "Target Object GUID",
-      "ldapDiagnosticMessage": "LDAP Diagnostic Message"
+      "ldapDiagnosticMessage": "LDAP Diagnostic Message",
+      "command": "Command",
+      "restoreOperationMode": "Restore operation mode",
+      "restoreTargetMode": "Restore target mode",
+      "server": "Server",
+      "targetPathDistinguishedName": "Target path",
+      "credentialMode": "Credential mode",
+      "sanitizedPowerShellError": "PowerShell error",
+      "powerShellExitCode": "PowerShell exit code",
+      "elapsedMs": "Elapsed (ms)"
     },
     "detail": {
       "title": "Operation Log Detail",

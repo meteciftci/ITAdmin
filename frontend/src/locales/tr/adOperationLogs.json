@@ -77,7 +77,16 @@
       "partialUpdate": "Partial Update",
       "rollbackStatus": "Rollback Status",
       "targetObjectGuid": "Target Object GUID",
-      "ldapDiagnosticMessage": "LDAP Diagnostic Message"
+      "ldapDiagnosticMessage": "LDAP Diagnostic Message",
+      "command": "Komut",
+      "restoreOperationMode": "Geri yükleme yöntemi",
+      "restoreTargetMode": "Geri yükleme hedef modu",
+      "server": "Sunucu",
+      "targetPathDistinguishedName": "Hedef yol",
+      "credentialMode": "Kimlik modu",
+      "sanitizedPowerShellError": "PowerShell hatası",
+      "powerShellExitCode": "PowerShell çıkış kodu",
+      "elapsedMs": "Süre (ms)"
     },
     "detail": {
       "title": "Operasyon Log Detayı",
