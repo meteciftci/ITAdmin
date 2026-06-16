@@ -850,7 +850,12 @@
         "dialogDescription": "Bu işlem silinen AD nesnesini son bilinen konumuna geri yükler.",
         "pageTitle": "Silinen nesneyi geri yükle",
         "pageDescription": "Silinen AD nesnesini son bilinen konumuna geri yükleyin.",
-        "confirmLabel": "Geri yüklemek için nesne adını yazın.",
+        "confirmLabel": "Geri yüklemek için sAMAccountName değerini yazın.",
+        "confirmation": {
+          "fallbackLabel": "Geri yüklemek için onay değerini yazın.",
+          "samAccountNameHint": "Devam etmek için sAMAccountName değerini yazın: {{value}}",
+          "fallbackHint": "Devam etmek için nesne değerini yazın: {{value}}"
+        },
         "targetLocation": "Geri yüklenecek konum",
         "restoredRdn": "Geri yüklenecek RDN",
         "restoredDistinguishedName": "Geri yüklenecek DN",

@@ -850,7 +850,12 @@
         "dialogDescription": "This restores the deleted AD object to its last known location.",
         "pageTitle": "Restore deleted object",
         "pageDescription": "Restore the deleted AD object to its last known location.",
-        "confirmLabel": "Type the object name to restore it.",
+        "confirmLabel": "Type the sAMAccountName value to restore it.",
+        "confirmation": {
+          "fallbackLabel": "Type the confirmation value to restore it.",
+          "samAccountNameHint": "Type the sAMAccountName value to continue: {{value}}",
+          "fallbackHint": "Type the object value to continue: {{value}}"
+        },
         "targetLocation": "Restore target location",
         "restoredRdn": "Restored RDN",
         "restoredDistinguishedName": "Restored DN",

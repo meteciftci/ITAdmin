@@ -341,7 +341,18 @@ public sealed class AdManagementController(
             return BadRequest(new { message = "Geçersiz silinen nesne kimliği." });
         }
 
-        var restoreTargetMode = body?.RestoreTargetMode ?? AppModels.AdDeletedObjectRestoreTargetMode.OriginalLocation;
+        if (!AdDeletedObjectRestoreTargetModeParser.TryParse(
+                body?.RestoreTargetMode,
+                out var restoreTargetMode))
+        {
+            return BadRequest(new { message = "Geçersiz geri yükleme hedef modu." });
+        }
+
+        if (restoreTargetMode == AppModels.AdDeletedObjectRestoreTargetMode.TargetPath
+            && string.IsNullOrWhiteSpace(body?.TargetPathDistinguishedName))
+        {
+            return BadRequest(new { message = "Farklı OU'ya geri yüklemek için hedef OU seçilmelidir." });
+        }
 
         var result = await adDeletedObjectRestoreService.RestoreDeletedObjectAsync(
             new AppModels.AdDeletedObjectRestoreRequest(
@@ -351,7 +362,7 @@ public sealed class AdManagementController(
                 ResolveIpAddress(),
                 ResolveUserAgent(),
                 restoreTargetMode,
-                body?.TargetPathDistinguishedName),
+                body?.TargetPathDistinguishedName?.Trim()),
             cancellationToken);
 
         if (!result.IsSuccess || result.RestoredObject is null)

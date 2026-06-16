@@ -343,14 +343,43 @@ public sealed class AdDeletedObjectRestoreTests
     [Fact]
     public void DeletedObjectRestoreEndpoint_AcceptsOptionalRequestBody()
     {
-        var source = File.ReadAllText(
+        var controllerSource = File.ReadAllText(
             Path.Combine(
                 FindRepositoryRoot(),
                 "backend/src/SasPortal.Api/Controllers/AdManagementController.cs"));
+        var contractSource = File.ReadAllText(
+            Path.Combine(
+                FindRepositoryRoot(),
+                "backend/src/SasPortal.Api/Contracts/AdManagement/AdDeletedObjectRestoreRequestBody.cs"));
 
-        Assert.Contains("AdDeletedObjectRestoreRequestBody? body", source, StringComparison.Ordinal);
-        Assert.Contains("body?.RestoreTargetMode ?? AppModels.AdDeletedObjectRestoreTargetMode.OriginalLocation", source, StringComparison.Ordinal);
-        Assert.Contains("body?.TargetPathDistinguishedName", source, StringComparison.Ordinal);
+        Assert.Contains("AdDeletedObjectRestoreRequestBody? body", controllerSource, StringComparison.Ordinal);
+        Assert.Contains("AdDeletedObjectRestoreTargetModeParser.TryParse", controllerSource, StringComparison.Ordinal);
+        Assert.Contains("Geçersiz geri yükleme hedef modu.", controllerSource, StringComparison.Ordinal);
+        Assert.Contains("Farklı OU'ya geri yüklemek için hedef OU seçilmelidir.", controllerSource, StringComparison.Ordinal);
+        Assert.Contains("string? RestoreTargetMode", contractSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("AdDeletedObjectRestoreTargetMode? RestoreTargetMode", contractSource, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(null, AdDeletedObjectRestoreTargetMode.OriginalLocation, true)]
+    [InlineData("", AdDeletedObjectRestoreTargetMode.OriginalLocation, true)]
+    [InlineData("OriginalLocation", AdDeletedObjectRestoreTargetMode.OriginalLocation, true)]
+    [InlineData("originallocation", AdDeletedObjectRestoreTargetMode.OriginalLocation, true)]
+    [InlineData("TargetPath", AdDeletedObjectRestoreTargetMode.TargetPath, true)]
+    [InlineData("targetpath", AdDeletedObjectRestoreTargetMode.TargetPath, true)]
+    [InlineData("InvalidMode", AdDeletedObjectRestoreTargetMode.OriginalLocation, false)]
+    public void AdDeletedObjectRestoreTargetModeParser_ParsesKnownValuesCaseInsensitively(
+        string? input,
+        AdDeletedObjectRestoreTargetMode expected,
+        bool expectedSuccess)
+    {
+        var success = AdDeletedObjectRestoreTargetModeParser.TryParse(input, out var parsed);
+
+        Assert.Equal(expectedSuccess, success);
+        if (expectedSuccess)
+        {
+            Assert.Equal(expected, parsed);
+        }
     }
 
     [Fact]

@@ -1,5 +1,33 @@
 const DELETED_OBJECT_RESTORE_RDN_MARKER_PATTERN = /ADEL:|\\0ADEL|\0/iu;
 
+export function containsDeletedObjectRestoreNameMarker(value: string): boolean {
+  return DELETED_OBJECT_RESTORE_RDN_MARKER_PATTERN.test(value);
+}
+
+export function getAdDeletedObjectRestoreConfirmationValue(item: {
+  id: string;
+  samAccountName?: string | null;
+  name?: string | null;
+  displayName?: string | null;
+}): { value: string; usesSamAccountName: boolean } {
+  const samAccountName = item.samAccountName?.trim();
+  if (samAccountName) {
+    return { value: samAccountName, usesSamAccountName: true };
+  }
+
+  const name = item.name?.trim();
+  if (name && !containsDeletedObjectRestoreNameMarker(name)) {
+    return { value: name, usesSamAccountName: false };
+  }
+
+  const displayName = item.displayName?.trim();
+  if (displayName && !containsDeletedObjectRestoreNameMarker(displayName)) {
+    return { value: displayName, usesSamAccountName: false };
+  }
+
+  return { value: item.id.trim(), usesSamAccountName: false };
+}
+
 export function normalizeDeletedObjectRestoreRdn(lastKnownRdn: string | null | undefined): string | null {
   if (!lastKnownRdn?.trim()) {
     return null;

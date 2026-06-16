@@ -94,26 +94,40 @@ describe("deleted object restore detail actions", () => {
   });
 });
 
+describe("deleted object restore confirmation value", () => {
+  const utilsSource = readFileSync(
+    new URL("./ad-deleted-object-restore-utils.ts", import.meta.url),
+    "utf8",
+  );
+
+  it("defines sAMAccountName-first confirmation resolver", () => {
+    assert.match(utilsSource, /getAdDeletedObjectRestoreConfirmationValue/);
+    assert.match(utilsSource, /samAccountName/);
+    assert.match(utilsSource, /displayName/);
+    assert.match(utilsSource, /containsDeletedObjectRestoreNameMarker/);
+  });
+});
+
 describe("deleted object restore page workflow", () => {
   const restorePageSource = readFileSync(
     new URL("./AdDeletedObjectRestorePage.tsx", import.meta.url),
     "utf8",
   );
 
-  it("loads detail and uses typed confirmation from primary label", () => {
+  it("loads detail and uses typed confirmation from sAMAccountName-first value", () => {
     assert.match(restorePageSource, /getAdDeletedObjectById/);
-    assert.match(restorePageSource, /getAdDeletedObjectPrimaryLabel/);
+    assert.match(restorePageSource, /getAdDeletedObjectRestoreConfirmationValue/);
+    assert.match(restorePageSource, /usesSamAccountName/);
     assert.match(restorePageSource, /confirmValue\.trim\(\)\.toLowerCase\(\)/);
     assert.match(restorePageSource, /canRestoreDeletedObject/);
   });
 
-  it("submits restore with target mode payload and handles success navigation", () => {
+  it("submits restore payloads aligned with backend contract", () => {
     assert.match(restorePageSource, /restoreAdDeletedObject/);
-    assert.match(restorePageSource, /restoreTargetMode/);
-    assert.match(restorePageSource, /OriginalLocation/);
-    assert.match(restorePageSource, /TargetPath/);
-    assert.match(restorePageSource, /AdOuSearchCombobox/);
+    assert.match(restorePageSource, /restoreTargetMode: "TargetPath"/);
     assert.match(restorePageSource, /targetPathDistinguishedName/);
+    assert.match(restorePageSource, /return restoreAdDeletedObject\(id!\);/);
+    assert.match(restorePageSource, /AdOuSearchCombobox/);
     assert.match(restorePageSource, /isTargetPathReady/);
     assert.match(restorePageSource, /expectedDistinguishedName/);
     assert.match(restorePageSource, /invalidateAdManagementDeletedObjectRestoreQueries/);
@@ -167,8 +181,20 @@ describe("deleted object restore i18n", () => {
       "Silinen AD nesnesini son bilinen konumuna geri yükleyin.",
     );
     assert.equal(
+      trAdManagement.adManagement.deletedObjects.restore.confirmLabel,
+      "Geri yüklemek için sAMAccountName değerini yazın.",
+    );
+    assert.equal(
       trAdManagement.adManagement.deletedObjects.restore.actions.submit,
       "Geri Yükle",
+    );
+    assert.equal(
+      trAdManagement.adManagement.deletedObjects.restore.confirmation.fallbackHint,
+      "Devam etmek için nesne değerini yazın: {{value}}",
+    );
+    assert.equal(
+      trAdManagement.adManagement.deletedObjects.restore.confirmation.samAccountNameHint,
+      "Devam etmek için sAMAccountName değerini yazın: {{value}}",
     );
     assert.equal(
       trAdManagement.adManagement.deletedObjects.success.restore,
@@ -199,6 +225,10 @@ describe("deleted object restore i18n", () => {
       "Restore the deleted AD object to its last known location.",
     );
     assert.equal(
+      enAdManagement.adManagement.deletedObjects.restore.confirmLabel,
+      "Type the sAMAccountName value to restore it.",
+    );
+    assert.equal(
       enAdManagement.adManagement.deletedObjects.restore.actions.submit,
       "Restore",
     );
@@ -221,6 +251,14 @@ describe("deleted object restore i18n", () => {
     assert.equal(
       enAdManagement.adManagement.deletedObjects.restore.errors.targetPathRequired,
       "Select a target OU to restore to another location.",
+    );
+    assert.equal(
+      enAdManagement.adManagement.deletedObjects.restore.confirmation.samAccountNameHint,
+      "Type the sAMAccountName value to continue: {{value}}",
+    );
+    assert.equal(
+      enAdManagement.adManagement.deletedObjects.restore.confirmation.fallbackHint,
+      "Type the object value to continue: {{value}}",
     );
   });
 

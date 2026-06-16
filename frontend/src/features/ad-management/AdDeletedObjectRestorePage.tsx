@@ -16,12 +16,12 @@ import { buttonVariants } from "@/components/ui/button-variants";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AD_DELETED_OBJECTS_LIST_PATH } from "@/features/ad-management/ad-deleted-objects-list-query";
-import { getAdDeletedObjectPrimaryLabel } from "@/features/ad-management/ad-deleted-object-display-labels";
 import { getAdDeletedObjectTypeLabel } from "@/features/ad-management/ad-deleted-object-labels";
 import { canRestoreDeletedObject } from "@/features/ad-management/ad-deleted-object-restore-eligibility";
 import type { AdDeletedObjectRestoreTargetMode } from "@/features/ad-management/ad-deleted-object-restore-types";
 import {
   buildExpectedRestoredDistinguishedName,
+  getAdDeletedObjectRestoreConfirmationValue,
   normalizeDeletedObjectRestoreRdn,
   resolveDeletedObjectOuSearchContext,
 } from "@/features/ad-management/ad-deleted-object-restore-utils";
@@ -89,8 +89,8 @@ export function AdDeletedObjectRestorePage() {
   });
 
   const detail = detailQuery.data;
-  const primaryLabel = detail ? getAdDeletedObjectPrimaryLabel(detail) : "";
-  const expectedConfirmValue = primaryLabel.trim();
+  const confirmation = detail ? getAdDeletedObjectRestoreConfirmationValue(detail) : null;
+  const expectedConfirmValue = confirmation?.value ?? "";
   const isConfirmMatch =
     expectedConfirmValue.length > 0
     && confirmValue.trim().toLowerCase() === expectedConfirmValue.toLowerCase();
@@ -123,15 +123,14 @@ export function AdDeletedObjectRestorePage() {
 
   const restoreMutation = useMutation({
     mutationFn: () => {
-      const payload =
-        restoreTargetMode === "TargetPath"
-          ? {
-              restoreTargetMode,
-              targetPathDistinguishedName: targetPathDistinguishedName?.trim() ?? "",
-            }
-          : { restoreTargetMode: "OriginalLocation" as const };
+      if (restoreTargetMode === "TargetPath") {
+        return restoreAdDeletedObject(id!, {
+          restoreTargetMode: "TargetPath",
+          targetPathDistinguishedName: targetPathDistinguishedName?.trim() ?? "",
+        });
+      }
 
-      return restoreAdDeletedObject(id!, payload);
+      return restoreAdDeletedObject(id!);
     },
     onSuccess: async (response) => {
       if (!response.success) {
@@ -168,7 +167,7 @@ export function AdDeletedObjectRestorePage() {
     );
   }
 
-  const pageDescription = primaryLabel || detail?.distinguishedName || undefined;
+  const pageDescription = detail?.displayName?.trim() || detail?.name?.trim() || detail?.distinguishedName || undefined;
 
   return (
     <AdManagementModuleStateGuard>
@@ -370,7 +369,9 @@ export function AdDeletedObjectRestorePage() {
             <SectionCard title={t("adManagement:deletedObjects.restore.dialogTitle")}>
               <div className="space-y-2">
                 <Label htmlFor="restore-deleted-object-confirm">
-                  {t("adManagement:deletedObjects.restore.confirmLabel")}
+                  {confirmation?.usesSamAccountName
+                    ? t("adManagement:deletedObjects.restore.confirmLabel")
+                    : t("adManagement:deletedObjects.restore.confirmation.fallbackLabel")}
                 </Label>
                 <Input
                   id="restore-deleted-object-confirm"
@@ -380,6 +381,15 @@ export function AdDeletedObjectRestorePage() {
                   autoComplete="off"
                   disabled={restoreMutation.isPending}
                 />
+                <p className="text-xs text-muted-foreground">
+                  {confirmation?.usesSamAccountName
+                    ? t("adManagement:deletedObjects.restore.confirmation.samAccountNameHint", {
+                        value: expectedConfirmValue,
+                      })
+                    : t("adManagement:deletedObjects.restore.confirmation.fallbackHint", {
+                        value: expectedConfirmValue,
+                      })}
+                </p>
               </div>
             </SectionCard>
 
