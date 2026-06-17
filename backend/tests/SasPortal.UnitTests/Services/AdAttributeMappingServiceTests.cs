@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SasPortal.Application.Common.AdManagement;
+using SasPortal.Application.Common.Constants;
 using SasPortal.Application.Common.Models;
 using SasPortal.Persistence.Context;
 using SasPortal.Persistence.Services;
@@ -64,7 +65,7 @@ public sealed class AdAttributeMappingServiceTests
 
         var duplicate = await service.CreateAsync(CreateRequest("mobilePhone", "Tel No 2", "telephoneNumber"));
         Assert.False(duplicate.IsSuccess);
-        Assert.Contains("already exists", duplicate.MessageKey, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(AdManagementApiMessageKeys.AttributeMappings.DuplicateLogicalField, duplicate.MessageKey);
         Assert.Single(dbContext.AdAttributeMappings);
     }
 
@@ -111,7 +112,7 @@ public sealed class AdAttributeMappingServiceTests
         var result = await service.CreateAsync(CreateRequest("workMail", "Work Mail", attributeName));
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(AdReservedCoreAttributes.ReservedAttributeMappingMessage, result.MessageKey);
+        Assert.Equal(AdReservedCoreAttributes.ReservedAttributeMappingMessageKey, result.MessageKey);
         Assert.Empty(dbContext.AdAttributeMappings);
     }
 

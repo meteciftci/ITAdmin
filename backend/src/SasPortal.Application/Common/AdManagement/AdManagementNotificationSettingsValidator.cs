@@ -14,20 +14,20 @@ public static class AdManagementNotificationSettingsValidator
             var eventKey = rule.EventKey?.Trim() ?? string.Empty;
             if (!AdManagementNotificationEventKeys.All.Contains(eventKey))
             {
-                return "Bildirim olayı geçersiz.";
+                return AdManagementApiMessageKeys.NotificationSettings.InvalidEvent;
             }
 
             var channel = rule.Channel?.Trim() ?? string.Empty;
             if (!string.Equals(channel, NotificationChannels.Sms, StringComparison.OrdinalIgnoreCase)
                 && !string.Equals(channel, NotificationChannels.Email, StringComparison.OrdinalIgnoreCase))
             {
-                return "Bildirim kanalı geçersiz.";
+                return AdManagementApiMessageKeys.NotificationSettings.InvalidChannel;
             }
 
             var duplicateKey = $"{eventKey}|{channel}";
             if (!seenKeys.Add(duplicateKey))
             {
-                return "Aynı olay ve kanal için zaten bildirim kuralı var.";
+                return AdManagementApiMessageKeys.NotificationSettings.DuplicateRule;
             }
         }
 
@@ -50,7 +50,7 @@ public static class AdManagementNotificationSettingsValidator
     {
         if (source is null || string.IsNullOrWhiteSpace(source.Type))
         {
-            return "Alıcı kaynağı zorunludur.";
+            return AdManagementApiMessageKeys.NotificationSettings.RecipientSourceRequired;
         }
 
         var type = source.Type.Trim();
@@ -61,7 +61,7 @@ public static class AdManagementNotificationSettingsValidator
             if (type is not AdManagementNotificationRecipientSourceTypes.MappedAttribute
                 and not AdManagementNotificationRecipientSourceTypes.AdAttribute)
             {
-                return "SMS alıcı kaynağı geçersiz.";
+                return AdManagementApiMessageKeys.NotificationSettings.InvalidSmsRecipientSource;
             }
         }
         else if (type is not AdManagementNotificationRecipientSourceTypes.MappedAttribute
@@ -69,7 +69,7 @@ public static class AdManagementNotificationSettingsValidator
                  and not AdManagementNotificationRecipientSourceTypes.UserPrincipalName
                  and not AdManagementNotificationRecipientSourceTypes.MailAttribute)
         {
-            return "E-posta alıcı kaynağı geçersiz.";
+            return AdManagementApiMessageKeys.NotificationSettings.InvalidEmailRecipientSource;
         }
 
         if (type is AdManagementNotificationRecipientSourceTypes.MappedAttribute
@@ -77,7 +77,7 @@ public static class AdManagementNotificationSettingsValidator
         {
             if (string.IsNullOrWhiteSpace(source.Value))
             {
-                return "Alıcı kaynağı değeri zorunludur.";
+                return AdManagementApiMessageKeys.NotificationSettings.RecipientSourceValueRequired;
             }
         }
 

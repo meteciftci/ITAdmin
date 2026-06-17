@@ -1,9 +1,11 @@
+using SasPortal.Application.Common.Constants;
+
 namespace SasPortal.Application.Common.AdManagement;
 
 public static class AdReservedCoreAttributes
 {
-    public const string ReservedAttributeMappingMessage =
-        "Bu AD attribute temel kullanıcı bilgisi veya sistem alanı olarak yönetiliyor. Mapped attributes içinde kullanılamaz.";
+    public const string ReservedAttributeMappingMessageKey =
+        AdManagementApiMessageKeys.MappedAttributes.ReservedAttribute;
 
     private static readonly HashSet<string> ReservedAttributeNames = new(StringComparer.OrdinalIgnoreCase)
     {

@@ -1013,6 +1013,45 @@
         "invalidRequest": "Geçersiz istek.",
         "ldapsRequired": "AD işlemleri için LDAPS bağlantısı zorunludur. Lütfen AD yönetim ayarlarında SSL'i etkinleştirin."
       },
+      "settings": {
+        "updateSucceeded": "AD yönetim ayarları güncellendi.",
+        "serviceAccountPasswordRequired": "AD yönetimi etkinken servis hesabı parolası zorunludur.",
+        "missingRequiredFields": "AD yönetim ayarları için zorunlu alanlar eksik.",
+        "ldapPortOutOfRange": "LDAP portu 1 ile 65535 arasında olmalıdır.",
+        "powerShellTimeoutOutOfRange": "PowerShell zaman aşımı 5 ile 300 saniye arasında olmalıdır.",
+        "defaultUpnSuffixInvalid": "Varsayılan kullanıcı oluşturma UPN soneki geçerli bir alan adı soneki olmalıdır."
+      },
+      "notificationSettings": {
+        "invalidEvent": "Bildirim olayı geçersiz.",
+        "invalidChannel": "Bildirim kanalı geçersiz.",
+        "duplicateRule": "Aynı olay ve kanal için zaten bildirim kuralı var.",
+        "recipientSourceRequired": "Alıcı kaynağı zorunludur.",
+        "invalidSmsRecipientSource": "SMS alıcı kaynağı geçersiz.",
+        "invalidEmailRecipientSource": "E-posta alıcı kaynağı geçersiz.",
+        "recipientSourceValueRequired": "Alıcı kaynağı değeri zorunludur."
+      },
+      "mappedAttributes": {
+        "invalidLogicalField": "Eşleştirilmiş attribute alanı geçersiz.",
+        "notEditable": "Eşleştirilmiş attribute düzenlenemez: {{logicalField}}.",
+        "notFound": "Eşleştirilmiş attribute bulunamadı: {{logicalField}}.",
+        "reservedAttribute": "Bu AD attribute temel kullanıcı bilgisi veya sistem alanı olarak yönetiliyor. Mapped attributes içinde kullanılamaz.",
+        "invalidAttributeName": "AD attribute adı geçersiz: {{attributeName}}.",
+        "invalidPhoneFormat": "Telefon formatı geçersiz.",
+        "invalidEmailFormat": "E-posta formatı geçersiz.",
+        "invalidNumberFormat": "Sayı formatı geçersiz."
+      },
+      "attributeMappings": {
+        "logicalFieldInvalid": "Logical field geçersiz.",
+        "displayNameRequired": "Görünen ad zorunludur.",
+        "displayNameTooLong": "Görünen ad çok uzun.",
+        "attributeNameInvalid": "Attribute adı geçersiz.",
+        "validationTypeInvalid": "Doğrulama tipi geçersiz.",
+        "duplicateLogicalField": "Bu logical field için zaten bir attribute eşleştirmesi var.",
+        "notFound": "Attribute eşleştirmesi bulunamadı.",
+        "createSuccess": "Attribute eşleştirmesi oluşturuldu.",
+        "updateSuccess": "Attribute eşleştirmesi güncellendi.",
+        "deleteSuccess": "Attribute eşleştirmesi silindi."
+      },
       "settingsValidation": {
         "missingRequiredSettings": "AD yönetim ayarları için zorunlu alanlar eksik.",
         "serviceAccountBindFailed": "AD yönetim servis hesabı ile bağlantı kurulamadı. NetBIOS domain adı, servis hesabı kullanıcı adı veya parola hatalı olabilir.",
@@ -1029,7 +1068,7 @@
       "users": {
         "notFound": "AD kullanıcısı bulunamadı.",
         "queryFailed": "AD kullanıcıları okunamadı.",
-        "createSuccess": "AD kullanıcısı oluşturuldu.",
+        "createSuccess": "AD kullanıcısı oluşturuldu: {{displayName}} ({{samAccountName}}).",
         "createFailed": "AD kullanıcısı oluşturulamadı.",
         "updateFailed": "AD kullanıcısı güncellenemedi.",
         "ouMoveSuccess": "Kullanıcı seçilen OU'ya taşındı.",
@@ -1059,7 +1098,16 @@
         "notInGroup": "Kullanıcı bu grupta değil.",
         "effectiveGroupsFailed": "Etkin grup üyelikleri okunamadı.",
         "effectiveGroupsMaxDepthOutOfRange": "maxDepth değeri {{min}} ile {{max}} arasında olmalıdır.",
-        "invalidUserId": "Geçersiz kullanıcı kimliği."
+        "invalidUserId": "Geçersiz kullanıcı kimliği.",
+        "givenNameRequired": "Ad zorunludur.",
+        "surnameRequired": "Soyad zorunludur.",
+        "displayNameRequired": "Görünen ad zorunludur.",
+        "initialPasswordRequired": "İlk parola zorunludur.",
+        "samAccountNameRequired": "Kullanıcı adı (sAMAccountName) zorunludur.",
+        "samAccountNameTooLong": "Kullanıcı adı (sAMAccountName) en fazla 20 karakter olabilir.",
+        "samAccountNameInvalidCharacters": "Kullanıcı adı (sAMAccountName) geçersiz karakterler içeriyor.",
+        "upnRequired": "UPN (userPrincipalName) zorunludur.",
+        "upnInvalid": "UPN (userPrincipalName) geçerli bir e-posta benzeri formatta olmalıdır."
       },
       "groups": {
         "notFound": "AD grubu bulunamadı.",
@@ -1081,7 +1129,14 @@
         "memberNotInGroup": "Üye bu grupta doğrudan üye değil.",
         "selfMembership": "Grup kendisine üye yapılamaz.",
         "invalidGroupId": "Geçersiz grup kimliği.",
-        "groupDnRequired": "Grup kimliği zorunludur."
+        "groupDnRequired": "Grup kimliği zorunludur.",
+        "displayNameRequired": "Görünen ad zorunludur.",
+        "technicalNameRequired": "Grup teknik adı zorunludur.",
+        "groupScopeRequired": "Grup kapsamı zorunludur.",
+        "invalidGroupScope": "Grup kapsamı geçersiz.",
+        "samAccountNameRequired": "sAMAccountName zorunludur.",
+        "samAccountNameTooLong": "sAMAccountName en fazla 64 karakter olabilir.",
+        "samAccountNameInvalidCharacters": "sAMAccountName geçersiz karakterler içeriyor."
       },
       "computers": {
         "notFound": "AD bilgisayarı bulunamadı.",

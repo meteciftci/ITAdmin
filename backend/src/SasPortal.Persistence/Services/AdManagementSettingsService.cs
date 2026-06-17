@@ -24,8 +24,6 @@ public sealed class AdManagementSettingsService(
     private const int LdapPortMax = 65535;
     private const int PowerShellTimeoutMin = 5;
     private const int PowerShellTimeoutMax = 300;
-    private const string MissingRequiredFieldsMessage =
-        "AD yönetim ayarları için zorunlu alanlar eksik.";
 
     public async Task<AdManagementSettingsModel> GetSettingsAsync(CancellationToken cancellationToken = default)
     {
@@ -41,9 +39,9 @@ public sealed class AdManagementSettingsService(
         UpdateAdManagementSettingsRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (!ValidateUpdateRequest(request, out var validationMessage))
+        if (!ValidateUpdateRequest(request, out var validationMessageKey))
         {
-            return new UpdateAdManagementSettingsResult(false, validationMessage, null);
+            return new UpdateAdManagementSettingsResult(false, validationMessageKey, null);
         }
 
         var notificationSettings = request.NotificationSettings
@@ -91,7 +89,7 @@ public sealed class AdManagementSettingsService(
             {
                 return new UpdateAdManagementSettingsResult(
                     false,
-                    MissingRequiredFieldsMessage,
+                    AdManagementApiMessageKeys.Settings.MissingRequiredFields,
                     null);
             }
 
@@ -101,7 +99,7 @@ public sealed class AdManagementSettingsService(
             {
                 return new UpdateAdManagementSettingsResult(
                     false,
-                    "Service account password is required when AD management is enabled.",
+                    AdManagementApiMessageKeys.Settings.ServiceAccountPasswordRequired,
                     null);
             }
         }
@@ -306,7 +304,7 @@ public sealed class AdManagementSettingsService(
         var fresh = await GetSettingsAsync(cancellationToken);
         return new UpdateAdManagementSettingsResult(
             true,
-            "AD management settings updated.",
+            AdManagementApiMessageKeys.Settings.UpdateSucceeded,
             fresh,
             validationResult);
     }
@@ -573,17 +571,17 @@ public sealed class AdManagementSettingsService(
         return $"{settings.Rules.Count} rules ({enabled} enabled)";
     }
 
-    private static bool ValidateUpdateRequest(UpdateAdManagementSettingsRequest request, out string message)
+    private static bool ValidateUpdateRequest(UpdateAdManagementSettingsRequest request, out string messageKey)
     {
         if (request.LdapPort is < LdapPortMin or > LdapPortMax)
         {
-            message = "LDAP port must be between 1 and 65535.";
+            messageKey = AdManagementApiMessageKeys.Settings.LdapPortOutOfRange;
             return false;
         }
 
         if (request.PowerShellTimeoutSeconds is < PowerShellTimeoutMin or > PowerShellTimeoutMax)
         {
-            message = "PowerShell timeout must be between 5 and 300 seconds.";
+            messageKey = AdManagementApiMessageKeys.Settings.PowerShellTimeoutOutOfRange;
             return false;
         }
 
@@ -593,12 +591,12 @@ public sealed class AdManagementSettingsService(
             if (string.IsNullOrWhiteSpace(normalized)
                 || !AdDefaultUpnSuffixNormalizer.IsValidFormat(normalized))
             {
-                message = "Default user creation UPN suffix must be a valid domain suffix.";
+                messageKey = AdManagementApiMessageKeys.Settings.DefaultUpnSuffixInvalid;
                 return false;
             }
         }
 
-        message = string.Empty;
+        messageKey = string.Empty;
         return true;
     }
 

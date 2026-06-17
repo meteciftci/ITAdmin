@@ -7,17 +7,17 @@ namespace SasPortal.UnitTests.AdManagement;
 public sealed class AdUpdateUserInfrastructureTests
 {
     [Fact]
-    public void GetLdapsRequiredErrorMessage_WhenSslDisabled_ReturnsUserFriendlyMessage()
+    public void GetLdapsRequiredMessageKey_WhenSslDisabled_ReturnsMessageKey()
     {
-        var message = AdDirectoryConnectionRequirements.GetLdapsRequiredErrorMessage(useSsl: false);
+        var messageKey = AdDirectoryConnectionRequirements.GetLdapsRequiredMessageKey(useSsl: false);
 
-        Assert.Equal(AdDirectoryConnectionRequirements.LdapsRequiredMessage, message);
+        Assert.Equal(AdManagementApiMessageKeys.Common.LdapsRequired, messageKey);
     }
 
     [Fact]
-    public void GetLdapsRequiredErrorMessage_WhenSslEnabled_ReturnsNull()
+    public void GetLdapsRequiredMessageKey_WhenSslEnabled_ReturnsNull()
     {
-        Assert.Null(AdDirectoryConnectionRequirements.GetLdapsRequiredErrorMessage(useSsl: true));
+        Assert.Null(AdDirectoryConnectionRequirements.GetLdapsRequiredMessageKey(useSsl: true));
     }
 
     [Fact]
@@ -27,7 +27,7 @@ public sealed class AdUpdateUserInfrastructureTests
     }
 
     [Fact]
-    public void TryValidate_WhenSamAccountNameTooLong_ReturnsInvalidRequestMessage()
+    public void TryValidate_WhenSamAccountNameTooLong_ReturnsMessageKey()
     {
         var mappings = Array.Empty<AdAttributeMappingItem>();
         var request = new UpdateAdUserRequest(
@@ -45,10 +45,14 @@ public sealed class AdUpdateUserInfrastructureTests
             null,
             null);
 
-        var isValid = AdUpdateUserRequestValidator.TryValidate(request, mappings, out var message);
+        var isValid = AdUpdateUserRequestValidator.TryValidate(
+            request,
+            mappings,
+            out var messageKey,
+            out _);
 
         Assert.False(isValid);
-        Assert.Equal(AdSamAccountNameValidator.TooLongMessage, message);
+        Assert.Equal(AdManagementApiMessageKeys.Users.SamAccountNameTooLong, messageKey);
     }
 
     [Fact]
@@ -60,7 +64,7 @@ public sealed class AdUpdateUserInfrastructureTests
     }
 
     [Fact]
-    public void TryValidate_WhenMappedFieldUsesReservedCoreAttribute_ReturnsError()
+    public void TryValidate_WhenMappedFieldUsesReservedCoreAttribute_ReturnsMessageKey()
     {
         var mappings = new[]
         {
@@ -93,14 +97,18 @@ public sealed class AdUpdateUserInfrastructureTests
             null,
             null);
 
-        var isValid = AdUpdateUserRequestValidator.TryValidate(request, mappings, out var message);
+        var isValid = AdUpdateUserRequestValidator.TryValidate(
+            request,
+            mappings,
+            out var messageKey,
+            out _);
 
         Assert.False(isValid);
-        Assert.Equal(AdReservedCoreAttributes.ReservedAttributeMappingMessage, message);
+        Assert.Equal(AdReservedCoreAttributes.ReservedAttributeMappingMessageKey, messageKey);
     }
 
     [Fact]
-    public void TryValidate_WhenMappedFieldNotEditable_ReturnsError()
+    public void TryValidate_WhenMappedFieldNotEditable_ReturnsMessageKey()
     {
         var mappings = new[]
         {
@@ -133,10 +141,16 @@ public sealed class AdUpdateUserInfrastructureTests
             null,
             null);
 
-        var isValid = AdUpdateUserRequestValidator.TryValidate(request, mappings, out var message);
+        var isValid = AdUpdateUserRequestValidator.TryValidate(
+            request,
+            mappings,
+            out var messageKey,
+            out var messageParams);
 
         Assert.False(isValid);
-        Assert.Contains("mobilePhone", message, StringComparison.Ordinal);
+        Assert.Equal(AdManagementApiMessageKeys.MappedAttributes.NotEditable, messageKey);
+        Assert.NotNull(messageParams);
+        Assert.Equal("mobilePhone", messageParams!["logicalField"]);
     }
 
     [Fact]

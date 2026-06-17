@@ -7,7 +7,8 @@ public static class AdUpdateUserMappedAttributeValidator
     public static bool TryValidate(
         IReadOnlyList<UpdateAdUserMappedAttributeRequest> mappedAttributes,
         IReadOnlyList<AdAttributeMappingItem> mappings,
-        out string message) =>
+        out string messageKey,
+        out IReadOnlyDictionary<string, object>? messageParams) =>
         AdCreateUserMappedAttributeValidator.TryValidate(
             mappedAttributes
                 .Select(static attribute => new CreateAdUserMappedAttributeRequest(
@@ -15,5 +16,6 @@ public static class AdUpdateUserMappedAttributeValidator
                     attribute.Value))
                 .ToList(),
             mappings,
-            out message);
+            out messageKey,
+            out messageParams);
 }

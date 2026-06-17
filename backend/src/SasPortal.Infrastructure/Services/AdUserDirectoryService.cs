@@ -238,7 +238,7 @@ public sealed partial class AdUserDirectoryService(
                     : AdDirectoryFailureKind.NotConfigured);
         }
 
-        var ldapsError = AdDirectoryConnectionRequirements.GetLdapsRequiredErrorMessage(connection.UseSsl);
+        var ldapsError = AdDirectoryConnectionRequirements.GetLdapsRequiredMessageKey(connection.UseSsl);
         if (ldapsError is not null)
         {
             return ConnectionResolveResult.Failed(

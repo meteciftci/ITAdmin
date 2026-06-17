@@ -1,4 +1,5 @@
 using SasPortal.Application.Common.AdManagement;
+using SasPortal.Application.Common.Constants;
 using SasPortal.Application.Common.Models;
 
 namespace SasPortal.UnitTests.AdManagement;
@@ -39,10 +40,12 @@ public sealed class AdCreateUserMappedAttributeValidatorTests
         var isValid = AdCreateUserMappedAttributeValidator.TryValidate(
             [new CreateAdUserMappedAttributeRequest("employeeId", "123")],
             Mappings,
-            out var message);
+            out var messageKey,
+            out var messageParams);
 
         Assert.False(isValid);
-        Assert.Contains("employeeId", message, StringComparison.Ordinal);
+        Assert.Equal(AdManagementApiMessageKeys.MappedAttributes.NotEditable, messageKey);
+        Assert.Equal("employeeId", messageParams!["logicalField"]);
     }
 
     [Fact]
@@ -51,10 +54,11 @@ public sealed class AdCreateUserMappedAttributeValidatorTests
         var isValid = AdCreateUserMappedAttributeValidator.TryValidate(
             [new CreateAdUserMappedAttributeRequest("mobilePhone", "abc")],
             Mappings,
-            out var message);
+            out var messageKey,
+            out _);
 
         Assert.False(isValid);
-        Assert.Contains("Telefon", message, StringComparison.Ordinal);
+        Assert.Equal(AdManagementApiMessageKeys.MappedAttributes.InvalidPhoneFormat, messageKey);
     }
 
     [Fact]
@@ -79,9 +83,11 @@ public sealed class AdCreateUserMappedAttributeValidatorTests
         var isValid = AdCreateUserMappedAttributeValidator.TryValidate(
             [new CreateAdUserMappedAttributeRequest("secretField", "x")],
             mappings,
+            out var messageKey,
             out _);
 
         Assert.False(isValid);
+        Assert.Equal(AdReservedCoreAttributes.ReservedAttributeMappingMessageKey, messageKey);
     }
 
     [Fact]
@@ -90,9 +96,10 @@ public sealed class AdCreateUserMappedAttributeValidatorTests
         var isValid = AdCreateUserMappedAttributeValidator.TryValidate(
             [new CreateAdUserMappedAttributeRequest("mobilePhone", "+905551112233")],
             Mappings,
-            out var message);
+            out var messageKey,
+            out _);
 
         Assert.True(isValid);
-        Assert.Empty(message);
+        Assert.Empty(messageKey);
     }
 }

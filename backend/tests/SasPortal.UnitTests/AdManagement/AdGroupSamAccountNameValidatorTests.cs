@@ -1,4 +1,5 @@
 using SasPortal.Application.Common.AdManagement;
+using SasPortal.Application.Common.Constants;
 
 namespace SasPortal.UnitTests.AdManagement;
 
@@ -7,10 +8,10 @@ public sealed class AdGroupSamAccountNameValidatorTests
     [Fact]
     public void IsValid_RejectsEmptySamAccountName()
     {
-        var isValid = AdGroupSamAccountNameValidator.IsValid("  ", out var message);
+        var isValid = AdGroupSamAccountNameValidator.IsValid("  ", out var messageKey);
 
         Assert.False(isValid);
-        Assert.Equal(AdGroupSamAccountNameValidator.EmptyMessage, message);
+        Assert.Equal(AdManagementApiMessageKeys.Groups.SamAccountNameRequired, messageKey);
     }
 
     [Fact]
@@ -18,10 +19,10 @@ public sealed class AdGroupSamAccountNameValidatorTests
     {
         var value = new string('a', AdGroupNameNormalizer.SamAccountNameMaxLength + 1);
 
-        var isValid = AdGroupSamAccountNameValidator.IsValid(value, out var message);
+        var isValid = AdGroupSamAccountNameValidator.IsValid(value, out var messageKey);
 
         Assert.False(isValid);
-        Assert.Equal(AdGroupSamAccountNameValidator.TooLongMessage, message);
+        Assert.Equal(AdManagementApiMessageKeys.Groups.SamAccountNameTooLong, messageKey);
     }
 
     [Fact]

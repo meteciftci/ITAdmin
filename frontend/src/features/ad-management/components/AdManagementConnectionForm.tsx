@@ -12,6 +12,7 @@ import {
   buildUpdateAdManagementSettingsPayload,
   defaultAdManagementNotificationSettings,
 } from "@/features/ad-management/ad-management-settings-payload";
+import { resolveAdManagementApiMessage } from "@/features/ad-management/ad-management-api-message";
 import type {
   AdManagementSettings,
   UpdateAdManagementSettingsRequest,
@@ -85,6 +86,26 @@ function parsePreferredDcs(value: string): string[] {
     result.push(line);
   }
   return result;
+}
+
+function resolveLastValidationMessage(
+  t: ReturnType<typeof useTranslation>["t"],
+  raw: string | null | undefined,
+): string {
+  const trimmed = raw?.trim();
+  if (!trimmed) {
+    return "-";
+  }
+
+  if (!trimmed.startsWith("apiMessages.")) {
+    return t("settings:adManagement.connection.lastValidationUnknown");
+  }
+
+  return resolveAdManagementApiMessage(
+    t,
+    { messageKey: trimmed },
+    "settings:adManagement.connection.lastValidationUnknown",
+  );
 }
 
 export function AdManagementConnectionForm({
@@ -445,7 +466,7 @@ export function AdManagementConnectionForm({
         <p className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
           {t("settings:adManagement.connection.lastValidation", {
             status: settings.lastValidationStatus,
-            message: settings.lastValidationMessage ?? "-",
+            message: resolveLastValidationMessage(t, settings.lastValidationMessage),
           })}
         </p>
       ) : null}

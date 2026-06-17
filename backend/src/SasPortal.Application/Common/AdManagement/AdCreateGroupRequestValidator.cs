@@ -1,62 +1,56 @@
+using SasPortal.Application.Common.Constants;
 using SasPortal.Application.Common.Models;
 
 namespace SasPortal.Application.Common.AdManagement;
 
 public static class AdCreateGroupRequestValidator
 {
-    public const string DisplayNameRequiredMessage = "Görünen ad zorunludur.";
-    public const string TechnicalNameRequiredMessage = "Grup teknik adı zorunludur.";
-    public const string GroupScopeRequiredMessage = "Grup kapsamı zorunludur.";
-    public const string InvalidGroupScopeMessage = "Grup kapsamı geçersiz.";
-    public const string TargetOuRequiredMessage = "Hedef OU zorunludur.";
-    public const string InvalidTargetOuMessage = "Seçilen OU geçersiz.";
-
     public static bool TryValidate(
         CreateAdGroupRequest request,
         string? groupsSearchBase,
-        out string message)
+        out string messageKey)
     {
-        message = string.Empty;
+        messageKey = string.Empty;
 
         if (string.IsNullOrWhiteSpace(request.DisplayName))
         {
-            message = DisplayNameRequiredMessage;
+            messageKey = AdManagementApiMessageKeys.Groups.DisplayNameRequired;
             return false;
         }
 
         if (string.IsNullOrWhiteSpace(request.Name))
         {
-            message = TechnicalNameRequiredMessage;
+            messageKey = AdManagementApiMessageKeys.Groups.TechnicalNameRequired;
             return false;
         }
 
-        if (!AdGroupSamAccountNameValidator.IsValid(request.SamAccountName, out message))
+        if (!AdGroupSamAccountNameValidator.IsValid(request.SamAccountName, out messageKey))
         {
             return false;
         }
 
         if (string.IsNullOrWhiteSpace(request.GroupScope))
         {
-            message = GroupScopeRequiredMessage;
+            messageKey = AdManagementApiMessageKeys.Groups.GroupScopeRequired;
             return false;
         }
 
         if (!AdGroupTypeHelper.TryParseScopeCode(request.GroupScope, out _))
         {
-            message = InvalidGroupScopeMessage;
+            messageKey = AdManagementApiMessageKeys.Groups.InvalidGroupScope;
             return false;
         }
 
         if (string.IsNullOrWhiteSpace(request.TargetOuDistinguishedName))
         {
-            message = TargetOuRequiredMessage;
+            messageKey = AdManagementApiMessageKeys.Groups.TargetOuRequired;
             return false;
         }
 
         if (string.IsNullOrWhiteSpace(groupsSearchBase)
             || !AdLdapDnHelper.IsEqualOrDescendantOf(request.TargetOuDistinguishedName, groupsSearchBase))
         {
-            message = InvalidTargetOuMessage;
+            messageKey = AdManagementApiMessageKeys.Groups.InvalidTargetOu;
             return false;
         }
 

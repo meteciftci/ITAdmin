@@ -33,13 +33,18 @@ public sealed partial class AdUserDirectoryService
         }
 
         var mappings = await attributeMappingService.GetMappingsAsync(cancellationToken);
-        if (!AdUpdateUserRequestValidator.TryValidate(normalizedRequest, mappings, out var validationMessage))
+        if (!AdUpdateUserRequestValidator.TryValidate(
+                normalizedRequest,
+                mappings,
+                out var validationMessageKey,
+                out var validationMessageParams))
         {
             return new AdUserDirectoryDetailResult(
                 false,
-                validationMessage,
+                validationMessageKey,
                 null,
-                AdDirectoryFailureKind.InvalidRequest);
+                AdDirectoryFailureKind.InvalidRequest,
+                validationMessageParams);
         }
 
         var context = connectionResult.Context;

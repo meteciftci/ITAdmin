@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SasPortal.Application.Common.AdManagement;
+using SasPortal.Application.Common.Constants;
 using SasPortal.Application.Common.Models;
 using SasPortal.Persistence.Context;
 using SasPortal.Persistence.Services;
@@ -171,7 +172,7 @@ public sealed class AdManagementSettingsServiceTests
         var result = await service.UpdateSettingsAsync(request);
 
         Assert.False(result.IsSuccess);
-        Assert.Contains("zorunlu alanlar eksik", result.MessageKey, StringComparison.Ordinal);
+        Assert.Equal(AdManagementApiMessageKeys.Settings.MissingRequiredFields, result.MessageKey);
         Assert.Empty(dbContext.AdManagementSettings);
     }
 
@@ -204,7 +205,7 @@ public sealed class AdManagementSettingsServiceTests
         var result = await service.UpdateSettingsAsync(request);
 
         Assert.False(result.IsSuccess);
-        Assert.Contains("zorunlu alanlar eksik", result.MessageKey, StringComparison.Ordinal);
+        Assert.Equal(AdManagementApiMessageKeys.Settings.MissingRequiredFields, result.MessageKey);
         Assert.Empty(dbContext.AdManagementSettings);
         Assert.Equal(0, dbContext.AdOperationLogs.Count(x => x.OperationType == "SettingsValidated"));
     }
@@ -689,7 +690,7 @@ public sealed class AdManagementSettingsServiceTests
             CreateRequest(isEnabled: false, defaultUserCreationUpnSuffix: "not a valid suffix"));
 
         Assert.False(result.IsSuccess);
-        Assert.Contains("UPN suffix", result.MessageKey, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(AdManagementApiMessageKeys.Settings.DefaultUpnSuffixInvalid, result.MessageKey);
         Assert.False(dbContext.AdManagementSettings.Any());
     }
 

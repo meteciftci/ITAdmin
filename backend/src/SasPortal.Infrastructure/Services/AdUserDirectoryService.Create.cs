@@ -114,11 +114,11 @@ public sealed partial class AdUserDirectoryService
         CreateAdUserRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (!ValidateCreateRequest(request, out var validationMessage))
+        if (!ValidateCreateRequest(request, out var validationMessageKey))
         {
             return new CreateAdUserResult(
                 false,
-                validationMessage,
+                validationMessageKey,
                 null,
                 AdDirectoryFailureKind.InvalidRequest);
         }
@@ -161,13 +161,15 @@ public sealed partial class AdUserDirectoryService
         if (!AdCreateUserMappedAttributeValidator.TryValidate(
                 request.MappedAttributes,
                 mappings,
-                out var mappedValidationMessage))
+                out var mappedValidationMessageKey,
+                out var mappedValidationMessageParams))
         {
             return new CreateAdUserResult(
                 false,
-                mappedValidationMessage,
+                mappedValidationMessageKey,
                 null,
-                AdDirectoryFailureKind.InvalidRequest);
+                AdDirectoryFailureKind.InvalidRequest,
+                mappedValidationMessageParams);
         }
 
         try
@@ -245,12 +247,15 @@ public sealed partial class AdUserDirectoryService
                     ex.FailureKind);
             }
 
-            var successMessage =
-                $"Kullanıcı oluşturuldu: {resolvedNames.DisplayName} ({resolvedNames.SamAccountName}).";
-
             var publicUserId = AdUserIdentityResolver.ResolvePublicUserId(
                 createdObjectGuid,
                 resolvedNames.SamAccountName);
+
+            var createSuccessParams = new Dictionary<string, object>
+            {
+                ["displayName"] = resolvedNames.DisplayName,
+                ["samAccountName"] = resolvedNames.SamAccountName,
+            };
 
             var responseWithoutNotifications = new CreateAdUserResponse(
                 publicUserId,
@@ -260,9 +265,11 @@ public sealed partial class AdUserDirectoryService
                 resolvedNames.UserPrincipalName,
                 resolvedNames.DisplayName,
                 request.IsEnabled,
-                successMessage,
+                AdManagementApiMessageKeys.Users.CreateSuccess,
                 resolvedNames.NamingCollisionResolved,
-                resolvedNames.GeneratedSuffix);
+                resolvedNames.GeneratedSuffix,
+                null,
+                createSuccessParams);
 
             var notificationSummary = await notificationEnqueueService.EnqueueUserCreatedAsync(
                 new AdUserCreatedNotificationEnqueueRequest(
@@ -285,7 +292,12 @@ public sealed partial class AdUserDirectoryService
                 notificationSummary,
                 cancellationToken);
 
-            return new CreateAdUserResult(true, successMessage, response);
+            return new CreateAdUserResult(
+                true,
+                AdManagementApiMessageKeys.Users.CreateSuccess,
+                response,
+                null,
+                createSuccessParams);
         }
         catch (LdapException)
         {
@@ -317,40 +329,40 @@ public sealed partial class AdUserDirectoryService
         }
     }
 
-    private static bool ValidateCreateRequest(CreateAdUserRequest request, out string message)
+    private static bool ValidateCreateRequest(CreateAdUserRequest request, out string messageKey)
     {
         if (string.IsNullOrWhiteSpace(request.GivenName))
         {
-            message = "Ad zorunludur.";
+            messageKey = AdManagementApiMessageKeys.Users.GivenNameRequired;
             return false;
         }
 
         if (string.IsNullOrWhiteSpace(request.Surname))
         {
-            message = "Soyad zorunludur.";
+            messageKey = AdManagementApiMessageKeys.Users.SurnameRequired;
             return false;
         }
 
         if (string.IsNullOrWhiteSpace(request.TargetOuDistinguishedName))
         {
-            message = "OU seçimi zorunludur.";
+            messageKey = AdManagementApiMessageKeys.Users.TargetOuRequired;
             return false;
         }
 
         if (string.IsNullOrWhiteSpace(request.InitialPassword))
         {
-            message = "İlk parola zorunludur.";
+            messageKey = AdManagementApiMessageKeys.Users.InitialPasswordRequired;
             return false;
         }
 
         var upnSuffix = AdDefaultUpnSuffixNormalizer.Normalize(request.UpnSuffix);
         if (string.IsNullOrWhiteSpace(upnSuffix) || !AdDefaultUpnSuffixNormalizer.IsValidFormat(upnSuffix))
         {
-            message = AdManagementApiMessageKeys.Users.InvalidUpnSuffix;
+            messageKey = AdManagementApiMessageKeys.Users.InvalidUpnSuffix;
             return false;
         }
 
-        message = string.Empty;
+        messageKey = string.Empty;
         return true;
     }
 

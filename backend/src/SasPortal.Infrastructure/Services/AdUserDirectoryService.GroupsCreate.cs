@@ -55,7 +55,7 @@ public sealed partial class AdUserDirectoryService
         {
             return new CreateAdGroupResult(
                 false,
-                AdCreateGroupRequestValidator.InvalidGroupScopeMessage,
+                AdManagementApiMessageKeys.Groups.InvalidGroupScope,
                 null,
                 AdDirectoryFailureKind.InvalidRequest);
         }

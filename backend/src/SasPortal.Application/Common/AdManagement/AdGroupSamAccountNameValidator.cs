@@ -1,3 +1,5 @@
+using SasPortal.Application.Common.Constants;
+
 namespace SasPortal.Application.Common.AdManagement;
 
 public static class AdGroupSamAccountNameValidator
@@ -5,30 +7,25 @@ public static class AdGroupSamAccountNameValidator
     private static readonly char[] ForbiddenCharacters =
         ['/', '\\', '[', ']', ':', ';', '|', '=', ',', '+', '*', '?', '<', '>', '"'];
 
-    public const string EmptyMessage = "sAMAccountName zorunludur.";
-    public const string TooLongMessage = "sAMAccountName en fazla 64 karakter olabilir.";
-    public const string InvalidCharactersMessage =
-        "sAMAccountName geçersiz karakterler içeriyor.";
-
-    public static bool IsValid(string? samAccountName, out string message)
+    public static bool IsValid(string? samAccountName, out string messageKey)
     {
-        message = string.Empty;
+        messageKey = string.Empty;
         if (string.IsNullOrWhiteSpace(samAccountName))
         {
-            message = EmptyMessage;
+            messageKey = AdManagementApiMessageKeys.Groups.SamAccountNameRequired;
             return false;
         }
 
         var trimmed = samAccountName.Trim();
         if (trimmed.Length > AdGroupNameNormalizer.SamAccountNameMaxLength)
         {
-            message = TooLongMessage;
+            messageKey = AdManagementApiMessageKeys.Groups.SamAccountNameTooLong;
             return false;
         }
 
         if (trimmed.Any(static ch => ForbiddenCharacters.Contains(ch) || char.IsControl(ch)))
         {
-            message = InvalidCharactersMessage;
+            messageKey = AdManagementApiMessageKeys.Groups.SamAccountNameInvalidCharacters;
             return false;
         }
 

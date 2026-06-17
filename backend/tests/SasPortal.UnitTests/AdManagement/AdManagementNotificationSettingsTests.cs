@@ -84,7 +84,7 @@ public sealed class AdManagementNotificationSettingsTests
         var error = AdManagementNotificationSettingsValidator.Validate(settings);
 
         Assert.NotNull(error);
-        Assert.Contains("Aynı olay ve kanal", error, StringComparison.Ordinal);
+        Assert.Equal(AdManagementApiMessageKeys.NotificationSettings.DuplicateRule, error);
     }
 
     [Fact]
@@ -107,7 +107,7 @@ public sealed class AdManagementNotificationSettingsTests
 
         var error = AdManagementNotificationSettingsValidator.Validate(settings);
 
-        Assert.NotNull(error);
+        Assert.Equal(AdManagementApiMessageKeys.NotificationSettings.RecipientSourceRequired, error);
     }
 
     private static AdManagementNotificationRule CreateRule(string eventKey, string channel)

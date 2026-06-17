@@ -1,3 +1,4 @@
+using SasPortal.Application.Common.Constants;
 using SasPortal.Application.Common.Models;
 
 namespace SasPortal.Application.Common.AdManagement;
@@ -7,39 +8,45 @@ public static class AdUpdateUserRequestValidator
     public static bool TryValidate(
         UpdateAdUserRequest request,
         IReadOnlyList<AdAttributeMappingItem> mappings,
-        out string message)
+        out string messageKey,
+        out IReadOnlyDictionary<string, object>? messageParams)
     {
-        message = string.Empty;
+        messageKey = string.Empty;
+        messageParams = null;
 
         if (string.IsNullOrWhiteSpace(request.GivenName))
         {
-            message = "Ad zorunludur.";
+            messageKey = AdManagementApiMessageKeys.Users.GivenNameRequired;
             return false;
         }
 
         if (string.IsNullOrWhiteSpace(request.Surname))
         {
-            message = "Soyad zorunludur.";
+            messageKey = AdManagementApiMessageKeys.Users.SurnameRequired;
             return false;
         }
 
         if (string.IsNullOrWhiteSpace(request.DisplayName))
         {
-            message = "Görünen ad zorunludur.";
+            messageKey = AdManagementApiMessageKeys.Users.DisplayNameRequired;
             return false;
         }
 
-        if (!AdSamAccountNameValidator.IsValid(request.SamAccountName, out message))
+        if (!AdSamAccountNameValidator.IsValid(request.SamAccountName, out messageKey))
         {
             return false;
         }
 
-        if (!AdUserPrincipalNameValidator.IsValid(request.UserPrincipalName, out message))
+        if (!AdUserPrincipalNameValidator.IsValid(request.UserPrincipalName, out messageKey))
         {
             return false;
         }
 
-        return AdUpdateUserMappedAttributeValidator.TryValidate(request.MappedAttributes, mappings, out message);
+        return AdUpdateUserMappedAttributeValidator.TryValidate(
+            request.MappedAttributes,
+            mappings,
+            out messageKey,
+            out messageParams);
     }
 
     public static string DeriveCommonNameFromDisplayName(string displayName) => displayName.Trim();

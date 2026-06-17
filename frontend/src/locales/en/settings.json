@@ -301,6 +301,7 @@
           "validate": "Validate settings"
         },
         "lastValidation": "Last validation: {{status}} - {{message}}",
+        "lastValidationUnknown": "Validation details are unavailable.",
         "messages": {
           "saveSuccess": "AD management settings saved.",
           "saveFailed": "AD management settings could not be saved.",

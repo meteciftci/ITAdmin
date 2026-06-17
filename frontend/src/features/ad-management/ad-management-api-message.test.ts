@@ -202,9 +202,19 @@ describe("AD management API message locale keys", () => {
       "Group identifier is required.",
     );
   });
+  it("connection form resolves lastValidationMessage via locale keys", () => {
+    const source = readFileSync(
+      new URL("./components/AdManagementConnectionForm.tsx", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(source, /resolveLastValidationMessage/);
+    assert.match(source, /resolveAdManagementApiMessage/);
+    assert.doesNotMatch(source, /settings\.lastValidationMessage\s*\?\?/);
+  });
 });
 
-describe("ad-management API message integration", () => {
+describe("ad-management API message locale parity", () => {
   const featureRoot = fileURLToPath(new URL(".", import.meta.url));
   const helperSource = readFileSync(new URL("./ad-management-api-message.ts", import.meta.url), "utf8");
 

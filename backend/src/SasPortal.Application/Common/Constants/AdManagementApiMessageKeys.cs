@@ -29,6 +29,53 @@ public static class AdManagementApiMessageKeys
         public const string ValidationSucceeded = Prefix + "settingsValidation.validationSucceeded";
     }
 
+    public static class Settings
+    {
+        public const string UpdateSucceeded = Prefix + "settings.updateSucceeded";
+        public const string ServiceAccountPasswordRequired = Prefix + "settings.serviceAccountPasswordRequired";
+        public const string MissingRequiredFields = Prefix + "settings.missingRequiredFields";
+        public const string LdapPortOutOfRange = Prefix + "settings.ldapPortOutOfRange";
+        public const string PowerShellTimeoutOutOfRange = Prefix + "settings.powerShellTimeoutOutOfRange";
+        public const string DefaultUpnSuffixInvalid = Prefix + "settings.defaultUpnSuffixInvalid";
+    }
+
+    public static class NotificationSettings
+    {
+        public const string InvalidEvent = Prefix + "notificationSettings.invalidEvent";
+        public const string InvalidChannel = Prefix + "notificationSettings.invalidChannel";
+        public const string DuplicateRule = Prefix + "notificationSettings.duplicateRule";
+        public const string RecipientSourceRequired = Prefix + "notificationSettings.recipientSourceRequired";
+        public const string InvalidSmsRecipientSource = Prefix + "notificationSettings.invalidSmsRecipientSource";
+        public const string InvalidEmailRecipientSource = Prefix + "notificationSettings.invalidEmailRecipientSource";
+        public const string RecipientSourceValueRequired = Prefix + "notificationSettings.recipientSourceValueRequired";
+    }
+
+    public static class MappedAttributes
+    {
+        public const string InvalidLogicalField = Prefix + "mappedAttributes.invalidLogicalField";
+        public const string NotEditable = Prefix + "mappedAttributes.notEditable";
+        public const string NotFound = Prefix + "mappedAttributes.notFound";
+        public const string ReservedAttribute = Prefix + "mappedAttributes.reservedAttribute";
+        public const string InvalidAttributeName = Prefix + "mappedAttributes.invalidAttributeName";
+        public const string InvalidPhoneFormat = Prefix + "mappedAttributes.invalidPhoneFormat";
+        public const string InvalidEmailFormat = Prefix + "mappedAttributes.invalidEmailFormat";
+        public const string InvalidNumberFormat = Prefix + "mappedAttributes.invalidNumberFormat";
+    }
+
+    public static class AttributeMappings
+    {
+        public const string LogicalFieldInvalid = Prefix + "attributeMappings.logicalFieldInvalid";
+        public const string DisplayNameRequired = Prefix + "attributeMappings.displayNameRequired";
+        public const string DisplayNameTooLong = Prefix + "attributeMappings.displayNameTooLong";
+        public const string AttributeNameInvalid = Prefix + "attributeMappings.attributeNameInvalid";
+        public const string ValidationTypeInvalid = Prefix + "attributeMappings.validationTypeInvalid";
+        public const string DuplicateLogicalField = Prefix + "attributeMappings.duplicateLogicalField";
+        public const string NotFound = Prefix + "attributeMappings.notFound";
+        public const string CreateSuccess = Prefix + "attributeMappings.createSuccess";
+        public const string UpdateSuccess = Prefix + "attributeMappings.updateSuccess";
+        public const string DeleteSuccess = Prefix + "attributeMappings.deleteSuccess";
+    }
+
     public static class Users
     {
         public const string NotFound = Prefix + "users.notFound";
@@ -64,6 +111,15 @@ public static class AdManagementApiMessageKeys
         public const string EffectiveGroupsFailed = Prefix + "users.effectiveGroupsFailed";
         public const string EffectiveGroupsMaxDepthOutOfRange = Prefix + "users.effectiveGroupsMaxDepthOutOfRange";
         public const string InvalidUserId = Prefix + "users.invalidUserId";
+        public const string GivenNameRequired = Prefix + "users.givenNameRequired";
+        public const string SurnameRequired = Prefix + "users.surnameRequired";
+        public const string DisplayNameRequired = Prefix + "users.displayNameRequired";
+        public const string InitialPasswordRequired = Prefix + "users.initialPasswordRequired";
+        public const string SamAccountNameRequired = Prefix + "users.samAccountNameRequired";
+        public const string SamAccountNameTooLong = Prefix + "users.samAccountNameTooLong";
+        public const string SamAccountNameInvalidCharacters = Prefix + "users.samAccountNameInvalidCharacters";
+        public const string UpnRequired = Prefix + "users.upnRequired";
+        public const string UpnInvalid = Prefix + "users.upnInvalid";
     }
 
     public static class Groups
@@ -88,6 +144,13 @@ public static class AdManagementApiMessageKeys
         public const string SelfMembership = Prefix + "groups.selfMembership";
         public const string InvalidGroupId = Prefix + "groups.invalidGroupId";
         public const string GroupDnRequired = Prefix + "groups.groupDnRequired";
+        public const string DisplayNameRequired = Prefix + "groups.displayNameRequired";
+        public const string TechnicalNameRequired = Prefix + "groups.technicalNameRequired";
+        public const string GroupScopeRequired = Prefix + "groups.groupScopeRequired";
+        public const string InvalidGroupScope = Prefix + "groups.invalidGroupScope";
+        public const string SamAccountNameRequired = Prefix + "groups.samAccountNameRequired";
+        public const string SamAccountNameTooLong = Prefix + "groups.samAccountNameTooLong";
+        public const string SamAccountNameInvalidCharacters = Prefix + "groups.samAccountNameInvalidCharacters";
     }
 
     public static class Computers

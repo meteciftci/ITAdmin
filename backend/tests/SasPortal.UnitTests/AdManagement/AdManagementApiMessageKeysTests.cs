@@ -120,6 +120,77 @@ public sealed class AdManagementApiMessageKeysTests
         }
     }
 
+    [Fact]
+    public void AdManagementValidatorFiles_DoNotContainUserFacingTurkishLiterals()
+    {
+        var adManagementDir = Path.Combine(
+            FindRepositoryRoot(),
+            "backend/src/SasPortal.Application/Common/AdManagement");
+
+        foreach (var file in Directory.GetFiles(adManagementDir, "*.cs"))
+        {
+            var source = File.ReadAllText(file);
+            foreach (var pattern in TurkishUserFacingPatterns)
+            {
+                Assert.False(
+                    source.Contains(pattern, StringComparison.OrdinalIgnoreCase),
+                    $"Validator file {Path.GetFileName(file)} contains Turkish user-facing literal '{pattern}'.");
+            }
+        }
+    }
+
+    [Fact]
+    public void AdManagementSettingsService_DoesNotAssignRawSentenceMessageKeys()
+    {
+        var source = File.ReadAllText(
+            Path.Combine(
+                FindRepositoryRoot(),
+                "backend/src/SasPortal.Persistence/Services/AdManagementSettingsService.cs"));
+
+        Assert.DoesNotContain("MissingRequiredFieldsMessage", source, StringComparison.Ordinal);
+        Assert.Contains("AdManagementApiMessageKeys.Settings.UpdateSucceeded", source, StringComparison.Ordinal);
+
+        var rawMessageKeyMatch = Regex.Match(
+            source,
+            @"MessageKey\s*:\s*""(?!apiMessages\.)[^""]+""",
+            RegexOptions.Multiline);
+        Assert.False(
+            rawMessageKeyMatch.Success,
+            $"MessageKey assigned a raw sentence instead of apiMessages.* key: {rawMessageKeyMatch.Value}");
+    }
+
+    [Fact]
+    public void CreateUserSuccess_UsesStableCreateSuccessMessageKey()
+    {
+        var source = File.ReadAllText(
+            Path.Combine(
+                FindRepositoryRoot(),
+                "backend/src/SasPortal.Infrastructure/Services/AdUserDirectoryService.Create.cs"));
+
+        Assert.Contains("AdManagementApiMessageKeys.Users.CreateSuccess", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("Kullanıcı oluşturuldu:", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AllDefinedApiMessageKeys_UseApiMessagesPrefix()
+    {
+        var keysType = typeof(AdManagementApiMessageKeys);
+        foreach (var nested in keysType.GetNestedTypes())
+        {
+            foreach (var field in nested.GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static))
+            {
+                if (field.FieldType != typeof(string))
+                {
+                    continue;
+                }
+
+                var value = (string?)field.GetRawConstantValue();
+                Assert.False(string.IsNullOrWhiteSpace(value));
+                Assert.StartsWith("apiMessages.", value, StringComparison.Ordinal);
+            }
+        }
+    }
+
     private static string FindRepositoryRoot()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);

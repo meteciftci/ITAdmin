@@ -73,32 +73,32 @@ public sealed class AdAttributeMappingService(
 
         if (string.IsNullOrWhiteSpace(logicalField) || !LogicalFieldRegex.IsMatch(logicalField))
         {
-            return new AdAttributeMappingResult(false, "Logical field is invalid.", null);
+            return new AdAttributeMappingResult(false, AdManagementApiMessageKeys.AttributeMappings.LogicalFieldInvalid, null);
         }
 
         if (string.IsNullOrWhiteSpace(displayName))
         {
-            return new AdAttributeMappingResult(false, "Display name is required.", null);
+            return new AdAttributeMappingResult(false, AdManagementApiMessageKeys.AttributeMappings.DisplayNameRequired, null);
         }
 
         if (displayName.Length > DisplayNameMaxLength)
         {
             return new AdAttributeMappingResult(
                 false,
-                $"Display name must be at most {DisplayNameMaxLength} characters.",
+                AdManagementApiMessageKeys.AttributeMappings.DisplayNameTooLong,
                 null);
         }
 
         if (string.IsNullOrWhiteSpace(attributeName) || !AttributeNameRegex.IsMatch(attributeName))
         {
-            return new AdAttributeMappingResult(false, "Attribute name is invalid.", null);
+            return new AdAttributeMappingResult(false, AdManagementApiMessageKeys.AttributeMappings.AttributeNameInvalid, null);
         }
 
         if (AdReservedCoreAttributes.IsReserved(attributeName))
         {
             return new AdAttributeMappingResult(
                 false,
-                AdReservedCoreAttributes.ReservedAttributeMappingMessage,
+                AdReservedCoreAttributes.ReservedAttributeMappingMessageKey,
                 null);
         }
 
@@ -107,7 +107,7 @@ public sealed class AdAttributeMappingService(
 
         if (!AllowedValidationTypes.Contains(validationType))
         {
-            return new AdAttributeMappingResult(false, "Validation type is invalid.", null);
+            return new AdAttributeMappingResult(false, AdManagementApiMessageKeys.AttributeMappings.ValidationTypeInvalid, null);
         }
 
         var duplicate = await context.AdAttributeMappings
@@ -117,7 +117,7 @@ public sealed class AdAttributeMappingService(
         {
             return new AdAttributeMappingResult(
                 false,
-                $"An attribute mapping with logical field '{logicalField}' already exists.",
+                AdManagementApiMessageKeys.AttributeMappings.DuplicateLogicalField,
                 null);
         }
 
@@ -178,7 +178,7 @@ public sealed class AdAttributeMappingService(
 
         return new AdAttributeMappingResult(
             true,
-            "AD attribute mapping created.",
+            AdManagementApiMessageKeys.AttributeMappings.CreateSuccess,
             MapToItem(entity));
     }
 
@@ -191,7 +191,7 @@ public sealed class AdAttributeMappingService(
 
         if (entity is null)
         {
-            return new AdAttributeMappingResult(false, "Attribute mapping was not found.", null);
+            return new AdAttributeMappingResult(false, AdManagementApiMessageKeys.AttributeMappings.NotFound, null);
         }
 
         var displayName = NormalizeNullable(request.DisplayName);
@@ -199,27 +199,27 @@ public sealed class AdAttributeMappingService(
 
         if (string.IsNullOrWhiteSpace(displayName))
         {
-            return new AdAttributeMappingResult(false, "Display name is required.", null);
+            return new AdAttributeMappingResult(false, AdManagementApiMessageKeys.AttributeMappings.DisplayNameRequired, null);
         }
 
         if (displayName.Length > DisplayNameMaxLength)
         {
             return new AdAttributeMappingResult(
                 false,
-                $"Display name must be at most {DisplayNameMaxLength} characters.",
+                AdManagementApiMessageKeys.AttributeMappings.DisplayNameTooLong,
                 null);
         }
 
         if (string.IsNullOrWhiteSpace(attributeName) || !AttributeNameRegex.IsMatch(attributeName))
         {
-            return new AdAttributeMappingResult(false, "Attribute name is invalid.", null);
+            return new AdAttributeMappingResult(false, AdManagementApiMessageKeys.AttributeMappings.AttributeNameInvalid, null);
         }
 
         if (AdReservedCoreAttributes.IsReserved(attributeName))
         {
             return new AdAttributeMappingResult(
                 false,
-                AdReservedCoreAttributes.ReservedAttributeMappingMessage,
+                AdReservedCoreAttributes.ReservedAttributeMappingMessageKey,
                 null);
         }
 
@@ -228,7 +228,7 @@ public sealed class AdAttributeMappingService(
 
         if (!AllowedValidationTypes.Contains(validationType))
         {
-            return new AdAttributeMappingResult(false, "Validation type is invalid.", null);
+            return new AdAttributeMappingResult(false, AdManagementApiMessageKeys.AttributeMappings.ValidationTypeInvalid, null);
         }
 
         var now = DateTime.UtcNow;
@@ -289,7 +289,7 @@ public sealed class AdAttributeMappingService(
 
         return new AdAttributeMappingResult(
             true,
-            "AD attribute mapping updated.",
+            AdManagementApiMessageKeys.AttributeMappings.UpdateSuccess,
             MapToItem(entity));
     }
 
@@ -302,7 +302,7 @@ public sealed class AdAttributeMappingService(
 
         if (entity is null)
         {
-            return new AdAttributeMappingResult(false, "Attribute mapping was not found.", null);
+            return new AdAttributeMappingResult(false, AdManagementApiMessageKeys.AttributeMappings.NotFound, null);
         }
 
         var now = DateTime.UtcNow;
@@ -350,7 +350,7 @@ public sealed class AdAttributeMappingService(
 
         await context.SaveChangesAsync(cancellationToken);
 
-        return new AdAttributeMappingResult(true, "AD attribute mapping deleted.", snapshot);
+        return new AdAttributeMappingResult(true, AdManagementApiMessageKeys.AttributeMappings.DeleteSuccess, snapshot);
     }
 
     private static bool ResolveIsSearchable(bool isSensitive, bool isSearchable) =>

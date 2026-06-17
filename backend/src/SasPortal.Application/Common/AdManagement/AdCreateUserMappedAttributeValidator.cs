@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using SasPortal.Application.Common.Constants;
 using SasPortal.Application.Common.Models;
 
 namespace SasPortal.Application.Common.AdManagement;
@@ -14,9 +15,11 @@ public static class AdCreateUserMappedAttributeValidator
     public static bool TryValidate(
         IReadOnlyList<CreateAdUserMappedAttributeRequest> mappedAttributes,
         IReadOnlyList<AdAttributeMappingItem> mappings,
-        out string message)
+        out string messageKey,
+        out IReadOnlyDictionary<string, object>? messageParams)
     {
-        message = string.Empty;
+        messageKey = string.Empty;
+        messageParams = null;
         var editableMappings = mappings
             .Where(static mapping => mapping.IsEnabled && mapping.IsEditable)
             .ToDictionary(static mapping => mapping.LogicalField, StringComparer.Ordinal);
@@ -26,7 +29,7 @@ public static class AdCreateUserMappedAttributeValidator
             var logicalField = attribute.LogicalField?.Trim() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(logicalField))
             {
-                message = "Eşleştirilmiş attribute alanı geçersiz.";
+                messageKey = AdManagementApiMessageKeys.MappedAttributes.InvalidLogicalField;
                 return false;
             }
 
@@ -36,21 +39,23 @@ public static class AdCreateUserMappedAttributeValidator
                     mappingItem.IsEnabled
                     && string.Equals(mappingItem.LogicalField, logicalField, StringComparison.Ordinal));
 
-                message = existsButNotEditable
-                    ? $"Eşleştirilmiş attribute düzenlenemez: {logicalField}."
-                    : $"Eşleştirilmiş attribute bulunamadı: {logicalField}.";
+                messageKey = existsButNotEditable
+                    ? AdManagementApiMessageKeys.MappedAttributes.NotEditable
+                    : AdManagementApiMessageKeys.MappedAttributes.NotFound;
+                messageParams = new Dictionary<string, object> { ["logicalField"] = logicalField };
                 return false;
             }
 
             if (AdReservedCoreAttributes.IsReserved(mapping.AttributeName))
             {
-                message = AdReservedCoreAttributes.ReservedAttributeMappingMessage;
+                messageKey = AdReservedCoreAttributes.ReservedAttributeMappingMessageKey;
                 return false;
             }
 
             if (!AdLdapAttributeCatalog.IsValidAttributeName(mapping.AttributeName))
             {
-                message = $"AD attribute adı geçersiz: {mapping.AttributeName}.";
+                messageKey = AdManagementApiMessageKeys.MappedAttributes.InvalidAttributeName;
+                messageParams = new Dictionary<string, object> { ["attributeName"] = mapping.AttributeName };
                 return false;
             }
 
@@ -59,7 +64,7 @@ public static class AdCreateUserMappedAttributeValidator
                 continue;
             }
 
-            if (!ValidateValue(mapping.ValidationType, attribute.Value, out message))
+            if (!ValidateValue(mapping.ValidationType, attribute.Value, out messageKey))
             {
                 return false;
             }
@@ -68,9 +73,9 @@ public static class AdCreateUserMappedAttributeValidator
         return true;
     }
 
-    private static bool ValidateValue(string validationType, object? value, out string message)
+    private static bool ValidateValue(string validationType, object? value, out string messageKey)
     {
-        message = string.Empty;
+        messageKey = string.Empty;
         var text = ExtractSingleValue(value);
         if (string.IsNullOrWhiteSpace(text))
         {
@@ -80,18 +85,18 @@ public static class AdCreateUserMappedAttributeValidator
         return validationType switch
         {
             "Phone" when !PhoneRegex.IsMatch(text) =>
-                Fail("Telefon formatı geçersiz.", out message),
+                Fail(AdManagementApiMessageKeys.MappedAttributes.InvalidPhoneFormat, out messageKey),
             "Email" when !EmailRegex.IsMatch(text) =>
-                Fail("E-posta formatı geçersiz.", out message),
+                Fail(AdManagementApiMessageKeys.MappedAttributes.InvalidEmailFormat, out messageKey),
             "Number" when !NumberRegex.IsMatch(text) =>
-                Fail("Sayı formatı geçersiz.", out message),
+                Fail(AdManagementApiMessageKeys.MappedAttributes.InvalidNumberFormat, out messageKey),
             _ => true,
         };
     }
 
-    private static bool Fail(string error, out string message)
+    private static bool Fail(string key, out string messageKey)
     {
-        message = error;
+        messageKey = key;
         return false;
     }
 

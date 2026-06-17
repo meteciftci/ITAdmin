@@ -1013,6 +1013,45 @@
         "invalidRequest": "Invalid request.",
         "ldapsRequired": "LDAPS connection is required for AD operations. Please enable SSL in AD management settings."
       },
+      "settings": {
+        "updateSucceeded": "AD management settings were updated.",
+        "serviceAccountPasswordRequired": "Service account password is required when AD management is enabled.",
+        "missingRequiredFields": "Required fields are missing for AD management settings.",
+        "ldapPortOutOfRange": "LDAP port must be between 1 and 65535.",
+        "powerShellTimeoutOutOfRange": "PowerShell timeout must be between 5 and 300 seconds.",
+        "defaultUpnSuffixInvalid": "Default user creation UPN suffix must be a valid domain suffix."
+      },
+      "notificationSettings": {
+        "invalidEvent": "Notification event is invalid.",
+        "invalidChannel": "Notification channel is invalid.",
+        "duplicateRule": "A notification rule already exists for the same event and channel.",
+        "recipientSourceRequired": "Recipient source is required.",
+        "invalidSmsRecipientSource": "SMS recipient source is invalid.",
+        "invalidEmailRecipientSource": "Email recipient source is invalid.",
+        "recipientSourceValueRequired": "Recipient source value is required."
+      },
+      "mappedAttributes": {
+        "invalidLogicalField": "Mapped attribute field is invalid.",
+        "notEditable": "Mapped attribute cannot be edited: {{logicalField}}.",
+        "notFound": "Mapped attribute was not found: {{logicalField}}.",
+        "reservedAttribute": "This AD attribute is managed as core user or system data and cannot be used in mapped attributes.",
+        "invalidAttributeName": "AD attribute name is invalid: {{attributeName}}.",
+        "invalidPhoneFormat": "Phone format is invalid.",
+        "invalidEmailFormat": "Email format is invalid.",
+        "invalidNumberFormat": "Number format is invalid."
+      },
+      "attributeMappings": {
+        "logicalFieldInvalid": "Logical field is invalid.",
+        "displayNameRequired": "Display name is required.",
+        "displayNameTooLong": "Display name is too long.",
+        "attributeNameInvalid": "Attribute name is invalid.",
+        "validationTypeInvalid": "Validation type is invalid.",
+        "duplicateLogicalField": "An attribute mapping with this logical field already exists.",
+        "notFound": "Attribute mapping was not found.",
+        "createSuccess": "Attribute mapping was created.",
+        "updateSuccess": "Attribute mapping was updated.",
+        "deleteSuccess": "Attribute mapping was deleted."
+      },
       "settingsValidation": {
         "missingRequiredSettings": "Required fields are missing for AD management settings.",
         "serviceAccountBindFailed": "Could not bind with the AD management service account. The NetBIOS domain name, service account username, or password may be incorrect.",
@@ -1029,7 +1068,7 @@
       "users": {
         "notFound": "AD user was not found.",
         "queryFailed": "AD users could not be read.",
-        "createSuccess": "AD user was created.",
+        "createSuccess": "AD user {{displayName}} ({{samAccountName}}) was created.",
         "createFailed": "AD user could not be created.",
         "updateFailed": "AD user could not be updated.",
         "ouMoveSuccess": "User was moved to the selected OU.",
@@ -1059,7 +1098,16 @@
         "notInGroup": "User is not a member of this group.",
         "effectiveGroupsFailed": "Effective group memberships could not be read.",
         "effectiveGroupsMaxDepthOutOfRange": "maxDepth must be between {{min}} and {{max}}.",
-        "invalidUserId": "Invalid user identifier."
+        "invalidUserId": "Invalid user identifier.",
+        "givenNameRequired": "Given name is required.",
+        "surnameRequired": "Surname is required.",
+        "displayNameRequired": "Display name is required.",
+        "initialPasswordRequired": "Initial password is required.",
+        "samAccountNameRequired": "Username (sAMAccountName) is required.",
+        "samAccountNameTooLong": "Username (sAMAccountName) must be at most 20 characters.",
+        "samAccountNameInvalidCharacters": "Username (sAMAccountName) contains invalid characters.",
+        "upnRequired": "UPN (userPrincipalName) is required.",
+        "upnInvalid": "UPN (userPrincipalName) must be in a valid email-like format."
       },
       "groups": {
         "notFound": "AD group was not found.",
@@ -1081,7 +1129,14 @@
         "memberNotInGroup": "Member is not a direct member of this group.",
         "selfMembership": "A group cannot be a member of itself.",
         "invalidGroupId": "Invalid group identifier.",
-        "groupDnRequired": "Group identifier is required."
+        "groupDnRequired": "Group identifier is required.",
+        "displayNameRequired": "Display name is required.",
+        "technicalNameRequired": "Group technical name is required.",
+        "groupScopeRequired": "Group scope is required.",
+        "invalidGroupScope": "Group scope is invalid.",
+        "samAccountNameRequired": "sAMAccountName is required.",
+        "samAccountNameTooLong": "sAMAccountName must be at most 64 characters.",
+        "samAccountNameInvalidCharacters": "sAMAccountName contains invalid characters."
       },
       "computers": {
         "notFound": "AD computer was not found.",

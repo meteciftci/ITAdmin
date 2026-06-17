@@ -1,16 +1,15 @@
+using SasPortal.Application.Common.Constants;
+
 namespace SasPortal.Application.Common.AdManagement;
 
 public static class AdUserPrincipalNameValidator
 {
-    public const string EmptyMessage = "UPN (userPrincipalName) zorunludur.";
-    public const string InvalidFormatMessage = "UPN (userPrincipalName) geçerli bir e-posta benzeri formatta olmalıdır.";
-
-    public static bool IsValid(string? userPrincipalName, out string message)
+    public static bool IsValid(string? userPrincipalName, out string messageKey)
     {
-        message = string.Empty;
+        messageKey = string.Empty;
         if (string.IsNullOrWhiteSpace(userPrincipalName))
         {
-            message = EmptyMessage;
+            messageKey = AdManagementApiMessageKeys.Users.UpnRequired;
             return false;
         }
 
@@ -20,7 +19,7 @@ public static class AdUserPrincipalNameValidator
             || atIndex != trimmed.LastIndexOf('@')
             || atIndex >= trimmed.Length - 1)
         {
-            message = InvalidFormatMessage;
+            messageKey = AdManagementApiMessageKeys.Users.UpnInvalid;
             return false;
         }
 
@@ -31,7 +30,7 @@ public static class AdUserPrincipalNameValidator
             || localPart.Contains('@', StringComparison.Ordinal)
             || domainPart.Contains('@', StringComparison.Ordinal))
         {
-            message = InvalidFormatMessage;
+            messageKey = AdManagementApiMessageKeys.Users.UpnInvalid;
             return false;
         }
 

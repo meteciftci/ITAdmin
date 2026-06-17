@@ -301,6 +301,7 @@
           "validate": "Ayarları doğrula"
         },
         "lastValidation": "Son doğrulama: {{status}} - {{message}}",
+        "lastValidationUnknown": "Doğrulama detayı gösterilemiyor.",
         "messages": {
           "saveSuccess": "AD yönetim ayarları kaydedildi.",
           "saveFailed": "AD yönetim ayarları kaydedilemedi.",
