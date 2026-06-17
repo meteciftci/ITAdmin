@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
 import {
@@ -6,9 +7,11 @@ import {
   getAdOrganizationalUnitParentPath,
   getAdOrganizationalUnitPrimaryLabel,
   getAdOrganizationalUnitSecondaryLabel,
+  resolveOrganizationalUnitRenameName,
 } from "./ad-ou-display-labels.ts";
 
 const sampleDn = "OU=BT,OU=Departments,DC=corp,DC=local";
+const emptyText = "N/A";
 
 describe("ad-ou-display-labels", () => {
   it("uses displayLabel as primary label when available", () => {
@@ -56,10 +59,10 @@ describe("ad-ou-display-labels", () => {
     assert.equal(label, "BT");
   });
 
-  it("formats null counts as dash", () => {
-    assert.equal(formatAdOrganizationalUnitCount(null), "-");
-    assert.equal(formatAdOrganizationalUnitCount(undefined), "-");
-    assert.equal(formatAdOrganizationalUnitCount(3), "3");
+  it("formats null counts with provided empty text", () => {
+    assert.equal(formatAdOrganizationalUnitCount(null, emptyText), emptyText);
+    assert.equal(formatAdOrganizationalUnitCount(undefined, emptyText), emptyText);
+    assert.equal(formatAdOrganizationalUnitCount(3, emptyText), "3");
   });
 
   it("derives parent path from canonical name", () => {
@@ -81,5 +84,47 @@ describe("ad-ou-display-labels", () => {
 
     assert.equal(primary, "BT");
     assert.equal(secondary, "corp.local/Departments/BT");
+  });
+
+  it("resolves rename name from ou before name", () => {
+    assert.equal(
+      resolveOrganizationalUnitRenameName({
+        ou: "BT",
+        name: "Legacy",
+        distinguishedName: sampleDn,
+      }),
+      "BT",
+    );
+  });
+});
+
+describe("ad organizational unit technical field", () => {
+  it("uses wrapping classes for long technical values", () => {
+    const source = readFileSync(
+      new URL("./components/AdOrganizationalUnitTechnicalField.tsx", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(source, /break-words/);
+    assert.match(source, /break-all/);
+    assert.match(source, /overflow-wrap:anywhere/);
+    assert.match(source, /whitespace-pre-wrap/);
+    assert.match(source, /common:notAvailable/);
+    assert.match(source, /min-w-0/);
+  });
+});
+
+describe("ad organizational unit count badge", () => {
+  it("uses i18n empty text and supports badge and card variants", () => {
+    const source = readFileSync(
+      new URL("./components/AdOrganizationalUnitCountBadge.tsx", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(source, /formatAdOrganizationalUnitCount/);
+    assert.match(source, /common:notAvailable/);
+    assert.match(source, /variant = "badge"/);
+    assert.match(source, /variant === "card"/);
+    assert.match(source, /aria-label/);
   });
 });

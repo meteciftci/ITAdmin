@@ -17,6 +17,10 @@ export function buildAdOrganizationalUnitCreatePath(
   return `${AD_ORGANIZATIONAL_UNIT_CREATE_PATH}?${params.toString()}`;
 }
 
+export function buildAdOrganizationalUnitRenamePath(organizationalUnitId: string): string {
+  return `${AD_ORGANIZATIONAL_UNITS_LIST_PATH}/${organizationalUnitId}/rename`;
+}
+
 export function readAdOrganizationalUnitCreateParentDn(
   searchParams: URLSearchParams,
 ): string | null {

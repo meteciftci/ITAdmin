@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AxiosError } from "axios";
+import { ListTree, Monitor, Shield, Users } from "lucide-react";
 
 import { useAuthStore } from "@/features/auth/auth-store";
 import { canAccess } from "@/lib/permissions";
@@ -16,13 +17,19 @@ import { RowActions } from "@/components/common/RowActions";
 import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { isGuidLike } from "@/features/ad-management/ad-user-detail-utils";
 import { adDetailOutlineButtonClass } from "@/features/ad-management/ad-user-detail-button-styles";
-import { buildAdOrganizationalUnitCreatePath, buildAdOrganizationalUnitDetailPath } from "@/features/ad-management/ad-ou-detail-path";
 import {
-  formatAdOrganizationalUnitCount,
+  buildAdOrganizationalUnitCreatePath,
+  buildAdOrganizationalUnitDetailPath,
+  buildAdOrganizationalUnitRenamePath,
+} from "@/features/ad-management/ad-ou-detail-path";
+import {
   getAdOrganizationalUnitParentPath,
   getAdOrganizationalUnitPrimaryLabel,
 } from "@/features/ad-management/ad-ou-display-labels";
-import { resolveAdOrganizationalUnitsReturnPath } from "@/features/ad-management/ad-ous-return-path";
+import {
+  buildAdOrganizationalUnitDetailReturnState,
+  resolveAdOrganizationalUnitsReturnPath,
+} from "@/features/ad-management/ad-ous-return-path";
 import {
   AD_MANAGEMENT_ORGANIZATIONAL_UNITS_QUERY_KEY,
   getAdOrganizationalUnitById,
@@ -30,10 +37,10 @@ import {
 import {
   AdDeleteOrganizationalUnitDialog,
   AdMoveOrganizationalUnitDialog,
-  AdRenameOrganizationalUnitDialog,
 } from "@/features/ad-management/components/AdOrganizationalUnitDialogs";
+import { AdOrganizationalUnitCountBadge } from "@/features/ad-management/components/AdOrganizationalUnitCountBadge";
 import { AdOrganizationalUnitRecentOperationsSection } from "@/features/ad-management/components/AdOrganizationalUnitRecentOperationsSection";
-import { AdUserDetailField } from "@/features/ad-management/components/ad-user-detail/AdUserDetailField";
+import { AdOrganizationalUnitTechnicalField } from "@/features/ad-management/components/AdOrganizationalUnitTechnicalField";
 import { AdManagementModuleStateGuard } from "@/features/ad-management/components/AdManagementModuleStateGuard";
 import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useAdManagementModuleStatus";
 import { getAdManagementApiErrorMessage } from "@/features/ad-management/ad-management-api-message";
@@ -52,12 +59,12 @@ export function AdOrganizationalUnitDetailPage() {
   const canDelete = canAccess(currentUser, "AdManagement.OrganizationalUnits.Delete");
   const canViewOperationLogs = canAccess(currentUser, "AdOperationLogs.View");
 
-  const [renameOpen, setRenameOpen] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   const organizationalUnitId = id?.trim() ?? "";
   const hasValidId = isGuidLike(organizationalUnitId);
+  const detailPath = buildAdOrganizationalUnitDetailPath(organizationalUnitId);
   const returnPath = resolveAdOrganizationalUnitsReturnPath(location.state);
 
   const detailQuery = useQuery({
@@ -128,6 +135,7 @@ export function AdOrganizationalUnitDetailPage() {
                       onClick={() =>
                         navigate(
                           buildAdOrganizationalUnitCreatePath(organizationalUnit.distinguishedName),
+                          { state: buildAdOrganizationalUnitDetailReturnState(detailPath) },
                         )
                       }
                     >
@@ -135,7 +143,13 @@ export function AdOrganizationalUnitDetailPage() {
                     </DropdownMenuItem>
                   ) : null}
                   {canUpdate ? (
-                    <DropdownMenuItem onClick={() => setRenameOpen(true)}>
+                    <DropdownMenuItem
+                      onClick={() =>
+                        navigate(buildAdOrganizationalUnitRenamePath(organizationalUnit.objectGuid), {
+                          state: buildAdOrganizationalUnitDetailReturnState(detailPath),
+                        })
+                      }
+                    >
                       {t("adManagement:organizationalUnits.actions.rename")}
                     </DropdownMenuItem>
                   ) : null}
@@ -182,51 +196,62 @@ export function AdOrganizationalUnitDetailPage() {
           <>
             <SectionCard title={t("adManagement:organizationalUnits.detail.sections.overview")}>
               <div className="grid gap-4 md:grid-cols-2">
-                <AdUserDetailField
-                  label={t("adManagement:organizationalUnits.fields.canonicalName")}
-                  value={organizationalUnit.canonicalName}
-                />
-                <AdUserDetailField
-                  label={t("adManagement:organizationalUnits.fields.distinguishedName")}
-                  value={organizationalUnit.distinguishedName}
-                  valueClassName="break-all font-mono text-xs"
-                />
-                <AdUserDetailField
-                  label={t("adManagement:organizationalUnits.fields.parent")}
-                  value={organizationalUnit.parentDistinguishedName}
-                  valueClassName="break-all font-mono text-xs"
-                />
-                <AdUserDetailField
+                <AdOrganizationalUnitTechnicalField
                   label={t("adManagement:organizationalUnits.fields.name")}
                   value={getAdOrganizationalUnitPrimaryLabel(organizationalUnit)}
+                  monospace={false}
                 />
-                <AdUserDetailField
+                <AdOrganizationalUnitTechnicalField
                   label={t("adManagement:organizationalUnits.fields.parentPath")}
                   value={
                     getAdOrganizationalUnitParentPath(organizationalUnit.canonicalName)
                     || organizationalUnit.parentDistinguishedName
                   }
+                  fullWidth
+                />
+                <AdOrganizationalUnitTechnicalField
+                  label={t("adManagement:organizationalUnits.fields.canonicalName")}
+                  value={organizationalUnit.canonicalName}
+                  fullWidth
+                />
+                <AdOrganizationalUnitTechnicalField
+                  label={t("adManagement:organizationalUnits.fields.distinguishedName")}
+                  value={organizationalUnit.distinguishedName}
+                  fullWidth
+                />
+                <AdOrganizationalUnitTechnicalField
+                  label={t("adManagement:organizationalUnits.fields.parent")}
+                  value={organizationalUnit.parentDistinguishedName}
+                  fullWidth
                 />
               </div>
             </SectionCard>
 
             <SectionCard title={t("adManagement:organizationalUnits.detail.sections.contentSummary")}>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <AdUserDetailField
+                <AdOrganizationalUnitCountBadge
+                  variant="card"
                   label={t("adManagement:organizationalUnits.table.childOuCount")}
-                  value={formatAdOrganizationalUnitCount(organizationalUnit.contentSummary.childOuCount)}
+                  value={organizationalUnit.contentSummary.childOuCount}
+                  icon={ListTree}
                 />
-                <AdUserDetailField
+                <AdOrganizationalUnitCountBadge
+                  variant="card"
                   label={t("adManagement:organizationalUnits.table.userCount")}
-                  value={formatAdOrganizationalUnitCount(organizationalUnit.contentSummary.userCount)}
+                  value={organizationalUnit.contentSummary.userCount}
+                  icon={Users}
                 />
-                <AdUserDetailField
+                <AdOrganizationalUnitCountBadge
+                  variant="card"
                   label={t("adManagement:organizationalUnits.table.groupCount")}
-                  value={formatAdOrganizationalUnitCount(organizationalUnit.contentSummary.groupCount)}
+                  value={organizationalUnit.contentSummary.groupCount}
+                  icon={Shield}
                 />
-                <AdUserDetailField
+                <AdOrganizationalUnitCountBadge
+                  variant="card"
                   label={t("adManagement:organizationalUnits.table.computerCount")}
-                  value={formatAdOrganizationalUnitCount(organizationalUnit.contentSummary.computerCount)}
+                  value={organizationalUnit.contentSummary.computerCount}
+                  icon={Monitor}
                 />
               </div>
             </SectionCard>
@@ -237,12 +262,20 @@ export function AdOrganizationalUnitDetailPage() {
               ) : (
                 <div className="divide-y rounded-lg border">
                   {organizationalUnit.childOrganizationalUnits.map((child) => (
-                    <div key={child.objectGuid} className="flex items-center justify-between gap-3 px-3 py-3">
-                      <div className="min-w-0">
-                        <p className="font-medium">
+                    <div
+                      key={child.objectGuid}
+                      className="flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-start sm:justify-between"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium break-words">
                           {getAdOrganizationalUnitPrimaryLabel(child)}
                         </p>
-                        <p className="truncate text-xs text-muted-foreground">{child.canonicalName}</p>
+                        <p
+                          className="mt-1 line-clamp-2 text-xs text-muted-foreground break-words [overflow-wrap:anywhere]"
+                          title={child.canonicalName}
+                        >
+                          {child.canonicalName}
+                        </p>
                       </div>
                       <Link
                         to={buildAdOrganizationalUnitDetailPath(child.objectGuid)}
@@ -268,12 +301,6 @@ export function AdOrganizationalUnitDetailPage() {
 
       {organizationalUnit ? (
         <>
-          <AdRenameOrganizationalUnitDialog
-            open={renameOpen}
-            organizationalUnit={organizationalUnit}
-            onOpenChange={setRenameOpen}
-            onSuccess={() => detailQuery.refetch()}
-          />
           <AdMoveOrganizationalUnitDialog
             open={moveOpen}
             organizationalUnit={organizationalUnit}

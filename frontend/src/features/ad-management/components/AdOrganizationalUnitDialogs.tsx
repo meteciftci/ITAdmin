@@ -13,13 +13,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   deleteAdOrganizationalUnit,
   invalidateAdOrganizationalUnitQueries,
   moveAdOrganizationalUnit,
-  renameAdOrganizationalUnit,
 } from "@/features/ad-management/api";
 import {
   getAdManagementApiErrorMessage,
@@ -29,96 +26,6 @@ import { formatAdOrganizationalUnitCount } from "@/features/ad-management/ad-ou-
 import { AdOuSearchCombobox } from "@/features/ad-management/components/AdOuSearchCombobox";
 import { isInvalidOrganizationalUnitMoveTarget } from "@/features/ad-management/ad-ldap-dn";
 import type { AdOrganizationalUnitDetail, AdOrganizationalUnitManageListItem } from "@/features/ad-management/types";
-
-type RenameProps = {
-  open: boolean;
-  organizationalUnit: AdOrganizationalUnitManageListItem | AdOrganizationalUnitDetail | null;
-  onOpenChange: (open: boolean) => void;
-  onSuccess?: () => void;
-};
-
-function resolveOrganizationalUnitRenameName(
-  organizationalUnit: AdOrganizationalUnitManageListItem | AdOrganizationalUnitDetail,
-): string {
-  return organizationalUnit.ou?.trim() || organizationalUnit.name?.trim() || "";
-}
-
-export function AdRenameOrganizationalUnitDialog({
-  open,
-  organizationalUnit,
-  onOpenChange,
-  onSuccess,
-}: RenameProps) {
-  const { t } = useTranslation(["adManagement", "common", "errors"]);
-  const queryClient = useQueryClient();
-  const [name, setName] = useState("");
-
-  const handleOpenChange = (nextOpen: boolean) => {
-    if (nextOpen && organizationalUnit) {
-      setName(resolveOrganizationalUnitRenameName(organizationalUnit));
-    }
-    onOpenChange(nextOpen);
-  };
-
-  const renameMutation = useMutation({
-    mutationFn: () => {
-      if (!organizationalUnit) {
-        throw new Error("Missing organizational unit");
-      }
-
-      return renameAdOrganizationalUnit(organizationalUnit.objectGuid, { name: name.trim() });
-    },
-    onSuccess: async (response) => {
-      if (!response.success) {
-        toast.error(
-          resolveAdManagementApiMessage(t, response, "adManagement:organizationalUnits.rename.error"),
-        );
-        return;
-      }
-
-      await invalidateAdOrganizationalUnitQueries(queryClient);
-      toast.success(t("adManagement:organizationalUnits.rename.success"));
-      handleOpenChange(false);
-      onSuccess?.();
-    },
-    onError: (error) => {
-      toast.error(getAdManagementApiErrorMessage(error, t, "adManagement:organizationalUnits.rename.error"));
-    },
-  });
-
-  return (
-    <Dialog open={open}>
-      <DialogContent onOpenChange={handleOpenChange}>
-        <DialogHeader>
-          <DialogTitle>{t("adManagement:organizationalUnits.rename.title")}</DialogTitle>
-          <DialogDescription>{t("adManagement:organizationalUnits.rename.description")}</DialogDescription>
-        </DialogHeader>
-        <DialogBody className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="rename-ou-name">{t("adManagement:organizationalUnits.fields.name")}</Label>
-            <Input
-              id="rename-ou-name"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-            />
-          </div>
-        </DialogBody>
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
-            {t("common:actions.cancel")}
-          </Button>
-          <Button
-            type="button"
-            disabled={!name.trim() || renameMutation.isPending}
-            onClick={() => renameMutation.mutate()}
-          >
-            {t("common:actions.save")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 type MoveProps = {
   open: boolean;
@@ -237,6 +144,7 @@ export function AdDeleteOrganizationalUnitDialog({
 }: DeleteProps) {
   const { t } = useTranslation(["adManagement", "common", "errors"]);
   const queryClient = useQueryClient();
+  const emptyText = t("common:notAvailable");
 
   const deleteMutation = useMutation({
     mutationFn: () => {
@@ -289,22 +197,22 @@ export function AdDeleteOrganizationalUnitDialog({
               <ul className="mt-2 space-y-1 text-muted-foreground">
                 <li>
                   {t("adManagement:organizationalUnits.summary.childOuCount", {
-                    count: formatAdOrganizationalUnitCount(summary.childOuCount),
+                    count: formatAdOrganizationalUnitCount(summary.childOuCount, emptyText),
                   })}
                 </li>
                 <li>
                   {t("adManagement:organizationalUnits.summary.userCount", {
-                    count: formatAdOrganizationalUnitCount(summary.userCount),
+                    count: formatAdOrganizationalUnitCount(summary.userCount, emptyText),
                   })}
                 </li>
                 <li>
                   {t("adManagement:organizationalUnits.summary.groupCount", {
-                    count: formatAdOrganizationalUnitCount(summary.groupCount),
+                    count: formatAdOrganizationalUnitCount(summary.groupCount, emptyText),
                   })}
                 </li>
                 <li>
                   {t("adManagement:organizationalUnits.summary.computerCount", {
-                    count: formatAdOrganizationalUnitCount(summary.computerCount),
+                    count: formatAdOrganizationalUnitCount(summary.computerCount, emptyText),
                   })}
                 </li>
               </ul>

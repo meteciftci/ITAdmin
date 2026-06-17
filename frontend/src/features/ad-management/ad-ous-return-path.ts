@@ -8,6 +8,12 @@ export function buildAdOrganizationalUnitsListReturnState() {
   };
 }
 
+export function buildAdOrganizationalUnitDetailReturnState(detailPath: string) {
+  return {
+    [AD_ORGANIZATIONAL_UNITS_RETURN_STATE_KEY]: detailPath,
+  };
+}
+
 export function resolveAdOrganizationalUnitsReturnPath(
   locationState: unknown,
   fallback = AD_ORGANIZATIONAL_UNITS_LIST_PATH,

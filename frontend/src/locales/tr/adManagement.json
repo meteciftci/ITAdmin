@@ -824,10 +824,16 @@
         }
       },
       "rename": {
-        "title": "OU Yeniden Adlandır",
+        "pageTitle": "OU Yeniden Adlandır",
+        "formTitle": "Organizasyon Birimi Adı",
         "description": "Organizasyon biriminin adını güncelleyin.",
-        "success": "Organizasyon birimi yeniden adlandırıldı.",
-        "error": "Organizasyon birimi yeniden adlandırılamadı."
+        "messages": {
+          "renamed": "Organizasyon birimi yeniden adlandırıldı.",
+          "renameFailed": "Organizasyon birimi yeniden adlandırılamadı."
+        },
+        "validation": {
+          "nameRequired": "OU adı zorunludur."
+        }
       },
       "move": {
         "title": "OU Taşı",

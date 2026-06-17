@@ -824,10 +824,16 @@
         }
       },
       "rename": {
-        "title": "Rename OU",
+        "pageTitle": "Rename OU",
+        "formTitle": "Organizational unit name",
         "description": "Update the organizational unit name.",
-        "success": "Organizational unit renamed.",
-        "error": "Organizational unit could not be renamed."
+        "messages": {
+          "renamed": "Organizational unit renamed.",
+          "renameFailed": "Organizational unit could not be renamed."
+        },
+        "validation": {
+          "nameRequired": "OU name is required."
+        }
       },
       "move": {
         "title": "Move OU",

@@ -67,8 +67,17 @@ export function getAdOrganizationalUnitSecondaryLabel(
   return location;
 }
 
-export function formatAdOrganizationalUnitCount(value: number | null | undefined): string {
-  return value == null ? "-" : String(value);
+export function formatAdOrganizationalUnitCount(
+  value: number | null | undefined,
+  emptyText: string,
+): string {
+  return value == null ? emptyText : String(value);
+}
+
+export function resolveOrganizationalUnitRenameName(
+  organizationalUnit: OrganizationalUnitLabelSource,
+): string {
+  return organizationalUnit.ou?.trim() || organizationalUnit.name?.trim() || "";
 }
 
 export function getAdOrganizationalUnitParentPath(canonicalName: string | null | undefined): string | null {

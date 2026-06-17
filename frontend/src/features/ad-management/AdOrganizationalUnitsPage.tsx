@@ -16,6 +16,7 @@ import { buildAdOrganizationalUnitsListReturnState } from "@/features/ad-managem
 import {
   buildAdOrganizationalUnitCreatePath,
   buildAdOrganizationalUnitDetailPath,
+  buildAdOrganizationalUnitRenamePath,
 } from "@/features/ad-management/ad-ou-detail-path";
 import {
   AD_MANAGEMENT_ORGANIZATIONAL_UNITS_QUERY_KEY,
@@ -24,7 +25,6 @@ import {
 import {
   AdDeleteOrganizationalUnitDialog,
   AdMoveOrganizationalUnitDialog,
-  AdRenameOrganizationalUnitDialog,
 } from "@/features/ad-management/components/AdOrganizationalUnitDialogs";
 import { AdManagementModuleStateGuard } from "@/features/ad-management/components/AdManagementModuleStateGuard";
 import { AdOrganizationalUnitsSearchToolbar } from "@/features/ad-management/components/AdOrganizationalUnitsSearchToolbar";
@@ -46,9 +46,10 @@ export function AdOrganizationalUnitsPage() {
   const navigate = useNavigate();
   const { listState, listPath, updateListState, clearListState } = useAdOrganizationalUnitListState();
 
-  const [renameTarget, setRenameTarget] = useState<AdOrganizationalUnitManageListItem | null>(null);
   const [moveTarget, setMoveTarget] = useState<AdOrganizationalUnitManageListItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AdOrganizationalUnitManageListItem | null>(null);
+
+  const emptyText = t("common:notAvailable");
 
   const normalizedSearch = listState.search.trim();
   const canSearch = normalizedSearch.length >= MIN_SEARCH_LENGTH;
@@ -80,6 +81,7 @@ export function AdOrganizationalUnitsPage() {
     () =>
       createAdOrganizationalUnitColumns({
         t,
+        emptyText,
         canCreate,
         canUpdate,
         canMove,
@@ -94,11 +96,15 @@ export function AdOrganizationalUnitsPage() {
             state: buildAdOrganizationalUnitsListReturnState(),
           });
         },
-        onRename: setRenameTarget,
+        onRename: (item) => {
+          navigate(buildAdOrganizationalUnitRenamePath(item.objectGuid), {
+            state: buildAdOrganizationalUnitsListReturnState(),
+          });
+        },
         onMove: setMoveTarget,
         onDelete: setDeleteTarget,
       }),
-    [t, navigate, canCreate, canUpdate, canMove, canDelete],
+    [t, emptyText, navigate, canCreate, canUpdate, canMove, canDelete],
   );
 
   const table = useServerDataTable({
@@ -188,15 +194,6 @@ export function AdOrganizationalUnitsPage() {
         </SectionCard>
       </section>
 
-      <AdRenameOrganizationalUnitDialog
-        open={Boolean(renameTarget)}
-        organizationalUnit={renameTarget}
-        onOpenChange={(open) => {
-          if (!open) {
-            setRenameTarget(null);
-          }
-        }}
-      />
       <AdMoveOrganizationalUnitDialog
         open={Boolean(moveTarget)}
         organizationalUnit={moveTarget}
