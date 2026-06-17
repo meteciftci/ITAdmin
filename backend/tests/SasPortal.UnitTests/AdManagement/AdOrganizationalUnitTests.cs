@@ -182,6 +182,20 @@ public sealed class AdOrganizationalUnitTests
     }
 
     [Fact]
+    public void OrganizationalUnitDirectory_RequiresMinimumSearchBeforeLdapQuery()
+    {
+        var source = File.ReadAllText(
+            Path.Combine(
+                FindRepositoryRoot(),
+                "backend/src/SasPortal.Infrastructure/Services/AdUserDirectoryService.OrganizationalUnitsDirectory.cs"));
+
+        Assert.Contains("AdLdapAttributeCatalog.IsSearchTermValid(query.Search)", source, StringComparison.Ordinal);
+        Assert.Contains("TryCountOneLevelEntries", source, StringComparison.Ordinal);
+        Assert.Contains("TryCountOrganizationalUnitChildren", source, StringComparison.Ordinal);
+        Assert.Contains("DisplayLabel", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void OrganizationalUnitInfrastructure_ContainsGuardAndMutationPatterns()
     {
         var source = File.ReadAllText(

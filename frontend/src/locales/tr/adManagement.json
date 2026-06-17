@@ -772,6 +772,8 @@
       "description": "Active Directory organizasyon birimlerini görüntüleyin, oluşturun ve yönetin.",
       "searchPlaceholder": "Organizasyon birimi ara...",
       "table": {
+        "organizationalUnit": "Organizasyon Birimi",
+        "location": "Konum",
         "name": "OU Adı",
         "parent": "Üst Konum",
         "childOuCount": "Alt OU",
@@ -802,7 +804,9 @@
       },
       "empty": {
         "title": "Organizasyon birimi bulunamadı",
-        "notFound": "OU bulunamadı"
+        "notFound": "OU bulunamadı",
+        "searchRequiredTitle": "Arama gerekli",
+        "searchRequired": "Organizasyon birimi aramak için en az 2 karakter girin."
       },
       "summary": {
         "childOuCount": "Alt OU: {{count}}",
@@ -811,10 +815,13 @@
         "computerCount": "Bilgisayar: {{count}}"
       },
       "create": {
-        "title": "OU Oluştur",
+        "pageTitle": "OU Oluştur",
+        "formTitle": "Organizasyon Birimi Bilgileri",
         "description": "Seçilen üst OU altında yeni bir organizasyon birimi oluşturun.",
-        "success": "Organizasyon birimi oluşturuldu.",
-        "error": "Organizasyon birimi oluşturulamadı."
+        "messages": {
+          "created": "Organizasyon birimi oluşturuldu.",
+          "createFailed": "Organizasyon birimi oluşturulamadı."
+        }
       },
       "rename": {
         "title": "OU Yeniden Adlandır",

@@ -13,13 +13,15 @@ import { SectionCard } from "@/components/common/SectionCard";
 import { AD_ORGANIZATIONAL_UNITS_LIST_DEFAULTS } from "@/features/ad-management/ad-ous-list-query";
 import { createAdOrganizationalUnitColumns } from "@/features/ad-management/ad-ous-columns";
 import { buildAdOrganizationalUnitsListReturnState } from "@/features/ad-management/ad-ous-return-path";
-import { buildAdOrganizationalUnitDetailPath } from "@/features/ad-management/ad-ou-detail-path";
+import {
+  buildAdOrganizationalUnitCreatePath,
+  buildAdOrganizationalUnitDetailPath,
+} from "@/features/ad-management/ad-ou-detail-path";
 import {
   AD_MANAGEMENT_ORGANIZATIONAL_UNITS_QUERY_KEY,
   getAdOrganizationalUnits,
 } from "@/features/ad-management/api";
 import {
-  AdCreateOrganizationalUnitDialog,
   AdDeleteOrganizationalUnitDialog,
   AdMoveOrganizationalUnitDialog,
   AdRenameOrganizationalUnitDialog,
@@ -30,6 +32,8 @@ import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useA
 import { useAdOrganizationalUnitListState } from "@/features/ad-management/use-ad-ou-list-state";
 import type { AdOrganizationalUnitManageListItem } from "@/features/ad-management/types";
 import { createApiErrorRouteState, getErrorRoutePath } from "@/lib/route-error";
+
+const MIN_SEARCH_LENGTH = 2;
 
 export function AdOrganizationalUnitsPage() {
   const { t } = useTranslation(["adManagement", "common", "errors"]);
@@ -42,14 +46,13 @@ export function AdOrganizationalUnitsPage() {
   const navigate = useNavigate();
   const { listState, listPath, updateListState, clearListState } = useAdOrganizationalUnitListState();
 
-  const [createOpen, setCreateOpen] = useState(false);
-  const [createParentDn, setCreateParentDn] = useState<string | null>(null);
   const [renameTarget, setRenameTarget] = useState<AdOrganizationalUnitManageListItem | null>(null);
   const [moveTarget, setMoveTarget] = useState<AdOrganizationalUnitManageListItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AdOrganizationalUnitManageListItem | null>(null);
 
   const normalizedSearch = listState.search.trim();
-  const effectiveSearch = normalizedSearch.length > 0 ? normalizedSearch : undefined;
+  const canSearch = normalizedSearch.length >= MIN_SEARCH_LENGTH;
+  const effectiveSearch = canSearch ? normalizedSearch : undefined;
 
   const organizationalUnitsQuery = useQuery({
     queryKey: [
@@ -65,12 +68,12 @@ export function AdOrganizationalUnitsPage() {
         pageNumber: listState.pageNumber,
         pageSize: listState.pageSize,
       }),
-    enabled: moduleStatus.isOperational,
+    enabled: moduleStatus.isOperational && canSearch,
   });
 
   const organizationalUnits = useMemo(
-    () => organizationalUnitsQuery.data?.items ?? [],
-    [organizationalUnitsQuery.data],
+    () => (canSearch ? organizationalUnitsQuery.data?.items ?? [] : []),
+    [canSearch, organizationalUnitsQuery.data],
   );
 
   const columns = useMemo(
@@ -87,8 +90,9 @@ export function AdOrganizationalUnitsPage() {
           });
         },
         onCreateChild: (item) => {
-          setCreateParentDn(item.distinguishedName);
-          setCreateOpen(true);
+          navigate(buildAdOrganizationalUnitCreatePath(item.distinguishedName), {
+            state: buildAdOrganizationalUnitsListReturnState(),
+          });
         },
         onRename: setRenameTarget,
         onMove: setMoveTarget,
@@ -106,6 +110,14 @@ export function AdOrganizationalUnitsPage() {
     pageIndex: listState.pageNumber - 1,
     pageSize: listState.pageSize,
   });
+
+  const handleRefresh = () => {
+    if (!canSearch) {
+      return;
+    }
+
+    organizationalUnitsQuery.refetch();
+  };
 
   if (moduleStatus.isOperational && organizationalUnitsQuery.isError) {
     const routeState = createApiErrorRouteState(organizationalUnitsQuery.error, {
@@ -128,23 +140,27 @@ export function AdOrganizationalUnitsPage() {
           <div className="space-y-4">
             <AdOrganizationalUnitsSearchToolbar
               listState={listState}
+              canSearch={canSearch}
               onListStateChange={updateListState}
               onClearFilters={clearListState}
-              onRefresh={() => organizationalUnitsQuery.refetch()}
+              onRefresh={handleRefresh}
               canCreate={canCreate}
-              onCreate={() => {
-                setCreateParentDn(null);
-                setCreateOpen(true);
-              }}
             />
 
-            {organizationalUnitsQuery.isLoading ? <LoadingState /> : null}
+            {!canSearch ? (
+              <EmptyState
+                title={t("adManagement:organizationalUnits.empty.searchRequiredTitle")}
+                description={t("adManagement:organizationalUnits.empty.searchRequired")}
+              />
+            ) : null}
 
-            {organizationalUnitsQuery.isSuccess && !organizationalUnits.length ? (
+            {canSearch && organizationalUnitsQuery.isLoading ? <LoadingState /> : null}
+
+            {canSearch && organizationalUnitsQuery.isSuccess && !organizationalUnits.length ? (
               <EmptyState title={t("adManagement:organizationalUnits.empty.title")} />
             ) : null}
 
-            {organizationalUnits.length > 0 ? (
+            {canSearch && organizationalUnits.length > 0 ? (
               <DataTable
                 table={table}
                 footer={
@@ -172,16 +188,6 @@ export function AdOrganizationalUnitsPage() {
         </SectionCard>
       </section>
 
-      <AdCreateOrganizationalUnitDialog
-        open={createOpen}
-        defaultParentDistinguishedName={createParentDn}
-        onOpenChange={setCreateOpen}
-        onSuccess={(detail) => {
-          navigate(buildAdOrganizationalUnitDetailPath(detail.objectGuid), {
-            state: buildAdOrganizationalUnitsListReturnState(),
-          });
-        }}
-      />
       <AdRenameOrganizationalUnitDialog
         open={Boolean(renameTarget)}
         organizationalUnit={renameTarget}

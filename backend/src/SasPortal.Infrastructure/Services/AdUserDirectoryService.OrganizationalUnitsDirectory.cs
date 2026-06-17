@@ -31,6 +31,7 @@ public sealed partial class AdUserDirectoryService : IAdOrganizationalUnitDirect
     private const string ChildUserFilter = "(&(objectCategory=person)(objectClass=user))";
     private const string ChildGroupFilter = "(objectClass=group)";
     private const string ChildComputerFilter = "(objectClass=computer)";
+    private const int OrganizationalUnitCountPageSize = 500;
 
     public Task<AdOrganizationalUnitManageListResult> SearchManageOrganizationalUnitsAsync(
         AdOrganizationalUnitManageListQuery query,
@@ -48,6 +49,14 @@ public sealed partial class AdUserDirectoryService : IAdOrganizationalUnitDirect
     {
         var pageSize = AdLdapValueConverter.ClampPageSize(query.PageSize);
         var pageNumber = AdLdapValueConverter.NormalizePageNumber(query.PageNumber);
+
+        if (!AdLdapAttributeCatalog.IsSearchTermValid(query.Search))
+        {
+            return new AdOrganizationalUnitManageListResult(
+                true,
+                string.Empty,
+                new AdOrganizationalUnitManagePage([], pageNumber, pageSize, false));
+        }
 
         var connectionResult = await ResolveConnectionAsync(cancellationToken);
         if (!connectionResult.IsSuccess || connectionResult.Context is null)
@@ -68,15 +77,6 @@ public sealed partial class AdUserDirectoryService : IAdOrganizationalUnitDirect
                 AdManagementApiMessageKeys.Common.NotConfigured,
                 null,
                 AdDirectoryFailureKind.NotConfigured);
-        }
-
-        if (!string.IsNullOrWhiteSpace(query.Search)
-            && !AdLdapAttributeCatalog.IsSearchTermValid(query.Search))
-        {
-            return new AdOrganizationalUnitManageListResult(
-                true,
-                string.Empty,
-                new AdOrganizationalUnitManagePage([], pageNumber, pageSize, false));
         }
 
         try
@@ -240,12 +240,19 @@ public sealed partial class AdUserDirectoryService : IAdOrganizationalUnitDirect
         var name = GetFirstString(entry, "name");
         var ou = GetFirstString(entry, "ou");
         var parentDistinguishedName = AdLdapDnHelper.GetParentDistinguishedName(distinguishedName);
-        var contentSummary = CountOrganizationalUnitChildren(ldapConnection, distinguishedName);
+        var contentSummary = TryCountOrganizationalUnitChildren(ldapConnection, distinguishedName);
+        var displayLabel = AdOrganizationalUnitLabelBuilder.Build(
+            distinguishedName,
+            displayName,
+            name,
+            ou);
 
         item = new AdOrganizationalUnitManageListItem(
             objectGuid.ToString("D"),
             name,
             ou,
+            displayName,
+            displayLabel,
             distinguishedName,
             parentDistinguishedName,
             AdOrganizationalUnitCanonicalNameBuilder.Build(distinguishedName),
@@ -311,7 +318,7 @@ public sealed partial class AdUserDirectoryService : IAdOrganizationalUnitDirect
         var name = GetFirstString(entry, "name");
         var ou = GetFirstString(entry, "ou");
         var parentDistinguishedName = AdLdapDnHelper.GetParentDistinguishedName(distinguishedName);
-        var contentSummary = CountOrganizationalUnitChildren(ldapConnection, distinguishedName);
+        var contentSummary = TryCountOrganizationalUnitChildren(ldapConnection, distinguishedName);
 
         detail = new AdOrganizationalUnitDetail(
             objectGuid.ToString("D"),
@@ -359,44 +366,124 @@ public sealed partial class AdUserDirectoryService : IAdOrganizationalUnitDirect
                 continue;
             }
 
+            var childDisplayName = GetFirstString(entry, "displayName");
+            var childName = GetFirstString(entry, "name");
+            var childOu = GetFirstString(entry, "ou");
             items.Add(new AdOrganizationalUnitChildListItem(
                 objectGuid.ToString("D"),
-                GetFirstString(entry, "name"),
-                GetFirstString(entry, "ou"),
+                childName,
+                childOu,
+                childDisplayName,
+                AdOrganizationalUnitLabelBuilder.Build(
+                    distinguishedName,
+                    childDisplayName,
+                    childName,
+                    childOu),
                 distinguishedName,
                 AdOrganizationalUnitCanonicalNameBuilder.Build(distinguishedName)));
         }
 
         return items
-            .OrderBy(static item => item.Name ?? item.Ou ?? item.DistinguishedName, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(static item => item.DisplayLabel, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
 
-    private static AdOrganizationalUnitContentSummary CountOrganizationalUnitChildren(
+    private AdOrganizationalUnitContentSummary TryCountOrganizationalUnitChildren(
         LdapConnection ldapConnection,
         string distinguishedName) =>
         new(
-            CountOneLevelEntries(ldapConnection, distinguishedName, ChildOrganizationalUnitFilter),
-            CountOneLevelEntries(ldapConnection, distinguishedName, ChildUserFilter),
-            CountOneLevelEntries(ldapConnection, distinguishedName, ChildGroupFilter),
-            CountOneLevelEntries(ldapConnection, distinguishedName, ChildComputerFilter));
+            TryCountOneLevelEntries(ldapConnection, distinguishedName, ChildOrganizationalUnitFilter, "ChildOu"),
+            TryCountOneLevelEntries(ldapConnection, distinguishedName, ChildUserFilter, "ChildUser"),
+            TryCountOneLevelEntries(ldapConnection, distinguishedName, ChildGroupFilter, "ChildGroup"),
+            TryCountOneLevelEntries(ldapConnection, distinguishedName, ChildComputerFilter, "ChildComputer"));
 
-    private static int CountOneLevelEntries(
+    private int? TryCountOneLevelEntries(
         LdapConnection ldapConnection,
         string searchBase,
-        string filter)
+        string filter,
+        string operationName)
     {
-        var searchRequest = new SearchRequest(
-            searchBase,
-            filter,
-            SearchScope.OneLevel,
-            "distinguishedName")
+        try
         {
-            TimeLimit = LdapOperationTimeout,
-        };
+            var total = 0;
+            byte[]? cookie = null;
 
-        var response = (SearchResponse)ldapConnection.SendRequest(searchRequest);
-        return response.ResultCode == ResultCode.Success ? response.Entries.Count : 0;
+            do
+            {
+                var searchRequest = new SearchRequest(
+                    searchBase,
+                    filter,
+                    SearchScope.OneLevel,
+                    "distinguishedName")
+                {
+                    TimeLimit = LdapOperationTimeout,
+                };
+
+                var pageControl = new PageResultRequestControl(OrganizationalUnitCountPageSize)
+                {
+                    Cookie = cookie,
+                };
+                searchRequest.Controls.Add(pageControl);
+
+                var response = (SearchResponse)ldapConnection.SendRequest(searchRequest);
+                if (response.ResultCode != ResultCode.Success)
+                {
+                    logger.LogWarning(
+                        "AD organizational unit child count query returned non-success result. Operation={Operation} SearchBase={SearchBase} Filter={Filter} ResultCode={ResultCode}",
+                        operationName,
+                        searchBase,
+                        filter,
+                        response.ResultCode);
+                    return null;
+                }
+
+                total += response.Entries.Count;
+                var pageResponse = response.Controls
+                    .OfType<PageResultResponseControl>()
+                    .FirstOrDefault();
+                cookie = pageResponse?.Cookie;
+            }
+            while (cookie is { Length: > 0 });
+
+            return total;
+        }
+        catch (LdapException ex)
+        {
+            logger.LogWarning(
+                ex,
+                "AD organizational unit child count query failed. Operation={Operation} SearchBase={SearchBase} Filter={Filter}",
+                operationName,
+                searchBase,
+                filter);
+            return null;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                ex,
+                "AD organizational unit child count query failed unexpectedly. Operation={Operation} SearchBase={SearchBase} Filter={Filter}",
+                operationName,
+                searchBase,
+                filter);
+            return null;
+        }
+    }
+
+    private bool OrganizationalUnitHasChildren(LdapConnection ldapConnection, string distinguishedName)
+    {
+        var summary = TryCountOrganizationalUnitChildren(ldapConnection, distinguishedName);
+        if (summary.ChildOuCount is null
+            || summary.UserCount is null
+            || summary.GroupCount is null
+            || summary.ComputerCount is null)
+        {
+            return true;
+        }
+
+        return summary.ChildOuCount > 0
+            || summary.UserCount > 0
+            || summary.GroupCount > 0
+            || summary.ComputerCount > 0;
     }
 
     private static string BuildOrganizationalUnitObjectGuidFilter(Guid id)
@@ -404,12 +491,6 @@ public sealed partial class AdUserDirectoryService : IAdOrganizationalUnitDirect
         var guidFilter = AdLdapFilterHelper.FormatObjectGuidFilter(id);
         return $"(&(objectClass=organizationalUnit)(objectGUID={guidFilter}))";
     }
-
-    private static bool OrganizationalUnitHasChildren(LdapConnection ldapConnection, string distinguishedName) =>
-        CountOneLevelEntries(ldapConnection, distinguishedName, ChildOrganizationalUnitFilter) > 0
-        || CountOneLevelEntries(ldapConnection, distinguishedName, ChildUserFilter) > 0
-        || CountOneLevelEntries(ldapConnection, distinguishedName, ChildGroupFilter) > 0
-        || CountOneLevelEntries(ldapConnection, distinguishedName, ChildComputerFilter) > 0;
 
     private static bool ExistsOrganizationalUnitWithNameUnderParent(
         LdapConnection ldapConnection,

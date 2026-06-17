@@ -5,7 +5,7 @@ namespace SasPortal.UnitTests.AdManagement;
 public sealed class AdOrganizationalUnitLabelBuilderTests
 {
     [Fact]
-    public void Build_PrefersDisplayNameThenNameThenOuThenParsedDn()
+    public void Build_PrefersDisplayNameThenOuThenNameThenParsedDn()
     {
         const string dn = "OU=BT,OU=Users,DC=example,DC=com";
 
@@ -14,12 +14,12 @@ public sealed class AdOrganizationalUnitLabelBuilderTests
             AdOrganizationalUnitLabelBuilder.Build(dn, "BT Display", "BT Name", "BT OU"));
 
         Assert.Equal(
-            "BT Name",
+            "BT OU",
             AdOrganizationalUnitLabelBuilder.Build(dn, null, "BT Name", "BT OU"));
 
         Assert.Equal(
-            "BT OU",
-            AdOrganizationalUnitLabelBuilder.Build(dn, null, null, "BT OU"));
+            "BT Name",
+            AdOrganizationalUnitLabelBuilder.Build(dn, null, "BT Name", null));
 
         Assert.Equal(
             "BT",

@@ -13,14 +13,14 @@ public static class AdOrganizationalUnitLabelBuilder
             return displayName.Trim();
         }
 
-        if (!string.IsNullOrWhiteSpace(name))
-        {
-            return name.Trim();
-        }
-
         if (!string.IsNullOrWhiteSpace(ou))
         {
             return ou.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(name))
+        {
+            return name.Trim();
         }
 
         var parsedOu = ParseOuNameFromDistinguishedName(distinguishedName);

@@ -1,30 +1,34 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { DataTableToolbar } from "@/components/common/data-table";
+import { AD_ORGANIZATIONAL_UNIT_CREATE_PATH } from "@/features/ad-management/ad-ou-detail-path";
 import {
   AD_ORGANIZATIONAL_UNITS_LIST_DEFAULTS,
   type AdOrganizationalUnitsListState,
 } from "@/features/ad-management/ad-ous-list-query";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { cn } from "@/lib/utils";
 
 type Props = {
   listState: AdOrganizationalUnitsListState;
+  canSearch: boolean;
   onListStateChange: (patch: Partial<AdOrganizationalUnitsListState>) => void;
   onClearFilters: () => void;
   onRefresh: () => void;
   canCreate: boolean;
-  onCreate: () => void;
 };
 
 export function AdOrganizationalUnitsSearchToolbar({
   listState,
+  canSearch,
   onListStateChange,
   onClearFilters,
   onRefresh,
   canCreate,
-  onCreate,
 }: Props) {
   const { t } = useTranslation(["adManagement", "common"]);
   const [searchInput, setSearchInput] = useState(listState.search);
@@ -60,11 +64,14 @@ export function AdOrganizationalUnitsSearchToolbar({
       actions={
         <>
           {canCreate ? (
-            <Button type="button" onClick={onCreate}>
+            <Link
+              to={AD_ORGANIZATIONAL_UNIT_CREATE_PATH}
+              className={cn(buttonVariants({ variant: "default" }))}
+            >
               {t("adManagement:organizationalUnits.actions.create")}
-            </Button>
+            </Link>
           ) : null}
-          <Button type="button" variant="outline" onClick={onRefresh}>
+          <Button type="button" variant="outline" onClick={onRefresh} disabled={!canSearch}>
             {t("common:actions.refresh")}
           </Button>
         </>

@@ -4,13 +4,15 @@ public sealed record AdOrganizationalUnitManageListItemResponse(
     string ObjectGuid,
     string? Name,
     string? Ou,
+    string? DisplayName,
+    string DisplayLabel,
     string DistinguishedName,
     string? ParentDistinguishedName,
     string CanonicalName,
-    int ChildOuCount,
-    int UserCount,
-    int GroupCount,
-    int ComputerCount);
+    int? ChildOuCount,
+    int? UserCount,
+    int? GroupCount,
+    int? ComputerCount);
 
 public sealed record AdOrganizationalUnitManageListResponse(
     IReadOnlyList<AdOrganizationalUnitManageListItemResponse> Items,
@@ -22,14 +24,16 @@ public sealed record AdOrganizationalUnitChildListItemResponse(
     string ObjectGuid,
     string? Name,
     string? Ou,
+    string? DisplayName,
+    string DisplayLabel,
     string DistinguishedName,
     string CanonicalName);
 
 public sealed record AdOrganizationalUnitContentSummaryResponse(
-    int ChildOuCount,
-    int UserCount,
-    int GroupCount,
-    int ComputerCount);
+    int? ChildOuCount,
+    int? UserCount,
+    int? GroupCount,
+    int? ComputerCount);
 
 public sealed record AdOrganizationalUnitDetailResponse(
     string ObjectGuid,

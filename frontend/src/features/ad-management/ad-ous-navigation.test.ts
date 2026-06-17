@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
-import { buildAdOrganizationalUnitDetailPath } from "./ad-ou-detail-path.ts";
+import {
+  AD_ORGANIZATIONAL_UNIT_CREATE_PATH,
+  buildAdOrganizationalUnitCreatePath,
+  buildAdOrganizationalUnitDetailPath,
+} from "./ad-ou-detail-path.ts";
 import { AD_ORGANIZATIONAL_UNITS_LIST_PATH } from "./ad-ous-list-path.ts";
 import {
   AD_OPERATION_LOG_COVERAGE_OPERATION_TYPES,
@@ -11,6 +15,7 @@ import {
 import { getSnapshotRenderStrategy } from "./parse-ad-operation-snapshot.ts";
 
 const organizationalUnitId = "550e8400-e29b-41d4-a716-446655440000";
+const parentDn = "OU=Departments,DC=corp,DC=local";
 
 function readLocaleOperations(locale: "tr" | "en"): Record<string, string> {
   const source = readFileSync(
@@ -29,19 +34,33 @@ describe("ad organizational units navigation", () => {
     );
   });
 
-  it("protects organizational units routes with AdManagement.OrganizationalUnits.View permission", () => {
+  it("builds organizational unit create path with optional parentDn query param", () => {
+    assert.equal(buildAdOrganizationalUnitCreatePath(), AD_ORGANIZATIONAL_UNIT_CREATE_PATH);
+    assert.equal(
+      buildAdOrganizationalUnitCreatePath(parentDn),
+      `${AD_ORGANIZATIONAL_UNIT_CREATE_PATH}?parentDn=${encodeURIComponent(parentDn)}`,
+    );
+  });
+
+  it("protects organizational units routes with expected permissions", () => {
     const routerSource = readFileSync(
       new URL("../../app/router.tsx", import.meta.url),
       "utf8",
     );
 
     assert.match(routerSource, /path: "\/ad-management\/organizational-units"/);
+    assert.match(routerSource, /path: "\/ad-management\/organizational-units\/create"/);
     assert.match(routerSource, /path: "\/ad-management\/organizational-units\/:id"/);
     assert.match(
       routerSource,
       /RequirePermission permission="AdManagement\.OrganizationalUnits\.View"/,
     );
+    assert.match(
+      routerSource,
+      /RequirePermission permission="AdManagement\.OrganizationalUnits\.Create"/,
+    );
     assert.match(routerSource, /AdOrganizationalUnitsPage/);
+    assert.match(routerSource, /AdOrganizationalUnitCreatePage/);
     assert.match(routerSource, /AdOrganizationalUnitDetailPage/);
   });
 
@@ -71,7 +90,20 @@ describe("ad organizational units navigation", () => {
     assert.ok(organizationalUnitsIndex < deletedObjectsIndex);
   });
 
-  it("uses list toolbar, DataTable, pagination and OU dialogs", () => {
+  it("does not query list API until search has minimum length", () => {
+    const pageSource = readFileSync(
+      new URL("./AdOrganizationalUnitsPage.tsx", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(pageSource, /MIN_SEARCH_LENGTH = 2/);
+    assert.match(pageSource, /canSearch = normalizedSearch\.length >= MIN_SEARCH_LENGTH/);
+    assert.match(pageSource, /enabled: moduleStatus\.isOperational && canSearch/);
+    assert.match(pageSource, /organizationalUnits\.empty\.searchRequired/);
+    assert.doesNotMatch(pageSource, /AdCreateOrganizationalUnitDialog/);
+  });
+
+  it("uses list toolbar, DataTable, pagination and rename/move/delete dialogs", () => {
     const pageSource = readFileSync(
       new URL("./AdOrganizationalUnitsPage.tsx", import.meta.url),
       "utf8",
@@ -88,20 +120,30 @@ describe("ad organizational units navigation", () => {
       new URL("./components/AdOrganizationalUnitDialogs.tsx", import.meta.url),
       "utf8",
     );
+    const createPageSource = readFileSync(
+      new URL("./AdOrganizationalUnitCreatePage.tsx", import.meta.url),
+      "utf8",
+    );
 
     assert.match(toolbarSource, /organizationalUnits\.searchPlaceholder/);
-    assert.match(toolbarSource, /listState/);
+    assert.match(toolbarSource, /canSearch/);
+    assert.match(toolbarSource, /AD_ORGANIZATIONAL_UNIT_CREATE_PATH/);
+    assert.match(toolbarSource, /disabled=\{!canSearch\}/);
     assert.match(pageSource, /DataTable/);
     assert.match(pageSource, /DataTablePagination/);
-    assert.match(columnsSource, /organizationalUnits\.table\./);
-    assert.match(dialogsSource, /AdCreateOrganizationalUnitDialog/);
+    assert.match(pageSource, /buildAdOrganizationalUnitCreatePath/);
+    assert.match(columnsSource, /organizationalUnits\.table\.organizationalUnit/);
+    assert.match(columnsSource, /getAdOrganizationalUnitPrimaryLabel/);
+    assert.match(columnsSource, /formatAdOrganizationalUnitCount/);
+    assert.doesNotMatch(dialogsSource, /AdCreateOrganizationalUnitDialog/);
     assert.match(dialogsSource, /AdRenameOrganizationalUnitDialog/);
     assert.match(dialogsSource, /AdMoveOrganizationalUnitDialog/);
     assert.match(dialogsSource, /AdDeleteOrganizationalUnitDialog/);
-    assert.match(dialogsSource, /AdOuSearchCombobox/);
+    assert.match(createPageSource, /createAdOrganizationalUnit/);
+    assert.match(createPageSource, /readAdOrganizationalUnitCreateParentDn/);
   });
 
-  it("detail page includes summary, content and child OU sections", () => {
+  it("detail page navigates child create action to create page with parentDn", () => {
     const detailSource = readFileSync(
       new URL("./AdOrganizationalUnitDetailPage.tsx", import.meta.url),
       "utf8",
@@ -111,6 +153,9 @@ describe("ad organizational units navigation", () => {
     assert.match(detailSource, /organizationalUnits\.detail\.sections\.contentSummary/);
     assert.match(detailSource, /organizationalUnits\.detail\.sections\.childOrganizationalUnits/);
     assert.match(detailSource, /AdOrganizationalUnitRecentOperationsSection/);
+    assert.match(detailSource, /getAdOrganizationalUnitPrimaryLabel/);
+    assert.match(detailSource, /buildAdOrganizationalUnitCreatePath/);
+    assert.doesNotMatch(detailSource, /AdCreateOrganizationalUnitDialog/);
   });
 
   it("uses correct API endpoints and query keys", () => {
@@ -172,6 +217,8 @@ describe("ad organizational units i18n", () => {
       adManagement: {
         organizationalUnits: {
           title: string;
+          empty: { searchRequired: string };
+          create: { pageTitle: string; messages: { created: string } };
           detail: { title: string; recentOperations: string };
           actions: { create: string; rename: string; move: string; delete: string };
         };
@@ -186,6 +233,8 @@ describe("ad organizational units i18n", () => {
       adManagement: {
         organizationalUnits: {
           title: string;
+          empty: { searchRequired: string };
+          create: { pageTitle: string; messages: { created: string } };
           detail: { title: string; recentOperations: string };
           actions: { create: string; rename: string; move: string; delete: string };
         };
@@ -196,6 +245,14 @@ describe("ad organizational units i18n", () => {
     };
 
     assert.equal(trAdManagement.adManagement.organizationalUnits.title, "Organizasyon Birimleri");
+    assert.equal(
+      trAdManagement.adManagement.organizationalUnits.empty.searchRequired,
+      "Organizasyon birimi aramak için en az 2 karakter girin.",
+    );
+    assert.equal(
+      trAdManagement.adManagement.organizationalUnits.create.pageTitle,
+      "OU Oluştur",
+    );
     assert.equal(
       trAdManagement.adManagement.organizationalUnits.detail.title,
       "OU Detayı",
@@ -211,6 +268,14 @@ describe("ad organizational units i18n", () => {
     assert.ok(trAdManagement.adManagement.apiMessages.organizationalUnits.notEmpty);
 
     assert.equal(enAdManagement.adManagement.organizationalUnits.title, "Organizational units");
+    assert.equal(
+      enAdManagement.adManagement.organizationalUnits.empty.searchRequired,
+      "Enter at least 2 characters to search organizational units.",
+    );
+    assert.equal(
+      enAdManagement.adManagement.organizationalUnits.create.pageTitle,
+      "Create OU",
+    );
     assert.equal(
       enAdManagement.adManagement.organizationalUnits.detail.title,
       "OU detail",
@@ -229,18 +294,40 @@ describe("ad organizational units i18n", () => {
   it("defines navigation keys for organizational units", () => {
     const trNavigation = JSON.parse(
       readFileSync(new URL("../../locales/tr/navigation.json", import.meta.url), "utf8"),
-    ) as { navigation: { items: { adManagementOrganizationalUnits: string } } };
+    ) as {
+      navigation: {
+        items: {
+          adManagementOrganizationalUnits: string;
+          adManagementOrganizationalUnitsCreate: string;
+        };
+      };
+    };
     const enNavigation = JSON.parse(
       readFileSync(new URL("../../locales/en/navigation.json", import.meta.url), "utf8"),
-    ) as { navigation: { items: { adManagementOrganizationalUnits: string } } };
+    ) as {
+      navigation: {
+        items: {
+          adManagementOrganizationalUnits: string;
+          adManagementOrganizationalUnitsCreate: string;
+        };
+      };
+    };
 
     assert.equal(
       trNavigation.navigation.items.adManagementOrganizationalUnits,
       "Organizasyon Birimleri",
     );
     assert.equal(
+      trNavigation.navigation.items.adManagementOrganizationalUnitsCreate,
+      "OU Oluştur",
+    );
+    assert.equal(
       enNavigation.navigation.items.adManagementOrganizationalUnits,
       "Organizational units",
+    );
+    assert.equal(
+      enNavigation.navigation.items.adManagementOrganizationalUnitsCreate,
+      "Create OU",
     );
   });
 
@@ -248,6 +335,7 @@ describe("ad organizational units i18n", () => {
     const sources = [
       readFileSync(new URL("./AdOrganizationalUnitsPage.tsx", import.meta.url), "utf8"),
       readFileSync(new URL("./AdOrganizationalUnitDetailPage.tsx", import.meta.url), "utf8"),
+      readFileSync(new URL("./AdOrganizationalUnitCreatePage.tsx", import.meta.url), "utf8"),
       readFileSync(
         new URL("./components/AdOrganizationalUnitsSearchToolbar.tsx", import.meta.url),
         "utf8",

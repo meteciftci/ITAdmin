@@ -871,13 +871,15 @@ export type AdOrganizationalUnitManageListItem = {
   objectGuid: string;
   name: string | null;
   ou: string | null;
+  displayName: string | null;
+  displayLabel: string;
   distinguishedName: string;
   parentDistinguishedName: string | null;
   canonicalName: string;
-  childOuCount: number;
-  userCount: number;
-  groupCount: number;
-  computerCount: number;
+  childOuCount: number | null;
+  userCount: number | null;
+  groupCount: number | null;
+  computerCount: number | null;
 };
 
 export type AdOrganizationalUnitManageListResponse = {
@@ -894,16 +896,18 @@ export type GetAdOrganizationalUnitsParams = {
 };
 
 export type AdOrganizationalUnitContentSummary = {
-  childOuCount: number;
-  userCount: number;
-  groupCount: number;
-  computerCount: number;
+  childOuCount: number | null;
+  userCount: number | null;
+  groupCount: number | null;
+  computerCount: number | null;
 };
 
 export type AdOrganizationalUnitChildListItem = {
   objectGuid: string;
   name: string | null;
   ou: string | null;
+  displayName: string | null;
+  displayLabel: string;
   distinguishedName: string;
   canonicalName: string;
 };
@@ -913,6 +917,7 @@ export type AdOrganizationalUnitDetail = {
   name: string | null;
   ou: string | null;
   displayName: string | null;
+  displayLabel?: string | null;
   distinguishedName: string;
   parentDistinguishedName: string | null;
   canonicalName: string;

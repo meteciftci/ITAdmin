@@ -772,6 +772,8 @@
       "description": "View, create, and manage Active Directory organizational units.",
       "searchPlaceholder": "Search organizational units...",
       "table": {
+        "organizationalUnit": "Organizational unit",
+        "location": "Location",
         "name": "OU name",
         "parent": "Parent path",
         "childOuCount": "Child OUs",
@@ -802,7 +804,9 @@
       },
       "empty": {
         "title": "No organizational units found",
-        "notFound": "OU not found"
+        "notFound": "OU not found",
+        "searchRequiredTitle": "Search required",
+        "searchRequired": "Enter at least 2 characters to search organizational units."
       },
       "summary": {
         "childOuCount": "Child OUs: {{count}}",
@@ -811,10 +815,13 @@
         "computerCount": "Computers: {{count}}"
       },
       "create": {
-        "title": "Create OU",
+        "pageTitle": "Create OU",
+        "formTitle": "Organizational unit details",
         "description": "Create a new organizational unit under the selected parent OU.",
-        "success": "Organizational unit created.",
-        "error": "Organizational unit could not be created."
+        "messages": {
+          "created": "Organizational unit created.",
+          "createFailed": "Organizational unit could not be created."
+        }
       },
       "rename": {
         "title": "Rename OU",

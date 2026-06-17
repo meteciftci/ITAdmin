@@ -777,10 +777,10 @@ public sealed partial class AdUserDirectoryService
                     cancellationToken,
                     new Dictionary<string, object>
                     {
-                        ["childOuCount"] = beforeDetail.ContentSummary.ChildOuCount,
-                        ["userCount"] = beforeDetail.ContentSummary.UserCount,
-                        ["groupCount"] = beforeDetail.ContentSummary.GroupCount,
-                        ["computerCount"] = beforeDetail.ContentSummary.ComputerCount,
+                        ["childOuCount"] = beforeDetail.ContentSummary.ChildOuCount?.ToString() ?? "-",
+                        ["userCount"] = beforeDetail.ContentSummary.UserCount?.ToString() ?? "-",
+                        ["groupCount"] = beforeDetail.ContentSummary.GroupCount?.ToString() ?? "-",
+                        ["computerCount"] = beforeDetail.ContentSummary.ComputerCount?.ToString() ?? "-",
                     });
             }
 

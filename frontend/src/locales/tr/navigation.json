@@ -13,6 +13,7 @@
       "adManagementGroups": "Gruplar",
       "adManagementComputers": "Bilgisayarlar",
       "adManagementOrganizationalUnits": "Organizasyon Birimleri",
+      "adManagementOrganizationalUnitsCreate": "OU Oluştur",
       "adManagementOrganizationalUnitDetail": "OU Detayı",
       "adManagementDeletedObjects": "Silinen Nesneler",
       "adManagementUsersCreate": "AD kullanıcısı oluştur",

@@ -16,7 +16,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  createAdOrganizationalUnit,
   deleteAdOrganizationalUnit,
   invalidateAdOrganizationalUnitQueries,
   moveAdOrganizationalUnit,
@@ -26,113 +25,10 @@ import {
   getAdManagementApiErrorMessage,
   resolveAdManagementApiMessage,
 } from "@/features/ad-management/ad-management-api-message";
+import { formatAdOrganizationalUnitCount } from "@/features/ad-management/ad-ou-display-labels";
 import { AdOuSearchCombobox } from "@/features/ad-management/components/AdOuSearchCombobox";
 import { isInvalidOrganizationalUnitMoveTarget } from "@/features/ad-management/ad-ldap-dn";
 import type { AdOrganizationalUnitDetail, AdOrganizationalUnitManageListItem } from "@/features/ad-management/types";
-
-type CreateProps = {
-  open: boolean;
-  defaultParentDistinguishedName?: string | null;
-  onOpenChange: (open: boolean) => void;
-  onSuccess?: (detail: AdOrganizationalUnitDetail) => void;
-};
-
-export function AdCreateOrganizationalUnitDialog({
-  open,
-  defaultParentDistinguishedName,
-  onOpenChange,
-  onSuccess,
-}: CreateProps) {
-  const { t } = useTranslation(["adManagement", "common", "errors"]);
-  const queryClient = useQueryClient();
-  const [name, setName] = useState("");
-  const [parentDistinguishedName, setParentDistinguishedName] = useState<string | null>(null);
-
-  const handleOpenChange = (nextOpen: boolean) => {
-    if (nextOpen) {
-      setParentDistinguishedName(defaultParentDistinguishedName ?? null);
-    } else {
-      setName("");
-      setParentDistinguishedName(defaultParentDistinguishedName ?? null);
-    }
-    onOpenChange(nextOpen);
-  };
-
-  const createMutation = useMutation({
-    mutationFn: () => {
-      if (!parentDistinguishedName?.trim()) {
-        throw new Error("Missing parent OU");
-      }
-
-      return createAdOrganizationalUnit({
-        name: name.trim(),
-        parentDistinguishedName: parentDistinguishedName.trim(),
-      });
-    },
-    onSuccess: async (response) => {
-      if (!response.success || !response.organizationalUnit) {
-        toast.error(
-          resolveAdManagementApiMessage(t, response, "adManagement:organizationalUnits.create.error"),
-        );
-        return;
-      }
-
-      await invalidateAdOrganizationalUnitQueries(queryClient);
-      toast.success(t("adManagement:organizationalUnits.create.success"));
-      handleOpenChange(false);
-      onSuccess?.(response.organizationalUnit);
-    },
-    onError: (error) => {
-      toast.error(getAdManagementApiErrorMessage(error, t, "adManagement:organizationalUnits.create.error"));
-    },
-  });
-
-  const canSubmit = name.trim().length > 0 && Boolean(parentDistinguishedName?.trim());
-
-  return (
-    <Dialog open={open}>
-      <DialogContent onOpenChange={handleOpenChange}>
-        <DialogHeader>
-          <DialogTitle>{t("adManagement:organizationalUnits.create.title")}</DialogTitle>
-          <DialogDescription>{t("adManagement:organizationalUnits.create.description")}</DialogDescription>
-        </DialogHeader>
-        <DialogBody className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="ou-name">{t("adManagement:organizationalUnits.fields.name")}</Label>
-            <Input
-              id="ou-name"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder={t("adManagement:organizationalUnits.fields.namePlaceholder")}
-            />
-          </div>
-          <AdOuSearchCombobox
-            value={parentDistinguishedName}
-            onChange={setParentDistinguishedName}
-            searchContext="manage"
-            fieldLabelKey="adManagement:organizationalUnits.fields.parent"
-            placeholderKey="adManagement:organizationalUnits.fields.parentPlaceholder"
-            searchKey="adManagement:organizationalUnits.fields.parentSearch"
-            emptyKey="adManagement:organizationalUnits.empty.notFound"
-            errorKey="adManagement:organizationalUnits.errors.loadFailed"
-          />
-        </DialogBody>
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
-            {t("common:actions.cancel")}
-          </Button>
-          <Button
-            type="button"
-            disabled={!canSubmit || createMutation.isPending}
-            onClick={() => createMutation.mutate()}
-          >
-            {t("common:actions.create")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 type RenameProps = {
   open: boolean;
@@ -140,6 +36,12 @@ type RenameProps = {
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
 };
+
+function resolveOrganizationalUnitRenameName(
+  organizationalUnit: AdOrganizationalUnitManageListItem | AdOrganizationalUnitDetail,
+): string {
+  return organizationalUnit.ou?.trim() || organizationalUnit.name?.trim() || "";
+}
 
 export function AdRenameOrganizationalUnitDialog({
   open,
@@ -153,7 +55,7 @@ export function AdRenameOrganizationalUnitDialog({
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (nextOpen && organizationalUnit) {
-      setName(organizationalUnit.name?.trim() || organizationalUnit.ou?.trim() || "");
+      setName(resolveOrganizationalUnitRenameName(organizationalUnit));
     }
     onOpenChange(nextOpen);
   };
@@ -385,10 +287,26 @@ export function AdDeleteOrganizationalUnitDialog({
             <div className="rounded-md border p-3 text-sm">
               <p className="font-medium">{t("adManagement:organizationalUnits.delete.contentSummary")}</p>
               <ul className="mt-2 space-y-1 text-muted-foreground">
-                <li>{t("adManagement:organizationalUnits.summary.childOuCount", { count: summary.childOuCount })}</li>
-                <li>{t("adManagement:organizationalUnits.summary.userCount", { count: summary.userCount })}</li>
-                <li>{t("adManagement:organizationalUnits.summary.groupCount", { count: summary.groupCount })}</li>
-                <li>{t("adManagement:organizationalUnits.summary.computerCount", { count: summary.computerCount })}</li>
+                <li>
+                  {t("adManagement:organizationalUnits.summary.childOuCount", {
+                    count: formatAdOrganizationalUnitCount(summary.childOuCount),
+                  })}
+                </li>
+                <li>
+                  {t("adManagement:organizationalUnits.summary.userCount", {
+                    count: formatAdOrganizationalUnitCount(summary.userCount),
+                  })}
+                </li>
+                <li>
+                  {t("adManagement:organizationalUnits.summary.groupCount", {
+                    count: formatAdOrganizationalUnitCount(summary.groupCount),
+                  })}
+                </li>
+                <li>
+                  {t("adManagement:organizationalUnits.summary.computerCount", {
+                    count: formatAdOrganizationalUnitCount(summary.computerCount),
+                  })}
+                </li>
               </ul>
             </div>
           ) : null}

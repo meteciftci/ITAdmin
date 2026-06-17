@@ -16,14 +16,18 @@ import { RowActions } from "@/components/common/RowActions";
 import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { isGuidLike } from "@/features/ad-management/ad-user-detail-utils";
 import { adDetailOutlineButtonClass } from "@/features/ad-management/ad-user-detail-button-styles";
-import { buildAdOrganizationalUnitDetailPath } from "@/features/ad-management/ad-ou-detail-path";
+import { buildAdOrganizationalUnitCreatePath, buildAdOrganizationalUnitDetailPath } from "@/features/ad-management/ad-ou-detail-path";
+import {
+  formatAdOrganizationalUnitCount,
+  getAdOrganizationalUnitParentPath,
+  getAdOrganizationalUnitPrimaryLabel,
+} from "@/features/ad-management/ad-ou-display-labels";
 import { resolveAdOrganizationalUnitsReturnPath } from "@/features/ad-management/ad-ous-return-path";
 import {
   AD_MANAGEMENT_ORGANIZATIONAL_UNITS_QUERY_KEY,
   getAdOrganizationalUnitById,
 } from "@/features/ad-management/api";
 import {
-  AdCreateOrganizationalUnitDialog,
   AdDeleteOrganizationalUnitDialog,
   AdMoveOrganizationalUnitDialog,
   AdRenameOrganizationalUnitDialog,
@@ -48,7 +52,6 @@ export function AdOrganizationalUnitDetailPage() {
   const canDelete = canAccess(currentUser, "AdManagement.OrganizationalUnits.Delete");
   const canViewOperationLogs = canAccess(currentUser, "AdOperationLogs.View");
 
-  const [createOpen, setCreateOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -71,10 +74,19 @@ export function AdOrganizationalUnitDetailPage() {
       return t("adManagement:organizationalUnits.detail.title");
     }
 
-    return organizationalUnit.name?.trim()
-      || organizationalUnit.ou?.trim()
-      || organizationalUnit.canonicalName;
+    return getAdOrganizationalUnitPrimaryLabel(organizationalUnit);
   }, [organizationalUnit, t]);
+
+  const pageDescription = useMemo(() => {
+    if (!organizationalUnit) {
+      return undefined;
+    }
+
+    return (
+      getAdOrganizationalUnitParentPath(organizationalUnit.canonicalName)
+      || organizationalUnit.canonicalName
+    );
+  }, [organizationalUnit]);
 
   const isNotFound =
     detailQuery.isError
@@ -94,7 +106,7 @@ export function AdOrganizationalUnitDetailPage() {
       <section className="mx-auto w-full max-w-7xl space-y-4">
         <PageHeader
           title={title}
-          description={organizationalUnit?.canonicalName}
+          description={pageDescription}
           actions={
             organizationalUnit ? (
               <div className="flex flex-wrap items-center gap-2">
@@ -112,7 +124,13 @@ export function AdOrganizationalUnitDetailPage() {
                 </Button>
                 <RowActions>
                   {canCreate ? (
-                    <DropdownMenuItem onClick={() => setCreateOpen(true)}>
+                    <DropdownMenuItem
+                      onClick={() =>
+                        navigate(
+                          buildAdOrganizationalUnitCreatePath(organizationalUnit.distinguishedName),
+                        )
+                      }
+                    >
                       {t("adManagement:organizationalUnits.actions.createChild")}
                     </DropdownMenuItem>
                   ) : null}
@@ -179,8 +197,15 @@ export function AdOrganizationalUnitDetailPage() {
                   valueClassName="break-all font-mono text-xs"
                 />
                 <AdUserDetailField
-                  label={t("adManagement:organizationalUnits.fields.displayName")}
-                  value={organizationalUnit.displayName}
+                  label={t("adManagement:organizationalUnits.fields.name")}
+                  value={getAdOrganizationalUnitPrimaryLabel(organizationalUnit)}
+                />
+                <AdUserDetailField
+                  label={t("adManagement:organizationalUnits.fields.parentPath")}
+                  value={
+                    getAdOrganizationalUnitParentPath(organizationalUnit.canonicalName)
+                    || organizationalUnit.parentDistinguishedName
+                  }
                 />
               </div>
             </SectionCard>
@@ -189,19 +214,19 @@ export function AdOrganizationalUnitDetailPage() {
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <AdUserDetailField
                   label={t("adManagement:organizationalUnits.table.childOuCount")}
-                  value={String(organizationalUnit.contentSummary.childOuCount)}
+                  value={formatAdOrganizationalUnitCount(organizationalUnit.contentSummary.childOuCount)}
                 />
                 <AdUserDetailField
                   label={t("adManagement:organizationalUnits.table.userCount")}
-                  value={String(organizationalUnit.contentSummary.userCount)}
+                  value={formatAdOrganizationalUnitCount(organizationalUnit.contentSummary.userCount)}
                 />
                 <AdUserDetailField
                   label={t("adManagement:organizationalUnits.table.groupCount")}
-                  value={String(organizationalUnit.contentSummary.groupCount)}
+                  value={formatAdOrganizationalUnitCount(organizationalUnit.contentSummary.groupCount)}
                 />
                 <AdUserDetailField
                   label={t("adManagement:organizationalUnits.table.computerCount")}
-                  value={String(organizationalUnit.contentSummary.computerCount)}
+                  value={formatAdOrganizationalUnitCount(organizationalUnit.contentSummary.computerCount)}
                 />
               </div>
             </SectionCard>
@@ -215,7 +240,7 @@ export function AdOrganizationalUnitDetailPage() {
                     <div key={child.objectGuid} className="flex items-center justify-between gap-3 px-3 py-3">
                       <div className="min-w-0">
                         <p className="font-medium">
-                          {child.name?.trim() || child.ou?.trim() || child.canonicalName}
+                          {getAdOrganizationalUnitPrimaryLabel(child)}
                         </p>
                         <p className="truncate text-xs text-muted-foreground">{child.canonicalName}</p>
                       </div>
@@ -243,11 +268,6 @@ export function AdOrganizationalUnitDetailPage() {
 
       {organizationalUnit ? (
         <>
-          <AdCreateOrganizationalUnitDialog
-            open={createOpen}
-            defaultParentDistinguishedName={organizationalUnit.distinguishedName}
-            onOpenChange={setCreateOpen}
-          />
           <AdRenameOrganizationalUnitDialog
             open={renameOpen}
             organizationalUnit={organizationalUnit}

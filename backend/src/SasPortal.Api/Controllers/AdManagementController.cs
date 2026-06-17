@@ -2259,6 +2259,8 @@ public sealed class AdManagementController(
             item.ObjectGuid,
             item.Name,
             item.Ou,
+            item.DisplayName,
+            item.DisplayLabel,
             item.DistinguishedName,
             item.ParentDistinguishedName,
             item.CanonicalName,
@@ -2287,6 +2289,8 @@ public sealed class AdManagementController(
                     child.ObjectGuid,
                     child.Name,
                     child.Ou,
+                    child.DisplayName,
+                    child.DisplayLabel,
                     child.DistinguishedName,
                     child.CanonicalName))
                 .ToList());

@@ -4,6 +4,10 @@ export type BreadcrumbItem = {
 };
 
 const breadcrumbItems: BreadcrumbItem[] = [
+  {
+    to: "/ad-management/organizational-units/create",
+    titleKey: "items.adManagementOrganizationalUnitsCreate",
+  },
   { to: "/ad-management/organizational-units", titleKey: "items.adManagementOrganizationalUnits" },
   { to: "/ad-management/users/create", titleKey: "items.adManagementUsersCreate" },
   { to: "/ad-management/users", titleKey: "items.adManagementUsers" },
@@ -34,7 +38,10 @@ export function getBreadcrumbKeyByPath(pathname: string): string | null {
     return "items.adManagementUserGroups";
   }
 
-  if (/^\/ad-management\/organizational-units\/[^/]+$/.test(pathname)) {
+  if (
+    /^\/ad-management\/organizational-units\/[^/]+$/.test(pathname)
+    && pathname !== "/ad-management/organizational-units/create"
+  ) {
     return "items.adManagementOrganizationalUnitDetail";
   }
 

@@ -9,13 +9,15 @@ public sealed record AdOrganizationalUnitManageListItem(
     string ObjectGuid,
     string? Name,
     string? Ou,
+    string? DisplayName,
+    string DisplayLabel,
     string DistinguishedName,
     string? ParentDistinguishedName,
     string CanonicalName,
-    int ChildOuCount,
-    int UserCount,
-    int GroupCount,
-    int ComputerCount);
+    int? ChildOuCount,
+    int? UserCount,
+    int? GroupCount,
+    int? ComputerCount);
 
 public sealed record AdOrganizationalUnitManagePage(
     IReadOnlyList<AdOrganizationalUnitManageListItem> Items,
@@ -34,14 +36,16 @@ public sealed record AdOrganizationalUnitChildListItem(
     string ObjectGuid,
     string? Name,
     string? Ou,
+    string? DisplayName,
+    string DisplayLabel,
     string DistinguishedName,
     string CanonicalName);
 
 public sealed record AdOrganizationalUnitContentSummary(
-    int ChildOuCount,
-    int UserCount,
-    int GroupCount,
-    int ComputerCount);
+    int? ChildOuCount,
+    int? UserCount,
+    int? GroupCount,
+    int? ComputerCount);
 
 public sealed record AdOrganizationalUnitDetail(
     string ObjectGuid,

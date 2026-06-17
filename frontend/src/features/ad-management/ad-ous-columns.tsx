@@ -4,6 +4,12 @@ import type { TFunction } from "i18next";
 import { RowActions } from "@/components/common/RowActions";
 import type { DataTableColumnMeta } from "@/components/common/data-table";
 import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import {
+  formatAdOrganizationalUnitCount,
+  getAdOrganizationalUnitParentPath,
+  getAdOrganizationalUnitPrimaryLabel,
+  getAdOrganizationalUnitSecondaryLabel,
+} from "@/features/ad-management/ad-ou-display-labels";
 import type { AdOrganizationalUnitManageListItem } from "@/features/ad-management/types";
 
 type CreateAdOrganizationalUnitColumnsOptions = {
@@ -19,10 +25,6 @@ type CreateAdOrganizationalUnitColumnsOptions = {
   onDelete: (item: AdOrganizationalUnitManageListItem) => void;
 };
 
-function getOrganizationalUnitLabel(item: AdOrganizationalUnitManageListItem): string {
-  return item.name?.trim() || item.ou?.trim() || item.canonicalName;
-}
-
 export function createAdOrganizationalUnitColumns({
   t,
   canCreate,
@@ -37,50 +39,66 @@ export function createAdOrganizationalUnitColumns({
 }: CreateAdOrganizationalUnitColumnsOptions): ColumnDef<AdOrganizationalUnitManageListItem, unknown>[] {
   return [
     {
-      id: "name",
-      header: () => t("adManagement:organizationalUnits.table.name"),
+      id: "organizationalUnit",
+      header: () => t("adManagement:organizationalUnits.table.organizationalUnit"),
       cell: ({ row }) => {
         const item = row.original;
-        const label = getOrganizationalUnitLabel(item);
+        const primaryLabel = getAdOrganizationalUnitPrimaryLabel(item);
+        const secondaryLabel = getAdOrganizationalUnitSecondaryLabel(item, primaryLabel);
+
         return (
           <div className="space-y-0.5" title={item.distinguishedName}>
-            <p className="font-medium">{label}</p>
-            <p className="truncate text-xs text-muted-foreground" title={item.canonicalName}>
-              {item.canonicalName}
+            <p className="font-medium" title={primaryLabel}>
+              {primaryLabel}
             </p>
+            {secondaryLabel ? (
+              <p className="truncate text-xs text-muted-foreground" title={secondaryLabel}>
+                {secondaryLabel}
+              </p>
+            ) : null}
           </div>
         );
       },
     },
     {
-      id: "parent",
-      header: () => t("adManagement:organizationalUnits.table.parent"),
+      id: "location",
+      header: () => t("adManagement:organizationalUnits.table.location"),
       meta: { truncate: true } satisfies DataTableColumnMeta,
-      cell: ({ row }) => row.original.parentDistinguishedName || "-",
+      cell: ({ row }) => {
+        const location =
+          getAdOrganizationalUnitParentPath(row.original.canonicalName)
+          || row.original.parentDistinguishedName
+          || "-";
+        return (
+          <span className="truncate text-muted-foreground" title={location}>
+            {location}
+          </span>
+        );
+      },
     },
     {
       id: "childOuCount",
       header: () => t("adManagement:organizationalUnits.table.childOuCount"),
       meta: { align: "center" } satisfies DataTableColumnMeta,
-      cell: ({ row }) => row.original.childOuCount,
+      cell: ({ row }) => formatAdOrganizationalUnitCount(row.original.childOuCount),
     },
     {
       id: "userCount",
       header: () => t("adManagement:organizationalUnits.table.userCount"),
       meta: { align: "center" } satisfies DataTableColumnMeta,
-      cell: ({ row }) => row.original.userCount,
+      cell: ({ row }) => formatAdOrganizationalUnitCount(row.original.userCount),
     },
     {
       id: "groupCount",
       header: () => t("adManagement:organizationalUnits.table.groupCount"),
       meta: { align: "center" } satisfies DataTableColumnMeta,
-      cell: ({ row }) => row.original.groupCount,
+      cell: ({ row }) => formatAdOrganizationalUnitCount(row.original.groupCount),
     },
     {
       id: "computerCount",
       header: () => t("adManagement:organizationalUnits.table.computerCount"),
       meta: { align: "center" } satisfies DataTableColumnMeta,
-      cell: ({ row }) => row.original.computerCount,
+      cell: ({ row }) => formatAdOrganizationalUnitCount(row.original.computerCount),
     },
     {
       id: "actions",

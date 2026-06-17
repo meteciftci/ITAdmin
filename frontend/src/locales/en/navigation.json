@@ -13,6 +13,7 @@
       "adManagementGroups": "Groups",
       "adManagementComputers": "Computers",
       "adManagementOrganizationalUnits": "Organizational units",
+      "adManagementOrganizationalUnitsCreate": "Create OU",
       "adManagementOrganizationalUnitDetail": "OU detail",
       "adManagementDeletedObjects": "Deleted objects",
       "adManagementUsersCreate": "Create AD user",
