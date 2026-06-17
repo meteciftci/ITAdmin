@@ -13,6 +13,12 @@ import {
   searchOrganizationalUnits,
 } from "@/features/ad-management/api";
 import type { AdOrganizationalUnitListItem } from "@/features/ad-management/types";
+import {
+  AD_COMBOBOX_POPOVER_CONTENT_PROPS,
+  AD_COMBOBOX_TRIGGER_BUTTON_CLASSNAME,
+  AD_COMBOBOX_TRIGGER_LABEL_CLASSNAME,
+  AD_COMBOBOX_TRIGGER_WRAPPER_CLASSNAME,
+} from "@/features/ad-management/ad-combobox-styles";
 import { isInvalidOrganizationalUnitMoveTarget } from "@/features/ad-management/ad-ldap-dn";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { cn } from "@/lib/utils";
@@ -132,24 +138,21 @@ export function AdOuSearchCombobox({
         <Label>{t(fieldLabelKey)} *</Label>
       ) : null}
       <Popover open={open} onOpenChange={setOpen}>
-        <div className="w-full [&>span]:flex [&>span]:w-full">
+        <div className={AD_COMBOBOX_TRIGGER_WRAPPER_CLASSNAME}>
           <PopoverTrigger asChild>
             <button
               type="button"
               disabled={disabled}
-              className={cn(
-                "flex h-10 w-full min-w-0 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-left text-sm shadow-xs",
-                "hover:bg-muted/30 disabled:cursor-not-allowed disabled:opacity-50",
-              )}
+              className={AD_COMBOBOX_TRIGGER_BUTTON_CLASSNAME}
             >
-              <span className={cn("min-w-0 flex-1 truncate", !triggerLabel && "text-muted-foreground")}>
+              <span className={cn(AD_COMBOBOX_TRIGGER_LABEL_CLASSNAME, !triggerLabel && "text-muted-foreground")}>
                 {triggerLabel || t(placeholderKey)}
               </span>
               <ChevronDown className="ml-2 size-4 shrink-0 opacity-60" />
             </button>
           </PopoverTrigger>
         </div>
-        <PopoverContent className="min-w-[20rem] p-2 sm:min-w-[24rem]" align="start">
+        <PopoverContent {...AD_COMBOBOX_POPOVER_CONTENT_PROPS}>
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
@@ -178,7 +181,7 @@ export function AdOuSearchCombobox({
                     <button
                       type="button"
                       className={cn(
-                        "w-full rounded-md px-2 py-2 text-left text-sm hover:bg-muted",
+                        "w-full min-w-0 rounded-md px-2 py-2 text-left text-sm hover:bg-muted",
                         value === item.distinguishedName && "bg-muted",
                       )}
                       onClick={() => handleSelect(item)}
@@ -198,9 +201,12 @@ export function AdOuSearchCombobox({
 
 function OuListItem({ item }: { item: AdOrganizationalUnitListItem }) {
   return (
-    <div className="space-y-0.5">
-      <div className="font-medium">{item.label}</div>
-      <div className="truncate text-xs text-muted-foreground" title={item.distinguishedName}>
+    <div className="min-w-0 space-y-0.5">
+      <div className="truncate font-medium">{item.label}</div>
+      <div
+        className="truncate font-mono text-xs text-muted-foreground"
+        title={item.distinguishedName}
+      >
         {item.distinguishedName}
       </div>
     </div>

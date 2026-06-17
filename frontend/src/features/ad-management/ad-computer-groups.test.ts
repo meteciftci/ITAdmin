@@ -60,7 +60,7 @@ describe("ad computer groups source inspection", () => {
       "utf8",
     );
     assert.match(comboboxSource, /searchAdComputerGroupCandidates/);
-    assert.match(comboboxSource, /matchTriggerWidth/);
+    assert.match(comboboxSource, /AD_COMBOBOX_POPOVER_CONTENT_PROPS/);
     assert.match(comboboxSource, /autoFocus/);
     assert.match(pageSource, /removeAdComputerFromGroup/);
     assert.match(pageSource, /invalidateAdComputerGroupsQuery/);

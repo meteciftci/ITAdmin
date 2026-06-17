@@ -7,6 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
+  AD_COMBOBOX_POPOVER_CONTENT_PROPS,
+  AD_COMBOBOX_TRIGGER_BUTTON_CLASSNAME,
+  AD_COMBOBOX_TRIGGER_LABEL_CLASSNAME,
+  AD_COMBOBOX_TRIGGER_WRAPPER_CLASSNAME,
+} from "@/features/ad-management/ad-combobox-styles";
+import {
   formatAdGroupSelectionPrimaryLabel,
   formatAdGroupSelectionSecondaryLabel,
 } from "@/features/ad-management/ad-group-display";
@@ -73,19 +79,16 @@ export function AdGroupMultiSearchCombobox({
     <div className="space-y-1.5">
       <Label>{t("adManagement:users.groups.fields.searchGroup")}</Label>
       <Popover open={open} onOpenChange={setOpen}>
-        <div className="w-full [&>span]:flex [&>span]:w-full">
+        <div className={AD_COMBOBOX_TRIGGER_WRAPPER_CLASSNAME}>
           <PopoverTrigger asChild>
             <button
               type="button"
               disabled={disabled}
-              className={cn(
-                "flex h-10 w-full min-w-0 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-left text-sm shadow-xs",
-                "hover:bg-muted/30 disabled:cursor-not-allowed disabled:opacity-50",
-              )}
+              className={AD_COMBOBOX_TRIGGER_BUTTON_CLASSNAME}
             >
               <span
                 className={cn(
-                  "min-w-0 flex-1 truncate",
+                  AD_COMBOBOX_TRIGGER_LABEL_CLASSNAME,
                   !triggerLabel && "text-muted-foreground",
                 )}
               >
@@ -95,7 +98,7 @@ export function AdGroupMultiSearchCombobox({
             </button>
           </PopoverTrigger>
         </div>
-        <PopoverContent matchTriggerWidth className="p-2" align="start">
+        <PopoverContent {...AD_COMBOBOX_POPOVER_CONTENT_PROPS}>
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}

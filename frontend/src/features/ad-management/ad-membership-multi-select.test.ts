@@ -29,9 +29,9 @@ describe("ad membership multi-select", () => {
       "utf8",
     );
 
-    assert.match(comboboxSource, /matchTriggerWidth/);
+    assert.match(comboboxSource, /AD_COMBOBOX_POPOVER_CONTENT_PROPS/);
+    assert.match(comboboxSource, /AD_COMBOBOX_TRIGGER_LABEL_CLASSNAME/);
     assert.match(comboboxSource, /autoFocus/);
-    assert.match(comboboxSource, /min-w-0 flex-1 truncate/);
     assert.doesNotMatch(comboboxSource, /w-\[var\(--radix-popover-trigger-width\)\]/);
     assert.match(comboboxSource, /membershipMultiSelect\.alreadyDirectGroupMember/);
   });
