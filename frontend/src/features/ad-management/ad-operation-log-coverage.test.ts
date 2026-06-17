@@ -28,7 +28,7 @@ describe("AD operation log coverage matrix", () => {
 
   it("tracks all known backend operation types", () => {
     assert.equal(matrix.length, AD_OPERATION_LOG_COVERAGE_OPERATION_TYPES.length);
-    assert.equal(summary.operationTypeCount, 29);
+    assert.equal(summary.operationTypeCount, 33);
   });
 
   it("keeps TR/EN operation label keys parallel", () => {
@@ -96,6 +96,10 @@ describe("AD operation log coverage matrix", () => {
       GroupDelete: "groupDelete",
       GroupMemberAdd: "groupMember",
       GroupMemberRemove: "groupMember",
+      OrganizationalUnitCreate: "organizationalUnit",
+      OrganizationalUnitRename: "organizationalUnit",
+      OrganizationalUnitMove: "organizationalUnit",
+      OrganizationalUnitDelete: "organizationalUnit",
     };
 
     for (const [operationType, strategy] of Object.entries(expectations)) {
@@ -113,7 +117,7 @@ describe("AD operation log coverage matrix", () => {
   it("exposes inventory summary for phase 20B.2", () => {
     assert.equal(summary.labelCoverage, summary.operationTypeCount);
     assert.equal(summary.localeGapOperations.length, 0);
-    assert.equal(summary.snapshotRendererCoverage, 24);
+    assert.equal(summary.snapshotRendererCoverage, 28);
     assert.ok(summary.genericFallbackOperations.length > 0);
   });
 });
@@ -162,5 +166,17 @@ describe("AdOperationLogSnapshotDetail dedicated render wiring", () => {
       ouMoveSection,
       /isComputerMove\s*\?\s*getComputerFieldEntries\(t, computer\)/,
     );
+  });
+
+  it("includes OrganizationalUnit dedicated sections", () => {
+    const detailSource = readFileSync(
+      new URL("./components/AdOperationLogSnapshotDetail.tsx", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(detailSource, /OrganizationalUnitSnapshotSections/);
+    assert.match(detailSource, /case "organizationalUnit"/);
+    assert.match(detailSource, /buildOrganizationalUnitComparisonRows/);
+    assert.match(detailSource, /snapshotSections\.organizationalUnit/);
   });
 });

@@ -40,3 +40,34 @@ export function getParentDistinguishedName(distinguishedName: string | null | un
 
   return components.slice(1).map((component) => component.trim()).join(",");
 }
+
+function normalizeDn(distinguishedName: string): string {
+  return splitDnComponents(distinguishedName.trim())
+    .map((component) => component.trim())
+    .join(",");
+}
+
+export function isEqualOrDescendantOf(
+  childDistinguishedName: string | null | undefined,
+  ancestorDistinguishedName: string | null | undefined,
+): boolean {
+  if (!childDistinguishedName?.trim() || !ancestorDistinguishedName?.trim()) {
+    return false;
+  }
+
+  const child = normalizeDn(childDistinguishedName);
+  const ancestor = normalizeDn(ancestorDistinguishedName);
+  return child.toLowerCase() === ancestor.toLowerCase()
+    || child.toLowerCase().endsWith(`,${ancestor.toLowerCase()}`);
+}
+
+export function isInvalidOrganizationalUnitMoveTarget(
+  sourceDistinguishedName: string,
+  targetParentDistinguishedName: string,
+): boolean {
+  if (sourceDistinguishedName.trim().toLowerCase() === targetParentDistinguishedName.trim().toLowerCase()) {
+    return true;
+  }
+
+  return isEqualOrDescendantOf(targetParentDistinguishedName, sourceDistinguishedName);
+}

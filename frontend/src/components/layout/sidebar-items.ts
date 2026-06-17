@@ -15,6 +15,7 @@ import {
   ShieldAlert,
   SlidersHorizontal,
   Users,
+  FolderTree,
 } from "lucide-react";
 
 import type { CurrentUser } from "@/features/auth/types";
@@ -125,6 +126,17 @@ function isAdManagementComputersVisible(
   return isAdManagementModuleOperational(moduleState);
 }
 
+function isAdManagementOrganizationalUnitsVisible(
+  user: CurrentUser | null,
+  moduleState?: AdManagementModuleSidebarState,
+): boolean {
+  if (!canAccess(user, "AdManagement.OrganizationalUnits.View")) {
+    return false;
+  }
+
+  return isAdManagementModuleOperational(moduleState);
+}
+
 function isAdManagementDeletedObjectsVisible(
   user: CurrentUser | null,
   moduleState?: AdManagementModuleSidebarState,
@@ -143,6 +155,7 @@ function isAdManagementSectionVisible(
   return isAdManagementUsersVisible(user, moduleState)
     || isAdManagementGroupsVisible(user, moduleState)
     || isAdManagementComputersVisible(user, moduleState)
+    || isAdManagementOrganizationalUnitsVisible(user, moduleState)
     || isAdManagementDeletedObjectsVisible(user, moduleState);
 }
 
@@ -189,6 +202,12 @@ export const getSidebarGroups = (
             to: "/ad-management/computers",
             icon: Monitor,
             visible: isAdManagementComputersVisible(user, adManagementModule),
+          },
+          {
+            titleKey: "items.adManagementOrganizationalUnits",
+            to: "/ad-management/organizational-units",
+            icon: FolderTree,
+            visible: isAdManagementOrganizationalUnitsVisible(user, adManagementModule),
           },
           {
             titleKey: "items.adManagementDeletedObjects",

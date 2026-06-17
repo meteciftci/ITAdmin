@@ -141,6 +141,34 @@ public static class AdLdapDnHelper
         return $"CN={escapedCn},{parentDistinguishedName.Trim()}";
     }
 
+    public static string BuildOuDistinguishedName(string ouName, string parentDistinguishedName)
+    {
+        var escapedOu = EscapeDnComponent(ouName);
+        return $"OU={escapedOu},{parentDistinguishedName.Trim()}";
+    }
+
+    public static string BuildOuRdn(string ouName) => $"OU={EscapeDnComponent(ouName)}";
+
+    public static bool IsDomainNamingContext(string? distinguishedName)
+    {
+        if (string.IsNullOrWhiteSpace(distinguishedName))
+        {
+            return false;
+        }
+
+        var components = SplitDnComponents(distinguishedName.Trim());
+        return components.Length > 0
+            && components.All(static component =>
+                component.Trim().StartsWith("DC=", StringComparison.OrdinalIgnoreCase));
+    }
+
+    public static bool IsOrganizationalUnitDistinguishedName(string? distinguishedName)
+    {
+        var relativeName = GetRelativeDistinguishedName(distinguishedName);
+        return !string.IsNullOrWhiteSpace(relativeName)
+            && relativeName.StartsWith("OU=", StringComparison.OrdinalIgnoreCase);
+    }
+
     public static string? GetParentDistinguishedName(string? distinguishedName)
     {
         if (string.IsNullOrWhiteSpace(distinguishedName))

@@ -40,5 +40,9 @@ public static class AdOperationLogCoverageMatrix
         new("ComputerGroupAdd", "backend/src/SasPortal.Infrastructure/Services/AdUserDirectoryService.ComputerGroupMembership.cs", true, true, "Computer group membership snapshots."),
         new("ComputerGroupRemove", "backend/src/SasPortal.Infrastructure/Services/AdUserDirectoryService.ComputerGroupMembership.cs", true, true, "Computer group membership snapshots."),
         new("DeletedObjectRestore", "backend/src/SasPortal.Infrastructure/Services/AdUserDirectoryService.DeletedObjectRestore.cs", true, true, "Deleted/restored object snapshots; credentialMode diagnostic only."),
+        new("OrganizationalUnitCreate", "backend/src/SasPortal.Infrastructure/Services/AdUserDirectoryService.OrganizationalUnitsMutations.cs", true, true, "Organizational unit after snapshot."),
+        new("OrganizationalUnitRename", "backend/src/SasPortal.Infrastructure/Services/AdUserDirectoryService.OrganizationalUnitsMutations.cs", true, true, "Organizational unit before/after rename snapshots."),
+        new("OrganizationalUnitMove", "backend/src/SasPortal.Infrastructure/Services/AdUserDirectoryService.OrganizationalUnitsMutations.cs", true, true, "Organizational unit before/after move snapshots."),
+        new("OrganizationalUnitDelete", "backend/src/SasPortal.Infrastructure/Services/AdUserDirectoryService.OrganizationalUnitsMutations.cs", true, true, "Organizational unit before delete snapshot."),
     ];
 }

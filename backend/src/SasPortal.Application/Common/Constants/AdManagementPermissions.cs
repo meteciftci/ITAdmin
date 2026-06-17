@@ -31,5 +31,10 @@ public static class AdManagementPermissions
     public const string UsersMoveOu = "AdManagement.Users.MoveOu";
     public const string DeletedObjectsView = "AdManagement.DeletedObjects.View";
     public const string DeletedObjectsRestore = "AdManagement.DeletedObjects.Restore";
+    public const string OrganizationalUnitsView = "AdManagement.OrganizationalUnits.View";
+    public const string OrganizationalUnitsCreate = "AdManagement.OrganizationalUnits.Create";
+    public const string OrganizationalUnitsUpdate = "AdManagement.OrganizationalUnits.Update";
+    public const string OrganizationalUnitsMove = "AdManagement.OrganizationalUnits.Move";
+    public const string OrganizationalUnitsDelete = "AdManagement.OrganizationalUnits.Delete";
     public const string OperationLogsView = "AdOperationLogs.View";
 }

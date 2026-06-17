@@ -305,6 +305,20 @@ export type ParsedSnapshotOu = {
   distinguishedName: string | null;
 };
 
+export type ParsedSnapshotOrganizationalUnit = {
+  id: string | null;
+  name: string | null;
+  ou: string | null;
+  displayName: string | null;
+  distinguishedName: string | null;
+  parentDistinguishedName: string | null;
+  canonicalName: string | null;
+  childOuCount: number | null;
+  userCount: number | null;
+  groupCount: number | null;
+  computerCount: number | null;
+};
+
 export type ParsedSnapshotMembership = {
   isDirectMember: boolean | null;
 };
@@ -369,6 +383,7 @@ export type ParsedNestedAdOperationSnapshot = {
   group: ParsedSnapshotGroup | null;
   member: ParsedSnapshotMember | null;
   ou: ParsedSnapshotOu | null;
+  organizationalUnit: ParsedSnapshotOrganizationalUnit | null;
   membership: ParsedSnapshotMembership | null;
   manager: ParsedSnapshotManager | null;
   accountExpiration: ParsedSnapshotAccountExpiration | null;
@@ -399,6 +414,7 @@ export type SnapshotRenderStrategy =
   | "groupMembership"
   | "groupMember"
   | "ouMove"
+  | "organizationalUnit"
   | "userManagerUpdate"
   | "userAccountExpirationUpdate"
   | "generic";
@@ -418,6 +434,12 @@ const GROUP_MEMBERSHIP_OPERATION_TYPES = new Set([
 ]);
 const GROUP_MEMBER_OPERATION_TYPES = new Set(["GroupMemberAdd", "GroupMemberRemove"]);
 const OU_MOVE_OPERATION_TYPES = new Set(["UserOuMove", "GroupMoveOu", "ComputerMoveOu"]);
+const ORGANIZATIONAL_UNIT_OPERATION_TYPES = new Set([
+  "OrganizationalUnitCreate",
+  "OrganizationalUnitRename",
+  "OrganizationalUnitMove",
+  "OrganizationalUnitDelete",
+]);
 const USER_MANAGER_UPDATE_OPERATION_TYPES = new Set(["UserManagerUpdate"]);
 const USER_ACCOUNT_EXPIRATION_UPDATE_OPERATION_TYPES = new Set(["UserAccountExpirationUpdate"]);
 
@@ -517,6 +539,34 @@ function parseSnapshotComputer(value: unknown): ParsedSnapshotComputer | null {
 
   return Object.values(computer).some((entry) => entry !== null && entry !== undefined)
     ? computer
+    : null;
+}
+
+function parseSnapshotOrganizationalUnit(value: unknown): ParsedSnapshotOrganizationalUnit | null {
+  const record = readRecord(value);
+  if (!record) {
+    return null;
+  }
+
+  const contentSummary = readRecord(record.contentSummary ?? record.ContentSummary);
+  const organizationalUnit: ParsedSnapshotOrganizationalUnit = {
+    id: formatSnapshotValue(record.id ?? record.Id),
+    name: formatSnapshotValue(record.name ?? record.Name),
+    ou: formatSnapshotValue(record.ou ?? record.Ou),
+    displayName: formatSnapshotValue(record.displayName ?? record.DisplayName),
+    distinguishedName: formatSnapshotValue(record.distinguishedName ?? record.DistinguishedName),
+    parentDistinguishedName: formatSnapshotValue(
+      record.parentDistinguishedName ?? record.ParentDistinguishedName,
+    ),
+    canonicalName: formatSnapshotValue(record.canonicalName ?? record.CanonicalName),
+    childOuCount: readNumber(contentSummary?.childOuCount ?? record.childOuCount),
+    userCount: readNumber(contentSummary?.userCount ?? record.userCount),
+    groupCount: readNumber(contentSummary?.groupCount ?? record.groupCount),
+    computerCount: readNumber(contentSummary?.computerCount ?? record.computerCount),
+  };
+
+  return Object.values(organizationalUnit).some((entry) => entry !== null && entry !== undefined)
+    ? organizationalUnit
     : null;
 }
 
@@ -739,6 +789,9 @@ export function parseNestedAdOperationSnapshot(value: unknown): ParsedNestedAdOp
     group,
     member: parseSnapshotMember(record.member ?? record.Member),
     ou: parseSnapshotOu(record.ou ?? record.Ou),
+    organizationalUnit: parseSnapshotOrganizationalUnit(
+      record.organizationalUnit ?? record.OrganizationalUnit,
+    ),
     membership: parseSnapshotMembership(record.membership ?? record.Membership),
     manager: parseSnapshotManager(record.manager ?? record.Manager),
     accountExpiration: parseSnapshotAccountExpiration(
@@ -1026,6 +1079,61 @@ export function buildGroupComparisonRows(
   return rows.filter((row) => row.before !== null || row.after !== null);
 }
 
+export function buildOrganizationalUnitComparisonRows(
+  before: ParsedNestedAdOperationSnapshot | null,
+  after: ParsedNestedAdOperationSnapshot | null,
+): SnapshotComparisonRow[] {
+  const beforeOu = before?.organizationalUnit ?? null;
+  const afterOu = after?.organizationalUnit ?? null;
+
+  const rows = [
+    buildComparisonRow("name", beforeOu?.name ?? null, afterOu?.name ?? null),
+    buildComparisonRow("ou", beforeOu?.ou ?? null, afterOu?.ou ?? null),
+    buildComparisonRow("displayName", beforeOu?.displayName ?? null, afterOu?.displayName ?? null),
+    buildComparisonRow(
+      "distinguishedName",
+      beforeOu?.distinguishedName ?? null,
+      afterOu?.distinguishedName ?? null,
+      true,
+      true,
+    ),
+    buildComparisonRow(
+      "parentDistinguishedName",
+      beforeOu?.parentDistinguishedName ?? null,
+      afterOu?.parentDistinguishedName ?? null,
+      true,
+      true,
+    ),
+    buildComparisonRow(
+      "canonicalName",
+      beforeOu?.canonicalName ?? null,
+      afterOu?.canonicalName ?? null,
+    ),
+    buildComparisonRow(
+      "childOuCount",
+      beforeOu?.childOuCount != null ? String(beforeOu.childOuCount) : null,
+      afterOu?.childOuCount != null ? String(afterOu.childOuCount) : null,
+    ),
+    buildComparisonRow(
+      "userCount",
+      beforeOu?.userCount != null ? String(beforeOu.userCount) : null,
+      afterOu?.userCount != null ? String(afterOu.userCount) : null,
+    ),
+    buildComparisonRow(
+      "groupCount",
+      beforeOu?.groupCount != null ? String(beforeOu.groupCount) : null,
+      afterOu?.groupCount != null ? String(afterOu.groupCount) : null,
+    ),
+    buildComparisonRow(
+      "computerCount",
+      beforeOu?.computerCount != null ? String(beforeOu.computerCount) : null,
+      afterOu?.computerCount != null ? String(afterOu.computerCount) : null,
+    ),
+  ];
+
+  return rows.filter((row) => row.before !== null || row.after !== null);
+}
+
 export function buildComputerComparisonRows(
   before: ParsedNestedAdOperationSnapshot | null,
   after: ParsedNestedAdOperationSnapshot | null,
@@ -1125,7 +1233,8 @@ export function hasNestedSnapshotContent(snapshot: ParsedNestedAdOperationSnapsh
       snapshot.group ||
       snapshot.member ||
       snapshot.ou ||
-      snapshot.membership ||
+      snapshot.organizationalUnit ||
+    snapshot.membership ||
       snapshot.manager ||
       snapshot.accountExpiration ||
       snapshot.mappedAttributes.length > 0 ||
@@ -1173,6 +1282,9 @@ export function getSnapshotRenderStrategy(operationType: string): SnapshotRender
   }
   if (OU_MOVE_OPERATION_TYPES.has(operationType)) {
     return "ouMove";
+  }
+  if (ORGANIZATIONAL_UNIT_OPERATION_TYPES.has(operationType)) {
+    return "organizationalUnit";
   }
   if (USER_MANAGER_UPDATE_OPERATION_TYPES.has(operationType)) {
     return "userManagerUpdate";

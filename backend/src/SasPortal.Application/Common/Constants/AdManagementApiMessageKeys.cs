@@ -194,6 +194,33 @@ public static class AdManagementApiMessageKeys
         public const string RestoreTargetOuNotFound = Prefix + "deletedObjects.restoreTargetOuNotFound";
     }
 
+    public static class OrganizationalUnits
+    {
+        public const string NotFound = Prefix + "organizationalUnits.notFound";
+        public const string QueryFailed = Prefix + "organizationalUnits.queryFailed";
+        public const string CreateSuccess = Prefix + "organizationalUnits.createSuccess";
+        public const string CreateFailed = Prefix + "organizationalUnits.createFailed";
+        public const string RenameSuccess = Prefix + "organizationalUnits.renameSuccess";
+        public const string RenameFailed = Prefix + "organizationalUnits.renameFailed";
+        public const string MoveSuccess = Prefix + "organizationalUnits.moveSuccess";
+        public const string MoveFailed = Prefix + "organizationalUnits.moveFailed";
+        public const string DeleteSuccess = Prefix + "organizationalUnits.deleteSuccess";
+        public const string DeleteFailed = Prefix + "organizationalUnits.deleteFailed";
+        public const string NameRequired = Prefix + "organizationalUnits.nameRequired";
+        public const string NameTooLong = Prefix + "organizationalUnits.nameTooLong";
+        public const string NameInvalidCharacters = Prefix + "organizationalUnits.nameInvalidCharacters";
+        public const string ParentRequired = Prefix + "organizationalUnits.parentRequired";
+        public const string InvalidParent = Prefix + "organizationalUnits.invalidParent";
+        public const string TargetParentRequired = Prefix + "organizationalUnits.targetParentRequired";
+        public const string InvalidTargetParent = Prefix + "organizationalUnits.invalidTargetParent";
+        public const string AlreadyInTargetParent = Prefix + "organizationalUnits.alreadyInTargetParent";
+        public const string NameCollision = Prefix + "organizationalUnits.nameCollision";
+        public const string ProtectedObject = Prefix + "organizationalUnits.protectedObject";
+        public const string NotEmpty = Prefix + "organizationalUnits.notEmpty";
+        public const string InvalidMoveTarget = Prefix + "organizationalUnits.invalidMoveTarget";
+        public const string InvalidOrganizationalUnitId = Prefix + "organizationalUnits.invalidOrganizationalUnitId";
+    }
+
     public static class OperationFailures
     {
         public const string PreflightSamAccountNameDuplicate = Prefix + "operationFailures.preflightSamAccountNameDuplicate";

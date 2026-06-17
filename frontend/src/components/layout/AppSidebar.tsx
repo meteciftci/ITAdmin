@@ -47,7 +47,8 @@ export function AppSidebar() {
   const canViewAdManagementModule =
     canAccess(user, "AdManagement.Users.View")
     || canAccess(user, "AdManagement.Groups.View")
-    || canAccess(user, "AdManagement.Computers.View");
+    || canAccess(user, "AdManagement.Computers.View")
+    || canAccess(user, "AdManagement.OrganizationalUnits.View");
   const adManagementSettingsQuery = useQuery({
     queryKey: AD_MANAGEMENT_SETTINGS_QUERY_KEY,
     queryFn: getAdManagementSettings,

@@ -59,6 +59,7 @@ public static class DependencyInjection
         services.AddScoped<IAdwsPortConnectivityChecker, AdwsPortConnectivityChecker>();
         services.AddScoped<IAdDeletedObjectRestoreReadinessPowerShellProbe, AdDeletedObjectRestoreReadinessPowerShellProbe>();
         services.AddScoped<IAdDeletedObjectRestoreReadinessService, AdDeletedObjectRestoreReadinessService>();
+        services.AddScoped<IAdOrganizationalUnitDirectoryService>(sp => sp.GetRequiredService<AdUserDirectoryService>());
 
         services.AddScoped<ISmsProviderAdapter, CustomHttpSmsAdapter>();
         services.AddScoped<IEmailProviderAdapter, SmtpEmailProviderAdapter>();

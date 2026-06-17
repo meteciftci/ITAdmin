@@ -31,6 +31,15 @@ public static class AdManagementOperationTypes
     public const string ComputerGroupAdd = "ComputerGroupAdd";
     public const string ComputerGroupRemove = "ComputerGroupRemove";
     public const string DeletedObjectRestore = "DeletedObjectRestore";
+    public const string OrganizationalUnitCreate = "OrganizationalUnitCreate";
+    public const string OrganizationalUnitRename = "OrganizationalUnitRename";
+    public const string OrganizationalUnitMove = "OrganizationalUnitMove";
+    public const string OrganizationalUnitDelete = "OrganizationalUnitDelete";
+}
+
+public static class AdManagementTargetOrganizationalUnitTypes
+{
+    public const string AdOrganizationalUnit = "AdOrganizationalUnit";
 }
 
 public static class AdManagementTargetComputerTypes

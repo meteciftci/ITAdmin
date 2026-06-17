@@ -64,6 +64,16 @@ import type {
   AdDeletedObjectRestoreReadinessResult,
   AdManagementValidationResult,
   GetAdDeletedObjectsParams,
+  AdOrganizationalUnitManageListResponse,
+  AdOrganizationalUnitDetail,
+  GetAdOrganizationalUnitsParams,
+  CreateAdOrganizationalUnitRequest,
+  CreateAdOrganizationalUnitResponse,
+  RenameAdOrganizationalUnitRequest,
+  RenameAdOrganizationalUnitResponse,
+  MoveAdOrganizationalUnitRequest,
+  MoveAdOrganizationalUnitResponse,
+  DeleteAdOrganizationalUnitResponse,
 } from "@/features/ad-management/types";
 
 export const AD_MANAGEMENT_SETTINGS_QUERY_KEY = [
@@ -81,6 +91,11 @@ export const AD_MANAGEMENT_USERS_QUERY_KEY = ["ad-management", "users"] as const
 export const AD_MANAGEMENT_GROUPS_QUERY_KEY = ["ad-management", "groups"] as const;
 
 export const AD_MANAGEMENT_COMPUTERS_QUERY_KEY = ["ad-management", "computers"] as const;
+
+export const AD_MANAGEMENT_ORGANIZATIONAL_UNITS_QUERY_KEY = [
+  "ad-management",
+  "organizational-units",
+] as const;
 
 export const AD_MANAGEMENT_DELETED_OBJECTS_QUERY_KEY = [
   "ad-management",
@@ -420,6 +435,77 @@ export const updateAdGroup = async (
 export const deleteAdGroup = async (groupId: string): Promise<DeleteAdGroupResponse> => {
   const { data } = await apiClient.delete<DeleteAdGroupResponse>(
     `/ad-management/groups/${groupId}`,
+  );
+  return data;
+};
+
+export async function invalidateAdOrganizationalUnitQueries(
+  queryClient: QueryClient,
+): Promise<void> {
+  await queryClient.invalidateQueries({
+    queryKey: AD_MANAGEMENT_ORGANIZATIONAL_UNITS_QUERY_KEY,
+  });
+  await queryClient.invalidateQueries({
+    queryKey: AD_OPERATION_LOGS_QUERY_KEY,
+  });
+}
+
+export const getAdOrganizationalUnits = async (
+  params: GetAdOrganizationalUnitsParams,
+): Promise<AdOrganizationalUnitManageListResponse> => {
+  const { data } = await apiClient.get<AdOrganizationalUnitManageListResponse>(
+    "/ad-management/organizational-units/manage",
+    { params },
+  );
+  return data;
+};
+
+export const getAdOrganizationalUnitById = async (
+  organizationalUnitId: string,
+): Promise<AdOrganizationalUnitDetail> => {
+  const { data } = await apiClient.get<AdOrganizationalUnitDetail>(
+    `/ad-management/organizational-units/${organizationalUnitId}`,
+  );
+  return data;
+};
+
+export const createAdOrganizationalUnit = async (
+  payload: CreateAdOrganizationalUnitRequest,
+): Promise<CreateAdOrganizationalUnitResponse> => {
+  const { data } = await apiClient.post<CreateAdOrganizationalUnitResponse>(
+    "/ad-management/organizational-units",
+    payload,
+  );
+  return data;
+};
+
+export const renameAdOrganizationalUnit = async (
+  organizationalUnitId: string,
+  payload: RenameAdOrganizationalUnitRequest,
+): Promise<RenameAdOrganizationalUnitResponse> => {
+  const { data } = await apiClient.put<RenameAdOrganizationalUnitResponse>(
+    `/ad-management/organizational-units/${organizationalUnitId}/rename`,
+    payload,
+  );
+  return data;
+};
+
+export const moveAdOrganizationalUnit = async (
+  organizationalUnitId: string,
+  payload: MoveAdOrganizationalUnitRequest,
+): Promise<MoveAdOrganizationalUnitResponse> => {
+  const { data } = await apiClient.post<MoveAdOrganizationalUnitResponse>(
+    `/ad-management/organizational-units/${organizationalUnitId}/move`,
+    payload,
+  );
+  return data;
+};
+
+export const deleteAdOrganizationalUnit = async (
+  organizationalUnitId: string,
+): Promise<DeleteAdOrganizationalUnitResponse> => {
+  const { data } = await apiClient.delete<DeleteAdOrganizationalUnitResponse>(
+    `/ad-management/organizational-units/${organizationalUnitId}`,
   );
   return data;
 };

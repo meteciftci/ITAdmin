@@ -162,6 +162,16 @@ const AdComputerGroupsPage = lazy(() =>
     default: module.AdComputerGroupsPage,
   })),
 );
+const AdOrganizationalUnitsPage = lazy(() =>
+  import("@/features/ad-management/AdOrganizationalUnitsPage").then((module) => ({
+    default: module.AdOrganizationalUnitsPage,
+  })),
+);
+const AdOrganizationalUnitDetailPage = lazy(() =>
+  import("@/features/ad-management/AdOrganizationalUnitDetailPage").then((module) => ({
+    default: module.AdOrganizationalUnitDetailPage,
+  })),
+);
 const AdDeletedObjectsPage = lazy(() =>
   import("@/features/ad-management/AdDeletedObjectsPage").then((module) => ({
     default: module.AdDeletedObjectsPage,
@@ -686,6 +696,34 @@ export const router = createBrowserRouter([
           <AppLayout>
             <LazyRoute>
               <AdComputerDetailPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/ad-management/organizational-units",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission="AdManagement.OrganizationalUnits.View">
+          <AppLayout>
+            <LazyRoute>
+              <AdOrganizationalUnitsPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/ad-management/organizational-units/:id",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission="AdManagement.OrganizationalUnits.View">
+          <AppLayout>
+            <LazyRoute>
+              <AdOrganizationalUnitDetailPage />
             </LazyRoute>
           </AppLayout>
         </RequirePermission>

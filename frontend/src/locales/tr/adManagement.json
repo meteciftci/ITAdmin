@@ -767,6 +767,95 @@
         }
       }
     },
+    "organizationalUnits": {
+      "title": "Organizasyon Birimleri",
+      "description": "Active Directory organizasyon birimlerini görüntüleyin, oluşturun ve yönetin.",
+      "searchPlaceholder": "Organizasyon birimi ara...",
+      "table": {
+        "name": "OU Adı",
+        "parent": "Üst Konum",
+        "childOuCount": "Alt OU",
+        "userCount": "Kullanıcı",
+        "groupCount": "Grup",
+        "computerCount": "Bilgisayar",
+        "actions": "İşlemler"
+      },
+      "fields": {
+        "name": "OU Adı",
+        "namePlaceholder": "OU adı girin",
+        "parent": "Üst OU",
+        "parentPlaceholder": "Üst OU seçin",
+        "parentSearch": "OU ara...",
+        "targetParent": "Hedef Üst OU",
+        "targetParentPlaceholder": "Hedef üst OU seçin",
+        "canonicalName": "Canonical Name",
+        "distinguishedName": "Distinguished Name",
+        "displayName": "Görünen Ad",
+        "parentPath": "Üst Konum"
+      },
+      "actions": {
+        "create": "OU Oluştur",
+        "createChild": "Alt OU Oluştur",
+        "rename": "Yeniden Adlandır",
+        "move": "Taşı",
+        "delete": "Sil"
+      },
+      "empty": {
+        "title": "Organizasyon birimi bulunamadı",
+        "notFound": "OU bulunamadı"
+      },
+      "summary": {
+        "childOuCount": "Alt OU: {{count}}",
+        "userCount": "Kullanıcı: {{count}}",
+        "groupCount": "Grup: {{count}}",
+        "computerCount": "Bilgisayar: {{count}}"
+      },
+      "create": {
+        "title": "OU Oluştur",
+        "description": "Seçilen üst OU altında yeni bir organizasyon birimi oluşturun.",
+        "success": "Organizasyon birimi oluşturuldu.",
+        "error": "Organizasyon birimi oluşturulamadı."
+      },
+      "rename": {
+        "title": "OU Yeniden Adlandır",
+        "description": "Organizasyon biriminin adını güncelleyin.",
+        "success": "Organizasyon birimi yeniden adlandırıldı.",
+        "error": "Organizasyon birimi yeniden adlandırılamadı."
+      },
+      "move": {
+        "title": "OU Taşı",
+        "description": "Organizasyon birimini başka bir üst OU altına taşıyın.",
+        "invalidTarget": "Hedef OU, taşınan OU'nun kendisi veya altı olamaz.",
+        "success": "Organizasyon birimi taşındı.",
+        "error": "Organizasyon birimi taşınamadı."
+      },
+      "delete": {
+        "title": "OU Sil",
+        "description": "Bu işlem organizasyon birimini kalıcı olarak siler.",
+        "warning": "Bu işlem geri alınamaz. OU boş olmalıdır.",
+        "contentSummary": "İçerik özeti",
+        "success": "Organizasyon birimi silindi.",
+        "error": "Organizasyon birimi silinemedi."
+      },
+      "detail": {
+        "title": "OU Detayı",
+        "invalidId": "Geçersiz organizasyon birimi kimliği.",
+        "notFound": "Organizasyon birimi bulunamadı.",
+        "noChildOrganizationalUnits": "Alt organizasyon birimi bulunamadı.",
+        "recentOperations": "Son Operasyonlar",
+        "viewAllLogs": "Tüm logları görüntüle",
+        "noRecentOperations": "Bu OU için son operasyon kaydı bulunamadı.",
+        "operationDetail": "Detay",
+        "sections": {
+          "overview": "Genel Bilgiler",
+          "contentSummary": "İçerik Özeti",
+          "childOrganizationalUnits": "Alt Organizasyon Birimleri"
+        }
+      },
+      "errors": {
+        "loadFailed": "Organizasyon birimleri yüklenemedi."
+      }
+    },
     "deletedObjects": {
       "title": "Silinen Nesneler",
       "description": "Active Directory üzerinde silinmiş kullanıcı, grup ve bilgisayar nesnelerini görüntüleyin.",
@@ -1174,6 +1263,31 @@
         "restorePowerShellModuleMissing": "Geri yükleme için ActiveDirectory PowerShell modülü gerekli.",
         "restoreParentNotFound": "Geri yükleme hedefi bulunamadı.",
         "restoreTargetOuNotFound": "Geri yükleme hedef OU bulunamadı."
+      },
+      "organizationalUnits": {
+        "notFound": "Organizasyon birimi bulunamadı.",
+        "queryFailed": "Organizasyon birimleri okunamadı.",
+        "createSuccess": "Organizasyon birimi oluşturuldu.",
+        "createFailed": "Organizasyon birimi oluşturulamadı.",
+        "renameSuccess": "Organizasyon birimi yeniden adlandırıldı.",
+        "renameFailed": "Organizasyon birimi yeniden adlandırılamadı.",
+        "moveSuccess": "Organizasyon birimi taşındı.",
+        "moveFailed": "Organizasyon birimi taşınamadı.",
+        "deleteSuccess": "Organizasyon birimi silindi.",
+        "deleteFailed": "Organizasyon birimi silinemedi.",
+        "nameRequired": "OU adı zorunludur.",
+        "nameTooLong": "OU adı çok uzun.",
+        "nameInvalidCharacters": "OU adı geçersiz karakterler içeriyor.",
+        "parentRequired": "Üst OU zorunludur.",
+        "invalidParent": "Üst OU geçersiz veya bulunamadı.",
+        "targetParentRequired": "Hedef üst OU zorunludur.",
+        "invalidTargetParent": "Hedef üst OU geçersiz veya bulunamadı.",
+        "alreadyInTargetParent": "Organizasyon birimi zaten hedef üst OU altında.",
+        "nameCollision": "Aynı üst OU altında aynı isimde bir OU zaten var.",
+        "protectedObject": "Bu organizasyon birimi korumalıdır ve bu işlem yapılamaz.",
+        "notEmpty": "Organizasyon birimi boş değil. Silmeden önce tüm alt içerikler kaldırılmalıdır.",
+        "invalidMoveTarget": "Hedef OU, taşınan OU'nun kendisi veya altı olamaz.",
+        "invalidOrganizationalUnitId": "Geçersiz organizasyon birimi kimliği."
       },
       "operationFailures": {
         "preflightSamAccountNameDuplicate": "Bu kullanıcı adı başka bir AD nesnesi tarafından kullanılıyor.",

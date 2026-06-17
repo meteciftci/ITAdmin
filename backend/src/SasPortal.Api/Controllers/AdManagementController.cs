@@ -32,7 +32,8 @@ public sealed class AdManagementController(
     IAdComputerGroupMembershipService adComputerGroupMembershipService,
     IAdDeletedObjectDirectoryService adDeletedObjectDirectoryService,
     IAdDeletedObjectRestoreService adDeletedObjectRestoreService,
-    IAdDeletedObjectRestoreReadinessService adDeletedObjectRestoreReadinessService) : ControllerBase
+    IAdDeletedObjectRestoreReadinessService adDeletedObjectRestoreReadinessService,
+    IAdOrganizationalUnitDirectoryService adOrganizationalUnitDirectoryService) : ControllerBase
 {
     [HttpGet("settings")]
     [RequirePermission(AdManagementPermissions.SettingsView)]
@@ -982,6 +983,179 @@ public sealed class AdManagementController(
                 .Select(item => new AdUpnSuffixItemResponse(item.Value, item.Source))
                 .ToList(),
             result.Warning));
+    }
+
+    [HttpGet("organizational-units/manage")]
+    [RequirePermission(AdManagementPermissions.OrganizationalUnitsView)]
+    public async Task<ActionResult<AdOrganizationalUnitManageListResponse>> ListManageOrganizationalUnits(
+        [FromQuery] string? search,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 25,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await adOrganizationalUnitDirectoryService.SearchManageOrganizationalUnitsAsync(
+            new AppModels.AdOrganizationalUnitManageListQuery(search, pageNumber, pageSize),
+            cancellationToken);
+
+        if (!result.IsSuccess || result.Page is null)
+        {
+            return MapDirectoryFailure(result.MessageKey, result.FailureKind, result.MessageParams);
+        }
+
+        return Ok(new AdOrganizationalUnitManageListResponse(
+            result.Page.Items.Select(MapOrganizationalUnitManageListItem).ToList(),
+            result.Page.PageNumber,
+            result.Page.PageSize,
+            result.Page.HasNextPage));
+    }
+
+    [HttpGet("organizational-units/{id}")]
+    [RequirePermission(AdManagementPermissions.OrganizationalUnitsView)]
+    public async Task<ActionResult<AdOrganizationalUnitDetailResponse>> GetOrganizationalUnitById(
+        [FromRoute] string id,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Guid.TryParse(id, out var objectGuid))
+        {
+            return BadRequest(new { messageKey = AdManagementApiMessageKeys.OrganizationalUnits.InvalidOrganizationalUnitId });
+        }
+
+        var result = await adOrganizationalUnitDirectoryService.GetOrganizationalUnitByIdAsync(
+            objectGuid,
+            cancellationToken);
+        if (!result.IsSuccess || result.OrganizationalUnit is null)
+        {
+            return MapDirectoryFailure(result.MessageKey, result.FailureKind, result.MessageParams);
+        }
+
+        return Ok(MapOrganizationalUnitDetail(result.OrganizationalUnit));
+    }
+
+    [HttpPost("organizational-units")]
+    [RequirePermission(AdManagementPermissions.OrganizationalUnitsCreate)]
+    public async Task<ActionResult<CreateAdOrganizationalUnitResponse>> CreateOrganizationalUnit(
+        [FromBody] CreateAdOrganizationalUnitRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await adOrganizationalUnitDirectoryService.CreateOrganizationalUnitAsync(
+            new AppModels.CreateAdOrganizationalUnitRequest(
+                request.Name,
+                request.ParentDistinguishedName,
+                ResolveActorUserId(User),
+                ResolveActorUserName(User),
+                ResolveIpAddress(),
+                ResolveUserAgent()),
+            cancellationToken);
+
+        if (!result.IsSuccess || result.OrganizationalUnit is null)
+        {
+            return MapDirectoryFailure(result.MessageKey, result.FailureKind, result.MessageParams);
+        }
+
+        return Ok(new CreateAdOrganizationalUnitResponse(
+            true,
+            AdManagementApiMessageKeys.OrganizationalUnits.CreateSuccess,
+            MapOrganizationalUnitDetail(result.OrganizationalUnit)));
+    }
+
+    [HttpPut("organizational-units/{id}/rename")]
+    [RequirePermission(AdManagementPermissions.OrganizationalUnitsUpdate)]
+    public async Task<ActionResult<RenameAdOrganizationalUnitResponse>> RenameOrganizationalUnit(
+        [FromRoute] string id,
+        [FromBody] RenameAdOrganizationalUnitRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Guid.TryParse(id, out var objectGuid))
+        {
+            return BadRequest(new { messageKey = AdManagementApiMessageKeys.OrganizationalUnits.InvalidOrganizationalUnitId });
+        }
+
+        var result = await adOrganizationalUnitDirectoryService.RenameOrganizationalUnitAsync(
+            new AppModels.RenameAdOrganizationalUnitRequest(
+                objectGuid,
+                request.Name,
+                ResolveActorUserId(User),
+                ResolveActorUserName(User),
+                ResolveIpAddress(),
+                ResolveUserAgent()),
+            cancellationToken);
+
+        if (!result.IsSuccess || result.OrganizationalUnit is null)
+        {
+            return MapDirectoryFailure(result.MessageKey, result.FailureKind, result.MessageParams);
+        }
+
+        return Ok(new RenameAdOrganizationalUnitResponse(
+            true,
+            AdManagementApiMessageKeys.OrganizationalUnits.RenameSuccess,
+            MapOrganizationalUnitDetail(result.OrganizationalUnit),
+            result.PreviousDistinguishedName));
+    }
+
+    [HttpPost("organizational-units/{id}/move")]
+    [RequirePermission(AdManagementPermissions.OrganizationalUnitsMove)]
+    public async Task<ActionResult<MoveAdOrganizationalUnitResponse>> MoveOrganizationalUnit(
+        [FromRoute] string id,
+        [FromBody] MoveAdOrganizationalUnitRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Guid.TryParse(id, out var objectGuid))
+        {
+            return BadRequest(new { messageKey = AdManagementApiMessageKeys.OrganizationalUnits.InvalidOrganizationalUnitId });
+        }
+
+        var result = await adOrganizationalUnitDirectoryService.MoveOrganizationalUnitAsync(
+            new AppModels.MoveAdOrganizationalUnitRequest(
+                objectGuid,
+                request.TargetParentDistinguishedName,
+                ResolveActorUserId(User),
+                ResolveActorUserName(User),
+                ResolveIpAddress(),
+                ResolveUserAgent()),
+            cancellationToken);
+
+        if (!result.IsSuccess || result.OrganizationalUnit is null)
+        {
+            return MapDirectoryFailure(result.MessageKey, result.FailureKind, result.MessageParams);
+        }
+
+        return Ok(new MoveAdOrganizationalUnitResponse(
+            true,
+            AdManagementApiMessageKeys.OrganizationalUnits.MoveSuccess,
+            MapOrganizationalUnitDetail(result.OrganizationalUnit),
+            result.PreviousDistinguishedName,
+            result.TargetParentDistinguishedName));
+    }
+
+    [HttpDelete("organizational-units/{id}")]
+    [RequirePermission(AdManagementPermissions.OrganizationalUnitsDelete)]
+    public async Task<ActionResult<DeleteAdOrganizationalUnitResponse>> DeleteOrganizationalUnit(
+        [FromRoute] string id,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Guid.TryParse(id, out var objectGuid))
+        {
+            return BadRequest(new { messageKey = AdManagementApiMessageKeys.OrganizationalUnits.InvalidOrganizationalUnitId });
+        }
+
+        var result = await adOrganizationalUnitDirectoryService.DeleteOrganizationalUnitAsync(
+            new AppModels.DeleteAdOrganizationalUnitRequest(
+                objectGuid,
+                ResolveActorUserId(User),
+                ResolveActorUserName(User),
+                ResolveIpAddress(),
+                ResolveUserAgent()),
+            cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return MapDirectoryFailure(result.MessageKey, result.FailureKind, result.MessageParams);
+        }
+
+        return Ok(new DeleteAdOrganizationalUnitResponse(
+            true,
+            AdManagementApiMessageKeys.OrganizationalUnits.DeleteSuccess,
+            result.DeletedOrganizationalUnitId));
     }
 
     [HttpGet("organizational-units")]
@@ -2078,6 +2252,44 @@ public sealed class AdManagementController(
             item.WhenCreated,
             item.WhenChanged,
             item.LastLogonAt);
+
+    private static AdOrganizationalUnitManageListItemResponse MapOrganizationalUnitManageListItem(
+        AppModels.AdOrganizationalUnitManageListItem item) =>
+        new(
+            item.ObjectGuid,
+            item.Name,
+            item.Ou,
+            item.DistinguishedName,
+            item.ParentDistinguishedName,
+            item.CanonicalName,
+            item.ChildOuCount,
+            item.UserCount,
+            item.GroupCount,
+            item.ComputerCount);
+
+    private static AdOrganizationalUnitDetailResponse MapOrganizationalUnitDetail(
+        AppModels.AdOrganizationalUnitDetail item) =>
+        new(
+            item.ObjectGuid,
+            item.Name,
+            item.Ou,
+            item.DisplayName,
+            item.DistinguishedName,
+            item.ParentDistinguishedName,
+            item.CanonicalName,
+            new AdOrganizationalUnitContentSummaryResponse(
+                item.ContentSummary.ChildOuCount,
+                item.ContentSummary.UserCount,
+                item.ContentSummary.GroupCount,
+                item.ContentSummary.ComputerCount),
+            item.ChildOrganizationalUnits
+                .Select(child => new AdOrganizationalUnitChildListItemResponse(
+                    child.ObjectGuid,
+                    child.Name,
+                    child.Ou,
+                    child.DistinguishedName,
+                    child.CanonicalName))
+                .ToList());
 
     private static AdComputerListItemResponse MapComputerListItem(AppModels.AdComputerListItem item) =>
         new(

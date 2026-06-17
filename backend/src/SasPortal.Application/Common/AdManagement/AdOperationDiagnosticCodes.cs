@@ -31,4 +31,8 @@ public static class AdOperationDiagnosticCodes
     public const string ComputerDeleteFailed = "AD_COMPUTER_DELETE_FAILED";
     public const string ComputerGroupAddFailed = "AD_COMPUTER_GROUP_ADD_FAILED";
     public const string ComputerGroupRemoveFailed = "AD_COMPUTER_GROUP_REMOVE_FAILED";
+    public const string OrganizationalUnitCreateFailed = "AD_ORGANIZATIONAL_UNIT_CREATE_FAILED";
+    public const string OrganizationalUnitRenameFailed = "AD_ORGANIZATIONAL_UNIT_RENAME_FAILED";
+    public const string OrganizationalUnitMoveFailed = "AD_ORGANIZATIONAL_UNIT_MOVE_FAILED";
+    public const string OrganizationalUnitDeleteFailed = "AD_ORGANIZATIONAL_UNIT_DELETE_FAILED";
 }

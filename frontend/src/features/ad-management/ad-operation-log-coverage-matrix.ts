@@ -25,6 +25,7 @@ const DEDICATED_SNAPSHOT_STRATEGIES = new Set<SnapshotRenderStrategy>([
   "groupMembership",
   "groupMember",
   "ouMove",
+  "organizationalUnit",
   "userManagerUpdate",
   "userAccountExpirationUpdate",
 ]);
@@ -60,6 +61,10 @@ export const AD_OPERATION_LOG_COVERAGE_OPERATION_TYPES = [
   "ComputerGroupAdd",
   "ComputerGroupRemove",
   "DeletedObjectRestore",
+  "OrganizationalUnitCreate",
+  "OrganizationalUnitRename",
+  "OrganizationalUnitMove",
+  "OrganizationalUnitDelete",
 ] as const;
 
 export type AdOperationLogCoverageOperationType =
@@ -75,6 +80,10 @@ const COVERAGE_NOTES: Partial<Record<AdOperationLogCoverageOperationType, string
   ComputerDisable: "Uses accountStatus strategy (user-oriented sections for computer account).",
   ComputerUpdate: "Dedicated computerUpdate snapshot comparison renderer.",
   ComputerMoveOu: "ouMove strategy with computer-aware entity field grid.",
+  OrganizationalUnitCreate: "organizationalUnit strategy with after snapshot.",
+  OrganizationalUnitRename: "organizationalUnit strategy with before/after comparison.",
+  OrganizationalUnitMove: "organizationalUnit strategy with before/after comparison.",
+  OrganizationalUnitDelete: "organizationalUnit strategy with before snapshot.",
 };
 
 function hasDedicatedSnapshotRenderer(operationType: string): boolean {

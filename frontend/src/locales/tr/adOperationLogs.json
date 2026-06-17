@@ -57,7 +57,11 @@
       "ComputerDelete": "Bilgisayar silme",
       "DeletedObjectRestore": "Silinen nesne geri yükleme",
       "ComputerGroupAdd": "Bilgisayarı gruba ekleme",
-      "ComputerGroupRemove": "Bilgisayarı gruptan çıkarma"
+      "ComputerGroupRemove": "Bilgisayarı gruptan çıkarma",
+      "OrganizationalUnitCreate": "OU oluşturma",
+      "OrganizationalUnitRename": "OU yeniden adlandırma",
+      "OrganizationalUnitMove": "OU taşıma",
+      "OrganizationalUnitDelete": "OU silme"
     },
     "statuses": {
       "Succeeded": "Başarılı",
@@ -148,6 +152,7 @@
       "groupUpdate": "Grup Bilgileri",
       "computerUpdate": "Bilgisayar Bilgileri",
       "deletedGroup": "Silinen Grup",
+      "organizationalUnit": "Organizasyon Birimi",
       "deletedComputer": "Silinen bilgisayar",
       "deletedObject": "Silinen nesne",
       "restoreTarget": "Geri yükleme hedefi",
@@ -175,6 +180,12 @@
         "groupType": "Group Type",
         "groupDistinguishedName": "Group Distinguished Name",
         "ou": "OU",
+        "parentDistinguishedName": "Üst Distinguished Name",
+        "canonicalName": "Canonical Name",
+        "childOuCount": "Alt OU Sayısı",
+        "userCount": "Kullanıcı Sayısı",
+        "groupCount": "Grup Sayısı",
+        "computerCount": "Bilgisayar Sayısı",
         "isDirectMember": "Direkt Üye mi",
         "isEnabled": "Aktif mi",
         "isLocked": "Kilitli mi",

@@ -43,7 +43,7 @@ public sealed class AdOperationLogCoverageTests
         .ToArray();
 
     Assert.Equal(constants, matrixTypes);
-    Assert.Equal(29, matrixTypes.Length);
+    Assert.Equal(33, matrixTypes.Length);
   }
 
   [Theory]
@@ -115,9 +115,9 @@ public sealed class AdOperationLogCoverageTests
   {
     var rows = AdOperationLogCoverageMatrix.Rows;
 
-    Assert.Equal(29, rows.Count);
-    Assert.Equal(29, rows.Count(row => row.ExpectSuccessLog));
-    Assert.Equal(25, rows.Count(row => row.ExpectFailureLog));
+    Assert.Equal(33, rows.Count);
+    Assert.Equal(33, rows.Count(row => row.ExpectSuccessLog));
+    Assert.Equal(29, rows.Count(row => row.ExpectFailureLog));
     Assert.Contains(rows, row => row.OperationType == AdManagementOperationTypes.ComputerUpdate);
     Assert.Contains(rows, row => row.OperationType == AdManagementOperationTypes.DeletedObjectRestore);
   }

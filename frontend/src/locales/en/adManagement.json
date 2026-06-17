@@ -767,6 +767,95 @@
         }
       }
     },
+    "organizationalUnits": {
+      "title": "Organizational units",
+      "description": "View, create, and manage Active Directory organizational units.",
+      "searchPlaceholder": "Search organizational units...",
+      "table": {
+        "name": "OU name",
+        "parent": "Parent path",
+        "childOuCount": "Child OUs",
+        "userCount": "Users",
+        "groupCount": "Groups",
+        "computerCount": "Computers",
+        "actions": "Actions"
+      },
+      "fields": {
+        "name": "OU name",
+        "namePlaceholder": "Enter OU name",
+        "parent": "Parent OU",
+        "parentPlaceholder": "Select parent OU",
+        "parentSearch": "Search OUs...",
+        "targetParent": "Target parent OU",
+        "targetParentPlaceholder": "Select target parent OU",
+        "canonicalName": "Canonical name",
+        "distinguishedName": "Distinguished name",
+        "displayName": "Display name",
+        "parentPath": "Parent path"
+      },
+      "actions": {
+        "create": "Create OU",
+        "createChild": "Create child OU",
+        "rename": "Rename",
+        "move": "Move",
+        "delete": "Delete"
+      },
+      "empty": {
+        "title": "No organizational units found",
+        "notFound": "OU not found"
+      },
+      "summary": {
+        "childOuCount": "Child OUs: {{count}}",
+        "userCount": "Users: {{count}}",
+        "groupCount": "Groups: {{count}}",
+        "computerCount": "Computers: {{count}}"
+      },
+      "create": {
+        "title": "Create OU",
+        "description": "Create a new organizational unit under the selected parent OU.",
+        "success": "Organizational unit created.",
+        "error": "Organizational unit could not be created."
+      },
+      "rename": {
+        "title": "Rename OU",
+        "description": "Update the organizational unit name.",
+        "success": "Organizational unit renamed.",
+        "error": "Organizational unit could not be renamed."
+      },
+      "move": {
+        "title": "Move OU",
+        "description": "Move the organizational unit under another parent OU.",
+        "invalidTarget": "The target OU cannot be the OU itself or one of its descendants.",
+        "success": "Organizational unit moved.",
+        "error": "Organizational unit could not be moved."
+      },
+      "delete": {
+        "title": "Delete OU",
+        "description": "This action permanently deletes the organizational unit.",
+        "warning": "This action cannot be undone. The OU must be empty.",
+        "contentSummary": "Content summary",
+        "success": "Organizational unit deleted.",
+        "error": "Organizational unit could not be deleted."
+      },
+      "detail": {
+        "title": "OU detail",
+        "invalidId": "Invalid organizational unit id.",
+        "notFound": "Organizational unit not found.",
+        "noChildOrganizationalUnits": "No child organizational units found.",
+        "recentOperations": "Recent operations",
+        "viewAllLogs": "View all logs",
+        "noRecentOperations": "No recent operation records found for this OU.",
+        "operationDetail": "Detail",
+        "sections": {
+          "overview": "Overview",
+          "contentSummary": "Content summary",
+          "childOrganizationalUnits": "Child organizational units"
+        }
+      },
+      "errors": {
+        "loadFailed": "Organizational units could not be loaded."
+      }
+    },
     "deletedObjects": {
       "title": "Deleted objects",
       "description": "View deleted Active Directory user, group, and computer objects.",
@@ -1174,6 +1263,31 @@
         "restorePowerShellModuleMissing": "ActiveDirectory PowerShell module is required for restore.",
         "restoreParentNotFound": "Restore target was not found.",
         "restoreTargetOuNotFound": "Restore target OU was not found."
+      },
+      "organizationalUnits": {
+        "notFound": "Organizational unit was not found.",
+        "queryFailed": "Organizational units could not be read.",
+        "createSuccess": "Organizational unit created.",
+        "createFailed": "Organizational unit could not be created.",
+        "renameSuccess": "Organizational unit renamed.",
+        "renameFailed": "Organizational unit could not be renamed.",
+        "moveSuccess": "Organizational unit moved.",
+        "moveFailed": "Organizational unit could not be moved.",
+        "deleteSuccess": "Organizational unit deleted.",
+        "deleteFailed": "Organizational unit could not be deleted.",
+        "nameRequired": "OU name is required.",
+        "nameTooLong": "OU name is too long.",
+        "nameInvalidCharacters": "OU name contains invalid characters.",
+        "parentRequired": "Parent OU is required.",
+        "invalidParent": "Parent OU is invalid or was not found.",
+        "targetParentRequired": "Target parent OU is required.",
+        "invalidTargetParent": "Target parent OU is invalid or was not found.",
+        "alreadyInTargetParent": "The organizational unit is already under the target parent OU.",
+        "nameCollision": "An OU with the same name already exists under the parent.",
+        "protectedObject": "This organizational unit is protected and cannot be changed.",
+        "notEmpty": "The organizational unit is not empty. Remove all child content before deleting.",
+        "invalidMoveTarget": "The target OU cannot be the OU itself or one of its descendants.",
+        "invalidOrganizationalUnitId": "Invalid organizational unit id."
       },
       "operationFailures": {
         "preflightSamAccountNameDuplicate": "This username is already used by another AD object.",

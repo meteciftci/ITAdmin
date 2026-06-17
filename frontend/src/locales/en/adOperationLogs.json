@@ -57,7 +57,11 @@
       "ComputerDelete": "Computer delete",
       "DeletedObjectRestore": "Deleted object restore",
       "ComputerGroupAdd": "Add computer to group",
-      "ComputerGroupRemove": "Remove computer from group"
+      "ComputerGroupRemove": "Remove computer from group",
+      "OrganizationalUnitCreate": "Organizational unit create",
+      "OrganizationalUnitRename": "Organizational unit rename",
+      "OrganizationalUnitMove": "Organizational unit move",
+      "OrganizationalUnitDelete": "Organizational unit delete"
     },
     "statuses": {
       "Succeeded": "Succeeded",
@@ -148,6 +152,7 @@
       "groupUpdate": "Group Information",
       "computerUpdate": "Computer Information",
       "deletedGroup": "Deleted Group",
+      "organizationalUnit": "Organizational unit",
       "deletedComputer": "Deleted computer",
       "deletedObject": "Deleted object",
       "restoreTarget": "Restore target",
@@ -175,6 +180,12 @@
         "groupType": "Group Type",
         "groupDistinguishedName": "Group Distinguished Name",
         "ou": "OU",
+        "parentDistinguishedName": "Parent distinguished name",
+        "canonicalName": "Canonical name",
+        "childOuCount": "Child OU count",
+        "userCount": "User count",
+        "groupCount": "Group count",
+        "computerCount": "Computer count",
         "isDirectMember": "Direct member",
         "isEnabled": "Enabled",
         "isLocked": "Locked",

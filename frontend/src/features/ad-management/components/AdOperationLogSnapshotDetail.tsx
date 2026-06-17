@@ -19,6 +19,7 @@ import {
   buildManagerComparisonRows,
   buildMappedAttributeComparisonRows,
   buildMembershipComparisonRows,
+  buildOrganizationalUnitComparisonRows,
   buildOuMoveComparisonRows,
   formatSnapshotBoolean,
   getSnapshotRenderStrategy,
@@ -1505,6 +1506,64 @@ function GroupUpdateSnapshotSections({
   );
 }
 
+function getOrganizationalUnitFieldLabel(t: TFunction<"adOperationLogs">, fieldKey: string): string {
+  const translationKey = `snapshotSections.fields.${fieldKey}` as const;
+  const translated = t(translationKey, { defaultValue: "" });
+  return translated || fieldKey;
+}
+
+function OrganizationalUnitSnapshotSections({
+  beforeSnapshotJson,
+  afterSnapshotJson,
+  noneLabel,
+  emptyDash,
+  t,
+}: {
+  beforeSnapshotJson: string | null | undefined;
+  afterSnapshotJson: string | null | undefined;
+  noneLabel: string;
+  emptyDash: string;
+  t: TFunction<"adOperationLogs">;
+}) {
+  const beforeSnapshot = useMemo(
+    () => parseNestedAdOperationSnapshot(beforeSnapshotJson),
+    [beforeSnapshotJson],
+  );
+  const afterSnapshot = useMemo(
+    () => parseNestedAdOperationSnapshot(afterSnapshotJson),
+    [afterSnapshotJson],
+  );
+  const organizationalUnitRows = useMemo(
+    () => buildOrganizationalUnitComparisonRows(beforeSnapshot, afterSnapshot),
+    [afterSnapshot, beforeSnapshot],
+  );
+
+  const hasAnySnapshot =
+    hasNestedSnapshotContent(beforeSnapshot) ||
+    hasNestedSnapshotContent(afterSnapshot) ||
+    Boolean(beforeSnapshotJson?.trim()) ||
+    Boolean(afterSnapshotJson?.trim());
+
+  return (
+    <section className="space-y-3 border-t pt-4">
+      <h3 className="text-sm font-medium">{t("snapshotSections.organizationalUnit")}</h3>
+      {hasAnySnapshot ? (
+        <ComparisonTable
+          rows={organizationalUnitRows}
+          getFieldLabel={(key) => getOrganizationalUnitFieldLabel(t, key)}
+          emptyLabel={emptyDash}
+          noneLabel={noneLabel}
+        />
+      ) : (
+        <span className="text-muted-foreground">{noneLabel}</span>
+      )}
+      {!afterSnapshotJson?.trim() && beforeSnapshotJson?.trim() ? (
+        <p className="text-xs text-muted-foreground">{t("comparison.afterMissing")}</p>
+      ) : null}
+    </section>
+  );
+}
+
 function GenericSnapshotSections({
   beforeSnapshotJson,
   afterSnapshotJson,
@@ -1721,6 +1780,16 @@ export function AdOperationLogSnapshotDetail({
             afterSnapshotJson={afterSnapshotJson}
             requestSummaryJson={requestSummaryJson}
             noneLabel={noneLabel}
+            t={t}
+          />
+        );
+      case "organizationalUnit":
+        return (
+          <OrganizationalUnitSnapshotSections
+            beforeSnapshotJson={beforeSnapshotJson}
+            afterSnapshotJson={afterSnapshotJson}
+            noneLabel={noneLabel}
+            emptyDash={emptyDash}
             t={t}
           />
         );

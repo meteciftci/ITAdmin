@@ -9,13 +9,15 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import {
   searchComputerOrganizationalUnits,
   searchGroupOrganizationalUnits,
+  getAdOrganizationalUnits,
   searchOrganizationalUnits,
 } from "@/features/ad-management/api";
 import type { AdOrganizationalUnitListItem } from "@/features/ad-management/types";
+import { isInvalidOrganizationalUnitMoveTarget } from "@/features/ad-management/ad-ldap-dn";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { cn } from "@/lib/utils";
 
-type OuSearchContext = "users" | "groups" | "computers";
+type OuSearchContext = "users" | "groups" | "computers" | "manage";
 
 type Props = {
   value: string | null;
@@ -29,6 +31,7 @@ type Props = {
   searchKey?: string;
   emptyKey?: string;
   errorKey?: string;
+  excludeDistinguishedName?: string | null;
 };
 
 export function AdOuSearchCombobox({
@@ -43,6 +46,7 @@ export function AdOuSearchCombobox({
   searchKey = "adManagement:users.create.fields.ouSearch",
   emptyKey = "adManagement:users.create.empty.ouNotFound",
   errorKey = "adManagement:users.create.errors.ouLoadFailed",
+  excludeDistinguishedName = null,
 }: Props) {
   const { t } = useTranslation(["adManagement", "common"]);
   const [open, setOpen] = useState(false);
@@ -52,7 +56,7 @@ export function AdOuSearchCombobox({
 
   const ouQuery = useQuery({
     queryKey: ["ad-management", "organizational-units", searchContext, debouncedSearch],
-    queryFn: () => {
+    queryFn: async () => {
       const params = {
         search: debouncedSearch.trim() || undefined,
         pageSize: 50,
@@ -66,12 +70,41 @@ export function AdOuSearchCombobox({
         return searchComputerOrganizationalUnits(params.search, params.pageSize);
       }
 
+      if (searchContext === "manage") {
+        const response = await getAdOrganizationalUnits({
+          search: params.search,
+          pageNumber: 1,
+          pageSize: params.pageSize,
+        });
+        return {
+          items: response.items.map(
+            (item): AdOrganizationalUnitListItem => ({
+              distinguishedName: item.distinguishedName,
+              name: item.name,
+              displayName: item.name,
+              ou: item.ou,
+              label: item.name?.trim() || item.ou?.trim() || item.canonicalName,
+            }),
+          ),
+          hasMore: response.hasNextPage,
+        };
+      }
+
       return searchOrganizationalUnits(params);
     },
     enabled: open && !disabled,
   });
 
-  const items = useMemo(() => ouQuery.data?.items ?? [], [ouQuery.data]);
+  const items = useMemo(() => {
+    const rawItems = ouQuery.data?.items ?? [];
+    if (!excludeDistinguishedName?.trim()) {
+      return rawItems;
+    }
+
+    return rawItems.filter(
+      (item) => !isInvalidOrganizationalUnitMoveTarget(excludeDistinguishedName, item.distinguishedName),
+    );
+  }, [excludeDistinguishedName, ouQuery.data]);
 
   const triggerLabel = useMemo(() => {
     if (!value) {
