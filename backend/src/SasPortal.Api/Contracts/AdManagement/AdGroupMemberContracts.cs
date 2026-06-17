@@ -46,11 +46,10 @@ public sealed record RemoveAdGroupMemberRequest(
 
 public sealed record AdGroupMemberOperationResponse(
     bool Success,
-    string Message,
+    string MessageKey,
     string? GroupId,
     string? GroupDistinguishedName,
     string? GroupName,
     string? MemberDistinguishedName,
     string? MemberName,
-    string? MessageKey = null,
     IReadOnlyDictionary<string, object>? MessageParams = null);

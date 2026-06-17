@@ -24,39 +24,34 @@ public static class AdLdapErrorNormalizer
     private const int LdapTimeLimitExceeded = 3;
     private const int LdapBusy = 51;
 
-    public const string UpdateUserFailedMessage = "AD kullanıcısı güncellenemedi.";
-    public const string UpdateGroupFailedMessage = "AD grubu güncellenemedi.";
-    public const string CreateGroupFailedMessage = "AD grubu oluşturulamadı.";
+    public const string UpdateUserFailedMessage = "AD user update failed.";
+    public const string UpdateGroupFailedMessage = "AD group update failed.";
+    public const string CreateGroupFailedMessage = "AD group create failed.";
     public const string PreflightGroupSamAccountNameDuplicateMessage =
-        "Aynı sAMAccountName başka bir grup tarafından kullanılıyor.";
+        "Duplicate sAMAccountName detected for another group.";
     public const string PreflightGroupCnDuplicateMessage =
-        "Aynı teknik ada sahip bir grup zaten var.";
-    public const string GroupNotFoundMessage = "AD grubu bulunamadı.";
-    public const string DeleteGroupFailedMessage = "AD grubu silinemedi.";
+        "A group with the same CN already exists.";
+    public const string GroupNotFoundMessage = "AD group not found.";
+    public const string DeleteGroupFailedMessage = "AD group delete failed.";
     public const string PreflightSamAccountNameDuplicateMessage =
-        "Bu kullanıcı adı başka bir AD nesnesi tarafından kullanılıyor.";
+        "Duplicate sAMAccountName detected for another AD object.";
     public const string PreflightUserPrincipalNameDuplicateMessage =
-        "Bu UPN başka bir AD nesnesi tarafından kullanılıyor.";
+        "Duplicate UPN detected for another AD object.";
     public const string PreflightCnDuplicateMessage =
-        "Bu görünen ad/CN aynı OU içinde başka bir AD nesnesi tarafından kullanılıyor.";
+        "Duplicate CN detected in the same OU.";
     public const string EntryAlreadyExistsMessage =
-        "Bu CN, kullanıcı adı veya UPN başka bir AD nesnesi tarafından kullanılıyor.";
+        "CN, sAMAccountName, or UPN already exists.";
     public const string ConstraintViolationMessage =
-        "Girilen alanlardan biri AD kurallarına uygun değil.";
+        "One or more fields violate AD constraints.";
     public const string InvalidDnSyntaxMessage =
-        "Kullanıcı adı veya görünen ad AD nesne adı için geçerli değil.";
+        "Invalid DN syntax for AD object name.";
     public const string InsufficientAccessRightsMessage =
-        "AD servis hesabının bu işlem için yetkisi yok.";
+        "AD service account lacks permission for this operation.";
     public const string UnwillingToPerformMessage =
-        "AD bu değişikliği kabul etmedi. Alan kısıtları veya domain politikaları nedeniyle işlem yapılamıyor.";
-    public const string NoSuchObjectMessage = "AD kullanıcısı bulunamadı.";
-    public const string ConnectionFailedMessage = "AD bağlantısı kurulamadı.";
+        "AD refused to perform the requested change.";
+    public const string NoSuchObjectMessage = "AD object not found.";
+    public const string ConnectionFailedMessage = "AD connection failed.";
 
-    public static string Normalize(int ldapErrorCode, string? diagnosticMessage = null)
-    {
-        var key = NormalizeMessageKey(ldapErrorCode, diagnosticMessage);
-        return Legacy(key);
-    }
 
     public static string NormalizeMessageKey(int ldapErrorCode, string? diagnosticMessage = null)
     {
@@ -147,7 +142,6 @@ public static class AdLdapErrorNormalizer
         return null;
     }
 
-    private static string Legacy(string messageKey) => AdManagementApiMessages.Legacy(messageKey);
 
     private static bool IsConnectionFailure(int ldapErrorCode, string? message)
     {

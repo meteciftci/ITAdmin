@@ -22,64 +22,37 @@ public sealed class AdManagementApiMessageKeysTests
     [InlineData(32, AdManagementApiMessageKeys.Ldap.NoSuchObject)]
     public void LdapNormalizer_ReturnsExpectedMessageKey(int ldapCode, string expectedKey)
     {
-        var key = AdLdapErrorNormalizer.NormalizeMessageKey(ldapCode, null);
-        Assert.Equal(expectedKey, key);
-        Assert.Equal(AdManagementApiMessages.Legacy(expectedKey), AdLdapErrorNormalizer.Normalize(ldapCode, null));
+        Assert.Equal(expectedKey, AdLdapErrorNormalizer.NormalizeMessageKey(ldapCode, null));
     }
 
     [Fact]
-    public void ValidationMessages_ExposeMessageKeys()
+    public void GroupsAndComputers_InvalidTargetOuKeys_AreDefined()
     {
-        var key = AdManagementApiMessageKeys.SettingsValidation.MissingRequiredSettings;
-        Assert.Equal(key, key);
-        Assert.Contains("zorunlu", AdManagementApiMessages.Legacy(key), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("apiMessages.groups.invalidTargetOu", AdManagementApiMessageKeys.Groups.InvalidTargetOu);
+        Assert.Equal("apiMessages.computers.invalidTargetOu", AdManagementApiMessageKeys.Computers.InvalidTargetOu);
     }
 
     [Fact]
-    public void CreateUserFailureKey_MapsToLegacyTurkishMessage()
+    public void AdManagementApiMessages_LegacyFileDoesNotExist()
     {
-        var key = AdManagementApiMessageKeys.Users.CreateFailed;
-        Assert.StartsWith("apiMessages.", key, StringComparison.Ordinal);
-        Assert.Contains("oluşturulamadı", AdManagementApiMessages.Legacy(key), StringComparison.OrdinalIgnoreCase);
+        var legacyPath = Path.Combine(
+            FindRepositoryRoot(),
+            "backend/src/SasPortal.Application/Common/AdManagement/AdManagementApiMessages.cs");
+
+        Assert.False(File.Exists(legacyPath));
     }
 
     [Fact]
-    public void OuMoveKeys_MapToLegacyTurkishMessages()
+    public void AdUserDirectoryServicePartials_DoNotReferenceLegacyMessages()
     {
-        Assert.Contains(
-            "taşındı",
-            AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.OuMoveSuccess),
-            StringComparison.OrdinalIgnoreCase);
-        Assert.Contains(
-            "başarısız",
-            AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.OuMoveFailed),
-            StringComparison.OrdinalIgnoreCase);
-    }
+        var servicesDir = Path.Combine(FindRepositoryRoot(), "backend/src/SasPortal.Infrastructure/Services");
+        var partialFiles = Directory.GetFiles(servicesDir, "AdUserDirectoryService*.cs");
 
-    [Fact]
-    public void DeletedObjectRestoreKeys_MapToLegacyTurkishMessages()
-    {
-        Assert.Contains(
-            "geri yüklendi",
-            AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.DeletedObjects.RestoreSuccess),
-            StringComparison.OrdinalIgnoreCase);
-        Assert.Contains(
-            "geri yüklenemedi",
-            AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.DeletedObjects.RestoreFailed),
-            StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public void PreflightDuplicateKeys_MapToLegacyTurkishMessages()
-    {
-        Assert.Contains(
-            "kullanıcı adı",
-            AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.OperationFailures.PreflightSamAccountNameDuplicate),
-            StringComparison.OrdinalIgnoreCase);
-        Assert.Contains(
-            "UPN",
-            AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.OperationFailures.PreflightUpnDuplicate),
-            StringComparison.Ordinal);
+        foreach (var file in partialFiles)
+        {
+            var source = File.ReadAllText(file);
+            Assert.DoesNotContain("AdManagementApiMessages.Legacy", source, StringComparison.Ordinal);
+        }
     }
 
     [Fact]
@@ -112,6 +85,38 @@ public sealed class AdManagementApiMessageKeysTests
                         $"File {Path.GetFileName(file)} contains user-facing Turkish const {constName}");
                 }
             }
+        }
+    }
+
+    [Fact]
+    public void AdManagementContracts_DoNotExposeUserFacingMessageProperty()
+    {
+        var contractsDir = Path.Combine(
+            FindRepositoryRoot(),
+            "backend/src/SasPortal.Api/Contracts/AdManagement");
+
+        foreach (var file in Directory.GetFiles(contractsDir, "*.cs"))
+        {
+            var source = File.ReadAllText(file);
+            Assert.False(
+                Regex.IsMatch(source, @"\bstring Message\b", RegexOptions.Multiline),
+                $"Contract {Path.GetFileName(file)} exposes user-facing Message property.");
+        }
+    }
+
+    [Fact]
+    public void AdManagementResultModels_DoNotExposeUserFacingMessageProperty()
+    {
+        var modelsDir = Path.Combine(
+            FindRepositoryRoot(),
+            "backend/src/SasPortal.Application/Common/Models");
+
+        foreach (var file in Directory.GetFiles(modelsDir, "Ad*.cs"))
+        {
+            var source = File.ReadAllText(file);
+            Assert.False(
+                Regex.IsMatch(source, @"\bstring Message\b", RegexOptions.Multiline),
+                $"Model {Path.GetFileName(file)} exposes user-facing Message property.");
         }
     }
 

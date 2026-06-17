@@ -57,16 +57,14 @@ public sealed record AdGroupDetail(
 
 public sealed record AdGroupDirectoryListResult(
     bool IsSuccess,
-    string Message,
+    string MessageKey,
     AdGroupSearchPage? Page,
     AdDirectoryFailureKind? FailureKind = null,
-    string? MessageKey = null,
     IReadOnlyDictionary<string, object>? MessageParams = null);
 
 public sealed record AdGroupDirectoryDetailResult(
     bool IsSuccess,
-    string Message,
+    string MessageKey,
     AdGroupDetail? Group,
     AdDirectoryFailureKind? FailureKind = null,
-    string? MessageKey = null,
     IReadOnlyDictionary<string, object>? MessageParams = null);

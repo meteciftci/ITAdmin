@@ -35,7 +35,7 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
         request,
                 auditAction,
                 "AD user account expiration update failed.",
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.AccountExpirationInvalidDate),
+                AdManagementApiMessageKeys.Users.AccountExpirationInvalidDate,
                 BuildAccountExpirationFailureDiagnostic(
                     AccountExpirationValidateStep,
                     request.UserId,
@@ -60,7 +60,7 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
         request,
                     auditAction,
                     "AD user account expiration update failed.",
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.AccountExpirationInvalidDate),
+                    AdManagementApiMessageKeys.Users.AccountExpirationInvalidDate,
                     BuildAccountExpirationFailureDiagnostic(
                         AccountExpirationValidateStep,
                         request.UserId,
@@ -81,7 +81,7 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
         request,
                 auditAction,
                 "AD user account expiration update failed.",
-                connectionResult.Message,
+                connectionResult.MessageKey,
                 BuildAccountExpirationFailureDiagnostic(
                     AccountExpirationValidateStep,
                     request.UserId,
@@ -102,7 +102,7 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
         request,
                 auditAction,
                 "AD user account expiration update failed.",
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
+                AdManagementApiMessageKeys.Common.NotConfigured,
                 BuildAccountExpirationFailureDiagnostic(
                     AccountExpirationValidateStep,
                     request.UserId,
@@ -130,7 +130,7 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
         request,
                     auditAction,
                     "AD user account expiration update failed.",
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.NotFound),
+                    AdManagementApiMessageKeys.Users.NotFound,
                     BuildAccountExpirationFailureDiagnostic(
                         AccountExpirationLoadUserStep,
                         request.UserId,
@@ -182,7 +182,7 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
         request,
                     auditAction,
                     "AD user account expiration update failed.",
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.AccountExpirationUpdateFailed),
+                    AdManagementApiMessageKeys.Users.AccountExpirationUpdateFailed,
                     BuildAccountExpirationFailureDiagnostic(
                         AccountExpirationReloadUserStep,
                         request.UserId,
@@ -234,7 +234,7 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
         request,
                 auditAction,
                 "AD user account expiration update failed.",
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.AccountExpirationUpdateFailed),
+                AdManagementApiMessageKeys.Users.AccountExpirationUpdateFailed,
                 BuildAccountExpirationFailureDiagnostic(
                     AccountExpirationModifyStep,
                     request.UserId,
@@ -298,13 +298,12 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
 
         return new UpdateAdUserAccountExpirationResult(
             false,
-            message,
+            messageKey ?? message,
             request.UserId.ToString("D"),
             beforeContext?.SamAccountName,
             beforeContext?.AccountExpiresDate,
             beforeContext?.NeverExpires ?? request.NeverExpires,
             failureKind,
-            messageKey,
             messageParams);
     }
 
@@ -534,7 +533,7 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
             messageKey = AdManagementApiMessageKeys.Users.AccountExpirationUpdateFailed;
         }
 
-        return (AdManagementApiMessages.Legacy(messageKey), messageKey);
+        return (messageKey, messageKey);
     }
 
     private static bool TryLoadUserAccountExpirationContext(

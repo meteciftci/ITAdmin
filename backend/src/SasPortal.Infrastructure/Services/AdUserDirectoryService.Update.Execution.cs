@@ -347,7 +347,7 @@ public sealed partial class AdUserDirectoryService
                 targetDistinguishedName);
 
             throw CreateUpdateUserLdapException(
-                AdLdapErrorNormalizer.Normalize(ex.ErrorCode, ex.Message),
+                AdLdapErrorNormalizer.NormalizeMessageKey(ex.ErrorCode, ex.Message),
                 MapFailureKind((ResultCode)ex.ErrorCode),
                 new AdUserUpdateFailureContext(
                     updateStep,
@@ -396,7 +396,7 @@ public sealed partial class AdUserDirectoryService
             targetDistinguishedName);
 
         throw CreateUpdateUserLdapException(
-            AdLdapErrorNormalizer.Normalize(ldapResultCode, response.ErrorMessage),
+            AdLdapErrorNormalizer.NormalizeMessageKey(ldapResultCode, response.ErrorMessage),
             MapFailureKind(response.ResultCode),
             new AdUserUpdateFailureContext(
                 updateStep,
@@ -437,8 +437,8 @@ public sealed partial class AdUserDirectoryService
             targetDistinguishedName);
 
         var userMessage = ldapResultCode is not null
-            ? AdLdapErrorNormalizer.Normalize(ldapResultCode.Value, diagnosticMessage)
-            : AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.UpdateFailed);
+            ? AdLdapErrorNormalizer.NormalizeMessageKey(ldapResultCode.Value, diagnosticMessage)
+            : AdManagementApiMessageKeys.Users.UpdateFailed;
 
         var failureKind = response is not null
             ? MapFailureKind(response.ResultCode)

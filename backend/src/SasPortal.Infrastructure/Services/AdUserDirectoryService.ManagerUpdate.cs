@@ -36,7 +36,7 @@ public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
         request,
                 auditAction,
                 "AD user manager update failed.",
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.InvalidRequest),
+                AdManagementApiMessageKeys.Common.InvalidRequest,
                 BuildManagerFailureDiagnostic(
                     ManagerValidateStep,
                     request.UserId,
@@ -55,7 +55,7 @@ public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
         request,
                 auditAction,
                 "AD user manager update failed.",
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.ManagerSelfSelection),
+                AdManagementApiMessageKeys.Users.ManagerSelfSelection,
                 BuildManagerFailureDiagnostic(
                     ManagerValidateStep,
                     request.UserId,
@@ -75,7 +75,7 @@ public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
         request,
                 auditAction,
                 "AD user manager update failed.",
-                connectionResult.Message,
+                connectionResult.MessageKey,
                 BuildManagerFailureDiagnostic(
                     ManagerValidateStep,
                     request.UserId,
@@ -96,7 +96,7 @@ public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
         request,
                 auditAction,
                 "AD user manager update failed.",
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
+                AdManagementApiMessageKeys.Common.NotConfigured,
                 BuildManagerFailureDiagnostic(
                     ManagerValidateStep,
                     request.UserId,
@@ -124,7 +124,7 @@ public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
         request,
                     auditAction,
                     "AD user manager update failed.",
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.NotFound),
+                    AdManagementApiMessageKeys.Users.NotFound,
                     BuildManagerFailureDiagnostic(
                         ManagerLoadUserStep,
                         request.UserId,
@@ -152,7 +152,7 @@ public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
         request,
                         auditAction,
                         "AD user manager update failed.",
-                        AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.ManagerNotFound),
+                        AdManagementApiMessageKeys.Users.ManagerNotFound,
                         BuildManagerFailureDiagnostic(
                             ManagerLoadManagerStep,
                             request.UserId,
@@ -201,7 +201,7 @@ public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
         request,
                     auditAction,
                     "AD user manager update failed.",
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.ManagerUpdateFailed),
+                    AdManagementApiMessageKeys.Users.ManagerUpdateFailed,
                     BuildManagerFailureDiagnostic(
                         ManagerReloadUserStep,
                         request.UserId,
@@ -251,7 +251,7 @@ public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
         request,
                 auditAction,
                 "AD user manager update failed.",
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.ManagerUpdateFailed),
+                AdManagementApiMessageKeys.Users.ManagerUpdateFailed,
                 BuildManagerFailureDiagnostic(
                     ManagerModifyStep,
                     request.UserId,
@@ -314,13 +314,12 @@ public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
 
         return new UpdateAdUserManagerResult(
             false,
-            message,
+            messageKey ?? message,
             request.UserId.ToString("D"),
             beforeContext?.SamAccountName,
             beforeContext?.Manager?.DistinguishedName,
             beforeContext?.Manager?.DisplayName,
             failureKind,
-            messageKey,
             messageParams);
     }
 
@@ -555,7 +554,7 @@ public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
             messageKey = AdManagementApiMessageKeys.Users.ManagerUpdateFailed;
         }
 
-        return (AdManagementApiMessages.Legacy(messageKey), messageKey);
+        return (messageKey, messageKey);
     }
 
     private static bool TryLoadUserManagerContext(

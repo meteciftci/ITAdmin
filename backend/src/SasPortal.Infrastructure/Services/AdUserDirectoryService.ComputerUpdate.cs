@@ -50,7 +50,7 @@ public sealed partial class AdUserDirectoryService : IAdComputerUpdateService
         request,
                 auditAction,
                 "AD computer update failed.",
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.InvalidRequest),
+                AdManagementApiMessageKeys.Common.InvalidRequest,
                 BuildComputerUpdateFailureDiagnostic(
                     ComputerUpdateValidateStep,
                     request.ComputerId,
@@ -69,7 +69,7 @@ public sealed partial class AdUserDirectoryService : IAdComputerUpdateService
         request,
                 auditAction,
                 "AD computer update failed.",
-                connectionResult.Message,
+                connectionResult.MessageKey,
                 BuildComputerUpdateFailureDiagnostic(
                     ComputerUpdateValidateStep,
                     request.ComputerId,
@@ -90,7 +90,7 @@ public sealed partial class AdUserDirectoryService : IAdComputerUpdateService
         request,
                 auditAction,
                 "AD computer update failed.",
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
+                AdManagementApiMessageKeys.Common.NotConfigured,
                 BuildComputerUpdateFailureDiagnostic(
                     ComputerUpdateValidateStep,
                     request.ComputerId,
@@ -117,7 +117,7 @@ public sealed partial class AdUserDirectoryService : IAdComputerUpdateService
         request,
                     auditAction,
                     "AD computer update failed.",
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.NotFound),
+                    AdManagementApiMessageKeys.Computers.NotFound,
                     BuildComputerUpdateFailureDiagnostic(
                         ComputerUpdateLoadStep,
                         request.ComputerId,
@@ -185,7 +185,7 @@ public sealed partial class AdUserDirectoryService : IAdComputerUpdateService
         request,
                     auditAction,
                     "AD computer update failed.",
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.UpdateFailed),
+                    AdManagementApiMessageKeys.Computers.UpdateFailed,
                     BuildComputerUpdateFailureDiagnostic(
                         ComputerUpdateReloadStep,
                         request.ComputerId,
@@ -235,7 +235,7 @@ public sealed partial class AdUserDirectoryService : IAdComputerUpdateService
         request,
                 auditAction,
                 "AD computer update failed.",
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.UpdateFailed),
+                AdManagementApiMessageKeys.Computers.UpdateFailed,
                 BuildComputerUpdateFailureDiagnostic(
                     ComputerUpdateModifyStep,
                     request.ComputerId,
@@ -307,7 +307,6 @@ public sealed partial class AdUserDirectoryService : IAdComputerUpdateService
             cancellationToken);
 
         return new UpdateAdComputerResult(false, message, FailureKind: failureKind,
-            MessageKey: messageKey,
             MessageParams: messageParams);
     }
 
@@ -613,8 +612,8 @@ public sealed partial class AdUserDirectoryService : IAdComputerUpdateService
     private static string SanitizeComputerUpdateLdapError(LdapException exception) =>
         string.IsNullOrWhiteSpace(exception.Message)
             || exception.Message.Contains("ldap", StringComparison.OrdinalIgnoreCase)
-            ? AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.UpdateFailed)
-            : AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.UpdateFailed);
+            ? AdManagementApiMessageKeys.Computers.UpdateFailed
+            : AdManagementApiMessageKeys.Computers.UpdateFailed;
 
     private sealed record AdComputerUpdateContext(
         string ComputerId,

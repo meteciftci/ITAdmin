@@ -68,18 +68,16 @@ public sealed record AdDeletedObjectDetail(
 
 public sealed record AdDeletedObjectSearchResult(
     bool IsSuccess,
-    string Message,
+    string MessageKey,
     AdDeletedObjectSearchPage? Page,
     AdDirectoryFailureKind? FailureKind = null,
-    string? MessageKey = null,
     IReadOnlyDictionary<string, object>? MessageParams = null);
 
 public sealed record AdDeletedObjectDetailRequest(Guid ObjectGuid);
 
 public sealed record AdDeletedObjectDetailResult(
     bool IsSuccess,
-    string Message,
+    string MessageKey,
     AdDeletedObjectDetail? Object,
     AdDirectoryFailureKind? FailureKind = null,
-    string? MessageKey = null,
     IReadOnlyDictionary<string, object>? MessageParams = null);

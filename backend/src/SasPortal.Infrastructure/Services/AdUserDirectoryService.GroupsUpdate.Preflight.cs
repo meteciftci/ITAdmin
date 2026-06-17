@@ -29,7 +29,7 @@ public sealed partial class AdUserDirectoryService
                 {
                     return new AdGroupUpdatePreflightFailure(
                         "sAMAccountName",
-                        AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.OperationFailures.PreflightGroupSamAccountNameDuplicate),
+                        AdManagementApiMessageKeys.OperationFailures.PreflightGroupSamAccountNameDuplicate,
                         "The sAMAccountName value is already used by another AD group.");
                 }
             }
@@ -45,7 +45,7 @@ public sealed partial class AdUserDirectoryService
             {
                 return new AdGroupUpdatePreflightFailure(
                     "cn",
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.OperationFailures.PreflightGroupCnDuplicate),
+                    AdManagementApiMessageKeys.OperationFailures.PreflightGroupCnDuplicate,
                     "A group with the same technical name already exists in the target OU.");
             }
         }

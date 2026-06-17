@@ -1,8 +1,7 @@
 export type AdManagementApiMessageParams = Record<string, string | number | boolean>;
 
 export type AdManagementApiMessageFields = {
-  message?: string | null;
-  messageKey?: string | null;
+  messageKey: string;
   messageParams?: AdManagementApiMessageParams | null;
 };
 
@@ -144,7 +143,6 @@ export type CreateAdUserResponse = AdManagementApiMessageFields & {
   userPrincipalName: string;
   displayName: string;
   isEnabled: boolean;
-  message: string;
   namingCollisionResolved: boolean;
   generatedSuffix: number | null;
   notificationSummary: AdUserCreatedNotificationSummary | null;
@@ -192,12 +190,10 @@ export type UpdateAdAttributeMappingRequest = {
 export type AdManagementValidationDetail = AdManagementApiMessageFields & {
   key: string;
   status: string;
-  message: string | null;
 };
 
 export type AdManagementValidationResult = AdManagementApiMessageFields & {
   isValid: boolean;
-  message: string;
   checkedAt: string;
   details: AdManagementValidationDetail[];
   restoreReadiness?: AdDeletedObjectRestoreReadinessResult | null;
@@ -220,14 +216,13 @@ export type AdDeletedObjectRestoreReadinessCheck = {
   key: string;
   status: AdDeletedObjectRestoreReadinessCheckStatus;
   title: string;
-  message: string | null;
   remediation: string | null;
   command: string | null;
   isBlocking: boolean;
   details: string | null;
   titleKey: string;
   titleParams?: AdDeletedObjectRestoreReadinessTextParams | null;
-  messageKey?: string | null;
+  messageKey: string | null;
   messageParams?: AdDeletedObjectRestoreReadinessTextParams | null;
   remediationKey?: string | null;
   remediationParams?: AdDeletedObjectRestoreReadinessTextParams | null;
@@ -419,7 +414,6 @@ export type RemoveAdGroupMemberRequest = {
 
 export type AdGroupMemberOperationResponse = AdManagementApiMessageFields & {
   success: boolean;
-  message: string;
   groupId: string | null;
   groupDistinguishedName: string | null;
   groupName: string | null;
@@ -500,13 +494,11 @@ export type AdComputerAccountConfirmAction = "enable" | "disable";
 
 export type AdComputerAccountOperationResponse = AdManagementApiMessageFields & {
   success: boolean;
-  message: string;
   computer: AdComputerDetail | null;
 };
 
 export type DeleteAdComputerResponse = AdManagementApiMessageFields & {
   success: boolean;
-  message: string;
   deletedComputerId: string | null;
   deletedComputerName: string | null;
   deletedDistinguishedName: string | null;
@@ -538,7 +530,6 @@ export type UpdateAdGroupRequest = {
 
 export type DeleteAdGroupResponse = AdManagementApiMessageFields & {
   success: boolean;
-  message: string;
   deletedGroupId: string | null;
 };
 
@@ -616,7 +607,6 @@ export type UpdateAdUserRequest = {
 
 export type AdUserAccountOperationResponse = AdManagementApiMessageFields & {
   success: boolean;
-  message: string;
   userId: string;
   samAccountName: string | null;
   userPrincipalName: string | null;
@@ -633,7 +623,6 @@ export type MoveAdUserOuRequest = {
 
 export type MoveAdUserOuResponse = AdManagementApiMessageFields & {
   success: boolean;
-  message: string;
   userId: string;
   samAccountName: string | null;
   userPrincipalName: string | null;
@@ -648,7 +637,6 @@ export type MoveAdGroupOuRequest = {
 
 export type MoveAdGroupOuResponse = AdManagementApiMessageFields & {
   success: boolean;
-  message: string;
   groupId: string;
   displayName: string | null;
   name: string | null;
@@ -730,7 +718,6 @@ export type AdGroupSearchResponse = {
 
 export type AdUserGroupOperationResponse = AdManagementApiMessageFields & {
   success: boolean;
-  message: string;
   userId: string;
   groupDistinguishedName: string;
   groupName: string | null;
@@ -777,7 +764,6 @@ export type AdComputerGroupMutationRequest = {
 
 export type AdComputerGroupOperationResponse = AdManagementApiMessageFields & {
   success: boolean;
-  message: string;
   computerId: string | null;
   computerName: string | null;
   computerSamAccountName: string | null;
@@ -794,7 +780,6 @@ export type UpdateAdUserManagerRequest = {
 
 export type UpdateAdUserManagerResponse = AdManagementApiMessageFields & {
   success: boolean;
-  message: string;
   userId: string;
   samAccountName: string | null;
   managerDistinguishedName: string | null;
@@ -808,7 +793,6 @@ export type UpdateAdUserAccountExpirationRequest = {
 
 export type UpdateAdUserAccountExpirationResponse = AdManagementApiMessageFields & {
   success: boolean;
-  message: string;
   userId: string;
   samAccountName: string | null;
   accountExpiresDate: string | null;
@@ -875,7 +859,6 @@ export type GetAdDeletedObjectsParams = {
 
 export type AdDeletedObjectRestoreResponse = AdManagementApiMessageFields & {
   success: boolean;
-  message: string;
   restoredObjectId: string | null;
   restoredObjectType: AdDeletedObjectType | null;
   restoredName: string | null;

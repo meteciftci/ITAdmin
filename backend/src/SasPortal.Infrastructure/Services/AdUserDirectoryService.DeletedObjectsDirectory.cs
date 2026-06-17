@@ -108,10 +108,9 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectDirectorySe
         {
             return new AdDeletedObjectSearchResult(
                 false,
-                connectionResult.Message,
+                connectionResult.MessageKey,
                 null,
                 connectionResult.FailureKind,
-                connectionResult.MessageKey,
                 connectionResult.MessageParams);
         }
 
@@ -120,10 +119,9 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectDirectorySe
         {
             return new AdDeletedObjectSearchResult(
                 false,
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
+                AdManagementApiMessageKeys.Common.NotConfigured,
                 null,
-                AdDirectoryFailureKind.NotConfigured,
-                AdManagementApiMessageKeys.Common.NotConfigured);
+                AdDirectoryFailureKind.NotConfigured);
         }
 
         try
@@ -213,10 +211,9 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectDirectorySe
         {
             return new AdDeletedObjectDetailResult(
                 false,
-                connectionResult.Message,
+                connectionResult.MessageKey,
                 null,
                 connectionResult.FailureKind,
-                connectionResult.MessageKey,
                 connectionResult.MessageParams);
         }
 
@@ -225,10 +222,9 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectDirectorySe
         {
             return new AdDeletedObjectDetailResult(
                 false,
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
+                AdManagementApiMessageKeys.Common.NotConfigured,
                 null,
-                AdDirectoryFailureKind.NotConfigured,
-                AdManagementApiMessageKeys.Common.NotConfigured);
+                AdDirectoryFailureKind.NotConfigured);
         }
 
         try
@@ -262,20 +258,18 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectDirectorySe
             {
                 return new AdDeletedObjectDetailResult(
                     false,
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.DeletedObjects.NotFound),
+                    AdManagementApiMessageKeys.DeletedObjects.NotFound,
                     null,
-                    AdDirectoryFailureKind.NotFound,
-                    AdManagementApiMessageKeys.DeletedObjects.NotFound);
+                    AdDirectoryFailureKind.NotFound);
             }
 
             if (!TryMapDeletedObjectDetail(response.Entries[0], out var detail))
             {
                 return new AdDeletedObjectDetailResult(
                     false,
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.DeletedObjects.NotFound),
+                    AdManagementApiMessageKeys.DeletedObjects.NotFound,
                     null,
-                    AdDirectoryFailureKind.NotFound,
-                    AdManagementApiMessageKeys.DeletedObjects.NotFound);
+                    AdDirectoryFailureKind.NotFound);
             }
 
             return new AdDeletedObjectDetailResult(true, string.Empty, detail);
@@ -435,18 +429,16 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectDirectorySe
     private static AdDeletedObjectSearchResult DeletedObjectListConnectionFailed() =>
         new(
             false,
-            AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.DeletedObjects.QueryFailed),
+            AdManagementApiMessageKeys.DeletedObjects.QueryFailed,
             null,
-            AdDirectoryFailureKind.ConnectionFailed,
-            AdManagementApiMessageKeys.DeletedObjects.QueryFailed);
+            AdDirectoryFailureKind.ConnectionFailed);
 
     private static AdDeletedObjectDetailResult DeletedObjectDetailConnectionFailed() =>
         new(
             false,
-            AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.DeletedObjects.QueryFailed),
+            AdManagementApiMessageKeys.DeletedObjects.QueryFailed,
             null,
-            AdDirectoryFailureKind.ConnectionFailed,
-            AdManagementApiMessageKeys.DeletedObjects.QueryFailed);
+            AdDirectoryFailureKind.ConnectionFailed);
 
     private AdDeletedObjectSearchResult DeletedObjectListFailure(ResultCode resultCode) =>
         resultCode switch
@@ -454,10 +446,9 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectDirectorySe
             ResultCode.InsufficientAccessRights or ResultCode.UnwillingToPerform =>
                 new AdDeletedObjectSearchResult(
                     false,
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.DeletedObjects.AccessDenied),
+                    AdManagementApiMessageKeys.DeletedObjects.AccessDenied,
                     null,
-                    AdDirectoryFailureKind.ConnectionFailed,
-                    AdManagementApiMessageKeys.DeletedObjects.AccessDenied),
+                    AdDirectoryFailureKind.ConnectionFailed),
             _ => DeletedObjectListConnectionFailed(),
         };
 
@@ -467,10 +458,9 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectDirectorySe
             ResultCode.InsufficientAccessRights or ResultCode.UnwillingToPerform =>
                 new AdDeletedObjectDetailResult(
                     false,
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.DeletedObjects.AccessDenied),
+                    AdManagementApiMessageKeys.DeletedObjects.AccessDenied,
                     null,
-                    AdDirectoryFailureKind.ConnectionFailed,
-                    AdManagementApiMessageKeys.DeletedObjects.AccessDenied),
+                    AdDirectoryFailureKind.ConnectionFailed),
             _ => DeletedObjectDetailConnectionFailed(),
         };
 }

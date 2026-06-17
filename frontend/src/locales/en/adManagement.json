@@ -1058,6 +1058,7 @@
         "alreadyInGroup": "User is already a member of this group.",
         "notInGroup": "User is not a member of this group.",
         "effectiveGroupsFailed": "Effective group memberships could not be read.",
+        "effectiveGroupsMaxDepthOutOfRange": "maxDepth must be between {{min}} and {{max}}.",
         "invalidUserId": "Invalid user identifier."
       },
       "groups": {
@@ -1072,6 +1073,7 @@
         "ouMoveFailed": "Group OU move operation failed.",
         "targetOuRequired": "Target OU selection is required.",
         "alreadyInTargetOu": "Group is already in the selected OU.",
+        "invalidTargetOu": "The selected OU is not valid for group placement.",
         "memberOperationFailed": "Group membership operation failed.",
         "memberAdded": "Member was added to the group.",
         "memberRemoved": "Member was removed from the group.",
@@ -1091,6 +1093,7 @@
         "ouMoveFailed": "Computer OU move operation failed.",
         "targetOuRequired": "Target OU selection is required.",
         "alreadyInTargetOu": "Computer is already in the selected OU.",
+        "invalidTargetOu": "The selected OU is not valid for computer placement.",
         "accountOperationFailed": "Computer account operation failed.",
         "accountEnabled": "Computer account was enabled.",
         "accountDisabled": "Computer account was disabled.",

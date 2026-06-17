@@ -4,7 +4,6 @@ public sealed record AdDeletedObjectRestoreReadinessCheck(
     string Key,
     string Status,
     string Title,
-    string? Message,
     string? Remediation,
     string? Command,
     bool IsBlocking,

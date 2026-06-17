@@ -97,7 +97,7 @@ public sealed class AdUserDirectoryServiceGroupMembershipLoggingTests
       "Group not found");
 
     Assert.False(result.IsSuccess);
-    Assert.Equal("Group not found", result.Message);
+    Assert.Equal("Group not found", result.MessageKey);
     Assert.Equal(AdDirectoryFailureKind.NotFound, result.FailureKind);
   }
 

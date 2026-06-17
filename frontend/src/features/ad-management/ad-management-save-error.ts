@@ -44,7 +44,7 @@ export function extractValidationFromError(
   };
   if (
     typeof candidate.isValid !== "boolean" ||
-    typeof candidate.message !== "string" ||
+    typeof candidate.messageKey !== "string" ||
     typeof candidate.checkedAt !== "string" ||
     !Array.isArray(candidate.details)
   ) {
@@ -52,9 +52,7 @@ export function extractValidationFromError(
   }
   return {
     isValid: candidate.isValid,
-    message: candidate.message,
-    messageKey:
-      typeof candidate.messageKey === "string" ? candidate.messageKey : null,
+    messageKey: candidate.messageKey,
     messageParams: parseMessageParams(candidate.messageParams),
     checkedAt: candidate.checkedAt,
     details: candidate.details
@@ -63,17 +61,15 @@ export function extractValidationFromError(
         const detail = item as Record<string, unknown>;
         if (
           typeof detail.key !== "string" ||
-          typeof detail.status !== "string"
+          typeof detail.status !== "string" ||
+          typeof detail.messageKey !== "string"
         ) {
           return null;
         }
         return {
           key: detail.key,
           status: detail.status,
-          message:
-            typeof detail.message === "string" ? detail.message : null,
-          messageKey:
-            typeof detail.messageKey === "string" ? detail.messageKey : null,
+          messageKey: detail.messageKey,
           messageParams: parseMessageParams(detail.messageParams),
         };
       })

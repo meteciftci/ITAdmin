@@ -20,10 +20,6 @@ export function resolveAdManagementApiMessage(
     return t(key);
   }
 
-  if (source?.message?.trim()) {
-    return source.message.trim();
-  }
-
   return t(fallbackKey);
 }
 
@@ -35,24 +31,15 @@ export function getAdManagementApiErrorMessage(
   if (error instanceof AxiosError) {
     const data = error.response?.data;
     if (data && typeof data === "object") {
-      const resolved = resolveAdManagementApiMessage(
-        t,
-        data as AdManagementApiMessageFields,
-        fallbackKey,
-      );
       const fields = data as AdManagementApiMessageFields;
-      if (fields.messageKey?.trim() || fields.message?.trim()) {
-        return resolved;
+      if (fields.messageKey?.trim()) {
+        return resolveAdManagementApiMessage(t, fields, fallbackKey);
       }
 
       const validation = (data as { validation?: AdManagementApiMessageFields }).validation;
-      if (validation) {
+      if (validation?.messageKey?.trim()) {
         return resolveAdManagementApiMessage(t, validation, fallbackKey);
       }
-    }
-
-    if (typeof data === "string" && data.trim()) {
-      return data.trim();
     }
   }
 

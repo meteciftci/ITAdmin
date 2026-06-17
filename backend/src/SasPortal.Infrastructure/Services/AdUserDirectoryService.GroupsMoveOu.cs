@@ -32,7 +32,7 @@ public sealed partial class AdUserDirectoryService
         request,
                 auditAction,
                 "AD group OU move failed.",
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.TargetOuRequired),
+                AdManagementApiMessageKeys.Groups.TargetOuRequired,
                 BuildGroupOuMoveFailureDiagnostic(
                     GroupOuMoveValidateStep,
                     request.GroupId,
@@ -53,7 +53,7 @@ public sealed partial class AdUserDirectoryService
         request,
                 auditAction,
                 "AD group OU move failed.",
-                connectionResult.Message,
+                connectionResult.MessageKey,
                 BuildGroupOuMoveFailureDiagnostic(
                     GroupOuMoveValidateStep,
                     request.GroupId,
@@ -74,7 +74,7 @@ public sealed partial class AdUserDirectoryService
         request,
                 auditAction,
                 "AD group OU move failed.",
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
+                AdManagementApiMessageKeys.Common.NotConfigured,
                 BuildGroupOuMoveFailureDiagnostic(
                     GroupOuMoveValidateTargetOuStep,
                     request.GroupId,
@@ -94,7 +94,7 @@ public sealed partial class AdUserDirectoryService
         request,
                 auditAction,
                 "AD group OU move failed.",
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.InvalidTargetOu),
+                AdManagementApiMessageKeys.Groups.InvalidTargetOu,
                 BuildGroupOuMoveFailureDiagnostic(
                     GroupOuMoveValidateTargetOuStep,
                     request.GroupId,
@@ -126,7 +126,7 @@ public sealed partial class AdUserDirectoryService
         request,
                     auditAction,
                     "AD group OU move failed.",
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.NotFound),
+                    AdManagementApiMessageKeys.Groups.NotFound,
                     BuildGroupOuMoveFailureDiagnostic(
                         GroupOuMoveLoadGroupStep,
                         request.GroupId,
@@ -149,7 +149,7 @@ public sealed partial class AdUserDirectoryService
         request,
                     auditAction,
                     "AD group OU move failed.",
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.NotFound),
+                    AdManagementApiMessageKeys.Groups.NotFound,
                     BuildGroupOuMoveFailureDiagnostic(
                         GroupOuMoveLoadGroupStep,
                         request.GroupId,
@@ -169,7 +169,7 @@ public sealed partial class AdUserDirectoryService
         request,
                     auditAction,
                     "AD group OU move failed.",
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.OuMoveFailed),
+                    AdManagementApiMessageKeys.Groups.OuMoveFailed,
                     BuildGroupOuMoveFailureDiagnostic(
                         GroupOuMoveValidateStep,
                         request.GroupId,
@@ -189,7 +189,7 @@ public sealed partial class AdUserDirectoryService
         request,
                     auditAction,
                     "AD group OU move failed.",
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.OuMoveFailed),
+                    AdManagementApiMessageKeys.Groups.OuMoveFailed,
                     BuildGroupOuMoveFailureDiagnostic(
                         GroupOuMoveValidateStep,
                         request.GroupId,
@@ -211,7 +211,7 @@ public sealed partial class AdUserDirectoryService
         request,
                     auditAction,
                     "AD group OU move failed.",
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.AlreadyInTargetOu),
+                    AdManagementApiMessageKeys.Groups.AlreadyInTargetOu,
                     BuildGroupOuMoveFailureDiagnostic(
                         GroupOuMoveValidateTargetOuStep,
                         request.GroupId,
@@ -231,7 +231,7 @@ public sealed partial class AdUserDirectoryService
         request,
                     auditAction,
                     "AD group OU move failed.",
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Ldap.NoSuchObject),
+                    AdManagementApiMessageKeys.Ldap.NoSuchObject,
                     BuildGroupOuMoveFailureDiagnostic(
                         GroupOuMoveValidateTargetOuStep,
                         request.GroupId,
@@ -252,7 +252,7 @@ public sealed partial class AdUserDirectoryService
         request,
                     auditAction,
                     "AD group OU move failed.",
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.OperationFailures.PreflightGroupCnDuplicate),
+                    AdManagementApiMessageKeys.OperationFailures.PreflightGroupCnDuplicate,
                     BuildGroupOuMoveFailureDiagnostic(
                         GroupOuMoveValidateTargetOuStep,
                         request.GroupId,
@@ -274,7 +274,7 @@ public sealed partial class AdUserDirectoryService
         request,
                     auditAction,
                     "AD group OU move failed.",
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.OuMoveFailed),
+                    AdManagementApiMessageKeys.Groups.OuMoveFailed,
                     BuildGroupOuMoveFailureDiagnostic(
                         GroupOuMoveMoveGroupStep,
                         request.GroupId,
@@ -309,7 +309,7 @@ public sealed partial class AdUserDirectoryService
         request,
                     auditAction,
                     "AD group OU move failed.",
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.OuMoveFailed),
+                    AdManagementApiMessageKeys.Groups.OuMoveFailed,
                     BuildGroupOuMoveFailureDiagnostic(
                         GroupOuMoveReloadGroupStep,
                         request.GroupId,
@@ -330,7 +330,7 @@ public sealed partial class AdUserDirectoryService
         request,
                     auditAction,
                     "AD group OU move failed.",
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.OuMoveFailed),
+                    AdManagementApiMessageKeys.Groups.OuMoveFailed,
                     BuildGroupOuMoveFailureDiagnostic(
                         GroupOuMoveReloadGroupStep,
                         request.GroupId,
@@ -348,7 +348,7 @@ public sealed partial class AdUserDirectoryService
                 request,
                 auditAction,
                 $"AD group moved to OU. Group: {afterDetail.SamAccountName}.",
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.OuMoveSuccess),
+                AdManagementApiMessageKeys.Groups.OuMoveSuccess,
                 connectionResult.Context.Connection,
                 loadedBeforeDetail,
                 afterDetail,
@@ -389,7 +389,7 @@ public sealed partial class AdUserDirectoryService
         request,
                 auditAction,
                 "AD group OU move failed.",
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.OuMoveFailed),
+                AdManagementApiMessageKeys.Groups.OuMoveFailed,
                 BuildGroupOuMoveFailureDiagnostic(
                     GroupOuMoveMoveGroupStep,
                     request.GroupId,
@@ -408,7 +408,7 @@ public sealed partial class AdUserDirectoryService
         MoveAdGroupOuRequest request,
         string auditAction,
         string auditDescription,
-        string message,
+        string messageKey,
         AdManagementConnectionParameters connection,
         AdGroupDetail beforeDetail,
         AdGroupDetail afterDetail,
@@ -430,7 +430,7 @@ public sealed partial class AdUserDirectoryService
 
         return new MoveAdGroupOuResult(
             true,
-            message,
+            messageKey,
             afterDetail.Id,
             afterDetail.DisplayName,
             afterDetail.Name,
@@ -444,14 +444,13 @@ public sealed partial class AdUserDirectoryService
         MoveAdGroupOuRequest request,
         string auditAction,
         string auditDescription,
-        string message,
+        string messageKey,
         string errorDiagnosticJson,
         AdGroupDetail? beforeDetail,
         string? targetDistinguishedName,
         string? targetOuDistinguishedName,
         AdDirectoryFailureKind? failureKind,
         CancellationToken cancellationToken,
-        string? messageKey = null,
         IReadOnlyDictionary<string, object>? messageParams = null)
     {
         await WriteGroupOuMoveFailureLogsSafelyAsync(
@@ -466,7 +465,7 @@ public sealed partial class AdUserDirectoryService
 
         return new MoveAdGroupOuResult(
             false,
-            message,
+            messageKey,
             beforeDetail?.Id ?? request.GroupId.ToString("D"),
             beforeDetail?.DisplayName,
             beforeDetail?.Name,
@@ -474,7 +473,8 @@ public sealed partial class AdUserDirectoryService
             beforeDetail?.DistinguishedName,
             beforeDetail?.DistinguishedName,
             targetOuDistinguishedName,
-            failureKind);
+            failureKind,
+            messageParams);
     }
 
     private async Task WriteGroupOuMoveSuccessLogsSafelyAsync(
@@ -681,9 +681,9 @@ public sealed partial class AdUserDirectoryService
 
     private static string SanitizeGroupOuMoveLdapError(LdapException exception)
     {
-        var normalized = AdLdapErrorNormalizer.Normalize(exception.ErrorCode, exception.Message);
-        return string.Equals(normalized, AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.UpdateFailed), StringComparison.Ordinal)
-            ? AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.OuMoveFailed)
+        var normalized = AdLdapErrorNormalizer.NormalizeMessageKey(exception.ErrorCode, exception.Message);
+        return string.Equals(normalized, AdManagementApiMessageKeys.Users.UpdateFailed, StringComparison.Ordinal)
+            ? AdManagementApiMessageKeys.Groups.OuMoveFailed
             : normalized;
     }
 }

@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using SasPortal.Application.Common.Constants;
 
 namespace SasPortal.UnitTests.AdManagement;
@@ -10,33 +9,17 @@ public sealed class AdManagementControllerMessageKeyTests
         "backend/src/SasPortal.Api/Controllers/AdManagementController.cs");
 
     [Fact]
-    public void LegacyPublicResponseBranches_SetMessageKey()
+    public void Controller_DoesNotReferenceLegacyMessages()
     {
         var source = File.ReadAllText(ControllerSourcePath);
-        var legacyMatches = Regex.Matches(
-            source,
-            @"AdManagementApiMessages\.Legacy\(([^)]+)\)",
-            RegexOptions.Multiline);
+        Assert.DoesNotContain("AdManagementApiMessages.Legacy", source, StringComparison.Ordinal);
+    }
 
-        Assert.NotEmpty(legacyMatches);
-
-        foreach (Match match in legacyMatches)
-        {
-            var keyExpression = match.Groups[1].Value.Trim();
-            if (keyExpression == "messageKey")
-            {
-                continue;
-            }
-
-            var contextStart = Math.Max(0, match.Index - 120);
-            var contextEnd = Math.Min(source.Length, match.Index + match.Length + 400);
-            var context = source[contextStart..contextEnd];
-
-            Assert.True(
-                context.Contains("messageKey", StringComparison.Ordinal)
-                    || context.Contains("MessageKey", StringComparison.Ordinal),
-                $"Legacy response for {keyExpression} should set messageKey/MessageKey near controller branch.");
-        }
+    [Fact]
+    public void Controller_DoesNotReturnUserFacingMessageField()
+    {
+        var source = File.ReadAllText(ControllerSourcePath);
+        Assert.DoesNotContain("message =", source, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -45,7 +28,7 @@ public sealed class AdManagementControllerMessageKeyTests
         var source = File.ReadAllText(ControllerSourcePath);
 
         Assert.Contains(
-            $"AdManagementApiMessageKeys.Computers.InvalidComputerId));",
+            "AdManagementApiMessageKeys.Computers.InvalidComputerId,",
             source,
             StringComparison.Ordinal);
         Assert.Contains(
@@ -92,38 +75,6 @@ public sealed class AdManagementControllerMessageKeyTests
         Assert.DoesNotContain(
             "AdManagementApiMessageKeys.Users.TargetOuRequired",
             moveComputerOuMethod,
-            StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void ExecuteComputerGroupOperationAsync_InvalidIdBranch_SetsInvalidComputerIdMessageKey()
-    {
-        var source = File.ReadAllText(ControllerSourcePath);
-        var methodStart = source.IndexOf(
-            "ExecuteComputerGroupOperationAsync(",
-            StringComparison.Ordinal);
-        Assert.True(methodStart >= 0);
-
-        var methodSource = source[methodStart..];
-        Assert.Contains(
-            "AdManagementApiMessageKeys.Computers.InvalidComputerId",
-            methodSource,
-            StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void ExecuteComputerGroupOperationAsync_MissingGroupDnBranch_SetsGroupDnRequiredMessageKey()
-    {
-        var source = File.ReadAllText(ControllerSourcePath);
-        var methodStart = source.IndexOf(
-            "ExecuteComputerGroupOperationAsync(",
-            StringComparison.Ordinal);
-        Assert.True(methodStart >= 0);
-
-        var methodSource = source[methodStart..];
-        Assert.Contains(
-            "AdManagementApiMessageKeys.Groups.GroupDnRequired",
-            methodSource,
             StringComparison.Ordinal);
     }
 

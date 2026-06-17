@@ -400,7 +400,7 @@ public static class AdOperationErrorDiagnosticBuilder
                 DiagnosticCode: AdOperationDiagnosticCodes.SettingsValidationFailed,
                 NormalizedReasonOverride: normalizedReason,
                 EnglishMessageOverride: "AD management settings validation failed.",
-                LdapDiagnosticMessage: result.Message,
+                LdapDiagnosticMessage: result.MessageKey,
                 PartialUpdate: false,
                 RollbackStatus: AdUserUpdateRollbackStatus.NotRequired));
     }

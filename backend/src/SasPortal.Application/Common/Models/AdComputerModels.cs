@@ -12,10 +12,9 @@ public sealed record AdComputerOperatingSystemOptionsPage(
 
 public sealed record AdComputerOperatingSystemOptionsResult(
     bool IsSuccess,
-    string Message,
+    string MessageKey,
     AdComputerOperatingSystemOptionsPage? Page,
     AdDirectoryFailureKind? FailureKind = null,
-    string? MessageKey = null,
     IReadOnlyDictionary<string, object>? MessageParams = null);
 
 public sealed record AdComputerListItem(
@@ -65,16 +64,14 @@ public sealed record AdComputerDetail(
 
 public sealed record AdComputerDirectoryListResult(
     bool IsSuccess,
-    string Message,
+    string MessageKey,
     AdComputerSearchPage? Page,
     AdDirectoryFailureKind? FailureKind = null,
-    string? MessageKey = null,
     IReadOnlyDictionary<string, object>? MessageParams = null);
 
 public sealed record AdComputerDirectoryDetailResult(
     bool IsSuccess,
-    string Message,
+    string MessageKey,
     AdComputerDetail? Computer,
     AdDirectoryFailureKind? FailureKind = null,
-    string? MessageKey = null,
     IReadOnlyDictionary<string, object>? MessageParams = null);

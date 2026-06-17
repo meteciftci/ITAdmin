@@ -6,7 +6,7 @@ public sealed record AdUserEffectiveGroupsRequest(
 
 public sealed record AdUserEffectiveGroupsResult(
     bool IsSuccess,
-    string Message,
+    string MessageKey,
     string? UserId,
     string? DisplayName,
     string? SamAccountName,
@@ -18,7 +18,6 @@ public sealed record AdUserEffectiveGroupsResult(
     bool Truncated,
     string? TruncatedReason,
     AdDirectoryFailureKind? FailureKind = null,
-    string? MessageKey = null,
     IReadOnlyDictionary<string, object>? MessageParams = null);
 
 public sealed record AdEffectiveGroupSummaryItem(

@@ -37,7 +37,7 @@ public sealed partial class AdUserDirectoryService : IAdUserOuMoveService
         request,
                 auditAction,
                 "AD user OU move failed.",
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.TargetOuRequired),
+                AdManagementApiMessageKeys.Users.TargetOuRequired,
                 BuildOuMoveFailureDiagnostic(
                     OuMoveValidateStep,
                     request.UserId,
@@ -57,7 +57,7 @@ public sealed partial class AdUserDirectoryService : IAdUserOuMoveService
         request,
                 auditAction,
                 "AD user OU move failed.",
-                connectionResult.Message,
+                connectionResult.MessageKey,
                 BuildOuMoveFailureDiagnostic(
                     OuMoveValidateStep,
                     request.UserId,
@@ -78,7 +78,7 @@ public sealed partial class AdUserDirectoryService : IAdUserOuMoveService
         request,
                 auditAction,
                 "AD user OU move failed.",
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
+                AdManagementApiMessageKeys.Common.NotConfigured,
                 BuildOuMoveFailureDiagnostic(
                     OuMoveValidateTargetOuStep,
                     request.UserId,
@@ -97,7 +97,7 @@ public sealed partial class AdUserDirectoryService : IAdUserOuMoveService
         request,
                 auditAction,
                 "AD user OU move failed.",
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.InvalidTargetOu),
+                AdManagementApiMessageKeys.Users.InvalidTargetOu,
                 BuildOuMoveFailureDiagnostic(
                     OuMoveValidateTargetOuStep,
                     request.UserId,
@@ -118,7 +118,7 @@ public sealed partial class AdUserDirectoryService : IAdUserOuMoveService
         request,
                 auditAction,
                 "AD user OU move failed.",
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
+                AdManagementApiMessageKeys.Common.NotConfigured,
                 BuildOuMoveFailureDiagnostic(
                     OuMoveValidateStep,
                     request.UserId,
@@ -146,7 +146,7 @@ public sealed partial class AdUserDirectoryService : IAdUserOuMoveService
         request,
                     auditAction,
                     "AD user OU move failed.",
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.NotFound),
+                    AdManagementApiMessageKeys.Users.NotFound,
                     BuildOuMoveFailureDiagnostic(
                         OuMoveLoadUserStep,
                         request.UserId,
@@ -167,7 +167,7 @@ public sealed partial class AdUserDirectoryService : IAdUserOuMoveService
         request,
                     auditAction,
                     "AD user OU move failed.",
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Ldap.NoSuchObject),
+                    AdManagementApiMessageKeys.Ldap.NoSuchObject,
                     BuildOuMoveFailureDiagnostic(
                         OuMoveValidateTargetOuStep,
                         request.UserId,
@@ -186,7 +186,7 @@ public sealed partial class AdUserDirectoryService : IAdUserOuMoveService
                     request,
                     auditAction,
                     $"AD user OU move skipped (no changes): {beforeContext.SamAccountName}.",
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.AlreadyInTargetOu),
+                    AdManagementApiMessageKeys.Users.AlreadyInTargetOu,
                     connection,
                     beforeContext,
                     beforeContext with { ParentOuDistinguishedName = targetOuDn },
@@ -201,7 +201,7 @@ public sealed partial class AdUserDirectoryService : IAdUserOuMoveService
         request,
                     auditAction,
                     "AD user OU move failed.",
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.OuMoveFailed),
+                    AdManagementApiMessageKeys.Users.OuMoveFailed,
                     BuildOuMoveFailureDiagnostic(
                         OuMoveMoveUserStep,
                         request.UserId,
@@ -230,7 +230,7 @@ public sealed partial class AdUserDirectoryService : IAdUserOuMoveService
         request,
                     auditAction,
                     "AD user OU move failed.",
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.OuMoveFailed),
+                    AdManagementApiMessageKeys.Users.OuMoveFailed,
                     BuildOuMoveFailureDiagnostic(
                         OuMoveReloadUserStep,
                         request.UserId,
@@ -249,7 +249,7 @@ public sealed partial class AdUserDirectoryService : IAdUserOuMoveService
         request,
                     auditAction,
                     "AD user OU move failed.",
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.OuMoveFailed),
+                    AdManagementApiMessageKeys.Users.OuMoveFailed,
                     BuildOuMoveFailureDiagnostic(
                         OuMoveReloadUserStep,
                         request.UserId,
@@ -266,7 +266,7 @@ public sealed partial class AdUserDirectoryService : IAdUserOuMoveService
                 request,
                 auditAction,
                 $"AD user moved to OU. User: {afterContext.SamAccountName}.",
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.OuMoveSuccess),
+                AdManagementApiMessageKeys.Users.OuMoveSuccess,
                 connection,
                 beforeContext,
                 afterContext,
@@ -298,7 +298,7 @@ public sealed partial class AdUserDirectoryService : IAdUserOuMoveService
         request,
                 auditAction,
                 "AD user OU move failed.",
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.OuMoveFailed),
+                AdManagementApiMessageKeys.Users.OuMoveFailed,
                 BuildOuMoveFailureDiagnostic(
                     OuMoveMoveUserStep,
                     request.UserId,
@@ -316,12 +316,13 @@ public sealed partial class AdUserDirectoryService : IAdUserOuMoveService
         MoveAdUserOuRequest request,
         string auditAction,
         string auditDescription,
-        string message,
+        string messageKey,
         AdManagementConnectionParameters connection,
         AdUserOuMoveContext beforeContext,
         AdUserOuMoveContext afterContext,
         string targetOuDistinguishedName,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IReadOnlyDictionary<string, object>? messageParams = null)
     {
         await WriteOuMoveSuccessLogsSafelyAsync(
             request,
@@ -334,26 +335,27 @@ public sealed partial class AdUserDirectoryService : IAdUserOuMoveService
 
         return new MoveAdUserOuResult(
             true,
-            message,
+            messageKey,
             afterContext.UserId,
             afterContext.SamAccountName,
             afterContext.UserPrincipalName,
             afterContext.DistinguishedName,
             beforeContext.DistinguishedName,
-            targetOuDistinguishedName);
+            targetOuDistinguishedName,
+            null,
+            messageParams);
     }
 
     private async Task<MoveAdUserOuResult> FailOuMoveAsync(
         MoveAdUserOuRequest request,
         string auditAction,
         string auditDescription,
-        string message,
+        string messageKey,
         string errorDiagnosticJson,
         AdUserOuMoveContext? beforeContext,
         string? targetOuDistinguishedName,
         AdDirectoryFailureKind? failureKind,
         CancellationToken cancellationToken,
-        string? messageKey = null,
         IReadOnlyDictionary<string, object>? messageParams = null)
     {
         await WriteOuMoveFailureLogsSafelyAsync(
@@ -367,14 +369,15 @@ public sealed partial class AdUserDirectoryService : IAdUserOuMoveService
 
         return new MoveAdUserOuResult(
             false,
-            message,
+            messageKey,
             request.UserId.ToString("D"),
             beforeContext?.SamAccountName,
             beforeContext?.UserPrincipalName,
             beforeContext?.DistinguishedName,
             beforeContext?.DistinguishedName,
             targetOuDistinguishedName,
-            failureKind);
+            failureKind,
+            messageParams);
     }
 
     private async Task WriteOuMoveSuccessLogsSafelyAsync(
@@ -645,9 +648,9 @@ public sealed partial class AdUserDirectoryService : IAdUserOuMoveService
 
     private static string SanitizeOuMoveLdapError(LdapException exception)
     {
-        var normalized = AdLdapErrorNormalizer.Normalize(exception.ErrorCode, exception.Message);
-        return string.Equals(normalized, AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.UpdateFailed), StringComparison.Ordinal)
-            ? AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.OuMoveFailed)
+        var normalized = AdLdapErrorNormalizer.NormalizeMessageKey(exception.ErrorCode, exception.Message);
+        return string.Equals(normalized, AdManagementApiMessageKeys.Users.UpdateFailed, StringComparison.Ordinal)
+            ? AdManagementApiMessageKeys.Users.OuMoveFailed
             : normalized;
     }
 

@@ -118,7 +118,7 @@ public sealed class AdComputerDeleteTests
                 FindRepositoryRoot(),
                 "backend/src/SasPortal.Api/Controllers/AdManagementController.cs"));
 
-        Assert.Contains("MapDirectoryFailure(result.Message, result.FailureKind, result.MessageKey, result.MessageParams)", source, StringComparison.Ordinal);
+        Assert.Contains("MapDirectoryFailure(result.MessageKey, result.FailureKind, result.MessageParams)", source, StringComparison.Ordinal);
         Assert.Contains("AdDirectoryFailureKind.NotFound => NotFound", source, StringComparison.Ordinal);
         Assert.Contains("AdDirectoryFailureKind.ConnectionFailed => StatusCode", source, StringComparison.Ordinal);
         Assert.Contains("AdDirectoryFailureKind.NotConfigured", source, StringComparison.Ordinal);

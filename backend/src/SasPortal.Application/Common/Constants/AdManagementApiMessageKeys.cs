@@ -62,6 +62,7 @@ public static class AdManagementApiMessageKeys
         public const string AlreadyInGroup = Prefix + "users.alreadyInGroup";
         public const string NotInGroup = Prefix + "users.notInGroup";
         public const string EffectiveGroupsFailed = Prefix + "users.effectiveGroupsFailed";
+        public const string EffectiveGroupsMaxDepthOutOfRange = Prefix + "users.effectiveGroupsMaxDepthOutOfRange";
         public const string InvalidUserId = Prefix + "users.invalidUserId";
     }
 
@@ -78,6 +79,7 @@ public static class AdManagementApiMessageKeys
         public const string OuMoveFailed = Prefix + "groups.ouMoveFailed";
         public const string TargetOuRequired = Prefix + "groups.targetOuRequired";
         public const string AlreadyInTargetOu = Prefix + "groups.alreadyInTargetOu";
+        public const string InvalidTargetOu = Prefix + "groups.invalidTargetOu";
         public const string MemberOperationFailed = Prefix + "groups.memberOperationFailed";
         public const string MemberAdded = Prefix + "groups.memberAdded";
         public const string MemberRemoved = Prefix + "groups.memberRemoved";
@@ -99,6 +101,7 @@ public static class AdManagementApiMessageKeys
         public const string OuMoveFailed = Prefix + "computers.ouMoveFailed";
         public const string TargetOuRequired = Prefix + "computers.targetOuRequired";
         public const string AlreadyInTargetOu = Prefix + "computers.alreadyInTargetOu";
+        public const string InvalidTargetOu = Prefix + "computers.invalidTargetOu";
         public const string AccountOperationFailed = Prefix + "computers.accountOperationFailed";
         public const string AccountEnabled = Prefix + "computers.accountEnabled";
         public const string AccountDisabled = Prefix + "computers.accountDisabled";

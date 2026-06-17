@@ -1058,6 +1058,7 @@
         "alreadyInGroup": "Kullanıcı bu gruba zaten üye.",
         "notInGroup": "Kullanıcı bu grupta değil.",
         "effectiveGroupsFailed": "Etkin grup üyelikleri okunamadı.",
+        "effectiveGroupsMaxDepthOutOfRange": "maxDepth değeri {{min}} ile {{max}} arasında olmalıdır.",
         "invalidUserId": "Geçersiz kullanıcı kimliği."
       },
       "groups": {
@@ -1072,6 +1073,7 @@
         "ouMoveFailed": "Grup OU taşıma işlemi başarısız oldu.",
         "targetOuRequired": "Hedef OU seçimi zorunludur.",
         "alreadyInTargetOu": "Grup zaten seçilen OU içinde.",
+        "invalidTargetOu": "Seçilen OU, grup yerleşimi için geçerli değil.",
         "memberOperationFailed": "Grup üyeliği işlemi başarısız oldu.",
         "memberAdded": "Üye gruba eklendi.",
         "memberRemoved": "Üye gruptan çıkarıldı.",
@@ -1091,6 +1093,7 @@
         "ouMoveFailed": "Bilgisayar OU taşıma işlemi başarısız oldu.",
         "targetOuRequired": "Hedef OU seçimi zorunludur.",
         "alreadyInTargetOu": "Bilgisayar zaten seçilen OU içinde.",
+        "invalidTargetOu": "Seçilen OU, bilgisayar yerleşimi için geçerli değil.",
         "accountOperationFailed": "Bilgisayar hesabı işlemi başarısız oldu.",
         "accountEnabled": "Bilgisayar hesabı etkinleştirildi.",
         "accountDisabled": "Bilgisayar hesabı devre dışı bırakıldı.",

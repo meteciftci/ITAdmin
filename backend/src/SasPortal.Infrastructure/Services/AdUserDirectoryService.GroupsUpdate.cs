@@ -25,10 +25,9 @@ public sealed partial class AdUserDirectoryService
         {
             return new AdGroupDirectoryDetailResult(
                 false,
-                connectionResult.Message,
+                connectionResult.MessageKey,
                 null,
                 connectionResult.FailureKind,
-                connectionResult.MessageKey,
                 connectionResult.MessageParams);
         }
 
@@ -46,7 +45,7 @@ public sealed partial class AdUserDirectoryService
         {
             return new AdGroupDirectoryDetailResult(
                 false,
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
+                AdManagementApiMessageKeys.Common.NotConfigured,
                 null,
                 AdDirectoryFailureKind.NotConfigured);
         }
@@ -67,7 +66,7 @@ public sealed partial class AdUserDirectoryService
                 return await FailGroupUpdateAsync(
         normalizedRequest,
                     context.Connection,
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.NotFound),
+                    AdManagementApiMessageKeys.Groups.NotFound,
                     AdDirectoryFailureKind.NotFound,
                     AdGroupUpdateOperationDiagnosticBuilder.BuildNotFoundJson(
                         AdGroupUpdateSteps.LoadGroup,
@@ -85,7 +84,7 @@ public sealed partial class AdUserDirectoryService
                 return await FailGroupUpdateAsync(
         normalizedRequest,
                     context.Connection,
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.NotFound),
+                    AdManagementApiMessageKeys.Groups.NotFound,
                     AdDirectoryFailureKind.NotFound,
                     AdGroupUpdateOperationDiagnosticBuilder.BuildNotFoundJson(
                         AdGroupUpdateSteps.LoadGroup,
@@ -175,7 +174,7 @@ public sealed partial class AdUserDirectoryService
                 return await FailGroupUpdateAsync(
         normalizedRequest,
                     context.Connection,
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.UpdateFailed),
+                    AdManagementApiMessageKeys.Groups.UpdateFailed,
                     AdDirectoryFailureKind.ConnectionFailed,
                     AdGroupUpdateOperationDiagnosticBuilder.BuildGenericFailureJson(
                         AdGroupUpdateSteps.ReloadGroup,
@@ -206,7 +205,7 @@ public sealed partial class AdUserDirectoryService
             return await FailGroupUpdateAsync(
         normalizedRequest,
                 context.Connection,
-                AdLdapErrorNormalizer.Normalize(ex.ErrorCode, ex.Message),
+                AdLdapErrorNormalizer.NormalizeMessageKey(ex.ErrorCode, ex.Message),
                 AdDirectoryFailureKind.ConnectionFailed,
                 AdGroupUpdateOperationDiagnosticBuilder.BuildGenericFailureJson(
                     AdGroupUpdateSteps.UpdateGroup,
@@ -230,7 +229,7 @@ public sealed partial class AdUserDirectoryService
             return await FailGroupUpdateAsync(
         normalizedRequest,
                 context.Connection,
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.UpdateFailed),
+                AdManagementApiMessageKeys.Groups.UpdateFailed,
                 AdDirectoryFailureKind.ConnectionFailed,
                 AdGroupUpdateOperationDiagnosticBuilder.BuildGenericFailureJson(
                     AdGroupUpdateSteps.UpdateGroup,

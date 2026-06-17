@@ -153,7 +153,7 @@ public sealed class AdManagementSettingsService(
 
                 return new UpdateAdManagementSettingsResult(
                     false,
-                    validationResult.Message,
+                    validationResult.MessageKey,
                     null,
                     validationResult);
             }
@@ -377,12 +377,12 @@ public sealed class AdManagementSettingsService(
             settingsEntity.LastValidationStatus = result.IsValid
                 ? AdManagementValidationStatuses.Ok
                 : AdManagementValidationStatuses.Failed;
-            settingsEntity.LastValidationMessage = string.IsNullOrWhiteSpace(result.Message)
+            settingsEntity.LastValidationMessage = string.IsNullOrWhiteSpace(result.MessageKey)
                 ? null
-                : (result.Message.Length > 2000 ? result.Message[..2000] : result.Message);
+                : (result.MessageKey.Length > 2000 ? result.MessageKey[..2000] : result.MessageKey);
         }
 
-        var safeMessage = SanitizeForLog(result.Message);
+        var safeMessage = SanitizeForLog(result.MessageKey);
         var auditDescription = TruncateAuditDescription(
             result.IsValid
                 ? "AD management settings validation succeeded."

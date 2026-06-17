@@ -9,10 +9,9 @@ public sealed record DeleteAdComputerRequest(
 
 public sealed record DeleteAdComputerResult(
     bool IsSuccess,
-    string Message,
+    string MessageKey,
     string? DeletedComputerId,
     string? DeletedComputerName,
     string? DeletedDistinguishedName,
     AdDirectoryFailureKind? FailureKind = null,
-    string? MessageKey = null,
     IReadOnlyDictionary<string, object>? MessageParams = null);

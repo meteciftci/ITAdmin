@@ -10,8 +10,7 @@ public sealed record UpdateAdComputerRequest(
 
 public sealed record UpdateAdComputerResult(
     bool IsSuccess,
-    string Message,
+    string MessageKey,
     AdComputerDetail? Computer = null,
     AdDirectoryFailureKind? FailureKind = null,
-    string? MessageKey = null,
     IReadOnlyDictionary<string, object>? MessageParams = null);

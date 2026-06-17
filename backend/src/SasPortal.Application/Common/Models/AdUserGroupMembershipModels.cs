@@ -35,7 +35,7 @@ public sealed record AdUserGroupMembershipItem(
 
 public sealed record AdUserGroupMembershipResult(
     bool IsSuccess,
-    string Message,
+    string MessageKey,
     string? UserId,
     string? DisplayName,
     string? SamAccountName,
@@ -43,7 +43,6 @@ public sealed record AdUserGroupMembershipResult(
     string? DistinguishedName,
     IReadOnlyList<AdUserGroupMembershipItem>? Groups,
     AdDirectoryFailureKind? FailureKind = null,
-    string? MessageKey = null,
     IReadOnlyDictionary<string, object>? MessageParams = null);
 
 public sealed record AdGroupSearchItem(
@@ -55,18 +54,16 @@ public sealed record AdGroupSearchItem(
 
 public sealed record AdGroupSearchResult(
     bool IsSuccess,
-    string Message,
+    string MessageKey,
     IReadOnlyList<AdGroupSearchItem>? Items,
     AdDirectoryFailureKind? FailureKind = null,
-    string? MessageKey = null,
     IReadOnlyDictionary<string, object>? MessageParams = null);
 
 public sealed record AdUserGroupOperationResult(
     bool IsSuccess,
-    string Message,
+    string MessageKey,
     string UserId,
     string GroupDistinguishedName,
     string? GroupName,
     AdDirectoryFailureKind? FailureKind = null,
-    string? MessageKey = null,
     IReadOnlyDictionary<string, object>? MessageParams = null);

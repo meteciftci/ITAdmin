@@ -871,13 +871,13 @@ public static class AdOperationLogSnapshotBuilder
                 operation = AdManagementOperationTypes.SettingsValidated,
                 isValid = result.IsValid,
                 checkedAt = result.CheckedAt,
-                message = SanitizeValidationMessage(result.Message),
+                message = SanitizeValidationMessage(result.MessageKey),
                 details = result.Details
                     .Select(static detail => new
                     {
                         key = detail.Key,
                         status = detail.Status,
-                        message = SanitizeValidationMessage(detail.Message),
+                        message = SanitizeValidationMessage(detail.MessageKey),
                     })
                     .ToList(),
             },

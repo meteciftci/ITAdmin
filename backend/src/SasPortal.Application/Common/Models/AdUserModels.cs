@@ -100,13 +100,12 @@ public sealed record UpdateAdUserManagerRequest(
 
 public sealed record UpdateAdUserManagerResult(
     bool IsSuccess,
-    string Message,
+    string MessageKey,
     string? UserId,
     string? SamAccountName,
     string? ManagerDistinguishedName,
     string? ManagerDisplayName,
     AdDirectoryFailureKind? FailureKind = null,
-    string? MessageKey = null,
     IReadOnlyDictionary<string, object>? MessageParams = null);
 
 public sealed record UpdateAdUserAccountExpirationRequest(
@@ -120,27 +119,24 @@ public sealed record UpdateAdUserAccountExpirationRequest(
 
 public sealed record UpdateAdUserAccountExpirationResult(
     bool IsSuccess,
-    string Message,
+    string MessageKey,
     string? UserId,
     string? SamAccountName,
     string? AccountExpiresDate,
     bool NeverExpires,
     AdDirectoryFailureKind? FailureKind = null,
-    string? MessageKey = null,
     IReadOnlyDictionary<string, object>? MessageParams = null);
 
 public sealed record AdUserDirectorySearchResult(
     bool IsSuccess,
-    string Message,
+    string MessageKey,
     AdUserSearchPage? Page,
     AdDirectoryFailureKind? FailureKind = null,
-    string? MessageKey = null,
     IReadOnlyDictionary<string, object>? MessageParams = null);
 
 public sealed record AdUserDirectoryDetailResult(
     bool IsSuccess,
-    string Message,
+    string MessageKey,
     AdUserDetail? User,
     AdDirectoryFailureKind? FailureKind = null,
-    string? MessageKey = null,
     IReadOnlyDictionary<string, object>? MessageParams = null);

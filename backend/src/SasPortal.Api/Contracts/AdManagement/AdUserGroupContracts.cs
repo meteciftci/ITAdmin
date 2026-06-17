@@ -31,9 +31,8 @@ public sealed record AdUserGroupMutationRequest(
 
 public sealed record AdUserGroupOperationResponse(
     bool Success,
-    string Message,
+    string MessageKey,
     string UserId,
     string GroupDistinguishedName,
     string? GroupName,
-    string? MessageKey = null,
     IReadOnlyDictionary<string, object>? MessageParams = null);

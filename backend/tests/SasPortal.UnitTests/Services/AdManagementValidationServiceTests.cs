@@ -1,3 +1,4 @@
+using SasPortal.Application.Common.Constants;
 using SasPortal.Application.Common.Models;
 using SasPortal.Infrastructure.Services;
 
@@ -17,9 +18,8 @@ public sealed class AdManagementValidationServiceTests
             new AdManagementValidationRequest(null, "tester", null, null));
 
         Assert.False(result.IsValid);
-        Assert.Equal("AD yönetim ayarları için zorunlu alanlar eksik.", result.Message);
         Assert.Equal(
-            SasPortal.Application.Common.Constants.AdManagementApiMessageKeys.SettingsValidation.MissingRequiredSettings,
+            AdManagementApiMessageKeys.SettingsValidation.MissingRequiredSettings,
             result.MessageKey);
     }
 
@@ -33,9 +33,8 @@ public sealed class AdManagementValidationServiceTests
             new AdManagementValidationRequest(null, "tester", null, null));
 
         Assert.False(result.IsValid);
-        Assert.Equal("AD yönetim ayarları için zorunlu alanlar eksik.", result.Message);
         Assert.Equal(
-            SasPortal.Application.Common.Constants.AdManagementApiMessageKeys.SettingsValidation.MissingRequiredSettings,
+            AdManagementApiMessageKeys.SettingsValidation.MissingRequiredSettings,
             result.MessageKey);
     }
 
@@ -49,14 +48,13 @@ public sealed class AdManagementValidationServiceTests
             new AdManagementValidationRequest(null, "tester", null, null));
 
         Assert.False(result.IsValid);
-        Assert.Equal("AD yönetim ayarları için zorunlu alanlar eksik.", result.Message);
         Assert.Equal(
-            SasPortal.Application.Common.Constants.AdManagementApiMessageKeys.SettingsValidation.MissingRequiredSettings,
+            AdManagementApiMessageKeys.SettingsValidation.MissingRequiredSettings,
             result.MessageKey);
     }
 
     [Fact]
-    public async Task ValidateConnectionAsync_WhenBindFails_MessageMentionsNetbiosPossibility()
+    public async Task ValidateConnectionAsync_WhenBindFails_ReturnsServiceAccountBindFailedMessageKey()
     {
         var connection = CreateConnection(
             domainFqdn: "invalid-ad-host.invalid",
@@ -67,8 +65,9 @@ public sealed class AdManagementValidationServiceTests
             new AdManagementValidationRequest(null, "tester", null, null));
 
         Assert.False(result.IsValid);
-        Assert.Contains("NetBIOS", result.Message, StringComparison.Ordinal);
-        Assert.Contains("servis hesabı", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(
+            AdManagementApiMessageKeys.SettingsValidation.ServiceAccountBindFailed,
+            result.MessageKey);
     }
 
     [Fact]

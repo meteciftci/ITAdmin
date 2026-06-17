@@ -32,7 +32,7 @@ public sealed record AdComputerGroupMutationRequest(
 
 public sealed record AdComputerGroupOperationResponse(
     bool Success,
-    string Message,
+    string MessageKey,
     string? ComputerId,
     string? ComputerName,
     string? ComputerSamAccountName,
@@ -40,5 +40,4 @@ public sealed record AdComputerGroupOperationResponse(
     string? GroupName,
     string? GroupDisplayName,
     string? GroupSamAccountName,
-    string? MessageKey = null,
     IReadOnlyDictionary<string, object>? MessageParams = null);

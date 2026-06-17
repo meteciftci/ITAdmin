@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 
 import type { TFunction } from "i18next";
@@ -28,6 +30,54 @@ function createT(translations: Record<string, string>): TFunction {
   }) as TFunction;
 
   return t;
+}
+
+function readLocaleApiMessage(
+  locale: Record<string, unknown>,
+  dottedKey: string,
+): string | undefined {
+  const segments = dottedKey.split(".");
+  let current: unknown = locale;
+
+  for (const segment of segments) {
+    if (!current || typeof current !== "object" || !(segment in current)) {
+      return undefined;
+    }
+
+    current = (current as Record<string, unknown>)[segment];
+  }
+
+  return typeof current === "string" ? current : undefined;
+}
+
+function collectFeatureSourceFiles(directory: string): string[] {
+  const files: string[] = [];
+
+  for (const entry of readdirSync(directory)) {
+    const fullPath = join(directory, entry);
+    const stats = statSync(fullPath);
+    if (stats.isDirectory()) {
+      files.push(...collectFeatureSourceFiles(fullPath));
+      continue;
+    }
+
+    if (fullPath.endsWith(".ts") || fullPath.endsWith(".tsx")) {
+      files.push(fullPath);
+    }
+  }
+
+  return files;
+}
+
+function extractBackendApiMessageKeys(): string[] {
+  const keysFile = new URL(
+    "../../../../backend/src/SasPortal.Application/Common/Constants/AdManagementApiMessageKeys.cs",
+    import.meta.url,
+  );
+  const source = readFileSync(keysFile, "utf8");
+  const matches = source.matchAll(/Prefix \+ "([^"]+)"/g);
+
+  return [...matches].map((match) => `apiMessages.${match[1]}`);
 }
 
 describe("resolveAdManagementApiMessage", () => {
@@ -60,20 +110,20 @@ describe("resolveAdManagementApiMessage", () => {
     assert.equal(message, "User mete.ciftci was not found.");
   });
 
-  it("falls back to legacy message when messageKey is missing", () => {
+  it("ignores backend message field and uses fallback key when messageKey is missing", () => {
     const message = resolveAdManagementApiMessage(
       t,
-      { message: "Legacy backend message" },
+      { messageKey: "", messageParams: null } as { messageKey: string },
       "adManagement:users.create.messages.created",
     );
 
-    assert.equal(message, "Legacy backend message");
+    assert.equal(message, "Fallback created message");
   });
 
-  it("uses fallback key when source has no message fields", () => {
+  it("uses fallback key when source has no messageKey", () => {
     const message = resolveAdManagementApiMessage(
       t,
-      {},
+      { messageKey: "" },
       "adManagement:users.create.messages.created",
     );
 
@@ -98,52 +148,29 @@ describe("getAdManagementApiErrorMessage", () => {
   });
 });
 
-function readLocaleApiMessage(
-  locale: Record<string, unknown>,
-  dottedKey: string,
-): string | undefined {
-  const segments = dottedKey.split(".");
-  let current: unknown = locale;
-
-  for (const segment of segments) {
-    if (!current || typeof current !== "object" || !(segment in current)) {
-      return undefined;
-    }
-
-    current = (current as Record<string, unknown>)[segment];
-  }
-
-  return typeof current === "string" ? current : undefined;
-}
-
 describe("AD management API message locale keys", () => {
-  const tr = JSON.parse(
+  const trRoot = JSON.parse(
     readFileSync(new URL("../../locales/tr/adManagement.json", import.meta.url), "utf8"),
   ) as Record<string, unknown>;
-  const en = JSON.parse(
+  const enRoot = JSON.parse(
     readFileSync(new URL("../../locales/en/adManagement.json", import.meta.url), "utf8"),
   ) as Record<string, unknown>;
+  const tr = trRoot.adManagement as Record<string, unknown>;
+  const en = enRoot.adManagement as Record<string, unknown>;
 
-  const requiredKeys = [
-    "adManagement.apiMessages.computers.invalidComputerId",
-    "adManagement.apiMessages.computers.targetOuRequired",
-    "adManagement.apiMessages.groups.groupDnRequired",
-    "adManagement.apiMessages.users.invalidUserId",
-    "adManagement.apiMessages.groups.invalidGroupId",
-    "adManagement.apiMessages.deletedObjects.notFound",
-  ];
+  const backendKeys = extractBackendApiMessageKeys();
 
-  for (const key of requiredKeys) {
+  for (const key of backendKeys) {
     it(`TR locale contains ${key}`, () => {
-      assert.ok(readLocaleApiMessage(tr, key));
+      assert.ok(readLocaleApiMessage(tr, key), `Missing TR locale for ${key}`);
     });
 
     it(`EN locale contains ${key}`, () => {
-      assert.ok(readLocaleApiMessage(en, key));
+      assert.ok(readLocaleApiMessage(en, key), `Missing EN locale for ${key}`);
     });
   }
 
-  it("resolveAdManagementApiMessage still resolves controller validation keys", () => {
+  it("resolveAdManagementApiMessage resolves controller validation keys", () => {
     const t = createT({
       "apiMessages.computers.invalidComputerId": "Invalid computer identifier.",
       "apiMessages.computers.targetOuRequired": "Target OU selection is required.",
@@ -153,7 +180,7 @@ describe("AD management API message locale keys", () => {
     assert.equal(
       resolveAdManagementApiMessage(
         t,
-        { messageKey: "apiMessages.computers.invalidComputerId", message: "Legacy TR" },
+        { messageKey: "apiMessages.computers.invalidComputerId" },
         "adManagement:computers.errors.notFound",
       ),
       "Invalid computer identifier.",
@@ -161,7 +188,7 @@ describe("AD management API message locale keys", () => {
     assert.equal(
       resolveAdManagementApiMessage(
         t,
-        { messageKey: "apiMessages.computers.targetOuRequired", message: "Legacy TR" },
+        { messageKey: "apiMessages.computers.targetOuRequired" },
         "adManagement:computers.errors.notFound",
       ),
       "Target OU selection is required.",
@@ -169,7 +196,7 @@ describe("AD management API message locale keys", () => {
     assert.equal(
       resolveAdManagementApiMessage(
         t,
-        { messageKey: "apiMessages.groups.groupDnRequired", message: "Legacy TR" },
+        { messageKey: "apiMessages.groups.groupDnRequired" },
         "adManagement:groups.errors.notFound",
       ),
       "Group identifier is required.",
@@ -178,6 +205,9 @@ describe("AD management API message locale keys", () => {
 });
 
 describe("ad-management API message integration", () => {
+  const featureRoot = fileURLToPath(new URL(".", import.meta.url));
+  const helperSource = readFileSync(new URL("./ad-management-api-message.ts", import.meta.url), "utf8");
+
   const adFeatureFiles = [
     "AdUsersPage.tsx",
     "AdComputersPage.tsx",
@@ -203,4 +233,23 @@ describe("ad-management API message integration", () => {
       assert.doesNotMatch(source, /getApiErrorMessage/);
     });
   }
+
+  it("helper does not read backend message field", () => {
+    assert.doesNotMatch(helperSource, /(?:source|fields)\.message(?!Key|Params)/);
+  });
+
+  it("feature sources do not use response.message for API toasts", () => {
+    const files = collectFeatureSourceFiles(featureRoot).filter(
+      (file) => !file.endsWith(".test.ts"),
+    );
+
+    for (const file of files) {
+      const source = readFileSync(file, "utf8");
+      assert.doesNotMatch(
+        source,
+        /response\.message\b/,
+        `${file} must not use response.message`,
+      );
+    }
+  });
 });

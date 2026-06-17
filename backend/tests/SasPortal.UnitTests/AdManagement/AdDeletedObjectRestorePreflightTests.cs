@@ -117,7 +117,7 @@ public sealed class AdDeletedObjectRestorePreflightTests
     }
 
     [Fact]
-    public void DeletedObjectRestoreService_ResolvesModuleMissingUserMessage()
+    public void DeletedObjectRestoreService_ResolvesModuleMissingMessageKey()
     {
         var source = File.ReadAllText(
             Path.Combine(
@@ -125,7 +125,6 @@ public sealed class AdDeletedObjectRestorePreflightTests
                 "backend/src/SasPortal.Infrastructure/Services/AdUserDirectoryService.DeletedObjectRestore.cs"));
 
         Assert.Contains("AdManagementApiMessageKeys.DeletedObjects.RestorePowerShellModuleMissing", source, StringComparison.Ordinal);
-        Assert.Contains("AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.DeletedObjects.RestorePowerShellModuleMissing)", source, StringComparison.Ordinal);
         Assert.Contains("ResolveDeletedObjectRestorePowerShellFailureMessage", source, StringComparison.Ordinal);
     }
 

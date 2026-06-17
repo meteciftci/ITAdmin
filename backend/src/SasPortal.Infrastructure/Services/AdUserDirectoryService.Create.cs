@@ -33,10 +33,9 @@ public sealed partial class AdUserDirectoryService
         {
             return new AdOrganizationalUnitSearchResult(
                 false,
-                connectionResult.Message,
+                connectionResult.MessageKey,
                 null,
                 connectionResult.FailureKind,
-                connectionResult.MessageKey,
                 connectionResult.MessageParams);
         }
 
@@ -45,7 +44,7 @@ public sealed partial class AdUserDirectoryService
         {
             return new AdOrganizationalUnitSearchResult(
                 false,
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
+                AdManagementApiMessageKeys.Common.NotConfigured,
                 null,
                 AdDirectoryFailureKind.NotConfigured);
         }
@@ -129,10 +128,9 @@ public sealed partial class AdUserDirectoryService
         {
             return new CreateAdUserResult(
                 false,
-                connectionResult.Message,
+                connectionResult.MessageKey,
                 null,
                 connectionResult.FailureKind,
-                connectionResult.MessageKey,
                 connectionResult.MessageParams);
         }
 
@@ -143,7 +141,7 @@ public sealed partial class AdUserDirectoryService
         {
             return new CreateAdUserResult(
                 false,
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.InvalidUpnSuffix),
+                AdManagementApiMessageKeys.Users.InvalidUpnSuffix,
                 null,
                 AdDirectoryFailureKind.InvalidRequest);
         }
@@ -154,7 +152,7 @@ public sealed partial class AdUserDirectoryService
         {
             return new CreateAdUserResult(
                 false,
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.InvalidTargetOu),
+                AdManagementApiMessageKeys.Users.InvalidTargetOu,
                 null,
                 AdDirectoryFailureKind.InvalidRequest);
         }
@@ -180,7 +178,7 @@ public sealed partial class AdUserDirectoryService
             {
                 return new CreateAdUserResult(
                     false,
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
+                    AdManagementApiMessageKeys.Common.NotConfigured,
                     null,
                     AdDirectoryFailureKind.NotConfigured);
             }
@@ -200,13 +198,13 @@ public sealed partial class AdUserDirectoryService
             {
                 await WriteCreateFailureLogsAsync(
         request,
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.NamingConflictFailed),
+                    AdManagementApiMessageKeys.Users.NamingConflictFailed,
                     connection,
                     step: "ResolveNaming",
                     cancellationToken);
                 return new CreateAdUserResult(
                     false,
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.NamingConflictFailed),
+                    AdManagementApiMessageKeys.Users.NamingConflictFailed,
                     null,
                     AdDirectoryFailureKind.InvalidRequest);
             }
@@ -293,13 +291,13 @@ public sealed partial class AdUserDirectoryService
         {
             await WriteCreateFailureLogsAsync(
         request,
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.CreateFailed),
+                AdManagementApiMessageKeys.Users.CreateFailed,
                 connectionResult.Context.Connection,
                 step: "CreateUser",
                 cancellationToken);
             return new CreateAdUserResult(
                 false,
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.CreateFailed),
+                AdManagementApiMessageKeys.Users.CreateFailed,
                 null,
                 AdDirectoryFailureKind.ConnectionFailed);
         }
@@ -307,13 +305,13 @@ public sealed partial class AdUserDirectoryService
         {
             await WriteCreateFailureLogsAsync(
         request,
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.CreateFailed),
+                AdManagementApiMessageKeys.Users.CreateFailed,
                 connectionResult.Context.Connection,
                 step: "CreateUser",
                 cancellationToken);
             return new CreateAdUserResult(
                 false,
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.CreateFailed),
+                AdManagementApiMessageKeys.Users.CreateFailed,
                 null,
                 AdDirectoryFailureKind.ConnectionFailed);
         }
@@ -348,7 +346,7 @@ public sealed partial class AdUserDirectoryService
         var upnSuffix = AdDefaultUpnSuffixNormalizer.Normalize(request.UpnSuffix);
         if (string.IsNullOrWhiteSpace(upnSuffix) || !AdDefaultUpnSuffixNormalizer.IsValidFormat(upnSuffix))
         {
-            message = AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.InvalidUpnSuffix);
+            message = AdManagementApiMessageKeys.Users.InvalidUpnSuffix;
             return false;
         }
 
@@ -487,7 +485,7 @@ public sealed partial class AdUserDirectoryService
         if (response.ResultCode != ResultCode.Success)
         {
             throw new CreateUserLdapException(
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.CreateFailed),
+                AdManagementApiMessageKeys.Users.CreateFailed,
                 AdDirectoryFailureKind.ConnectionFailed);
         }
     }
@@ -534,7 +532,7 @@ public sealed partial class AdUserDirectoryService
         if (!ldapConnection.SessionOptions.SecureSocketLayer)
         {
             throw new CreateUserLdapException(
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.LdapsRequired),
+                AdManagementApiMessageKeys.Common.LdapsRequired,
                 AdDirectoryFailureKind.ConnectionFailed);
         }
 
@@ -550,7 +548,7 @@ public sealed partial class AdUserDirectoryService
         if (response.ResultCode != ResultCode.Success)
         {
             throw new CreateUserLdapException(
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.LdapsRequired),
+                AdManagementApiMessageKeys.Common.LdapsRequired,
                 AdDirectoryFailureKind.ConnectionFailed);
         }
     }
@@ -572,7 +570,7 @@ public sealed partial class AdUserDirectoryService
             if (pwdResponse.ResultCode != ResultCode.Success)
             {
                 throw new CreateUserLdapException(
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.CreateFailed),
+                    AdManagementApiMessageKeys.Users.CreateFailed,
                     AdDirectoryFailureKind.ConnectionFailed);
             }
         }
@@ -591,7 +589,7 @@ public sealed partial class AdUserDirectoryService
         if (enableResponse.ResultCode != ResultCode.Success)
         {
             throw new CreateUserLdapException(
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.CreateFailed),
+                AdManagementApiMessageKeys.Users.CreateFailed,
                 AdDirectoryFailureKind.ConnectionFailed);
         }
     }
@@ -758,17 +756,17 @@ public sealed partial class AdUserDirectoryService
 
     private static string? ResolveCreateFailureReason(string message)
     {
-        if (string.Equals(message, AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.NamingConflictFailed), StringComparison.Ordinal))
+        if (string.Equals(message, AdManagementApiMessageKeys.Users.NamingConflictFailed, StringComparison.Ordinal))
         {
             return AdUserUpdateNormalizedReasons.DuplicateValue;
         }
 
-        if (string.Equals(message, AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.LdapsRequired), StringComparison.Ordinal))
+        if (string.Equals(message, AdManagementApiMessageKeys.Common.LdapsRequired, StringComparison.Ordinal))
         {
             return AdUserUpdateNormalizedReasons.InvalidRequest;
         }
 
-        if (string.Equals(message, AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.CreateFailed), StringComparison.Ordinal))
+        if (string.Equals(message, AdManagementApiMessageKeys.Users.CreateFailed, StringComparison.Ordinal))
         {
             return AdUserUpdateNormalizedReasons.ConnectionFailed;
         }
@@ -779,17 +777,17 @@ public sealed partial class AdUserDirectoryService
     private static string ResolveCreateFailureEnglishMessage(string message) =>
         message switch
         {
-            var value when string.Equals(value, AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.NamingConflictFailed), StringComparison.Ordinal) =>
+            var value when string.Equals(value, AdManagementApiMessageKeys.Users.NamingConflictFailed, StringComparison.Ordinal) =>
                 "A suitable samAccountName or UPN could not be resolved for the requested user.",
-            var value when string.Equals(value, AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.LdapsRequired), StringComparison.Ordinal) =>
+            var value when string.Equals(value, AdManagementApiMessageKeys.Common.LdapsRequired, StringComparison.Ordinal) =>
                 "The initial password could not be set because LDAPS is required.",
-            var value when string.Equals(value, AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.CreateFailed), StringComparison.Ordinal) =>
+            var value when string.Equals(value, AdManagementApiMessageKeys.Users.CreateFailed, StringComparison.Ordinal) =>
                 "The AD user create operation failed.",
             _ => "The AD user create operation failed.",
         };
 
     private static AdOrganizationalUnitSearchResult OuConnectionFailed() =>
-        new(false, AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.QueryFailed), null, AdDirectoryFailureKind.ConnectionFailed);
+        new(false, AdManagementApiMessageKeys.Users.QueryFailed, null, AdDirectoryFailureKind.ConnectionFailed);
 
     private sealed class CreateUserLdapException(string userMessage, AdDirectoryFailureKind failureKind)
         : Exception(userMessage)

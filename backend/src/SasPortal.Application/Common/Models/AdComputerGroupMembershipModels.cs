@@ -45,7 +45,7 @@ public sealed record AdComputerGroupCandidateItem(
 
 public sealed record AdComputerGroupMembershipResult(
     bool IsSuccess,
-    string Message,
+    string MessageKey,
     string? ComputerId,
     string? Name,
     string? SamAccountName,
@@ -53,20 +53,18 @@ public sealed record AdComputerGroupMembershipResult(
     string? DistinguishedName,
     IReadOnlyList<AdComputerGroupMembershipItem>? Groups,
     AdDirectoryFailureKind? FailureKind = null,
-    string? MessageKey = null,
     IReadOnlyDictionary<string, object>? MessageParams = null);
 
 public sealed record AdComputerGroupSearchResult(
     bool IsSuccess,
-    string Message,
+    string MessageKey,
     IReadOnlyList<AdComputerGroupCandidateItem>? Items,
     AdDirectoryFailureKind? FailureKind = null,
-    string? MessageKey = null,
     IReadOnlyDictionary<string, object>? MessageParams = null);
 
 public sealed record AdComputerGroupOperationResult(
     bool IsSuccess,
-    string Message,
+    string MessageKey,
     string? ComputerId,
     string? ComputerName,
     string? ComputerSamAccountName,
@@ -75,5 +73,4 @@ public sealed record AdComputerGroupOperationResult(
     string? GroupDisplayName,
     string? GroupSamAccountName,
     AdDirectoryFailureKind? FailureKind = null,
-    string? MessageKey = null,
     IReadOnlyDictionary<string, object>? MessageParams = null);

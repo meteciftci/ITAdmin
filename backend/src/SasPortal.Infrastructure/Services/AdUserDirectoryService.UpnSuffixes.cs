@@ -37,11 +37,10 @@ public sealed partial class AdUserDirectoryService
                 {
                     return new AdUpnSuffixesResult(
                         false,
-                        AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.MissingUpnSuffix),
+                        AdManagementApiMessageKeys.Users.MissingUpnSuffix,
                         null,
                         null,
-                        AdDirectoryFailureKind.NotConfigured,
-                        AdManagementApiMessageKeys.Users.MissingUpnSuffix);
+                        AdDirectoryFailureKind.NotConfigured);
                 }
 
                 return BuildDomainOnlyFallback(
@@ -91,19 +90,17 @@ public sealed partial class AdUserDirectoryService
         {
             return new AdUpnSuffixesResult(
                 false,
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.MissingUpnSuffix),
+                AdManagementApiMessageKeys.Users.MissingUpnSuffix,
                 null,
                 AdUpnSuffixListBuilder.ForestReadFallbackWarning,
-                AdDirectoryFailureKind.NotConfigured,
-                AdManagementApiMessageKeys.Users.MissingUpnSuffix);
+                AdDirectoryFailureKind.NotConfigured);
         }
 
         return new AdUpnSuffixesResult(
             true,
             string.Empty,
             buildResult.Items,
-            buildResult.Warning,
-            AdDirectoryFailureKind.ConnectionFailed);
+            buildResult.Warning);
     }
 
     private static UpnSuffixDirectoryReadResult ReadUpnSuffixesFromDirectory(LdapConnection ldapConnection)

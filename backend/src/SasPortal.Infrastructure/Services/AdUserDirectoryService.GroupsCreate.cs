@@ -32,10 +32,9 @@ public sealed partial class AdUserDirectoryService
         {
             return new CreateAdGroupResult(
                 false,
-                connectionResult.Message,
+                connectionResult.MessageKey,
                 null,
                 connectionResult.FailureKind,
-                connectionResult.MessageKey,
                 connectionResult.MessageParams);
         }
 
@@ -71,7 +70,7 @@ public sealed partial class AdUserDirectoryService
             {
                 return new CreateAdGroupResult(
                     false,
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
+                    AdManagementApiMessageKeys.Common.NotConfigured,
                     null,
                     AdDirectoryFailureKind.NotConfigured);
             }
@@ -133,13 +132,13 @@ public sealed partial class AdUserDirectoryService
             {
                 await WriteCreateGroupFailureLogsAsync(
         normalizedRequest,
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.CreateFailed),
+                    AdManagementApiMessageKeys.Groups.CreateFailed,
                     connection,
                     step: "ReloadGroup",
                     cancellationToken);
                 return new CreateAdGroupResult(
                     false,
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.CreateFailed),
+                    AdManagementApiMessageKeys.Groups.CreateFailed,
                     null,
                     AdDirectoryFailureKind.ConnectionFailed);
             }
@@ -149,13 +148,13 @@ public sealed partial class AdUserDirectoryService
             {
                 await WriteCreateGroupFailureLogsAsync(
         normalizedRequest,
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.CreateFailed),
+                    AdManagementApiMessageKeys.Groups.CreateFailed,
                     connection,
                     step: "ReloadGroup",
                     cancellationToken);
                 return new CreateAdGroupResult(
                     false,
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.CreateFailed),
+                    AdManagementApiMessageKeys.Groups.CreateFailed,
                     null,
                     detailResult.FailureKind ?? AdDirectoryFailureKind.ConnectionFailed);
             }
@@ -172,13 +171,13 @@ public sealed partial class AdUserDirectoryService
         {
             await WriteCreateGroupFailureLogsAsync(
         normalizedRequest,
-                AdLdapErrorNormalizer.Normalize(ex.ErrorCode, ex.Message),
+                AdLdapErrorNormalizer.NormalizeMessageKey(ex.ErrorCode, ex.Message),
                 connection,
                 step: "CreateGroup",
                 cancellationToken);
             return new CreateAdGroupResult(
                 false,
-                AdLdapErrorNormalizer.Normalize(ex.ErrorCode, ex.Message),
+                AdLdapErrorNormalizer.NormalizeMessageKey(ex.ErrorCode, ex.Message),
                 null,
                 AdDirectoryFailureKind.ConnectionFailed);
         }
@@ -190,13 +189,13 @@ public sealed partial class AdUserDirectoryService
                 normalizedRequest.ActorUserId);
             await WriteCreateGroupFailureLogsAsync(
         normalizedRequest,
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.CreateFailed),
+                AdManagementApiMessageKeys.Groups.CreateFailed,
                 connection,
                 step: "CreateGroup",
                 cancellationToken);
             return new CreateAdGroupResult(
                 false,
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.CreateFailed),
+                AdManagementApiMessageKeys.Groups.CreateFailed,
                 null,
                 AdDirectoryFailureKind.ConnectionFailed);
         }
@@ -215,10 +214,9 @@ public sealed partial class AdUserDirectoryService
         {
             return new AdOrganizationalUnitSearchResult(
                 false,
-                connectionResult.Message,
+                connectionResult.MessageKey,
                 null,
                 connectionResult.FailureKind,
-                connectionResult.MessageKey,
                 connectionResult.MessageParams);
         }
 
@@ -227,7 +225,7 @@ public sealed partial class AdUserDirectoryService
         {
             return new AdOrganizationalUnitSearchResult(
                 false,
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
+                AdManagementApiMessageKeys.Common.NotConfigured,
                 null,
                 AdDirectoryFailureKind.NotConfigured);
         }
@@ -315,12 +313,12 @@ public sealed partial class AdUserDirectoryService
     {
         if (HasDuplicateGroupCnInParentOu(ldapConnection, targetOuDistinguishedName, commonName))
         {
-            return new CreateGroupPreflightFailure(AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.OperationFailures.PreflightGroupCnDuplicate));
+            return new CreateGroupPreflightFailure(AdManagementApiMessageKeys.OperationFailures.PreflightGroupCnDuplicate);
         }
 
         if (HasDuplicateGroupSamAccountName(ldapConnection, domainSearchBase, samAccountName))
         {
-            return new CreateGroupPreflightFailure(AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.OperationFailures.PreflightGroupSamAccountNameDuplicate));
+            return new CreateGroupPreflightFailure(AdManagementApiMessageKeys.OperationFailures.PreflightGroupSamAccountNameDuplicate);
         }
 
         return null;
@@ -394,7 +392,7 @@ public sealed partial class AdUserDirectoryService
         if (response.ResultCode != ResultCode.Success)
         {
             throw new CreateGroupLdapException(
-                AdLdapErrorNormalizer.Normalize((int)response.ResultCode, response.ErrorMessage),
+                AdLdapErrorNormalizer.NormalizeMessageKey((int)response.ResultCode, response.ErrorMessage),
                 MapGroupFailureKind(response.ResultCode));
         }
     }
@@ -559,11 +557,11 @@ public sealed partial class AdUserDirectoryService
     private static string ResolveCreateGroupFailureEnglishMessage(string message) =>
         message switch
         {
-            _ when string.Equals(message, AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.OperationFailures.PreflightGroupCnDuplicate), StringComparison.Ordinal) =>
+            _ when string.Equals(message, AdManagementApiMessageKeys.OperationFailures.PreflightGroupCnDuplicate, StringComparison.Ordinal) =>
                 "A group with the same technical name already exists in the target OU.",
-            _ when string.Equals(message, AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.OperationFailures.PreflightGroupSamAccountNameDuplicate), StringComparison.Ordinal) =>
+            _ when string.Equals(message, AdManagementApiMessageKeys.OperationFailures.PreflightGroupSamAccountNameDuplicate, StringComparison.Ordinal) =>
                 "The sAMAccountName value is already used by another AD group.",
-            _ when string.Equals(message, AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.InvalidTargetOu), StringComparison.Ordinal) =>
+            _ when string.Equals(message, AdManagementApiMessageKeys.Users.InvalidTargetOu, StringComparison.Ordinal) =>
                 "The selected OU is not valid for group creation.",
             _ => "The AD security group could not be created.",
         };
@@ -571,10 +569,10 @@ public sealed partial class AdUserDirectoryService
     private static string ResolveCreateGroupFailureReason(string message) =>
         message switch
         {
-            _ when string.Equals(message, AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.OperationFailures.PreflightGroupCnDuplicate), StringComparison.Ordinal)
-                || string.Equals(message, AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.OperationFailures.PreflightGroupSamAccountNameDuplicate), StringComparison.Ordinal) =>
+            _ when string.Equals(message, AdManagementApiMessageKeys.OperationFailures.PreflightGroupCnDuplicate, StringComparison.Ordinal)
+                || string.Equals(message, AdManagementApiMessageKeys.OperationFailures.PreflightGroupSamAccountNameDuplicate, StringComparison.Ordinal) =>
                 AdUserUpdateNormalizedReasons.DuplicateValue,
-            _ when string.Equals(message, AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.InvalidTargetOu), StringComparison.Ordinal) =>
+            _ when string.Equals(message, AdManagementApiMessageKeys.Users.InvalidTargetOu, StringComparison.Ordinal) =>
                 AdUserUpdateNormalizedReasons.InvalidDnSyntax,
             _ => AdUserUpdateNormalizedReasons.Unknown,
         };

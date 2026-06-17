@@ -9,8 +9,7 @@ public sealed record AdComputerAccountOperationRequest(
 
 public sealed record AdComputerAccountOperationResult(
     bool IsSuccess,
-    string Message,
+    string MessageKey,
     AdComputerDetail? Computer = null,
     AdDirectoryFailureKind? FailureKind = null,
-    string? MessageKey = null,
     IReadOnlyDictionary<string, object>? MessageParams = null);

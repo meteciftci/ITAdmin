@@ -29,7 +29,7 @@ public sealed partial class AdUserDirectoryService
                 {
                     return new AdUserUpdatePreflightFailure(
                         "sAMAccountName",
-                        AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.OperationFailures.PreflightSamAccountNameDuplicate),
+                        AdManagementApiMessageKeys.OperationFailures.PreflightSamAccountNameDuplicate,
                         "The sAMAccountName value is already used by another AD object.");
                 }
             }
@@ -45,7 +45,7 @@ public sealed partial class AdUserDirectoryService
                 {
                     return new AdUserUpdatePreflightFailure(
                         "userPrincipalName",
-                        AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.OperationFailures.PreflightUpnDuplicate),
+                        AdManagementApiMessageKeys.OperationFailures.PreflightUpnDuplicate,
                         "The userPrincipalName value is already used by another AD object.");
                 }
             }
@@ -61,7 +61,7 @@ public sealed partial class AdUserDirectoryService
             {
                 return new AdUserUpdatePreflightFailure(
                     "cn",
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.OperationFailures.PreflightCnDuplicate),
+                    AdManagementApiMessageKeys.OperationFailures.PreflightCnDuplicate,
                     "The CN value is already used by another AD object in the target OU.");
             }
         }

@@ -22,10 +22,9 @@ public sealed record CreateAdUserMappedAttributeRequest(
 
 public sealed record CreateAdUserResult(
     bool IsSuccess,
-    string Message,
+    string MessageKey,
     CreateAdUserResponse? User,
     AdDirectoryFailureKind? FailureKind = null,
-    string? MessageKey = null,
     IReadOnlyDictionary<string, object>? MessageParams = null);
 
 public sealed record CreateAdUserResponse(
@@ -36,11 +35,10 @@ public sealed record CreateAdUserResponse(
     string UserPrincipalName,
     string DisplayName,
     bool IsEnabled,
-    string Message,
+    string MessageKey,
     bool NamingCollisionResolved,
     int? GeneratedSuffix,
     AdManagementNotificationSummary? NotificationSummary = null,
-    string? MessageKey = null,
     IReadOnlyDictionary<string, object>? MessageParams = null);
 
 public sealed record AdOrganizationalUnitSearchQuery(
@@ -56,10 +54,9 @@ public sealed record AdOrganizationalUnitListItem(
 
 public sealed record AdOrganizationalUnitSearchResult(
     bool IsSuccess,
-    string Message,
+    string MessageKey,
     AdOrganizationalUnitSearchPage? Page,
     AdDirectoryFailureKind? FailureKind = null,
-    string? MessageKey = null,
     IReadOnlyDictionary<string, object>? MessageParams = null);
 
 public sealed record AdOrganizationalUnitSearchPage(

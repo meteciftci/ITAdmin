@@ -79,10 +79,9 @@ public sealed partial class AdUserDirectoryService : IAdGroupDirectoryService
         {
             return new AdGroupDirectoryListResult(
                 false,
-                connectionResult.Message,
+                connectionResult.MessageKey,
                 null,
                 connectionResult.FailureKind,
-                connectionResult.MessageKey,
                 connectionResult.MessageParams);
         }
 
@@ -91,10 +90,9 @@ public sealed partial class AdUserDirectoryService : IAdGroupDirectoryService
         {
             return new AdGroupDirectoryListResult(
                 false,
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
+                AdManagementApiMessageKeys.Common.NotConfigured,
                 null,
-                AdDirectoryFailureKind.NotConfigured,
-                AdManagementApiMessageKeys.Common.NotConfigured);
+                AdDirectoryFailureKind.NotConfigured);
         }
 
         try
@@ -172,10 +170,9 @@ public sealed partial class AdUserDirectoryService : IAdGroupDirectoryService
         {
             return new AdGroupDirectoryDetailResult(
                 false,
-                connectionResult.Message,
+                connectionResult.MessageKey,
                 null,
                 connectionResult.FailureKind,
-                connectionResult.MessageKey,
                 connectionResult.MessageParams);
         }
 
@@ -184,10 +181,9 @@ public sealed partial class AdUserDirectoryService : IAdGroupDirectoryService
         {
             return new AdGroupDirectoryDetailResult(
                 false,
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
+                AdManagementApiMessageKeys.Common.NotConfigured,
                 null,
-                AdDirectoryFailureKind.NotConfigured,
-                AdManagementApiMessageKeys.Common.NotConfigured);
+                AdDirectoryFailureKind.NotConfigured);
         }
 
         try
@@ -214,20 +210,18 @@ public sealed partial class AdUserDirectoryService : IAdGroupDirectoryService
             {
                 return new AdGroupDirectoryDetailResult(
                     false,
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.NotFound),
+                    AdManagementApiMessageKeys.Groups.NotFound,
                     null,
-                    AdDirectoryFailureKind.NotFound,
-                    AdManagementApiMessageKeys.Groups.NotFound);
+                    AdDirectoryFailureKind.NotFound);
             }
 
             if (!TryMapGroupDetail(ldapConnection, response.Entries[0], out var detail))
             {
                 return new AdGroupDirectoryDetailResult(
                     false,
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.NotFound),
+                    AdManagementApiMessageKeys.Groups.NotFound,
                     null,
-                    AdDirectoryFailureKind.NotFound,
-                    AdManagementApiMessageKeys.Groups.NotFound);
+                    AdDirectoryFailureKind.NotFound);
             }
 
             detail = TryEnrichDetailWithResolvedManagedBy(ldapConnection, detail);
@@ -632,16 +626,14 @@ public sealed partial class AdUserDirectoryService : IAdGroupDirectoryService
     private static AdGroupDirectoryListResult GroupListConnectionFailed() =>
         new(
             false,
-            AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.QueryFailed),
+            AdManagementApiMessageKeys.Groups.QueryFailed,
             null,
-            AdDirectoryFailureKind.ConnectionFailed,
-            AdManagementApiMessageKeys.Groups.QueryFailed);
+            AdDirectoryFailureKind.ConnectionFailed);
 
     private static AdGroupDirectoryDetailResult GroupDetailConnectionFailed() =>
         new(
             false,
-            AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.QueryFailed),
+            AdManagementApiMessageKeys.Groups.QueryFailed,
             null,
-            AdDirectoryFailureKind.ConnectionFailed,
-            AdManagementApiMessageKeys.Groups.QueryFailed);
+            AdDirectoryFailureKind.ConnectionFailed);
 }

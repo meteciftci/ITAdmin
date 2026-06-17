@@ -40,10 +40,9 @@ public sealed partial class AdUserDirectoryService(
         {
             return new AdUserDirectorySearchResult(
                 false,
-                connectionResult.Message,
+                connectionResult.MessageKey,
                 null,
                 connectionResult.FailureKind,
-                connectionResult.MessageKey,
                 connectionResult.MessageParams);
         }
 
@@ -54,10 +53,9 @@ public sealed partial class AdUserDirectoryService(
         {
             return new AdUserDirectorySearchResult(
                 false,
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
+                AdManagementApiMessageKeys.Common.NotConfigured,
                 null,
-                AdDirectoryFailureKind.NotConfigured,
-                AdManagementApiMessageKeys.Common.NotConfigured);
+                AdDirectoryFailureKind.NotConfigured);
         }
 
         try
@@ -140,10 +138,9 @@ public sealed partial class AdUserDirectoryService(
         {
             return new AdUserDirectoryDetailResult(
                 false,
-                connectionResult.Message,
+                connectionResult.MessageKey,
                 null,
                 connectionResult.FailureKind,
-                connectionResult.MessageKey,
                 connectionResult.MessageParams);
         }
 
@@ -155,10 +152,9 @@ public sealed partial class AdUserDirectoryService(
         {
             return new AdUserDirectoryDetailResult(
                 false,
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
+                AdManagementApiMessageKeys.Common.NotConfigured,
                 null,
-                AdDirectoryFailureKind.NotConfigured,
-                AdManagementApiMessageKeys.Common.NotConfigured);
+                AdDirectoryFailureKind.NotConfigured);
         }
 
         try
@@ -189,20 +185,18 @@ public sealed partial class AdUserDirectoryService(
             {
                 return new AdUserDirectoryDetailResult(
                     false,
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.NotFound),
+                    AdManagementApiMessageKeys.Users.NotFound,
                     null,
-                    AdDirectoryFailureKind.NotFound,
-                    AdManagementApiMessageKeys.Users.NotFound);
+                    AdDirectoryFailureKind.NotFound);
             }
 
             if (!TryMapDetailItem(response.Entries[0], activeMappings, out var detail))
             {
                 return new AdUserDirectoryDetailResult(
                     false,
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.NotFound),
+                    AdManagementApiMessageKeys.Users.NotFound,
                     null,
-                    AdDirectoryFailureKind.NotFound,
-                    AdManagementApiMessageKeys.Users.NotFound);
+                    AdDirectoryFailureKind.NotFound);
             }
 
             detail = TryEnrichDetailWithResolvedManager(ldapConnection, detail);
@@ -597,18 +591,16 @@ public sealed partial class AdUserDirectoryService(
     private static AdUserDirectorySearchResult ConnectionFailed() =>
         new(
             false,
-            AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.QueryFailed),
+            AdManagementApiMessageKeys.Users.QueryFailed,
             null,
-            AdDirectoryFailureKind.ConnectionFailed,
-            AdManagementApiMessageKeys.Users.QueryFailed);
+            AdDirectoryFailureKind.ConnectionFailed);
 
     private static AdUserDirectoryDetailResult ConnectionFailedDetail() =>
         new(
             false,
-            AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.QueryFailed),
+            AdManagementApiMessageKeys.Users.QueryFailed,
             null,
-            AdDirectoryFailureKind.ConnectionFailed,
-            AdManagementApiMessageKeys.Users.QueryFailed);
+            AdDirectoryFailureKind.ConnectionFailed);
 
     private sealed class DirectoryConnectionContext(AdManagementConnectionParameters connection)
     {
@@ -618,10 +610,9 @@ public sealed partial class AdUserDirectoryService(
     private sealed class ConnectionResolveResult
     {
         public bool IsSuccess { get; init; }
-        public string Message { get; init; } = string.Empty;
+        public string MessageKey { get; init; } = string.Empty;
         public DirectoryConnectionContext? Context { get; init; }
         public AdDirectoryFailureKind? FailureKind { get; init; }
-        public string? MessageKey { get; init; }
         public IReadOnlyDictionary<string, object>? MessageParams { get; init; }
 
         public static ConnectionResolveResult Success(DirectoryConnectionContext context) =>
@@ -630,17 +621,13 @@ public sealed partial class AdUserDirectoryService(
         public static ConnectionResolveResult Failed(
             string messageKey,
             AdDirectoryFailureKind kind,
-            IReadOnlyDictionary<string, object>? messageParams = null)
-        {
-            var (message, key, parameters) = AdManagementApiMessages.Bundle(messageKey, messageParams);
-            return new()
+            IReadOnlyDictionary<string, object>? messageParams = null) =>
+            new()
             {
                 IsSuccess = false,
-                Message = message,
+                MessageKey = messageKey,
                 FailureKind = kind,
-                MessageKey = key,
-                MessageParams = parameters,
+                MessageParams = messageParams,
             };
-        }
     }
 }

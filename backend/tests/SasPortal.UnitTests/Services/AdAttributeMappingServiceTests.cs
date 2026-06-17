@@ -64,7 +64,7 @@ public sealed class AdAttributeMappingServiceTests
 
         var duplicate = await service.CreateAsync(CreateRequest("mobilePhone", "Tel No 2", "telephoneNumber"));
         Assert.False(duplicate.IsSuccess);
-        Assert.Contains("already exists", duplicate.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("already exists", duplicate.MessageKey, StringComparison.OrdinalIgnoreCase);
         Assert.Single(dbContext.AdAttributeMappings);
     }
 
@@ -111,7 +111,7 @@ public sealed class AdAttributeMappingServiceTests
         var result = await service.CreateAsync(CreateRequest("workMail", "Work Mail", attributeName));
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(AdReservedCoreAttributes.ReservedAttributeMappingMessage, result.Message);
+        Assert.Equal(AdReservedCoreAttributes.ReservedAttributeMappingMessage, result.MessageKey);
         Assert.Empty(dbContext.AdAttributeMappings);
     }
 

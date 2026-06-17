@@ -24,11 +24,10 @@ public sealed partial class AdUserDirectoryService
         if (!connectionResult.IsSuccess || connectionResult.Context is null)
         {
             return EffectiveGroupsFailure(
-                connectionResult.Message,
+                connectionResult.MessageKey,
                 request.UserId,
                 maxDepth,
                 connectionResult.FailureKind,
-                connectionResult.MessageKey,
                 connectionResult.MessageParams);
         }
 
@@ -36,11 +35,10 @@ public sealed partial class AdUserDirectoryService
         if (string.IsNullOrWhiteSpace(searchBase))
         {
             return EffectiveGroupsFailure(
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
+                AdManagementApiMessageKeys.Common.NotConfigured,
                 request.UserId,
                 maxDepth,
-                AdDirectoryFailureKind.NotConfigured,
-                AdManagementApiMessageKeys.Common.NotConfigured);
+                AdDirectoryFailureKind.NotConfigured);
         }
 
         try
@@ -53,11 +51,10 @@ public sealed partial class AdUserDirectoryService
                     out var userContext))
             {
                 return EffectiveGroupsFailure(
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.NotFound),
+                    AdManagementApiMessageKeys.Users.NotFound,
                     request.UserId,
                     maxDepth,
-                    AdDirectoryFailureKind.NotFound,
-                    AdManagementApiMessageKeys.Users.NotFound);
+                    AdDirectoryFailureKind.NotFound);
             }
 
             var groupSearchBases = AdLdapGroupSearchBases.ResolveDistinctSearchBases(
@@ -140,20 +137,18 @@ public sealed partial class AdUserDirectoryService
         catch (LdapException)
         {
             return EffectiveGroupsFailure(
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.QueryFailed),
+                AdManagementApiMessageKeys.Users.QueryFailed,
                 request.UserId,
                 maxDepth,
-                AdDirectoryFailureKind.ConnectionFailed,
-                AdManagementApiMessageKeys.Users.QueryFailed);
+                AdDirectoryFailureKind.ConnectionFailed);
         }
         catch (Exception)
         {
             return EffectiveGroupsFailure(
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.EffectiveGroupsFailed),
+                AdManagementApiMessageKeys.Users.EffectiveGroupsFailed,
                 request.UserId,
                 maxDepth,
-                AdDirectoryFailureKind.ConnectionFailed,
-                AdManagementApiMessageKeys.Users.EffectiveGroupsFailed);
+                AdDirectoryFailureKind.ConnectionFailed);
         }
     }
 
@@ -302,15 +297,14 @@ public sealed partial class AdUserDirectoryService
     }
 
     private static AdUserEffectiveGroupsResult EffectiveGroupsFailure(
-        string message,
+        string messageKey,
         Guid userId,
         int maxDepth,
         AdDirectoryFailureKind? failureKind,
-        string? messageKey = null,
         IReadOnlyDictionary<string, object>? messageParams = null) =>
         new(
             false,
-            message,
+            messageKey,
             userId.ToString("D"),
             null,
             null,
@@ -322,6 +316,5 @@ public sealed partial class AdUserDirectoryService
             false,
             null,
             failureKind,
-            messageKey,
             messageParams);
 }

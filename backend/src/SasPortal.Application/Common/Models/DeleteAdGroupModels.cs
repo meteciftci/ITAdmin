@@ -9,8 +9,7 @@ public sealed record DeleteAdGroupRequest(
 
 public sealed record DeleteAdGroupResult(
     bool IsSuccess,
-    string Message,
+    string MessageKey,
     string? DeletedGroupId,
     AdDirectoryFailureKind? FailureKind = null,
-    string? MessageKey = null,
     IReadOnlyDictionary<string, object>? MessageParams = null);

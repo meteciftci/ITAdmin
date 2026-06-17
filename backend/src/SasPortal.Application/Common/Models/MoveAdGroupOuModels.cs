@@ -10,7 +10,7 @@ public sealed record MoveAdGroupOuRequest(
 
 public sealed record MoveAdGroupOuResult(
     bool IsSuccess,
-    string Message,
+    string MessageKey,
     string? GroupId,
     string? DisplayName,
     string? Name,
@@ -19,5 +19,4 @@ public sealed record MoveAdGroupOuResult(
     string? PreviousDistinguishedName,
     string? TargetOuDistinguishedName,
     AdDirectoryFailureKind? FailureKind = null,
-    string? MessageKey = null,
     IReadOnlyDictionary<string, object>? MessageParams = null);

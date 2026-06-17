@@ -329,7 +329,7 @@ public sealed class AdOperationLogStandardTests
     {
         var result = new AdManagementValidationResult(
             IsValid: false,
-            Message: "AD yönetim servis hesabı ile bağlantı kurulamadı.",
+            MessageKey: "AD yönetim servis hesabı ile bağlantı kurulamadı.",
             CheckedAt: DateTimeOffset.UtcNow,
             Details:
             [

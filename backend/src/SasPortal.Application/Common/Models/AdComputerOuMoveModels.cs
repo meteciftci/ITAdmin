@@ -10,8 +10,7 @@ public sealed record MoveAdComputerOuRequest(
 
 public sealed record MoveAdComputerOuResult(
     bool IsSuccess,
-    string Message,
+    string MessageKey,
     AdComputerDetail? Computer = null,
     AdDirectoryFailureKind? FailureKind = null,
-    string? MessageKey = null,
     IReadOnlyDictionary<string, object>? MessageParams = null);

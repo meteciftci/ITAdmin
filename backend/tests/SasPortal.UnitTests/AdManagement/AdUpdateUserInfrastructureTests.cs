@@ -167,12 +167,12 @@ public sealed class AdUpdateUserInfrastructureTests
     }
 
     [Theory]
-    [InlineData(68, AdLdapErrorNormalizer.EntryAlreadyExistsMessage)]
-    [InlineData(32, AdLdapErrorNormalizer.NoSuchObjectMessage)]
-    [InlineData(50, AdLdapErrorNormalizer.InsufficientAccessRightsMessage)]
-    public void Normalize_ReturnsExpectedUserMessage(int errorCode, string expected)
+    [InlineData(68, AdManagementApiMessageKeys.Ldap.EntryAlreadyExists)]
+    [InlineData(32, AdManagementApiMessageKeys.Ldap.NoSuchObject)]
+    [InlineData(50, AdManagementApiMessageKeys.Ldap.InsufficientAccessRights)]
+    public void NormalizeMessageKey_ReturnsExpectedKey(int errorCode, string expected)
     {
-        Assert.Equal(expected, AdLdapErrorNormalizer.Normalize(errorCode));
+        Assert.Equal(expected, AdLdapErrorNormalizer.NormalizeMessageKey(errorCode));
     }
 
     [Fact]

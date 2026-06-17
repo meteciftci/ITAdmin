@@ -2,6 +2,6 @@ namespace SasPortal.Application.Common.Models;
 
 public sealed record UpdateAdManagementSettingsResult(
     bool IsSuccess,
-    string Message,
+    string MessageKey,
     AdManagementSettingsModel? Settings,
     AdManagementValidationResult? Validation = null);

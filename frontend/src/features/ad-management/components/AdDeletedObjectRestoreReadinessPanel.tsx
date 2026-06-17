@@ -94,7 +94,6 @@ function ReadinessCheckRow({ check }: { check: AdDeletedObjectRestoreReadinessCh
     t,
     check.messageKey,
     check.messageParams,
-    check.message,
   );
   const remediation = translateReadinessText(
     t,

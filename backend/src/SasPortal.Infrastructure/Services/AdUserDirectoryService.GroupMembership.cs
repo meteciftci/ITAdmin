@@ -72,7 +72,7 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
         {
             return new AdUserGroupMembershipResult(
                 false,
-                connectionResult.Message,
+                connectionResult.MessageKey,
                 request.UserId.ToString("D"),
                 null,
                 null,
@@ -80,7 +80,6 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
                 null,
                 null,
                 connectionResult.FailureKind,
-                connectionResult.MessageKey,
                 connectionResult.MessageParams);
         }
 
@@ -89,7 +88,7 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
         {
             return new AdUserGroupMembershipResult(
                 false,
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
+                AdManagementApiMessageKeys.Common.NotConfigured,
                 request.UserId.ToString("D"),
                 null,
                 null,
@@ -110,7 +109,7 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
             {
                 return new AdUserGroupMembershipResult(
                     false,
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.NotFound),
+                    AdManagementApiMessageKeys.Users.NotFound,
                     request.UserId.ToString("D"),
                     null,
                     null,
@@ -155,10 +154,9 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
         {
             return new AdGroupSearchResult(
                 false,
-                connectionResult.Message,
+                connectionResult.MessageKey,
                 null,
                 connectionResult.FailureKind,
-                connectionResult.MessageKey,
                 connectionResult.MessageParams);
         }
 
@@ -167,7 +165,7 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
         {
             return new AdGroupSearchResult(
                 false,
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
+                AdManagementApiMessageKeys.Common.NotConfigured,
                 null,
                 AdDirectoryFailureKind.NotConfigured);
         }
@@ -245,7 +243,7 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
                 operationType,
                 auditAction,
                 add ? "AD user added to group failed." : "AD user removed from group failed.",
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.GroupDnRequired),
+                AdManagementApiMessageKeys.Groups.GroupDnRequired,
                 BuildGroupFailureDiagnostic(
                     operationType,
                     GroupMembershipValidateStep,
@@ -268,7 +266,7 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
                 operationType,
                 auditAction,
                 add ? "AD user added to group failed." : "AD user removed from group failed.",
-                connectionResult.Message,
+                connectionResult.MessageKey,
                 BuildGroupFailureDiagnostic(
                     operationType,
                     GroupMembershipValidateStep,
@@ -291,7 +289,7 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
                 operationType,
                 auditAction,
                 add ? "AD user added to group failed." : "AD user removed from group failed.",
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
+                AdManagementApiMessageKeys.Common.NotConfigured,
                 BuildGroupFailureDiagnostic(
                     operationType,
                     GroupMembershipValidateStep,
@@ -320,7 +318,7 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
                     operationType,
                     auditAction,
                     add ? "AD user added to group failed." : "AD user removed from group failed.",
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.NotFound),
+                    AdManagementApiMessageKeys.Users.NotFound,
                     BuildGroupFailureDiagnostic(
                         operationType,
                         GroupMembershipLoadUserStep,
@@ -342,7 +340,7 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
                     operationType,
                     auditAction,
                     add ? "AD user added to group failed." : "AD user removed from group failed.",
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.NotFound),
+                    AdManagementApiMessageKeys.Groups.NotFound,
                     BuildGroupFailureDiagnostic(
                         operationType,
                         GroupMembershipLoadGroupStep,
@@ -367,7 +365,7 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
                     operationType,
                     auditAction,
                     $"AD user added to group. User: {userContext.SamAccountName}. Group: {groupInfo.Name}.",
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.AlreadyInGroup),
+                    AdManagementApiMessageKeys.Users.AlreadyInGroup,
                     connectionResult.Context.Connection,
                     beforeContext,
                     userContext,
@@ -382,7 +380,7 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
                     operationType,
                     auditAction,
                     $"AD user removed from group. User: {userContext.SamAccountName}. Group: {groupInfo.Name}.",
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.NotInGroup),
+                    AdManagementApiMessageKeys.Users.NotInGroup,
                     connectionResult.Context.Connection,
                     beforeContext,
                     userContext,
@@ -411,7 +409,7 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
                     operationType,
                     auditAction,
                     add ? "AD user added to group failed." : "AD user removed from group failed.",
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.GroupOperationFailed),
+                    AdManagementApiMessageKeys.Users.GroupOperationFailed,
                     BuildGroupFailureDiagnostic(
                         operationType,
                         GroupMembershipModifyStep,
@@ -426,7 +424,7 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
                     cancellationToken);
             }
 
-            var successMessage = add ? AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.GroupMembershipAdded) : AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.GroupMembershipRemoved);
+            var successMessage = add ? AdManagementApiMessageKeys.Users.GroupMembershipAdded : AdManagementApiMessageKeys.Users.GroupMembershipRemoved;
             var auditDescription = add
                 ? $"AD user added to group. User: {userContext.SamAccountName}. Group: {groupInfo.Name}."
                 : $"AD user removed from group. User: {userContext.SamAccountName}. Group: {groupInfo.Name}.";
@@ -472,7 +470,7 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
                 operationType,
                 auditAction,
                 add ? "AD user added to group failed." : "AD user removed from group failed.",
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.GroupOperationFailed),
+                AdManagementApiMessageKeys.Users.GroupOperationFailed,
                 BuildGroupFailureDiagnostic(
                     operationType,
                     GroupMembershipModifyStep,
@@ -1059,13 +1057,13 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
     private static string SanitizeGroupLdapError(LdapException exception) =>
         string.IsNullOrWhiteSpace(exception.Message)
             || exception.Message.Contains("ldap", StringComparison.OrdinalIgnoreCase)
-            ? AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.GroupOperationFailed)
-            : AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.GroupOperationFailed);
+            ? AdManagementApiMessageKeys.Users.GroupOperationFailed
+            : AdManagementApiMessageKeys.Users.GroupOperationFailed;
 
     private static AdUserGroupMembershipResult ConnectionFailedGroupMembership(Guid userId) =>
         new(
             false,
-            AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.QueryFailed),
+            AdManagementApiMessageKeys.Users.QueryFailed,
             userId.ToString("D"),
             null,
             null,
@@ -1075,7 +1073,7 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
             AdDirectoryFailureKind.ConnectionFailed);
 
     private static AdGroupSearchResult GroupSearchConnectionFailed() =>
-        new(false, AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.QueryFailed), null, AdDirectoryFailureKind.ConnectionFailed);
+        new(false, AdManagementApiMessageKeys.Groups.QueryFailed, null, AdDirectoryFailureKind.ConnectionFailed);
 
     private sealed record AdUserGroupContext(
         string UserId,

@@ -10,7 +10,7 @@ public sealed record MoveAdUserOuRequest(
 
 public sealed record MoveAdUserOuResult(
     bool IsSuccess,
-    string Message,
+    string MessageKey,
     string? UserId,
     string? SamAccountName,
     string? UserPrincipalName,
@@ -18,5 +18,4 @@ public sealed record MoveAdUserOuResult(
     string? PreviousDistinguishedName,
     string? TargetOuDistinguishedName,
     AdDirectoryFailureKind? FailureKind = null,
-    string? MessageKey = null,
     IReadOnlyDictionary<string, object>? MessageParams = null);

@@ -1,4 +1,5 @@
 using SasPortal.Application.Common.AdManagement;
+using SasPortal.Application.Common.Constants;
 
 namespace SasPortal.UnitTests.AdManagement;
 
@@ -7,47 +8,42 @@ public sealed class AdLdapErrorNormalizerTests
     [Theory]
     [InlineData("0000207D: NameErr: DSID-031A1234, problem 2006 (BAD_NAME), data 0, best match of: '' ")]
     [InlineData("name reference is invalid")]
-    public void Normalize_MapsInvalidDnDiagnosticToUserFriendlyMessage(string diagnostic)
+    public void NormalizeMessageKey_MapsInvalidDnDiagnostic(string diagnostic)
     {
-        var message = AdLdapErrorNormalizer.Normalize(0, diagnostic);
-
-        Assert.Equal(AdLdapErrorNormalizer.InvalidDnSyntaxMessage, message);
+        var messageKey = AdLdapErrorNormalizer.NormalizeMessageKey(0, diagnostic);
+        Assert.Equal(AdManagementApiMessageKeys.Ldap.InvalidDnSyntax, messageKey);
     }
 
     [Theory]
     [InlineData("0000052D: A constraint violation occurred.")]
-    public void Normalize_MapsPasswordPolicyDiagnosticToConstraintMessage(string diagnostic)
+    public void NormalizeMessageKey_MapsPasswordPolicyDiagnostic(string diagnostic)
     {
-        var message = AdLdapErrorNormalizer.Normalize(0, diagnostic);
-
-        Assert.Equal(AdLdapErrorNormalizer.ConstraintViolationMessage, message);
+        var messageKey = AdLdapErrorNormalizer.NormalizeMessageKey(0, diagnostic);
+        Assert.Equal(AdManagementApiMessageKeys.Ldap.ConstraintViolation, messageKey);
     }
 
     [Theory]
     [InlineData("00002098: Insufficient access rights")]
     [InlineData("00002089: Insufficient access rights")]
-    public void Normalize_MapsInsufficientAccessDiagnostic(string diagnostic)
+    public void NormalizeMessageKey_MapsInsufficientAccessDiagnostic(string diagnostic)
     {
-        var message = AdLdapErrorNormalizer.Normalize(0, diagnostic);
-
-        Assert.Equal(AdLdapErrorNormalizer.InsufficientAccessRightsMessage, message);
+        var messageKey = AdLdapErrorNormalizer.NormalizeMessageKey(0, diagnostic);
+        Assert.Equal(AdManagementApiMessageKeys.Ldap.InsufficientAccessRights, messageKey);
     }
 
     [Theory]
     [InlineData("0000208F: ENTRY_EXISTS")]
     [InlineData("object already exists")]
-    public void Normalize_MapsDuplicateEntryDiagnostic(string diagnostic)
+    public void NormalizeMessageKey_MapsDuplicateEntryDiagnostic(string diagnostic)
     {
-        var message = AdLdapErrorNormalizer.Normalize(0, diagnostic);
-
-        Assert.Equal(AdLdapErrorNormalizer.EntryAlreadyExistsMessage, message);
+        var messageKey = AdLdapErrorNormalizer.NormalizeMessageKey(0, diagnostic);
+        Assert.Equal(AdManagementApiMessageKeys.Ldap.EntryAlreadyExists, messageKey);
     }
 
     [Fact]
-    public void Normalize_ReturnsGenericMessage_WhenUnknown()
+    public void NormalizeMessageKey_ReturnsUpdateUserFailedKey_WhenUnknown()
     {
-        var message = AdLdapErrorNormalizer.Normalize(9999, "totally unknown ldap failure");
-
-        Assert.Equal(AdLdapErrorNormalizer.UpdateUserFailedMessage, message);
+        var messageKey = AdLdapErrorNormalizer.NormalizeMessageKey(9999, "totally unknown ldap failure");
+        Assert.Equal(AdManagementApiMessageKeys.Ldap.UpdateUserFailed, messageKey);
     }
 }

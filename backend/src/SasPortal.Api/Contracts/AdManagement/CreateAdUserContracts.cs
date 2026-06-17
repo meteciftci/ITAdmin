@@ -29,11 +29,10 @@ public sealed record CreateAdUserResponse(
     string UserPrincipalName,
     string DisplayName,
     bool IsEnabled,
-    string Message,
+    string MessageKey,
     bool NamingCollisionResolved,
     int? GeneratedSuffix,
     AdUserCreatedNotificationSummaryResponse? NotificationSummary,
-    string? MessageKey = null,
     IReadOnlyDictionary<string, object>? MessageParams = null);
 
 public sealed record AdOrganizationalUnitListItemResponse(

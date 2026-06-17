@@ -20,8 +20,7 @@ public sealed record AdDeletedObjectRestoreItem(
 
 public sealed record AdDeletedObjectRestoreResult(
     bool IsSuccess,
-    string Message,
+    string MessageKey,
     AdDeletedObjectRestoreItem? RestoredObject,
     AdDirectoryFailureKind? FailureKind = null,
-    string? MessageKey = null,
     IReadOnlyDictionary<string, object>? MessageParams = null);

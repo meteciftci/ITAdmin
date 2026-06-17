@@ -31,10 +31,9 @@ public sealed partial class AdUserDirectoryService
         {
             return new DeleteAdGroupResult(
                 false,
-                connectionResult.Message,
+                connectionResult.MessageKey,
                 null,
                 connectionResult.FailureKind,
-                connectionResult.MessageKey,
                 connectionResult.MessageParams);
         }
 
@@ -43,10 +42,9 @@ public sealed partial class AdUserDirectoryService
         {
             return new DeleteAdGroupResult(
                 false,
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
+                AdManagementApiMessageKeys.Common.NotConfigured,
                 null,
-                AdDirectoryFailureKind.NotConfigured,
-                AdManagementApiMessageKeys.Common.NotConfigured);
+                AdDirectoryFailureKind.NotConfigured);
         }
 
         var context = connectionResult.Context;
@@ -65,7 +63,7 @@ public sealed partial class AdUserDirectoryService
                 return await FailGroupDeleteAsync(
         request,
                     context.Connection,
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.NotFound),
+                    AdManagementApiMessageKeys.Groups.NotFound,
                     AdDirectoryFailureKind.NotFound,
                     AdGroupDeleteOperationDiagnosticBuilder.BuildNotFoundJson(
                         AdGroupDeleteSteps.LoadGroup,
@@ -82,7 +80,7 @@ public sealed partial class AdUserDirectoryService
                 return await FailGroupDeleteAsync(
         request,
                     context.Connection,
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.NotFound),
+                    AdManagementApiMessageKeys.Groups.NotFound,
                     AdDirectoryFailureKind.NotFound,
                     AdGroupDeleteOperationDiagnosticBuilder.BuildNotFoundJson(
                         AdGroupDeleteSteps.LoadGroup,
@@ -98,7 +96,7 @@ public sealed partial class AdUserDirectoryService
                 return await FailGroupDeleteAsync(
         request,
                     context.Connection,
-                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.DeleteFailed),
+                    AdManagementApiMessageKeys.Groups.DeleteFailed,
                     AdDirectoryFailureKind.InvalidRequest,
                     AdGroupDeleteOperationDiagnosticBuilder.BuildPreflightJson(
                         AdGroupDeleteSteps.Preflight,
@@ -156,7 +154,7 @@ public sealed partial class AdUserDirectoryService
             return await FailGroupDeleteAsync(
         request,
                 context.Connection,
-                AdManagementApiMessages.Legacy(messageKey),
+                messageKey,
                 AdDirectoryFailureKind.ConnectionFailed,
                 AdGroupDeleteOperationDiagnosticBuilder.BuildGenericFailureJson(
                     AdGroupDeleteSteps.DeleteGroup,
@@ -183,7 +181,7 @@ public sealed partial class AdUserDirectoryService
             return await FailGroupDeleteAsync(
         request,
                 context.Connection,
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.DeleteFailed),
+                AdManagementApiMessageKeys.Groups.DeleteFailed,
                 AdDirectoryFailureKind.ConnectionFailed,
                 AdGroupDeleteOperationDiagnosticBuilder.BuildGenericFailureJson(
                     AdGroupDeleteSteps.DeleteGroup,
@@ -207,7 +205,7 @@ public sealed partial class AdUserDirectoryService
             var messageKey = AdLdapErrorNormalizer.NormalizeMessageKey(
                 (int)response.ResultCode,
                 response.ErrorMessage);
-            var userMessage = AdManagementApiMessages.Legacy(messageKey);
+            var userMessage = messageKey;
             throw new DeleteGroupLdapException(
                 userMessage,
                 MapGroupFailureKind(response.ResultCode),
@@ -299,7 +297,7 @@ public sealed partial class AdUserDirectoryService
                 request.ActorUserId);
         }
 
-        return new DeleteAdGroupResult(false, message, null, failureKind, messageKey, messageParams);
+        return new DeleteAdGroupResult(false, messageKey ?? message, null, failureKind, messageParams);
     }
 
     private async Task WriteGroupDeleteSuccessLogsAsync(

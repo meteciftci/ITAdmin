@@ -442,9 +442,8 @@ public sealed class AdDeletedObjectRestoreReadinessService(
         new(
             key,
             status,
-            titleKey,
-            messageKey,
-            remediationKey,
+            string.Empty,
+            null,
             command,
             isBlocking,
             details,

@@ -171,7 +171,7 @@ public sealed class AdManagementSettingsServiceTests
         var result = await service.UpdateSettingsAsync(request);
 
         Assert.False(result.IsSuccess);
-        Assert.Contains("zorunlu alanlar eksik", result.Message, StringComparison.Ordinal);
+        Assert.Contains("zorunlu alanlar eksik", result.MessageKey, StringComparison.Ordinal);
         Assert.Empty(dbContext.AdManagementSettings);
     }
 
@@ -204,7 +204,7 @@ public sealed class AdManagementSettingsServiceTests
         var result = await service.UpdateSettingsAsync(request);
 
         Assert.False(result.IsSuccess);
-        Assert.Contains("zorunlu alanlar eksik", result.Message, StringComparison.Ordinal);
+        Assert.Contains("zorunlu alanlar eksik", result.MessageKey, StringComparison.Ordinal);
         Assert.Empty(dbContext.AdManagementSettings);
         Assert.Equal(0, dbContext.AdOperationLogs.Count(x => x.OperationType == "SettingsValidated"));
     }
@@ -351,7 +351,7 @@ public sealed class AdManagementSettingsServiceTests
         var checkedAt = new DateTimeOffset(2026, 5, 15, 12, 0, 0, TimeSpan.Zero);
         var result = new AdManagementValidationResult(
             IsValid: true,
-            Message: "AD yönetim ayarları doğrulandı.",
+            MessageKey: "AD yönetim ayarları doğrulandı.",
             CheckedAt: checkedAt,
             Details: new List<AdManagementValidationDetail>
             {
@@ -406,7 +406,7 @@ public sealed class AdManagementSettingsServiceTests
         var failureMessage = "AD yönetim servis hesabı ile bağlantı kurulamadı.";
         var result = new AdManagementValidationResult(
             IsValid: false,
-            Message: failureMessage,
+            MessageKey: failureMessage,
             CheckedAt: checkedAt,
             Details: new List<AdManagementValidationDetail>
             {
@@ -461,7 +461,7 @@ public sealed class AdManagementSettingsServiceTests
 
         var result = new AdManagementValidationResult(
             IsValid: false,
-            Message: "AD yönetim ayarları eksik.",
+            MessageKey: "AD yönetim ayarları eksik.",
             CheckedAt: DateTimeOffset.UtcNow,
             Details: new List<AdManagementValidationDetail>
             {
@@ -511,7 +511,7 @@ public sealed class AdManagementSettingsServiceTests
         {
             NextResult = new AdManagementValidationResult(
                 IsValid: false,
-                Message: "AD yönetim servis hesabı ile bağlantı kurulamadı.",
+                MessageKey: "AD yönetim servis hesabı ile bağlantı kurulamadı.",
                 CheckedAt: DateTimeOffset.UtcNow,
                 Details: new List<AdManagementValidationDetail>
                 {
@@ -568,7 +568,7 @@ public sealed class AdManagementSettingsServiceTests
         {
             NextResult = new AdManagementValidationResult(
                 IsValid: true,
-                Message: "ok",
+                MessageKey: "ok",
                 CheckedAt: checkedAt,
                 Details: new List<AdManagementValidationDetail>
                 {
@@ -612,7 +612,7 @@ public sealed class AdManagementSettingsServiceTests
         {
             NextResult = new AdManagementValidationResult(
                 IsValid: false,
-                Message: failingMessage,
+                MessageKey: failingMessage,
                 CheckedAt: DateTimeOffset.UtcNow,
                 Details: new List<AdManagementValidationDetail>
                 {
@@ -689,7 +689,7 @@ public sealed class AdManagementSettingsServiceTests
             CreateRequest(isEnabled: false, defaultUserCreationUpnSuffix: "not a valid suffix"));
 
         Assert.False(result.IsSuccess);
-        Assert.Contains("UPN suffix", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("UPN suffix", result.MessageKey, StringComparison.OrdinalIgnoreCase);
         Assert.False(dbContext.AdManagementSettings.Any());
     }
 

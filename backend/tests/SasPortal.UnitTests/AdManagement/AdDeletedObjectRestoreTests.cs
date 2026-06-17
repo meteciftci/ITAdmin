@@ -302,7 +302,7 @@ public sealed class AdDeletedObjectRestoreTests
                 "backend/src/SasPortal.Api/Controllers/AdManagementController.cs"));
 
         Assert.Contains("RestoreDeletedObject", source, StringComparison.Ordinal);
-        Assert.Contains("MapDirectoryFailure(result.Message, result.FailureKind, result.MessageKey, result.MessageParams)", source, StringComparison.Ordinal);
+        Assert.Contains("MapDirectoryFailure(result.MessageKey, result.FailureKind, result.MessageParams)", source, StringComparison.Ordinal);
         Assert.Contains("AdDirectoryFailureKind.ConnectionFailed => StatusCode(", source, StringComparison.Ordinal);
         Assert.Contains("AdDirectoryFailureKind.InvalidRequest => BadRequest", source, StringComparison.Ordinal);
         Assert.Contains("AdDirectoryFailureKind.NotFound => NotFound", source, StringComparison.Ordinal);
@@ -379,8 +379,8 @@ public sealed class AdDeletedObjectRestoreTests
 
         Assert.Contains("AdDeletedObjectRestoreRequestBody? body", controllerSource, StringComparison.Ordinal);
         Assert.Contains("AdDeletedObjectRestoreTargetModeParser.TryParse", controllerSource, StringComparison.Ordinal);
-        Assert.Contains("Geçersiz geri yükleme hedef modu.", controllerSource, StringComparison.Ordinal);
-        Assert.Contains("Farklı OU'ya geri yüklemek için hedef OU seçilmelidir.", controllerSource, StringComparison.Ordinal);
+        Assert.Contains("AdManagementApiMessageKeys.Common.InvalidRequest", controllerSource, StringComparison.Ordinal);
+        Assert.Contains("AdManagementApiMessageKeys.DeletedObjects.RestoreMissingTarget", controllerSource, StringComparison.Ordinal);
         Assert.Contains("string? RestoreTargetMode", contractSource, StringComparison.Ordinal);
         Assert.DoesNotContain("AdDeletedObjectRestoreTargetMode? RestoreTargetMode", contractSource, StringComparison.Ordinal);
     }

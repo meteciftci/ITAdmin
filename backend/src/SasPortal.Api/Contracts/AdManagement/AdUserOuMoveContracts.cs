@@ -7,12 +7,11 @@ public sealed class MoveAdUserOuRequest
 
 public sealed record MoveAdUserOuResponse(
     bool Success,
-    string Message,
+    string MessageKey,
     string UserId,
     string? SamAccountName,
     string? UserPrincipalName,
     string? DistinguishedName,
     string? PreviousDistinguishedName,
     string? TargetOuDistinguishedName,
-    string? MessageKey = null,
     IReadOnlyDictionary<string, object>? MessageParams = null);

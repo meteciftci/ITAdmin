@@ -221,7 +221,7 @@ public sealed partial class AdUserDirectoryService
 
             var ldapResultCode = (int)response.ResultCode;
             throw CreateUpdateGroupLdapException(
-                AdLdapErrorNormalizer.Normalize(ldapResultCode, response.ErrorMessage),
+                AdLdapErrorNormalizer.NormalizeMessageKey(ldapResultCode, response.ErrorMessage),
                 MapGroupFailureKind(response.ResultCode),
                 new AdGroupUpdateFailureContext(
                     updateStep,
@@ -242,8 +242,8 @@ public sealed partial class AdUserDirectoryService
             var ldapResultCode = response is not null ? (int)response.ResultCode : (int?)null;
             var diagnosticMessage = response?.ErrorMessage ?? ex.Message;
             var userMessage = ldapResultCode is not null
-                ? AdLdapErrorNormalizer.Normalize(ldapResultCode.Value, diagnosticMessage)
-                : AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.UpdateFailed);
+                ? AdLdapErrorNormalizer.NormalizeMessageKey(ldapResultCode.Value, diagnosticMessage)
+                : AdManagementApiMessageKeys.Groups.UpdateFailed;
 
             throw CreateUpdateGroupLdapException(
                 userMessage,
@@ -266,7 +266,7 @@ public sealed partial class AdUserDirectoryService
         catch (LdapException ex)
         {
             throw CreateUpdateGroupLdapException(
-                AdLdapErrorNormalizer.Normalize(ex.ErrorCode, ex.Message),
+                AdLdapErrorNormalizer.NormalizeMessageKey(ex.ErrorCode, ex.Message),
                 MapGroupFailureKind((ResultCode)ex.ErrorCode),
                 new AdGroupUpdateFailureContext(
                     updateStep,

@@ -7,7 +7,7 @@ public sealed class MoveAdGroupOuRequest
 
 public sealed record MoveAdGroupOuResponse(
     bool Success,
-    string Message,
+    string MessageKey,
     string GroupId,
     string? DisplayName,
     string? Name,
@@ -15,5 +15,4 @@ public sealed record MoveAdGroupOuResponse(
     string? DistinguishedName,
     string? PreviousDistinguishedName,
     string? TargetOuDistinguishedName,
-    string? MessageKey = null,
     IReadOnlyDictionary<string, object>? MessageParams = null);

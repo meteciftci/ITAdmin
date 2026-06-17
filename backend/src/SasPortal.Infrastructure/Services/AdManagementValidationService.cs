@@ -269,7 +269,6 @@ public sealed class AdManagementValidationService : IAdManagementValidationServi
         new(
             key,
             status,
-            AdManagementApiMessages.Legacy(messageKey),
             messageKey);
 
     private static AdManagementValidationResult ValidationResult(
@@ -279,10 +278,9 @@ public sealed class AdManagementValidationService : IAdManagementValidationServi
         IReadOnlyList<AdManagementValidationDetail> details) =>
         new(
             isValid,
-            AdManagementApiMessages.Legacy(messageKey),
+            messageKey,
             checkedAt,
-            details,
-            messageKey);
+            details);
 
     private static bool TryValidateDomainFqdnHost(
         string domainFqdn,
