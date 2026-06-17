@@ -11,6 +11,7 @@ import {
 import {
   buildAccountExpirationComparisonRows,
   buildAccountStatusComparisonRows,
+  buildComputerComparisonRows,
   buildCoreFieldComparisonRows,
   buildGenericSnapshotSections,
   buildGroupComparisonRows,
@@ -37,6 +38,7 @@ import {
   type ParsedSnapshotGroup,
   type ParsedSnapshotRestoredObject,
   type SnapshotCoreFieldKey,
+  type SnapshotComputerComparisonFieldKey,
   type SnapshotGroupComparisonFieldKey,
 } from "@/features/ad-management/parse-ad-operation-snapshot";
 
@@ -199,6 +201,11 @@ function getComputerFieldEntries(
       key: "samAccountName",
       label: t("snapshotSections.fields.samAccountName"),
       value: computer.samAccountName,
+    },
+    {
+      key: "dNSHostName",
+      label: t("snapshotSections.fields.dNSHostName"),
+      value: computer.dNSHostName ?? null,
     },
     {
       key: "distinguishedName",
@@ -504,6 +511,10 @@ function OuMoveSnapshotSections({
     () => resolveSnapshotUser(beforeSnapshot, afterSnapshot),
     [beforeSnapshot, afterSnapshot],
   );
+  const computer = useMemo(
+    () => resolveSnapshotComputer(beforeSnapshot, afterSnapshot),
+    [beforeSnapshot, afterSnapshot],
+  );
   const group = useMemo(
     () => resolveSnapshotGroup(beforeSnapshot, afterSnapshot),
     [beforeSnapshot, afterSnapshot],
@@ -547,7 +558,9 @@ function OuMoveSnapshotSections({
           entries={
             isGroupMove
               ? getGroupFieldEntries(t, group, formatBoolean)
-              : getUserFieldEntries(t, user)
+              : isComputerMove
+                ? getComputerFieldEntries(t, computer)
+                : getUserFieldEntries(t, user)
           }
           noneLabel={noneLabel}
         />
@@ -1364,6 +1377,73 @@ function GroupDeleteSnapshotSections({
   );
 }
 
+function ComputerUpdateSnapshotSections({
+  beforeSnapshotJson,
+  afterSnapshotJson,
+  noneLabel,
+  emptyDash,
+  t,
+}: {
+  beforeSnapshotJson: string | null | undefined;
+  afterSnapshotJson: string | null | undefined;
+  noneLabel: string;
+  emptyDash: string;
+  t: TFunction<"adOperationLogs">;
+}) {
+  const booleanLabels = useMemo(
+    () => ({ yes: t("snapshotSections.boolean.yes"), no: t("snapshotSections.boolean.no") }),
+    [t],
+  );
+  const formatBoolean = useMemo(
+    () => (value: boolean | null | undefined) => formatSnapshotBoolean(value, booleanLabels),
+    [booleanLabels],
+  );
+
+  const beforeSnapshot = useMemo(
+    () => parseNestedAdOperationSnapshot(beforeSnapshotJson),
+    [beforeSnapshotJson],
+  );
+  const afterSnapshot = useMemo(
+    () => parseNestedAdOperationSnapshot(afterSnapshotJson),
+    [afterSnapshotJson],
+  );
+  const computerRows = useMemo(
+    () => buildComputerComparisonRows(beforeSnapshot, afterSnapshot, formatBoolean),
+    [afterSnapshot, beforeSnapshot, formatBoolean],
+  );
+
+  const getComputerFieldLabel = (key: string) => {
+    const translationKey = `snapshotSections.fields.${key}` as const;
+    const translated = t(translationKey, { defaultValue: "" });
+    return translated || key;
+  };
+
+  const hasAnySnapshot =
+    hasNestedSnapshotContent(beforeSnapshot) ||
+    hasNestedSnapshotContent(afterSnapshot) ||
+    Boolean(beforeSnapshotJson?.trim()) ||
+    Boolean(afterSnapshotJson?.trim());
+
+  return (
+    <section className="space-y-3 border-t pt-4">
+      <h3 className="text-sm font-medium">{t("snapshotSections.computerUpdate")}</h3>
+      {hasAnySnapshot ? (
+        <ComparisonTable
+          rows={computerRows}
+          getFieldLabel={(key) => getComputerFieldLabel(key as SnapshotComputerComparisonFieldKey)}
+          emptyLabel={emptyDash}
+          noneLabel={noneLabel}
+        />
+      ) : (
+        <span className="text-muted-foreground">{noneLabel}</span>
+      )}
+      {!afterSnapshotJson?.trim() && beforeSnapshotJson?.trim() ? (
+        <p className="text-xs text-muted-foreground">{t("comparison.afterMissing")}</p>
+      ) : null}
+    </section>
+  );
+}
+
 function GroupUpdateSnapshotSections({
   beforeSnapshotJson,
   afterSnapshotJson,
@@ -1621,6 +1701,16 @@ export function AdOperationLogSnapshotDetail({
             beforeSnapshotJson={beforeSnapshotJson}
             afterSnapshotJson={afterSnapshotJson}
             noneLabel={noneLabel}
+            t={t}
+          />
+        );
+      case "computerUpdate":
+        return (
+          <ComputerUpdateSnapshotSections
+            beforeSnapshotJson={beforeSnapshotJson}
+            afterSnapshotJson={afterSnapshotJson}
+            noneLabel={noneLabel}
+            emptyDash={emptyDash}
             t={t}
           />
         );

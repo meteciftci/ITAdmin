@@ -65,7 +65,6 @@ describe("AD operation log coverage matrix", () => {
         "AttributeMappingCreated",
         "AttributeMappingDeleted",
         "AttributeMappingUpdated",
-        "ComputerUpdate",
         "SettingsUpdated",
         "SettingsValidated",
       ].sort(),
@@ -80,6 +79,7 @@ describe("AD operation log coverage matrix", () => {
     const expectations: Record<string, string> = {
       DeletedObjectRestore: "deletedObjectRestore",
       ComputerDelete: "computerDelete",
+      ComputerUpdate: "computerUpdate",
       ComputerMoveOu: "ouMove",
       ComputerGroupAdd: "groupMembership",
       ComputerGroupRemove: "groupMembership",
@@ -107,13 +107,13 @@ describe("AD operation log coverage matrix", () => {
 
   it("keeps generic renderer fallback available", () => {
     assert.equal(getSnapshotRenderStrategy("SettingsUpdated"), "generic");
-    assert.equal(getSnapshotRenderStrategy("ComputerUpdate"), "generic");
+    assert.equal(getSnapshotRenderStrategy("ComputerUpdate"), "computerUpdate");
   });
 
-  it("exposes inventory summary for phase 20B.1", () => {
+  it("exposes inventory summary for phase 20B.2", () => {
     assert.equal(summary.labelCoverage, summary.operationTypeCount);
     assert.equal(summary.localeGapOperations.length, 0);
-    assert.equal(summary.snapshotRendererCoverage, 23);
+    assert.equal(summary.snapshotRendererCoverage, 24);
     assert.ok(summary.genericFallbackOperations.length > 0);
   });
 });
@@ -130,5 +130,37 @@ describe("AdOperationLogSnapshotDetail dedicated render wiring", () => {
     assert.match(detailSource, /ComputerDeleteSnapshotSections/);
     assert.match(detailSource, /case "computerDelete"/);
     assert.match(detailSource, /default:\s*return\s*\(\s*<GenericSnapshotSections/);
+  });
+
+  it("includes ComputerUpdate dedicated sections", () => {
+    const detailSource = readFileSync(
+      new URL("./components/AdOperationLogSnapshotDetail.tsx", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(detailSource, /ComputerUpdateSnapshotSections/);
+    assert.match(detailSource, /case "computerUpdate"/);
+    assert.match(detailSource, /buildComputerComparisonRows/);
+    assert.match(detailSource, /snapshotSections\.computerUpdate/);
+  });
+
+  it("uses computer field grid for ComputerMoveOu in ouMove renderer", () => {
+    const detailSource = readFileSync(
+      new URL("./components/AdOperationLogSnapshotDetail.tsx", import.meta.url),
+      "utf8",
+    );
+
+    const ouMoveSection = detailSource.slice(
+      detailSource.indexOf("function OuMoveSnapshotSections"),
+      detailSource.indexOf("function UserManagerUpdateSnapshotSections"),
+    );
+
+    assert.match(ouMoveSection, /isComputerMove/);
+    assert.match(ouMoveSection, /getComputerFieldEntries\(t, computer\)/);
+    assert.match(ouMoveSection, /resolveSnapshotComputer/);
+    assert.match(
+      ouMoveSection,
+      /isComputerMove\s*\?\s*getComputerFieldEntries\(t, computer\)/,
+    );
   });
 });

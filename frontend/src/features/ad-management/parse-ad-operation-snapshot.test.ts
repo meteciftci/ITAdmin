@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 
 import {
   buildAccountStatusComparisonRows,
+  buildComputerComparisonRows,
   buildCoreFieldComparisonRows,
   buildGenericSnapshotEntries,
   buildGroupComparisonRows,
@@ -248,6 +249,82 @@ describe("parseNestedAdOperationSnapshot", () => {
     assert.equal(snapshot?.ou?.distinguishedName, "OU=Target,DC=corp,DC=local");
   });
 
+  it("builds ou move comparison rows for ComputerMoveOu snapshots", () => {
+    const before = parseNestedAdOperationSnapshot(
+      JSON.stringify({
+        operation: "ComputerMoveOu",
+        computer: {
+          id: "11111111-2222-3333-4444-555555555555",
+          samAccountName: "PC-01$",
+          name: "PC-01",
+          distinguishedName: "CN=PC-01,OU=Old,DC=corp,DC=local",
+        },
+        ou: { distinguishedName: "OU=Old,DC=corp,DC=local" },
+      }),
+    );
+    const after = parseNestedAdOperationSnapshot(
+      JSON.stringify({
+        operation: "ComputerMoveOu",
+        computer: {
+          id: "11111111-2222-3333-4444-555555555555",
+          samAccountName: "PC-01$",
+          name: "PC-01",
+          distinguishedName: "CN=PC-01,OU=New,DC=corp,DC=local",
+        },
+        ou: { distinguishedName: "OU=New,DC=corp,DC=local" },
+      }),
+    );
+
+    const rows = buildOuMoveComparisonRows(before, after);
+    const dnRow = rows.find((row) => row.key === "distinguishedName");
+    const ouRow = rows.find((row) => row.key === "ou");
+
+    assert.equal(dnRow?.changed, true);
+    assert.equal(ouRow?.changed, true);
+    assert.equal(dnRow?.before, "CN=PC-01,OU=Old,DC=corp,DC=local");
+    assert.equal(dnRow?.after, "CN=PC-01,OU=New,DC=corp,DC=local");
+  });
+
+  it("builds computer comparison rows for ComputerUpdate description changes", () => {
+    const before = parseNestedAdOperationSnapshot(
+      JSON.stringify({
+        operation: "ComputerUpdate",
+        computer: {
+          id: "11111111-2222-3333-4444-555555555555",
+          samAccountName: "PC-01$",
+          name: "PC-01",
+          distinguishedName: "CN=PC-01,OU=Computers,DC=corp,DC=local",
+        },
+        description: "Old description",
+      }),
+    );
+    const after = parseNestedAdOperationSnapshot(
+      JSON.stringify({
+        operation: "ComputerUpdate",
+        computer: {
+          id: "11111111-2222-3333-4444-555555555555",
+          samAccountName: "PC-01$",
+          name: "PC-01",
+          distinguishedName: "CN=PC-01,OU=Computers,DC=corp,DC=local",
+        },
+        description: "Updated description",
+      }),
+    );
+
+    const rows = buildComputerComparisonRows(
+      before,
+      after,
+      (value) => (value === null || value === undefined ? null : value ? "yes" : "no"),
+    );
+    const descriptionRow = rows.find((row) => row.key === "description");
+    const nameRow = rows.find((row) => row.key === "name");
+
+    assert.equal(descriptionRow?.changed, true);
+    assert.equal(descriptionRow?.before, "Old description");
+    assert.equal(descriptionRow?.after, "Updated description");
+    assert.equal(nameRow?.changed, false);
+  });
+
   it("builds ou move comparison rows for GroupMoveOu snapshots", () => {
     const before = parseNestedAdOperationSnapshot(
       JSON.stringify({
@@ -378,6 +455,7 @@ describe("getSnapshotRenderStrategy", () => {
     assert.equal(getSnapshotRenderStrategy("GroupUpdate"), "groupUpdate");
     assert.equal(getSnapshotRenderStrategy("GroupDelete"), "groupDelete");
     assert.equal(getSnapshotRenderStrategy("ComputerDelete"), "computerDelete");
+    assert.equal(getSnapshotRenderStrategy("ComputerUpdate"), "computerUpdate");
     assert.equal(getSnapshotRenderStrategy("ComputerEnable"), "accountStatus");
     assert.equal(getSnapshotRenderStrategy("ComputerDisable"), "accountStatus");
     assert.equal(getSnapshotRenderStrategy("ComputerMoveOu"), "ouMove");

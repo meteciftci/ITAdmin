@@ -146,6 +146,7 @@
       "createdUser": "Oluşturulan Kullanıcı",
       "createdGroup": "Oluşturulan Grup",
       "groupUpdate": "Grup Bilgileri",
+      "computerUpdate": "Bilgisayar Bilgileri",
       "deletedGroup": "Silinen Grup",
       "deletedComputer": "Silinen bilgisayar",
       "deletedObject": "Silinen nesne",
@@ -197,7 +198,11 @@
         "memberCount": "Üye Sayısı",
         "memberOfCount": "Üye Olduğu Grup Sayısı",
         "memberType": "Üye Türü",
-        "dNSHostName": "DNS Hostname"
+        "dNSHostName": "DNS Hostname",
+        "operatingSystem": "İşletim sistemi",
+        "operatingSystemVersion": "İşletim sistemi sürümü",
+        "lastLogonTimestamp": "Son oturum açma",
+        "modifiedAt": "Değiştirilme tarihi"
       }
     },
     "empty": {

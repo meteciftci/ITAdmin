@@ -18,6 +18,7 @@ const DEDICATED_SNAPSHOT_STRATEGIES = new Set<SnapshotRenderStrategy>([
   "groupUpdate",
   "groupDelete",
   "computerDelete",
+  "computerUpdate",
   "deletedObjectRestore",
   "accountStatus",
   "lockStatus",
@@ -72,9 +73,8 @@ const COVERAGE_NOTES: Partial<Record<AdOperationLogCoverageOperationType, string
   AttributeMappingDeleted: "Generic snapshot renderer; before snapshot only on success.",
   ComputerEnable: "Uses accountStatus strategy (user-oriented sections for computer account).",
   ComputerDisable: "Uses accountStatus strategy (user-oriented sections for computer account).",
-  ComputerUpdate: "Generic snapshot renderer; dedicated comparison renderer missing.",
-  ComputerMoveOu:
-    "ouMove strategy; entity header still uses user field grid instead of computer grid.",
+  ComputerUpdate: "Dedicated computerUpdate snapshot comparison renderer.",
+  ComputerMoveOu: "ouMove strategy with computer-aware entity field grid.",
 };
 
 function hasDedicatedSnapshotRenderer(operationType: string): boolean {

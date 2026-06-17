@@ -146,6 +146,7 @@
       "createdUser": "Created User",
       "createdGroup": "Created Group",
       "groupUpdate": "Group Information",
+      "computerUpdate": "Computer Information",
       "deletedGroup": "Deleted Group",
       "deletedComputer": "Deleted computer",
       "deletedObject": "Deleted object",
@@ -197,7 +198,11 @@
         "memberCount": "Member Count",
         "memberOfCount": "Member Of Count",
         "memberType": "Member Type",
-        "dNSHostName": "DNS Hostname"
+        "dNSHostName": "DNS Hostname",
+        "operatingSystem": "Operating system",
+        "operatingSystemVersion": "Operating system version",
+        "lastLogonTimestamp": "Last logon",
+        "modifiedAt": "Modified at"
       }
     },
     "empty": {

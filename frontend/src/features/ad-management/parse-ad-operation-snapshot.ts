@@ -246,7 +246,31 @@ export type ParsedSnapshotComputer = {
   displayName?: string | null;
   dNSHostName?: string | null;
   distinguishedName: string | null;
+  description?: string | null;
+  operatingSystem?: string | null;
+  operatingSystemVersion?: string | null;
+  lastLogonTimestamp?: string | null;
+  whenChanged?: string | null;
+  modifiedAt?: string | null;
 };
+
+export const SNAPSHOT_COMPUTER_COMPARISON_FIELD_KEYS = [
+  "name",
+  "samAccountName",
+  "distinguishedName",
+  "dNSHostName",
+  "description",
+  "operatingSystem",
+  "operatingSystemVersion",
+  "isEnabled",
+  "isLocked",
+  "lastLogonTimestamp",
+  "whenChanged",
+  "modifiedAt",
+] as const;
+
+export type SnapshotComputerComparisonFieldKey =
+  (typeof SNAPSHOT_COMPUTER_COMPARISON_FIELD_KEYS)[number];
 
 export type ParsedSnapshotGroup = {
   id: string | null;
@@ -368,6 +392,7 @@ export type SnapshotRenderStrategy =
   | "groupUpdate"
   | "groupDelete"
   | "computerDelete"
+  | "computerUpdate"
   | "deletedObjectRestore"
   | "accountStatus"
   | "lockStatus"
@@ -478,6 +503,16 @@ function parseSnapshotComputer(value: unknown): ParsedSnapshotComputer | null {
     displayName: formatSnapshotValue(record.displayName ?? record.DisplayName),
     dNSHostName: formatSnapshotValue(record.dNSHostName ?? record.DNSHostName),
     distinguishedName: formatSnapshotValue(record.distinguishedName ?? record.DistinguishedName),
+    description: formatSnapshotValue(record.description ?? record.Description),
+    operatingSystem: formatSnapshotValue(record.operatingSystem ?? record.OperatingSystem),
+    operatingSystemVersion: formatSnapshotValue(
+      record.operatingSystemVersion ?? record.OperatingSystemVersion,
+    ),
+    lastLogonTimestamp: formatSnapshotValue(
+      record.lastLogonTimestamp ?? record.LastLogonTimestamp,
+    ),
+    whenChanged: formatSnapshotValue(record.whenChanged ?? record.WhenChanged),
+    modifiedAt: formatSnapshotValue(record.modifiedAt ?? record.ModifiedAt),
   };
 
   return Object.values(computer).some((entry) => entry !== null && entry !== undefined)
@@ -731,6 +766,16 @@ export function resolveSnapshotComputer(
   return after?.computer ?? before?.computer ?? null;
 }
 
+export function readSnapshotRootDescription(
+  snapshot: ParsedNestedAdOperationSnapshot | null,
+): string | null {
+  if (!snapshot) {
+    return null;
+  }
+
+  return formatSnapshotValue(snapshot.rawRecord.description ?? snapshot.rawRecord.Description);
+}
+
 export function readSnapshotDeletedFlag(
   snapshot: ParsedNestedAdOperationSnapshot | null,
 ): boolean | null {
@@ -855,10 +900,12 @@ export function buildOuMoveComparisonRows(
   const beforeIdentityDn =
     before?.user?.distinguishedName
     ?? before?.group?.distinguishedName
+    ?? before?.computer?.distinguishedName
     ?? null;
   const afterIdentityDn =
     after?.user?.distinguishedName
     ?? after?.group?.distinguishedName
+    ?? after?.computer?.distinguishedName
     ?? null;
 
   const rows = [
@@ -979,6 +1026,77 @@ export function buildGroupComparisonRows(
   return rows.filter((row) => row.before !== null || row.after !== null);
 }
 
+export function buildComputerComparisonRows(
+  before: ParsedNestedAdOperationSnapshot | null,
+  after: ParsedNestedAdOperationSnapshot | null,
+  formatBoolean: (value: boolean | null | undefined) => string | null,
+): SnapshotComparisonRow[] {
+  const beforeComputer = before?.computer ?? null;
+  const afterComputer = after?.computer ?? null;
+  const beforeDescription =
+    readSnapshotRootDescription(before) ?? beforeComputer?.description ?? null;
+  const afterDescription = readSnapshotRootDescription(after) ?? afterComputer?.description ?? null;
+
+  const rows = [
+    buildComparisonRow("name", beforeComputer?.name ?? null, afterComputer?.name ?? null),
+    buildComparisonRow(
+      "samAccountName",
+      beforeComputer?.samAccountName ?? null,
+      afterComputer?.samAccountName ?? null,
+    ),
+    buildComparisonRow(
+      "distinguishedName",
+      beforeComputer?.distinguishedName ?? null,
+      afterComputer?.distinguishedName ?? null,
+      true,
+      true,
+    ),
+    buildComparisonRow(
+      "dNSHostName",
+      beforeComputer?.dNSHostName ?? null,
+      afterComputer?.dNSHostName ?? null,
+    ),
+    buildComparisonRow("description", beforeDescription, afterDescription),
+    buildComparisonRow(
+      "operatingSystem",
+      beforeComputer?.operatingSystem ?? null,
+      afterComputer?.operatingSystem ?? null,
+    ),
+    buildComparisonRow(
+      "operatingSystemVersion",
+      beforeComputer?.operatingSystemVersion ?? null,
+      afterComputer?.operatingSystemVersion ?? null,
+    ),
+    buildComparisonRow(
+      "isEnabled",
+      formatBoolean(before?.account?.isEnabled),
+      formatBoolean(after?.account?.isEnabled),
+    ),
+    buildComparisonRow(
+      "isLocked",
+      formatBoolean(before?.account?.isLocked),
+      formatBoolean(after?.account?.isLocked),
+    ),
+    buildComparisonRow(
+      "lastLogonTimestamp",
+      beforeComputer?.lastLogonTimestamp ?? null,
+      afterComputer?.lastLogonTimestamp ?? null,
+    ),
+    buildComparisonRow(
+      "whenChanged",
+      beforeComputer?.whenChanged ?? null,
+      afterComputer?.whenChanged ?? null,
+    ),
+    buildComparisonRow(
+      "modifiedAt",
+      beforeComputer?.modifiedAt ?? null,
+      afterComputer?.modifiedAt ?? null,
+    ),
+  ];
+
+  return rows.filter((row) => row.before !== null || row.after !== null);
+}
+
 export function buildMembershipComparisonRows(
   before: ParsedNestedAdOperationSnapshot | null,
   after: ParsedNestedAdOperationSnapshot | null,
@@ -1034,6 +1152,9 @@ export function getSnapshotRenderStrategy(operationType: string): SnapshotRender
   }
   if (operationType === "ComputerDelete") {
     return "computerDelete";
+  }
+  if (operationType === "ComputerUpdate") {
+    return "computerUpdate";
   }
   if (operationType === "DeletedObjectRestore") {
     return "deletedObjectRestore";
