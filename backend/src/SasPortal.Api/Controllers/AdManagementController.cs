@@ -443,7 +443,8 @@ public sealed class AdManagementController(
             return BadRequest(new AdComputerAccountOperationResponse(
                 false,
                 AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.InvalidComputerId),
-                null));
+                null,
+                AdManagementApiMessageKeys.Computers.InvalidComputerId));
         }
 
         var result = await adComputerUpdateService.UpdateComputerAsync(
@@ -471,15 +472,17 @@ public sealed class AdManagementController(
             return BadRequest(new AdComputerAccountOperationResponse(
                 false,
                 AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.InvalidComputerId),
-                null));
+                null,
+                AdManagementApiMessageKeys.Computers.InvalidComputerId));
         }
 
         if (string.IsNullOrWhiteSpace(request.TargetOuDistinguishedName))
         {
             return BadRequest(new AdComputerAccountOperationResponse(
                 false,
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.TargetOuRequired),
-                null));
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.TargetOuRequired),
+                null,
+                AdManagementApiMessageKeys.Computers.TargetOuRequired));
         }
 
         var result = await adComputerOuMoveService.MoveOuAsync(
@@ -610,7 +613,8 @@ public sealed class AdManagementController(
                 AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.InvalidComputerId),
                 null,
                 null,
-                null));
+                null,
+                AdManagementApiMessageKeys.Computers.InvalidComputerId));
         }
 
         var result = await adComputerDeleteService.DeleteComputerAsync(
@@ -777,21 +781,23 @@ public sealed class AdManagementController(
                 null,
                 null,
                 null,
-                request.TargetOuDistinguishedName));
+                request.TargetOuDistinguishedName,
+                AdManagementApiMessageKeys.Groups.InvalidGroupId));
         }
 
         if (string.IsNullOrWhiteSpace(request.TargetOuDistinguishedName))
         {
             return BadRequest(new MoveAdGroupOuResponse(
                 false,
-                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.TargetOuRequired),
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.TargetOuRequired),
                 id,
                 null,
                 null,
                 null,
                 null,
                 null,
-                request.TargetOuDistinguishedName));
+                request.TargetOuDistinguishedName,
+                AdManagementApiMessageKeys.Groups.TargetOuRequired));
         }
 
         var result = await adGroupDirectoryService.MoveGroupOuAsync(
@@ -1109,7 +1115,7 @@ public sealed class AdManagementController(
                 id,
                 null,
                 null,
-                null));
+                AdManagementApiMessageKeys.Users.InvalidUserId));
         }
 
         var result = await adUserManagerUpdateService.UpdateManagerAsync(
@@ -1163,7 +1169,8 @@ public sealed class AdManagementController(
                 id,
                 null,
                 null,
-                request.NeverExpires));
+                request.NeverExpires,
+                AdManagementApiMessageKeys.Users.InvalidUserId));
         }
 
         var result = await adUserAccountExpirationUpdateService.UpdateAccountExpirationAsync(
@@ -1219,7 +1226,8 @@ public sealed class AdManagementController(
                 null,
                 null,
                 null,
-                request.TargetOuDistinguishedName));
+                request.TargetOuDistinguishedName,
+                AdManagementApiMessageKeys.Users.InvalidUserId));
         }
 
         if (string.IsNullOrWhiteSpace(request.TargetOuDistinguishedName))
@@ -1232,7 +1240,8 @@ public sealed class AdManagementController(
                 null,
                 null,
                 null,
-                request.TargetOuDistinguishedName));
+                request.TargetOuDistinguishedName,
+                AdManagementApiMessageKeys.Users.TargetOuRequired));
         }
 
         var result = await adUserOuMoveService.MoveOuAsync(
@@ -1739,7 +1748,8 @@ public sealed class AdManagementController(
                 groupDistinguishedName,
                 null,
                 null,
-                null));
+                null,
+                AdManagementApiMessageKeys.Computers.InvalidComputerId));
         }
 
         if (string.IsNullOrWhiteSpace(groupDistinguishedName))
@@ -1753,7 +1763,8 @@ public sealed class AdManagementController(
                 groupDistinguishedName,
                 null,
                 null,
-                null));
+                null,
+                AdManagementApiMessageKeys.Groups.GroupDnRequired));
         }
 
         var result = await operation(
@@ -1821,7 +1832,8 @@ public sealed class AdManagementController(
                 AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.InvalidUserId),
                 id,
                 groupDistinguishedName,
-                null));
+                null,
+                AdManagementApiMessageKeys.Users.InvalidUserId));
         }
 
         if (string.IsNullOrWhiteSpace(groupDistinguishedName))
@@ -1831,7 +1843,8 @@ public sealed class AdManagementController(
                 AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.GroupDnRequired),
                 id,
                 groupDistinguishedName,
-                null));
+                null,
+                AdManagementApiMessageKeys.Groups.GroupDnRequired));
         }
 
         var result = await operation(
@@ -1929,7 +1942,8 @@ public sealed class AdManagementController(
             return BadRequest(new AdComputerAccountOperationResponse(
                 false,
                 AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.InvalidComputerId),
-                null));
+                null,
+                AdManagementApiMessageKeys.Computers.InvalidComputerId));
         }
 
         var result = await operation(
@@ -2019,7 +2033,8 @@ public sealed class AdManagementController(
                 null,
                 null,
                 null,
-                null));
+                null,
+                AdManagementApiMessageKeys.Users.InvalidUserId));
         }
 
         var result = await operation(
@@ -2266,7 +2281,8 @@ public sealed class AdManagementController(
                 null,
                 null,
                 memberDistinguishedName,
-                null));
+                null,
+                AdManagementApiMessageKeys.Groups.InvalidGroupId));
         }
 
         if (string.IsNullOrWhiteSpace(memberDistinguishedName))
@@ -2278,7 +2294,8 @@ public sealed class AdManagementController(
                 null,
                 null,
                 memberDistinguishedName,
-                null));
+                null,
+                AdManagementApiMessageKeys.Groups.MemberOperationFailed));
         }
 
         var result = await operation(

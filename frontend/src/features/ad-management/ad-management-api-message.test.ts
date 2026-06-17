@@ -98,6 +98,85 @@ describe("getAdManagementApiErrorMessage", () => {
   });
 });
 
+function readLocaleApiMessage(
+  locale: Record<string, unknown>,
+  dottedKey: string,
+): string | undefined {
+  const segments = dottedKey.split(".");
+  let current: unknown = locale;
+
+  for (const segment of segments) {
+    if (!current || typeof current !== "object" || !(segment in current)) {
+      return undefined;
+    }
+
+    current = (current as Record<string, unknown>)[segment];
+  }
+
+  return typeof current === "string" ? current : undefined;
+}
+
+describe("AD management API message locale keys", () => {
+  const tr = JSON.parse(
+    readFileSync(new URL("../../locales/tr/adManagement.json", import.meta.url), "utf8"),
+  ) as Record<string, unknown>;
+  const en = JSON.parse(
+    readFileSync(new URL("../../locales/en/adManagement.json", import.meta.url), "utf8"),
+  ) as Record<string, unknown>;
+
+  const requiredKeys = [
+    "adManagement.apiMessages.computers.invalidComputerId",
+    "adManagement.apiMessages.computers.targetOuRequired",
+    "adManagement.apiMessages.groups.groupDnRequired",
+    "adManagement.apiMessages.users.invalidUserId",
+    "adManagement.apiMessages.groups.invalidGroupId",
+    "adManagement.apiMessages.deletedObjects.notFound",
+  ];
+
+  for (const key of requiredKeys) {
+    it(`TR locale contains ${key}`, () => {
+      assert.ok(readLocaleApiMessage(tr, key));
+    });
+
+    it(`EN locale contains ${key}`, () => {
+      assert.ok(readLocaleApiMessage(en, key));
+    });
+  }
+
+  it("resolveAdManagementApiMessage still resolves controller validation keys", () => {
+    const t = createT({
+      "apiMessages.computers.invalidComputerId": "Invalid computer identifier.",
+      "apiMessages.computers.targetOuRequired": "Target OU selection is required.",
+      "apiMessages.groups.groupDnRequired": "Group identifier is required.",
+    });
+
+    assert.equal(
+      resolveAdManagementApiMessage(
+        t,
+        { messageKey: "apiMessages.computers.invalidComputerId", message: "Legacy TR" },
+        "adManagement:computers.errors.notFound",
+      ),
+      "Invalid computer identifier.",
+    );
+    assert.equal(
+      resolveAdManagementApiMessage(
+        t,
+        { messageKey: "apiMessages.computers.targetOuRequired", message: "Legacy TR" },
+        "adManagement:computers.errors.notFound",
+      ),
+      "Target OU selection is required.",
+    );
+    assert.equal(
+      resolveAdManagementApiMessage(
+        t,
+        { messageKey: "apiMessages.groups.groupDnRequired", message: "Legacy TR" },
+        "adManagement:groups.errors.notFound",
+      ),
+      "Group identifier is required.",
+    );
+  });
+});
+
 describe("ad-management API message integration", () => {
   const adFeatureFiles = [
     "AdUsersPage.tsx",
