@@ -36,7 +36,10 @@ import type {
   AdGroupMemberListItem,
   AdGroupMemberListTypeFilter,
 } from "@/features/ad-management/types";
-import { getApiErrorMessage } from "@/lib/api-error";
+import {
+  getAdManagementApiErrorMessage,
+  resolveAdManagementApiMessage,
+} from "@/features/ad-management/ad-management-api-message";
 
 const DEFAULT_PAGE_SIZE = 20;
 const PAGE_SIZE_OPTIONS = [10, 20, 50] as const;
@@ -91,20 +94,32 @@ export function AdGroupMembersSection({
     onSuccess: async (response) => {
       if (!response.success) {
         toast.error(
-          response.message || t("adManagement:groups.members.removeError"),
+          resolveAdManagementApiMessage(
+            t,
+            response,
+            "adManagement:groups.members.removeError",
+          ),
         );
         return;
       }
 
       toast.success(
-        response.message || t("adManagement:groups.members.removeSuccess"),
+        resolveAdManagementApiMessage(
+          t,
+          response,
+          "adManagement:groups.members.removeSuccess",
+        ),
       );
       setRemoveTarget(null);
       await invalidateAdGroupMemberQueries(queryClient, groupId);
     },
     onError: (error) => {
       toast.error(
-        getApiErrorMessage(error, t("adManagement:groups.members.removeError")),
+        getAdManagementApiErrorMessage(
+          error,
+          t,
+          "adManagement:groups.members.removeError",
+        ),
       );
     },
   });
@@ -239,9 +254,10 @@ export function AdGroupMembersSection({
           {membersQuery.isError ? (
             <ErrorState
               title={t("errors:generic.title")}
-              description={getApiErrorMessage(
+              description={getAdManagementApiErrorMessage(
                 membersQuery.error,
-                t("errors:generic.description"),
+                t,
+                "errors:generic.description",
               )}
             />
           ) : null}

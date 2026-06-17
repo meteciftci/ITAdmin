@@ -51,7 +51,10 @@ import type {
   AdComputerGroupCandidateItem,
   AdComputerGroupMembershipItem,
 } from "@/features/ad-management/types";
-import { getApiErrorMessage } from "@/lib/api-error";
+import {
+  getAdManagementApiErrorMessage,
+  resolveAdManagementApiMessage,
+} from "@/features/ad-management/ad-management-api-message";
 import { canAccess } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
@@ -153,7 +156,11 @@ export function AdComputerGroupsPage() {
     },
     onError: (error) => {
       toast.error(
-        getApiErrorMessage(error, t("adManagement:computers.groups.messages.addFailed")),
+        getAdManagementApiErrorMessage(
+          error,
+          t,
+          "adManagement:computers.groups.messages.addFailed",
+        ),
       );
     },
   });
@@ -163,19 +170,33 @@ export function AdComputerGroupsPage() {
       removeAdComputerFromGroup(computerId!, { groupDistinguishedName }),
     onSuccess: async (response) => {
       if (!response.success) {
-        toast.error(t("adManagement:computers.groups.messages.removeFailed"));
+        toast.error(
+          resolveAdManagementApiMessage(
+            t,
+            response,
+            "adManagement:computers.groups.messages.removeFailed",
+          ),
+        );
         return;
       }
 
       toast.success(
-        response.message || t("adManagement:computers.groups.messages.membershipRemoved"),
+        resolveAdManagementApiMessage(
+          t,
+          response,
+          "adManagement:computers.groups.messages.membershipRemoved",
+        ),
       );
       setRemoveTarget(null);
       await invalidateAdComputerGroupsQuery(queryClient, computerId!);
     },
     onError: (error) => {
       toast.error(
-        getApiErrorMessage(error, t("adManagement:computers.groups.messages.removeFailed")),
+        getAdManagementApiErrorMessage(
+          error,
+          t,
+          "adManagement:computers.groups.messages.removeFailed",
+        ),
       );
     },
   });
@@ -239,9 +260,10 @@ export function AdComputerGroupsPage() {
         {groupsQuery.isError ? (
           <ErrorState
             title={t("adManagement:computers.groups.errors.loadFailed")}
-            description={getApiErrorMessage(
+            description={getAdManagementApiErrorMessage(
               groupsQuery.error,
-              t("adManagement:computers.groups.errors.loadFailed"),
+              t,
+              "adManagement:computers.groups.errors.loadFailed",
             )}
           />
         ) : null}

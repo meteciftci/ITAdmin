@@ -34,4 +34,6 @@ public sealed record AdUserGroupOperationResponse(
     string Message,
     string UserId,
     string GroupDistinguishedName,
-    string? GroupName);
+    string? GroupName,
+    string? MessageKey = null,
+    IReadOnlyDictionary<string, object>? MessageParams = null);

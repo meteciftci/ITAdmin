@@ -29,7 +29,10 @@ import {
 import { AdManagementModuleStateGuard } from "@/features/ad-management/components/AdManagementModuleStateGuard";
 import { AdOuSearchCombobox } from "@/features/ad-management/components/AdOuSearchCombobox";
 import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useAdManagementModuleStatus";
-import { getApiErrorMessage } from "@/lib/api-error";
+import {
+  getAdManagementApiErrorMessage,
+  resolveAdManagementApiMessage,
+} from "@/features/ad-management/ad-management-api-message";
 import { cn } from "@/lib/utils";
 
 function SummaryField({
@@ -90,18 +93,24 @@ export function AdMoveGroupOuPage() {
       }),
     onSuccess: async (response) => {
       if (!response.success) {
-        toast.error(response.message || t("adManagement:groups.moveOu.error"));
+        toast.error(
+          resolveAdManagementApiMessage(t, response, "adManagement:groups.moveOu.error"),
+        );
         return;
       }
 
       await invalidateAdGroupOuMoveQueries(queryClient);
-      toast.success(response.message || t("adManagement:groups.moveOu.success"));
+      toast.success(
+        resolveAdManagementApiMessage(t, response, "adManagement:groups.moveOu.success"),
+      );
       navigate(groupId ? buildAdGroupDetailPath(groupId) : returnPath, {
         state: groupId ? buildAdGroupDetailReturnState(groupId) : undefined,
       });
     },
     onError: (error) => {
-      toast.error(getApiErrorMessage(error, t("adManagement:groups.moveOu.error")));
+      toast.error(
+        getAdManagementApiErrorMessage(error, t, "adManagement:groups.moveOu.error"),
+      );
     },
   });
 
@@ -158,9 +167,10 @@ export function AdMoveGroupOuPage() {
         {groupQuery.isError ? (
           <ErrorState
             title={t("errors:generic.title")}
-            description={getApiErrorMessage(
+            description={getAdManagementApiErrorMessage(
               groupQuery.error,
-              t("adManagement:groups.errors.notFound"),
+              t,
+              "adManagement:groups.errors.notFound",
             )}
           />
         ) : null}

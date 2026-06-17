@@ -9,11 +9,6 @@ namespace SasPortal.Infrastructure.Services;
 
 public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpdateService
 {
-    private const string AccountExpirationUpdateFailedMessage = "Hesap bitiş tarihi güncellenemedi.";
-    private const string AccountExpirationUpdateSuccessMessage = "Hesap bitiş tarihi güncellendi.";
-    private const string AccountExpirationInvalidDateMessage = "Hesap bitiş tarihi geçersiz.";
-    private const string AccountExpirationDateRequiredMessage = "Hesap bitiş tarihi zorunludur.";
-    private const string AccountExpirationInvalidRequestMessage = "Geçersiz hesap bitiş tarihi isteği.";
     private const string AccountExpirationSuccessLoggingFailedMessage =
         "AD user account expiration update succeeded but logging failed.";
     private const string AccountExpirationFailureLoggingFailedMessage =
@@ -37,10 +32,10 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
         if (!request.NeverExpires && string.IsNullOrWhiteSpace(request.ExpiresAt))
         {
             return await FailAccountExpirationUpdateAsync(
-                request,
+        request,
                 auditAction,
                 "AD user account expiration update failed.",
-                AccountExpirationDateRequiredMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.AccountExpirationInvalidDate),
                 BuildAccountExpirationFailureDiagnostic(
                     AccountExpirationValidateStep,
                     request.UserId,
@@ -49,7 +44,8 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
                     normalizedReasonOverride: AdUserUpdateNormalizedReasons.InvalidRequest),
                 null,
                 AdDirectoryFailureKind.InvalidRequest,
-                cancellationToken);
+                                cancellationToken,
+                AdManagementApiMessageKeys.Users.AccountExpirationInvalidDate);
         }
 
         DateOnly parsedSelectedDate = default;
@@ -61,10 +57,10 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
                     out var parseError))
             {
                 return await FailAccountExpirationUpdateAsync(
-                    request,
+        request,
                     auditAction,
                     "AD user account expiration update failed.",
-                    AccountExpirationInvalidDateMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.AccountExpirationInvalidDate),
                     BuildAccountExpirationFailureDiagnostic(
                         AccountExpirationValidateStep,
                         request.UserId,
@@ -73,7 +69,8 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
                         normalizedReasonOverride: AdUserUpdateNormalizedReasons.InvalidRequest),
                     null,
                     AdDirectoryFailureKind.InvalidRequest,
-                    cancellationToken);
+                                        cancellationToken,
+                AdManagementApiMessageKeys.Users.AccountExpirationInvalidDate);
             }
         }
 
@@ -81,7 +78,7 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
         if (!connectionResult.IsSuccess || connectionResult.Context is null)
         {
             return await FailAccountExpirationUpdateAsync(
-                request,
+        request,
                 auditAction,
                 "AD user account expiration update failed.",
                 connectionResult.Message,
@@ -93,17 +90,19 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
                     normalizedReasonOverride: AdUserUpdateNormalizedReasons.ConnectionFailed),
                 null,
                 connectionResult.FailureKind,
-                cancellationToken);
+                cancellationToken,
+                connectionResult.MessageKey,
+                connectionResult.MessageParams);
         }
 
         var connection = connectionResult.Context.Connection;
         if (AdLdapUserSearchBases.ResolveDistinctSearchBases(connection).Count == 0)
         {
             return await FailAccountExpirationUpdateAsync(
-                request,
+        request,
                 auditAction,
                 "AD user account expiration update failed.",
-                AdManagementNotConfiguredMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
                 BuildAccountExpirationFailureDiagnostic(
                     AccountExpirationValidateStep,
                     request.UserId,
@@ -112,7 +111,8 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
                     normalizedReasonOverride: AdUserUpdateNormalizedReasons.InvalidRequest),
                 null,
                 AdDirectoryFailureKind.NotConfigured,
-                cancellationToken);
+                                cancellationToken,
+                AdManagementApiMessageKeys.Common.NotConfigured);
         }
 
         AdUserAccountExpirationContext? loadedBeforeContext = null;
@@ -127,10 +127,10 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
                     out var beforeContext))
             {
                 return await FailAccountExpirationUpdateAsync(
-                    request,
+        request,
                     auditAction,
                     "AD user account expiration update failed.",
-                    UserNotFoundMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.NotFound),
                     BuildAccountExpirationFailureDiagnostic(
                         AccountExpirationLoadUserStep,
                         request.UserId,
@@ -139,7 +139,8 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
                         normalizedReasonOverride: AdUserUpdateNormalizedReasons.NoSuchObject),
                     null,
                     AdDirectoryFailureKind.NotFound,
-                    cancellationToken);
+                                        cancellationToken,
+                AdManagementApiMessageKeys.Users.NotFound);
             }
 
             loadedBeforeContext = beforeContext;
@@ -158,7 +159,7 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
                     request,
                     auditAction,
                     $"AD user account expiration update skipped (no changes): {beforeContext.SamAccountName}.",
-                    AccountExpirationUpdateSuccessMessage,
+                    string.Empty,
                     connection,
                     beforeContext,
                     beforeContext,
@@ -178,10 +179,10 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
                     out var afterContext))
             {
                 return await FailAccountExpirationUpdateAsync(
-                    request,
+        request,
                     auditAction,
                     "AD user account expiration update failed.",
-                    AccountExpirationUpdateFailedMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.AccountExpirationUpdateFailed),
                     BuildAccountExpirationFailureDiagnostic(
                         AccountExpirationReloadUserStep,
                         request.UserId,
@@ -191,14 +192,15 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
                         normalizedReasonOverride: AdUserUpdateNormalizedReasons.Unknown),
                     beforeContext,
                     AdDirectoryFailureKind.ConnectionFailed,
-                    cancellationToken);
+                                        cancellationToken,
+                AdManagementApiMessageKeys.Users.AccountExpirationUpdateFailed);
             }
 
             return await CompleteAccountExpirationUpdateAsync(
                 request,
                 auditAction,
                 $"AD user account expiration updated. User: {afterContext.SamAccountName}.",
-                AccountExpirationUpdateSuccessMessage,
+                string.Empty,
                 connection,
                 beforeContext,
                 afterContext,
@@ -206,11 +208,12 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
         }
         catch (LdapException ex)
         {
+            var (message, messageKey) = SanitizeAccountExpirationLdapError(ex);
             return await FailAccountExpirationUpdateAsync(
-                request,
+        request,
                 auditAction,
                 "AD user account expiration update failed.",
-                SanitizeAccountExpirationLdapError(ex),
+                message,
                 BuildAccountExpirationFailureDiagnostic(
                     AccountExpirationModifyStep,
                     request.UserId,
@@ -222,15 +225,16 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
                     ldapDiagnosticMessage: ex.Message),
                 loadedBeforeContext,
                 AdDirectoryFailureKind.ConnectionFailed,
-                cancellationToken);
+                cancellationToken,
+                messageKey);
         }
         catch (Exception)
         {
             return await FailAccountExpirationUpdateAsync(
-                request,
+        request,
                 auditAction,
                 "AD user account expiration update failed.",
-                AccountExpirationUpdateFailedMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.AccountExpirationUpdateFailed),
                 BuildAccountExpirationFailureDiagnostic(
                     AccountExpirationModifyStep,
                     request.UserId,
@@ -239,7 +243,8 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
                     normalizedReasonOverride: AdUserUpdateNormalizedReasons.Unknown),
                 loadedBeforeContext,
                 AdDirectoryFailureKind.ConnectionFailed,
-                cancellationToken);
+                                cancellationToken,
+                AdManagementApiMessageKeys.Users.AccountExpirationUpdateFailed);
         }
     }
 
@@ -279,10 +284,12 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
         string errorDiagnosticJson,
         AdUserAccountExpirationContext? beforeContext,
         AdDirectoryFailureKind? failureKind,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? messageKey = null,
+        IReadOnlyDictionary<string, object>? messageParams = null)
     {
         await WriteAccountExpirationUpdateFailureLogsSafelyAsync(
-            request,
+        request,
             auditAction,
             auditDescription,
             beforeContext,
@@ -296,7 +303,9 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
             beforeContext?.SamAccountName,
             beforeContext?.AccountExpiresDate,
             beforeContext?.NeverExpires ?? request.NeverExpires,
-            failureKind);
+            failureKind,
+            messageKey,
+            messageParams);
     }
 
     private async Task WriteAccountExpirationUpdateSuccessLogsSafelyAsync(
@@ -517,12 +526,15 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
         }
     }
 
-    private static string SanitizeAccountExpirationLdapError(LdapException exception)
+    private static (string Message, string MessageKey) SanitizeAccountExpirationLdapError(LdapException exception)
     {
-        var normalized = AdLdapErrorNormalizer.Normalize(exception.ErrorCode, exception.Message);
-        return string.Equals(normalized, AdLdapErrorNormalizer.UpdateUserFailedMessage, StringComparison.Ordinal)
-            ? AccountExpirationUpdateFailedMessage
-            : normalized;
+        var messageKey = AdLdapErrorNormalizer.NormalizeMessageKey(exception.ErrorCode, exception.Message);
+        if (string.Equals(messageKey, AdManagementApiMessageKeys.Ldap.UpdateUserFailed, StringComparison.Ordinal))
+        {
+            messageKey = AdManagementApiMessageKeys.Users.AccountExpirationUpdateFailed;
+        }
+
+        return (AdManagementApiMessages.Legacy(messageKey), messageKey);
     }
 
     private static bool TryLoadUserAccountExpirationContext(

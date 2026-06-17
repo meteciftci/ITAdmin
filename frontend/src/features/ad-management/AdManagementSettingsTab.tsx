@@ -107,7 +107,8 @@ export function AdManagementSettingsTab({ readOnly }: Props) {
       toast.error(
         getAdManagementSaveErrorMessage(
           error,
-          t("settings:adManagement.connection.messages.saveFailed"),
+          t,
+          "settings:adManagement.connection.messages.saveFailed",
         ),
       );
     },

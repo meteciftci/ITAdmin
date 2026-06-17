@@ -9,11 +9,6 @@ namespace SasPortal.Infrastructure.Services;
 
 public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
 {
-    private const string ManagerUpdateFailedMessage = "Manager güncellenemedi.";
-    private const string ManagerUpdateSuccessMessage = "Manager güncellendi.";
-    private const string ManagerNotFoundMessage = "Seçilen manager kullanıcısı bulunamadı.";
-    private const string ManagerSelfSelectionMessage = "Kullanıcı kendisinin manager'ı olamaz.";
-    private const string ManagerInvalidRequestMessage = "Geçersiz manager güncelleme isteği.";
     private const string ManagerUpdateSuccessLoggingFailedMessage =
         "AD user manager update succeeded but logging failed.";
     private const string ManagerUpdateFailureLoggingFailedMessage =
@@ -38,10 +33,10 @@ public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
         if (!request.ClearManager && request.ManagerUserId is null)
         {
             return await FailManagerUpdateAsync(
-                request,
+        request,
                 auditAction,
                 "AD user manager update failed.",
-                ManagerInvalidRequestMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.InvalidRequest),
                 BuildManagerFailureDiagnostic(
                     ManagerValidateStep,
                     request.UserId,
@@ -50,16 +45,17 @@ public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
                     normalizedReasonOverride: AdUserUpdateNormalizedReasons.InvalidRequest),
                 null,
                 AdDirectoryFailureKind.InvalidRequest,
-                cancellationToken);
+                                cancellationToken,
+                AdManagementApiMessageKeys.Common.InvalidRequest);
         }
 
         if (request.ManagerUserId == request.UserId)
         {
             return await FailManagerUpdateAsync(
-                request,
+        request,
                 auditAction,
                 "AD user manager update failed.",
-                ManagerSelfSelectionMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.ManagerSelfSelection),
                 BuildManagerFailureDiagnostic(
                     ManagerValidateStep,
                     request.UserId,
@@ -68,14 +64,15 @@ public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
                     normalizedReasonOverride: AdUserUpdateNormalizedReasons.InvalidRequest),
                 null,
                 AdDirectoryFailureKind.InvalidRequest,
-                cancellationToken);
+                                cancellationToken,
+                AdManagementApiMessageKeys.Users.ManagerSelfSelection);
         }
 
         var connectionResult = await ResolveConnectionAsync(cancellationToken);
         if (!connectionResult.IsSuccess || connectionResult.Context is null)
         {
             return await FailManagerUpdateAsync(
-                request,
+        request,
                 auditAction,
                 "AD user manager update failed.",
                 connectionResult.Message,
@@ -87,17 +84,19 @@ public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
                     normalizedReasonOverride: AdUserUpdateNormalizedReasons.ConnectionFailed),
                 null,
                 connectionResult.FailureKind,
-                cancellationToken);
+                cancellationToken,
+                connectionResult.MessageKey,
+                connectionResult.MessageParams);
         }
 
         var connection = connectionResult.Context.Connection;
         if (AdLdapUserSearchBases.ResolveDistinctSearchBases(connection).Count == 0)
         {
             return await FailManagerUpdateAsync(
-                request,
+        request,
                 auditAction,
                 "AD user manager update failed.",
-                AdManagementNotConfiguredMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
                 BuildManagerFailureDiagnostic(
                     ManagerValidateStep,
                     request.UserId,
@@ -106,7 +105,8 @@ public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
                     normalizedReasonOverride: AdUserUpdateNormalizedReasons.InvalidRequest),
                 null,
                 AdDirectoryFailureKind.NotConfigured,
-                cancellationToken);
+                                cancellationToken,
+                AdManagementApiMessageKeys.Common.NotConfigured);
         }
 
         AdUserManagerOperationContext? loadedBeforeContext = null;
@@ -121,10 +121,10 @@ public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
                     out var beforeContext))
             {
                 return await FailManagerUpdateAsync(
-                    request,
+        request,
                     auditAction,
                     "AD user manager update failed.",
-                    UserNotFoundMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.NotFound),
                     BuildManagerFailureDiagnostic(
                         ManagerLoadUserStep,
                         request.UserId,
@@ -133,7 +133,8 @@ public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
                         normalizedReasonOverride: AdUserUpdateNormalizedReasons.NoSuchObject),
                     null,
                     AdDirectoryFailureKind.NotFound,
-                    cancellationToken);
+                                        cancellationToken,
+                AdManagementApiMessageKeys.Users.NotFound);
             }
 
             loadedBeforeContext = beforeContext;
@@ -148,10 +149,10 @@ public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
                         out targetManager))
                 {
                     return await FailManagerUpdateAsync(
-                        request,
+        request,
                         auditAction,
                         "AD user manager update failed.",
-                        ManagerNotFoundMessage,
+                        AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.ManagerNotFound),
                         BuildManagerFailureDiagnostic(
                             ManagerLoadManagerStep,
                             request.UserId,
@@ -160,7 +161,8 @@ public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
                             normalizedReasonOverride: AdUserUpdateNormalizedReasons.NoSuchObject),
                         beforeContext,
                         AdDirectoryFailureKind.NotFound,
-                        cancellationToken);
+                                                cancellationToken,
+                AdManagementApiMessageKeys.Users.ManagerNotFound);
                 }
             }
 
@@ -174,7 +176,6 @@ public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
                     request,
                     auditAction,
                     $"AD user manager update skipped (no changes): {beforeContext.SamAccountName}.",
-                    ManagerUpdateSuccessMessage,
                     connection,
                     beforeContext,
                     beforeContext,
@@ -197,10 +198,10 @@ public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
                     out var afterContext))
             {
                 return await FailManagerUpdateAsync(
-                    request,
+        request,
                     auditAction,
                     "AD user manager update failed.",
-                    ManagerUpdateFailedMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.ManagerUpdateFailed),
                     BuildManagerFailureDiagnostic(
                         ManagerReloadUserStep,
                         request.UserId,
@@ -209,14 +210,14 @@ public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
                         normalizedReasonOverride: AdUserUpdateNormalizedReasons.Unknown),
                     beforeContext,
                     AdDirectoryFailureKind.ConnectionFailed,
-                    cancellationToken);
+                                        cancellationToken,
+                AdManagementApiMessageKeys.Users.ManagerUpdateFailed);
             }
 
             return await CompleteManagerUpdateAsync(
                 request,
                 auditAction,
                 $"AD user manager updated. User: {afterContext.SamAccountName}.",
-                ManagerUpdateSuccessMessage,
                 connection,
                 beforeContext,
                 afterContext,
@@ -224,11 +225,12 @@ public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
         }
         catch (LdapException ex)
         {
+            var (message, messageKey) = SanitizeManagerLdapError(ex);
             return await FailManagerUpdateAsync(
-                request,
+        request,
                 auditAction,
                 "AD user manager update failed.",
-                SanitizeManagerLdapError(ex),
+                message,
                 BuildManagerFailureDiagnostic(
                     ManagerModifyStep,
                     request.UserId,
@@ -240,15 +242,16 @@ public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
                     ldapDiagnosticMessage: ex.Message),
                 loadedBeforeContext,
                 AdDirectoryFailureKind.ConnectionFailed,
-                cancellationToken);
+                cancellationToken,
+                messageKey);
         }
         catch (Exception)
         {
             return await FailManagerUpdateAsync(
-                request,
+        request,
                 auditAction,
                 "AD user manager update failed.",
-                ManagerUpdateFailedMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.ManagerUpdateFailed),
                 BuildManagerFailureDiagnostic(
                     ManagerModifyStep,
                     request.UserId,
@@ -257,7 +260,8 @@ public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
                     normalizedReasonOverride: AdUserUpdateNormalizedReasons.Unknown),
                 loadedBeforeContext,
                 AdDirectoryFailureKind.ConnectionFailed,
-                cancellationToken);
+                                cancellationToken,
+                AdManagementApiMessageKeys.Users.ManagerUpdateFailed);
         }
     }
 
@@ -265,7 +269,6 @@ public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
         UpdateAdUserManagerRequest request,
         string auditAction,
         string auditDescription,
-        string message,
         AdManagementConnectionParameters connection,
         AdUserManagerOperationContext beforeContext,
         AdUserManagerOperationContext afterContext,
@@ -282,7 +285,7 @@ public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
 
         return new UpdateAdUserManagerResult(
             true,
-            message,
+            string.Empty,
             afterContext.UserId,
             afterContext.SamAccountName,
             afterContext.Manager?.DistinguishedName,
@@ -297,10 +300,12 @@ public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
         string errorDiagnosticJson,
         AdUserManagerOperationContext? beforeContext,
         AdDirectoryFailureKind? failureKind,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? messageKey = null,
+        IReadOnlyDictionary<string, object>? messageParams = null)
     {
         await WriteManagerUpdateFailureLogsSafelyAsync(
-            request,
+        request,
             auditAction,
             auditDescription,
             beforeContext,
@@ -314,7 +319,9 @@ public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
             beforeContext?.SamAccountName,
             beforeContext?.Manager?.DistinguishedName,
             beforeContext?.Manager?.DisplayName,
-            failureKind);
+            failureKind,
+            messageKey,
+            messageParams);
     }
 
     private async Task WriteManagerUpdateSuccessLogsSafelyAsync(
@@ -540,12 +547,15 @@ public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
         }
     }
 
-    private static string SanitizeManagerLdapError(LdapException exception)
+    private static (string Message, string MessageKey) SanitizeManagerLdapError(LdapException exception)
     {
-        var normalized = AdLdapErrorNormalizer.Normalize(exception.ErrorCode, exception.Message);
-        return string.Equals(normalized, AdLdapErrorNormalizer.UpdateUserFailedMessage, StringComparison.Ordinal)
-            ? ManagerUpdateFailedMessage
-            : normalized;
+        var messageKey = AdLdapErrorNormalizer.NormalizeMessageKey(exception.ErrorCode, exception.Message);
+        if (string.Equals(messageKey, AdManagementApiMessageKeys.Ldap.UpdateUserFailed, StringComparison.Ordinal))
+        {
+            messageKey = AdManagementApiMessageKeys.Users.ManagerUpdateFailed;
+        }
+
+        return (AdManagementApiMessages.Legacy(messageKey), messageKey);
     }
 
     private static bool TryLoadUserManagerContext(

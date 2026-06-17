@@ -22,7 +22,7 @@ import { AdUserRecentOperationsSection } from "@/features/ad-management/componen
 import { AdUserTechnicalInfoSection } from "@/features/ad-management/components/ad-user-detail/AdUserTechnicalInfoSection";
 import { AdManagementModuleStateGuard } from "@/features/ad-management/components/AdManagementModuleStateGuard";
 import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useAdManagementModuleStatus";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { getAdManagementApiErrorMessage } from "@/features/ad-management/ad-management-api-message";
 import { canAccess } from "@/lib/permissions";
 
 export function AdUserDetailPage() {
@@ -103,9 +103,10 @@ export function AdUserDetailPage() {
         {userQuery.isError && !isNotFound ? (
           <ErrorState
             title={t("adManagement:users.errors.detailFailed")}
-            description={getApiErrorMessage(
+            description={getAdManagementApiErrorMessage(
               userQuery.error,
-              t("adManagement:users.errors.detailFailed"),
+              t,
+              "adManagement:users.errors.detailFailed",
             )}
           />
         ) : null}

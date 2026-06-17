@@ -9,10 +9,6 @@ namespace SasPortal.Infrastructure.Services;
 
 public sealed partial class AdUserDirectoryService : IAdComputerDeleteService
 {
-    private const string ComputerDeleteSuccessMessage = "Bilgisayar hesabı silindi.";
-    private const string ComputerDeleteFailedMessage = "Bilgisayar hesabı silinemedi.";
-    private const string ComputerDeleteStillExistsMessage =
-        "Bilgisayar hesabı silme işlemi tamamlanamadı.";
     private const string ComputerDeleteSuccessLoggingFailedMessage =
         "AD computer delete operation succeeded but logging failed.";
     private const string ComputerDeleteFailureLoggingFailedMessage =
@@ -34,7 +30,7 @@ public sealed partial class AdUserDirectoryService : IAdComputerDeleteService
         if (!connectionResult.IsSuccess || connectionResult.Context is null)
         {
             return await FailComputerDeleteAsync(
-                request,
+        request,
                 connectionResult.Message,
                 connectionResult.Context?.Connection,
                 beforeState: null,
@@ -54,8 +50,8 @@ public sealed partial class AdUserDirectoryService : IAdComputerDeleteService
         if (string.IsNullOrWhiteSpace(computersSearchBase))
         {
             return await FailComputerDeleteAsync(
-                request,
-                AdManagementNotConfiguredMessage,
+        request,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
                 context.Connection,
                 beforeState: null,
                 AdDirectoryFailureKind.NotConfigured,
@@ -64,7 +60,7 @@ public sealed partial class AdUserDirectoryService : IAdComputerDeleteService
                     AdComputerDeleteSteps.LoadComputer,
                     request.ComputerId,
                     targetDistinguishedName: null,
-                    englishMessageOverride: AdManagementNotConfiguredMessage,
+                    englishMessageOverride: AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
                     normalizedReasonOverride: AdUserUpdateNormalizedReasons.InvalidRequest),
                 cancellationToken);
         }
@@ -82,8 +78,8 @@ public sealed partial class AdUserDirectoryService : IAdComputerDeleteService
                     out var beforeState))
             {
                 return await FailComputerDeleteAsync(
-                    request,
-                    ComputerNotFoundMessage,
+        request,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.NotFound),
                     context.Connection,
                     beforeState: null,
                     AdDirectoryFailureKind.NotFound,
@@ -92,7 +88,7 @@ public sealed partial class AdUserDirectoryService : IAdComputerDeleteService
                         AdComputerDeleteSteps.LoadComputer,
                         request.ComputerId,
                         targetDistinguishedName: null,
-                        englishMessageOverride: ComputerNotFoundMessage,
+                        englishMessageOverride: AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.NotFound),
                         normalizedReasonOverride: AdUserUpdateNormalizedReasons.NoSuchObject),
                     cancellationToken);
             }
@@ -105,7 +101,7 @@ public sealed partial class AdUserDirectoryService : IAdComputerDeleteService
                     beforeState.IsCriticalSystemObject))
             {
                 return await FailComputerDeleteAsync(
-                    request,
+        request,
                     AdComputerAccountGuard.ProtectedComputerDeleteMessage,
                     context.Connection,
                     beforeState,
@@ -127,7 +123,7 @@ public sealed partial class AdUserDirectoryService : IAdComputerDeleteService
             catch (DeleteComputerLdapException ex)
             {
                 return await FailComputerDeleteAsync(
-                    request,
+        request,
                     ex.UserMessage,
                     context.Connection,
                     beforeState,
@@ -152,8 +148,8 @@ public sealed partial class AdUserDirectoryService : IAdComputerDeleteService
                     out _))
             {
                 return await FailComputerDeleteAsync(
-                    request,
-                    ComputerDeleteStillExistsMessage,
+        request,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.DeleteFailed),
                     context.Connection,
                     beforeState,
                     AdDirectoryFailureKind.ConnectionFailed,
@@ -175,7 +171,7 @@ public sealed partial class AdUserDirectoryService : IAdComputerDeleteService
 
             return new DeleteAdComputerResult(
                 true,
-                ComputerDeleteSuccessMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.DeleteSuccess),
                 beforeState.ComputerId,
                 beforeState.Name ?? beforeState.SamAccountName,
                 beforeState.DistinguishedName);
@@ -183,7 +179,7 @@ public sealed partial class AdUserDirectoryService : IAdComputerDeleteService
         catch (LdapException ex)
         {
             return await FailComputerDeleteAsync(
-                request,
+        request,
                 SanitizeComputerDeleteLdapError(ex),
                 context.Connection,
                 loadedBeforeState,
@@ -207,8 +203,8 @@ public sealed partial class AdUserDirectoryService : IAdComputerDeleteService
                 request.ActorUserId);
 
             return await FailComputerDeleteAsync(
-                request,
-                ComputerDeleteFailedMessage,
+        request,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.DeleteFailed),
                 context.Connection,
                 loadedBeforeState,
                 AdDirectoryFailureKind.ConnectionFailed,
@@ -278,12 +274,14 @@ public sealed partial class AdUserDirectoryService : IAdComputerDeleteService
         AdComputerAccountState? beforeState,
         AdDirectoryFailureKind? failureKind,
         string operationDiagnosticJson,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? messageKey = null,
+        IReadOnlyDictionary<string, object>? messageParams = null)
     {
         try
         {
             await WriteComputerDeleteFailureLogsAsync(
-                request,
+        request,
                 connection,
                 beforeState,
                 operationDiagnosticJson,
@@ -444,8 +442,8 @@ public sealed partial class AdUserDirectoryService : IAdComputerDeleteService
 
     private static string SanitizeComputerDeleteLdapError(LdapException exception) =>
         string.IsNullOrWhiteSpace(exception.Message)
-            ? ComputerDeleteFailedMessage
-            : ComputerDeleteFailedMessage;
+            ? AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.DeleteFailed)
+            : AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.DeleteFailed);
 
     private sealed class DeleteComputerLdapException(
         string userMessage,

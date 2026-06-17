@@ -1,0 +1,155 @@
+namespace SasPortal.Application.Common.Constants;
+
+public static class AdManagementApiMessageKeys
+{
+    private const string Prefix = "apiMessages.";
+
+    public static class Common
+    {
+        public const string NotConfigured = Prefix + "common.notConfigured";
+        public const string ModuleDisabled = Prefix + "common.moduleDisabled";
+        public const string MissingServiceAccountPassword = Prefix + "common.missingServiceAccountPassword";
+        public const string ConnectionFailed = Prefix + "common.connectionFailed";
+        public const string InvalidRequest = Prefix + "common.invalidRequest";
+        public const string LdapsRequired = Prefix + "common.ldapsRequired";
+    }
+
+    public static class SettingsValidation
+    {
+        public const string MissingRequiredSettings = Prefix + "settingsValidation.missingRequiredSettings";
+        public const string ServiceAccountBindFailed = Prefix + "settingsValidation.serviceAccountBindFailed";
+        public const string DomainFqdnUnreachable = Prefix + "settingsValidation.domainFqdnUnreachable";
+        public const string BaseDnNotResolved = Prefix + "settingsValidation.baseDnNotResolved";
+        public const string DefaultNamingContextNotResolved = Prefix + "settingsValidation.defaultNamingContextNotResolved";
+        public const string UsersRootOuNotResolved = Prefix + "settingsValidation.usersRootOuNotResolved";
+        public const string DisabledUsersOuNotResolved = Prefix + "settingsValidation.disabledUsersOuNotResolved";
+        public const string GroupsSearchBaseNotResolved = Prefix + "settingsValidation.groupsSearchBaseNotResolved";
+        public const string ComputersSearchBaseNotResolved = Prefix + "settingsValidation.computersSearchBaseNotResolved";
+        public const string PreferredDcUnreachable = Prefix + "settingsValidation.preferredDcUnreachable";
+        public const string ValidationSucceeded = Prefix + "settingsValidation.validationSucceeded";
+    }
+
+    public static class Users
+    {
+        public const string NotFound = Prefix + "users.notFound";
+        public const string QueryFailed = Prefix + "users.queryFailed";
+        public const string CreateSuccess = Prefix + "users.createSuccess";
+        public const string CreateFailed = Prefix + "users.createFailed";
+        public const string UpdateFailed = Prefix + "users.updateFailed";
+        public const string OuMoveSuccess = Prefix + "users.ouMoveSuccess";
+        public const string OuMoveFailed = Prefix + "users.ouMoveFailed";
+        public const string TargetOuRequired = Prefix + "users.targetOuRequired";
+        public const string AlreadyInTargetOu = Prefix + "users.alreadyInTargetOu";
+        public const string InvalidTargetOu = Prefix + "users.invalidTargetOu";
+        public const string NamingConflictFailed = Prefix + "users.namingConflictFailed";
+        public const string MissingUpnSuffix = Prefix + "users.missingUpnSuffix";
+        public const string InvalidUpnSuffix = Prefix + "users.invalidUpnSuffix";
+        public const string ManagerUpdateFailed = Prefix + "users.managerUpdateFailed";
+        public const string ManagerSelfSelection = Prefix + "users.managerSelfSelection";
+        public const string ManagerNotFound = Prefix + "users.managerNotFound";
+        public const string AccountExpirationUpdateFailed = Prefix + "users.accountExpirationUpdateFailed";
+        public const string AccountExpirationInvalidDate = Prefix + "users.accountExpirationInvalidDate";
+        public const string AccountOperationFailed = Prefix + "users.accountOperationFailed";
+        public const string AccountEnabled = Prefix + "users.accountEnabled";
+        public const string AccountDisabled = Prefix + "users.accountDisabled";
+        public const string AccountUnlocked = Prefix + "users.accountUnlocked";
+        public const string AccountAlreadyEnabled = Prefix + "users.accountAlreadyEnabled";
+        public const string AccountAlreadyDisabled = Prefix + "users.accountAlreadyDisabled";
+        public const string AccountNotLocked = Prefix + "users.accountNotLocked";
+        public const string GroupOperationFailed = Prefix + "users.groupOperationFailed";
+        public const string GroupMembershipAdded = Prefix + "users.groupMembershipAdded";
+        public const string GroupMembershipRemoved = Prefix + "users.groupMembershipRemoved";
+        public const string AlreadyInGroup = Prefix + "users.alreadyInGroup";
+        public const string NotInGroup = Prefix + "users.notInGroup";
+        public const string EffectiveGroupsFailed = Prefix + "users.effectiveGroupsFailed";
+        public const string InvalidUserId = Prefix + "users.invalidUserId";
+    }
+
+    public static class Groups
+    {
+        public const string NotFound = Prefix + "groups.notFound";
+        public const string QueryFailed = Prefix + "groups.queryFailed";
+        public const string CreateSuccess = Prefix + "groups.createSuccess";
+        public const string CreateFailed = Prefix + "groups.createFailed";
+        public const string UpdateFailed = Prefix + "groups.updateFailed";
+        public const string DeleteSuccess = Prefix + "groups.deleteSuccess";
+        public const string DeleteFailed = Prefix + "groups.deleteFailed";
+        public const string OuMoveSuccess = Prefix + "groups.ouMoveSuccess";
+        public const string OuMoveFailed = Prefix + "groups.ouMoveFailed";
+        public const string TargetOuRequired = Prefix + "groups.targetOuRequired";
+        public const string AlreadyInTargetOu = Prefix + "groups.alreadyInTargetOu";
+        public const string MemberOperationFailed = Prefix + "groups.memberOperationFailed";
+        public const string MemberAdded = Prefix + "groups.memberAdded";
+        public const string MemberRemoved = Prefix + "groups.memberRemoved";
+        public const string MemberAlreadyInGroup = Prefix + "groups.memberAlreadyInGroup";
+        public const string MemberNotInGroup = Prefix + "groups.memberNotInGroup";
+        public const string SelfMembership = Prefix + "groups.selfMembership";
+        public const string InvalidGroupId = Prefix + "groups.invalidGroupId";
+        public const string GroupDnRequired = Prefix + "groups.groupDnRequired";
+    }
+
+    public static class Computers
+    {
+        public const string NotFound = Prefix + "computers.notFound";
+        public const string QueryFailed = Prefix + "computers.queryFailed";
+        public const string UpdateFailed = Prefix + "computers.updateFailed";
+        public const string DeleteSuccess = Prefix + "computers.deleteSuccess";
+        public const string DeleteFailed = Prefix + "computers.deleteFailed";
+        public const string OuMoveSuccess = Prefix + "computers.ouMoveSuccess";
+        public const string OuMoveFailed = Prefix + "computers.ouMoveFailed";
+        public const string TargetOuRequired = Prefix + "computers.targetOuRequired";
+        public const string AlreadyInTargetOu = Prefix + "computers.alreadyInTargetOu";
+        public const string AccountOperationFailed = Prefix + "computers.accountOperationFailed";
+        public const string AccountEnabled = Prefix + "computers.accountEnabled";
+        public const string AccountDisabled = Prefix + "computers.accountDisabled";
+        public const string GroupOperationFailed = Prefix + "computers.groupOperationFailed";
+        public const string GroupMembershipAdded = Prefix + "computers.groupMembershipAdded";
+        public const string GroupMembershipRemoved = Prefix + "computers.groupMembershipRemoved";
+        public const string AlreadyInGroup = Prefix + "computers.alreadyInGroup";
+        public const string NotInGroup = Prefix + "computers.notInGroup";
+        public const string ProtectedDelete = Prefix + "computers.protectedDelete";
+        public const string ProtectedWrite = Prefix + "computers.protectedWrite";
+        public const string InvalidComputerId = Prefix + "computers.invalidComputerId";
+    }
+
+    public static class DeletedObjects
+    {
+        public const string NotFound = Prefix + "deletedObjects.notFound";
+        public const string QueryFailed = Prefix + "deletedObjects.queryFailed";
+        public const string AccessDenied = Prefix + "deletedObjects.accessDenied";
+        public const string RestoreSuccess = Prefix + "deletedObjects.restoreSuccess";
+        public const string RestoreFailed = Prefix + "deletedObjects.restoreFailed";
+        public const string RestoreUnsupportedType = Prefix + "deletedObjects.restoreUnsupportedType";
+        public const string RestoreMissingTarget = Prefix + "deletedObjects.restoreMissingTarget";
+        public const string RestoreTargetNotFound = Prefix + "deletedObjects.restoreTargetNotFound";
+        public const string RestoreConflict = Prefix + "deletedObjects.restoreConflict";
+        public const string RestorePowerShellModuleMissing = Prefix + "deletedObjects.restorePowerShellModuleMissing";
+        public const string RestoreParentNotFound = Prefix + "deletedObjects.restoreParentNotFound";
+        public const string RestoreTargetOuNotFound = Prefix + "deletedObjects.restoreTargetOuNotFound";
+    }
+
+    public static class OperationFailures
+    {
+        public const string PreflightSamAccountNameDuplicate = Prefix + "operationFailures.preflightSamAccountNameDuplicate";
+        public const string PreflightUpnDuplicate = Prefix + "operationFailures.preflightUpnDuplicate";
+        public const string PreflightCnDuplicate = Prefix + "operationFailures.preflightCnDuplicate";
+        public const string PreflightGroupSamAccountNameDuplicate = Prefix + "operationFailures.preflightGroupSamAccountNameDuplicate";
+        public const string PreflightGroupCnDuplicate = Prefix + "operationFailures.preflightGroupCnDuplicate";
+    }
+
+    public static class Ldap
+    {
+        public const string EntryAlreadyExists = Prefix + "ldap.entryAlreadyExists";
+        public const string ConstraintViolation = Prefix + "ldap.constraintViolation";
+        public const string InvalidDnSyntax = Prefix + "ldap.invalidDnSyntax";
+        public const string InsufficientAccessRights = Prefix + "ldap.insufficientAccessRights";
+        public const string UnwillingToPerform = Prefix + "ldap.unwillingToPerform";
+        public const string NoSuchObject = Prefix + "ldap.noSuchObject";
+        public const string ConnectionFailed = Prefix + "ldap.connectionFailed";
+        public const string UpdateUserFailed = Prefix + "ldap.updateUserFailed";
+        public const string UpdateGroupFailed = Prefix + "ldap.updateGroupFailed";
+        public const string CreateGroupFailed = Prefix + "ldap.createGroupFailed";
+        public const string DeleteGroupFailed = Prefix + "ldap.deleteGroupFailed";
+        public const string GroupNotFound = Prefix + "ldap.groupNotFound";
+    }
+}

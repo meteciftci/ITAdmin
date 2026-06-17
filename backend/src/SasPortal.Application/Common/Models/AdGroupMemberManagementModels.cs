@@ -31,7 +31,9 @@ public sealed record AdGroupMembersListResult(
     bool IsSuccess,
     string Message,
     AdGroupMembersPage? Page,
-    AdDirectoryFailureKind? FailureKind = null);
+    AdDirectoryFailureKind? FailureKind = null,
+    string? MessageKey = null,
+    IReadOnlyDictionary<string, object>? MessageParams = null);
 
 public sealed record AdGroupMemberCandidatesQuery(
     Guid GroupId,
@@ -57,7 +59,9 @@ public sealed record AdGroupMemberCandidatesResult(
     bool IsSuccess,
     string Message,
     IReadOnlyList<AdGroupMemberCandidateItem>? Items,
-    AdDirectoryFailureKind? FailureKind = null);
+    AdDirectoryFailureKind? FailureKind = null,
+    string? MessageKey = null,
+    IReadOnlyDictionary<string, object>? MessageParams = null);
 
 public sealed record AddAdGroupMemberRequest(
     Guid GroupId,
@@ -84,4 +88,6 @@ public sealed record AdGroupMemberOperationResult(
     string? GroupName,
     string? MemberDistinguishedName,
     string? MemberName,
-    AdDirectoryFailureKind? FailureKind = null);
+    AdDirectoryFailureKind? FailureKind = null,
+    string? MessageKey = null,
+    IReadOnlyDictionary<string, object>? MessageParams = null);

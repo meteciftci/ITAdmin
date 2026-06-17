@@ -2,14 +2,13 @@ using System.DirectoryServices.Protocols;
 using Microsoft.Extensions.Logging;
 using SasPortal.Application.Abstractions.Services;
 using SasPortal.Application.Common.AdManagement;
+using SasPortal.Application.Common.Constants;
 using SasPortal.Application.Common.Models;
 
 namespace SasPortal.Infrastructure.Services;
 
 public sealed partial class AdUserDirectoryService : IAdComputerDirectoryService
 {
-    private const string ComputerNotFoundMessage = "AD bilgisayarı bulunamadı.";
-    private const string ComputersQueryFailedMessage = "AD bilgisayarları okunamadı.";
     private const int ComputerOuSearchDefaultPageSize = 50;
     private const int ComputerOuSearchMaxPageSize = 200;
 
@@ -88,7 +87,9 @@ public sealed partial class AdUserDirectoryService : IAdComputerDirectoryService
                 false,
                 connectionResult.Message,
                 null,
-                connectionResult.FailureKind);
+                connectionResult.FailureKind,
+                connectionResult.MessageKey,
+                connectionResult.MessageParams);
         }
 
         var computersSearchBase = AdLdapComputerSearchBases.ResolveRequiredComputersSearchBase(
@@ -97,9 +98,10 @@ public sealed partial class AdUserDirectoryService : IAdComputerDirectoryService
         {
             return new AdComputerDirectoryListResult(
                 false,
-                AdManagementNotConfiguredMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
                 null,
-                AdDirectoryFailureKind.NotConfigured);
+                AdDirectoryFailureKind.NotConfigured,
+                AdManagementApiMessageKeys.Common.NotConfigured);
         }
 
         try
@@ -181,7 +183,9 @@ public sealed partial class AdUserDirectoryService : IAdComputerDirectoryService
                 false,
                 connectionResult.Message,
                 null,
-                connectionResult.FailureKind);
+                connectionResult.FailureKind,
+                connectionResult.MessageKey,
+                connectionResult.MessageParams);
         }
 
         var computersSearchBase = AdLdapComputerSearchBases.ResolveRequiredComputersSearchBase(
@@ -190,9 +194,10 @@ public sealed partial class AdUserDirectoryService : IAdComputerDirectoryService
         {
             return new AdComputerOperatingSystemOptionsResult(
                 false,
-                AdManagementNotConfiguredMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
                 null,
-                AdDirectoryFailureKind.NotConfigured);
+                AdDirectoryFailureKind.NotConfigured,
+                AdManagementApiMessageKeys.Common.NotConfigured);
         }
 
         try
@@ -293,7 +298,9 @@ public sealed partial class AdUserDirectoryService : IAdComputerDirectoryService
                 false,
                 connectionResult.Message,
                 null,
-                connectionResult.FailureKind);
+                connectionResult.FailureKind,
+                connectionResult.MessageKey,
+                connectionResult.MessageParams);
         }
 
         var computersSearchBase = AdLdapComputerSearchBases.ResolveRequiredComputersSearchBase(
@@ -302,9 +309,10 @@ public sealed partial class AdUserDirectoryService : IAdComputerDirectoryService
         {
             return new AdComputerDirectoryDetailResult(
                 false,
-                AdManagementNotConfiguredMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
                 null,
-                AdDirectoryFailureKind.NotConfigured);
+                AdDirectoryFailureKind.NotConfigured,
+                AdManagementApiMessageKeys.Common.NotConfigured);
         }
 
         try
@@ -331,18 +339,20 @@ public sealed partial class AdUserDirectoryService : IAdComputerDirectoryService
             {
                 return new AdComputerDirectoryDetailResult(
                     false,
-                    ComputerNotFoundMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.NotFound),
                     null,
-                    AdDirectoryFailureKind.NotFound);
+                    AdDirectoryFailureKind.NotFound,
+                    AdManagementApiMessageKeys.Computers.NotFound);
             }
 
             if (!TryMapComputerDetail(ldapConnection, response.Entries[0], out var detail))
             {
                 return new AdComputerDirectoryDetailResult(
                     false,
-                    ComputerNotFoundMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.NotFound),
                     null,
-                    AdDirectoryFailureKind.NotFound);
+                    AdDirectoryFailureKind.NotFound,
+                    AdManagementApiMessageKeys.Computers.NotFound);
             }
 
             detail = TryEnrichComputerDetailWithResolvedManagedBy(ldapConnection, detail);
@@ -374,7 +384,9 @@ public sealed partial class AdUserDirectoryService : IAdComputerDirectoryService
                 false,
                 connectionResult.Message,
                 null,
-                connectionResult.FailureKind);
+                connectionResult.FailureKind,
+                connectionResult.MessageKey,
+                connectionResult.MessageParams);
         }
 
         var computersSearchBase = AdLdapComputerSearchBases.ResolveRequiredComputersSearchBase(
@@ -383,9 +395,10 @@ public sealed partial class AdUserDirectoryService : IAdComputerDirectoryService
         {
             return new AdOrganizationalUnitSearchResult(
                 false,
-                AdManagementNotConfiguredMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
                 null,
-                AdDirectoryFailureKind.NotConfigured);
+                AdDirectoryFailureKind.NotConfigured,
+                AdManagementApiMessageKeys.Common.NotConfigured);
         }
 
         try
@@ -631,14 +644,34 @@ public sealed partial class AdUserDirectoryService : IAdComputerDirectoryService
     }
 
     private static AdComputerDirectoryListResult ComputerListConnectionFailed() =>
-        new(false, ComputersQueryFailedMessage, null, AdDirectoryFailureKind.ConnectionFailed);
+        new(
+            false,
+            AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.QueryFailed),
+            null,
+            AdDirectoryFailureKind.ConnectionFailed,
+            AdManagementApiMessageKeys.Computers.QueryFailed);
 
     private static AdComputerDirectoryDetailResult ComputerDetailConnectionFailed() =>
-        new(false, ComputersQueryFailedMessage, null, AdDirectoryFailureKind.ConnectionFailed);
+        new(
+            false,
+            AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.QueryFailed),
+            null,
+            AdDirectoryFailureKind.ConnectionFailed,
+            AdManagementApiMessageKeys.Computers.QueryFailed);
 
     private static AdOrganizationalUnitSearchResult ComputerOuConnectionFailed() =>
-        new(false, ComputersQueryFailedMessage, null, AdDirectoryFailureKind.ConnectionFailed);
+        new(
+            false,
+            AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.QueryFailed),
+            null,
+            AdDirectoryFailureKind.ConnectionFailed,
+            AdManagementApiMessageKeys.Computers.QueryFailed);
 
     private static AdComputerOperatingSystemOptionsResult ComputerOperatingSystemOptionsConnectionFailed() =>
-        new(false, ComputersQueryFailedMessage, null, AdDirectoryFailureKind.ConnectionFailed);
+        new(
+            false,
+            AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.QueryFailed),
+            null,
+            AdDirectoryFailureKind.ConnectionFailed,
+            AdManagementApiMessageKeys.Computers.QueryFailed);
 }

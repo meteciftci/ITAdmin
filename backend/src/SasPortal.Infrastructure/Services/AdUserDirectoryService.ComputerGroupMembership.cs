@@ -9,14 +9,6 @@ namespace SasPortal.Infrastructure.Services;
 
 public sealed partial class AdUserDirectoryService : IAdComputerGroupMembershipService
 {
-    private const string ComputerGroupOperationFailedMessage = "Grup üyeliği işlemi başarısız oldu.";
-    private const string ComputerGroupSearchFailedMessage = "AD grupları okunamadı.";
-    private const string InvalidComputerGroupDnMessage = "Geçersiz grup kimliği.";
-    private const string ComputerGroupNotFoundMessage = "AD grubu bulunamadı.";
-    private const string ComputerAlreadyInGroupMessage = "Bilgisayar bu gruba zaten üye.";
-    private const string ComputerNotInGroupMessage = "Bilgisayar bu grupta değil.";
-    private const string ComputerGroupMembershipAddedMessage = "Bilgisayar gruba eklendi.";
-    private const string ComputerGroupMembershipRemovedMessage = "Bilgisayar gruptan çıkarıldı.";
     private const int ComputerGroupSearchDefaultLimit = 50;
     private const int ComputerGroupSearchMaxLimit = 50;
     private const int ComputerGroupMembershipServerLogDnMaxLength = 250;
@@ -92,7 +84,7 @@ public sealed partial class AdUserDirectoryService : IAdComputerGroupMembershipS
         var connectionResult = await ResolveConnectionAsync(cancellationToken);
         if (!connectionResult.IsSuccess || connectionResult.Context is null)
         {
-            return ConnectionFailedComputerGroupMembership(request.ComputerId, connectionResult.Message, connectionResult.FailureKind);
+            return ConnectionFailedComputerGroupMembership(request.ComputerId, connectionResult.Message, connectionResult.FailureKind, connectionResult.MessageKey, connectionResult.MessageParams);
         }
 
         var computersSearchBase = AdLdapComputerSearchBases.ResolveRequiredComputersSearchBase(
@@ -101,8 +93,9 @@ public sealed partial class AdUserDirectoryService : IAdComputerGroupMembershipS
         {
             return ConnectionFailedComputerGroupMembership(
                 request.ComputerId,
-                AdManagementNotConfiguredMessage,
-                AdDirectoryFailureKind.NotConfigured);
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
+                AdDirectoryFailureKind.NotConfigured,
+                AdManagementApiMessageKeys.Common.NotConfigured);
         }
 
         try
@@ -116,7 +109,7 @@ public sealed partial class AdUserDirectoryService : IAdComputerGroupMembershipS
             {
                 return new AdComputerGroupMembershipResult(
                     false,
-                    ComputerNotFoundMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.NotFound),
                     request.ComputerId.ToString("D"),
                     null,
                     null,
@@ -141,15 +134,17 @@ public sealed partial class AdUserDirectoryService : IAdComputerGroupMembershipS
         {
             return ConnectionFailedComputerGroupMembership(
                 request.ComputerId,
-                DirectoryQueryFailedMessage,
-                AdDirectoryFailureKind.ConnectionFailed);
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.QueryFailed),
+                AdDirectoryFailureKind.ConnectionFailed,
+                AdManagementApiMessageKeys.Groups.QueryFailed);
         }
         catch (Exception)
         {
             return ConnectionFailedComputerGroupMembership(
                 request.ComputerId,
-                DirectoryQueryFailedMessage,
-                AdDirectoryFailureKind.ConnectionFailed);
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.QueryFailed),
+                AdDirectoryFailureKind.ConnectionFailed,
+                AdManagementApiMessageKeys.Groups.QueryFailed);
         }
     }
 
@@ -169,7 +164,9 @@ public sealed partial class AdUserDirectoryService : IAdComputerGroupMembershipS
                 false,
                 connectionResult.Message,
                 null,
-                connectionResult.FailureKind);
+                connectionResult.FailureKind,
+                connectionResult.MessageKey,
+                connectionResult.MessageParams);
         }
 
         var groupsSearchBase = ResolveRequiredGroupsSearchBase(connectionResult.Context.Connection);
@@ -177,7 +174,7 @@ public sealed partial class AdUserDirectoryService : IAdComputerGroupMembershipS
         {
             return new AdComputerGroupSearchResult(
                 false,
-                AdManagementNotConfiguredMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
                 null,
                 AdDirectoryFailureKind.NotConfigured);
         }
@@ -188,7 +185,7 @@ public sealed partial class AdUserDirectoryService : IAdComputerGroupMembershipS
         {
             return new AdComputerGroupSearchResult(
                 false,
-                AdManagementNotConfiguredMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
                 null,
                 AdDirectoryFailureKind.NotConfigured);
         }
@@ -275,11 +272,11 @@ public sealed partial class AdUserDirectoryService : IAdComputerGroupMembershipS
         if (string.IsNullOrWhiteSpace(groupDn))
         {
             return await FailComputerGroupOperationAsync(
-                request,
+        request,
                 operationType,
                 auditAction,
                 add ? "AD computer added to group failed." : "AD computer removed from group failed.",
-                InvalidComputerGroupDnMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.GroupDnRequired),
                 BuildComputerGroupFailureDiagnostic(
                     operationType,
                     ComputerGroupMembershipValidateStep,
@@ -298,7 +295,7 @@ public sealed partial class AdUserDirectoryService : IAdComputerGroupMembershipS
         if (!connectionResult.IsSuccess || connectionResult.Context is null)
         {
             return await FailComputerGroupOperationAsync(
-                request,
+        request,
                 operationType,
                 auditAction,
                 add ? "AD computer added to group failed." : "AD computer removed from group failed.",
@@ -322,11 +319,11 @@ public sealed partial class AdUserDirectoryService : IAdComputerGroupMembershipS
         if (string.IsNullOrWhiteSpace(computersSearchBase))
         {
             return await FailComputerGroupOperationAsync(
-                request,
+        request,
                 operationType,
                 auditAction,
                 add ? "AD computer added to group failed." : "AD computer removed from group failed.",
-                AdManagementNotConfiguredMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
                 BuildComputerGroupFailureDiagnostic(
                     operationType,
                     ComputerGroupMembershipValidateStep,
@@ -351,11 +348,11 @@ public sealed partial class AdUserDirectoryService : IAdComputerGroupMembershipS
                     out var computerContext))
             {
                 return await FailComputerGroupOperationAsync(
-                    request,
+        request,
                     operationType,
                     auditAction,
                     add ? "AD computer added to group failed." : "AD computer removed from group failed.",
-                    ComputerNotFoundMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.NotFound),
                     BuildComputerGroupFailureDiagnostic(
                         operationType,
                         ComputerGroupMembershipLoadComputerStep,
@@ -376,7 +373,7 @@ public sealed partial class AdUserDirectoryService : IAdComputerGroupMembershipS
                     computerContext.IsCriticalSystemObject))
             {
                 return await FailComputerGroupOperationAsync(
-                    request,
+        request,
                     operationType,
                     auditAction,
                     add ? "AD computer added to group failed." : "AD computer removed from group failed.",
@@ -398,11 +395,11 @@ public sealed partial class AdUserDirectoryService : IAdComputerGroupMembershipS
             if (!TryLoadSecurityGroupByDn(ldapConnection, groupDn, out var groupInfo))
             {
                 return await FailComputerGroupOperationAsync(
-                    request,
+        request,
                     operationType,
                     auditAction,
                     add ? "AD computer added to group failed." : "AD computer removed from group failed.",
-                    ComputerGroupNotFoundMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.NotFound),
                     BuildComputerGroupFailureDiagnostic(
                         operationType,
                         ComputerGroupMembershipLoadGroupStep,
@@ -427,7 +424,7 @@ public sealed partial class AdUserDirectoryService : IAdComputerGroupMembershipS
                     operationType,
                     auditAction,
                     $"AD computer added to group. Computer: {computerContext.SamAccountName}. Group: {groupInfo.Name}.",
-                    ComputerAlreadyInGroupMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.AlreadyInGroup),
                     connectionResult.Context.Connection,
                     beforeContext,
                     computerContext,
@@ -442,7 +439,7 @@ public sealed partial class AdUserDirectoryService : IAdComputerGroupMembershipS
                     operationType,
                     auditAction,
                     $"AD computer removed from group. Computer: {computerContext.SamAccountName}. Group: {groupInfo.Name}.",
-                    ComputerNotInGroupMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.NotInGroup),
                     connectionResult.Context.Connection,
                     beforeContext,
                     computerContext,
@@ -467,11 +464,11 @@ public sealed partial class AdUserDirectoryService : IAdComputerGroupMembershipS
                     out var afterContext))
             {
                 return await FailComputerGroupOperationAsync(
-                    request,
+        request,
                     operationType,
                     auditAction,
                     add ? "AD computer added to group failed." : "AD computer removed from group failed.",
-                    ComputerGroupOperationFailedMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.GroupOperationFailed),
                     BuildComputerGroupFailureDiagnostic(
                         operationType,
                         ComputerGroupMembershipModifyStep,
@@ -487,8 +484,8 @@ public sealed partial class AdUserDirectoryService : IAdComputerGroupMembershipS
             }
 
             var successMessage = add
-                ? ComputerGroupMembershipAddedMessage
-                : ComputerGroupMembershipRemovedMessage;
+                ? AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.GroupMembershipAdded)
+                : AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.GroupMembershipRemoved);
             var auditDescription = add
                 ? $"AD computer added to group. Computer: {computerContext.SamAccountName}. Group: {groupInfo.Name}."
                 : $"AD computer removed from group. Computer: {computerContext.SamAccountName}. Group: {groupInfo.Name}.";
@@ -508,7 +505,7 @@ public sealed partial class AdUserDirectoryService : IAdComputerGroupMembershipS
         catch (LdapException ex)
         {
             return await FailComputerGroupOperationAsync(
-                request,
+        request,
                 operationType,
                 auditAction,
                 add ? "AD computer added to group failed." : "AD computer removed from group failed.",
@@ -530,11 +527,11 @@ public sealed partial class AdUserDirectoryService : IAdComputerGroupMembershipS
         catch (Exception)
         {
             return await FailComputerGroupOperationAsync(
-                request,
+        request,
                 operationType,
                 auditAction,
                 add ? "AD computer added to group failed." : "AD computer removed from group failed.",
-                ComputerGroupOperationFailedMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.GroupOperationFailed),
                 BuildComputerGroupFailureDiagnostic(
                     operationType,
                     ComputerGroupMembershipModifyStep,
@@ -596,10 +593,12 @@ public sealed partial class AdUserDirectoryService : IAdComputerGroupMembershipS
         AdComputerSecurityGroupInfo? groupInfo,
         string? groupDn,
         AdDirectoryFailureKind? failureKind,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? messageKey = null,
+        IReadOnlyDictionary<string, object>? messageParams = null)
     {
         await WriteComputerGroupFailureLogsSafelyAsync(
-            request,
+        request,
             operationType,
             auditAction,
             auditDescription,
@@ -1107,7 +1106,9 @@ public sealed partial class AdUserDirectoryService : IAdComputerGroupMembershipS
     private static AdComputerGroupMembershipResult ConnectionFailedComputerGroupMembership(
         Guid computerId,
         string message,
-        AdDirectoryFailureKind? failureKind) =>
+        AdDirectoryFailureKind? failureKind,
+        string? messageKey = null,
+        IReadOnlyDictionary<string, object>? messageParams = null) =>
         new(
             false,
             message,
@@ -1117,16 +1118,18 @@ public sealed partial class AdUserDirectoryService : IAdComputerGroupMembershipS
             null,
             null,
             null,
-            failureKind);
+            failureKind,
+            messageKey,
+            messageParams);
 
     private static AdComputerGroupSearchResult ComputerGroupSearchConnectionFailed() =>
-        new(false, ComputerGroupSearchFailedMessage, null, AdDirectoryFailureKind.ConnectionFailed);
+        new(false, AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.QueryFailed), null, AdDirectoryFailureKind.ConnectionFailed);
 
     private static string SanitizeComputerGroupLdapError(LdapException exception) =>
         string.IsNullOrWhiteSpace(exception.Message)
             || exception.Message.Contains("ldap", StringComparison.OrdinalIgnoreCase)
-            ? ComputerGroupOperationFailedMessage
-            : ComputerGroupOperationFailedMessage;
+            ? AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.GroupOperationFailed)
+            : AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.GroupOperationFailed);
 
     private sealed class ComputerGroupMembershipItemComparer : IComparer<AdComputerGroupMembershipItem>
     {

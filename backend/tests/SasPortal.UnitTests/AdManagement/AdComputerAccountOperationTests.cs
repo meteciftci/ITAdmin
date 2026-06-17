@@ -74,7 +74,7 @@ public sealed class AdComputerAccountOperationTests
                 "backend/src/SasPortal.Api/Controllers/AdManagementController.cs"));
 
         Assert.Contains("ExecuteComputerAccountOperationAsync", source, StringComparison.Ordinal);
-        Assert.Contains("Geçersiz bilgisayar kimliği.", source, StringComparison.Ordinal);
+        Assert.Contains("AdManagementApiMessageKeys.Computers.InvalidComputerId", source, StringComparison.Ordinal);
         Assert.Contains("!Guid.TryParse(id, out var objectGuid)", source, StringComparison.Ordinal);
         Assert.Contains("return BadRequest(new AdComputerAccountOperationResponse(", source, StringComparison.Ordinal);
     }

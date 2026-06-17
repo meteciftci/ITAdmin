@@ -221,6 +221,8 @@ public sealed class AdUserDirectoryServiceGroupMembershipLoggingTests
         "CN=VPN Users,DC=example,DC=com",
         AdDirectoryFailureKind.NotFound,
         CancellationToken.None,
+        null,
+        null,
       ])!;
 
     return await task;

@@ -26,7 +26,7 @@ import { AdUserDetailField } from "@/features/ad-management/components/ad-user-d
 import { AdManagementModuleStateGuard } from "@/features/ad-management/components/AdManagementModuleStateGuard";
 import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useAdManagementModuleStatus";
 import type { AdComputerMemberOfItem } from "@/features/ad-management/types";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { getAdManagementApiErrorMessage } from "@/features/ad-management/ad-management-api-message";
 import { cn } from "@/lib/utils";
 
 function MemberOfList({
@@ -318,7 +318,11 @@ export function AdComputerDetailPage() {
         {computerQuery.isError && !isNotFound ? (
           <ErrorState
             title={t("errors:generic.title")}
-            description={getApiErrorMessage(computerQuery.error, t("errors:generic.description"))}
+            description={getAdManagementApiErrorMessage(
+              computerQuery.error,
+              t,
+              "errors:generic.description",
+            )}
           />
         ) : null}
 

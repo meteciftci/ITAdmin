@@ -40,7 +40,10 @@ import { AdDeletedObjectRestoreReadinessPanel } from "@/features/ad-management/c
 import { AdOuSearchCombobox } from "@/features/ad-management/components/AdOuSearchCombobox";
 import { AdManagementModuleStateGuard } from "@/features/ad-management/components/AdManagementModuleStateGuard";
 import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useAdManagementModuleStatus";
-import { getApiErrorMessage } from "@/lib/api-error";
+import {
+  getAdManagementApiErrorMessage,
+  resolveAdManagementApiMessage,
+} from "@/features/ad-management/ad-management-api-message";
 import { cn } from "@/lib/utils";
 
 function SummaryField({
@@ -156,17 +159,35 @@ export function AdDeletedObjectRestorePage() {
     },
     onSuccess: async (response) => {
       if (!response.success) {
-        toast.error(response.message || t("adManagement:deletedObjects.errors.restoreFailed"));
+        toast.error(
+          resolveAdManagementApiMessage(
+            t,
+            response,
+            "adManagement:deletedObjects.errors.restoreFailed",
+          ),
+        );
         await invalidateAdManagementDeletedObjectRestoreQueries(queryClient);
         return;
       }
 
       await invalidateAdManagementDeletedObjectRestoreQueries(queryClient);
-      toast.success(response.message || t("adManagement:deletedObjects.success.restore"));
+      toast.success(
+        resolveAdManagementApiMessage(
+          t,
+          response,
+          "adManagement:deletedObjects.success.restore",
+        ),
+      );
       navigate(returnPath);
     },
     onError: async (error) => {
-      toast.error(getApiErrorMessage(error, t("adManagement:deletedObjects.errors.restoreFailed")));
+      toast.error(
+        getAdManagementApiErrorMessage(
+          error,
+          t,
+          "adManagement:deletedObjects.errors.restoreFailed",
+        ),
+      );
       await invalidateAdManagementDeletedObjectRestoreQueries(queryClient);
     },
   });
@@ -220,9 +241,10 @@ export function AdDeletedObjectRestorePage() {
                 ? t("adManagement:deletedObjects.errors.notFound")
                 : t("adManagement:deletedObjects.errors.detailFailed")
             }
-            description={getApiErrorMessage(
+            description={getAdManagementApiErrorMessage(
               detailQuery.error,
-              t("adManagement:deletedObjects.errors.detailFailed"),
+              t,
+              "adManagement:deletedObjects.errors.detailFailed",
             )}
             retry={
               <Link to={returnPath} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>

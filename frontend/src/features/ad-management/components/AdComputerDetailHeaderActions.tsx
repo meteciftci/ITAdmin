@@ -33,7 +33,10 @@ import type {
   AdComputerDetail,
 } from "@/features/ad-management/types";
 import { getAdComputerPrimaryLabel } from "@/features/ad-management/ad-computer-display-labels";
-import { getApiErrorMessage } from "@/lib/api-error";
+import {
+  getAdManagementApiErrorMessage,
+  resolveAdManagementApiMessage,
+} from "@/features/ad-management/ad-management-api-message";
 
 type Props = {
   computer: AdComputerDetail;
@@ -87,30 +90,31 @@ export function AdComputerDetailHeaderActions({
     },
     onSuccess: async (response, action) => {
       if (!response.success) {
-        toast.error(
+        const fallbackKey =
           action === "enable"
-            ? t("adManagement:computers.messages.enableFailed")
-            : t("adManagement:computers.messages.disableFailed"),
-        );
+            ? "adManagement:computers.messages.enableFailed"
+            : "adManagement:computers.messages.disableFailed";
+        toast.error(resolveAdManagementApiMessage(t, response, fallbackKey));
         return;
       }
 
       await invalidateAdManagementComputerQueries(queryClient);
 
-      const message =
+      const fallbackKey =
         action === "enable"
-          ? t("adManagement:computers.messages.enabled")
-          : t("adManagement:computers.messages.disabled");
-      toast.success(response.message || message);
+          ? "adManagement:computers.messages.enabled"
+          : "adManagement:computers.messages.disabled";
+      toast.success(resolveAdManagementApiMessage(t, response, fallbackKey));
       setConfirmAction(null);
     },
     onError: (error, action) => {
       toast.error(
-        getApiErrorMessage(
+        getAdManagementApiErrorMessage(
           error,
+          t,
           action === "enable"
-            ? t("adManagement:computers.messages.enableFailed")
-            : t("adManagement:computers.messages.disableFailed"),
+            ? "adManagement:computers.messages.enableFailed"
+            : "adManagement:computers.messages.disableFailed",
         ),
       );
     },
@@ -120,17 +124,23 @@ export function AdComputerDetailHeaderActions({
     mutationFn: () => deleteAdComputer(computer.id),
     onSuccess: async (response) => {
       if (!response.success) {
-        toast.error(t("adManagement:computers.delete.error"));
+        toast.error(
+          resolveAdManagementApiMessage(t, response, "adManagement:computers.delete.error"),
+        );
         return;
       }
 
       await invalidateAdManagementComputerQueries(queryClient);
-      toast.success(response.message || t("adManagement:computers.delete.success"));
+      toast.success(
+        resolveAdManagementApiMessage(t, response, "adManagement:computers.delete.success"),
+      );
       setIsDeleteDialogOpen(false);
       navigate(returnPath);
     },
     onError: (error) => {
-      toast.error(getApiErrorMessage(error, t("adManagement:computers.delete.error")));
+      toast.error(
+        getAdManagementApiErrorMessage(error, t, "adManagement:computers.delete.error"),
+      );
     },
   });
 
@@ -139,21 +149,32 @@ export function AdComputerDetailHeaderActions({
       updateAdComputer(computer.id, { description }),
     onSuccess: async (response) => {
       if (!response.success) {
-        toast.error(t("adManagement:computers.updateDescription.messages.updateFailed"));
+        toast.error(
+          resolveAdManagementApiMessage(
+            t,
+            response,
+            "adManagement:computers.updateDescription.messages.updateFailed",
+          ),
+        );
         return;
       }
 
       await invalidateAdManagementComputerQueries(queryClient);
       toast.success(
-        response.message || t("adManagement:computers.updateDescription.messages.updated"),
+        resolveAdManagementApiMessage(
+          t,
+          response,
+          "adManagement:computers.updateDescription.messages.updated",
+        ),
       );
       setIsUpdateDialogOpen(false);
     },
     onError: (error) => {
       toast.error(
-        getApiErrorMessage(
+        getAdManagementApiErrorMessage(
           error,
-          t("adManagement:computers.updateDescription.messages.updateFailed"),
+          t,
+          "adManagement:computers.updateDescription.messages.updateFailed",
         ),
       );
     },

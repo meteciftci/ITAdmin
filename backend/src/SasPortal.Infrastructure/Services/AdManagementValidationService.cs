@@ -9,21 +9,6 @@ namespace SasPortal.Infrastructure.Services;
 
 public sealed class AdManagementValidationService : IAdManagementValidationService
 {
-    private const string MissingRequiredSettings =
-        "AD yönetim ayarları için zorunlu alanlar eksik.";
-    private const string ServiceAccountBindFailed =
-        "AD yönetim servis hesabı ile bağlantı kurulamadı. NetBIOS domain adı, servis hesabı kullanıcı adı veya parola hatalı olabilir.";
-    private const string DomainFqdnUnreachable =
-        "Domain FQDN erişilemedi veya doğrulanamadı.";
-    private const string BaseDnNotResolved = "Base DN çözümlenemedi.";
-    private const string DefaultNamingContextNotResolved = "Default naming context çözümlenemedi.";
-    private const string UsersRootOuNotResolved = "Users root OU çözümlenemedi.";
-    private const string DisabledUsersOuNotResolved = "Pasif kullanıcılar OU çözümlenemedi.";
-    private const string GroupsSearchBaseNotResolved = "Gruplar arama base çözümlenemedi.";
-    private const string ComputersSearchBaseNotResolved = "Bilgisayarlar arama base çözümlenemedi.";
-    private const string PreferredDcUnreachable = "Tercih edilen DC erişilemedi.";
-    private const string ValidationSucceeded = "AD yönetim ayarları doğrulandı.";
-
     public Task<AdManagementValidationResult> ValidateConnectionAsync(
         AdManagementConnectionParameters connection,
         AdManagementValidationRequest request,
@@ -44,13 +29,13 @@ public sealed class AdManagementValidationService : IAdManagementValidationServi
             || string.IsNullOrWhiteSpace(connection.ServiceAccountUserName)
             || string.IsNullOrWhiteSpace(connection.ServiceAccountPassword))
         {
-            details.Add(new AdManagementValidationDetail(
+            details.Add(ValidationDetail(
                 "serviceAccountBind",
                 AdManagementValidationStatuses.Failed,
-                MissingRequiredSettings));
-            return Task.FromResult(new AdManagementValidationResult(
+                AdManagementApiMessageKeys.SettingsValidation.MissingRequiredSettings));
+            return Task.FromResult(ValidationResult(
                 false,
-                MissingRequiredSettings,
+                AdManagementApiMessageKeys.SettingsValidation.MissingRequiredSettings,
                 checkedAt,
                 details));
         }
@@ -80,13 +65,13 @@ public sealed class AdManagementValidationService : IAdManagementValidationServi
 
         if (primaryConnection is null)
         {
-            details.Add(new AdManagementValidationDetail(
+            details.Add(ValidationDetail(
                 "serviceAccountBind",
                 AdManagementValidationStatuses.Failed,
-                ServiceAccountBindFailed));
-            return Task.FromResult(new AdManagementValidationResult(
+                AdManagementApiMessageKeys.SettingsValidation.ServiceAccountBindFailed));
+            return Task.FromResult(ValidationResult(
                 false,
-                ServiceAccountBindFailed,
+                AdManagementApiMessageKeys.SettingsValidation.ServiceAccountBindFailed,
                 checkedAt,
                 details));
         }
@@ -100,13 +85,13 @@ public sealed class AdManagementValidationService : IAdManagementValidationServi
 
             if (!TryResolveBase(primaryConnection, connection.BaseDn!))
             {
-                details.Add(new AdManagementValidationDetail(
+                details.Add(ValidationDetail(
                     "baseDn",
                     AdManagementValidationStatuses.Failed,
-                    BaseDnNotResolved));
-                return Task.FromResult(new AdManagementValidationResult(
+                    AdManagementApiMessageKeys.SettingsValidation.BaseDnNotResolved));
+                return Task.FromResult(ValidationResult(
                     false,
-                    BaseDnNotResolved,
+                    AdManagementApiMessageKeys.SettingsValidation.BaseDnNotResolved,
                     checkedAt,
                     details));
             }
@@ -118,13 +103,13 @@ public sealed class AdManagementValidationService : IAdManagementValidationServi
 
             if (!TryResolveBase(primaryConnection, connection.DefaultNamingContext!))
             {
-                details.Add(new AdManagementValidationDetail(
+                details.Add(ValidationDetail(
                     "defaultNamingContext",
                     AdManagementValidationStatuses.Failed,
-                    DefaultNamingContextNotResolved));
-                return Task.FromResult(new AdManagementValidationResult(
+                    AdManagementApiMessageKeys.SettingsValidation.DefaultNamingContextNotResolved));
+                return Task.FromResult(ValidationResult(
                     false,
-                    DefaultNamingContextNotResolved,
+                    AdManagementApiMessageKeys.SettingsValidation.DefaultNamingContextNotResolved,
                     checkedAt,
                     details));
             }
@@ -136,13 +121,13 @@ public sealed class AdManagementValidationService : IAdManagementValidationServi
 
             if (!TryResolveBase(primaryConnection, connection.UsersRootOu!))
             {
-                details.Add(new AdManagementValidationDetail(
+                details.Add(ValidationDetail(
                     "usersRootOu",
                     AdManagementValidationStatuses.Failed,
-                    UsersRootOuNotResolved));
-                return Task.FromResult(new AdManagementValidationResult(
+                    AdManagementApiMessageKeys.SettingsValidation.UsersRootOuNotResolved));
+                return Task.FromResult(ValidationResult(
                     false,
-                    UsersRootOuNotResolved,
+                    AdManagementApiMessageKeys.SettingsValidation.UsersRootOuNotResolved,
                     checkedAt,
                     details));
             }
@@ -154,13 +139,13 @@ public sealed class AdManagementValidationService : IAdManagementValidationServi
 
             if (!TryResolveBase(primaryConnection, connection.DisabledUsersOu!))
             {
-                details.Add(new AdManagementValidationDetail(
+                details.Add(ValidationDetail(
                     "disabledUsersOu",
                     AdManagementValidationStatuses.Failed,
-                    DisabledUsersOuNotResolved));
-                return Task.FromResult(new AdManagementValidationResult(
+                    AdManagementApiMessageKeys.SettingsValidation.DisabledUsersOuNotResolved));
+                return Task.FromResult(ValidationResult(
                     false,
-                    DisabledUsersOuNotResolved,
+                    AdManagementApiMessageKeys.SettingsValidation.DisabledUsersOuNotResolved,
                     checkedAt,
                     details));
             }
@@ -174,13 +159,13 @@ public sealed class AdManagementValidationService : IAdManagementValidationServi
             {
                 if (!TryResolveBase(primaryConnection, connection.GroupsSearchBase!))
                 {
-                    details.Add(new AdManagementValidationDetail(
+                    details.Add(ValidationDetail(
                         "groupsSearchBase",
                         AdManagementValidationStatuses.Failed,
-                        GroupsSearchBaseNotResolved));
-                    return Task.FromResult(new AdManagementValidationResult(
+                        AdManagementApiMessageKeys.SettingsValidation.GroupsSearchBaseNotResolved));
+                    return Task.FromResult(ValidationResult(
                         false,
-                        GroupsSearchBaseNotResolved,
+                        AdManagementApiMessageKeys.SettingsValidation.GroupsSearchBaseNotResolved,
                         checkedAt,
                         details));
                 }
@@ -195,13 +180,13 @@ public sealed class AdManagementValidationService : IAdManagementValidationServi
             {
                 if (!TryResolveBase(primaryConnection, connection.ComputersSearchBase!))
                 {
-                    details.Add(new AdManagementValidationDetail(
+                    details.Add(ValidationDetail(
                         "computersSearchBase",
                         AdManagementValidationStatuses.Failed,
-                        ComputersSearchBaseNotResolved));
-                    return Task.FromResult(new AdManagementValidationResult(
+                        AdManagementApiMessageKeys.SettingsValidation.ComputersSearchBaseNotResolved));
+                    return Task.FromResult(ValidationResult(
                         false,
-                        ComputersSearchBaseNotResolved,
+                        AdManagementApiMessageKeys.SettingsValidation.ComputersSearchBaseNotResolved,
                         checkedAt,
                         details));
                 }
@@ -250,13 +235,13 @@ public sealed class AdManagementValidationService : IAdManagementValidationServi
 
             if (dcConnection is null)
             {
-                details.Add(new AdManagementValidationDetail(
+                details.Add(ValidationDetail(
                     $"preferredDomainController:{dc}",
                     AdManagementValidationStatuses.Failed,
-                    PreferredDcUnreachable));
-                return Task.FromResult(new AdManagementValidationResult(
+                    AdManagementApiMessageKeys.SettingsValidation.PreferredDcUnreachable));
+                return Task.FromResult(ValidationResult(
                     false,
-                    PreferredDcUnreachable,
+                    AdManagementApiMessageKeys.SettingsValidation.PreferredDcUnreachable,
                     checkedAt,
                     details));
             }
@@ -270,12 +255,34 @@ public sealed class AdManagementValidationService : IAdManagementValidationServi
             }
         }
 
-        return Task.FromResult(new AdManagementValidationResult(
+        return Task.FromResult(ValidationResult(
             true,
-            ValidationSucceeded,
+            AdManagementApiMessageKeys.SettingsValidation.ValidationSucceeded,
             checkedAt,
             details));
     }
+
+    private static AdManagementValidationDetail ValidationDetail(
+        string key,
+        string status,
+        string messageKey) =>
+        new(
+            key,
+            status,
+            AdManagementApiMessages.Legacy(messageKey),
+            messageKey);
+
+    private static AdManagementValidationResult ValidationResult(
+        bool isValid,
+        string messageKey,
+        DateTimeOffset checkedAt,
+        IReadOnlyList<AdManagementValidationDetail> details) =>
+        new(
+            isValid,
+            AdManagementApiMessages.Legacy(messageKey),
+            checkedAt,
+            details,
+            messageKey);
 
     private static bool TryValidateDomainFqdnHost(
         string domainFqdn,
@@ -301,13 +308,13 @@ public sealed class AdManagementValidationService : IAdManagementValidationServi
 
         if (domainConnection is null)
         {
-            details.Add(new AdManagementValidationDetail(
+            details.Add(ValidationDetail(
                 "domainFqdn",
                 AdManagementValidationStatuses.Failed,
-                DomainFqdnUnreachable));
-            failure = new AdManagementValidationResult(
+                AdManagementApiMessageKeys.SettingsValidation.DomainFqdnUnreachable));
+            failure = ValidationResult(
                 false,
-                DomainFqdnUnreachable,
+                AdManagementApiMessageKeys.SettingsValidation.DomainFqdnUnreachable,
                 checkedAt,
                 details);
             return false;

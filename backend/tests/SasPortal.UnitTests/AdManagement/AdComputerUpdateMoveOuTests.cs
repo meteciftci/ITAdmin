@@ -90,7 +90,7 @@ public sealed class AdComputerUpdateMoveOuTests
         Assert.Contains("UpdateComputer", source, StringComparison.Ordinal);
         Assert.Contains("MoveComputerOu", source, StringComparison.Ordinal);
         Assert.Contains("!Guid.TryParse(id, out var objectGuid)", source, StringComparison.Ordinal);
-        Assert.Contains("Geçersiz bilgisayar kimliği.", source, StringComparison.Ordinal);
+        Assert.Contains("AdManagementApiMessageKeys.Computers.InvalidComputerId", source, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -118,7 +118,6 @@ public sealed class AdComputerUpdateMoveOuTests
                 FindRepositoryRoot(),
                 "backend/src/SasPortal.Infrastructure/Services/AdUserDirectoryService.ComputerUpdate.cs"));
 
-        Assert.Contains("ComputerUpdateNoChangesMessage", source, StringComparison.Ordinal);
         Assert.Contains("skipped (no changes)", source, StringComparison.Ordinal);
         Assert.Contains("""{"changeStatus":"NoChangesDetected"}""", source, StringComparison.Ordinal);
     }
@@ -135,7 +134,7 @@ public sealed class AdComputerUpdateMoveOuTests
         Assert.Contains("TryLoadOrganizationalUnit", source, StringComparison.Ordinal);
         Assert.Contains("GetRelativeDistinguishedName", source, StringComparison.Ordinal);
         Assert.Contains("ModifyDNRequest", source, StringComparison.Ordinal);
-        Assert.Contains("ComputerAlreadyInTargetOuMessage", source, StringComparison.Ordinal);
+        Assert.Contains("AdManagementApiMessageKeys.Computers.AlreadyInTargetOu", source, StringComparison.Ordinal);
         Assert.Contains("IsEqualOrDescendantOf(targetOuDn, computersSearchBase)", source, StringComparison.Ordinal);
     }
 

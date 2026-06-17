@@ -18,7 +18,7 @@ import {
   updateAdUserManager,
 } from "@/features/ad-management/api";
 import type { AdUserDetail, AdUserListItem } from "@/features/ad-management/types";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { getAdManagementApiErrorMessage } from "@/features/ad-management/ad-management-api-message";
 
 type Props = {
   user: AdUserDetail;
@@ -54,7 +54,11 @@ export function AdUserManagerSection({ user, canUpdate }: Props) {
     },
     onError: (error) => {
       toast.error(
-        getApiErrorMessage(error, t("adManagement:users.detail.manager.updateFailed")),
+        getAdManagementApiErrorMessage(
+          error,
+          t,
+          "adManagement:users.detail.manager.updateFailed",
+        ),
       );
     },
   });

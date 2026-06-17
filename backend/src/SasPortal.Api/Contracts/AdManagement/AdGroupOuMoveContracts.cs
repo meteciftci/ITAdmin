@@ -14,4 +14,6 @@ public sealed record MoveAdGroupOuResponse(
     string? SamAccountName,
     string? DistinguishedName,
     string? PreviousDistinguishedName,
-    string? TargetOuDistinguishedName);
+    string? TargetOuDistinguishedName,
+    string? MessageKey = null,
+    IReadOnlyDictionary<string, object>? MessageParams = null);

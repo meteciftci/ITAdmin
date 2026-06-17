@@ -52,13 +52,17 @@ public sealed record AdComputerGroupMembershipResult(
     string? DnsHostName,
     string? DistinguishedName,
     IReadOnlyList<AdComputerGroupMembershipItem>? Groups,
-    AdDirectoryFailureKind? FailureKind = null);
+    AdDirectoryFailureKind? FailureKind = null,
+    string? MessageKey = null,
+    IReadOnlyDictionary<string, object>? MessageParams = null);
 
 public sealed record AdComputerGroupSearchResult(
     bool IsSuccess,
     string Message,
     IReadOnlyList<AdComputerGroupCandidateItem>? Items,
-    AdDirectoryFailureKind? FailureKind = null);
+    AdDirectoryFailureKind? FailureKind = null,
+    string? MessageKey = null,
+    IReadOnlyDictionary<string, object>? MessageParams = null);
 
 public sealed record AdComputerGroupOperationResult(
     bool IsSuccess,
@@ -70,4 +74,6 @@ public sealed record AdComputerGroupOperationResult(
     string? GroupName,
     string? GroupDisplayName,
     string? GroupSamAccountName,
-    AdDirectoryFailureKind? FailureKind = null);
+    AdDirectoryFailureKind? FailureKind = null,
+    string? MessageKey = null,
+    IReadOnlyDictionary<string, object>? MessageParams = null);

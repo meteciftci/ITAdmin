@@ -18,4 +18,6 @@ public sealed record MoveAdGroupOuResult(
     string? DistinguishedName,
     string? PreviousDistinguishedName,
     string? TargetOuDistinguishedName,
-    AdDirectoryFailureKind? FailureKind = null);
+    AdDirectoryFailureKind? FailureKind = null,
+    string? MessageKey = null,
+    IReadOnlyDictionary<string, object>? MessageParams = null);

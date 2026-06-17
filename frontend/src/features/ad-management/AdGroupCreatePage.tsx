@@ -25,7 +25,7 @@ import { AdManagementModuleStateGuard } from "@/features/ad-management/component
 import { AdOuSearchCombobox } from "@/features/ad-management/components/AdOuSearchCombobox";
 import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useAdManagementModuleStatus";
 import type { AdGroupScope } from "@/features/ad-management/types";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { getAdManagementApiErrorMessage } from "@/features/ad-management/ad-management-api-message";
 import { cn } from "@/lib/utils";
 
 const GROUP_SCOPE_OPTIONS: AdGroupScope[] = ["Global", "DomainLocal", "Universal"];
@@ -76,7 +76,11 @@ export function AdGroupCreatePage() {
     },
     onError: (error) => {
       toast.error(
-        getApiErrorMessage(error, t("adManagement:groups.create.messages.createFailed")),
+        getAdManagementApiErrorMessage(
+          error,
+          t,
+          "adManagement:groups.create.messages.createFailed",
+        ),
       );
     },
   });

@@ -10,30 +10,6 @@ namespace SasPortal.Infrastructure.Services;
 
 public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreService
 {
-    private const string DeletedObjectRestoreSuccessMessage = "Silinen nesne geri yüklendi.";
-    private const string DeletedObjectRestoreFailedMessage = "Silinen nesne geri yüklenemedi.";
-    private const string DeletedObjectRestoreUnsupportedTypeMessage = "Bu nesne türü geri yüklenemez.";
-    private const string DeletedObjectRestoreMissingTargetMessage =
-        "Bu nesne için son bilinen konum bilgisi bulunamadı.";
-    private const string DeletedObjectRestoreMissingRdnMessage =
-        "Bu nesne için son bilinen RDN bilgisi bulunamadı.";
-    private const string DeletedObjectRestoreInvalidRdnMessage =
-        "Bu nesne için geçerli geri yükleme RDN bilgisi bulunamadı.";
-    private const string DeletedObjectRestoreParentNotFoundMessage = "Geri yükleme hedefi bulunamadı.";
-    private const string DeletedObjectRestoreConflictMessage =
-        "Hedef konumda aynı ada sahip bir nesne bulunuyor.";
-    private const string DeletedObjectRestoreInvalidTargetMessage =
-        "Geri yükleme hedefi geçerli değil.";
-    private const string DeletedObjectRestoreVerifyFailedMessage =
-        "Silinen nesne geri yükleme işlemi doğrulanamadı.";
-    private const string DeletedObjectRestoreTargetPathRequiredMessage =
-        "Farklı OU’ya geri yüklemek için hedef OU seçilmelidir.";
-    private const string DeletedObjectRestoreTargetPathInvalidMessage =
-        "Geri yükleme hedefi geçerli değil.";
-    private const string DeletedObjectRestorePowerShellModuleMissingMessage =
-        "AD restore komutu çalıştırılamadı. Active Directory PowerShell modülü sunucuda bulunamadı.";
-    private const string DeletedObjectRestorePowerShellFailedMessage =
-        "Silinen nesne geri yüklenemedi.";
     private const string DeletedObjectRestoreCommandName = "Restore-ADObject";
     private const string DeletedObjectRestoreSourceDnResolutionEntryDistinguishedName = "EntryDistinguishedName";
     private const string DeletedObjectRestoreSourceDnResolutionAttributeFallback = "DistinguishedNameAttributeFallback";
@@ -84,7 +60,7 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
         if (!connectionResult.IsSuccess || connectionResult.Context is null)
         {
             return await FailDeletedObjectRestoreAsync(
-                request,
+        request,
                 connectionResult.Message,
                 connectionResult.Context?.Connection,
                 beforeState: null,
@@ -104,8 +80,8 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
         if (string.IsNullOrWhiteSpace(deletedObjectsSearchBase) || string.IsNullOrWhiteSpace(namingContext))
         {
             return await FailDeletedObjectRestoreAsync(
-                request,
-                AdManagementNotConfiguredMessage,
+        request,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
                 context.Connection,
                 beforeState: null,
                 AdDirectoryFailureKind.NotConfigured,
@@ -114,7 +90,7 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                     request.ObjectGuid,
                     sourceDeletedDistinguishedName: null,
                     restoredDistinguishedName: null,
-                    englishMessageOverride: AdManagementNotConfiguredMessage,
+                    englishMessageOverride: AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
                     normalizedReasonOverride: AdUserUpdateNormalizedReasons.InvalidRequest),
                 cancellationToken);
         }
@@ -132,8 +108,8 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                     out var beforeState))
             {
                 return await FailDeletedObjectRestoreAsync(
-                    request,
-                    DeletedObjectNotFoundMessage,
+        request,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.DeletedObjects.NotFound),
                     context.Connection,
                     beforeState: null,
                     AdDirectoryFailureKind.NotFound,
@@ -152,8 +128,8 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
             if (beforeState.ObjectType == AdDeletedObjectType.Unknown)
             {
                 return await FailDeletedObjectRestoreAsync(
-                    request,
-                    DeletedObjectRestoreUnsupportedTypeMessage,
+        request,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.DeletedObjects.RestoreUnsupportedType),
                     context.Connection,
                     beforeState,
                     AdDirectoryFailureKind.InvalidRequest,
@@ -171,8 +147,8 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
             if (string.IsNullOrWhiteSpace(originalLastKnownRdn))
             {
                 return await FailDeletedObjectRestoreAsync(
-                    request,
-                    DeletedObjectRestoreMissingRdnMessage,
+        request,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.DeletedObjects.RestoreMissingTarget),
                     context.Connection,
                     beforeState,
                     AdDirectoryFailureKind.InvalidRequest,
@@ -191,8 +167,8 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
             if (ContainsDeletedObjectRestoreRdnMarker(originalLastKnownRdn))
             {
                 return await FailDeletedObjectRestoreAsync(
-                    request,
-                    DeletedObjectRestoreInvalidRdnMessage,
+        request,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.InvalidRequest),
                     context.Connection,
                     beforeState,
                     AdDirectoryFailureKind.InvalidRequest,
@@ -213,8 +189,8 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
             if (string.IsNullOrWhiteSpace(restoreRdn) || !IsValidDeletedObjectRestoreRdn(restoreRdn))
             {
                 return await FailDeletedObjectRestoreAsync(
-                    request,
-                    DeletedObjectRestoreInvalidRdnMessage,
+        request,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.InvalidRequest),
                     context.Connection,
                     beforeState,
                     AdDirectoryFailureKind.InvalidRequest,
@@ -240,8 +216,8 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                 if (string.IsNullOrWhiteSpace(request.TargetPathDistinguishedName))
                 {
                     return await FailDeletedObjectRestoreAsync(
-                        request,
-                        DeletedObjectRestoreTargetPathRequiredMessage,
+        request,
+                        AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.DeletedObjects.RestoreMissingTarget),
                         context.Connection,
                         beforeState,
                         AdDirectoryFailureKind.InvalidRequest,
@@ -264,8 +240,8 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                     || !AdLdapDnHelper.IsEqualOrDescendantOf(restoreParentDn, namingContext))
                 {
                     return await FailDeletedObjectRestoreAsync(
-                        request,
-                        DeletedObjectRestoreTargetPathInvalidMessage,
+        request,
+                        AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.InvalidRequest),
                         context.Connection,
                         beforeState,
                         AdDirectoryFailureKind.InvalidRequest,
@@ -285,8 +261,8 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                 if (!TryLoadRestoreTargetOrganizationalUnitByDn(ldapConnection, restoreParentDn))
                 {
                     return await FailDeletedObjectRestoreAsync(
-                        request,
-                        DeletedObjectRestoreParentNotFoundMessage,
+        request,
+                        AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.DeletedObjects.RestoreParentNotFound),
                         context.Connection,
                         beforeState,
                         AdDirectoryFailureKind.InvalidRequest,
@@ -308,8 +284,8 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                 if (string.IsNullOrWhiteSpace(metadataLastKnownParent))
                 {
                     return await FailDeletedObjectRestoreAsync(
-                        request,
-                        DeletedObjectRestoreMissingTargetMessage,
+        request,
+                        AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.DeletedObjects.RestoreMissingTarget),
                         context.Connection,
                         beforeState,
                         AdDirectoryFailureKind.InvalidRequest,
@@ -331,8 +307,8 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                     || !AdLdapDnHelper.IsEqualOrDescendantOf(restoreParentDn, namingContext))
                 {
                     return await FailDeletedObjectRestoreAsync(
-                        request,
-                        DeletedObjectRestoreInvalidTargetMessage,
+        request,
+                        AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.DeletedObjects.RestoreTargetNotFound),
                         context.Connection,
                         beforeState,
                         AdDirectoryFailureKind.InvalidRequest,
@@ -351,8 +327,8 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                 if (!TryLoadDirectoryObjectByDn(ldapConnection, restoreParentDn))
                 {
                     return await FailDeletedObjectRestoreAsync(
-                        request,
-                        DeletedObjectRestoreParentNotFoundMessage,
+        request,
+                        AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.DeletedObjects.RestoreParentNotFound),
                         context.Connection,
                         beforeState,
                         AdDirectoryFailureKind.InvalidRequest,
@@ -373,8 +349,8 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
             if (TryLoadDirectoryObjectByDn(ldapConnection, restoredDistinguishedName))
             {
                 return await FailDeletedObjectRestoreAsync(
-                    request,
-                    DeletedObjectRestoreConflictMessage,
+        request,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.DeletedObjects.RestoreConflict),
                     context.Connection,
                     beforeState,
                     AdDirectoryFailureKind.InvalidRequest,
@@ -412,7 +388,7 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
             {
                 var failureMessage = ResolveDeletedObjectRestorePowerShellFailureMessage(commandResult);
                 return await FailDeletedObjectRestoreAsync(
-                    request,
+        request,
                     failureMessage,
                     context.Connection,
                     beforeState,
@@ -444,8 +420,8 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                     out var restoredState))
             {
                 return await FailDeletedObjectRestoreAsync(
-                    request,
-                    DeletedObjectRestoreVerifyFailedMessage,
+        request,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.DeletedObjects.RestoreFailed),
                     context.Connection,
                     beforeState,
                     AdDirectoryFailureKind.InvalidRequest,
@@ -481,7 +457,7 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
 
             return new AdDeletedObjectRestoreResult(
                 true,
-                DeletedObjectRestoreSuccessMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.DeletedObjects.RestoreSuccess),
                 new AdDeletedObjectRestoreItem(
                     restoredState.ObjectId,
                     restoredState.ObjectType,
@@ -499,7 +475,7 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                 "The deleted AD object could not be restored.");
 
             return await FailDeletedObjectRestoreAsync(
-                request,
+        request,
                 ldapFailure.UserMessage,
                 context.Connection,
                 loadedBeforeState,
@@ -529,7 +505,7 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                 : AdDeletedObjectRestoreSteps.RestoreObject;
 
             return await FailDeletedObjectRestoreAsync(
-                request,
+        request,
                 SanitizeDeletedObjectRestoreLdapError(ex),
                 context.Connection,
                 loadedBeforeState,
@@ -560,8 +536,8 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                 request.ActorUserId);
 
             return await FailDeletedObjectRestoreAsync(
-                request,
-                DeletedObjectRestoreFailedMessage,
+        request,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.DeletedObjects.RestoreFailed),
                 context.Connection,
                 loadedBeforeState,
                 AdDirectoryFailureKind.InvalidRequest,
@@ -892,12 +868,14 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
         AdDeletedObjectRestoreState? beforeState,
         AdDirectoryFailureKind? failureKind,
         string operationDiagnosticJson,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? messageKey = null,
+        IReadOnlyDictionary<string, object>? messageParams = null)
     {
         try
         {
             await WriteDeletedObjectRestoreFailureLogsAsync(
-                request,
+        request,
                 connection,
                 beforeState,
                 operationDiagnosticJson,
@@ -1150,7 +1128,7 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
                 AdDeletedObjectRestorePowerShellCommandRunner.ModuleMissingErrorToken,
                 StringComparison.Ordinal))
         {
-            return DeletedObjectRestorePowerShellModuleMissingMessage;
+            return AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.DeletedObjects.RestorePowerShellModuleMissing);
         }
 
         if (!string.IsNullOrWhiteSpace(commandResult.SanitizedErrorSummary))
@@ -1158,7 +1136,7 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
             return AdLdapErrorNormalizer.Normalize(0, commandResult.SanitizedErrorSummary);
         }
 
-        return DeletedObjectRestorePowerShellFailedMessage;
+        return AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.DeletedObjects.RestoreFailed);
     }
 
     private static string ResolveDeletedObjectRestoreNormalizedReasonFromPowerShell(string? sanitizedErrorSummary)
@@ -1286,7 +1264,7 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreServ
         var diagnosticMessage = response?.ErrorMessage ?? exception.Message;
         var userMessage = ldapResultCode is not null
             ? AdLdapErrorNormalizer.Normalize(ldapResultCode.Value, diagnosticMessage)
-            : DeletedObjectRestoreFailedMessage;
+            : AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.DeletedObjects.RestoreFailed);
 
         return new RestoreDeletedObjectLdapException(
             userMessage,

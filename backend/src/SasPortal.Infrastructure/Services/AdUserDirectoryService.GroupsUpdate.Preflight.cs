@@ -1,5 +1,6 @@
 using System.DirectoryServices.Protocols;
 using SasPortal.Application.Common.AdManagement;
+using SasPortal.Application.Common.Constants;
 
 namespace SasPortal.Infrastructure.Services;
 
@@ -28,7 +29,7 @@ public sealed partial class AdUserDirectoryService
                 {
                     return new AdGroupUpdatePreflightFailure(
                         "sAMAccountName",
-                        AdLdapErrorNormalizer.PreflightGroupSamAccountNameDuplicateMessage,
+                        AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.OperationFailures.PreflightGroupSamAccountNameDuplicate),
                         "The sAMAccountName value is already used by another AD group.");
                 }
             }
@@ -44,7 +45,7 @@ public sealed partial class AdUserDirectoryService
             {
                 return new AdGroupUpdatePreflightFailure(
                     "cn",
-                    AdLdapErrorNormalizer.PreflightGroupCnDuplicateMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.OperationFailures.PreflightGroupCnDuplicate),
                     "A group with the same technical name already exists in the target OU.");
             }
         }

@@ -103,7 +103,7 @@ public sealed class AdDeletedObjectRestoreTests
                 "backend/src/SasPortal.Api/Controllers/AdManagementController.cs"));
 
         Assert.Contains("RestoreDeletedObject", source, StringComparison.Ordinal);
-        Assert.Contains("Geçersiz silinen nesne kimliği.", source, StringComparison.Ordinal);
+        Assert.Contains("AdManagementApiMessageKeys.DeletedObjects.NotFound", source, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -137,7 +137,7 @@ public sealed class AdDeletedObjectRestoreTests
         Assert.Contains("deletedObjectRestoreCommandRunner.ExecuteRestoreAsync", restoreSource, StringComparison.Ordinal);
         Assert.Contains("deletedObjectRestoreCommandRunner", restoreSource, StringComparison.Ordinal);
         Assert.Contains("AdDeletedObjectRestoreTargetMode.TargetPath", restoreSource, StringComparison.Ordinal);
-        Assert.Contains("DeletedObjectRestoreTargetPathRequiredMessage", restoreSource, StringComparison.Ordinal);
+        Assert.Contains("AdManagementApiMessageKeys.DeletedObjects.RestoreTargetNotFound", restoreSource, StringComparison.Ordinal);
         Assert.Contains("TryLoadRestoreTargetOrganizationalUnitByDn", restoreSource, StringComparison.Ordinal);
         Assert.Contains("TryVerifyRestoredObject", restoreSource, StringComparison.Ordinal);
         Assert.Contains("PowerShellRestoreAdObject", restoreSource, StringComparison.Ordinal);
@@ -167,9 +167,8 @@ public sealed class AdDeletedObjectRestoreTests
                 "backend/src/SasPortal.Infrastructure/Services/AdUserDirectoryService.DeletedObjectRestore.cs"));
 
         Assert.Contains("AdDeletedObjectType.Unknown", source, StringComparison.Ordinal);
-        Assert.Contains("DeletedObjectRestoreMissingTargetMessage", source, StringComparison.Ordinal);
-        Assert.Contains("DeletedObjectRestoreMissingRdnMessage", source, StringComparison.Ordinal);
-        Assert.Contains("DeletedObjectRestoreConflictMessage", source, StringComparison.Ordinal);
+        Assert.Contains("AdManagementApiMessageKeys.DeletedObjects.RestoreMissingTarget", source, StringComparison.Ordinal);
+        Assert.Contains("AdManagementApiMessageKeys.DeletedObjects.RestoreConflict", source, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -244,7 +243,7 @@ public sealed class AdDeletedObjectRestoreTests
                 "backend/src/SasPortal.Infrastructure/Services/AdUserDirectoryService.DeletedObjectRestore.cs"));
 
         Assert.Contains("AdDeletedObjectRestoreSteps.VerifyRestored", source, StringComparison.Ordinal);
-        Assert.Contains("DeletedObjectRestoreVerifyFailedMessage", source, StringComparison.Ordinal);
+        Assert.Contains("AdManagementApiMessageKeys.DeletedObjects.RestoreFailed", source, StringComparison.Ordinal);
         Assert.DoesNotContain(
             "AdDeletedObjectRestoreSteps.VerifyRestored,\n                        request.ObjectGuid,\n                        restoredDistinguishedName,\n                        englishMessageOverride: \"The restored AD object could not be verified.\",\n                        normalizedReasonOverride: AdUserUpdateNormalizedReasons.ConnectionFailed)",
             source,
@@ -303,7 +302,7 @@ public sealed class AdDeletedObjectRestoreTests
                 "backend/src/SasPortal.Api/Controllers/AdManagementController.cs"));
 
         Assert.Contains("RestoreDeletedObject", source, StringComparison.Ordinal);
-        Assert.Contains("MapDirectoryFailure(result.Message, result.FailureKind)", source, StringComparison.Ordinal);
+        Assert.Contains("MapDirectoryFailure(result.Message, result.FailureKind, result.MessageKey, result.MessageParams)", source, StringComparison.Ordinal);
         Assert.Contains("AdDirectoryFailureKind.ConnectionFailed => StatusCode(", source, StringComparison.Ordinal);
         Assert.Contains("AdDirectoryFailureKind.InvalidRequest => BadRequest", source, StringComparison.Ordinal);
         Assert.Contains("AdDirectoryFailureKind.NotFound => NotFound", source, StringComparison.Ordinal);
@@ -321,7 +320,7 @@ public sealed class AdDeletedObjectRestoreTests
         Assert.Contains("AdLdapDnHelper.BuildCommonNameRdn", source, StringComparison.Ordinal);
         Assert.Contains("ContainsDeletedObjectRestoreRdnMarker", source, StringComparison.Ordinal);
         Assert.Contains("IsValidDeletedObjectRestoreRdn", source, StringComparison.Ordinal);
-        Assert.Contains("DeletedObjectRestoreInvalidRdnMessage", source, StringComparison.Ordinal);
+        Assert.Contains("AdManagementApiMessageKeys.Common.InvalidRequest", source, StringComparison.Ordinal);
     }
 
     [Fact]

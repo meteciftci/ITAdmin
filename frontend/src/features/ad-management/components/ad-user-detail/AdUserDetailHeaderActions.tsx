@@ -25,7 +25,10 @@ import {
   adDetailEditButtonClass,
   adDetailOutlineButtonClass,
 } from "@/features/ad-management/ad-user-detail-button-styles";
-import { getApiErrorMessage } from "@/lib/api-error";
+import {
+  getAdManagementApiErrorMessage,
+  resolveAdManagementApiMessage,
+} from "@/features/ad-management/ad-management-api-message";
 
 type Props = {
   user: AdUserDetail;
@@ -75,24 +78,34 @@ export function AdUserDetailHeaderActions({
     },
     onSuccess: async (response, action) => {
       if (!response.success) {
-        toast.error(t("adManagement:users.messages.operationFailed"));
+        toast.error(
+          resolveAdManagementApiMessage(
+            t,
+            response,
+            "adManagement:users.messages.operationFailed",
+          ),
+        );
         return;
       }
 
       await invalidateAdUserDetailRelatedQueries(queryClient, user.id);
 
-      const message =
+      const fallbackKey =
         action === "enable"
-          ? t("adManagement:users.messages.enabled")
+          ? "adManagement:users.messages.enabled"
           : action === "disable"
-            ? t("adManagement:users.messages.disabled")
-            : t("adManagement:users.messages.unlocked");
-      toast.success(response.message || message);
+            ? "adManagement:users.messages.disabled"
+            : "adManagement:users.messages.unlocked";
+      toast.success(resolveAdManagementApiMessage(t, response, fallbackKey));
       setConfirmAction(null);
     },
     onError: (error) => {
       toast.error(
-        getApiErrorMessage(error, t("adManagement:users.messages.operationFailed")),
+        getAdManagementApiErrorMessage(
+          error,
+          t,
+          "adManagement:users.messages.operationFailed",
+        ),
       );
     },
   });

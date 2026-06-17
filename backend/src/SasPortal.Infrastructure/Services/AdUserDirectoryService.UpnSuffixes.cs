@@ -7,8 +7,6 @@ namespace SasPortal.Infrastructure.Services;
 
 public sealed partial class AdUserDirectoryService
 {
-    private const string UpnSuffixesNotFoundMessage = "UPN suffix bulunamadı.";
-
     public async Task<AdUpnSuffixesResult> GetUpnSuffixesAsync(CancellationToken cancellationToken = default)
     {
         var settings = await settingsService.GetSettingsAsync(cancellationToken);
@@ -39,10 +37,11 @@ public sealed partial class AdUserDirectoryService
                 {
                     return new AdUpnSuffixesResult(
                         false,
-                        UpnSuffixesNotFoundMessage,
+                        AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.MissingUpnSuffix),
                         null,
                         null,
-                        AdDirectoryFailureKind.NotConfigured);
+                        AdDirectoryFailureKind.NotConfigured,
+                        AdManagementApiMessageKeys.Users.MissingUpnSuffix);
                 }
 
                 return BuildDomainOnlyFallback(
@@ -92,10 +91,11 @@ public sealed partial class AdUserDirectoryService
         {
             return new AdUpnSuffixesResult(
                 false,
-                UpnSuffixesNotFoundMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.MissingUpnSuffix),
                 null,
                 AdUpnSuffixListBuilder.ForestReadFallbackWarning,
-                AdDirectoryFailureKind.NotConfigured);
+                AdDirectoryFailureKind.NotConfigured,
+                AdManagementApiMessageKeys.Users.MissingUpnSuffix);
         }
 
         return new AdUpnSuffixesResult(

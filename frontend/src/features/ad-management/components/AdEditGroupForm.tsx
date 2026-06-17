@@ -15,7 +15,7 @@ import {
   updateAdGroup,
 } from "@/features/ad-management/api";
 import type { AdGroupDetail } from "@/features/ad-management/types";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { getAdManagementApiErrorMessage } from "@/features/ad-management/ad-management-api-message";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -43,7 +43,11 @@ export function AdEditGroupForm({ group, returnPath }: Props) {
     },
     onError: (error) => {
       toast.error(
-        getApiErrorMessage(error, t("adManagement:groups.edit.messages.updateFailed")),
+        getAdManagementApiErrorMessage(
+          error,
+          t,
+          "adManagement:groups.edit.messages.updateFailed",
+        ),
       );
     },
   });

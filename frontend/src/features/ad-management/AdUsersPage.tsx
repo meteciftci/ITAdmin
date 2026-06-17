@@ -29,7 +29,10 @@ import { AdUsersSearchToolbar } from "@/features/ad-management/components/AdUser
 import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useAdManagementModuleStatus";
 import { useAdUserListState } from "@/features/ad-management/use-ad-user-list-state";
 import type { AdUserAccountConfirmAction, AdUserListItem } from "@/features/ad-management/types";
-import { getApiErrorMessage } from "@/lib/api-error";
+import {
+  getAdManagementApiErrorMessage,
+  resolveAdManagementApiMessage,
+} from "@/features/ad-management/ad-management-api-message";
 import { createApiErrorRouteState, getErrorRoutePath } from "@/lib/route-error";
 
 type AccountConfirmTarget = {
@@ -157,24 +160,34 @@ export function AdUsersPage() {
     },
     onSuccess: async (response, variables) => {
       if (!response.success) {
-        toast.error(t("adManagement:users.messages.operationFailed"));
+        toast.error(
+          resolveAdManagementApiMessage(
+            t,
+            response,
+            "adManagement:users.messages.operationFailed",
+          ),
+        );
         return;
       }
 
       await invalidateAdManagementUserQueries(queryClient);
 
-      const message =
+      const fallbackKey =
         variables.action === "enable"
-          ? t("adManagement:users.messages.enabled")
+          ? "adManagement:users.messages.enabled"
           : variables.action === "disable"
-            ? t("adManagement:users.messages.disabled")
-            : t("adManagement:users.messages.unlocked");
-      toast.success(response.message || message);
+            ? "adManagement:users.messages.disabled"
+            : "adManagement:users.messages.unlocked";
+      toast.success(resolveAdManagementApiMessage(t, response, fallbackKey));
       setConfirmTarget(null);
     },
     onError: (error) => {
       toast.error(
-        getApiErrorMessage(error, t("adManagement:users.messages.operationFailed")),
+        getAdManagementApiErrorMessage(
+          error,
+          t,
+          "adManagement:users.messages.operationFailed",
+        ),
       );
     },
   });

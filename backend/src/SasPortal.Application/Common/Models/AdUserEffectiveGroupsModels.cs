@@ -17,7 +17,9 @@ public sealed record AdUserEffectiveGroupsResult(
     int MaxDepth,
     bool Truncated,
     string? TruncatedReason,
-    AdDirectoryFailureKind? FailureKind = null);
+    AdDirectoryFailureKind? FailureKind = null,
+    string? MessageKey = null,
+    IReadOnlyDictionary<string, object>? MessageParams = null);
 
 public sealed record AdEffectiveGroupSummaryItem(
     string DistinguishedName,

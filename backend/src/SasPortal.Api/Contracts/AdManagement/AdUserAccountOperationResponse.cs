@@ -8,4 +8,6 @@ public sealed record AdUserAccountOperationResponse(
     string? UserPrincipalName,
     string? DistinguishedName,
     bool? IsEnabled,
-    bool? IsLockedOut);
+    bool? IsLockedOut,
+    string? MessageKey = null,
+    IReadOnlyDictionary<string, object>? MessageParams = null);

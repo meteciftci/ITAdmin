@@ -13,4 +13,6 @@ public sealed record MoveAdUserOuResponse(
     string? UserPrincipalName,
     string? DistinguishedName,
     string? PreviousDistinguishedName,
-    string? TargetOuDistinguishedName);
+    string? TargetOuDistinguishedName,
+    string? MessageKey = null,
+    IReadOnlyDictionary<string, object>? MessageParams = null);

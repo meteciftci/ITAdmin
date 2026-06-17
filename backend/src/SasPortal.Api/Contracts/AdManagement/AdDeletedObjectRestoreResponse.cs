@@ -8,4 +8,6 @@ public sealed record AdDeletedObjectRestoreResponse(
     string? RestoredName,
     string? RestoredSamAccountName,
     string? RestoredDistinguishedName,
-    string? RestoredLastKnownParent);
+    string? RestoredLastKnownParent,
+    string? MessageKey = null,
+    IReadOnlyDictionary<string, object>? MessageParams = null);

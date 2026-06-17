@@ -33,7 +33,9 @@ public sealed partial class AdUserDirectoryService
                 false,
                 connectionResult.Message,
                 null,
-                connectionResult.FailureKind);
+                connectionResult.FailureKind,
+                connectionResult.MessageKey,
+                connectionResult.MessageParams);
         }
 
         var groupsSearchBase = ResolveRequiredGroupsSearchBase(connectionResult.Context.Connection);
@@ -41,9 +43,10 @@ public sealed partial class AdUserDirectoryService
         {
             return new DeleteAdGroupResult(
                 false,
-                AdManagementNotConfiguredMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
                 null,
-                AdDirectoryFailureKind.NotConfigured);
+                AdDirectoryFailureKind.NotConfigured,
+                AdManagementApiMessageKeys.Common.NotConfigured);
         }
 
         var context = connectionResult.Context;
@@ -60,40 +63,42 @@ public sealed partial class AdUserDirectoryService
                     out _))
             {
                 return await FailGroupDeleteAsync(
-                    request,
+        request,
                     context.Connection,
-                    AdLdapErrorNormalizer.GroupNotFoundMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.NotFound),
                     AdDirectoryFailureKind.NotFound,
                     AdGroupDeleteOperationDiagnosticBuilder.BuildNotFoundJson(
                         AdGroupDeleteSteps.LoadGroup,
                         request.GroupId),
                     beforeDetail: null,
                     targetDistinguishedName: null,
-                    cancellationToken);
+                                        cancellationToken,
+                AdManagementApiMessageKeys.Groups.NotFound);
             }
 
             var distinguishedName = groupDetail!.DistinguishedName;
             if (string.IsNullOrWhiteSpace(distinguishedName))
             {
                 return await FailGroupDeleteAsync(
-                    request,
+        request,
                     context.Connection,
-                    AdLdapErrorNormalizer.GroupNotFoundMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.NotFound),
                     AdDirectoryFailureKind.NotFound,
                     AdGroupDeleteOperationDiagnosticBuilder.BuildNotFoundJson(
                         AdGroupDeleteSteps.LoadGroup,
                         request.GroupId),
                     beforeDetail: groupDetail,
                     targetDistinguishedName: null,
-                    cancellationToken);
+                                        cancellationToken,
+                AdManagementApiMessageKeys.Groups.NotFound);
             }
 
             if (!groupDetail.SecurityEnabled)
             {
                 return await FailGroupDeleteAsync(
-                    request,
+        request,
                     context.Connection,
-                    AdLdapErrorNormalizer.DeleteGroupFailedMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.DeleteFailed),
                     AdDirectoryFailureKind.InvalidRequest,
                     AdGroupDeleteOperationDiagnosticBuilder.BuildPreflightJson(
                         AdGroupDeleteSteps.Preflight,
@@ -103,7 +108,8 @@ public sealed partial class AdUserDirectoryService
                         distinguishedName),
                     beforeDetail: groupDetail,
                     targetDistinguishedName: distinguishedName,
-                    cancellationToken);
+                                        cancellationToken,
+                AdManagementApiMessageKeys.Groups.DeleteFailed);
             }
 
             try
@@ -113,7 +119,7 @@ public sealed partial class AdUserDirectoryService
             catch (DeleteGroupLdapException ex)
             {
                 return await FailGroupDeleteAsync(
-                    request,
+        request,
                     context.Connection,
                     ex.UserMessage,
                     ex.FailureKind,
@@ -128,7 +134,8 @@ public sealed partial class AdUserDirectoryService
                         ex.LdapDiagnosticMessage),
                     beforeDetail: groupDetail,
                     targetDistinguishedName: distinguishedName,
-                    cancellationToken);
+                    cancellationToken,
+                    ex.MessageKey);
             }
 
             await WriteGroupDeleteSuccessLogsAsync(
@@ -145,10 +152,11 @@ public sealed partial class AdUserDirectoryService
         }
         catch (LdapException ex)
         {
+            var messageKey = AdLdapErrorNormalizer.NormalizeMessageKey(ex.ErrorCode, ex.Message);
             return await FailGroupDeleteAsync(
-                request,
+        request,
                 context.Connection,
-                AdLdapErrorNormalizer.Normalize(ex.ErrorCode, ex.Message),
+                AdManagementApiMessages.Legacy(messageKey),
                 AdDirectoryFailureKind.ConnectionFailed,
                 AdGroupDeleteOperationDiagnosticBuilder.BuildGenericFailureJson(
                     AdGroupDeleteSteps.DeleteGroup,
@@ -161,7 +169,8 @@ public sealed partial class AdUserDirectoryService
                     ex.Message),
                 beforeDetail: null,
                 targetDistinguishedName: null,
-                cancellationToken);
+                cancellationToken,
+                messageKey);
         }
         catch (Exception ex)
         {
@@ -172,9 +181,9 @@ public sealed partial class AdUserDirectoryService
                 request.ActorUserId);
 
             return await FailGroupDeleteAsync(
-                request,
+        request,
                 context.Connection,
-                AdLdapErrorNormalizer.DeleteGroupFailedMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.DeleteFailed),
                 AdDirectoryFailureKind.ConnectionFailed,
                 AdGroupDeleteOperationDiagnosticBuilder.BuildGenericFailureJson(
                     AdGroupDeleteSteps.DeleteGroup,
@@ -184,7 +193,8 @@ public sealed partial class AdUserDirectoryService
                     null),
                 beforeDetail: null,
                 targetDistinguishedName: null,
-                cancellationToken);
+                                cancellationToken,
+                AdManagementApiMessageKeys.Groups.DeleteFailed);
         }
     }
 
@@ -194,12 +204,16 @@ public sealed partial class AdUserDirectoryService
         var response = (DirectoryResponse)ldapConnection.SendRequest(deleteRequest);
         if (response.ResultCode != ResultCode.Success)
         {
-            var userMessage = AdLdapErrorNormalizer.Normalize((int)response.ResultCode, response.ErrorMessage);
+            var messageKey = AdLdapErrorNormalizer.NormalizeMessageKey(
+                (int)response.ResultCode,
+                response.ErrorMessage);
+            var userMessage = AdManagementApiMessages.Legacy(messageKey);
             throw new DeleteGroupLdapException(
                 userMessage,
                 MapGroupFailureKind(response.ResultCode),
                 ResolveDeleteNormalizedReason(response.ResultCode),
                 ResolveDeleteEnglishMessage(response.ResultCode),
+                messageKey,
                 (int)response.ResultCode,
                 (int)response.ResultCode,
                 response.ErrorMessage);
@@ -235,12 +249,14 @@ public sealed partial class AdUserDirectoryService
         string operationDiagnosticJson,
         AdGroupDetail? beforeDetail,
         string? targetDistinguishedName,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? messageKey = null,
+        IReadOnlyDictionary<string, object>? messageParams = null)
     {
         try
         {
             await WriteGroupDeleteFailureLogsAsync(
-                request,
+        request,
                 connection,
                 beforeDetail,
                 targetDistinguishedName,
@@ -283,7 +299,7 @@ public sealed partial class AdUserDirectoryService
                 request.ActorUserId);
         }
 
-        return new DeleteAdGroupResult(false, message, null, failureKind);
+        return new DeleteAdGroupResult(false, message, null, failureKind, messageKey, messageParams);
     }
 
     private async Task WriteGroupDeleteSuccessLogsAsync(
@@ -400,6 +416,7 @@ public sealed partial class AdUserDirectoryService
         AdDirectoryFailureKind failureKind,
         string normalizedReason,
         string englishMessage,
+        string messageKey,
         int? ldapResultCode = null,
         int? ldapExceptionErrorCode = null,
         string? ldapDiagnosticMessage = null) : Exception(userMessage)
@@ -408,6 +425,7 @@ public sealed partial class AdUserDirectoryService
         public AdDirectoryFailureKind FailureKind { get; } = failureKind;
         public string NormalizedReason { get; } = normalizedReason;
         public string EnglishMessage { get; } = englishMessage;
+        public string MessageKey { get; } = messageKey;
         public int? LdapResultCode { get; } = ldapResultCode;
         public int? LdapExceptionErrorCode { get; } = ldapExceptionErrorCode;
         public string? LdapDiagnosticMessage { get; } = ldapDiagnosticMessage;

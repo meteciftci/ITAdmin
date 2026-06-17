@@ -1,7 +1,29 @@
 import { AxiosError } from "axios";
 
-import type { AdManagementValidationResult } from "@/features/ad-management/types";
-import { getApiErrorMessage } from "@/lib/api-error";
+import type { TFunction } from "i18next";
+
+import {
+  getAdManagementApiErrorMessage,
+  resolveAdManagementApiMessage,
+} from "@/features/ad-management/ad-management-api-message";
+import type {
+  AdManagementApiMessageParams,
+  AdManagementValidationResult,
+} from "@/features/ad-management/types";
+
+function parseMessageParams(
+  value: unknown,
+): AdManagementApiMessageParams | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  if (typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  return value as AdManagementApiMessageParams;
+}
 
 export function extractValidationFromError(
   error: unknown,
@@ -31,9 +53,12 @@ export function extractValidationFromError(
   return {
     isValid: candidate.isValid,
     message: candidate.message,
+    messageKey:
+      typeof candidate.messageKey === "string" ? candidate.messageKey : null,
+    messageParams: parseMessageParams(candidate.messageParams),
     checkedAt: candidate.checkedAt,
     details: candidate.details
-      .map((item) => {
+      .map((item): AdManagementValidationResult["details"][number] | null => {
         if (!item || typeof item !== "object") return null;
         const detail = item as Record<string, unknown>;
         if (
@@ -47,6 +72,9 @@ export function extractValidationFromError(
           status: detail.status,
           message:
             typeof detail.message === "string" ? detail.message : null,
+          messageKey:
+            typeof detail.messageKey === "string" ? detail.messageKey : null,
+          messageParams: parseMessageParams(detail.messageParams),
         };
       })
       .filter((d): d is AdManagementValidationResult["details"][number] => d !== null),
@@ -55,17 +83,13 @@ export function extractValidationFromError(
 
 export function getAdManagementSaveErrorMessage(
   error: unknown,
-  saveFailedFallback: string,
+  t: TFunction,
+  fallbackKey: string,
 ): string {
-  const apiMessage = getApiErrorMessage(error, "");
-  if (apiMessage.trim().length > 0) {
-    return apiMessage;
-  }
-
   const validation = extractValidationFromError(error);
-  if (validation?.message.trim()) {
-    return validation.message;
+  if (validation) {
+    return resolveAdManagementApiMessage(t, validation, fallbackKey);
   }
 
-  return saveFailedFallback;
+  return getAdManagementApiErrorMessage(error, t, fallbackKey);
 }

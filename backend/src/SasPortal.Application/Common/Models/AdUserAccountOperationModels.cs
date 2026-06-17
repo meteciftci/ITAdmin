@@ -16,4 +16,6 @@ public sealed record AdUserAccountOperationResult(
     string? DistinguishedName = null,
     bool? IsEnabled = null,
     bool? IsLockedOut = null,
-    AdDirectoryFailureKind? FailureKind = null);
+    AdDirectoryFailureKind? FailureKind = null,
+    string? MessageKey = null,
+    IReadOnlyDictionary<string, object>? MessageParams = null);

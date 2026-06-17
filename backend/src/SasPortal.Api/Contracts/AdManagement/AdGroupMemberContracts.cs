@@ -51,4 +51,6 @@ public sealed record AdGroupMemberOperationResponse(
     string? GroupDistinguishedName,
     string? GroupName,
     string? MemberDistinguishedName,
-    string? MemberName);
+    string? MemberName,
+    string? MessageKey = null,
+    IReadOnlyDictionary<string, object>? MessageParams = null);

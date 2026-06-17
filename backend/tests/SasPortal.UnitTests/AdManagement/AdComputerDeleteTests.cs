@@ -66,7 +66,7 @@ public sealed class AdComputerDeleteTests
                 "backend/src/SasPortal.Api/Controllers/AdManagementController.cs"));
 
         Assert.Contains("DeleteComputer", source, StringComparison.Ordinal);
-        Assert.Contains("Geçersiz bilgisayar kimliği.", source, StringComparison.Ordinal);
+        Assert.Contains("AdManagementApiMessageKeys.Computers.InvalidComputerId", source, StringComparison.Ordinal);
         Assert.Contains("DeleteAdComputerResponse", source, StringComparison.Ordinal);
     }
 
@@ -118,7 +118,7 @@ public sealed class AdComputerDeleteTests
                 FindRepositoryRoot(),
                 "backend/src/SasPortal.Api/Controllers/AdManagementController.cs"));
 
-        Assert.Contains("MapDirectoryFailure(result.Message, result.FailureKind)", source, StringComparison.Ordinal);
+        Assert.Contains("MapDirectoryFailure(result.Message, result.FailureKind, result.MessageKey, result.MessageParams)", source, StringComparison.Ordinal);
         Assert.Contains("AdDirectoryFailureKind.NotFound => NotFound", source, StringComparison.Ordinal);
         Assert.Contains("AdDirectoryFailureKind.ConnectionFailed => StatusCode", source, StringComparison.Ordinal);
         Assert.Contains("AdDirectoryFailureKind.NotConfigured", source, StringComparison.Ordinal);

@@ -2,16 +2,13 @@ using System.DirectoryServices.Protocols;
 using Microsoft.Extensions.Logging;
 using SasPortal.Application.Abstractions.Services;
 using SasPortal.Application.Common.AdManagement;
+using SasPortal.Application.Common.Constants;
 using SasPortal.Application.Common.Models;
 
 namespace SasPortal.Infrastructure.Services;
 
 public sealed partial class AdUserDirectoryService : IAdGroupDirectoryService
 {
-    private const string SecurityGroupNotFoundMessage = "AD grubu bulunamadı.";
-    private const string GroupsQueryFailedMessage = "AD grupları okunamadı.";
-    private const string DistributionGroupExcludedMessage = "AD grubu bulunamadı.";
-
     private static readonly string[] GroupListAttributes =
     [
         "objectGUID",
@@ -84,7 +81,9 @@ public sealed partial class AdUserDirectoryService : IAdGroupDirectoryService
                 false,
                 connectionResult.Message,
                 null,
-                connectionResult.FailureKind);
+                connectionResult.FailureKind,
+                connectionResult.MessageKey,
+                connectionResult.MessageParams);
         }
 
         var groupsSearchBase = ResolveRequiredGroupsSearchBase(connectionResult.Context.Connection);
@@ -92,9 +91,10 @@ public sealed partial class AdUserDirectoryService : IAdGroupDirectoryService
         {
             return new AdGroupDirectoryListResult(
                 false,
-                AdManagementNotConfiguredMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
                 null,
-                AdDirectoryFailureKind.NotConfigured);
+                AdDirectoryFailureKind.NotConfigured,
+                AdManagementApiMessageKeys.Common.NotConfigured);
         }
 
         try
@@ -174,7 +174,9 @@ public sealed partial class AdUserDirectoryService : IAdGroupDirectoryService
                 false,
                 connectionResult.Message,
                 null,
-                connectionResult.FailureKind);
+                connectionResult.FailureKind,
+                connectionResult.MessageKey,
+                connectionResult.MessageParams);
         }
 
         var groupsSearchBase = ResolveRequiredGroupsSearchBase(connectionResult.Context.Connection);
@@ -182,9 +184,10 @@ public sealed partial class AdUserDirectoryService : IAdGroupDirectoryService
         {
             return new AdGroupDirectoryDetailResult(
                 false,
-                AdManagementNotConfiguredMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
                 null,
-                AdDirectoryFailureKind.NotConfigured);
+                AdDirectoryFailureKind.NotConfigured,
+                AdManagementApiMessageKeys.Common.NotConfigured);
         }
 
         try
@@ -211,18 +214,20 @@ public sealed partial class AdUserDirectoryService : IAdGroupDirectoryService
             {
                 return new AdGroupDirectoryDetailResult(
                     false,
-                    SecurityGroupNotFoundMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.NotFound),
                     null,
-                    AdDirectoryFailureKind.NotFound);
+                    AdDirectoryFailureKind.NotFound,
+                    AdManagementApiMessageKeys.Groups.NotFound);
             }
 
             if (!TryMapGroupDetail(ldapConnection, response.Entries[0], out var detail))
             {
                 return new AdGroupDirectoryDetailResult(
                     false,
-                    DistributionGroupExcludedMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.NotFound),
                     null,
-                    AdDirectoryFailureKind.NotFound);
+                    AdDirectoryFailureKind.NotFound,
+                    AdManagementApiMessageKeys.Groups.NotFound);
             }
 
             detail = TryEnrichDetailWithResolvedManagedBy(ldapConnection, detail);
@@ -625,8 +630,18 @@ public sealed partial class AdUserDirectoryService : IAdGroupDirectoryService
         string.IsNullOrWhiteSpace(connection.GroupsSearchBase) ? null : connection.GroupsSearchBase.Trim();
 
     private static AdGroupDirectoryListResult GroupListConnectionFailed() =>
-        new(false, GroupsQueryFailedMessage, null, AdDirectoryFailureKind.ConnectionFailed);
+        new(
+            false,
+            AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.QueryFailed),
+            null,
+            AdDirectoryFailureKind.ConnectionFailed,
+            AdManagementApiMessageKeys.Groups.QueryFailed);
 
     private static AdGroupDirectoryDetailResult GroupDetailConnectionFailed() =>
-        new(false, GroupsQueryFailedMessage, null, AdDirectoryFailureKind.ConnectionFailed);
+        new(
+            false,
+            AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.QueryFailed),
+            null,
+            AdDirectoryFailureKind.ConnectionFailed,
+            AdManagementApiMessageKeys.Groups.QueryFailed);
 }

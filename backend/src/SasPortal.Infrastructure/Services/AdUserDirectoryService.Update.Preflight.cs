@@ -1,5 +1,6 @@
 using System.DirectoryServices.Protocols;
 using SasPortal.Application.Common.AdManagement;
+using SasPortal.Application.Common.Constants;
 
 namespace SasPortal.Infrastructure.Services;
 
@@ -28,7 +29,7 @@ public sealed partial class AdUserDirectoryService
                 {
                     return new AdUserUpdatePreflightFailure(
                         "sAMAccountName",
-                        AdLdapErrorNormalizer.PreflightSamAccountNameDuplicateMessage,
+                        AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.OperationFailures.PreflightSamAccountNameDuplicate),
                         "The sAMAccountName value is already used by another AD object.");
                 }
             }
@@ -44,7 +45,7 @@ public sealed partial class AdUserDirectoryService
                 {
                     return new AdUserUpdatePreflightFailure(
                         "userPrincipalName",
-                        AdLdapErrorNormalizer.PreflightUserPrincipalNameDuplicateMessage,
+                        AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.OperationFailures.PreflightUpnDuplicate),
                         "The userPrincipalName value is already used by another AD object.");
                 }
             }
@@ -60,7 +61,7 @@ public sealed partial class AdUserDirectoryService
             {
                 return new AdUserUpdatePreflightFailure(
                     "cn",
-                    AdLdapErrorNormalizer.PreflightCnDuplicateMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.OperationFailures.PreflightCnDuplicate),
                     "The CN value is already used by another AD object in the target OU.");
             }
         }

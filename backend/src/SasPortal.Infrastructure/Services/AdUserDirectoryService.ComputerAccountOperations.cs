@@ -9,13 +9,6 @@ namespace SasPortal.Infrastructure.Services;
 
 public sealed partial class AdUserDirectoryService : IAdComputerAccountOperationService
 {
-    private const string ComputerAccountOperationFailedMessage = "Bilgisayar hesabı işlemi başarısız oldu.";
-    private const string ComputerAlreadyEnabledMessage = "Bilgisayar hesabı zaten etkin.";
-    private const string ComputerAlreadyDisabledMessage = "Bilgisayar hesabı zaten devre dışı.";
-    private const string ComputerEnabledMessage = "Bilgisayar hesabı etkinleştirildi.";
-    private const string ComputerDisabledMessage = "Bilgisayar hesabı devre dışı bırakıldı.";
-    private const string ComputerUserAccountControlMissingMessage =
-        "Bilgisayar hesabı userAccountControl değeri okunamadı.";
     private const string ComputerLoadStep = "LoadComputer";
     private const string ComputerModifyStep = "ModifyAccountControl";
     private const string ComputerOperationSuccessLoggingFailedMessage =
@@ -54,15 +47,15 @@ public sealed partial class AdUserDirectoryService : IAdComputerAccountOperation
             ? AdManagementOperationTypes.ComputerDisable
             : AdManagementOperationTypes.ComputerEnable;
         var auditAction = disabled ? "Disable" : "Enable";
-        var successMessage = disabled ? ComputerDisabledMessage : ComputerEnabledMessage;
-        var alreadyMessage = disabled ? ComputerAlreadyDisabledMessage : ComputerAlreadyEnabledMessage;
+        var successMessage = disabled ? AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.AccountDisabled) : AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.AccountEnabled);
+        var alreadyMessage = disabled ? AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.AccountDisabled) : AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.AccountEnabled);
         var auditDescriptionVerb = disabled ? "disabled" : "enabled";
 
         var connectionResult = await ResolveConnectionAsync(cancellationToken);
         if (!connectionResult.IsSuccess || connectionResult.Context is null)
         {
             return await FailComputerAccountOperationAsync(
-                request,
+        request,
                 operationType,
                 auditAction,
                 $"AD computer account {auditDescriptionVerb} failed.",
@@ -79,11 +72,11 @@ public sealed partial class AdUserDirectoryService : IAdComputerAccountOperation
         if (string.IsNullOrWhiteSpace(computersSearchBase))
         {
             return await FailComputerAccountOperationAsync(
-                request,
+        request,
                 operationType,
                 auditAction,
                 $"AD computer account {auditDescriptionVerb} failed.",
-                AdManagementNotConfiguredMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
                 context.Connection,
                 beforeState: null,
                 AdDirectoryFailureKind.NotConfigured,
@@ -102,11 +95,11 @@ public sealed partial class AdUserDirectoryService : IAdComputerAccountOperation
                     out var beforeState))
             {
                 return await FailComputerAccountOperationAsync(
-                    request,
+        request,
                     operationType,
                     auditAction,
                     $"AD computer account {auditDescriptionVerb} failed.",
-                    ComputerNotFoundMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.NotFound),
                     context.Connection,
                     beforeState: null,
                     AdDirectoryFailureKind.NotFound,
@@ -118,11 +111,11 @@ public sealed partial class AdUserDirectoryService : IAdComputerAccountOperation
             if (beforeState.UserAccountControl is null)
             {
                 return await FailComputerAccountOperationAsync(
-                    request,
+        request,
                     operationType,
                     auditAction,
                     $"AD computer account {auditDescriptionVerb} failed.",
-                    ComputerUserAccountControlMissingMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.AccountOperationFailed),
                     context.Connection,
                     beforeState,
                     AdDirectoryFailureKind.InvalidRequest,
@@ -135,7 +128,7 @@ public sealed partial class AdUserDirectoryService : IAdComputerAccountOperation
                     beforeState.IsCriticalSystemObject))
             {
                 return await FailComputerAccountOperationAsync(
-                    request,
+        request,
                     operationType,
                     auditAction,
                     $"AD computer account {auditDescriptionVerb} failed.",
@@ -181,11 +174,11 @@ public sealed partial class AdUserDirectoryService : IAdComputerAccountOperation
                     out var afterState))
             {
                 return await FailComputerAccountOperationAsync(
-                    request,
+        request,
                     operationType,
                     auditAction,
                     $"AD computer account {auditDescriptionVerb} failed.",
-                    ComputerAccountOperationFailedMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.AccountOperationFailed),
                     context.Connection,
                     loadedBeforeState,
                     AdDirectoryFailureKind.ConnectionFailed,
@@ -208,7 +201,7 @@ public sealed partial class AdUserDirectoryService : IAdComputerAccountOperation
         catch (LdapException ex)
         {
             return await FailComputerAccountOperationAsync(
-                request,
+        request,
                 operationType,
                 auditAction,
                 $"AD computer account {auditDescriptionVerb} failed.",
@@ -222,11 +215,11 @@ public sealed partial class AdUserDirectoryService : IAdComputerAccountOperation
         catch (Exception)
         {
             return await FailComputerAccountOperationAsync(
-                request,
+        request,
                 operationType,
                 auditAction,
                 $"AD computer account {auditDescriptionVerb} failed.",
-                ComputerAccountOperationFailedMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.AccountOperationFailed),
                 context.Connection,
                 loadedBeforeState,
                 AdDirectoryFailureKind.ConnectionFailed,
@@ -357,9 +350,11 @@ public sealed partial class AdUserDirectoryService : IAdComputerAccountOperation
         AdComputerAccountState? beforeState,
         AdDirectoryFailureKind? failureKind,
         CancellationToken cancellationToken,
-        LdapException? ldapException = null)
+        LdapException? ldapException = null,
+        string? messageKey = null,
+        IReadOnlyDictionary<string, object>? messageParams = null)
     {
-        var step = beforeState is null && string.Equals(message, ComputerNotFoundMessage, StringComparison.Ordinal)
+        var step = beforeState is null && string.Equals(message, AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.NotFound), StringComparison.Ordinal)
             ? ComputerLoadStep
             : ComputerModifyStep;
 
@@ -381,7 +376,7 @@ public sealed partial class AdUserDirectoryService : IAdComputerAccountOperation
                 ldapDiagnosticMessage: ldapException.Message);
 
         await WriteComputerAccountFailureLogsSafelyAsync(
-            request,
+        request,
             operationType,
             auditAction,
             auditDescription,
@@ -393,7 +388,9 @@ public sealed partial class AdUserDirectoryService : IAdComputerAccountOperation
         return new AdComputerAccountOperationResult(
             false,
             message,
-            FailureKind: failureKind);
+            FailureKind: failureKind,
+            MessageKey: messageKey,
+            MessageParams: messageParams);
     }
 
     private bool TryLoadComputerDetail(
@@ -651,19 +648,19 @@ public sealed partial class AdUserDirectoryService : IAdComputerAccountOperation
 
     private static string? ResolveComputerFailureReason(string message)
     {
-        if (string.Equals(message, ComputerNotFoundMessage, StringComparison.Ordinal))
+        if (string.Equals(message, AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.NotFound), StringComparison.Ordinal))
         {
             return AdUserUpdateNormalizedReasons.NoSuchObject;
         }
 
-        if (string.Equals(message, AdManagementNotConfiguredMessage, StringComparison.Ordinal)
+        if (string.Equals(message, AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured), StringComparison.Ordinal)
             || string.Equals(message, AdComputerAccountGuard.ProtectedComputerMessage, StringComparison.Ordinal)
-            || string.Equals(message, ComputerUserAccountControlMissingMessage, StringComparison.Ordinal))
+            || string.Equals(message, AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.AccountOperationFailed), StringComparison.Ordinal))
         {
             return AdUserUpdateNormalizedReasons.InvalidRequest;
         }
 
-        if (string.Equals(message, ComputerAccountOperationFailedMessage, StringComparison.Ordinal))
+        if (string.Equals(message, AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.AccountOperationFailed), StringComparison.Ordinal))
         {
             return AdUserUpdateNormalizedReasons.ConnectionFailed;
         }
@@ -674,23 +671,23 @@ public sealed partial class AdUserDirectoryService : IAdComputerAccountOperation
     private static string ResolveComputerFailureEnglishMessage(string userMessage) =>
         userMessage switch
         {
-            var message when string.Equals(message, ComputerNotFoundMessage, StringComparison.Ordinal) =>
+            var message when string.Equals(message, AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.NotFound), StringComparison.Ordinal) =>
                 "The AD computer could not be found.",
-            var message when string.Equals(message, AdManagementNotConfiguredMessage, StringComparison.Ordinal) =>
+            var message when string.Equals(message, AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured), StringComparison.Ordinal) =>
                 "AD management is not configured.",
             var message when string.Equals(message, AdComputerAccountGuard.ProtectedComputerMessage, StringComparison.Ordinal) =>
                 "This computer account cannot be enabled or disabled.",
-            var message when string.Equals(message, ComputerUserAccountControlMissingMessage, StringComparison.Ordinal) =>
+            var message when string.Equals(message, AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.AccountOperationFailed), StringComparison.Ordinal) =>
                 "The computer account userAccountControl value could not be read.",
-            var message when string.Equals(message, ComputerAccountOperationFailedMessage, StringComparison.Ordinal) =>
+            var message when string.Equals(message, AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.AccountOperationFailed), StringComparison.Ordinal) =>
                 "The AD computer account operation failed.",
             _ => "The AD computer account operation failed.",
         };
 
     private static string SanitizeComputerLdapError(LdapException exception) =>
         string.IsNullOrWhiteSpace(exception.Message) || exception.Message.Contains("ldap", StringComparison.OrdinalIgnoreCase)
-            ? ComputerAccountOperationFailedMessage
-            : ComputerAccountOperationFailedMessage;
+            ? AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.AccountOperationFailed)
+            : AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.AccountOperationFailed);
 
     private static bool? GetFirstBool(SearchResultEntry entry, string attributeName)
     {

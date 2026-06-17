@@ -1,5 +1,6 @@
 using System.DirectoryServices.Protocols;
 using SasPortal.Application.Common.AdManagement;
+using SasPortal.Application.Common.Constants;
 using SasPortal.Application.Common.Models;
 
 namespace SasPortal.Infrastructure.Services;
@@ -437,7 +438,7 @@ public sealed partial class AdUserDirectoryService
 
         var userMessage = ldapResultCode is not null
             ? AdLdapErrorNormalizer.Normalize(ldapResultCode.Value, diagnosticMessage)
-            : AdLdapErrorNormalizer.UpdateUserFailedMessage;
+            : AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.UpdateFailed);
 
         var failureKind = response is not null
             ? MapFailureKind(response.ResultCode)

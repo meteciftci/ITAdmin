@@ -28,7 +28,7 @@ import { AdDeletedObjectDetailHeaderActions } from "@/features/ad-management/com
 import { AdManagementModuleStateGuard } from "@/features/ad-management/components/AdManagementModuleStateGuard";
 import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useAdManagementModuleStatus";
 import { adDetailOutlineButtonClass } from "@/features/ad-management/ad-user-detail-button-styles";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { getAdManagementApiErrorMessage } from "@/features/ad-management/ad-management-api-message";
 
 export function AdDeletedObjectDetailPage() {
   const { t } = useTranslation(["adManagement", "common", "errors"]);
@@ -109,9 +109,10 @@ export function AdDeletedObjectDetailPage() {
               ? t("adManagement:deletedObjects.errors.notFound")
               : t("adManagement:deletedObjects.errors.detailFailed")
           }
-          description={getApiErrorMessage(
+          description={getAdManagementApiErrorMessage(
             detailQuery.error,
-            t("adManagement:deletedObjects.errors.detailFailed"),
+            t,
+            "adManagement:deletedObjects.errors.detailFailed",
           )}
           retry={
             <Link to={returnPath} className={adDetailOutlineButtonClass}>

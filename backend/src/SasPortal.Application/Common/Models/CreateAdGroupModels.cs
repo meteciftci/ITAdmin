@@ -16,4 +16,6 @@ public sealed record CreateAdGroupResult(
     bool IsSuccess,
     string Message,
     AdGroupDetail? Group,
-    AdDirectoryFailureKind? FailureKind = null);
+    AdDirectoryFailureKind? FailureKind = null,
+    string? MessageKey = null,
+    IReadOnlyDictionary<string, object>? MessageParams = null);

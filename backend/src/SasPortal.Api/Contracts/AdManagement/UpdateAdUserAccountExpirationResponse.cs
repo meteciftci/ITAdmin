@@ -6,4 +6,6 @@ public sealed record UpdateAdUserAccountExpirationResponse(
     string UserId,
     string? SamAccountName,
     string? AccountExpiresDate,
-    bool NeverExpires);
+    bool NeverExpires,
+    string? MessageKey = null,
+    IReadOnlyDictionary<string, object>? MessageParams = null);

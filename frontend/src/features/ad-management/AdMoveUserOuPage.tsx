@@ -24,7 +24,10 @@ import {
 import { AdManagementModuleStateGuard } from "@/features/ad-management/components/AdManagementModuleStateGuard";
 import { AdOuSearchCombobox } from "@/features/ad-management/components/AdOuSearchCombobox";
 import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useAdManagementModuleStatus";
-import { getApiErrorMessage } from "@/lib/api-error";
+import {
+  getAdManagementApiErrorMessage,
+  resolveAdManagementApiMessage,
+} from "@/features/ad-management/ad-management-api-message";
 import { AD_USER_FORM_ACTIONS_CLASSNAME } from "@/features/ad-management/ad-form-actions";
 import { cn } from "@/lib/utils";
 
@@ -90,22 +93,35 @@ export function AdMoveUserOuPage() {
       }),
     onSuccess: async (response) => {
       if (!response.success) {
-        toast.error(t("adManagement:users.moveOu.messages.moveFailed"));
+        toast.error(
+          resolveAdManagementApiMessage(
+            t,
+            response,
+            "adManagement:users.moveOu.messages.moveFailed",
+          ),
+        );
         return;
       }
 
       await invalidateAdManagementUserQueries(queryClient);
       toast.success(
-        response.message
-        || (response.previousDistinguishedName === response.distinguishedName
-          ? t("adManagement:users.moveOu.messages.alreadyInOu")
-          : t("adManagement:users.moveOu.messages.moved")),
+        resolveAdManagementApiMessage(
+          t,
+          response,
+          response.previousDistinguishedName === response.distinguishedName
+            ? "adManagement:users.moveOu.messages.alreadyInOu"
+            : "adManagement:users.moveOu.messages.moved",
+        ),
       );
       navigate(returnPath);
     },
     onError: (error) => {
       toast.error(
-        getApiErrorMessage(error, t("adManagement:users.moveOu.messages.moveFailed")),
+        getAdManagementApiErrorMessage(
+          error,
+          t,
+          "adManagement:users.moveOu.messages.moveFailed",
+        ),
       );
     },
   });
@@ -154,9 +170,10 @@ export function AdMoveUserOuPage() {
         {userQuery.isError ? (
           <ErrorState
             title={t("adManagement:users.errors.detailFailed")}
-            description={getApiErrorMessage(
+            description={getAdManagementApiErrorMessage(
               userQuery.error,
-              t("adManagement:users.errors.detailFailed"),
+              t,
+              "adManagement:users.errors.detailFailed",
             )}
           />
         ) : null}

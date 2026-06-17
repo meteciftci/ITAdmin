@@ -9,13 +9,6 @@ namespace SasPortal.Infrastructure.Services;
 
 public sealed partial class AdUserDirectoryService : IAdUserAccountOperationService
 {
-    private const string AccountOperationFailedMessage = "Hesap işlemi başarısız oldu.";
-    private const string AccountAlreadyEnabledMessage = "Kullanıcı hesabı zaten aktif.";
-    private const string AccountAlreadyDisabledMessage = "Kullanıcı hesabı zaten pasif.";
-    private const string AccountNotLockedMessage = "Kullanıcı hesabı kilitli değil.";
-    private const string AccountEnabledMessage = "Kullanıcı hesabı aktife alındı.";
-    private const string AccountDisabledMessage = "Kullanıcı hesabı pasife alındı.";
-    private const string AccountUnlockedMessage = "Kullanıcı kilidi açıldı.";
     private const string AccountLoadUserStep = "LoadUser";
     private const string AccountModifyStep = "ModifyAccountControl";
     private const string AccountUnlockStep = "UnlockAccount";
@@ -48,15 +41,15 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
             ? AdManagementOperationTypes.UserDisable
             : AdManagementOperationTypes.UserEnable;
         var auditAction = disabled ? "Disable" : "Enable";
-        var successMessage = disabled ? AccountDisabledMessage : AccountEnabledMessage;
-        var alreadyMessage = disabled ? AccountAlreadyDisabledMessage : AccountAlreadyEnabledMessage;
+        var successMessage = disabled ? AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.AccountDisabled) : AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.AccountEnabled);
+        var alreadyMessage = disabled ? AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.AccountAlreadyDisabled) : AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.AccountAlreadyEnabled);
         var auditDescriptionVerb = disabled ? "disabled" : "enabled";
 
         var connectionResult = await ResolveConnectionAsync(cancellationToken);
         if (!connectionResult.IsSuccess || connectionResult.Context is null)
         {
             return await FailAccountOperationAsync(
-                request,
+        request,
                 operationType,
                 auditAction,
                 $"AD user account {auditDescriptionVerb} failed.",
@@ -72,11 +65,11 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
         if (string.IsNullOrWhiteSpace(searchBase))
         {
             return await FailAccountOperationAsync(
-                request,
+        request,
                 operationType,
                 auditAction,
                 $"AD user account {auditDescriptionVerb} failed.",
-                AdManagementNotConfiguredMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
                 context.Connection,
                 beforeState: null,
                 AdDirectoryFailureKind.NotConfigured,
@@ -95,11 +88,11 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
                     out var beforeState))
             {
                 return await FailAccountOperationAsync(
-                    request,
+        request,
                     operationType,
                     auditAction,
                     $"AD user account {auditDescriptionVerb} failed.",
-                    UserNotFoundMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.NotFound),
                     context.Connection,
                     beforeState: null,
                     AdDirectoryFailureKind.NotFound,
@@ -139,11 +132,11 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
                     out var afterState))
             {
                 return await FailAccountOperationAsync(
-                    request,
+        request,
                     operationType,
                     auditAction,
                     $"AD user account {auditDescriptionVerb} failed.",
-                    AccountOperationFailedMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.AccountOperationFailed),
                     context.Connection,
                     loadedBeforeState,
                     AdDirectoryFailureKind.ConnectionFailed,
@@ -169,7 +162,7 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
         catch (LdapException ex)
         {
             return await FailAccountOperationAsync(
-                request,
+        request,
                 operationType,
                 auditAction,
                 $"AD user account {auditDescriptionVerb} failed.",
@@ -183,11 +176,11 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
         catch (Exception)
         {
             return await FailAccountOperationAsync(
-                request,
+        request,
                 operationType,
                 auditAction,
                 $"AD user account {auditDescriptionVerb} failed.",
-                AccountOperationFailedMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.AccountOperationFailed),
                 context.Connection,
                 loadedBeforeState,
                 AdDirectoryFailureKind.ConnectionFailed,
@@ -206,7 +199,7 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
         if (!connectionResult.IsSuccess || connectionResult.Context is null)
         {
             return await FailAccountOperationAsync(
-                request,
+        request,
                 operationType,
                 auditAction,
                 "AD user account unlock failed.",
@@ -222,11 +215,11 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
         if (string.IsNullOrWhiteSpace(searchBase))
         {
             return await FailAccountOperationAsync(
-                request,
+        request,
                 operationType,
                 auditAction,
                 "AD user account unlock failed.",
-                AdManagementNotConfiguredMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
                 context.Connection,
                 beforeState: null,
                 AdDirectoryFailureKind.NotConfigured,
@@ -245,11 +238,11 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
                     out var beforeState))
             {
                 return await FailAccountOperationAsync(
-                    request,
+        request,
                     operationType,
                     auditAction,
                     "AD user account unlock failed.",
-                    UserNotFoundMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.NotFound),
                     context.Connection,
                     beforeState: null,
                     AdDirectoryFailureKind.NotFound,
@@ -265,7 +258,7 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
                     operationType,
                     auditAction,
                     $"AD user account unlocked. User: {beforeState.SamAccountName}.",
-                    AccountNotLockedMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.AccountNotLocked),
                     context.Connection,
                     beforeState,
                     beforeState,
@@ -282,11 +275,11 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
                     out var afterState))
             {
                 return await FailAccountOperationAsync(
-                    request,
+        request,
                     operationType,
                     auditAction,
                     "AD user account unlock failed.",
-                    AccountOperationFailedMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.AccountOperationFailed),
                     context.Connection,
                     loadedBeforeState,
                     AdDirectoryFailureKind.ConnectionFailed,
@@ -298,7 +291,7 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
                 operationType,
                 auditAction,
                 $"AD user account unlocked. User: {afterState.SamAccountName}.",
-                AccountUnlockedMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.AccountUnlocked),
                 context.Connection,
                 beforeState,
                 afterState,
@@ -308,7 +301,7 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
         catch (LdapException ex)
         {
             return await FailAccountOperationAsync(
-                request,
+        request,
                 operationType,
                 auditAction,
                 "AD user account unlock failed.",
@@ -322,11 +315,11 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
         catch (Exception)
         {
             return await FailAccountOperationAsync(
-                request,
+        request,
                 operationType,
                 auditAction,
                 "AD user account unlock failed.",
-                AccountOperationFailedMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.AccountOperationFailed),
                 context.Connection,
                 loadedBeforeState,
                 AdDirectoryFailureKind.ConnectionFailed,
@@ -485,12 +478,14 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
         AdUserAccountState? beforeState,
         AdDirectoryFailureKind? failureKind,
         CancellationToken cancellationToken,
-        LdapException? ldapException = null)
+        LdapException? ldapException = null,
+        string? messageKey = null,
+        IReadOnlyDictionary<string, object>? messageParams = null)
     {
         var step = operationType == AdManagementOperationTypes.UserUnlock
             ? AccountUnlockStep
             : AccountModifyStep;
-        if (beforeState is null && string.Equals(message, UserNotFoundMessage, StringComparison.Ordinal))
+        if (beforeState is null && string.Equals(message, AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.NotFound), StringComparison.Ordinal))
         {
             step = AccountLoadUserStep;
         }
@@ -513,7 +508,7 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
                 ldapDiagnosticMessage: ldapException.Message);
 
         await WriteAccountFailureLogsSafelyAsync(
-            request,
+        request,
             operationType,
             auditAction,
             auditDescription,
@@ -526,7 +521,9 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
             false,
             message,
             request.UserId.ToString("D"),
-            FailureKind: failureKind);
+            FailureKind: failureKind,
+            MessageKey: messageKey,
+            MessageParams: messageParams);
     }
 
     private async Task WriteAccountOperationLogsAsync(
@@ -785,17 +782,17 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
 
     private static string? ResolveAccountFailureReason(string message)
     {
-        if (string.Equals(message, UserNotFoundMessage, StringComparison.Ordinal))
+        if (string.Equals(message, AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.NotFound), StringComparison.Ordinal))
         {
             return AdUserUpdateNormalizedReasons.NoSuchObject;
         }
 
-        if (string.Equals(message, AdManagementNotConfiguredMessage, StringComparison.Ordinal))
+        if (string.Equals(message, AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured), StringComparison.Ordinal))
         {
             return AdUserUpdateNormalizedReasons.InvalidRequest;
         }
 
-        if (string.Equals(message, AccountOperationFailedMessage, StringComparison.Ordinal))
+        if (string.Equals(message, AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.AccountOperationFailed), StringComparison.Ordinal))
         {
             return AdUserUpdateNormalizedReasons.ConnectionFailed;
         }
@@ -821,19 +818,19 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
     private static string ResolveAccountFailureEnglishMessage(string userMessage) =>
         userMessage switch
         {
-            var message when string.Equals(message, UserNotFoundMessage, StringComparison.Ordinal) =>
+            var message when string.Equals(message, AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.NotFound), StringComparison.Ordinal) =>
                 "The AD user could not be found.",
-            var message when string.Equals(message, AdManagementNotConfiguredMessage, StringComparison.Ordinal) =>
+            var message when string.Equals(message, AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured), StringComparison.Ordinal) =>
                 "AD management is not configured.",
-            var message when string.Equals(message, AccountOperationFailedMessage, StringComparison.Ordinal) =>
+            var message when string.Equals(message, AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.AccountOperationFailed), StringComparison.Ordinal) =>
                 "The AD account operation failed.",
             _ => "The AD account operation failed.",
         };
 
     private static string SanitizeLdapError(LdapException exception) =>
         string.IsNullOrWhiteSpace(exception.Message) || exception.Message.Contains("ldap", StringComparison.OrdinalIgnoreCase)
-            ? AccountOperationFailedMessage
-            : AccountOperationFailedMessage;
+            ? AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.AccountOperationFailed)
+            : AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.AccountOperationFailed);
 
     private async Task<AdManagementNotificationSummary?> TryEnqueueAccountOperationNotificationAsync(
         string eventKey,

@@ -5,4 +5,6 @@ public sealed record DeleteAdComputerResponse(
     string Message,
     string? DeletedComputerId,
     string? DeletedComputerName,
-    string? DeletedDistinguishedName);
+    string? DeletedDistinguishedName,
+    string? MessageKey = null,
+    IReadOnlyDictionary<string, object>? MessageParams = null);

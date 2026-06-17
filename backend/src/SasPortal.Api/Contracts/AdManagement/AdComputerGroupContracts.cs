@@ -39,4 +39,6 @@ public sealed record AdComputerGroupOperationResponse(
     string? GroupDistinguishedName,
     string? GroupName,
     string? GroupDisplayName,
-    string? GroupSamAccountName);
+    string? GroupSamAccountName,
+    string? MessageKey = null,
+    IReadOnlyDictionary<string, object>? MessageParams = null);

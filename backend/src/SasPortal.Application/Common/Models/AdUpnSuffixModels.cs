@@ -7,4 +7,6 @@ public sealed record AdUpnSuffixesResult(
     string Message,
     IReadOnlyList<AdUpnSuffixItem>? Items,
     string? Warning = null,
-    AdDirectoryFailureKind? FailureKind = null);
+    AdDirectoryFailureKind? FailureKind = null,
+    string? MessageKey = null,
+    IReadOnlyDictionary<string, object>? MessageParams = null);

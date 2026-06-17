@@ -35,7 +35,10 @@ import type {
   AdAttributeMapping,
   CreateAdUserMappedAttributeRequest,
 } from "@/features/ad-management/types";
-import { getApiErrorMessage } from "@/lib/api-error";
+import {
+  getAdManagementApiErrorMessage,
+  resolveAdManagementApiMessage,
+} from "@/features/ad-management/ad-management-api-message";
 import { cn } from "@/lib/utils";
 
 type MappedFieldValues = Record<string, string>;
@@ -123,8 +126,11 @@ export function AdCreateUserPage() {
     mutationFn: createAdUser,
     onSuccess: async (response) => {
       await invalidateAdManagementUserQueries(queryClient);
-      const baseMessage =
-        response.message || t("adManagement:users.create.messages.created");
+      const baseMessage = resolveAdManagementApiMessage(
+        t,
+        response,
+        "adManagement:users.create.messages.created",
+      );
       if ((response.notificationSummary?.queuedCount ?? 0) > 0) {
         toast.success(
           `${baseMessage} ${t("adManagement:users.create.messages.notificationQueued")}`,
@@ -142,7 +148,11 @@ export function AdCreateUserPage() {
     },
     onError: (error) => {
       toast.error(
-        getApiErrorMessage(error, t("adManagement:users.create.messages.createFailed")),
+        getAdManagementApiErrorMessage(
+          error,
+          t,
+          "adManagement:users.create.messages.createFailed",
+        ),
       );
     },
   });

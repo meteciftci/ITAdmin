@@ -132,7 +132,7 @@ describe("deleted object restore page workflow", () => {
     assert.match(restorePageSource, /expectedDistinguishedName/);
     assert.match(restorePageSource, /invalidateAdManagementDeletedObjectRestoreQueries/);
     assert.match(restorePageSource, /navigate\(returnPath\)/);
-    assert.match(restorePageSource, /getApiErrorMessage/);
+    assert.match(restorePageSource, /getAdManagementApiErrorMessage/);
   });
 
   it("shows not restorable state instead of form when ineligible", () => {

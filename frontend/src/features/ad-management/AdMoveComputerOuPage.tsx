@@ -31,7 +31,10 @@ import {
 import { AdComputerMoveOuForm } from "@/features/ad-management/components/AdComputerMoveOuForm";
 import { AdManagementModuleStateGuard } from "@/features/ad-management/components/AdManagementModuleStateGuard";
 import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useAdManagementModuleStatus";
-import { getApiErrorMessage } from "@/lib/api-error";
+import {
+  getAdManagementApiErrorMessage,
+  resolveAdManagementApiMessage,
+} from "@/features/ad-management/ad-management-api-message";
 import { cn } from "@/lib/utils";
 
 function SummaryField({
@@ -101,24 +104,34 @@ export function AdMoveComputerOuPage() {
     onSuccess: async (response) => {
       if (!response.success) {
         toast.error(
-          response.message || t("adManagement:computers.moveOu.messages.moveFailed"),
+          resolveAdManagementApiMessage(
+            t,
+            response,
+            "adManagement:computers.moveOu.messages.moveFailed",
+          ),
         );
         return;
       }
 
       await invalidateAdManagementComputerQueries(queryClient);
-      const fallbackMessage = response.message?.includes("zaten")
-        || response.message?.toLowerCase().includes("already")
-        ? t("adManagement:computers.moveOu.messages.alreadyInOu")
-        : t("adManagement:computers.moveOu.messages.moved");
-      toast.success(response.message || fallbackMessage);
+      toast.success(
+        resolveAdManagementApiMessage(
+          t,
+          response,
+          "adManagement:computers.moveOu.messages.moved",
+        ),
+      );
       navigate(computerId ? buildAdComputerDetailPath(computerId) : returnPath, {
         state: computerId ? buildAdComputerDetailReturnState(computerId) : undefined,
       });
     },
     onError: (error) => {
       toast.error(
-        getApiErrorMessage(error, t("adManagement:computers.moveOu.messages.moveFailed")),
+        getAdManagementApiErrorMessage(
+          error,
+          t,
+          "adManagement:computers.moveOu.messages.moveFailed",
+        ),
       );
     },
   });
@@ -179,9 +192,10 @@ export function AdMoveComputerOuPage() {
         {computerQuery.isError ? (
           <ErrorState
             title={t("adManagement:computers.errors.detailFailed")}
-            description={getApiErrorMessage(
+            description={getAdManagementApiErrorMessage(
               computerQuery.error,
-              t("adManagement:computers.errors.detailFailed"),
+              t,
+              "adManagement:computers.errors.detailFailed",
             )}
           />
         ) : null}

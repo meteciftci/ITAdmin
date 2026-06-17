@@ -70,7 +70,9 @@ public sealed record AdDeletedObjectSearchResult(
     bool IsSuccess,
     string Message,
     AdDeletedObjectSearchPage? Page,
-    AdDirectoryFailureKind? FailureKind = null);
+    AdDirectoryFailureKind? FailureKind = null,
+    string? MessageKey = null,
+    IReadOnlyDictionary<string, object>? MessageParams = null);
 
 public sealed record AdDeletedObjectDetailRequest(Guid ObjectGuid);
 
@@ -78,4 +80,6 @@ public sealed record AdDeletedObjectDetailResult(
     bool IsSuccess,
     string Message,
     AdDeletedObjectDetail? Object,
-    AdDirectoryFailureKind? FailureKind = null);
+    AdDirectoryFailureKind? FailureKind = null,
+    string? MessageKey = null,
+    IReadOnlyDictionary<string, object>? MessageParams = null);

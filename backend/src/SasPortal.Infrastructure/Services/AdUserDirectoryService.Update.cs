@@ -9,7 +9,6 @@ namespace SasPortal.Infrastructure.Services;
 
 public sealed partial class AdUserDirectoryService
 {
-    private const string UpdateUserFailedMessage = AdLdapErrorNormalizer.UpdateUserFailedMessage;
     private const int LdapNoSuchAttribute = 16;
     private const string UpdateUserSuccessLoggingFailedMessage =
         "AD user update operation succeeded but logging failed.";
@@ -29,7 +28,9 @@ public sealed partial class AdUserDirectoryService
                 false,
                 connectionResult.Message,
                 null,
-                connectionResult.FailureKind);
+                connectionResult.FailureKind,
+                connectionResult.MessageKey,
+                connectionResult.MessageParams);
         }
 
         var mappings = await attributeMappingService.GetMappingsAsync(cancellationToken);
@@ -48,7 +49,7 @@ public sealed partial class AdUserDirectoryService
         {
             return new AdUserDirectoryDetailResult(
                 false,
-                AdManagementNotConfiguredMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
                 null,
                 AdDirectoryFailureKind.NotConfigured);
         }
@@ -67,9 +68,9 @@ public sealed partial class AdUserDirectoryService
                     out var beforeEntry))
             {
                 return await FailUpdateAsync(
-                    normalizedRequest,
+        normalizedRequest,
                     context.Connection,
-                    UserNotFoundMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.NotFound),
                     AdDirectoryFailureKind.NotFound,
                     AdUserUpdateOperationDiagnosticBuilder.BuildNotFoundJson(
                         AdUserUpdateSteps.LoadUser,
@@ -85,9 +86,9 @@ public sealed partial class AdUserDirectoryService
             if (string.IsNullOrWhiteSpace(distinguishedName))
             {
                 return await FailUpdateAsync(
-                    normalizedRequest,
+        normalizedRequest,
                     context.Connection,
-                    UserNotFoundMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.NotFound),
                     AdDirectoryFailureKind.NotFound,
                     AdUserUpdateOperationDiagnosticBuilder.BuildNotFoundJson(
                         AdUserUpdateSteps.LoadUser,
@@ -121,7 +122,7 @@ public sealed partial class AdUserDirectoryService
             if (preflightFailure is not null)
             {
                 return await FailUpdateAsync(
-                    normalizedRequest,
+        normalizedRequest,
                     context.Connection,
                     preflightFailure.UserMessage,
                     AdDirectoryFailureKind.InvalidRequest,
@@ -151,7 +152,7 @@ public sealed partial class AdUserDirectoryService
             catch (UpdateUserLdapException ex)
             {
                 return await HandleUpdateWriteFailureAsync(
-                    ldapConnection,
+        ldapConnection,
                     searchBase,
                     normalizedRequest,
                     context.Connection,
@@ -185,9 +186,9 @@ public sealed partial class AdUserDirectoryService
                     distinguishedName);
 
                 return await FailUpdateAsync(
-                    normalizedRequest,
+        normalizedRequest,
                     context.Connection,
-                    UpdateUserFailedMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.UpdateFailed),
                     AdDirectoryFailureKind.ConnectionFailed,
                     AdUserUpdateOperationDiagnosticBuilder.BuildGenericFailureJson(
                         AdUserUpdateSteps.ReloadUser,
@@ -226,7 +227,7 @@ public sealed partial class AdUserDirectoryService
                 null);
 
             return await FailUpdateAsync(
-                normalizedRequest,
+        normalizedRequest,
                 context.Connection,
                 AdLdapErrorNormalizer.Normalize(ex.ErrorCode, ex.Message),
                 AdDirectoryFailureKind.ConnectionFailed,
@@ -260,9 +261,9 @@ public sealed partial class AdUserDirectoryService
                     null));
 
             return await FailUpdateAsync(
-                normalizedRequest,
+        normalizedRequest,
                 context.Connection,
-                UpdateUserFailedMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.UpdateFailed),
                 AdDirectoryFailureKind.ConnectionFailed,
                 AdUserUpdateOperationDiagnosticBuilder.BuildGenericFailureJson(
                     AdUserUpdateSteps.UpdateUser,
@@ -330,7 +331,7 @@ public sealed partial class AdUserDirectoryService
             appliedChangeNames);
 
         return await FailUpdateAsync(
-            request,
+        request,
             connection,
             exception.UserMessage,
             exception.FailureKind,
@@ -462,12 +463,14 @@ public sealed partial class AdUserDirectoryService
         string? targetDistinguishedName,
         AdUserDetail? afterDetail,
         string? afterDistinguishedName,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? messageKey = null,
+        IReadOnlyDictionary<string, object>? messageParams = null)
     {
         try
         {
             await WriteUpdateFailureLogsAsync(
-                request,
+        request,
                 connection,
                 beforeDetail,
                 targetDistinguishedName,

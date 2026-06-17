@@ -11,4 +11,6 @@ public sealed record DeleteAdGroupResult(
     bool IsSuccess,
     string Message,
     string? DeletedGroupId,
-    AdDirectoryFailureKind? FailureKind = null);
+    AdDirectoryFailureKind? FailureKind = null,
+    string? MessageKey = null,
+    IReadOnlyDictionary<string, object>? MessageParams = null);

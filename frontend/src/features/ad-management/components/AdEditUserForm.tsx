@@ -25,7 +25,7 @@ import type {
   AdUserDetail,
   MappedAdUserAttribute,
 } from "@/features/ad-management/types";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { getAdManagementApiErrorMessage } from "@/features/ad-management/ad-management-api-message";
 import { cn } from "@/lib/utils";
 
 type MappedFieldValues = Record<string, string>;
@@ -108,7 +108,11 @@ export function AdEditUserForm({ user, returnPath }: Props) {
     },
     onError: (error) => {
       toast.error(
-        getApiErrorMessage(error, t("adManagement:users.edit.messages.updateFailed")),
+        getAdManagementApiErrorMessage(
+          error,
+          t,
+          "adManagement:users.edit.messages.updateFailed",
+        ),
       );
     },
   });

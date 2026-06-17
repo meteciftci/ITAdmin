@@ -11,4 +11,6 @@ public sealed record AdComputerAccountOperationResult(
     bool IsSuccess,
     string Message,
     AdComputerDetail? Computer = null,
-    AdDirectoryFailureKind? FailureKind = null);
+    AdDirectoryFailureKind? FailureKind = null,
+    string? MessageKey = null,
+    IReadOnlyDictionary<string, object>? MessageParams = null);

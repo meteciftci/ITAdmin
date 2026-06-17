@@ -64,7 +64,7 @@ public sealed class AdDeletedObjectRestorePreflightTests
                 FindRepositoryRoot(),
                 "backend/src/SasPortal.Infrastructure/Services/AdUserDirectoryService.DeletedObjectRestore.cs"));
 
-        Assert.Contains("DeletedObjectRestoreParentNotFoundMessage", source, StringComparison.Ordinal);
+        Assert.Contains("AdManagementApiMessageKeys.DeletedObjects.RestoreParentNotFound", source, StringComparison.Ordinal);
         Assert.Contains("AdDeletedObjectRestoreSteps.CheckParentExists", source, StringComparison.Ordinal);
         Assert.Contains("The restore target parent could not be found.", source, StringComparison.Ordinal);
         Assert.Contains("The restore target OU could not be found.", source, StringComparison.Ordinal);
@@ -124,8 +124,8 @@ public sealed class AdDeletedObjectRestorePreflightTests
                 FindRepositoryRoot(),
                 "backend/src/SasPortal.Infrastructure/Services/AdUserDirectoryService.DeletedObjectRestore.cs"));
 
-        Assert.Contains("DeletedObjectRestorePowerShellModuleMissingMessage", source, StringComparison.Ordinal);
-        Assert.Contains("Active Directory PowerShell modülü sunucuda bulunamadı.", source, StringComparison.Ordinal);
+        Assert.Contains("AdManagementApiMessageKeys.DeletedObjects.RestorePowerShellModuleMissing", source, StringComparison.Ordinal);
+        Assert.Contains("AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.DeletedObjects.RestorePowerShellModuleMissing)", source, StringComparison.Ordinal);
         Assert.Contains("ResolveDeletedObjectRestorePowerShellFailureMessage", source, StringComparison.Ordinal);
     }
 

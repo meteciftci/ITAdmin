@@ -17,7 +17,7 @@ describe("AdDeleteGroupConfirmDialog", () => {
     assert.match(source, /disabled=\{!group \|\| !isConfirmMatch/);
     assert.match(source, /variant="destructive"/);
     assert.match(source, /deleteAdGroup/);
-    assert.match(source, /getApiErrorMessage/);
+    assert.match(source, /getAdManagementApiErrorMessage/);
     assert.match(source, /invalidateAdManagementGroupQueries/);
     assert.match(source, /AD_OPERATION_LOGS_QUERY_KEY/);
     assert.doesNotMatch(source, /manageGroups|moveOu|restore/i);

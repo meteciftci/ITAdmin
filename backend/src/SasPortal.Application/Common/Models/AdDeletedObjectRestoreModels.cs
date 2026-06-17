@@ -22,4 +22,6 @@ public sealed record AdDeletedObjectRestoreResult(
     bool IsSuccess,
     string Message,
     AdDeletedObjectRestoreItem? RestoredObject,
-    AdDirectoryFailureKind? FailureKind = null);
+    AdDirectoryFailureKind? FailureKind = null,
+    string? MessageKey = null,
+    IReadOnlyDictionary<string, object>? MessageParams = null);

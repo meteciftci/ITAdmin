@@ -38,7 +38,10 @@ import type {
   AdComputerAccountConfirmAction,
   AdComputerListItem,
 } from "@/features/ad-management/types";
-import { getApiErrorMessage } from "@/lib/api-error";
+import {
+  getAdManagementApiErrorMessage,
+  resolveAdManagementApiMessage,
+} from "@/features/ad-management/ad-management-api-message";
 import { createApiErrorRouteState, getErrorRoutePath } from "@/lib/route-error";
 
 const MIN_SEARCH_LENGTH = 2;
@@ -138,16 +141,26 @@ export function AdComputersPage() {
     mutationFn: (computerId: string) => deleteAdComputer(computerId),
     onSuccess: async (response) => {
       if (!response.success) {
-        toast.error(t("adManagement:computers.delete.error"));
+        toast.error(
+          resolveAdManagementApiMessage(
+            t,
+            response,
+            "adManagement:computers.delete.error",
+          ),
+        );
         return;
       }
 
       await invalidateAdManagementComputerQueries(queryClient);
-      toast.success(response.message || t("adManagement:computers.delete.success"));
+      toast.success(
+        resolveAdManagementApiMessage(t, response, "adManagement:computers.delete.success"),
+      );
       setDeleteTarget(null);
     },
     onError: (error) => {
-      toast.error(getApiErrorMessage(error, t("adManagement:computers.delete.error")));
+      toast.error(
+        getAdManagementApiErrorMessage(error, t, "adManagement:computers.delete.error"),
+      );
     },
   });
 
@@ -167,30 +180,31 @@ export function AdComputersPage() {
     },
     onSuccess: async (response, variables) => {
       if (!response.success) {
-        toast.error(
+        const fallbackKey =
           variables.action === "enable"
-            ? t("adManagement:computers.messages.enableFailed")
-            : t("adManagement:computers.messages.disableFailed"),
-        );
+            ? "adManagement:computers.messages.enableFailed"
+            : "adManagement:computers.messages.disableFailed";
+        toast.error(resolveAdManagementApiMessage(t, response, fallbackKey));
         return;
       }
 
       await invalidateAdManagementComputerQueries(queryClient);
 
-      const message =
+      const fallbackKey =
         variables.action === "enable"
-          ? t("adManagement:computers.messages.enabled")
-          : t("adManagement:computers.messages.disabled");
-      toast.success(response.message || message);
+          ? "adManagement:computers.messages.enabled"
+          : "adManagement:computers.messages.disabled";
+      toast.success(resolveAdManagementApiMessage(t, response, fallbackKey));
       setConfirmTarget(null);
     },
     onError: (error, variables) => {
       toast.error(
-        getApiErrorMessage(
+        getAdManagementApiErrorMessage(
           error,
+          t,
           variables.action === "enable"
-            ? t("adManagement:computers.messages.enableFailed")
-            : t("adManagement:computers.messages.disableFailed"),
+            ? "adManagement:computers.messages.enableFailed"
+            : "adManagement:computers.messages.disableFailed",
         ),
       );
     },

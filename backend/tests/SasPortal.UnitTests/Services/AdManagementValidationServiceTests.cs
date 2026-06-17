@@ -18,6 +18,9 @@ public sealed class AdManagementValidationServiceTests
 
         Assert.False(result.IsValid);
         Assert.Equal("AD yönetim ayarları için zorunlu alanlar eksik.", result.Message);
+        Assert.Equal(
+            SasPortal.Application.Common.Constants.AdManagementApiMessageKeys.SettingsValidation.MissingRequiredSettings,
+            result.MessageKey);
     }
 
     [Fact]
@@ -31,6 +34,9 @@ public sealed class AdManagementValidationServiceTests
 
         Assert.False(result.IsValid);
         Assert.Equal("AD yönetim ayarları için zorunlu alanlar eksik.", result.Message);
+        Assert.Equal(
+            SasPortal.Application.Common.Constants.AdManagementApiMessageKeys.SettingsValidation.MissingRequiredSettings,
+            result.MessageKey);
     }
 
     [Fact]
@@ -44,6 +50,9 @@ public sealed class AdManagementValidationServiceTests
 
         Assert.False(result.IsValid);
         Assert.Equal("AD yönetim ayarları için zorunlu alanlar eksik.", result.Message);
+        Assert.Equal(
+            SasPortal.Application.Common.Constants.AdManagementApiMessageKeys.SettingsValidation.MissingRequiredSettings,
+            result.MessageKey);
     }
 
     [Fact]

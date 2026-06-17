@@ -1,18 +1,22 @@
 import type { TFunction } from "i18next";
 import { toast } from "sonner";
 
-import { getApiErrorMessage } from "@/lib/api-error";
+import {
+  getAdManagementApiErrorMessage,
+  resolveAdManagementApiMessage,
+} from "@/features/ad-management/ad-management-api-message";
+import type { AdManagementApiMessageFields } from "@/features/ad-management/types";
 
 export type SequentialAddResult<T> = {
   item: T;
   success: boolean;
-  message?: string;
+  source?: AdManagementApiMessageFields;
   error?: unknown;
 };
 
 export async function runSequentialMembershipAdd<T>(
   items: readonly T[],
-  addOne: (item: T) => Promise<{ success: boolean; message?: string }>,
+  addOne: (item: T) => Promise<AdManagementApiMessageFields & { success: boolean }>,
 ): Promise<SequentialAddResult<T>[]> {
   const results: SequentialAddResult<T>[] = [];
 
@@ -22,7 +26,7 @@ export async function runSequentialMembershipAdd<T>(
       results.push({
         item,
         success: response.success,
-        message: response.message,
+        source: response,
       });
     } catch (error) {
       results.push({
@@ -58,7 +62,6 @@ export function notifySequentialAddResults<T>({
   allSuccessMessageKey,
   partialSuccessMessageKey,
   allFailedMessageKey,
-  getDefaultErrorMessage,
 }: NotifySequentialAddOptions<T>) {
   const successCount = results.filter((result) => result.success).length;
   const failedCount = results.length - successCount;
@@ -70,10 +73,11 @@ export function notifySequentialAddResults<T>({
 
   if (successCount === 0) {
     const firstFailure = results.find((result) => !result.success);
-    const message = firstFailure?.message
-      || (firstFailure?.error
-        ? getApiErrorMessage(firstFailure.error, getDefaultErrorMessage())
-        : getDefaultErrorMessage());
+    const message = firstFailure?.source
+      ? resolveAdManagementApiMessage(t, firstFailure.source, allFailedMessageKey)
+      : firstFailure?.error
+        ? getAdManagementApiErrorMessage(firstFailure.error, t, allFailedMessageKey)
+        : t(allFailedMessageKey);
     toast.error(message || t(allFailedMessageKey));
     return;
   }

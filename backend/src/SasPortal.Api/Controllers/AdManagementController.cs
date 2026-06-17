@@ -155,15 +155,17 @@ public sealed class AdManagementController(
 
     private static AppModels.AdManagementValidationResult BuildMissingConnectionValidationResult()
     {
-        const string message = "AD yönetim ayarları eksik. Lütfen önce gerekli alanları kaydedin.";
+        var messageKey = AdManagementApiMessageKeys.SettingsValidation.MissingRequiredSettings;
+        var message = AdManagementApiMessages.Legacy(messageKey);
         return new AppModels.AdManagementValidationResult(
             false,
             message,
             DateTimeOffset.UtcNow,
             new List<AppModels.AdManagementValidationDetail>
             {
-                new("serviceAccountBind", AdManagementValidationStatuses.Failed, message),
-            });
+                new("serviceAccountBind", AdManagementValidationStatuses.Failed, message, messageKey),
+            },
+            messageKey);
     }
 
     [HttpGet("users")]
@@ -182,7 +184,7 @@ public sealed class AdManagementController(
 
         if (!result.IsSuccess || result.Page is null)
         {
-            return MapDirectoryFailure(result.Message, result.FailureKind);
+            return MapDirectoryFailure(result.Message, result.FailureKind, result.MessageKey, result.MessageParams);
         }
 
         return Ok(new AdUserSearchResponse(
@@ -206,7 +208,7 @@ public sealed class AdManagementController(
 
         if (!result.IsSuccess || result.Page is null)
         {
-            return MapDirectoryFailure(result.Message, result.FailureKind);
+            return MapDirectoryFailure(result.Message, result.FailureKind, result.MessageKey, result.MessageParams);
         }
 
         return Ok(new AdGroupListResponse(
@@ -224,13 +226,13 @@ public sealed class AdManagementController(
     {
         if (!Guid.TryParse(id, out var objectGuid))
         {
-            return BadRequest(new { message = "Geçersiz grup kimliği." });
+            return BadRequest(new { message = AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.InvalidGroupId), messageKey = AdManagementApiMessageKeys.Groups.InvalidGroupId });
         }
 
         var result = await adGroupDirectoryService.GetGroupByIdAsync(objectGuid, cancellationToken);
         if (!result.IsSuccess || result.Group is null)
         {
-            return MapDirectoryFailure(result.Message, result.FailureKind);
+            return MapDirectoryFailure(result.Message, result.FailureKind, result.MessageKey, result.MessageParams);
         }
 
         return Ok(MapGroupDetail(result.Group));
@@ -258,7 +260,7 @@ public sealed class AdManagementController(
 
         if (!result.IsSuccess || result.Page is null)
         {
-            return MapDirectoryFailure(result.Message, result.FailureKind);
+            return MapDirectoryFailure(result.Message, result.FailureKind, result.MessageKey, result.MessageParams);
         }
 
         return Ok(new AdComputerListResponse(
@@ -276,13 +278,13 @@ public sealed class AdManagementController(
     {
         if (!Guid.TryParse(id, out var objectGuid))
         {
-            return BadRequest(new { message = "Geçersiz bilgisayar kimliği." });
+            return BadRequest(new { message = AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.InvalidComputerId), messageKey = AdManagementApiMessageKeys.Computers.InvalidComputerId });
         }
 
         var result = await adComputerDirectoryService.GetComputerByIdAsync(objectGuid, cancellationToken);
         if (!result.IsSuccess || result.Computer is null)
         {
-            return MapDirectoryFailure(result.Message, result.FailureKind);
+            return MapDirectoryFailure(result.Message, result.FailureKind, result.MessageKey, result.MessageParams);
         }
 
         return Ok(MapComputerDetail(result.Computer));
@@ -309,7 +311,7 @@ public sealed class AdManagementController(
 
         if (!result.IsSuccess || result.Page is null)
         {
-            return MapDirectoryFailure(result.Message, result.FailureKind);
+            return MapDirectoryFailure(result.Message, result.FailureKind, result.MessageKey, result.MessageParams);
         }
 
         return Ok(new AdDeletedObjectListResponse(
@@ -327,7 +329,7 @@ public sealed class AdManagementController(
     {
         if (!Guid.TryParse(id, out var objectGuid))
         {
-            return BadRequest(new { message = "Geçersiz silinen nesne kimliği." });
+            return BadRequest(new { message = AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.DeletedObjects.NotFound), messageKey = AdManagementApiMessageKeys.DeletedObjects.NotFound });
         }
 
         var result = await adDeletedObjectDirectoryService.GetDeletedObjectByIdAsync(
@@ -335,7 +337,7 @@ public sealed class AdManagementController(
             cancellationToken);
         if (!result.IsSuccess || result.Object is null)
         {
-            return MapDirectoryFailure(result.Message, result.FailureKind);
+            return MapDirectoryFailure(result.Message, result.FailureKind, result.MessageKey, result.MessageParams);
         }
 
         return Ok(MapDeletedObjectDetail(result.Object));
@@ -350,7 +352,7 @@ public sealed class AdManagementController(
     {
         if (!Guid.TryParse(id, out var objectGuid))
         {
-            return BadRequest(new { message = "Geçersiz silinen nesne kimliği." });
+            return BadRequest(new { message = AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.DeletedObjects.NotFound), messageKey = AdManagementApiMessageKeys.DeletedObjects.NotFound });
         }
 
         if (!AdDeletedObjectRestoreTargetModeParser.TryParse(
@@ -379,7 +381,7 @@ public sealed class AdManagementController(
 
         if (!result.IsSuccess || result.RestoredObject is null)
         {
-            return MapDirectoryFailure(result.Message, result.FailureKind);
+            return MapDirectoryFailure(result.Message, result.FailureKind, result.MessageKey, result.MessageParams);
         }
 
         return Ok(new AdDeletedObjectRestoreResponse(
@@ -390,7 +392,9 @@ public sealed class AdManagementController(
             result.RestoredObject.Name,
             result.RestoredObject.SamAccountName,
             result.RestoredObject.DistinguishedName,
-            result.RestoredObject.RestoredParent));
+            result.RestoredObject.RestoredParent,
+            result.MessageKey,
+            result.MessageParams));
     }
 
     [HttpGet("computer-operating-systems")]
@@ -401,7 +405,7 @@ public sealed class AdManagementController(
         var result = await adComputerDirectoryService.GetComputerOperatingSystemsAsync(cancellationToken);
         if (!result.IsSuccess || result.Page is null)
         {
-            return MapDirectoryFailure(result.Message, result.FailureKind);
+            return MapDirectoryFailure(result.Message, result.FailureKind, result.MessageKey, result.MessageParams);
         }
 
         return Ok(new AdComputerOperatingSystemOptionsResponse(result.Page.Items));
@@ -438,7 +442,7 @@ public sealed class AdManagementController(
         {
             return BadRequest(new AdComputerAccountOperationResponse(
                 false,
-                "Geçersiz bilgisayar kimliği.",
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.InvalidComputerId),
                 null));
         }
 
@@ -452,7 +456,7 @@ public sealed class AdManagementController(
                 ResolveUserAgent()),
             cancellationToken);
 
-        return MapComputerOperationActionResult(result.IsSuccess, result.Message, result.Computer, result.FailureKind);
+        return MapComputerOperationActionResult(result.IsSuccess, result.Message, result.Computer, result.FailureKind, result.MessageKey, result.MessageParams);
     }
 
     [HttpPost("computers/{id}/move-ou")]
@@ -466,7 +470,7 @@ public sealed class AdManagementController(
         {
             return BadRequest(new AdComputerAccountOperationResponse(
                 false,
-                "Geçersiz bilgisayar kimliği.",
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.InvalidComputerId),
                 null));
         }
 
@@ -474,7 +478,7 @@ public sealed class AdManagementController(
         {
             return BadRequest(new AdComputerAccountOperationResponse(
                 false,
-                "Hedef OU seçimi zorunludur.",
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.TargetOuRequired),
                 null));
         }
 
@@ -488,7 +492,7 @@ public sealed class AdManagementController(
                 ResolveUserAgent()),
             cancellationToken);
 
-        return MapComputerOperationActionResult(result.IsSuccess, result.Message, result.Computer, result.FailureKind);
+        return MapComputerOperationActionResult(result.IsSuccess, result.Message, result.Computer, result.FailureKind, result.MessageKey, result.MessageParams);
     }
 
     [HttpGet("computers/{id}/groups")]
@@ -499,7 +503,7 @@ public sealed class AdManagementController(
     {
         if (!Guid.TryParse(id, out var objectGuid))
         {
-            return BadRequest(new { message = "Geçersiz bilgisayar kimliği." });
+            return BadRequest(new { message = AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.InvalidComputerId), messageKey = AdManagementApiMessageKeys.Computers.InvalidComputerId });
         }
 
         var result = await adComputerGroupMembershipService.GetComputerGroupsAsync(
@@ -513,7 +517,7 @@ public sealed class AdManagementController(
 
         if (!result.IsSuccess)
         {
-            return MapDirectoryFailure(result.Message, result.FailureKind);
+            return MapDirectoryFailure(result.Message, result.FailureKind, result.MessageKey, result.MessageParams);
         }
 
         return Ok(MapComputerGroupMemberships(result));
@@ -528,7 +532,7 @@ public sealed class AdManagementController(
     {
         if (!Guid.TryParse(id, out var objectGuid))
         {
-            return BadRequest(new { message = "Geçersiz bilgisayar kimliği." });
+            return BadRequest(new { message = AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.InvalidComputerId), messageKey = AdManagementApiMessageKeys.Computers.InvalidComputerId });
         }
 
         var result = await adComputerGroupMembershipService.SearchGroupCandidatesAsync(
@@ -537,7 +541,7 @@ public sealed class AdManagementController(
 
         if (!result.IsSuccess)
         {
-            return MapDirectoryFailure(result.Message, result.FailureKind);
+            return MapDirectoryFailure(result.Message, result.FailureKind, result.MessageKey, result.MessageParams);
         }
 
         return Ok(new AdComputerGroupCandidateSearchResponse(
@@ -603,7 +607,7 @@ public sealed class AdManagementController(
         {
             return BadRequest(new DeleteAdComputerResponse(
                 false,
-                "Geçersiz bilgisayar kimliği.",
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.InvalidComputerId),
                 null,
                 null,
                 null));
@@ -620,7 +624,7 @@ public sealed class AdManagementController(
 
         if (!result.IsSuccess)
         {
-            return MapDirectoryFailure(result.Message, result.FailureKind);
+            return MapDirectoryFailure(result.Message, result.FailureKind, result.MessageKey, result.MessageParams);
         }
 
         return Ok(new DeleteAdComputerResponse(
@@ -628,7 +632,9 @@ public sealed class AdManagementController(
             result.Message,
             result.DeletedComputerId,
             result.DeletedComputerName,
-            result.DeletedDistinguishedName));
+            result.DeletedDistinguishedName,
+            result.MessageKey,
+            result.MessageParams));
     }
 
     [HttpGet("computer-organizational-units")]
@@ -644,7 +650,7 @@ public sealed class AdManagementController(
 
         if (!result.IsSuccess || result.Page is null)
         {
-            return MapDirectoryFailure(result.Message, result.FailureKind);
+            return MapDirectoryFailure(result.Message, result.FailureKind, result.MessageKey, result.MessageParams);
         }
 
         return Ok(new AdOrganizationalUnitSearchResponse(
@@ -681,7 +687,7 @@ public sealed class AdManagementController(
 
         if (!result.IsSuccess || result.Group is null)
         {
-            return MapDirectoryFailure(result.Message, result.FailureKind);
+            return MapDirectoryFailure(result.Message, result.FailureKind, result.MessageKey, result.MessageParams);
         }
 
         return Ok(MapGroupDetail(result.Group));
@@ -696,7 +702,7 @@ public sealed class AdManagementController(
     {
         if (!Guid.TryParse(id, out var objectGuid))
         {
-            return BadRequest(new { message = "Geçersiz grup kimliği." });
+            return BadRequest(new { message = AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.InvalidGroupId), messageKey = AdManagementApiMessageKeys.Groups.InvalidGroupId });
         }
 
         var result = await adGroupDirectoryService.UpdateGroupAsync(
@@ -714,7 +720,7 @@ public sealed class AdManagementController(
 
         if (!result.IsSuccess || result.Group is null)
         {
-            return MapDirectoryFailure(result.Message, result.FailureKind);
+            return MapDirectoryFailure(result.Message, result.FailureKind, result.MessageKey, result.MessageParams);
         }
 
         return Ok(MapGroupDetail(result.Group));
@@ -728,7 +734,7 @@ public sealed class AdManagementController(
     {
         if (!Guid.TryParse(id, out var objectGuid))
         {
-            return BadRequest(new { message = "Geçersiz grup kimliği." });
+            return BadRequest(new { message = AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.InvalidGroupId), messageKey = AdManagementApiMessageKeys.Groups.InvalidGroupId });
         }
 
         var result = await adGroupDirectoryService.DeleteGroupAsync(
@@ -742,13 +748,15 @@ public sealed class AdManagementController(
 
         if (!result.IsSuccess)
         {
-            return MapDirectoryFailure(result.Message, result.FailureKind);
+            return MapDirectoryFailure(result.Message, result.FailureKind, result.MessageKey, result.MessageParams);
         }
 
         return Ok(new DeleteAdGroupResponse(
             true,
             result.Message,
-            result.DeletedGroupId));
+            result.DeletedGroupId,
+            result.MessageKey,
+            result.MessageParams));
     }
 
     [HttpPost("groups/{id}/move-ou")]
@@ -762,7 +770,7 @@ public sealed class AdManagementController(
         {
             return BadRequest(new MoveAdGroupOuResponse(
                 false,
-                "Geçersiz grup kimliği.",
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.InvalidGroupId),
                 id,
                 null,
                 null,
@@ -776,7 +784,7 @@ public sealed class AdManagementController(
         {
             return BadRequest(new MoveAdGroupOuResponse(
                 false,
-                "Hedef OU seçimi zorunludur.",
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.TargetOuRequired),
                 id,
                 null,
                 null,
@@ -805,7 +813,9 @@ public sealed class AdManagementController(
             result.SamAccountName,
             result.DistinguishedName,
             result.PreviousDistinguishedName,
-            result.TargetOuDistinguishedName);
+            result.TargetOuDistinguishedName,
+            result.MessageKey,
+            result.MessageParams);
 
         if (result.IsSuccess)
         {
@@ -834,7 +844,7 @@ public sealed class AdManagementController(
     {
         if (!Guid.TryParse(id, out var objectGuid))
         {
-            return BadRequest(new { message = "Geçersiz grup kimliği." });
+            return BadRequest(new { message = AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.InvalidGroupId), messageKey = AdManagementApiMessageKeys.Groups.InvalidGroupId });
         }
 
         var result = await adGroupDirectoryService.GetGroupMembersAsync(
@@ -843,7 +853,7 @@ public sealed class AdManagementController(
 
         if (!result.IsSuccess || result.Page is null)
         {
-            return MapDirectoryFailure(result.Message, result.FailureKind);
+            return MapDirectoryFailure(result.Message, result.FailureKind, result.MessageKey, result.MessageParams);
         }
 
         return Ok(new AdGroupMembersListResponse(
@@ -865,7 +875,7 @@ public sealed class AdManagementController(
     {
         if (!Guid.TryParse(id, out var objectGuid))
         {
-            return BadRequest(new { message = "Geçersiz grup kimliği." });
+            return BadRequest(new { message = AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.InvalidGroupId), messageKey = AdManagementApiMessageKeys.Groups.InvalidGroupId });
         }
 
         var typeList = string.IsNullOrWhiteSpace(types)
@@ -878,7 +888,7 @@ public sealed class AdManagementController(
 
         if (!result.IsSuccess || result.Items is null)
         {
-            return MapDirectoryFailure(result.Message, result.FailureKind);
+            return MapDirectoryFailure(result.Message, result.FailureKind, result.MessageKey, result.MessageParams);
         }
 
         return Ok(new AdGroupMemberCandidatesResponse(
@@ -945,7 +955,7 @@ public sealed class AdManagementController(
 
         if (!result.IsSuccess || result.Page is null)
         {
-            return MapDirectoryFailure(result.Message, result.FailureKind);
+            return MapDirectoryFailure(result.Message, result.FailureKind, result.MessageKey, result.MessageParams);
         }
 
         return Ok(new AdOrganizationalUnitSearchResponse(
@@ -970,7 +980,7 @@ public sealed class AdManagementController(
         var result = await adUserDirectoryService.GetUpnSuffixesAsync(cancellationToken);
         if (!result.IsSuccess || result.Items is null)
         {
-            return MapDirectoryFailure(result.Message, result.FailureKind);
+            return MapDirectoryFailure(result.Message, result.FailureKind, result.MessageKey, result.MessageParams);
         }
 
         return Ok(new AdUpnSuffixesResponse(
@@ -993,7 +1003,7 @@ public sealed class AdManagementController(
 
         if (!result.IsSuccess || result.Page is null)
         {
-            return MapDirectoryFailure(result.Message, result.FailureKind);
+            return MapDirectoryFailure(result.Message, result.FailureKind, result.MessageKey, result.MessageParams);
         }
 
         return Ok(new AdOrganizationalUnitSearchResponse(
@@ -1038,7 +1048,7 @@ public sealed class AdManagementController(
 
         if (!result.IsSuccess || result.User is null)
         {
-            return MapDirectoryFailure(result.Message, result.FailureKind);
+            return MapDirectoryFailure(result.Message, result.FailureKind, result.MessageKey, result.MessageParams);
         }
 
         var user = result.User;
@@ -1058,7 +1068,9 @@ public sealed class AdManagementController(
                 : new AdUserCreatedNotificationSummaryResponse(
                     user.NotificationSummary.QueuedCount,
                     user.NotificationSummary.SkippedCount,
-                    user.NotificationSummary.Messages)));
+                    user.NotificationSummary.Messages),
+            user.MessageKey,
+            user.MessageParams));
     }
 
     [HttpPost("users/{id}/enable")]
@@ -1093,7 +1105,7 @@ public sealed class AdManagementController(
         {
             return BadRequest(new UpdateAdUserManagerResponse(
                 false,
-                "Geçersiz kullanıcı kimliği.",
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.InvalidUserId),
                 id,
                 null,
                 null,
@@ -1117,7 +1129,9 @@ public sealed class AdManagementController(
             result.UserId ?? id,
             result.SamAccountName,
             result.ManagerDistinguishedName,
-            result.ManagerDisplayName);
+            result.ManagerDisplayName,
+            result.MessageKey,
+            result.MessageParams);
 
         if (result.IsSuccess)
         {
@@ -1145,7 +1159,7 @@ public sealed class AdManagementController(
         {
             return BadRequest(new UpdateAdUserAccountExpirationResponse(
                 false,
-                "Geçersiz kullanıcı kimliği.",
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.InvalidUserId),
                 id,
                 null,
                 null,
@@ -1169,7 +1183,9 @@ public sealed class AdManagementController(
             result.UserId ?? id,
             result.SamAccountName,
             result.AccountExpiresDate,
-            result.NeverExpires);
+            result.NeverExpires,
+            result.MessageKey,
+            result.MessageParams);
 
         if (result.IsSuccess)
         {
@@ -1197,7 +1213,7 @@ public sealed class AdManagementController(
         {
             return BadRequest(new MoveAdUserOuResponse(
                 false,
-                "Geçersiz kullanıcı kimliği.",
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.InvalidUserId),
                 id,
                 null,
                 null,
@@ -1210,7 +1226,7 @@ public sealed class AdManagementController(
         {
             return BadRequest(new MoveAdUserOuResponse(
                 false,
-                "Hedef OU seçimi zorunludur.",
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.TargetOuRequired),
                 id,
                 null,
                 null,
@@ -1237,7 +1253,9 @@ public sealed class AdManagementController(
             result.UserPrincipalName,
             result.DistinguishedName,
             result.PreviousDistinguishedName,
-            result.TargetOuDistinguishedName);
+            result.TargetOuDistinguishedName,
+            result.MessageKey,
+            result.MessageParams);
 
         if (result.IsSuccess)
         {
@@ -1262,7 +1280,7 @@ public sealed class AdManagementController(
     {
         if (!Guid.TryParse(id, out var objectGuid))
         {
-            return BadRequest(new { message = "Geçersiz kullanıcı kimliği." });
+            return BadRequest(new { message = AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.InvalidUserId), messageKey = AdManagementApiMessageKeys.Users.InvalidUserId });
         }
 
         var result = await adUserGroupMembershipService.GetUserGroupsAsync(
@@ -1276,7 +1294,7 @@ public sealed class AdManagementController(
 
         if (!result.IsSuccess)
         {
-            return MapDirectoryFailure(result.Message, result.FailureKind);
+            return MapDirectoryFailure(result.Message, result.FailureKind, result.MessageKey, result.MessageParams);
         }
 
         return Ok(MapUserGroupMemberships(result));
@@ -1291,7 +1309,7 @@ public sealed class AdManagementController(
     {
         if (!Guid.TryParse(id, out var objectGuid))
         {
-            return BadRequest(new { message = "Geçersiz kullanıcı kimliği." });
+            return BadRequest(new { message = AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.InvalidUserId), messageKey = AdManagementApiMessageKeys.Users.InvalidUserId });
         }
 
         if (maxDepth.HasValue
@@ -1311,7 +1329,7 @@ public sealed class AdManagementController(
 
         if (!result.IsSuccess)
         {
-            return MapDirectoryFailure(result.Message, result.FailureKind);
+            return MapDirectoryFailure(result.Message, result.FailureKind, result.MessageKey, result.MessageParams);
         }
 
         return Ok(MapUserEffectiveGroups(result));
@@ -1329,7 +1347,7 @@ public sealed class AdManagementController(
 
         if (!result.IsSuccess)
         {
-            return MapDirectoryFailure(result.Message, result.FailureKind);
+            return MapDirectoryFailure(result.Message, result.FailureKind, result.MessageKey, result.MessageParams);
         }
 
         return Ok(new AdGroupSearchResponse(
@@ -1394,7 +1412,7 @@ public sealed class AdManagementController(
     {
         if (!Guid.TryParse(id, out var objectGuid))
         {
-            return BadRequest(new { message = "Geçersiz kullanıcı kimliği." });
+            return BadRequest(new { message = AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.InvalidUserId), messageKey = AdManagementApiMessageKeys.Users.InvalidUserId });
         }
 
         var result = await adUserDirectoryService.UpdateUserAsync(
@@ -1420,7 +1438,7 @@ public sealed class AdManagementController(
 
         if (!result.IsSuccess || result.User is null)
         {
-            return MapDirectoryFailure(result.Message, result.FailureKind);
+            return MapDirectoryFailure(result.Message, result.FailureKind, result.MessageKey, result.MessageParams);
         }
 
         return Ok(MapUserDetail(result.User));
@@ -1434,13 +1452,13 @@ public sealed class AdManagementController(
     {
         if (!Guid.TryParse(id, out var objectGuid))
         {
-            return BadRequest(new { message = "Geçersiz kullanıcı kimliği." });
+            return BadRequest(new { message = AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.InvalidUserId), messageKey = AdManagementApiMessageKeys.Users.InvalidUserId });
         }
 
         var result = await adUserDirectoryService.GetUserByIdAsync(objectGuid, cancellationToken);
         if (!result.IsSuccess || result.User is null)
         {
-            return MapDirectoryFailure(result.Message, result.FailureKind);
+            return MapDirectoryFailure(result.Message, result.FailureKind, result.MessageKey, result.MessageParams);
         }
 
         return Ok(MapUserDetail(result.User));
@@ -1649,9 +1667,11 @@ public sealed class AdManagementController(
             result.Message,
             result.CheckedAt,
             result.Details
-                .Select(d => new AdManagementValidationDetailResponse(d.Key, d.Status, d.Message))
+                .Select(d => new AdManagementValidationDetailResponse(d.Key, d.Status, d.Message, d.MessageKey, d.MessageParams))
                 .ToList(),
-            restoreReadiness is null ? null : MapRestoreReadiness(restoreReadiness));
+            restoreReadiness is null ? null : MapRestoreReadiness(restoreReadiness),
+            result.MessageKey,
+            result.MessageParams);
 
     private static AdDeletedObjectRestoreReadinessResponse MapRestoreReadiness(
         AppModels.AdDeletedObjectRestoreReadinessResult result) =>
@@ -1712,7 +1732,7 @@ public sealed class AdManagementController(
         {
             return BadRequest(new AdComputerGroupOperationResponse(
                 false,
-                "Geçersiz bilgisayar kimliği.",
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.InvalidComputerId),
                 id,
                 null,
                 null,
@@ -1726,7 +1746,7 @@ public sealed class AdManagementController(
         {
             return BadRequest(new AdComputerGroupOperationResponse(
                 false,
-                "Grup kimliği zorunludur.",
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.GroupDnRequired),
                 id,
                 null,
                 null,
@@ -1750,7 +1770,9 @@ public sealed class AdManagementController(
             result.GroupDistinguishedName,
             result.GroupName,
             result.GroupDisplayName,
-            result.GroupSamAccountName);
+            result.GroupSamAccountName,
+            result.MessageKey,
+            result.MessageParams);
 
         if (result.IsSuccess)
         {
@@ -1796,7 +1818,7 @@ public sealed class AdManagementController(
         {
             return BadRequest(new AdUserGroupOperationResponse(
                 false,
-                "Geçersiz kullanıcı kimliği.",
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.InvalidUserId),
                 id,
                 groupDistinguishedName,
                 null));
@@ -1806,7 +1828,7 @@ public sealed class AdManagementController(
         {
             return BadRequest(new AdUserGroupOperationResponse(
                 false,
-                "Grup kimliği zorunludur.",
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.GroupDnRequired),
                 id,
                 groupDistinguishedName,
                 null));
@@ -1822,7 +1844,9 @@ public sealed class AdManagementController(
             result.Message,
             result.UserId,
             result.GroupDistinguishedName,
-            result.GroupName);
+            result.GroupName,
+            result.MessageKey,
+            result.MessageParams);
 
         if (result.IsSuccess)
         {
@@ -1904,7 +1928,7 @@ public sealed class AdManagementController(
         {
             return BadRequest(new AdComputerAccountOperationResponse(
                 false,
-                "Geçersiz bilgisayar kimliği.",
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.InvalidComputerId),
                 null));
         }
 
@@ -1942,18 +1966,24 @@ public sealed class AdManagementController(
         new(
             result.IsSuccess,
             result.Message,
-            result.Computer is null ? null : MapComputerDetail(result.Computer));
+            result.Computer is null ? null : MapComputerDetail(result.Computer),
+            result.MessageKey,
+            result.MessageParams);
 
     private ActionResult<AdComputerAccountOperationResponse> MapComputerOperationActionResult(
         bool isSuccess,
         string message,
         AppModels.AdComputerDetail? computer,
-        AppModels.AdDirectoryFailureKind? failureKind)
+        AppModels.AdDirectoryFailureKind? failureKind,
+        string? messageKey = null,
+        IReadOnlyDictionary<string, object>? messageParams = null)
     {
         var response = new AdComputerAccountOperationResponse(
             isSuccess,
             message,
-            computer is null ? null : MapComputerDetail(computer));
+            computer is null ? null : MapComputerDetail(computer),
+            messageKey,
+            messageParams);
 
         if (isSuccess)
         {
@@ -1983,7 +2013,7 @@ public sealed class AdManagementController(
         {
             return BadRequest(new AdUserAccountOperationResponse(
                 false,
-                "Geçersiz kullanıcı kimliği.",
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.InvalidUserId),
                 id,
                 null,
                 null,
@@ -2030,17 +2060,23 @@ public sealed class AdManagementController(
             result.UserPrincipalName,
             result.DistinguishedName,
             result.IsEnabled,
-            result.IsLockedOut);
+            result.IsLockedOut,
+            result.MessageKey,
+            result.MessageParams);
 
-    private ActionResult MapDirectoryFailure(string message, AppModels.AdDirectoryFailureKind? failureKind) =>
+    private ActionResult MapDirectoryFailure(
+        string message,
+        AppModels.AdDirectoryFailureKind? failureKind,
+        string? messageKey = null,
+        IReadOnlyDictionary<string, object>? messageParams = null) =>
         failureKind switch
         {
-            AppModels.AdDirectoryFailureKind.NotFound => NotFound(new { message }),
-            AppModels.AdDirectoryFailureKind.InvalidRequest => BadRequest(new { message }),
+            AppModels.AdDirectoryFailureKind.NotFound => NotFound(new { message, messageKey, messageParams }),
+            AppModels.AdDirectoryFailureKind.InvalidRequest => BadRequest(new { message, messageKey, messageParams }),
             AppModels.AdDirectoryFailureKind.ConnectionFailed => StatusCode(
                 StatusCodes.Status503ServiceUnavailable,
-                new { message }),
-            _ => BadRequest(new { message }),
+                new { message, messageKey, messageParams }),
+            _ => BadRequest(new { message, messageKey, messageParams }),
         };
 
     private static AdUserListItemResponse MapUserListItem(AppModels.AdUserListItem item) =>
@@ -2225,7 +2261,7 @@ public sealed class AdManagementController(
         {
             return BadRequest(new AdGroupMemberOperationResponse(
                 false,
-                "Geçersiz grup kimliği.",
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.InvalidGroupId),
                 id,
                 null,
                 null,
@@ -2237,7 +2273,7 @@ public sealed class AdManagementController(
         {
             return BadRequest(new AdGroupMemberOperationResponse(
                 false,
-                "Üye kimliği zorunludur.",
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Groups.MemberOperationFailed),
                 id,
                 null,
                 null,
@@ -2258,7 +2294,9 @@ public sealed class AdManagementController(
             result.GroupDistinguishedName,
             result.GroupName,
             result.MemberDistinguishedName,
-            result.MemberName);
+            result.MemberName,
+            result.MessageKey,
+            result.MessageParams);
 
         if (result.IsSuccess)
         {

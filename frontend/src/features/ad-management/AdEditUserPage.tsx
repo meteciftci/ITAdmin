@@ -13,7 +13,7 @@ import { AD_MANAGEMENT_USERS_QUERY_KEY, getAdUserById } from "@/features/ad-mana
 import { AdEditUserForm } from "@/features/ad-management/components/AdEditUserForm";
 import { AdManagementModuleStateGuard } from "@/features/ad-management/components/AdManagementModuleStateGuard";
 import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useAdManagementModuleStatus";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { getAdManagementApiErrorMessage } from "@/features/ad-management/ad-management-api-message";
 import { cn } from "@/lib/utils";
 
 export function AdEditUserPage() {
@@ -75,9 +75,10 @@ export function AdEditUserPage() {
         {userQuery.isError ? (
           <ErrorState
             title={t("adManagement:users.errors.detailFailed")}
-            description={getApiErrorMessage(
+            description={getAdManagementApiErrorMessage(
               userQuery.error,
-              t("adManagement:users.errors.detailFailed"),
+              t,
+              "adManagement:users.errors.detailFailed",
             )}
           />
         ) : null}

@@ -40,7 +40,7 @@ import type {
   AdGroupMemberCandidateItem,
   AdGroupMemberCandidateType,
 } from "@/features/ad-management/types";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { getAdManagementApiErrorMessage } from "@/features/ad-management/ad-management-api-message";
 import { cn } from "@/lib/utils";
 
 const MIN_SEARCH_LENGTH = 2;
@@ -132,7 +132,11 @@ export function AdAddGroupMemberDialog({ open, groupId, onOpenChange }: Props) {
     },
     onError: (error) => {
       toast.error(
-        getApiErrorMessage(error, t("adManagement:groups.members.addError")),
+        getAdManagementApiErrorMessage(
+          error,
+          t,
+          "adManagement:groups.members.addError",
+        ),
       );
     },
   });

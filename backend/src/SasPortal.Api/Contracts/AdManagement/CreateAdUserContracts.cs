@@ -32,7 +32,9 @@ public sealed record CreateAdUserResponse(
     string Message,
     bool NamingCollisionResolved,
     int? GeneratedSuffix,
-    AdUserCreatedNotificationSummaryResponse? NotificationSummary);
+    AdUserCreatedNotificationSummaryResponse? NotificationSummary,
+    string? MessageKey = null,
+    IReadOnlyDictionary<string, object>? MessageParams = null);
 
 public sealed record AdOrganizationalUnitListItemResponse(
     string DistinguishedName,

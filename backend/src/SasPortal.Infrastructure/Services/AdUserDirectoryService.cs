@@ -4,6 +4,7 @@ using System.Net;
 using Microsoft.Extensions.Logging;
 using SasPortal.Application.Abstractions.Services;
 using SasPortal.Application.Common.AdManagement;
+using SasPortal.Application.Common.Constants;
 using SasPortal.Application.Common.Models;
 
 namespace SasPortal.Infrastructure.Services;
@@ -17,13 +18,6 @@ public sealed partial class AdUserDirectoryService(
     IAdDeletedObjectRestoreCommandRunner deletedObjectRestoreCommandRunner,
     ILogger<AdUserDirectoryService> logger) : IAdUserDirectoryService
 {
-    private const string AdManagementDisabledMessage = "AD yönetim modülü etkin değil.";
-    private const string AdManagementNotConfiguredMessage =
-        "AD yönetim ayarları yapılandırılmamış. Lütfen önce bağlantı ayarlarını kaydedin.";
-    private const string MissingServiceAccountPasswordMessage =
-        "AD yönetim servis hesabı parolası tanımlı değil.";
-    private const string DirectoryQueryFailedMessage = "AD kullanıcıları okunamadı.";
-    private const string UserNotFoundMessage = "AD kullanıcısı bulunamadı.";
     private static readonly TimeSpan LdapOperationTimeout = TimeSpan.FromSeconds(30);
 
     public async Task<AdUserDirectorySearchResult> SearchUsersAsync(
@@ -48,7 +42,9 @@ public sealed partial class AdUserDirectoryService(
                 false,
                 connectionResult.Message,
                 null,
-                connectionResult.FailureKind);
+                connectionResult.FailureKind,
+                connectionResult.MessageKey,
+                connectionResult.MessageParams);
         }
 
         var mappings = await attributeMappingService.GetMappingsAsync(cancellationToken);
@@ -58,9 +54,10 @@ public sealed partial class AdUserDirectoryService(
         {
             return new AdUserDirectorySearchResult(
                 false,
-                AdManagementNotConfiguredMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
                 null,
-                AdDirectoryFailureKind.NotConfigured);
+                AdDirectoryFailureKind.NotConfigured,
+                AdManagementApiMessageKeys.Common.NotConfigured);
         }
 
         try
@@ -145,7 +142,9 @@ public sealed partial class AdUserDirectoryService(
                 false,
                 connectionResult.Message,
                 null,
-                connectionResult.FailureKind);
+                connectionResult.FailureKind,
+                connectionResult.MessageKey,
+                connectionResult.MessageParams);
         }
 
         var mappings = await attributeMappingService.GetMappingsAsync(cancellationToken);
@@ -156,9 +155,10 @@ public sealed partial class AdUserDirectoryService(
         {
             return new AdUserDirectoryDetailResult(
                 false,
-                AdManagementNotConfiguredMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
                 null,
-                AdDirectoryFailureKind.NotConfigured);
+                AdDirectoryFailureKind.NotConfigured,
+                AdManagementApiMessageKeys.Common.NotConfigured);
         }
 
         try
@@ -189,18 +189,20 @@ public sealed partial class AdUserDirectoryService(
             {
                 return new AdUserDirectoryDetailResult(
                     false,
-                    UserNotFoundMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.NotFound),
                     null,
-                    AdDirectoryFailureKind.NotFound);
+                    AdDirectoryFailureKind.NotFound,
+                    AdManagementApiMessageKeys.Users.NotFound);
             }
 
             if (!TryMapDetailItem(response.Entries[0], activeMappings, out var detail))
             {
                 return new AdUserDirectoryDetailResult(
                     false,
-                    UserNotFoundMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.NotFound),
                     null,
-                    AdDirectoryFailureKind.NotFound);
+                    AdDirectoryFailureKind.NotFound,
+                    AdManagementApiMessageKeys.Users.NotFound);
             }
 
             detail = TryEnrichDetailWithResolvedManager(ldapConnection, detail);
@@ -223,7 +225,7 @@ public sealed partial class AdUserDirectoryService(
         if (!settings.IsEnabled)
         {
             return ConnectionResolveResult.Failed(
-                AdManagementDisabledMessage,
+                AdManagementApiMessageKeys.Common.ModuleDisabled,
                 AdDirectoryFailureKind.Disabled);
         }
 
@@ -232,10 +234,11 @@ public sealed partial class AdUserDirectoryService(
             || string.IsNullOrWhiteSpace(connection.ServiceAccountUserName)
             || string.IsNullOrWhiteSpace(connection.ServiceAccountPassword))
         {
+            var messageKey = string.IsNullOrWhiteSpace(connection?.ServiceAccountPassword)
+                ? AdManagementApiMessageKeys.Common.MissingServiceAccountPassword
+                : AdManagementApiMessageKeys.Common.NotConfigured;
             return ConnectionResolveResult.Failed(
-                string.IsNullOrWhiteSpace(connection?.ServiceAccountPassword)
-                    ? MissingServiceAccountPasswordMessage
-                    : AdManagementNotConfiguredMessage,
+                messageKey,
                 string.IsNullOrWhiteSpace(connection?.ServiceAccountPassword)
                     ? AdDirectoryFailureKind.MissingPassword
                     : AdDirectoryFailureKind.NotConfigured);
@@ -244,7 +247,9 @@ public sealed partial class AdUserDirectoryService(
         var ldapsError = AdDirectoryConnectionRequirements.GetLdapsRequiredErrorMessage(connection.UseSsl);
         if (ldapsError is not null)
         {
-            return ConnectionResolveResult.Failed(ldapsError, AdDirectoryFailureKind.InvalidRequest);
+            return ConnectionResolveResult.Failed(
+                AdManagementApiMessageKeys.Common.LdapsRequired,
+                AdDirectoryFailureKind.InvalidRequest);
         }
 
         return ConnectionResolveResult.Success(new DirectoryConnectionContext(connection));
@@ -590,10 +595,20 @@ public sealed partial class AdUserDirectoryService(
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static AdUserDirectorySearchResult ConnectionFailed() =>
-        new(false, DirectoryQueryFailedMessage, null, AdDirectoryFailureKind.ConnectionFailed);
+        new(
+            false,
+            AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.QueryFailed),
+            null,
+            AdDirectoryFailureKind.ConnectionFailed,
+            AdManagementApiMessageKeys.Users.QueryFailed);
 
     private static AdUserDirectoryDetailResult ConnectionFailedDetail() =>
-        new(false, DirectoryQueryFailedMessage, null, AdDirectoryFailureKind.ConnectionFailed);
+        new(
+            false,
+            AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.QueryFailed),
+            null,
+            AdDirectoryFailureKind.ConnectionFailed,
+            AdManagementApiMessageKeys.Users.QueryFailed);
 
     private sealed class DirectoryConnectionContext(AdManagementConnectionParameters connection)
     {
@@ -606,11 +621,26 @@ public sealed partial class AdUserDirectoryService(
         public string Message { get; init; } = string.Empty;
         public DirectoryConnectionContext? Context { get; init; }
         public AdDirectoryFailureKind? FailureKind { get; init; }
+        public string? MessageKey { get; init; }
+        public IReadOnlyDictionary<string, object>? MessageParams { get; init; }
 
         public static ConnectionResolveResult Success(DirectoryConnectionContext context) =>
             new() { IsSuccess = true, Context = context };
 
-        public static ConnectionResolveResult Failed(string message, AdDirectoryFailureKind kind) =>
-            new() { IsSuccess = false, Message = message, FailureKind = kind };
+        public static ConnectionResolveResult Failed(
+            string messageKey,
+            AdDirectoryFailureKind kind,
+            IReadOnlyDictionary<string, object>? messageParams = null)
+        {
+            var (message, key, parameters) = AdManagementApiMessages.Bundle(messageKey, messageParams);
+            return new()
+            {
+                IsSuccess = false,
+                Message = message,
+                FailureKind = kind,
+                MessageKey = key,
+                MessageParams = parameters,
+            };
+        }
     }
 }

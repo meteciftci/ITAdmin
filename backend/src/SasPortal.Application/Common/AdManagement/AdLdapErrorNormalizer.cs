@@ -1,5 +1,7 @@
 namespace SasPortal.Application.Common.AdManagement;
 
+using SasPortal.Application.Common.Constants;
+
 public static class AdLdapErrorNormalizer
 {
     // Common LDAP result codes (RFC 4511).
@@ -52,41 +54,100 @@ public static class AdLdapErrorNormalizer
 
     public static string Normalize(int ldapErrorCode, string? diagnosticMessage = null)
     {
-        var adNormalized = TryNormalizeFromAdDiagnostic(diagnosticMessage);
-        if (adNormalized is not null)
+        var key = NormalizeMessageKey(ldapErrorCode, diagnosticMessage);
+        return Legacy(key);
+    }
+
+    public static string NormalizeMessageKey(int ldapErrorCode, string? diagnosticMessage = null)
+    {
+        var adNormalizedKey = TryNormalizeKeyFromAdDiagnostic(diagnosticMessage);
+        if (adNormalizedKey is not null)
         {
-            return adNormalized;
+            return adNormalizedKey;
         }
 
         if (IsConnectionFailure(ldapErrorCode, diagnosticMessage))
         {
-            return ConnectionFailedMessage;
+            return AdManagementApiMessageKeys.Ldap.ConnectionFailed;
         }
 
         return ldapErrorCode switch
         {
-            LdapAlreadyExists or LdapAttributeOrValueExists => EntryAlreadyExistsMessage,
-            LdapConstraintViolation or LdapConstraintAttributeType => ConstraintViolationMessage,
-            LdapInvalidDnSyntax or LdapNamingViolation => InvalidDnSyntaxMessage,
-            LdapInsufficientAccessRights => InsufficientAccessRightsMessage,
-            LdapUnwillingToPerform or LdapNotAllowedOnNonLeaf or LdapNotAllowedOnRdn => UnwillingToPerformMessage,
-            LdapNoSuchObject => NoSuchObjectMessage,
-            LdapUnavailable or LdapBusy or LdapOperationsError or LdapTimeLimitExceeded => ConnectionFailedMessage,
+            LdapAlreadyExists or LdapAttributeOrValueExists => AdManagementApiMessageKeys.Ldap.EntryAlreadyExists,
+            LdapConstraintViolation or LdapConstraintAttributeType => AdManagementApiMessageKeys.Ldap.ConstraintViolation,
+            LdapInvalidDnSyntax or LdapNamingViolation => AdManagementApiMessageKeys.Ldap.InvalidDnSyntax,
+            LdapInsufficientAccessRights => AdManagementApiMessageKeys.Ldap.InsufficientAccessRights,
+            LdapUnwillingToPerform or LdapNotAllowedOnNonLeaf or LdapNotAllowedOnRdn => AdManagementApiMessageKeys.Ldap.UnwillingToPerform,
+            LdapNoSuchObject => AdManagementApiMessageKeys.Ldap.NoSuchObject,
+            LdapUnavailable or LdapBusy or LdapOperationsError or LdapTimeLimitExceeded => AdManagementApiMessageKeys.Ldap.ConnectionFailed,
             _ => MatchesAlreadyExists(diagnosticMessage)
-                ? EntryAlreadyExistsMessage
+                ? AdManagementApiMessageKeys.Ldap.EntryAlreadyExists
                 : MatchesConstraint(diagnosticMessage)
-                    ? ConstraintViolationMessage
+                    ? AdManagementApiMessageKeys.Ldap.ConstraintViolation
                     : MatchesInvalidDn(diagnosticMessage)
-                        ? InvalidDnSyntaxMessage
+                        ? AdManagementApiMessageKeys.Ldap.InvalidDnSyntax
                         : MatchesInsufficientAccess(diagnosticMessage)
-                            ? InsufficientAccessRightsMessage
+                            ? AdManagementApiMessageKeys.Ldap.InsufficientAccessRights
                             : MatchesUnwilling(diagnosticMessage)
-                                ? UnwillingToPerformMessage
+                                ? AdManagementApiMessageKeys.Ldap.UnwillingToPerform
                                 : MatchesNoSuchObject(diagnosticMessage)
-                                    ? NoSuchObjectMessage
-                                    : UpdateUserFailedMessage,
+                                    ? AdManagementApiMessageKeys.Ldap.NoSuchObject
+                                    : AdManagementApiMessageKeys.Ldap.UpdateUserFailed,
         };
     }
+
+    public static string? TryNormalizeKeyFromAdDiagnostic(string? message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return null;
+        }
+
+        if (ContainsAdDiagnostic(message, "0000207D", "name reference is invalid", "invalid dn syntax"))
+        {
+            return AdManagementApiMessageKeys.Ldap.InvalidDnSyntax;
+        }
+
+        if (ContainsAdDiagnostic(message, "0000052D"))
+        {
+            return AdManagementApiMessageKeys.Ldap.ConstraintViolation;
+        }
+
+        if (ContainsAdDiagnostic(message, "00002098", "00002089", "insufficient access rights"))
+        {
+            return AdManagementApiMessageKeys.Ldap.InsufficientAccessRights;
+        }
+
+        if (ContainsAdDiagnostic(
+                message,
+                "0000208F",
+                "00002071",
+                "000021C7",
+                "entry_exists",
+                "entry already exists",
+                "attributeorvalueexists",
+                "attribute or value exists",
+                "already exists",
+                "object already exists",
+                "constraint violation"))
+        {
+            return AdManagementApiMessageKeys.Ldap.EntryAlreadyExists;
+        }
+
+        if (ContainsAdDiagnostic(message, "00002056", "unwillingtoperform", "unwilling to perform"))
+        {
+            return AdManagementApiMessageKeys.Ldap.UnwillingToPerform;
+        }
+
+        if (ContainsAdDiagnostic(message, "00002030", "nosuchobject", "no such object"))
+        {
+            return AdManagementApiMessageKeys.Ldap.NoSuchObject;
+        }
+
+        return null;
+    }
+
+    private static string Legacy(string messageKey) => AdManagementApiMessages.Legacy(messageKey);
 
     private static bool IsConnectionFailure(int ldapErrorCode, string? message)
     {
@@ -103,57 +164,6 @@ public static class AdLdapErrorNormalizer
         return message.Contains("timeout", StringComparison.OrdinalIgnoreCase)
             || message.Contains("server down", StringComparison.OrdinalIgnoreCase)
             || message.Contains("connection", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string? TryNormalizeFromAdDiagnostic(string? message)
-    {
-        if (string.IsNullOrWhiteSpace(message))
-        {
-            return null;
-        }
-
-        if (ContainsAdDiagnostic(message, "0000207D", "name reference is invalid", "invalid dn syntax"))
-        {
-            return InvalidDnSyntaxMessage;
-        }
-
-        if (ContainsAdDiagnostic(message, "0000052D"))
-        {
-            return ConstraintViolationMessage;
-        }
-
-        if (ContainsAdDiagnostic(message, "00002098", "00002089", "insufficient access rights"))
-        {
-            return InsufficientAccessRightsMessage;
-        }
-
-        if (ContainsAdDiagnostic(
-                message,
-                "0000208F",
-                "00002071",
-                "000021C7",
-                "entry_exists",
-                "entry already exists",
-                "attributeorvalueexists",
-                "attribute or value exists",
-                "already exists",
-                "object already exists",
-                "constraint violation"))
-        {
-            return EntryAlreadyExistsMessage;
-        }
-
-        if (ContainsAdDiagnostic(message, "00002056", "unwillingtoperform", "unwilling to perform"))
-        {
-            return UnwillingToPerformMessage;
-        }
-
-        if (ContainsAdDiagnostic(message, "00002030", "nosuchobject", "no such object"))
-        {
-            return NoSuchObjectMessage;
-        }
-
-        return null;
     }
 
     private static bool ContainsAdDiagnostic(string? message, params string[] tokens)

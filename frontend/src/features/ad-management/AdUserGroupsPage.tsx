@@ -47,7 +47,10 @@ import type {
 } from "@/features/ad-management/types";
 import { resolveAdUserReturnPathFromLocation } from "@/features/ad-management/ad-return-path";
 import { AD_USERS_LIST_PATH } from "@/features/ad-management/ad-users-list-path";
-import { getApiErrorMessage } from "@/lib/api-error";
+import {
+  getAdManagementApiErrorMessage,
+  resolveAdManagementApiMessage,
+} from "@/features/ad-management/ad-management-api-message";
 import { canAccess } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
@@ -141,7 +144,11 @@ export function AdUserGroupsPage() {
     },
     onError: (error) => {
       toast.error(
-        getApiErrorMessage(error, t("adManagement:users.groups.messages.operationFailed")),
+        getAdManagementApiErrorMessage(
+          error,
+          t,
+          "adManagement:users.groups.messages.operationFailed",
+        ),
       );
     },
   });
@@ -151,19 +158,33 @@ export function AdUserGroupsPage() {
       removeAdUserFromGroup(userId!, { groupDistinguishedName }),
     onSuccess: async (response) => {
       if (!response.success) {
-        toast.error(t("adManagement:users.groups.messages.operationFailed"));
+        toast.error(
+          resolveAdManagementApiMessage(
+            t,
+            response,
+            "adManagement:users.groups.messages.operationFailed",
+          ),
+        );
         return;
       }
 
       toast.success(
-        response.message || t("adManagement:users.groups.messages.membershipRemoved"),
+        resolveAdManagementApiMessage(
+          t,
+          response,
+          "adManagement:users.groups.messages.membershipRemoved",
+        ),
       );
       setRemoveTarget(null);
       await invalidateAdUserGroupsQuery(queryClient, userId!);
     },
     onError: (error) => {
       toast.error(
-        getApiErrorMessage(error, t("adManagement:users.groups.messages.operationFailed")),
+        getAdManagementApiErrorMessage(
+          error,
+          t,
+          "adManagement:users.groups.messages.operationFailed",
+        ),
       );
     },
   });
@@ -214,9 +235,10 @@ export function AdUserGroupsPage() {
         {groupsQuery.isError ? (
           <ErrorState
             title={t("adManagement:users.groups.errors.loadFailed")}
-            description={getApiErrorMessage(
+            description={getAdManagementApiErrorMessage(
               groupsQuery.error,
-              t("adManagement:users.groups.errors.loadFailed"),
+              t,
+              "adManagement:users.groups.errors.loadFailed",
             )}
           />
         ) : null}

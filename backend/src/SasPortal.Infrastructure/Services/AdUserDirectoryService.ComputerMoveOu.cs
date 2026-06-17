@@ -9,14 +9,6 @@ namespace SasPortal.Infrastructure.Services;
 
 public sealed partial class AdUserDirectoryService : IAdComputerOuMoveService
 {
-    private const string ComputerOuMoveFailedMessage = "Bilgisayar OU taşıma işlemi başarısız oldu.";
-    private const string ComputerOuMoveInvalidTargetOuMessage =
-        "Seçilen OU, AD yönetim ayarlarındaki bilgisayar arama base altında olmalıdır.";
-    private const string ComputerOuMoveTargetOuRequiredMessage = "Hedef OU seçimi zorunludur.";
-    private const string ComputerOuMoveTargetOuNotFoundMessage = "Hedef OU bulunamadı.";
-    private const string ComputerOuMoveInvalidTargetDnMessage = "Hedef OU distinguished name geçersiz.";
-    private const string ComputerAlreadyInTargetOuMessage = "Bilgisayar zaten seçilen OU içinde.";
-    private const string ComputerOuMoveSuccessMessage = "Bilgisayar OU taşıma işlemi tamamlandı.";
     private const string ComputerOuMoveSuccessLoggingFailedMessage =
         "AD computer OU move operation succeeded but logging failed.";
     private const string ComputerOuMoveFailureLoggingFailedMessage =
@@ -54,10 +46,10 @@ public sealed partial class AdUserDirectoryService : IAdComputerOuMoveService
         if (string.IsNullOrWhiteSpace(targetOuDn))
         {
             return await FailComputerOuMoveAsync(
-                request,
+        request,
                 auditAction,
                 "AD computer OU move failed.",
-                ComputerOuMoveTargetOuRequiredMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.TargetOuRequired),
                 BuildComputerOuMoveFailureDiagnostic(
                     ComputerOuMoveValidateStep,
                     request.ComputerId,
@@ -72,10 +64,10 @@ public sealed partial class AdUserDirectoryService : IAdComputerOuMoveService
         if (!IsValidTargetOuDistinguishedName(targetOuDn))
         {
             return await FailComputerOuMoveAsync(
-                request,
+        request,
                 auditAction,
                 "AD computer OU move failed.",
-                ComputerOuMoveInvalidTargetDnMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Ldap.InvalidDnSyntax),
                 BuildComputerOuMoveFailureDiagnostic(
                     ComputerOuMoveValidateStep,
                     request.ComputerId,
@@ -91,7 +83,7 @@ public sealed partial class AdUserDirectoryService : IAdComputerOuMoveService
         if (!connectionResult.IsSuccess || connectionResult.Context is null)
         {
             return await FailComputerOuMoveAsync(
-                request,
+        request,
                 auditAction,
                 "AD computer OU move failed.",
                 connectionResult.Message,
@@ -111,10 +103,10 @@ public sealed partial class AdUserDirectoryService : IAdComputerOuMoveService
         if (string.IsNullOrWhiteSpace(computersSearchBase))
         {
             return await FailComputerOuMoveAsync(
-                request,
+        request,
                 auditAction,
                 "AD computer OU move failed.",
-                AdManagementNotConfiguredMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
                 BuildComputerOuMoveFailureDiagnostic(
                     ComputerOuMoveValidateTargetOuStep,
                     request.ComputerId,
@@ -129,10 +121,10 @@ public sealed partial class AdUserDirectoryService : IAdComputerOuMoveService
         if (!AdLdapDnHelper.IsEqualOrDescendantOf(targetOuDn, computersSearchBase))
         {
             return await FailComputerOuMoveAsync(
-                request,
+        request,
                 auditAction,
                 "AD computer OU move failed.",
-                ComputerOuMoveInvalidTargetOuMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Users.InvalidTargetOu),
                 BuildComputerOuMoveFailureDiagnostic(
                     ComputerOuMoveValidateTargetOuStep,
                     request.ComputerId,
@@ -157,10 +149,10 @@ public sealed partial class AdUserDirectoryService : IAdComputerOuMoveService
                     out var beforeContext))
             {
                 return await FailComputerOuMoveAsync(
-                    request,
+        request,
                     auditAction,
                     "AD computer OU move failed.",
-                    ComputerNotFoundMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.NotFound),
                     BuildComputerOuMoveFailureDiagnostic(
                         ComputerOuMoveLoadStep,
                         request.ComputerId,
@@ -180,7 +172,7 @@ public sealed partial class AdUserDirectoryService : IAdComputerOuMoveService
                     beforeContext.IsCriticalSystemObject))
             {
                 return await FailComputerOuMoveAsync(
-                    request,
+        request,
                     auditAction,
                     "AD computer OU move failed.",
                     AdComputerAccountGuard.ProtectedComputerWriteOperationMessage,
@@ -198,10 +190,10 @@ public sealed partial class AdUserDirectoryService : IAdComputerOuMoveService
             if (!TryLoadOrganizationalUnit(ldapConnection, targetOuDn))
             {
                 return await FailComputerOuMoveAsync(
-                    request,
+        request,
                     auditAction,
                     "AD computer OU move failed.",
-                    ComputerOuMoveTargetOuNotFoundMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Ldap.NoSuchObject),
                     BuildComputerOuMoveFailureDiagnostic(
                         ComputerOuMoveValidateTargetOuStep,
                         request.ComputerId,
@@ -219,7 +211,7 @@ public sealed partial class AdUserDirectoryService : IAdComputerOuMoveService
                     request,
                     auditAction,
                     $"AD computer OU move skipped (no changes): {beforeContext.Name ?? beforeContext.SamAccountName}.",
-                    ComputerAlreadyInTargetOuMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.AlreadyInTargetOu),
                     connection,
                     ldapConnection,
                     computersSearchBase,
@@ -232,10 +224,10 @@ public sealed partial class AdUserDirectoryService : IAdComputerOuMoveService
             if (string.IsNullOrWhiteSpace(currentRdn))
             {
                 return await FailComputerOuMoveAsync(
-                    request,
+        request,
                     auditAction,
                     "AD computer OU move failed.",
-                    ComputerOuMoveFailedMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.OuMoveFailed),
                     BuildComputerOuMoveFailureDiagnostic(
                         ComputerOuMoveMoveStep,
                         request.ComputerId,
@@ -260,10 +252,10 @@ public sealed partial class AdUserDirectoryService : IAdComputerOuMoveService
                     out var afterContext))
             {
                 return await FailComputerOuMoveAsync(
-                    request,
+        request,
                     auditAction,
                     "AD computer OU move failed.",
-                    ComputerOuMoveFailedMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.OuMoveFailed),
                     BuildComputerOuMoveFailureDiagnostic(
                         ComputerOuMoveReloadStep,
                         request.ComputerId,
@@ -278,10 +270,10 @@ public sealed partial class AdUserDirectoryService : IAdComputerOuMoveService
             if (!AdLdapDnHelper.AreDistinguishedNamesEqual(afterContext.ParentOuDistinguishedName, targetOuDn))
             {
                 return await FailComputerOuMoveAsync(
-                    request,
+        request,
                     auditAction,
                     "AD computer OU move failed.",
-                    ComputerOuMoveFailedMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.OuMoveFailed),
                     BuildComputerOuMoveFailureDiagnostic(
                         ComputerOuMoveReloadStep,
                         request.ComputerId,
@@ -297,7 +289,7 @@ public sealed partial class AdUserDirectoryService : IAdComputerOuMoveService
                 request,
                 auditAction,
                 $"AD computer moved to OU. Computer: {afterContext.Name ?? afterContext.SamAccountName}.",
-                ComputerOuMoveSuccessMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.OuMoveSuccess),
                 connection,
                 ldapConnection,
                 computersSearchBase,
@@ -308,7 +300,7 @@ public sealed partial class AdUserDirectoryService : IAdComputerOuMoveService
         catch (LdapException ex)
         {
             return await FailComputerOuMoveAsync(
-                request,
+        request,
                 auditAction,
                 "AD computer OU move failed.",
                 SanitizeComputerOuMoveLdapError(ex),
@@ -326,10 +318,10 @@ public sealed partial class AdUserDirectoryService : IAdComputerOuMoveService
         catch (Exception)
         {
             return await FailComputerOuMoveAsync(
-                request,
+        request,
                 auditAction,
                 "AD computer OU move failed.",
-                ComputerOuMoveFailedMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.OuMoveFailed),
                 BuildComputerOuMoveFailureDiagnostic(
                     ComputerOuMoveMoveStep,
                     request.ComputerId,
@@ -384,17 +376,21 @@ public sealed partial class AdUserDirectoryService : IAdComputerOuMoveService
         string errorDiagnosticJson,
         AdComputerOuMoveContext? beforeContext,
         AdDirectoryFailureKind? failureKind,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? messageKey = null,
+        IReadOnlyDictionary<string, object>? messageParams = null)
     {
         await WriteComputerOuMoveFailureLogsSafelyAsync(
-            request,
+        request,
             auditAction,
             auditDescription,
             beforeContext,
             errorDiagnosticJson,
             cancellationToken);
 
-        return new MoveAdComputerOuResult(false, message, FailureKind: failureKind);
+        return new MoveAdComputerOuResult(false, message, FailureKind: failureKind,
+            MessageKey: messageKey,
+            MessageParams: messageParams);
     }
 
     private static bool IsValidTargetOuDistinguishedName(string distinguishedName) =>
@@ -654,8 +650,8 @@ public sealed partial class AdUserDirectoryService : IAdComputerOuMoveService
     private static string SanitizeComputerOuMoveLdapError(LdapException exception) =>
         string.IsNullOrWhiteSpace(exception.Message)
             || exception.Message.Contains("ldap", StringComparison.OrdinalIgnoreCase)
-            ? ComputerOuMoveFailedMessage
-            : ComputerOuMoveFailedMessage;
+            ? AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.OuMoveFailed)
+            : AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.OuMoveFailed);
 
     private sealed record AdComputerOuMoveContext(
         string ComputerId,

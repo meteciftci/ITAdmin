@@ -13,4 +13,6 @@ public sealed record DeleteAdComputerResult(
     string? DeletedComputerId,
     string? DeletedComputerName,
     string? DeletedDistinguishedName,
-    AdDirectoryFailureKind? FailureKind = null);
+    AdDirectoryFailureKind? FailureKind = null,
+    string? MessageKey = null,
+    IReadOnlyDictionary<string, object>? MessageParams = null);

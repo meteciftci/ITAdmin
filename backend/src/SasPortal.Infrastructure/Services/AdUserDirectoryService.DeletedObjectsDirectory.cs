@@ -3,16 +3,13 @@ using System.DirectoryServices.Protocols;
 using Microsoft.Extensions.Logging;
 using SasPortal.Application.Abstractions.Services;
 using SasPortal.Application.Common.AdManagement;
+using SasPortal.Application.Common.Constants;
 using SasPortal.Application.Common.Models;
 
 namespace SasPortal.Infrastructure.Services;
 
 public sealed partial class AdUserDirectoryService : IAdDeletedObjectDirectoryService
 {
-    private const string DeletedObjectNotFoundMessage = "Silinen AD nesnesi bulunamadı.";
-    private const string DeletedObjectsQueryFailedMessage = "Silinen AD nesneleri okunamadı.";
-    private const string DeletedObjectsAccessDeniedMessage =
-        "Silinen nesneler kapsayıcısına erişilemiyor. Servis hesabı yetkilerini kontrol edin.";
     private const int DeletedObjectMemberOfLimit = 25;
 
     private static readonly string[] DeletedObjectListAttributes =
@@ -113,7 +110,9 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectDirectorySe
                 false,
                 connectionResult.Message,
                 null,
-                connectionResult.FailureKind);
+                connectionResult.FailureKind,
+                connectionResult.MessageKey,
+                connectionResult.MessageParams);
         }
 
         var searchBase = ResolveDeletedObjectsSearchBase(connectionResult.Context.Connection);
@@ -121,9 +120,10 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectDirectorySe
         {
             return new AdDeletedObjectSearchResult(
                 false,
-                AdManagementNotConfiguredMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
                 null,
-                AdDirectoryFailureKind.NotConfigured);
+                AdDirectoryFailureKind.NotConfigured,
+                AdManagementApiMessageKeys.Common.NotConfigured);
         }
 
         try
@@ -215,7 +215,9 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectDirectorySe
                 false,
                 connectionResult.Message,
                 null,
-                connectionResult.FailureKind);
+                connectionResult.FailureKind,
+                connectionResult.MessageKey,
+                connectionResult.MessageParams);
         }
 
         var searchBase = ResolveDeletedObjectsSearchBase(connectionResult.Context.Connection);
@@ -223,9 +225,10 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectDirectorySe
         {
             return new AdDeletedObjectDetailResult(
                 false,
-                AdManagementNotConfiguredMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
                 null,
-                AdDirectoryFailureKind.NotConfigured);
+                AdDirectoryFailureKind.NotConfigured,
+                AdManagementApiMessageKeys.Common.NotConfigured);
         }
 
         try
@@ -259,18 +262,20 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectDirectorySe
             {
                 return new AdDeletedObjectDetailResult(
                     false,
-                    DeletedObjectNotFoundMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.DeletedObjects.NotFound),
                     null,
-                    AdDirectoryFailureKind.NotFound);
+                    AdDirectoryFailureKind.NotFound,
+                    AdManagementApiMessageKeys.DeletedObjects.NotFound);
             }
 
             if (!TryMapDeletedObjectDetail(response.Entries[0], out var detail))
             {
                 return new AdDeletedObjectDetailResult(
                     false,
-                    DeletedObjectNotFoundMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.DeletedObjects.NotFound),
                     null,
-                    AdDirectoryFailureKind.NotFound);
+                    AdDirectoryFailureKind.NotFound,
+                    AdManagementApiMessageKeys.DeletedObjects.NotFound);
             }
 
             return new AdDeletedObjectDetailResult(true, string.Empty, detail);
@@ -428,10 +433,20 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectDirectorySe
     }
 
     private static AdDeletedObjectSearchResult DeletedObjectListConnectionFailed() =>
-        new(false, DeletedObjectsQueryFailedMessage, null, AdDirectoryFailureKind.ConnectionFailed);
+        new(
+            false,
+            AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.DeletedObjects.QueryFailed),
+            null,
+            AdDirectoryFailureKind.ConnectionFailed,
+            AdManagementApiMessageKeys.DeletedObjects.QueryFailed);
 
     private static AdDeletedObjectDetailResult DeletedObjectDetailConnectionFailed() =>
-        new(false, DeletedObjectsQueryFailedMessage, null, AdDirectoryFailureKind.ConnectionFailed);
+        new(
+            false,
+            AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.DeletedObjects.QueryFailed),
+            null,
+            AdDirectoryFailureKind.ConnectionFailed,
+            AdManagementApiMessageKeys.DeletedObjects.QueryFailed);
 
     private AdDeletedObjectSearchResult DeletedObjectListFailure(ResultCode resultCode) =>
         resultCode switch
@@ -439,9 +454,10 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectDirectorySe
             ResultCode.InsufficientAccessRights or ResultCode.UnwillingToPerform =>
                 new AdDeletedObjectSearchResult(
                     false,
-                    DeletedObjectsAccessDeniedMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.DeletedObjects.AccessDenied),
                     null,
-                    AdDirectoryFailureKind.ConnectionFailed),
+                    AdDirectoryFailureKind.ConnectionFailed,
+                    AdManagementApiMessageKeys.DeletedObjects.AccessDenied),
             _ => DeletedObjectListConnectionFailed(),
         };
 
@@ -451,9 +467,10 @@ public sealed partial class AdUserDirectoryService : IAdDeletedObjectDirectorySe
             ResultCode.InsufficientAccessRights or ResultCode.UnwillingToPerform =>
                 new AdDeletedObjectDetailResult(
                     false,
-                    DeletedObjectsAccessDeniedMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.DeletedObjects.AccessDenied),
                     null,
-                    AdDirectoryFailureKind.ConnectionFailed),
+                    AdDirectoryFailureKind.ConnectionFailed,
+                    AdManagementApiMessageKeys.DeletedObjects.AccessDenied),
             _ => DeletedObjectDetailConnectionFailed(),
         };
 }

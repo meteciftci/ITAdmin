@@ -10,10 +10,6 @@ namespace SasPortal.Infrastructure.Services;
 public sealed partial class AdUserDirectoryService : IAdComputerUpdateService
 {
     private const int ComputerDescriptionMaxLength = 1024;
-    private const string ComputerUpdateFailedMessage = "Bilgisayar açıklaması güncellenemedi.";
-    private const string ComputerUpdateSuccessMessage = "Bilgisayar açıklaması güncellendi.";
-    private const string ComputerUpdateNoChangesMessage = "Bilgisayar açıklamasında değişiklik yok.";
-    private const string ComputerDescriptionTooLongMessage = "Açıklama en fazla 1024 karakter olabilir.";
     private const string ComputerUpdateSuccessLoggingFailedMessage =
         "AD computer update operation succeeded but logging failed.";
     private const string ComputerUpdateFailureLoggingFailedMessage =
@@ -51,10 +47,10 @@ public sealed partial class AdUserDirectoryService : IAdComputerUpdateService
         if (normalizedDescription.Length > ComputerDescriptionMaxLength)
         {
             return await FailComputerUpdateAsync(
-                request,
+        request,
                 auditAction,
                 "AD computer update failed.",
-                ComputerDescriptionTooLongMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.InvalidRequest),
                 BuildComputerUpdateFailureDiagnostic(
                     ComputerUpdateValidateStep,
                     request.ComputerId,
@@ -70,7 +66,7 @@ public sealed partial class AdUserDirectoryService : IAdComputerUpdateService
         if (!connectionResult.IsSuccess || connectionResult.Context is null)
         {
             return await FailComputerUpdateAsync(
-                request,
+        request,
                 auditAction,
                 "AD computer update failed.",
                 connectionResult.Message,
@@ -91,10 +87,10 @@ public sealed partial class AdUserDirectoryService : IAdComputerUpdateService
         if (string.IsNullOrWhiteSpace(computersSearchBase))
         {
             return await FailComputerUpdateAsync(
-                request,
+        request,
                 auditAction,
                 "AD computer update failed.",
-                AdManagementNotConfiguredMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Common.NotConfigured),
                 BuildComputerUpdateFailureDiagnostic(
                     ComputerUpdateValidateStep,
                     request.ComputerId,
@@ -118,10 +114,10 @@ public sealed partial class AdUserDirectoryService : IAdComputerUpdateService
                     out var beforeContext))
             {
                 return await FailComputerUpdateAsync(
-                    request,
+        request,
                     auditAction,
                     "AD computer update failed.",
-                    ComputerNotFoundMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.NotFound),
                     BuildComputerUpdateFailureDiagnostic(
                         ComputerUpdateLoadStep,
                         request.ComputerId,
@@ -141,7 +137,7 @@ public sealed partial class AdUserDirectoryService : IAdComputerUpdateService
                     beforeContext.IsCriticalSystemObject))
             {
                 return await FailComputerUpdateAsync(
-                    request,
+        request,
                     auditAction,
                     "AD computer update failed.",
                     AdComputerAccountGuard.ProtectedComputerWriteOperationMessage,
@@ -163,7 +159,7 @@ public sealed partial class AdUserDirectoryService : IAdComputerUpdateService
                     request,
                     auditAction,
                     $"AD computer update skipped (no changes): {beforeContext.Name ?? beforeContext.SamAccountName}.",
-                    ComputerUpdateNoChangesMessage,
+                    string.Empty,
                     context.Connection,
                     ldapConnection,
                     computersSearchBase,
@@ -186,10 +182,10 @@ public sealed partial class AdUserDirectoryService : IAdComputerUpdateService
                     out var afterContext))
             {
                 return await FailComputerUpdateAsync(
-                    request,
+        request,
                     auditAction,
                     "AD computer update failed.",
-                    ComputerUpdateFailedMessage,
+                    AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.UpdateFailed),
                     BuildComputerUpdateFailureDiagnostic(
                         ComputerUpdateReloadStep,
                         request.ComputerId,
@@ -205,7 +201,7 @@ public sealed partial class AdUserDirectoryService : IAdComputerUpdateService
                 request,
                 auditAction,
                 $"AD computer description updated. Computer: {afterContext.Name ?? afterContext.SamAccountName}.",
-                ComputerUpdateSuccessMessage,
+                string.Empty,
                 context.Connection,
                 ldapConnection,
                 computersSearchBase,
@@ -218,7 +214,7 @@ public sealed partial class AdUserDirectoryService : IAdComputerUpdateService
         catch (LdapException ex)
         {
             return await FailComputerUpdateAsync(
-                request,
+        request,
                 auditAction,
                 "AD computer update failed.",
                 SanitizeComputerUpdateLdapError(ex),
@@ -236,10 +232,10 @@ public sealed partial class AdUserDirectoryService : IAdComputerUpdateService
         catch (Exception)
         {
             return await FailComputerUpdateAsync(
-                request,
+        request,
                 auditAction,
                 "AD computer update failed.",
-                ComputerUpdateFailedMessage,
+                AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.UpdateFailed),
                 BuildComputerUpdateFailureDiagnostic(
                     ComputerUpdateModifyStep,
                     request.ComputerId,
@@ -298,17 +294,21 @@ public sealed partial class AdUserDirectoryService : IAdComputerUpdateService
         string errorDiagnosticJson,
         AdComputerUpdateContext? beforeContext,
         AdDirectoryFailureKind? failureKind,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? messageKey = null,
+        IReadOnlyDictionary<string, object>? messageParams = null)
     {
         await WriteComputerUpdateFailureLogsSafelyAsync(
-            request,
+        request,
             auditAction,
             auditDescription,
             beforeContext,
             errorDiagnosticJson,
             cancellationToken);
 
-        return new UpdateAdComputerResult(false, message, FailureKind: failureKind);
+        return new UpdateAdComputerResult(false, message, FailureKind: failureKind,
+            MessageKey: messageKey,
+            MessageParams: messageParams);
     }
 
     private static string NormalizeComputerDescription(string? description)
@@ -613,8 +613,8 @@ public sealed partial class AdUserDirectoryService : IAdComputerUpdateService
     private static string SanitizeComputerUpdateLdapError(LdapException exception) =>
         string.IsNullOrWhiteSpace(exception.Message)
             || exception.Message.Contains("ldap", StringComparison.OrdinalIgnoreCase)
-            ? ComputerUpdateFailedMessage
-            : ComputerUpdateFailedMessage;
+            ? AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.UpdateFailed)
+            : AdManagementApiMessages.Legacy(AdManagementApiMessageKeys.Computers.UpdateFailed);
 
     private sealed record AdComputerUpdateContext(
         string ComputerId,

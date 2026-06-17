@@ -14,7 +14,7 @@ import { AD_MANAGEMENT_GROUPS_QUERY_KEY, getAdGroupById } from "@/features/ad-ma
 import { AdEditGroupForm } from "@/features/ad-management/components/AdEditGroupForm";
 import { AdManagementModuleStateGuard } from "@/features/ad-management/components/AdManagementModuleStateGuard";
 import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useAdManagementModuleStatus";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { getAdManagementApiErrorMessage } from "@/features/ad-management/ad-management-api-message";
 import { cn } from "@/lib/utils";
 
 export function AdEditGroupPage() {
@@ -71,9 +71,10 @@ export function AdEditGroupPage() {
         {groupQuery.isError ? (
           <ErrorState
             title={t("adManagement:groups.errors.notFound")}
-            description={getApiErrorMessage(
+            description={getAdManagementApiErrorMessage(
               groupQuery.error,
-              t("adManagement:groups.errors.notFound"),
+              t,
+              "adManagement:groups.errors.notFound",
             )}
           />
         ) : null}

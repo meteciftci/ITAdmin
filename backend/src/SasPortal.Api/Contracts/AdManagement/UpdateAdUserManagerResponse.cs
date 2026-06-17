@@ -6,4 +6,6 @@ public sealed record UpdateAdUserManagerResponse(
     string UserId,
     string? SamAccountName,
     string? ManagerDistinguishedName,
-    string? ManagerDisplayName);
+    string? ManagerDisplayName,
+    string? MessageKey = null,
+    IReadOnlyDictionary<string, object>? MessageParams = null);

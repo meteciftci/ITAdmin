@@ -31,7 +31,7 @@ import type {
   AdEffectiveGroupSummaryItem,
   AdMembershipPathNode,
 } from "@/features/ad-management/types";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { getAdManagementApiErrorMessage } from "@/features/ad-management/ad-management-api-message";
 import { cn } from "@/lib/utils";
 
 const MAX_DEPTH_OPTIONS = [3, 5, 10] as const;
@@ -224,9 +224,10 @@ export function AdUserEffectiveGroupsSection({ userId }: Props) {
       {effectiveGroupsQuery.isError ? (
         <ErrorState
           title={t("adManagement:users.detail.effectiveGroups.errors.loadFailed")}
-          description={getApiErrorMessage(
+          description={getAdManagementApiErrorMessage(
             effectiveGroupsQuery.error,
-            t("adManagement:users.detail.effectiveGroups.errors.loadFailed"),
+            t,
+            "adManagement:users.detail.effectiveGroups.errors.loadFailed",
           )}
         />
       ) : null}

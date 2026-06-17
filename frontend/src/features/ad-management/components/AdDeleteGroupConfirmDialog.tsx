@@ -28,7 +28,10 @@ import {
 } from "@/features/ad-management/api";
 import { AD_OPERATION_LOGS_QUERY_KEY } from "@/features/ad-management/operation-logs-api";
 import type { AdGroupDetail } from "@/features/ad-management/types";
-import { getApiErrorMessage } from "@/lib/api-error";
+import {
+  getAdManagementApiErrorMessage,
+  resolveAdManagementApiMessage,
+} from "@/features/ad-management/ad-management-api-message";
 
 type Props = {
   open: boolean;
@@ -73,19 +76,25 @@ export function AdDeleteGroupConfirmDialog({
     },
     onSuccess: async (response) => {
       if (!response.success) {
-        toast.error(t("adManagement:groups.delete.error"));
+        toast.error(
+          resolveAdManagementApiMessage(t, response, "adManagement:groups.delete.error"),
+        );
         return;
       }
 
       await invalidateAdManagementGroupQueries(queryClient);
       await queryClient.invalidateQueries({ queryKey: AD_OPERATION_LOGS_QUERY_KEY });
-      toast.success(response.message || t("adManagement:groups.delete.success"));
+      toast.success(
+        resolveAdManagementApiMessage(t, response, "adManagement:groups.delete.success"),
+      );
       setConfirmValue("");
       onOpenChange(false);
       onDeleted?.();
     },
     onError: (error) => {
-      toast.error(getApiErrorMessage(error, t("adManagement:groups.delete.error")));
+      toast.error(
+        getAdManagementApiErrorMessage(error, t, "adManagement:groups.delete.error"),
+      );
     },
   });
 
@@ -153,7 +162,11 @@ export function AdDeleteGroupConfirmDialog({
 
         {groupQuery.isError ? (
           <p className="text-sm text-destructive">
-            {getApiErrorMessage(groupQuery.error, t("adManagement:groups.delete.error"))}
+            {getAdManagementApiErrorMessage(
+              groupQuery.error,
+              t,
+              "adManagement:groups.delete.error",
+            )}
           </p>
         ) : null}
 

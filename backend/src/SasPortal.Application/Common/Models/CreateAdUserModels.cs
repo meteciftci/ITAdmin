@@ -24,7 +24,9 @@ public sealed record CreateAdUserResult(
     bool IsSuccess,
     string Message,
     CreateAdUserResponse? User,
-    AdDirectoryFailureKind? FailureKind = null);
+    AdDirectoryFailureKind? FailureKind = null,
+    string? MessageKey = null,
+    IReadOnlyDictionary<string, object>? MessageParams = null);
 
 public sealed record CreateAdUserResponse(
     string Id,
@@ -37,7 +39,9 @@ public sealed record CreateAdUserResponse(
     string Message,
     bool NamingCollisionResolved,
     int? GeneratedSuffix,
-    AdManagementNotificationSummary? NotificationSummary = null);
+    AdManagementNotificationSummary? NotificationSummary = null,
+    string? MessageKey = null,
+    IReadOnlyDictionary<string, object>? MessageParams = null);
 
 public sealed record AdOrganizationalUnitSearchQuery(
     string? Search,
@@ -54,7 +58,9 @@ public sealed record AdOrganizationalUnitSearchResult(
     bool IsSuccess,
     string Message,
     AdOrganizationalUnitSearchPage? Page,
-    AdDirectoryFailureKind? FailureKind = null);
+    AdDirectoryFailureKind? FailureKind = null,
+    string? MessageKey = null,
+    IReadOnlyDictionary<string, object>? MessageParams = null);
 
 public sealed record AdOrganizationalUnitSearchPage(
     IReadOnlyList<AdOrganizationalUnitListItem> Items,
