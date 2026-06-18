@@ -29,6 +29,7 @@ public static class DependencyInjection
         services.AddScoped<IAuditLogService, AuditLogService>();
         services.AddScoped<IAuditLogWriter, AuditLogWriter>();
         services.AddScoped<ISecurityLogService, SecurityLogService>();
+        services.AddScoped<ISecurityLogWriter, SecurityLogWriter>();
         services.AddScoped<ISettingsService, SettingsService>();
         services.AddScoped<IReadinessService, ReadinessService>();
         services.AddScoped<IAdOperationLogService, AdOperationLogService>();

@@ -34,6 +34,7 @@ public partial class Program
         });
 
         builder.Services.AddControllers();
+        builder.Services.AddHttpContextAccessor();
 
         // IIS / reverse proxy support: honor X-Forwarded-For / X-Forwarded-Proto only from
         // proxies declared in configuration (safe loopback-only default when config is empty).
@@ -77,6 +78,7 @@ public partial class Program
 
         builder.Services.AddAuthorization();
         builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionAuthorizationPolicyProvider>();
+        builder.Services.AddScoped<ForbiddenAccessSecurityLogger>();
         builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
         builder.Services.AddScoped<IAuthorizationHandler, AnyPermissionAuthorizationHandler>();
         builder.Services.AddOpenApi();

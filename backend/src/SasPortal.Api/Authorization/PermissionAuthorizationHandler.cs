@@ -4,21 +4,22 @@ using SasPortal.Application.Common.Security;
 
 namespace SasPortal.Api.Authorization;
 
-public sealed class PermissionAuthorizationHandler : AuthorizationHandler<PermissionRequirement>
+public sealed class PermissionAuthorizationHandler(
+    ForbiddenAccessSecurityLogger forbiddenAccessSecurityLogger) : AuthorizationHandler<PermissionRequirement>
 {
-    protected override Task HandleRequirementAsync(
+    protected override async Task HandleRequirementAsync(
         AuthorizationHandlerContext context,
         PermissionRequirement requirement)
     {
         if (context.User.Identity?.IsAuthenticated != true)
         {
-            return Task.CompletedTask;
+            return;
         }
 
         if (IsSuperAdmin(context.User))
         {
             context.Succeed(requirement);
-            return Task.CompletedTask;
+            return;
         }
 
         var hasPermission = context.User.FindAll(CustomClaimTypes.Permission)
@@ -27,9 +28,13 @@ public sealed class PermissionAuthorizationHandler : AuthorizationHandler<Permis
         if (hasPermission)
         {
             context.Succeed(requirement);
+            return;
         }
 
-        return Task.CompletedTask;
+        await forbiddenAccessSecurityLogger.TryLogPermissionDeniedAsync(
+            context,
+            requirement.Permission,
+            CancellationToken.None);
     }
 
     private static bool IsSuperAdmin(ClaimsPrincipal user)

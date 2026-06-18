@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Net.Http.Headers;
+using SasPortal.Api.Authorization;
 
 namespace SasPortal.Api.Security;
 
@@ -44,6 +45,15 @@ public sealed class CsrfProtectionMiddleware
         {
             await _next(context).ConfigureAwait(false);
             return;
+        }
+
+        if (context.RequestServices is not null)
+        {
+            var forbiddenAccessLogger = context.RequestServices.GetService<ForbiddenAccessSecurityLogger>();
+            if (forbiddenAccessLogger is not null)
+            {
+                await forbiddenAccessLogger.TryLogCsrfValidationFailedAsync(context).ConfigureAwait(false);
+            }
         }
 
         await WriteForbiddenAsync(context).ConfigureAwait(false);
