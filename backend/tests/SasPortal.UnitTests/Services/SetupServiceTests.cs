@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
+using SasPortal.Application.Common.Constants;
 using SasPortal.Application.Common.Models;
 using SasPortal.Persistence.Context;
 using SasPortal.Persistence.Services;
@@ -110,6 +111,28 @@ public sealed class SetupServiceTests
         Assert.True(result.IsCompleted);
         var user = await context.PortalUsers.SingleAsync();
         Assert.Null(user.Email);
+    }
+
+    [Fact]
+    public async Task CompleteSetupAsync_WhenUseSslDisabled_FailsWithoutCallingLdap()
+    {
+        await using var context = CreateDbContext();
+        var ldap = new FakeLdapService
+        {
+            ResolveUserProfile = _ => new LdapUserProfile("obj-ssl", "user", "User", null, null),
+        };
+
+        var service = CreateSetupService(context, ldap, "setup-secret");
+        var baseRequest = CreateMinimalCompleteRequest("user", "p");
+        var request = baseRequest with { Ldap = baseRequest.Ldap with { UseSsl = false } };
+
+        var result = await service.CompleteSetupAsync(request);
+
+        Assert.False(result.IsCompleted);
+        Assert.Equal(SetupApiMessageKeys.Validation.SecureConnectionRequired, result.Message);
+        Assert.Equal(0, ldap.ValidateCallCount);
+        Assert.Equal(0, ldap.GetUserProfileCallCount);
+        Assert.False(await context.PortalUsers.AnyAsync());
     }
 
     [Fact]

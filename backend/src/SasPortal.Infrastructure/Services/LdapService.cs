@@ -16,6 +16,7 @@ public sealed class LdapService : ILdapService
         "LDAP operation timed out. Verify host, port, SSL settings, and network connectivity.";
 
     private const string MissingRequiredFieldsMessage = "Required LDAP fields are missing.";
+    private const string SecureConnectionRequiredMessage = "Only LDAPS (SSL/TLS) connections are supported.";
     private const string ValidationSucceededMessage = "LDAP validation succeeded.";
     private const string DirectoryUserNotFoundMessage = "Directory user could not be found.";
     private const string DirectoryUserDistinguishedNameNotFoundMessage = "Directory user distinguished name could not be resolved.";
@@ -152,6 +153,12 @@ public sealed class LdapService : ILdapService
             string.IsNullOrWhiteSpace(request.TestPassword))
         {
             return Task.FromResult(new LdapValidationResult(false, MissingRequiredFieldsMessage));
+        }
+
+        // Only LDAPS is supported; never attempt a plain LDAP connection.
+        if (!request.UseSsl)
+        {
+            return Task.FromResult(new LdapValidationResult(false, SecureConnectionRequiredMessage));
         }
 
         try

@@ -14,114 +14,22 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SectionCard } from "@/components/common/SectionCard";
+import { completeSetup, getSetupStatus } from "@/features/setup/api";
 import {
-  completeSetup,
-  getSetupStatus,
-  type CompleteSetupRequest,
-} from "@/features/setup/api";
+  buildCompleteSetupRequest,
+  defaultSetupFormValues,
+  mapCompleteSetupFailureToast,
+  resolveResponseMessage,
+  type SetupFormValues,
+} from "@/features/setup/setup-form";
 import { getApiErrorMessage } from "@/lib/api-error";
 
 const SETUP_STATUS_QUERY_KEY = ["setup", "status"] as const;
 
-const DIRECTORY_USER_NOT_FOUND = "Directory user could not be found.";
-const DIRECTORY_USER_PROFILE_COULD_NOT_BE_LOADED_PREFIX = "Directory user profile could not be loaded";
-const LDAP_OPERATION_TIMED_OUT_PREFIX = "LDAP operation timed out";
-
-const STANDARD_LDAP_PORT = "389";
-const STANDARD_LDAPS_PORT = "636";
-
-function shouldSuggestPortForSslToggle(portValue: string): boolean {
-  const trimmed = portValue.trim();
-  if (trimmed.length === 0) {
-    return true;
-  }
-  return trimmed === STANDARD_LDAP_PORT || trimmed === STANDARD_LDAPS_PORT;
-}
-
-function portAfterSslToggle(useSsl: boolean, currentPort: string): string {
-  if (!shouldSuggestPortForSslToggle(currentPort)) {
-    return currentPort;
-  }
-  return useSsl ? STANDARD_LDAPS_PORT : STANDARD_LDAP_PORT;
-}
-
-type SetupFormValues = {
-  setupKey: string;
-  ldap: {
-    name: string;
-    host: string;
-    port: string;
-    useSsl: boolean;
-    baseDn: string;
-    userSearchBase: string;
-    userSearchFilter: string;
-    bindUserName: string;
-    bindUserDomain: string;
-    bindPassword: string;
-    nationalIdAttribute: string;
-  };
-  admin: {
-    userName: string;
-    password: string;
-  };
-};
-
 type FieldErrors = Partial<Record<string, string>>;
-
-const defaultValues: SetupFormValues = {
-  setupKey: "",
-  ldap: {
-    name: "Default LDAP",
-    host: "",
-    port: STANDARD_LDAP_PORT,
-    useSsl: false,
-    baseDn: "",
-    userSearchBase: "",
-    userSearchFilter: "(&(objectClass=user)(sAMAccountName={0}))",
-    bindUserName: "",
-    bindUserDomain: "",
-    bindPassword: "",
-    nationalIdAttribute: "",
-  },
-  admin: {
-    userName: "",
-    password: "",
-  },
-};
-
-function emptyToNull(value: string): string | null {
-  const trimmed = value.trim();
-  return trimmed.length === 0 ? null : trimmed;
-}
-
-function resolveResponseMessage(message: string | undefined, fallback: string): string {
-  const trimmed = message?.trim();
-  return trimmed ? trimmed : fallback;
-}
-
-function mapCompleteSetupFailureToast(
-  backendMessage: string | undefined,
-  genericFallback: string,
-  directoryUserNotFoundHint: string,
-  directoryUserProfileHint: string,
-  ldapTimeoutHint: string,
-): string {
-  const trimmed = backendMessage?.trim() ?? "";
-  if (trimmed === DIRECTORY_USER_NOT_FOUND) {
-    return directoryUserNotFoundHint;
-  }
-  if (trimmed.startsWith(DIRECTORY_USER_PROFILE_COULD_NOT_BE_LOADED_PREFIX)) {
-    return directoryUserProfileHint;
-  }
-  if (trimmed.startsWith(LDAP_OPERATION_TIMED_OUT_PREFIX)) {
-    return ldapTimeoutHint;
-  }
-  return trimmed.length > 0 ? trimmed : genericFallback;
-}
 
 function FieldHint({ children }: { children: string }) {
   return <p className="text-xs text-muted-foreground">{children}</p>;
@@ -137,7 +45,7 @@ export function SetupRequiredPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const [values, setValues] = useState<SetupFormValues>(defaultValues);
+  const [values, setValues] = useState<SetupFormValues>(defaultSetupFormValues);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -189,29 +97,6 @@ export function SetupRequiredPage() {
     return errors;
   };
 
-  const buildLdapPayload = (port: number) => ({
-    name: values.ldap.name.trim() || "Default LDAP",
-    host: values.ldap.host.trim(),
-    port,
-    useSsl: values.ldap.useSsl,
-    baseDn: values.ldap.baseDn.trim(),
-    userSearchBase: values.ldap.userSearchBase.trim(),
-    userSearchFilter: values.ldap.userSearchFilter.trim(),
-    bindUserName: values.ldap.bindUserName.trim(),
-    bindUserDomain: emptyToNull(values.ldap.bindUserDomain),
-    bindPassword: values.ldap.bindPassword,
-    nationalIdAttribute: emptyToNull(values.ldap.nationalIdAttribute),
-  });
-
-  const buildCompleteRequest = (port: number): CompleteSetupRequest => ({
-    setupKey: values.setupKey,
-    ldap: buildLdapPayload(port),
-    admin: {
-      userName: values.admin.userName.trim(),
-      password: values.admin.password,
-    },
-  });
-
   const handleCompleteSetup = async () => {
     const errors = validateForm();
     setFieldErrors(errors);
@@ -221,22 +106,18 @@ export function SetupRequiredPage() {
 
     const port = Number.parseInt(values.ldap.port, 10);
     setIsSubmitting(true);
-    const directoryUserNotFoundHint = t("setup:messages.directoryUserNotFoundHint");
-    const directoryUserProfileHint = t("setup:messages.directoryUserProfileHint");
-    const ldapTimeoutHint = t("setup:messages.ldapTimeoutHint");
     const completeFailedFallback = t("setup:messages.completeFailed");
+    const failureHints = {
+      genericFallback: completeFailedFallback,
+      secureConnectionRequiredHint: t("setup:messages.secureConnectionRequired"),
+      directoryUserNotFoundHint: t("setup:messages.directoryUserNotFoundHint"),
+      directoryUserProfileHint: t("setup:messages.directoryUserProfileHint"),
+      ldapTimeoutHint: t("setup:messages.ldapTimeoutHint"),
+    };
     try {
-      const response = await completeSetup(buildCompleteRequest(port));
+      const response = await completeSetup(buildCompleteSetupRequest(values, port));
       if (!response.isCompleted) {
-        toast.error(
-          mapCompleteSetupFailureToast(
-            response.message,
-            completeFailedFallback,
-            directoryUserNotFoundHint,
-            directoryUserProfileHint,
-            ldapTimeoutHint,
-          ),
-        );
+        toast.error(mapCompleteSetupFailureToast(response.message, failureHints));
         return;
       }
 
@@ -249,15 +130,7 @@ export function SetupRequiredPage() {
       if (axios.isAxiosError(error)) {
         const data = error.response?.data as { message?: string; isCompleted?: boolean } | undefined;
         if (data && typeof data === "object" && data.isCompleted === false) {
-          toast.error(
-            mapCompleteSetupFailureToast(
-              data.message,
-              completeFailedFallback,
-              directoryUserNotFoundHint,
-              directoryUserProfileHint,
-              ldapTimeoutHint,
-            ),
-          );
+          toast.error(mapCompleteSetupFailureToast(data.message, failureHints));
           return;
         }
       }
@@ -266,15 +139,7 @@ export function SetupRequiredPage() {
         ? getApiErrorMessage(error, completeFailedFallback)
         : completeFailedFallback;
 
-      toast.error(
-        mapCompleteSetupFailureToast(
-          fromApi,
-          completeFailedFallback,
-          directoryUserNotFoundHint,
-          directoryUserProfileHint,
-          ldapTimeoutHint,
-        ),
-      );
+      toast.error(mapCompleteSetupFailureToast(fromApi, failureHints));
     } finally {
       setIsSubmitting(false);
     }
@@ -387,33 +252,8 @@ export function SetupRequiredPage() {
                   disabled={isSubmitting}
                   required
                 />
+                <FieldHint>{t("setup:helpers.port")}</FieldHint>
                 <FieldError message={fieldErrors["ldap.port"]} />
-              </div>
-
-              <div className="flex flex-col gap-2 rounded-md border border-border/60 bg-muted/20 p-3 md:col-span-2">
-                <div className="flex items-start gap-3">
-                  <Checkbox
-                    id="ldapUseSsl"
-                    className="mt-0.5"
-                    checked={values.ldap.useSsl}
-                    onChange={(event) => {
-                      const nextSsl = event.target.checked;
-                      setValues((current) => ({
-                        ...current,
-                        ldap: {
-                          ...current.ldap,
-                          useSsl: nextSsl,
-                          port: portAfterSslToggle(nextSsl, current.ldap.port),
-                        },
-                      }));
-                    }}
-                    disabled={isSubmitting}
-                  />
-                  <Label htmlFor="ldapUseSsl" className="cursor-pointer font-normal leading-none">
-                    {t("setup:fields.useSsl")}
-                  </Label>
-                </div>
-                <FieldHint>{t("setup:helpers.ldapSslPort")}</FieldHint>
               </div>
 
               <div className="space-y-2 md:col-span-2">

@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using SasPortal.Application.Abstractions.Security;
 using SasPortal.Application.Abstractions.Services;
+using SasPortal.Application.Common.Constants;
 using SasPortal.Application.Common.Models;
 using SasPortal.Domain.Entities;
 using SasPortal.Domain.Enums;
@@ -127,6 +128,12 @@ public sealed class SetupService(
             string.IsNullOrWhiteSpace(request.Admin.Password))
         {
             return new CompleteSetupResult(false, "Invalid setup request.");
+        }
+
+        // Only LDAPS is supported; plain LDAP must never complete initial setup.
+        if (!request.Ldap.UseSsl)
+        {
+            return new CompleteSetupResult(false, SetupApiMessageKeys.Validation.SecureConnectionRequired);
         }
 
         var configuredSetupKey = configuration["Setup:SetupKey"];

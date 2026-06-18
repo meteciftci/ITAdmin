@@ -13,7 +13,6 @@
       "name": "Ad",
       "host": "Host",
       "port": "Port",
-      "useSsl": "SSL kullan",
       "baseDn": "Base DN",
       "userSearchBase": "Kullanıcı arama base",
       "userSearchFilter": "Kullanıcı arama filtresi",
@@ -29,7 +28,7 @@
       "bindUserName": "DOMAIN\\kullanici veya kullanici@domain.local formatı önerilir.",
       "bindUserDomain": "Opsiyonel. Bind kullanıcı domain bilgisi ayrı tutuluyorsa girin.",
       "userSearchFilter": "{0} kullanıcı adı ile değiştirilir.",
-      "ldapSslPort": "LDAPS sertifikanız yoksa SSL kapalı ve port 389 kullanın. LDAPS için SSL açık ve port 636 kullanılır.",
+      "port": "Bağlantı yalnızca LDAPS (SSL/TLS) üzerinden kurulur. Varsayılan LDAPS portu 636'dır.",
       "adminCredentials": "Bu kullanıcı LDAP üzerinde doğrulanır ve kurulum sonrası portal SuperAdmin kullanıcısı olarak tanımlanır. Ad soyad ve e-posta bilgileri AD profilinden alınır."
     },
     "actions": {
@@ -39,6 +38,7 @@
     "messages": {
       "completeSuccess": "Kurulum başarıyla tamamlandı.",
       "completeFailed": "Kurulum tamamlanamadı.",
+      "secureConnectionRequired": "LDAP bağlantısı yalnızca LDAPS (SSL/TLS) üzerinden kurulabilir.",
       "directoryUserNotFoundHint": "Yönetici kullanıcı AD içinde bulunamadı. Kullanıcı adını sAMAccountName, DOMAIN\\kullanici veya kullanici@domain formatlarından biriyle deneyin ve User Search Filter ayarını kontrol edin.",
       "directoryUserProfileHint": "Yönetici kullanıcı AD profil bilgisi alınamadı. Kullanıcı adını, User Search Base ve User Search Filter ayarlarını kontrol edin.",
       "ldapTimeoutHint": "Kurulum isteği zaman aşımına uğradı veya LDAP sunucusu yanıt vermedi. LDAP sunucusu, ağ bağlantısı, SSL ve User Search ayarlarını kontrol edin."

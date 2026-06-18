@@ -13,7 +13,6 @@
       "name": "Name",
       "host": "Host",
       "port": "Port",
-      "useSsl": "Use SSL",
       "baseDn": "Base DN",
       "userSearchBase": "User search base",
       "userSearchFilter": "User search filter",
@@ -29,7 +28,7 @@
       "bindUserName": "DOMAIN\\user or user@domain.local format is recommended.",
       "bindUserDomain": "Optional. Enter if bind user domain is stored separately.",
       "userSearchFilter": "{0} is replaced with the user name.",
-      "ldapSslPort": "If you do not have an LDAPS certificate, use SSL off with port 389. For LDAPS, use SSL on with port 636.",
+      "port": "Connections are established over LDAPS (SSL/TLS) only. The default LDAPS port is 636.",
       "adminCredentials": "This user is validated against LDAP and becomes the portal SuperAdmin after setup. Display name and email are loaded from the AD profile."
     },
     "actions": {
@@ -39,6 +38,7 @@
     "messages": {
       "completeSuccess": "Setup completed successfully.",
       "completeFailed": "Setup could not be completed.",
+      "secureConnectionRequired": "The LDAP connection can only be established over LDAPS (SSL/TLS).",
       "directoryUserNotFoundHint": "The administrator user could not be found in AD. Try the user name as sAMAccountName, DOMAIN\\user, or user@domain and check the User Search Filter setting.",
       "directoryUserProfileHint": "The administrator user's AD profile could not be loaded. Check the user name, User Search Base, and User Search Filter settings.",
       "ldapTimeoutHint": "The setup request timed out or the LDAP server did not respond. Check the LDAP server, network connectivity, SSL, and User Search settings."

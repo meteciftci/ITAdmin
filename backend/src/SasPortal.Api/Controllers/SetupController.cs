@@ -1,6 +1,8 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SasPortal.Api.Contracts.Setup;
 using SasPortal.Application.Abstractions.Services;
+using SasPortal.Application.Common.Constants;
 using AppModels = SasPortal.Application.Common.Models;
 
 namespace SasPortal.Api.Controllers;
@@ -21,6 +23,22 @@ public sealed class SetupController(ISetupService setupService, ILdapService lda
         [FromBody] ValidateLdapRequest request,
         CancellationToken cancellationToken)
     {
+        // LDAP validation is a first-run setup capability only. Once setup is
+        // completed the endpoint must not perform any outbound LDAP connection.
+        var isSetupRequired = await setupService.IsSetupRequiredAsync(cancellationToken);
+        if (!isSetupRequired)
+        {
+            return StatusCode(
+                StatusCodes.Status403Forbidden,
+                new { messageKey = SetupApiMessageKeys.Validation.SetupAlreadyCompleted });
+        }
+
+        // Only LDAPS is supported; reject plain LDAP before any connection attempt.
+        if (!request.UseSsl)
+        {
+            return BadRequest(new { messageKey = SetupApiMessageKeys.Validation.SecureConnectionRequired });
+        }
+
         var validationRequest = new AppModels.LdapValidationRequest
         {
             Host = request.Host,
