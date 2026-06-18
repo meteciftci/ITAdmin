@@ -13,11 +13,7 @@ export type SetupPreflightCheckResponse = {
 
 export type SetupPreflightResponse = {
   checks: SetupPreflightCheckResponse[];
-};
-
-export const getSetupPreflight = async (): Promise<SetupPreflightResponse> => {
-  const { data } = await apiClient.get<SetupPreflightResponse>("/setup/preflight");
-  return data;
+  canContinue: boolean;
 };
 
 export type CompleteSetupLdapRequest = {
@@ -29,18 +25,34 @@ export type CompleteSetupLdapRequest = {
   bindUserName: string;
   bindUserDomain?: string | null;
   bindPassword: string;
-  nationalIdAttribute?: string | null;
 };
 
-export type CompleteSetupAdminRequest = {
+export type CompleteSetupAdManagementModuleRequest = {
+  isEnabled: boolean;
+  usersSearchBase?: string | null;
+  groupsSearchBase?: string | null;
+  computersSearchBase?: string | null;
+  defaultUserOu?: string | null;
+  defaultGroupOu?: string | null;
+  defaultComputerOu?: string | null;
+  deletedObjectsEnabled: boolean;
+};
+
+export type CompleteSetupModulesRequest = {
+  adManagement?: CompleteSetupAdManagementModuleRequest | null;
+};
+
+export type CompleteSetupAdminUserRequest = {
   userName: string;
-  password: string;
+  distinguishedName?: string | null;
+  directoryObjectId?: string | null;
 };
 
 export type CompleteSetupRequest = {
   setupKey: string;
   ldap: CompleteSetupLdapRequest;
-  admin: CompleteSetupAdminRequest;
+  modules: CompleteSetupModulesRequest;
+  adminUsers: CompleteSetupAdminUserRequest[];
 };
 
 export type CompleteSetupResponse = {
@@ -48,8 +60,64 @@ export type CompleteSetupResponse = {
   message: string;
 };
 
+export type ValidateSetupLdapRequest = {
+  setupKey: string;
+  host: string;
+  baseDn: string;
+  userSearchBase: string;
+  userSearchFilter: string;
+  bindUserName: string;
+  bindUserDomain?: string | null;
+  bindPassword: string;
+};
+
+export type ValidateLdapResponse = {
+  isValid: boolean;
+  message: string;
+};
+
+export type SearchSetupAdminUsersRequest = {
+  setupKey: string;
+  ldap: CompleteSetupLdapRequest;
+  search: string;
+};
+
+export type SetupAdminUserSearchResultResponse = {
+  userName: string;
+  displayName: string;
+  email?: string | null;
+  distinguishedName?: string | null;
+  directoryObjectId?: string | null;
+};
+
+export type SearchSetupAdminUsersResponse = {
+  users: SetupAdminUserSearchResultResponse[];
+};
+
 export const getSetupStatus = async (): Promise<SetupStatusResponse> => {
   const { data } = await apiClient.get<SetupStatusResponse>("/setup/status");
+  return data;
+};
+
+export const getSetupPreflight = async (): Promise<SetupPreflightResponse> => {
+  const { data } = await apiClient.get<SetupPreflightResponse>("/setup/preflight");
+  return data;
+};
+
+export const validateSetupLdap = async (
+  request: ValidateSetupLdapRequest,
+): Promise<ValidateLdapResponse> => {
+  const { data } = await apiClient.post<ValidateLdapResponse>("/setup/validate-ldap", request);
+  return data;
+};
+
+export const searchSetupAdminUsers = async (
+  request: SearchSetupAdminUsersRequest,
+): Promise<SearchSetupAdminUsersResponse> => {
+  const { data } = await apiClient.post<SearchSetupAdminUsersResponse>(
+    "/setup/search-admin-users",
+    request,
+  );
   return data;
 };
 

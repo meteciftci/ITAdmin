@@ -27,7 +27,9 @@ public sealed class SetupPreflightService(
         AddDataProtectionChecks(checks);
         AddRuntimeMetadataChecks(checks);
 
-        return new SetupPreflightResult(checks);
+        return new SetupPreflightResult(
+            checks,
+            checks.All(check => check.Status == SetupPreflightCheckStatuses.Ok));
     }
 
     private async Task AddDatabaseChecksAsync(List<SetupPreflightCheck> checks, CancellationToken cancellationToken)

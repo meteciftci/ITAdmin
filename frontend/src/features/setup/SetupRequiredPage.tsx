@@ -71,6 +71,10 @@ export function SetupRequiredPage() {
       errors["ldap.baseDn"] = t("setup:validation.required");
     }
 
+    if (!values.ldap.userSearchBase.trim()) {
+      errors["ldap.userSearchBase"] = t("setup:validation.required");
+    }
+
     if (!values.ldap.userSearchFilter.trim()) {
       errors["ldap.userSearchFilter"] = t("setup:validation.required");
     }
@@ -85,10 +89,6 @@ export function SetupRequiredPage() {
 
     if (!values.admin.userName.trim()) {
       errors["admin.userName"] = t("setup:validation.required");
-    }
-
-    if (!values.admin.password.trim()) {
-      errors["admin.password"] = t("setup:validation.required");
     }
 
     return errors;
@@ -261,6 +261,7 @@ export function SetupRequiredPage() {
                   onChange={(event) => updateLdap("userSearchBase", event.target.value)}
                   disabled={isSubmitting}
                 />
+                <FieldError message={fieldErrors["ldap.userSearchBase"]} />
               </div>
 
               <div className="space-y-2 md:col-span-2">
@@ -313,28 +314,12 @@ export function SetupRequiredPage() {
                 />
                 <FieldError message={fieldErrors["ldap.bindPassword"]} />
               </div>
-
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="ldapNationalIdAttribute">
-                  {t("setup:fields.nationalIdAttribute")}
-                </Label>
-                <Input
-                  id="ldapNationalIdAttribute"
-                  value={values.ldap.nationalIdAttribute}
-                  onChange={(event) => updateLdap("nationalIdAttribute", event.target.value)}
-                  disabled={isSubmitting}
-                />
-              </div>
             </div>
           </SectionCard>
 
           <SectionCard title={t("setup:sections.admin")}>
             <div className="grid gap-4 sm:grid-cols-2">
-              <p className="text-sm text-muted-foreground sm:col-span-2">
-                {t("setup:helpers.adminCredentials")}
-              </p>
-
-              <div className="space-y-2">
+              <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="adminUserName">{t("setup:fields.adminUserName")}</Label>
                 <Input
                   id="adminUserName"
@@ -345,20 +330,6 @@ export function SetupRequiredPage() {
                   required
                 />
                 <FieldError message={fieldErrors["admin.userName"]} />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="adminPassword">{t("setup:fields.adminPassword")}</Label>
-                <Input
-                  id="adminPassword"
-                  type="password"
-                  autoComplete="new-password"
-                  value={values.admin.password}
-                  onChange={(event) => updateAdmin("password", event.target.value)}
-                  disabled={isSubmitting}
-                  required
-                />
-                <FieldError message={fieldErrors["admin.password"]} />
               </div>
             </div>
           </SectionCard>

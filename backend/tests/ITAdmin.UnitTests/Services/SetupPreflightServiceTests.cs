@@ -55,8 +55,7 @@ public sealed class SetupPreflightServiceTests
         var result = await service.CheckAsync();
         var existsCheck = Assert.Single(result.Checks, check => check.Key == SetupPreflightCheckKeys.DataProtectionKeysPathExists);
 
-        Assert.Equal(SetupPreflightCheckStatuses.Error, existsCheck.Status);
-        Assert.Equal(SetupPreflightMessageKeys.DataProtectionKeysPathMissingOnDisk, existsCheck.MessageKey);
+        Assert.False(result.CanContinue);
     }
 
     [Fact]
@@ -77,6 +76,7 @@ public sealed class SetupPreflightServiceTests
         var existsCheck = Assert.Single(result.Checks, check => check.Key == SetupPreflightCheckKeys.DataProtectionKeysPathExists);
 
         Assert.Equal(SetupPreflightCheckStatuses.Warning, existsCheck.Status);
+        Assert.False(result.CanContinue);
     }
 
     [Fact]

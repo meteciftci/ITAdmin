@@ -35,16 +35,19 @@ describe("setup-form", () => {
     assert.equal("useSsl" in payload, false);
   });
 
-  it("builds the complete-setup request without port or useSsl", () => {
+  it("builds the complete-setup request with adminUsers and modules", () => {
     const request = buildCompleteSetupRequest({
       ...defaults,
       setupKey: "key",
-      admin: { userName: " admin ", password: "pw" },
+      admin: { userName: " admin " },
     });
 
-    assert.equal(request.admin.userName, "admin");
+    assert.equal(request.adminUsers.length, 1);
+    assert.equal(request.adminUsers[0]?.userName, "admin");
+    assert.equal(request.modules.adManagement?.isEnabled, false);
     assert.equal("port" in request.ldap, false);
     assert.equal("useSsl" in request.ldap, false);
+    assert.equal("nationalIdAttribute" in request.ldap, false);
   });
 
   it("sends the trimmed connection name without a hard-coded fallback", () => {
@@ -54,11 +57,11 @@ describe("setup-form", () => {
 
   it("normalizes optional fields to null", () => {
     const payload = buildCompleteSetupLdapPayload(
-      { ...defaults.ldap, bindUserDomain: "   ", nationalIdAttribute: "" },
+      { ...defaults.ldap, bindUserDomain: "   " },
     );
 
     assert.equal(payload.bindUserDomain, null);
-    assert.equal(payload.nationalIdAttribute, null);
+    assert.equal("nationalIdAttribute" in payload, false);
   });
 
   it("falls back to the generic hint for an empty message", () => {

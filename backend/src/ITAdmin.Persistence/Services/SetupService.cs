@@ -6,13 +6,14 @@ using ITAdmin.Application.Abstractions.Services;
 using ITAdmin.Application.Common.Constants;
 using ITAdmin.Application.Common.Models;
 using ITAdmin.Application.Common.Security;
+using ITAdmin.Application.Common.Setup;
 using ITAdmin.Domain.Entities;
 using ITAdmin.Domain.Enums;
 using ITAdmin.Persistence.Context;
 
 namespace ITAdmin.Persistence.Services;
 
-public sealed class SetupService(
+public sealed partial class SetupService(
     AppDbContext context,
     ILdapService ldapService,
     ISecretProtector secretProtector,
@@ -25,74 +26,12 @@ public sealed class SetupService(
     private const string UserRoleCode = "User";
     private const string SetupActor = "setup";
     private const string ActiveDirectoryDirectorySource = "ActiveDirectory";
-    private const string NationalIdApplicationSettingKey = "Directory:NationalIdAttribute";
 
     internal const string DirectoryUserProfileCouldNotBeLoadedMessage =
         "Directory user profile could not be loaded. Check the administrator user name, User Search Base, and User Search Filter.";
 
-    private static readonly (string Module, string Code, string Description)[] DefaultPermissions =
-    [
-        ("Dashboard", PermissionCodes.Dashboard.View, "View dashboard."),
-        ("Users", PermissionCodes.Users.View, "View users."),
-        ("Users", PermissionCodes.Users.Create, "Create users."),
-        ("Users", PermissionCodes.Users.Update, "Update users."),
-        ("Users", PermissionCodes.Users.Delete, "Delete users."),
-        ("Users", PermissionCodes.Users.AssignRoles, "Assign roles to users."),
-        ("Roles", PermissionCodes.Roles.View, "View roles."),
-        ("Roles", PermissionCodes.Roles.Create, "Create roles."),
-        ("Roles", PermissionCodes.Roles.Update, "Update roles."),
-        ("Roles", PermissionCodes.Roles.Delete, "Delete roles."),
-        ("Roles", PermissionCodes.Roles.AssignPermissions, "Assign permissions to roles."),
-        ("Permissions", PermissionCodes.Permissions.View, "View permissions."),
-        ("AuditLogs", PermissionCodes.AuditLogs.View, "View audit logs."),
-        ("SecurityLogs", PermissionCodes.SecurityLogs.View, "View security logs."),
-        ("Settings", PermissionCodes.Settings.View, "View settings."),
-        ("Settings", PermissionCodes.Settings.Update, "Update settings."),
-        ("AdManagement", PermissionCodes.AdManagement.Settings.View, "View AD management settings."),
-        ("AdManagement", PermissionCodes.AdManagement.Settings.Update, "Update AD management settings."),
-        ("AdManagement", PermissionCodes.AdManagement.Users.View, "View AD management directory users."),
-        ("AdManagement", PermissionCodes.AdManagement.Users.Create, "Create AD management directory users."),
-        ("AdManagement", PermissionCodes.AdManagement.Users.Update, "Update AD management directory users."),
-        ("AdManagement", PermissionCodes.AdManagement.Users.Enable, "Enable AD management directory user accounts."),
-        ("AdManagement", PermissionCodes.AdManagement.Users.Disable, "Disable AD management directory user accounts."),
-        ("AdManagement", PermissionCodes.AdManagement.Users.Unlock, "Unlock AD management directory user accounts."),
-        ("AdManagement", PermissionCodes.AdManagement.Users.Groups.View, "View AD user direct group memberships."),
-        ("AdManagement", PermissionCodes.AdManagement.Users.Groups.Add, "Add AD users to groups."),
-        ("AdManagement", PermissionCodes.AdManagement.Users.Groups.Remove, "Remove AD users from groups."),
-        ("AdManagement", PermissionCodes.AdManagement.Groups.View, "View AD management security groups."),
-        ("AdManagement", PermissionCodes.AdManagement.Computers.View, "View AD management directory computers."),
-        ("AdManagement", PermissionCodes.AdManagement.Computers.Update, "Update AD management directory computer attributes."),
-        ("AdManagement", PermissionCodes.AdManagement.Computers.MoveOu, "Move AD management directory computers between OUs."),
-        ("AdManagement", PermissionCodes.AdManagement.Computers.Enable, "Enable AD management directory computer accounts."),
-        ("AdManagement", PermissionCodes.AdManagement.Computers.Disable, "Disable AD management directory computer accounts."),
-        ("AdManagement", PermissionCodes.AdManagement.Computers.Delete, "Delete AD management directory computer accounts."),
-        ("AdManagement", PermissionCodes.AdManagement.Computers.Groups.View, "View AD computer direct group memberships."),
-        ("AdManagement", PermissionCodes.AdManagement.Computers.Groups.Add, "Add AD computers to groups."),
-        ("AdManagement", PermissionCodes.AdManagement.Computers.Groups.Remove, "Remove AD computers from groups."),
-        ("AdManagement", PermissionCodes.AdManagement.DeletedObjects.View, "View AD management deleted directory objects."),
-        ("AdManagement", PermissionCodes.AdManagement.DeletedObjects.Restore, "Restore AD management deleted directory objects."),
-        ("AdManagement", PermissionCodes.AdManagement.OrganizationalUnits.View, "View AD management organizational units."),
-        ("AdManagement", PermissionCodes.AdManagement.OrganizationalUnits.Create, "Create AD management organizational units."),
-        ("AdManagement", PermissionCodes.AdManagement.OrganizationalUnits.Update, "Rename AD management organizational units."),
-        ("AdManagement", PermissionCodes.AdManagement.OrganizationalUnits.Move, "Move AD management organizational units."),
-        ("AdManagement", PermissionCodes.AdManagement.OrganizationalUnits.Delete, "Delete AD management organizational units."),
-        ("AdManagement", PermissionCodes.AdManagement.Groups.Create, "Create AD management security groups."),
-        ("AdManagement", PermissionCodes.AdManagement.Groups.Update, "Update AD management security groups."),
-        ("AdManagement", PermissionCodes.AdManagement.Groups.Delete, "Delete AD management security groups."),
-        ("AdManagement", PermissionCodes.AdManagement.Groups.ManageMembers, "Manage AD security group memberships."),
-        ("AdManagement", PermissionCodes.AdManagement.Groups.MoveOu, "Move AD management security groups between OUs."),
-        ("AdManagement", PermissionCodes.AdManagement.Users.MoveOu, "Move AD management directory users between OUs."),
-        ("AdOperationLogs", PermissionCodes.AdOperationLogs.View, "View AD operation logs."),
-        ("NotificationProviders", PermissionCodes.NotificationProviders.View, "View notification provider settings."),
-        ("NotificationProviders", PermissionCodes.NotificationProviders.Update, "Update notification provider settings."),
-        ("NotificationProviders", PermissionCodes.NotificationProviders.Test, "Send notification provider test messages."),
-        ("NotificationOutbox", PermissionCodes.NotificationOutbox.View, "View notification outbox."),
-        ("NotificationOutbox", PermissionCodes.NotificationOutbox.Retry, "Retry notification outbox items."),
-        ("NotificationOutbox", PermissionCodes.NotificationOutbox.Cancel, "Cancel notification outbox items."),
-        ("NotificationTemplates", PermissionCodes.NotificationTemplates.View, "View notification templates."),
-        ("NotificationTemplates", PermissionCodes.NotificationTemplates.Update, "Update notification templates."),
-        ("Setup", PermissionCodes.Setup.Manage, "Manage setup.")
-    ];
+    internal const string AdminUserNotFoundInDirectoryMessage =
+        "One or more selected admin users could not be found in the directory.";
 
     public async Task<bool> IsSetupRequiredAsync(CancellationToken cancellationToken = default)
     {
@@ -113,36 +52,105 @@ public sealed class SetupService(
         return !hasAnyUser || !isSetupCompleted;
     }
 
+    public async Task<ValidateSetupLdapResult> ValidateLdapAsync(
+        ValidateSetupLdapRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (!SetupRequestValidator.TryValidateLdapSettings(request.Ldap, out var message, out _))
+        {
+            return new ValidateSetupLdapResult(false, message);
+        }
+
+        var setupKeyValidation = SetupRequestValidator.ValidateSetupKey(
+            setupKeyValidator,
+            configuration,
+            request.SetupKey);
+        if (!SetupRequestValidator.TryMapSetupKeyValidationFailure(setupKeyValidation, out message, out _))
+        {
+            return new ValidateSetupLdapResult(false, message);
+        }
+
+        if (!await IsSetupRequiredAsync(cancellationToken))
+        {
+            return new ValidateSetupLdapResult(false, "Setup has already been completed.");
+        }
+
+        return await ValidateLdapConnectionAsync(request.Ldap, cancellationToken);
+    }
+
+    public async Task<SearchSetupAdminUsersResult> SearchAdminUsersAsync(
+        SearchSetupAdminUsersRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var setupKeyValidation = SetupRequestValidator.ValidateSetupKey(
+            setupKeyValidator,
+            configuration,
+            request.SetupKey);
+        if (!SetupRequestValidator.TryMapSetupKeyValidationFailure(setupKeyValidation, out var setupKeyMessage, out _))
+        {
+            return new SearchSetupAdminUsersResult(Array.Empty<SetupAdminUserSearchResult>(), setupKeyMessage);
+        }
+
+        if (!await IsSetupRequiredAsync(cancellationToken))
+        {
+            return new SearchSetupAdminUsersResult(Array.Empty<SetupAdminUserSearchResult>(), "Setup has already been completed.");
+        }
+
+        if (!SetupRequestValidator.TryValidateLdapSettings(request.Ldap, out var ldapMessage, out _))
+        {
+            return new SearchSetupAdminUsersResult(Array.Empty<SetupAdminUserSearchResult>(), ldapMessage);
+        }
+
+        var search = request.Search.Trim();
+        if (search.Length < SetupConstants.MinAdminUserSearchLength)
+        {
+            return new SearchSetupAdminUsersResult(Array.Empty<SetupAdminUserSearchResult>());
+        }
+
+        var lookupResults = await ldapService.SearchUsersAsync(
+            new LdapUserLookupRequest(
+                Host: request.Ldap.Host,
+                BaseDn: request.Ldap.BaseDn,
+                UserSearchBase: request.Ldap.UserSearchBase,
+                BindUserName: request.Ldap.BindUserName,
+                BindUserDomain: request.Ldap.BindUserDomain,
+                BindPassword: request.Ldap.BindPassword,
+                Search: search,
+                MaxResults: SetupConstants.MaxAdminUserSearchResults,
+                NationalIdAttribute: null),
+            cancellationToken);
+
+        var users = lookupResults
+            .Select(item => new SetupAdminUserSearchResult(
+                item.UserName,
+                item.DisplayName,
+                item.Email,
+                item.DistinguishedName,
+                item.DirectoryObjectId))
+            .ToList();
+
+        return new SearchSetupAdminUsersResult(users);
+    }
+
     public async Task<CompleteSetupResult> CompleteSetupAsync(
         CompleteSetupRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(request.SetupKey) ||
-            string.IsNullOrWhiteSpace(request.Ldap.Host) ||
-            string.IsNullOrWhiteSpace(request.Ldap.BaseDn) ||
-            string.IsNullOrWhiteSpace(request.Ldap.UserSearchFilter) ||
-            string.IsNullOrWhiteSpace(request.Ldap.BindUserName) ||
-            string.IsNullOrWhiteSpace(request.Ldap.BindPassword) ||
-            string.IsNullOrWhiteSpace(request.Admin.UserName) ||
-            string.IsNullOrWhiteSpace(request.Admin.Password))
+        if (!SetupRequestValidator.TryValidateCompleteSetupRequest(request, out var validationMessage, out _))
         {
-            return new CompleteSetupResult(false, "Invalid setup request.");
+            return new CompleteSetupResult(false, validationMessage);
         }
 
-        var configuredSetupKeyHash = configuration[SetupKeyHashValidator.ConfigurationKey];
-        var setupKeyValidation = setupKeyValidator.Validate(configuredSetupKeyHash, request.SetupKey);
-        switch (setupKeyValidation)
+        var setupKeyValidation = SetupRequestValidator.ValidateSetupKey(
+            setupKeyValidator,
+            configuration,
+            request.SetupKey);
+        if (!SetupRequestValidator.TryMapSetupKeyValidationFailure(setupKeyValidation, out validationMessage, out _))
         {
-            case SetupKeyValidationOutcome.MissingHashConfiguration:
-                return new CompleteSetupResult(false, "Setup key hash is not configured.");
-            case SetupKeyValidationOutcome.InvalidHashFormat:
-                return new CompleteSetupResult(false, "Setup key hash format is invalid.");
-            case SetupKeyValidationOutcome.InvalidKey:
-                return new CompleteSetupResult(false, "Invalid setup key.");
+            return new CompleteSetupResult(false, validationMessage);
         }
 
-        var isSetupRequired = await IsSetupRequiredAsync(cancellationToken);
-        if (!isSetupRequired)
+        if (!await IsSetupRequiredAsync(cancellationToken))
         {
             return new CompleteSetupResult(false, "Setup has already been completed.");
         }
@@ -150,77 +158,23 @@ public sealed class SetupService(
         logger.LogInformation("Setup complete started.");
         logger.LogInformation("Setup LDAP validation started.");
 
-        var ldapResult = await ldapService.ValidateAsync(
-            new LdapValidationRequest
-            {
-                Host = request.Ldap.Host,
-                BaseDn = request.Ldap.BaseDn,
-                UserSearchBase = request.Ldap.UserSearchBase,
-                UserSearchFilter = request.Ldap.UserSearchFilter,
-                BindUserName = request.Ldap.BindUserName,
-                BindUserDomain = request.Ldap.BindUserDomain,
-                BindPassword = request.Ldap.BindPassword,
-                TestUserName = request.Admin.UserName,
-                TestPassword = request.Admin.Password
-            },
-            cancellationToken);
-
-        logger.LogInformation("Setup LDAP validation completed. IsValid={IsValid}", ldapResult.IsValid);
-
-        if (!ldapResult.IsValid)
+        var ldapValidation = await ValidateLdapConnectionAsync(request.Ldap, cancellationToken);
+        logger.LogInformation("Setup LDAP validation completed. IsValid={IsValid}", ldapValidation.IsValid);
+        if (!ldapValidation.IsValid)
         {
             logger.LogWarning("Setup failed.");
-            return new CompleteSetupResult(false, ldapResult.Message);
+            return new CompleteSetupResult(false, ldapValidation.Message);
         }
 
         logger.LogInformation("Setup LDAP profile lookup started.");
-
-        var nationalIdAttribute = string.IsNullOrWhiteSpace(request.Ldap.NationalIdAttribute)
-            ? null
-            : request.Ldap.NationalIdAttribute.Trim();
-
-        LdapUserProfile? ldapProfile = null;
-        foreach (var candidateUserName in BuildLdapUserNameCandidates(request.Admin.UserName))
-        {
-            ldapProfile = await ldapService.GetUserProfileAsync(
-                new LdapUserProfileRequest(
-                    Host: request.Ldap.Host,
-                    BaseDn: request.Ldap.BaseDn,
-                    UserSearchBase: request.Ldap.UserSearchBase,
-                    UserSearchFilter: request.Ldap.UserSearchFilter,
-                    BindUserName: request.Ldap.BindUserName,
-                    BindUserDomain: request.Ldap.BindUserDomain,
-                    BindPassword: request.Ldap.BindPassword,
-                    UserName: candidateUserName,
-                    NationalIdAttribute: nationalIdAttribute),
-                cancellationToken);
-
-            if (ldapProfile is not null)
-            {
-                break;
-            }
-        }
-
-        logger.LogInformation("Setup LDAP profile lookup completed. Found={Found}", ldapProfile is not null);
-
-        if (ldapProfile is null)
+        var resolvedProfiles = await ResolveAdminUserProfilesAsync(request.Ldap, request.AdminUsers, cancellationToken);
+        if (resolvedProfiles is null)
         {
             logger.LogWarning("Setup failed.");
-            return new CompleteSetupResult(false, DirectoryUserProfileCouldNotBeLoadedMessage);
+            return new CompleteSetupResult(false, AdminUserNotFoundInDirectoryMessage);
         }
 
-        var usernameConflictExists = await context.PortalUsers.AnyAsync(
-            x => x.UserName == ldapProfile.UserName &&
-                 x.DirectoryObjectId != ldapProfile.DirectoryObjectId,
-            cancellationToken);
-
-        if (usernameConflictExists)
-        {
-            logger.LogWarning("Setup failed.");
-            return new CompleteSetupResult(false, "A portal user with the same user name already exists.");
-        }
-
-        var displayName = ResolveDisplayName(ldapProfile);
+        logger.LogInformation("Setup LDAP profile lookup completed. Count={Count}", resolvedProfiles.Count);
 
         await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
         logger.LogInformation("Setup transaction started.");
@@ -229,182 +183,264 @@ public sealed class SetupService(
         {
             var now = DateTime.UtcNow;
 
-            var activeLdapSetting = await context.LdapSettings
-                .FirstOrDefaultAsync(x => x.IsActive, cancellationToken);
+            await PersistLdapSettingsAsync(request.Ldap, now, cancellationToken);
+            var superAdminRole = await EnsureDefaultRolesAndPermissionsAsync(now, cancellationToken);
+            await PersistAdManagementModuleSettingsAsync(request.Ldap, request.Modules, now, cancellationToken);
 
-            if (activeLdapSetting is null)
-            {
-                activeLdapSetting = new LdapSetting
+            var primaryAdminUser = await PersistAdminUsersAsync(resolvedProfiles, superAdminRole, now, cancellationToken);
+            await MarkSetupCompletedAsync(now, cancellationToken);
+
+            await context.SecurityLogs.AddAsync(
+                new SecurityLog
                 {
-                    Name = string.IsNullOrWhiteSpace(request.Ldap.Name) ? "Default LDAP" : request.Ldap.Name,
-                    Host = request.Ldap.Host,
-                    BaseDn = request.Ldap.BaseDn,
-                    UserSearchBase = request.Ldap.UserSearchBase,
-                    UserSearchFilter = request.Ldap.UserSearchFilter,
-                    BindUserName = request.Ldap.BindUserName,
-                    BindUserDomain = request.Ldap.BindUserDomain,
-                    EncryptedBindPassword = secretProtector.Protect(request.Ldap.BindPassword),
-                    IsActive = true,
-                    CreatedAt = now,
-                    CreatedBy = SetupActor
-                };
+                    UserId = primaryAdminUser.Id,
+                    UserName = primaryAdminUser.UserName,
+                    EventType = "SetupCompleted",
+                    Severity = "Info",
+                    Description = "Initial setup completed.",
+                    CreatedAt = now
+                },
+                cancellationToken);
 
-                await context.LdapSettings.AddAsync(activeLdapSetting, cancellationToken);
-            }
-            else
+            await context.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+
+            logger.LogInformation("Setup completed successfully.");
+            return new CompleteSetupResult(true, "Setup completed successfully.");
+        }
+        catch (Exception exception)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            logger.LogWarning(exception, "Setup failed.");
+            return new CompleteSetupResult(false, "Setup could not be completed.");
+        }
+    }
+
+    private async Task<ValidateSetupLdapResult> ValidateLdapConnectionAsync(
+        CompleteSetupLdapSettings ldap,
+        CancellationToken cancellationToken)
+    {
+        var bindResult = await ldapService.ValidateBindAsync(
+            new LdapBindValidationRequest
             {
-                activeLdapSetting.Name = string.IsNullOrWhiteSpace(request.Ldap.Name) ? "Default LDAP" : request.Ldap.Name;
-                activeLdapSetting.Host = request.Ldap.Host;
-                activeLdapSetting.BaseDn = request.Ldap.BaseDn;
-                activeLdapSetting.UserSearchBase = request.Ldap.UserSearchBase;
-                activeLdapSetting.UserSearchFilter = request.Ldap.UserSearchFilter;
-                activeLdapSetting.BindUserName = request.Ldap.BindUserName;
-                activeLdapSetting.BindUserDomain = request.Ldap.BindUserDomain;
-                activeLdapSetting.EncryptedBindPassword = secretProtector.Protect(request.Ldap.BindPassword);
-                activeLdapSetting.UpdatedAt = now;
-                activeLdapSetting.UpdatedBy = SetupActor;
-            }
+                Host = ldap.Host,
+                BindUserName = ldap.BindUserName,
+                BindUserDomain = ldap.BindUserDomain,
+                BindPassword = ldap.BindPassword
+            },
+            cancellationToken);
 
-            var superAdminRole = await context.PortalRoles
-                .FirstOrDefaultAsync(x => x.Code == SuperAdminRoleCode, cancellationToken);
-            if (superAdminRole is null)
+        if (!bindResult.IsValid)
+        {
+            return new ValidateSetupLdapResult(false, bindResult.Message);
+        }
+
+        var searchBasesResult = await ldapService.ValidateSearchBasesAsync(
+            new LdapSearchBasesValidationRequest
             {
-                superAdminRole = new PortalRole
-                {
-                    Name = "Super Admin",
-                    Code = SuperAdminRoleCode,
-                    Description = "Full system access role.",
-                    IsSystem = true,
-                    IsActive = true,
-                    CreatedAt = now,
-                    CreatedBy = SetupActor
-                };
-                await context.PortalRoles.AddAsync(superAdminRole, cancellationToken);
-            }
-            else
+                Host = ldap.Host,
+                BaseDn = ldap.BaseDn,
+                UserSearchBase = ldap.UserSearchBase,
+                BindUserName = ldap.BindUserName,
+                BindUserDomain = ldap.BindUserDomain,
+                BindPassword = ldap.BindPassword
+            },
+            cancellationToken);
+
+        return new ValidateSetupLdapResult(searchBasesResult.IsValid, searchBasesResult.Message);
+    }
+
+    private async Task<IReadOnlyList<LdapUserProfile>?> ResolveAdminUserProfilesAsync(
+        CompleteSetupLdapSettings ldap,
+        IReadOnlyList<CompleteSetupAdminUser> adminUsers,
+        CancellationToken cancellationToken)
+    {
+        var resolvedProfiles = new List<LdapUserProfile>(adminUsers.Count);
+
+        foreach (var adminUser in adminUsers)
+        {
+            LdapUserProfile? profile = null;
+
+            if (!string.IsNullOrWhiteSpace(adminUser.DirectoryObjectId))
             {
-                ApplySystemRoleMetadataIfChanged(
-                    superAdminRole,
-                    name: "Super Admin",
-                    description: "Full system access role.",
-                    now);
-            }
-
-            var administratorRole = await context.PortalRoles
-                .FirstOrDefaultAsync(x => x.Code == AdministratorRoleCode, cancellationToken);
-            if (administratorRole is null)
-            {
-                administratorRole = new PortalRole
-                {
-                    Name = "Administrator",
-                    Code = AdministratorRoleCode,
-                    Description = "System administrator role.",
-                    IsSystem = true,
-                    IsActive = true,
-                    CreatedAt = now,
-                    CreatedBy = SetupActor
-                };
-                await context.PortalRoles.AddAsync(administratorRole, cancellationToken);
-            }
-            else
-            {
-                ApplySystemRoleMetadataIfChanged(
-                    administratorRole,
-                    name: "Administrator",
-                    description: "System administrator role.",
-                    now);
-            }
-
-            var userRole = await context.PortalRoles
-                .FirstOrDefaultAsync(x => x.Code == UserRoleCode, cancellationToken);
-            if (userRole is null)
-            {
-                userRole = new PortalRole
-                {
-                    Name = "User",
-                    Code = UserRoleCode,
-                    Description = "Default user role.",
-                    IsSystem = true,
-                    IsActive = true,
-                    CreatedAt = now,
-                    CreatedBy = SetupActor
-                };
-                await context.PortalRoles.AddAsync(userRole, cancellationToken);
-            }
-            else
-            {
-                ApplySystemRoleMetadataIfChanged(
-                    userRole,
-                    name: "User",
-                    description: "Default user role.",
-                    now);
-            }
-
-            var allPermissions = new List<PortalPermission>(DefaultPermissions.Length);
-            foreach (var defaultPermission in DefaultPermissions)
-            {
-                var permission = await context.PortalPermissions
-                    .FirstOrDefaultAsync(x => x.Code == defaultPermission.Code, cancellationToken);
-
-                if (permission is null)
-                {
-                    permission = new PortalPermission
-                    {
-                        Module = defaultPermission.Module,
-                        Code = defaultPermission.Code,
-                        Description = defaultPermission.Description,
-                        IsActive = true,
-                        CreatedAt = now,
-                        CreatedBy = SetupActor
-                    };
-                    await context.PortalPermissions.AddAsync(permission, cancellationToken);
-                }
-
-                allPermissions.Add(permission);
-            }
-
-            foreach (var permission in allPermissions)
-            {
-                var hasRolePermission = await context.PortalRolePermissions
-                    .AnyAsync(
-                        x => x.PortalRoleId == administratorRole.Id &&
-                             x.PortalPermissionId == permission.Id,
-                        cancellationToken);
-
-                if (!hasRolePermission)
-                {
-                    await context.PortalRolePermissions.AddAsync(
-                        new PortalRolePermission
-                        {
-                            PortalRoleId = administratorRole.Id,
-                            PortalPermissionId = permission.Id,
-                            CreatedAt = now,
-                            CreatedBy = SetupActor
-                        },
-                        cancellationToken);
-                }
-            }
-
-            var dashboardPermission = allPermissions.First(x => x.Code == "Dashboard.View");
-            var hasDashboardOnUserRole = await context.PortalRolePermissions
-                .AnyAsync(
-                    x => x.PortalRoleId == userRole.Id &&
-                         x.PortalPermissionId == dashboardPermission.Id,
-                    cancellationToken);
-
-            if (!hasDashboardOnUserRole)
-            {
-                await context.PortalRolePermissions.AddAsync(
-                    new PortalRolePermission
-                    {
-                        PortalRoleId = userRole.Id,
-                        PortalPermissionId = dashboardPermission.Id,
-                        CreatedAt = now,
-                        CreatedBy = SetupActor
-                    },
+                profile = await ldapService.GetUserProfileByObjectIdAsync(
+                    new LdapUserProfileByObjectIdRequest(
+                        Host: ldap.Host,
+                        BaseDn: ldap.BaseDn,
+                        UserSearchBase: ldap.UserSearchBase,
+                        BindUserName: ldap.BindUserName,
+                        BindUserDomain: ldap.BindUserDomain,
+                        BindPassword: ldap.BindPassword,
+                        DirectoryObjectId: adminUser.DirectoryObjectId.Trim(),
+                        NationalIdAttribute: null),
                     cancellationToken);
             }
 
+            if (profile is null)
+            {
+                foreach (var candidateUserName in BuildLdapUserNameCandidates(adminUser.UserName))
+                {
+                    profile = await ldapService.GetUserProfileAsync(
+                        new LdapUserProfileRequest(
+                            Host: ldap.Host,
+                            BaseDn: ldap.BaseDn,
+                            UserSearchBase: ldap.UserSearchBase,
+                            UserSearchFilter: ldap.UserSearchFilter,
+                            BindUserName: ldap.BindUserName,
+                            BindUserDomain: ldap.BindUserDomain,
+                            BindPassword: ldap.BindPassword,
+                            UserName: candidateUserName,
+                            NationalIdAttribute: null),
+                        cancellationToken);
+
+                    if (profile is not null)
+                    {
+                        break;
+                    }
+                }
+            }
+
+            if (profile is null)
+            {
+                return null;
+            }
+
+            resolvedProfiles.Add(profile);
+        }
+
+        return resolvedProfiles;
+    }
+
+    private async Task PersistLdapSettingsAsync(
+        CompleteSetupLdapSettings ldap,
+        DateTime now,
+        CancellationToken cancellationToken)
+    {
+        var activeLdapSetting = await context.LdapSettings
+            .FirstOrDefaultAsync(x => x.IsActive, cancellationToken);
+
+        if (activeLdapSetting is null)
+        {
+            activeLdapSetting = new LdapSetting
+            {
+                Name = string.IsNullOrWhiteSpace(ldap.Name) ? "Default LDAP" : ldap.Name.Trim(),
+                Host = ldap.Host.Trim(),
+                BaseDn = ldap.BaseDn.Trim(),
+                UserSearchBase = ldap.UserSearchBase.Trim(),
+                UserSearchFilter = ldap.UserSearchFilter.Trim(),
+                BindUserName = ldap.BindUserName.Trim(),
+                BindUserDomain = ldap.BindUserDomain?.Trim(),
+                EncryptedBindPassword = secretProtector.Protect(ldap.BindPassword),
+                IsActive = true,
+                CreatedAt = now,
+                CreatedBy = SetupActor
+            };
+
+            await context.LdapSettings.AddAsync(activeLdapSetting, cancellationToken);
+            return;
+        }
+
+        activeLdapSetting.Name = string.IsNullOrWhiteSpace(ldap.Name) ? "Default LDAP" : ldap.Name.Trim();
+        activeLdapSetting.Host = ldap.Host.Trim();
+        activeLdapSetting.BaseDn = ldap.BaseDn.Trim();
+        activeLdapSetting.UserSearchBase = ldap.UserSearchBase.Trim();
+        activeLdapSetting.UserSearchFilter = ldap.UserSearchFilter.Trim();
+        activeLdapSetting.BindUserName = ldap.BindUserName.Trim();
+        activeLdapSetting.BindUserDomain = ldap.BindUserDomain?.Trim();
+        activeLdapSetting.EncryptedBindPassword = secretProtector.Protect(ldap.BindPassword);
+        activeLdapSetting.UpdatedAt = now;
+        activeLdapSetting.UpdatedBy = SetupActor;
+    }
+
+    private async Task PersistAdManagementModuleSettingsAsync(
+        CompleteSetupLdapSettings ldap,
+        CompleteSetupModulesSettings modules,
+        DateTime now,
+        CancellationToken cancellationToken)
+    {
+        var entity = await context.AdManagementSettings
+            .OrderByDescending(x => x.UpdatedAt ?? x.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var adManagement = modules.AdManagement;
+        if (adManagement is null || !adManagement.IsEnabled)
+        {
+            if (entity is null)
+            {
+                entity = new AdManagementSettings
+                {
+                    IsEnabled = false,
+                    PowerShellHealthEnabled = false,
+                    PowerShellTimeoutSeconds = 30,
+                    CreatedAt = now,
+                    CreatedBy = SetupActor
+                };
+                await context.AdManagementSettings.AddAsync(entity, cancellationToken);
+            }
+            else
+            {
+                entity.IsEnabled = false;
+                entity.UpdatedAt = now;
+                entity.UpdatedBy = SetupActor;
+            }
+
+            return;
+        }
+
+        entity ??= new AdManagementSettings
+        {
+            PowerShellHealthEnabled = false,
+            PowerShellTimeoutSeconds = 30,
+            CreatedAt = now,
+            CreatedBy = SetupActor
+        };
+
+        var isNewEntity = !context.AdManagementSettings.Local.Any(x => x.Id == entity.Id) &&
+                          !await context.AdManagementSettings.AnyAsync(x => x.Id == entity.Id, cancellationToken);
+
+        entity.IsEnabled = true;
+        entity.BaseDn = ldap.BaseDn.Trim();
+        entity.DefaultNamingContext = ldap.BaseDn.Trim();
+        entity.DomainFqdn = DeriveDomainFqdn(ldap.BaseDn, ldap.Host);
+        entity.NetbiosDomainName = ldap.BindUserDomain?.Trim();
+        entity.UsersRootOu = adManagement.UsersSearchBase!.Trim();
+        entity.GroupsSearchBase = adManagement.GroupsSearchBase!.Trim();
+        entity.ComputersSearchBase = adManagement.ComputersSearchBase!.Trim();
+        entity.DisabledUsersOu = string.IsNullOrWhiteSpace(adManagement.DefaultUserOu)
+            ? adManagement.UsersSearchBase!.Trim()
+            : adManagement.DefaultUserOu.Trim();
+        entity.ServiceAccountUserName = ldap.BindUserName.Trim();
+        entity.EncryptedServiceAccountPassword = secretProtector.Protect(ldap.BindPassword);
+        entity.UpdatedAt = now;
+        entity.UpdatedBy = SetupActor;
+
+        if (isNewEntity)
+        {
+            await context.AdManagementSettings.AddAsync(entity, cancellationToken);
+        }
+    }
+
+    private async Task<PortalUser> PersistAdminUsersAsync(
+        IReadOnlyList<LdapUserProfile> profiles,
+        PortalRole superAdminRole,
+        DateTime now,
+        CancellationToken cancellationToken)
+    {
+        PortalUser? primaryAdminUser = null;
+
+        foreach (var ldapProfile in profiles)
+        {
+            var usernameConflictExists = await context.PortalUsers.AnyAsync(
+                x => x.UserName == ldapProfile.UserName &&
+                     x.DirectoryObjectId != ldapProfile.DirectoryObjectId,
+                cancellationToken);
+
+            if (usernameConflictExists)
+            {
+                throw new InvalidOperationException("A portal user with the same user name already exists.");
+            }
+
+            var displayName = ResolveDisplayName(ldapProfile);
             var adminUser = await context.PortalUsers
                 .FirstOrDefaultAsync(x => x.DirectoryObjectId == ldapProfile.DirectoryObjectId, cancellationToken);
 
@@ -415,9 +451,6 @@ public sealed class SetupService(
                     DirectorySource = ActiveDirectoryDirectorySource,
                     DirectoryObjectId = ldapProfile.DirectoryObjectId,
                     PreferredLanguage = "tr",
-                    NationalIdEncrypted =
-                        ldapProfile.NationalId is not null ? secretProtector.Protect(ldapProfile.NationalId) : null,
-                    NationalIdMasked = ldapProfile.NationalId is not null ? MaskNationalId(ldapProfile.NationalId) : null,
                     UserName = ldapProfile.UserName,
                     DisplayName = displayName,
                     Email = ldapProfile.Email,
@@ -431,55 +464,12 @@ public sealed class SetupService(
             {
                 adminUser.DirectorySource = ActiveDirectoryDirectorySource;
                 adminUser.DirectoryObjectId = ldapProfile.DirectoryObjectId;
-                if (ldapProfile.NationalId is not null)
-                {
-                    adminUser.NationalIdEncrypted = secretProtector.Protect(ldapProfile.NationalId);
-                    adminUser.NationalIdMasked = MaskNationalId(ldapProfile.NationalId);
-                }
-
                 adminUser.UserName = ldapProfile.UserName;
                 adminUser.DisplayName = displayName;
                 adminUser.Email = ldapProfile.Email;
                 adminUser.IsActive = true;
                 adminUser.UpdatedAt = now;
                 adminUser.UpdatedBy = SetupActor;
-            }
-
-            if (!string.IsNullOrWhiteSpace(request.Ldap.NationalIdAttribute))
-            {
-                var nationalIdSetting =
-                    await context.ApplicationSettings.FirstOrDefaultAsync(
-                        x => x.Key == NationalIdApplicationSettingKey,
-                        cancellationToken);
-
-                if (nationalIdSetting is null)
-                {
-                    await context.ApplicationSettings.AddAsync(
-                        new ApplicationSetting
-                        {
-                            Key = NationalIdApplicationSettingKey,
-                            Value = request.Ldap.NationalIdAttribute.Trim(),
-                            ValueType = SettingValueType.String,
-                            Description = "LDAP attribute name that stores the national identity value.",
-                            IsEncrypted = false,
-                            IsSystem = true,
-                            IsActive = true,
-                            CreatedAt = now,
-                            CreatedBy = SetupActor
-                        },
-                        cancellationToken);
-                }
-                else
-                {
-                    nationalIdSetting.Value = request.Ldap.NationalIdAttribute.Trim();
-                    nationalIdSetting.ValueType = SettingValueType.String;
-                    nationalIdSetting.Description = "LDAP attribute name that stores the national identity value.";
-                    nationalIdSetting.IsEncrypted = false;
-                    nationalIdSetting.IsSystem = true;
-                    nationalIdSetting.IsActive = true;
-                    nationalIdSetting.UpdatedAt = now;
-                    nationalIdSetting.UpdatedBy = SetupActor;
-                }
             }
 
             var hasSuperAdminRole = await context.PortalUserRoles
@@ -501,61 +491,59 @@ public sealed class SetupService(
                     cancellationToken);
             }
 
-            var setupCompletionSetting = await context.ApplicationSettings
-                .FirstOrDefaultAsync(x => x.Key == "Setup:IsCompleted", cancellationToken);
-
-            if (setupCompletionSetting is null)
-            {
-                setupCompletionSetting = new ApplicationSetting
-                {
-                    Key = "Setup:IsCompleted",
-                    Value = "true",
-                    ValueType = SettingValueType.Boolean,
-                    Description = "Indicates whether initial setup has been completed.",
-                    IsEncrypted = false,
-                    IsSystem = true,
-                    IsActive = true,
-                    CreatedAt = now,
-                    CreatedBy = SetupActor
-                };
-                await context.ApplicationSettings.AddAsync(setupCompletionSetting, cancellationToken);
-            }
-            else
-            {
-                setupCompletionSetting.Value = "true";
-                setupCompletionSetting.ValueType = SettingValueType.Boolean;
-                setupCompletionSetting.Description = "Indicates whether initial setup has been completed.";
-                setupCompletionSetting.IsEncrypted = false;
-                setupCompletionSetting.IsSystem = true;
-                setupCompletionSetting.IsActive = true;
-                setupCompletionSetting.UpdatedAt = now;
-                setupCompletionSetting.UpdatedBy = SetupActor;
-            }
-
-            await context.SecurityLogs.AddAsync(
-                new SecurityLog
-                {
-                    UserId = adminUser.Id,
-                    UserName = ldapProfile.UserName,
-                    EventType = "SetupCompleted",
-                    Severity = "Info",
-                    Description = "Initial setup completed.",
-                    CreatedAt = now
-                },
-                cancellationToken);
-
-            await context.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
-
-            logger.LogInformation("Setup completed successfully.");
-            return new CompleteSetupResult(true, "Setup completed successfully.");
+            primaryAdminUser ??= adminUser;
         }
-        catch (Exception exception)
+
+        return primaryAdminUser ?? throw new InvalidOperationException("At least one admin user is required.");
+    }
+
+    private async Task MarkSetupCompletedAsync(DateTime now, CancellationToken cancellationToken)
+    {
+        var setupCompletionSetting = await context.ApplicationSettings
+            .FirstOrDefaultAsync(x => x.Key == "Setup:IsCompleted", cancellationToken);
+
+        if (setupCompletionSetting is null)
         {
-            await transaction.RollbackAsync(cancellationToken);
-            logger.LogWarning(exception, "Setup failed.");
-            return new CompleteSetupResult(false, "Setup could not be completed.");
+            setupCompletionSetting = new ApplicationSetting
+            {
+                Key = "Setup:IsCompleted",
+                Value = "true",
+                ValueType = SettingValueType.Boolean,
+                Description = "Indicates whether initial setup has been completed.",
+                IsEncrypted = false,
+                IsSystem = true,
+                IsActive = true,
+                CreatedAt = now,
+                CreatedBy = SetupActor
+            };
+            await context.ApplicationSettings.AddAsync(setupCompletionSetting, cancellationToken);
+            return;
         }
+
+        setupCompletionSetting.Value = "true";
+        setupCompletionSetting.ValueType = SettingValueType.Boolean;
+        setupCompletionSetting.Description = "Indicates whether initial setup has been completed.";
+        setupCompletionSetting.IsEncrypted = false;
+        setupCompletionSetting.IsSystem = true;
+        setupCompletionSetting.IsActive = true;
+        setupCompletionSetting.UpdatedAt = now;
+        setupCompletionSetting.UpdatedBy = SetupActor;
+    }
+
+    private static string DeriveDomainFqdn(string baseDn, string host)
+    {
+        var dcParts = baseDn
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(part => part.StartsWith("DC=", StringComparison.OrdinalIgnoreCase))
+            .Select(part => part[3..])
+            .ToArray();
+
+        if (dcParts.Length > 0)
+        {
+            return string.Join('.', dcParts);
+        }
+
+        return host.Trim();
     }
 
     internal static IReadOnlyList<string> BuildLdapUserNameCandidates(string userName)
@@ -598,47 +586,8 @@ public sealed class SetupService(
         return result;
     }
 
-    private static string ResolveDisplayName(LdapUserProfile ldapProfile)
-    {
-        return string.IsNullOrWhiteSpace(ldapProfile.DisplayName)
+    private static string ResolveDisplayName(LdapUserProfile ldapProfile) =>
+        string.IsNullOrWhiteSpace(ldapProfile.DisplayName)
             ? ldapProfile.UserName
             : ldapProfile.DisplayName;
-    }
-
-    private static string? MaskNationalId(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return null;
-        }
-
-        var trimmed = value.Trim();
-        var length = trimmed.Length;
-
-        string masked =
-            length <= 4 ? new string('*', length)
-            : $"{trimmed[..3]}{new string('*', length - 5)}{trimmed[^2..]}";
-
-        return masked.Length > 50 ? masked[..50] : masked;
-    }
-
-    private static void ApplySystemRoleMetadataIfChanged(
-        PortalRole role,
-        string name,
-        string description,
-        DateTime now)
-    {
-        if (role.Name != name ||
-            role.Description != description ||
-            !role.IsSystem ||
-            !role.IsActive)
-        {
-            role.Name = name;
-            role.Description = description;
-            role.IsSystem = true;
-            role.IsActive = true;
-            role.UpdatedAt = now;
-            role.UpdatedBy = SetupActor;
-        }
-    }
 }

@@ -503,4 +503,3 @@ backend/src/ITAdmin.Api/wwwroot/uploads/branding/*
 deploy-itadmin-iis.ps1
 publish-iis.zsh
 test-itadmin.zsh
-.cursor/

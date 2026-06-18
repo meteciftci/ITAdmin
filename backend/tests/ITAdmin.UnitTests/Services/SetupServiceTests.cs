@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using ITAdmin.Application.Common.Constants;
 using ITAdmin.Application.Common.Models;
 using ITAdmin.Application.Common.Security;
+using ITAdmin.Domain.Entities;
 using ITAdmin.Persistence.Context;
 using ITAdmin.Persistence.Services;
 using ITAdmin.UnitTests.Fakes;
@@ -21,107 +22,12 @@ public sealed class SetupServiceTests
     }
 
     [Fact]
-    public void BuildLdapUserNameCandidates_WithEmailFormat_ReturnsOriginalThenLocalPart()
-    {
-        var result = SetupService.BuildLdapUserNameCandidates("user@domain.local");
-        Assert.Equal(new[] { "user@domain.local", "user" }, result);
-    }
-
-    [Fact]
-    public void BuildLdapUserNameCandidates_WithPlainSamAccount_ReturnsSingleEntry()
-    {
-        var result = SetupService.BuildLdapUserNameCandidates("user");
-        Assert.Equal(new[] { "user" }, result);
-    }
-
-    [Fact]
-    public void BuildLdapUserNameCandidates_TrimsAndIgnoresDuplicatesCaseInsensitive()
-    {
-        var result = SetupService.BuildLdapUserNameCandidates(@"  DOMAIN\User  ");
-        Assert.Equal(new[] { @"DOMAIN\User", "User" }, result);
-    }
-
-    [Fact]
-    public async Task CompleteSetupAsync_WhenFirstProfileLookupFails_RetriesWithSamAccountCandidate()
-    {
-        await using var context = CreateDbContext();
-        var ldap = new FakeLdapService
-        {
-            ResolveUserProfile = request => request.UserName switch
-            {
-                @"DOMAIN\mete" => null,
-                "mete" => new LdapUserProfile("obj-1", "mete", "Mete From Ldap", "mete@corp.test", null),
-                _ => null,
-            },
-        };
-
-        var service = CreateSetupService(context, ldap, "setup-secret");
-        var request = CreateMinimalCompleteRequest(
-            setupKey: "setup-secret",
-            adminUserName: @"DOMAIN\mete",
-            adminPassword: "p");
-
-        var result = await service.CompleteSetupAsync(request);
-
-        Assert.True(result.IsCompleted);
-        Assert.Equal(2, ldap.GetUserProfileCallCount);
-
-        var user = await context.PortalUsers.SingleAsync();
-        Assert.Equal("mete", user.UserName);
-        Assert.Equal("Mete From Ldap", user.DisplayName);
-        Assert.Equal("mete@corp.test", user.Email);
-    }
-
-    [Fact]
-    public async Task CompleteSetupAsync_UsesLdapProfileEmail_WhenPresent()
-    {
-        await using var context = CreateDbContext();
-        var ldap = new FakeLdapService
-        {
-            ResolveUserProfile = _ => new LdapUserProfile(
-                "obj-2",
-                "plain",
-                "Plain User",
-                "plain@ad.test",
-                null),
-        };
-
-        var service = CreateSetupService(context, ldap, "setup-secret");
-        var request = CreateMinimalCompleteRequest("setup-secret", "plain", "p");
-
-        var result = await service.CompleteSetupAsync(request);
-
-        Assert.True(result.IsCompleted);
-        var user = await context.PortalUsers.SingleAsync();
-        Assert.Equal("plain@ad.test", user.Email);
-    }
-
-    [Fact]
-    public async Task CompleteSetupAsync_LeavesEmailNull_WhenLdapProfileHasNoEmail()
-    {
-        await using var context = CreateDbContext();
-        var ldap = new FakeLdapService
-        {
-            ResolveUserProfile = _ => new LdapUserProfile("obj-3", "noemail", "No Email User", null, null),
-        };
-
-        var service = CreateSetupService(context, ldap, "setup-secret");
-        var request = CreateMinimalCompleteRequest("setup-secret", "noemail", "p");
-
-        var result = await service.CompleteSetupAsync(request);
-
-        Assert.True(result.IsCompleted);
-        var user = await context.PortalUsers.SingleAsync();
-        Assert.Null(user.Email);
-    }
-
-    [Fact]
     public async Task CompleteSetupAsync_RejectsInvalidSetupKey()
     {
         await using var context = CreateDbContext();
-        var ldap = new FakeLdapService();
+        var ldap = CreateSuccessfulLdapFake();
         var service = CreateSetupService(context, ldap, "setup-secret");
-        var request = CreateMinimalCompleteRequest("wrong-key", "user", "p");
+        var request = CreateMinimalCompleteRequest("wrong-key", ["user"]);
 
         var result = await service.CompleteSetupAsync(request);
 
@@ -130,48 +36,96 @@ public sealed class SetupServiceTests
     }
 
     [Fact]
-    public async Task CompleteSetupAsync_RejectsMissingSetupKeyHashConfiguration()
+    public async Task CompleteSetupAsync_RejectsWhenNoAdminUsersProvided()
     {
         await using var context = CreateDbContext();
-        var ldap = new FakeLdapService();
-        var service = CreateSetupService(context, ldap, setupKeyPlaintext: "setup-secret", includeSetupKeyHash: false);
-        var request = CreateMinimalCompleteRequest("setup-secret", "user", "p");
+        var ldap = CreateSuccessfulLdapFake();
+        var service = CreateSetupService(context, ldap, "setup-secret");
+        var request = CreateMinimalCompleteRequest("setup-secret", []);
 
         var result = await service.CompleteSetupAsync(request);
 
         Assert.False(result.IsCompleted);
-        Assert.Equal("Setup key hash is not configured.", result.Message);
+        Assert.Equal("At least one admin user is required.", result.Message);
     }
 
     [Fact]
-    public async Task CompleteSetupAsync_RejectsInvalidSetupKeyHashFormat()
+    public async Task CompleteSetupAsync_RejectsDuplicateAdminUsers()
     {
         await using var context = CreateDbContext();
-        var ldap = new FakeLdapService();
-        var service = CreateSetupService(
-            context,
-            ldap,
-            setupKeyPlaintext: "setup-secret",
-            configuredSetupKeyHash: "invalid-hash");
-        var request = CreateMinimalCompleteRequest("setup-secret", "user", "p");
+        var ldap = CreateSuccessfulLdapFake();
+        var service = CreateSetupService(context, ldap, "setup-secret");
+        var request = new CompleteSetupRequest(
+            "setup-secret",
+            CreateMinimalLdapSettings(),
+            new CompleteSetupModulesSettings(null),
+            [
+                new CompleteSetupAdminUser("user1", null, "11111111-1111-1111-1111-111111111111"),
+                new CompleteSetupAdminUser("user2", null, "11111111-1111-1111-1111-111111111111"),
+            ]);
 
         var result = await service.CompleteSetupAsync(request);
 
         Assert.False(result.IsCompleted);
-        Assert.Equal("Setup key hash format is invalid.", result.Message);
+        Assert.Equal("Duplicate admin user selection is not allowed.", result.Message);
     }
 
     [Fact]
-    public async Task CompleteSetupAsync_WorksWithoutNationalIdAttribute()
+    public async Task CompleteSetupAsync_AssignsSuperAdminRoleToAllSelectedAdminUsers()
     {
         await using var context = CreateDbContext();
-        var ldap = new FakeLdapService
+        var ldap = CreateSuccessfulLdapFake();
+        ldap.ResolveUserProfile = request => request.UserName switch
         {
-            ResolveUserProfile = _ => new LdapUserProfile("obj-4", "plain", "Plain User", "plain@ad.test", null),
+            "admin1" => new LdapUserProfile("obj-1", "admin1", "Admin One", "admin1@corp.test", null),
+            "admin2" => new LdapUserProfile("obj-2", "admin2", "Admin Two", "admin2@corp.test", null),
+            _ => null,
         };
 
         var service = CreateSetupService(context, ldap, "setup-secret");
-        var request = CreateMinimalCompleteRequest("setup-secret", "plain", "p");
+        var request = CreateMinimalCompleteRequest("setup-secret", ["admin1", "admin2"]);
+
+        var result = await service.CompleteSetupAsync(request);
+
+        Assert.True(result.IsCompleted);
+        var superAdminRole = await context.PortalRoles.SingleAsync(x => x.Code == "SuperAdmin");
+        var adminUsers = await context.PortalUsers.ToListAsync();
+        Assert.Equal(2, adminUsers.Count);
+        Assert.All(adminUsers, user => Assert.Null(user.NationalIdEncrypted));
+
+        foreach (var adminUser in adminUsers)
+        {
+            Assert.True(await context.PortalUserRoles.AnyAsync(
+                x => x.PortalUserId == adminUser.Id && x.PortalRoleId == superAdminRole.Id));
+        }
+    }
+
+    [Fact]
+    public async Task CompleteSetupAsync_WorksWithoutAdminPassword()
+    {
+        await using var context = CreateDbContext();
+        var ldap = CreateSuccessfulLdapFake();
+        ldap.ResolveUserProfile = _ => new LdapUserProfile("obj-3", "plain", "Plain User", "plain@ad.test", null);
+
+        var service = CreateSetupService(context, ldap, "setup-secret");
+        var request = CreateMinimalCompleteRequest("setup-secret", ["plain"]);
+
+        var result = await service.CompleteSetupAsync(request);
+
+        Assert.True(result.IsCompleted);
+        Assert.Equal(0, ldap.ValidateCallCount);
+        Assert.True(ldap.ValidateBindCallCount > 0);
+    }
+
+    [Fact]
+    public async Task CompleteSetupAsync_DoesNotWriteNationalIdAttributeSetting()
+    {
+        await using var context = CreateDbContext();
+        var ldap = CreateSuccessfulLdapFake();
+        ldap.ResolveUserProfile = _ => new LdapUserProfile("obj-4", "plain", "Plain User", "plain@ad.test", "12345678901");
+
+        var service = CreateSetupService(context, ldap, "setup-secret");
+        var request = CreateMinimalCompleteRequest("setup-secret", ["plain"]);
 
         var result = await service.CompleteSetupAsync(request);
 
@@ -180,21 +134,188 @@ public sealed class SetupServiceTests
     }
 
     [Fact]
-    public async Task CompleteSetupAsync_WhenProfileLookupFails_ReturnsDetailedEnglishMessage()
+    public async Task CompleteSetupAsync_WhenAdManagementDisabled_PersistsDisabledSettings()
     {
         await using var context = CreateDbContext();
-        var ldap = new FakeLdapService
-        {
-            ResolveUserProfile = _ => null,
-        };
+        var ldap = CreateSuccessfulLdapFake();
+        ldap.ResolveUserProfile = _ => new LdapUserProfile("obj-5", "plain", "Plain User", null, null);
 
         var service = CreateSetupService(context, ldap, "setup-secret");
-        var request = CreateMinimalCompleteRequest("setup-secret", "someuser", "p");
+        var request = CreateMinimalCompleteRequest("setup-secret", ["plain"]) with
+        {
+            Modules = new CompleteSetupModulesSettings(
+                new CompleteSetupAdManagementModuleSettings(
+                    IsEnabled: false,
+                    UsersSearchBase: null,
+                    GroupsSearchBase: null,
+                    ComputersSearchBase: null,
+                    DefaultUserOu: null,
+                    DefaultGroupOu: null,
+                    DefaultComputerOu: null,
+                    DeletedObjectsEnabled: false))
+        };
+
+        var result = await service.CompleteSetupAsync(request);
+
+        Assert.True(result.IsCompleted);
+        var settings = await context.AdManagementSettings.SingleAsync();
+        Assert.False(settings.IsEnabled);
+    }
+
+    [Fact]
+    public async Task CompleteSetupAsync_WhenAdManagementEnabledWithoutRequiredFields_FailsValidation()
+    {
+        await using var context = CreateDbContext();
+        var ldap = CreateSuccessfulLdapFake();
+        var service = CreateSetupService(context, ldap, "setup-secret");
+        var request = CreateMinimalCompleteRequest("setup-secret", ["plain"]) with
+        {
+            Modules = new CompleteSetupModulesSettings(
+                new CompleteSetupAdManagementModuleSettings(
+                    IsEnabled: true,
+                    UsersSearchBase: null,
+                    GroupsSearchBase: "OU=Groups,DC=test,DC=local",
+                    ComputersSearchBase: "OU=Computers,DC=test,DC=local",
+                    DefaultUserOu: null,
+                    DefaultGroupOu: null,
+                    DefaultComputerOu: null,
+                    DeletedObjectsEnabled: true))
+        };
 
         var result = await service.CompleteSetupAsync(request);
 
         Assert.False(result.IsCompleted);
-        Assert.Equal(SetupService.DirectoryUserProfileCouldNotBeLoadedMessage, result.Message);
+        Assert.Equal("AD Management module is missing required fields.", result.Message);
+    }
+
+    [Fact]
+    public async Task CompleteSetupAsync_WhenAdManagementEnabled_PersistsSettings()
+    {
+        await using var context = CreateDbContext();
+        var ldap = CreateSuccessfulLdapFake();
+        ldap.ResolveUserProfile = _ => new LdapUserProfile("obj-6", "plain", "Plain User", null, null);
+
+        var service = CreateSetupService(context, ldap, "setup-secret");
+        var request = CreateMinimalCompleteRequest("setup-secret", ["plain"]) with
+        {
+            Modules = new CompleteSetupModulesSettings(
+                new CompleteSetupAdManagementModuleSettings(
+                    IsEnabled: true,
+                    UsersSearchBase: "OU=Users,DC=test,DC=local",
+                    GroupsSearchBase: "OU=Groups,DC=test,DC=local",
+                    ComputersSearchBase: "OU=Computers,DC=test,DC=local",
+                    DefaultUserOu: "OU=NewUsers,DC=test,DC=local",
+                    DefaultGroupOu: null,
+                    DefaultComputerOu: null,
+                    DeletedObjectsEnabled: true))
+        };
+
+        var result = await service.CompleteSetupAsync(request);
+
+        Assert.True(result.IsCompleted);
+        var settings = await context.AdManagementSettings.SingleAsync();
+        Assert.True(settings.IsEnabled);
+        Assert.Equal("OU=Users,DC=test,DC=local", settings.UsersRootOu);
+        Assert.Equal("OU=Groups,DC=test,DC=local", settings.GroupsSearchBase);
+        Assert.Equal("OU=Computers,DC=test,DC=local", settings.ComputersSearchBase);
+    }
+
+    [Fact]
+    public async Task CompleteSetupAsync_WhenProfileLookupFails_ReturnsDirectoryFailureMessage()
+    {
+        await using var context = CreateDbContext();
+        var ldap = CreateSuccessfulLdapFake();
+        ldap.ResolveUserProfile = _ => null;
+
+        var service = CreateSetupService(context, ldap, "setup-secret");
+        var request = CreateMinimalCompleteRequest("setup-secret", ["someuser"]);
+
+        var result = await service.CompleteSetupAsync(request);
+
+        Assert.False(result.IsCompleted);
+        Assert.Equal(SetupService.AdminUserNotFoundInDirectoryMessage, result.Message);
+    }
+
+    [Fact]
+    public async Task SearchAdminUsersAsync_ReturnsEmptyList_WhenSearchShorterThanMinimum()
+    {
+        await using var context = CreateDbContext();
+        var ldap = CreateSuccessfulLdapFake();
+        var service = CreateSetupService(context, ldap, "setup-secret");
+
+        var result = await service.SearchAdminUsersAsync(
+            new SearchSetupAdminUsersRequest(
+                "setup-secret",
+                CreateMinimalLdapSettings(),
+                "a"),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Empty(result.Users);
+        Assert.Equal(0, ldap.SearchUsersCallCount);
+    }
+
+    [Fact]
+    public async Task SearchAdminUsersAsync_ReturnsFailure_WhenSetupKeyInvalid()
+    {
+        await using var context = CreateDbContext();
+        var ldap = CreateSuccessfulLdapFake();
+        var service = CreateSetupService(context, ldap, "setup-secret");
+
+        var result = await service.SearchAdminUsersAsync(
+            new SearchSetupAdminUsersRequest(
+                "wrong-key",
+                CreateMinimalLdapSettings(),
+                "admin"),
+            CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal("Invalid setup key.", result.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task SearchAdminUsersAsync_DoesNotReturnSecrets()
+    {
+        await using var context = CreateDbContext();
+        var ldap = CreateSuccessfulLdapFake();
+        ldap.SearchUsersResult =
+        [
+            new LdapUserLookupItem(
+                "obj-7",
+                "admin",
+                "Admin User",
+                "admin@corp.test",
+                null,
+                "CN=admin,OU=Users,DC=test,DC=local")
+        ];
+
+        var service = CreateSetupService(context, ldap, "setup-secret");
+        var result = await service.SearchAdminUsersAsync(
+            new SearchSetupAdminUsersRequest(
+                "setup-secret",
+                CreateMinimalLdapSettings(),
+                "admin"),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        var user = Assert.Single(result.Users);
+        Assert.Equal("admin", user.UserName);
+        Assert.DoesNotContain("bindpw", user.DisplayName, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static FakeLdapService CreateSuccessfulLdapFake()
+    {
+        return new FakeLdapService
+        {
+            ValidateBindResult = new(true, "bind ok"),
+            ValidateSearchBasesResult = new(true, "bases ok"),
+            ResolveUserProfile = request => new LdapUserProfile(
+                "obj-default",
+                request.UserName,
+                request.UserName,
+                $"{request.UserName}@corp.test",
+                null),
+        };
     }
 
     private static SetupService CreateSetupService(
@@ -233,23 +354,27 @@ public sealed class SetupServiceTests
         return new AppDbContext(options);
     }
 
+    private static CompleteSetupLdapSettings CreateMinimalLdapSettings() =>
+        new(
+            Name: "Default LDAP",
+            Host: "dc01.test",
+            BaseDn: "DC=test,DC=local",
+            UserSearchBase: "OU=Users,DC=test,DC=local",
+            UserSearchFilter: "(&(objectClass=user)(sAMAccountName={0}))",
+            BindUserName: "bind",
+            BindUserDomain: null,
+            BindPassword: "bindpw");
+
     private static CompleteSetupRequest CreateMinimalCompleteRequest(
         string setupKey,
-        string adminUserName,
-        string adminPassword)
+        IReadOnlyList<string> adminUserNames)
     {
         return new CompleteSetupRequest(
             setupKey,
-            new CompleteSetupLdapSettings(
-                Name: "Default LDAP",
-                Host: "dc01.test",
-                BaseDn: "DC=test,DC=local",
-                UserSearchBase: "",
-                UserSearchFilter: "(&(objectClass=user)(sAMAccountName={0}))",
-                BindUserName: "bind",
-                BindUserDomain: null,
-                BindPassword: "bindpw",
-                NationalIdAttribute: null),
-            new CompleteSetupAdminUser(adminUserName, adminPassword));
+            CreateMinimalLdapSettings(),
+            new CompleteSetupModulesSettings(null),
+            adminUserNames
+                .Select(name => new CompleteSetupAdminUser(name, null, null))
+                .ToList());
     }
 }

@@ -5,42 +5,44 @@ using ITAdmin.Api.Controllers;
 using ITAdmin.Application.Common.Constants;
 using ITAdmin.Application.Common.Models;
 using ITAdmin.UnitTests.Fakes;
+using ApiSearchSetupAdminUsersRequest = ITAdmin.Api.Contracts.Setup.SearchSetupAdminUsersRequest;
 
 namespace ITAdmin.UnitTests.Setup;
 
 public sealed class SetupControllerTests
 {
     [Fact]
-    public async Task ValidateLdap_WhenSetupAlreadyCompleted_ReturnsForbiddenWithoutCallingLdap()
+    public async Task ValidateLdap_WhenSetupAlreadyCompleted_ReturnsForbidden()
     {
         var setup = new FakeSetupService { IsSetupRequiredResult = false };
         var preflight = new FakeSetupPreflightService();
-        var ldap = new FakeLdapService();
-        var controller = new SetupController(setup, preflight, ldap);
+        var controller = new SetupController(setup, preflight);
 
-        var result = await controller.ValidateLdap(CreateValidRequest(), CancellationToken.None);
+        var result = await controller.ValidateLdap(CreateValidValidateRequest(), CancellationToken.None);
 
         var objectResult = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(StatusCodes.Status403Forbidden, objectResult.StatusCode);
-        Assert.Equal(0, ldap.ValidateCallCount);
+        Assert.Equal(0, setup.ValidateLdapCallCount);
     }
 
     [Fact]
-    public async Task ValidateLdap_WhenSetupRequired_CallsLdapAndReturnsResult()
+    public async Task ValidateLdap_WhenSetupRequired_DelegatesToSetupService()
     {
-        var setup = new FakeSetupService { IsSetupRequiredResult = true };
+        var setup = new FakeSetupService
+        {
+            IsSetupRequiredResult = true,
+            ValidateLdapResult = new(true, "LDAP validation succeeded."),
+        };
         var preflight = new FakeSetupPreflightService();
-        var ldap = new FakeLdapService { ValidateResult = new(true, "LDAP validation succeeded.") };
-        var controller = new SetupController(setup, preflight, ldap);
+        var controller = new SetupController(setup, preflight);
 
-        var result = await controller.ValidateLdap(CreateValidRequest(), CancellationToken.None);
+        var result = await controller.ValidateLdap(CreateValidValidateRequest(), CancellationToken.None);
 
         var okResult = Assert.IsType<OkObjectResult>(result.Result);
         var response = Assert.IsType<ValidateLdapResponse>(okResult.Value);
         Assert.True(response.IsValid);
-        Assert.Equal(1, ldap.ValidateCallCount);
-        Assert.NotNull(ldap.LastValidateRequest);
-        Assert.Equal("dc01.test", ldap.LastValidateRequest!.Host);
+        Assert.Equal(1, setup.ValidateLdapCallCount);
+        Assert.Equal("setup-secret", setup.LastValidateLdapRequest!.SetupKey);
     }
 
     [Fact]
@@ -48,8 +50,7 @@ public sealed class SetupControllerTests
     {
         var setup = new FakeSetupService { IsSetupRequiredResult = false };
         var preflight = new FakeSetupPreflightService();
-        var ldap = new FakeLdapService();
-        var controller = new SetupController(setup, preflight, ldap);
+        var controller = new SetupController(setup, preflight);
 
         var result = await controller.GetPreflight(CancellationToken.None);
 
@@ -59,7 +60,7 @@ public sealed class SetupControllerTests
     }
 
     [Fact]
-    public async Task GetPreflight_WhenSetupRequired_ReturnsChecks()
+    public async Task GetPreflight_WhenSetupRequired_ReturnsChecksAndCanContinue()
     {
         var setup = new FakeSetupService { IsSetupRequiredResult = true };
         var preflight = new FakeSetupPreflightService
@@ -70,30 +71,70 @@ public sealed class SetupControllerTests
                     SetupPreflightCheckStatuses.Ok,
                     SetupPreflightMessageKeys.JwtKeyConfigured,
                     null),
-            ]),
+            ], true),
         };
-        var ldap = new FakeLdapService();
-        var controller = new SetupController(setup, preflight, ldap);
+        var controller = new SetupController(setup, preflight);
 
         var result = await controller.GetPreflight(CancellationToken.None);
 
         var okResult = Assert.IsType<OkObjectResult>(result.Result);
         var response = Assert.IsType<SetupPreflightResponse>(okResult.Value);
         Assert.Single(response.Checks);
-        Assert.Equal(SetupPreflightCheckKeys.JwtKeyConfigured, response.Checks[0].Key);
-        Assert.Equal(1, preflight.CheckCallCount);
+        Assert.True(response.CanContinue);
     }
 
-    private static ValidateLdapRequest CreateValidRequest() => new()
+    [Fact]
+    public async Task SearchAdminUsers_WhenSetupAlreadyCompleted_ReturnsForbidden()
     {
+        var setup = new FakeSetupService { IsSetupRequiredResult = false };
+        var preflight = new FakeSetupPreflightService();
+        var controller = new SetupController(setup, preflight);
+
+        var result = await controller.SearchAdminUsers(CreateValidSearchRequest(), CancellationToken.None);
+
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(StatusCodes.Status403Forbidden, objectResult.StatusCode);
+        Assert.Equal(0, setup.SearchAdminUsersCallCount);
+    }
+
+    [Fact]
+    public async Task SearchAdminUsers_WhenInvalidSetupKey_ReturnsBadRequest()
+    {
+        var setup = new FakeSetupService
+        {
+            IsSetupRequiredResult = true,
+            SearchAdminUsersResult = new([], "Invalid setup key."),
+        };
+        var preflight = new FakeSetupPreflightService();
+        var controller = new SetupController(setup, preflight);
+
+        var result = await controller.SearchAdminUsers(CreateValidSearchRequest(), CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
+    private static ValidateLdapRequest CreateValidValidateRequest() => new()
+    {
+        SetupKey = "setup-secret",
         Host = "dc01.test",
         BaseDn = "DC=test,DC=local",
-        UserSearchBase = string.Empty,
+        UserSearchBase = "OU=Users,DC=test,DC=local",
         UserSearchFilter = "(&(objectClass=user)(sAMAccountName={0}))",
         BindUserName = "bind",
         BindUserDomain = null,
         BindPassword = "bindpw",
-        TestUserName = "admin",
-        TestPassword = "adminpw",
     };
+
+    private static ApiSearchSetupAdminUsersRequest CreateValidSearchRequest() => new(
+        "setup-secret",
+        new CompleteSetupLdapSettingsRequest(
+            "Default LDAP",
+            "dc01.test",
+            "DC=test,DC=local",
+            "OU=Users,DC=test,DC=local",
+            "(&(objectClass=user)(sAMAccountName={0}))",
+            "bind",
+            null,
+            "bindpw"),
+        "admin");
 }

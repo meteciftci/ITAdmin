@@ -1,4 +1,9 @@
-import type { CompleteSetupLdapRequest, CompleteSetupRequest } from "@/features/setup/api";
+import type {
+  CompleteSetupAdminUserRequest,
+  CompleteSetupLdapRequest,
+  CompleteSetupModulesRequest,
+  CompleteSetupRequest,
+} from "@/features/setup/api";
 
 const DEFAULT_USER_SEARCH_FILTER = "(&(objectClass=user)(sAMAccountName={0}))";
 
@@ -15,12 +20,10 @@ export type SetupLdapFormValues = {
   bindUserName: string;
   bindUserDomain: string;
   bindPassword: string;
-  nationalIdAttribute: string;
 };
 
 export type SetupAdminFormValues = {
   userName: string;
-  password: string;
 };
 
 export type SetupFormValues = {
@@ -45,11 +48,9 @@ export function createDefaultSetupFormValues(defaultConnectionName: string): Set
       bindUserName: "",
       bindUserDomain: "",
       bindPassword: "",
-      nationalIdAttribute: "",
     },
     admin: {
       userName: "",
-      password: "",
     },
   };
 }
@@ -71,18 +72,33 @@ export function buildCompleteSetupLdapPayload(
     bindUserName: ldap.bindUserName.trim(),
     bindUserDomain: emptyToNull(ldap.bindUserDomain),
     bindPassword: ldap.bindPassword,
-    nationalIdAttribute: emptyToNull(ldap.nationalIdAttribute),
   };
+}
+
+function buildDefaultModulesPayload(): CompleteSetupModulesRequest {
+  return {
+    adManagement: {
+      isEnabled: false,
+      deletedObjectsEnabled: false,
+    },
+  };
+}
+
+function buildAdminUsersPayload(admin: SetupAdminFormValues): CompleteSetupAdminUserRequest[] {
+  const userName = admin.userName.trim();
+  if (userName.length === 0) {
+    return [];
+  }
+
+  return [{ userName }];
 }
 
 export function buildCompleteSetupRequest(values: SetupFormValues): CompleteSetupRequest {
   return {
     setupKey: values.setupKey,
     ldap: buildCompleteSetupLdapPayload(values.ldap),
-    admin: {
-      userName: values.admin.userName.trim(),
-      password: values.admin.password,
-    },
+    modules: buildDefaultModulesPayload(),
+    adminUsers: buildAdminUsersPayload(values.admin),
   };
 }
 

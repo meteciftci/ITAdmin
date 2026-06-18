@@ -11,8 +11,7 @@ namespace ITAdmin.Api.Controllers;
 [Route("api/setup")]
 public sealed class SetupController(
     ISetupService setupService,
-    ISetupPreflightService setupPreflightService,
-    ILdapService ldapService) : ControllerBase
+    ISetupPreflightService setupPreflightService) : ControllerBase
 {
     [HttpGet("status")]
     public async Task<ActionResult<SetupStatusResponse>> GetStatus(CancellationToken cancellationToken)
@@ -41,7 +40,7 @@ public sealed class SetupController(
                 check.Detail))
             .ToList();
 
-        return Ok(new SetupPreflightResponse(checks));
+        return Ok(new SetupPreflightResponse(checks, result.CanContinue));
     }
 
     [HttpPost("validate-ldap")]
@@ -49,8 +48,6 @@ public sealed class SetupController(
         [FromBody] ValidateLdapRequest request,
         CancellationToken cancellationToken)
     {
-        // LDAP validation is a first-run setup capability only. Once setup is
-        // completed the endpoint must not perform any outbound LDAP connection.
         var isSetupRequired = await setupService.IsSetupRequiredAsync(cancellationToken);
         if (!isSetupRequired)
         {
@@ -59,21 +56,50 @@ public sealed class SetupController(
                 new { messageKey = SetupApiMessageKeys.Validation.SetupAlreadyCompleted });
         }
 
-        var validationRequest = new AppModels.LdapValidationRequest
-        {
-            Host = request.Host,
-            BaseDn = request.BaseDn,
-            UserSearchBase = request.UserSearchBase,
-            UserSearchFilter = request.UserSearchFilter,
-            BindUserName = request.BindUserName,
-            BindUserDomain = request.BindUserDomain,
-            BindPassword = request.BindPassword,
-            TestUserName = request.TestUserName,
-            TestPassword = request.TestPassword
-        };
+        var result = await setupService.ValidateLdapAsync(
+            new AppModels.ValidateSetupLdapRequest(
+                request.SetupKey,
+                MapLdapSettings(request)),
+            cancellationToken);
 
-        var result = await ldapService.ValidateAsync(validationRequest, cancellationToken);
         return Ok(new ValidateLdapResponse(result.IsValid, result.Message));
+    }
+
+    [HttpPost("search-admin-users")]
+    public async Task<ActionResult<SearchSetupAdminUsersResponse>> SearchAdminUsers(
+        [FromBody] SearchSetupAdminUsersRequest request,
+        CancellationToken cancellationToken)
+    {
+        var isSetupRequired = await setupService.IsSetupRequiredAsync(cancellationToken);
+        if (!isSetupRequired)
+        {
+            return StatusCode(
+                StatusCodes.Status403Forbidden,
+                new { messageKey = SetupApiMessageKeys.Validation.SetupAlreadyCompleted });
+        }
+
+        var result = await setupService.SearchAdminUsersAsync(
+            new AppModels.SearchSetupAdminUsersRequest(
+                request.SetupKey,
+                MapLdapSettings(request.Ldap),
+                request.Search),
+            cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return BadRequest(new { message = result.ErrorMessage });
+        }
+
+        var users = result.Users
+            .Select(user => new SetupAdminUserSearchResultResponse(
+                user.UserName,
+                user.DisplayName,
+                user.Email,
+                user.DistinguishedName,
+                user.DirectoryObjectId))
+            .ToList();
+
+        return Ok(new SearchSetupAdminUsersResponse(users));
     }
 
     [HttpPost("complete")]
@@ -84,19 +110,14 @@ public sealed class SetupController(
         var result = await setupService.CompleteSetupAsync(
             new AppModels.CompleteSetupRequest(
                 request.SetupKey,
-                new AppModels.CompleteSetupLdapSettings(
-                    request.Ldap.Name,
-                    request.Ldap.Host,
-                    request.Ldap.BaseDn,
-                    request.Ldap.UserSearchBase,
-                    request.Ldap.UserSearchFilter,
-                    request.Ldap.BindUserName,
-                    request.Ldap.BindUserDomain,
-                    request.Ldap.BindPassword,
-                    request.Ldap.NationalIdAttribute),
-                new AppModels.CompleteSetupAdminUser(
-                    request.Admin.UserName,
-                    request.Admin.Password)),
+                MapLdapSettings(request.Ldap),
+                MapModules(request.Modules),
+                request.AdminUsers
+                    .Select(adminUser => new AppModels.CompleteSetupAdminUser(
+                        adminUser.UserName,
+                        adminUser.DistinguishedName,
+                        adminUser.DirectoryObjectId))
+                    .ToList()),
             cancellationToken);
 
         var response = new CompleteSetupResponse(result.IsCompleted, result.Message);
@@ -107,4 +128,39 @@ public sealed class SetupController(
 
         return BadRequest(response);
     }
+
+    private static AppModels.CompleteSetupLdapSettings MapLdapSettings(CompleteSetupLdapSettingsRequest ldap) =>
+        new(
+            ldap.Name,
+            ldap.Host,
+            ldap.BaseDn,
+            ldap.UserSearchBase,
+            ldap.UserSearchFilter,
+            ldap.BindUserName,
+            ldap.BindUserDomain,
+            ldap.BindPassword);
+
+    private static AppModels.CompleteSetupLdapSettings MapLdapSettings(ValidateLdapRequest request) =>
+        new(
+            Name: "Default LDAP",
+            request.Host,
+            request.BaseDn,
+            request.UserSearchBase,
+            request.UserSearchFilter,
+            request.BindUserName,
+            request.BindUserDomain,
+            request.BindPassword);
+
+    private static AppModels.CompleteSetupModulesSettings MapModules(CompleteSetupModulesRequest modules) =>
+        new(modules.AdManagement is null
+            ? null
+            : new AppModels.CompleteSetupAdManagementModuleSettings(
+                modules.AdManagement.IsEnabled,
+                modules.AdManagement.UsersSearchBase,
+                modules.AdManagement.GroupsSearchBase,
+                modules.AdManagement.ComputersSearchBase,
+                modules.AdManagement.DefaultUserOu,
+                modules.AdManagement.DefaultGroupOu,
+                modules.AdManagement.DefaultComputerOu,
+                modules.AdManagement.DeletedObjectsEnabled));
 }

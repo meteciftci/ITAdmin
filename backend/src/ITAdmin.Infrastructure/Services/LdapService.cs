@@ -659,7 +659,13 @@ public sealed class LdapService(ILogger<LdapService> logger) : ILdapService
 
                 seenObjectIds.Add(directoryObjectId);
                 seenUserNames.Add(resolvedUserName);
-                collected.Add(new LdapUserLookupItem(directoryObjectId, resolvedUserName, displayName, email, nationalId));
+                collected.Add(new LdapUserLookupItem(
+                    directoryObjectId,
+                    resolvedUserName,
+                    displayName,
+                    email,
+                    nationalId,
+                    entry.DistinguishedName));
             }
 
             return Task.FromResult<IReadOnlyCollection<LdapUserLookupItem>>(collected);

@@ -80,5 +80,14 @@ public sealed class FakeLdapService : ILdapService
     public Task<IReadOnlyCollection<LdapUserLookupItem>> SearchUsersAsync(
         LdapUserLookupRequest request,
         CancellationToken cancellationToken = default)
-        => Task.FromResult<IReadOnlyCollection<LdapUserLookupItem>>(Array.Empty<LdapUserLookupItem>());
+    {
+        SearchUsersCallCount++;
+        LastSearchUsersRequest = request;
+        return Task.FromResult(SearchUsersResult);
+    }
+
+    public int SearchUsersCallCount { get; private set; }
+    public LdapUserLookupRequest? LastSearchUsersRequest { get; private set; }
+    public IReadOnlyCollection<LdapUserLookupItem> SearchUsersResult { get; set; } =
+        Array.Empty<LdapUserLookupItem>();
 }

@@ -7,4 +7,5 @@ public sealed record SetupPreflightCheckResponse(
     string? Detail);
 
 public sealed record SetupPreflightResponse(
-    IReadOnlyList<SetupPreflightCheckResponse> Checks);
+    IReadOnlyList<SetupPreflightCheckResponse> Checks,
+    bool CanContinue);
