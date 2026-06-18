@@ -6,7 +6,7 @@ import { RowActions } from "@/components/common/RowActions";
 import type { DataTableColumnMeta } from "@/components/common/data-table";
 import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import {
-  getAdOrganizationalUnitParentPath,
+  getAdOrganizationalUnitAttributeName,
   getAdOrganizationalUnitPrimaryLabel,
   getAdOrganizationalUnitSecondaryLabel,
 } from "@/features/ad-management/ad-ou-display-labels";
@@ -67,20 +67,20 @@ export function createAdOrganizationalUnitColumns({
       },
     },
     {
-      id: "location",
-      header: () => t("adManagement:organizationalUnits.table.location"),
+      id: "ouName",
+      header: () => t("adManagement:organizationalUnits.table.ouName"),
       meta: { truncate: true } satisfies DataTableColumnMeta,
       cell: ({ row }) => {
-        const location =
-          getAdOrganizationalUnitParentPath(row.original.canonicalName)
-          || row.original.parentDistinguishedName
+        const attributeName =
+          getAdOrganizationalUnitAttributeName(row.original)
           || emptyText;
+
         return (
           <span
-            className="line-clamp-2 min-w-0 text-muted-foreground break-words [overflow-wrap:anywhere]"
-            title={location}
+            className="block min-w-0 truncate text-muted-foreground"
+            title={attributeName}
           >
-            {location}
+            {attributeName}
           </span>
         );
       },

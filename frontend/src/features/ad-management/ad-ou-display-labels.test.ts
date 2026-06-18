@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 
 import {
   formatAdOrganizationalUnitCount,
+  getAdOrganizationalUnitAttributeName,
   getAdOrganizationalUnitParentPath,
   getAdOrganizationalUnitPrimaryLabel,
   getAdOrganizationalUnitSecondaryLabel,
@@ -95,6 +96,67 @@ describe("ad-ou-display-labels", () => {
       }),
       "BT",
     );
+  });
+
+  it("uses ou as attribute name when available", () => {
+    assert.equal(
+      getAdOrganizationalUnitAttributeName({
+        ou: "BT",
+        name: "BT Name",
+        distinguishedName: sampleDn,
+      }),
+      "BT",
+    );
+  });
+
+  it("falls back to name when ou is missing", () => {
+    assert.equal(
+      getAdOrganizationalUnitAttributeName({
+        ou: null,
+        name: "BT Name",
+        distinguishedName: sampleDn,
+      }),
+      "BT Name",
+    );
+  });
+
+  it("falls back to parsed OU RDN when ou and name are missing", () => {
+    assert.equal(
+      getAdOrganizationalUnitAttributeName({
+        ou: null,
+        name: null,
+        distinguishedName: sampleDn,
+      }),
+      "BT",
+    );
+  });
+
+  it("returns null attribute name when no ou, name, or parseable RDN exists", () => {
+    assert.equal(
+      getAdOrganizationalUnitAttributeName({
+        ou: null,
+        name: null,
+        distinguishedName: "DC=corp,DC=local",
+      }),
+      null,
+    );
+  });
+});
+
+describe("ad organizational unit list columns", () => {
+  it("shows location in first column and ou attribute name in ouName column", () => {
+    const columnsSource = readFileSync(
+      new URL("./ad-ous-columns.tsx", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(columnsSource, /getAdOrganizationalUnitSecondaryLabel/);
+    assert.match(columnsSource, /getAdOrganizationalUnitAttributeName/);
+    assert.match(columnsSource, /id: "ouName"/);
+    assert.match(columnsSource, /organizationalUnits\.table\.ouName/);
+    assert.doesNotMatch(columnsSource, /id: "location"/);
+    assert.doesNotMatch(columnsSource, /organizationalUnits\.table\.location/);
+    assert.doesNotMatch(columnsSource, /getAdOrganizationalUnitParentPath/);
   });
 });
 

@@ -773,8 +773,7 @@
       "searchPlaceholder": "Organizasyon birimi ara...",
       "table": {
         "organizationalUnit": "Organizasyon Birimi",
-        "location": "Konum",
-        "name": "OU Adı",
+        "ouName": "OU Adı",
         "parent": "Üst Konum",
         "childOuCount": "Alt OU",
         "userCount": "Kullanıcı",

@@ -773,8 +773,7 @@
       "searchPlaceholder": "Search organizational units...",
       "table": {
         "organizationalUnit": "Organizational unit",
-        "location": "Location",
-        "name": "OU name",
+        "ouName": "OU Name",
         "parent": "Parent path",
         "childOuCount": "Child OUs",
         "userCount": "Users",

@@ -24,6 +24,20 @@ function parseOuRdnLabel(distinguishedName: string | null | undefined): string |
   return value || null;
 }
 
+export function getAdOrganizationalUnitAttributeName(
+  item: Pick<OrganizationalUnitLabelSource, "ou" | "name" | "distinguishedName">,
+): string | null {
+  if (item.ou?.trim()) {
+    return item.ou.trim();
+  }
+
+  if (item.name?.trim()) {
+    return item.name.trim();
+  }
+
+  return parseOuRdnLabel(item.distinguishedName);
+}
+
 export function getAdOrganizationalUnitPrimaryLabel(
   item: OrganizationalUnitLabelSource,
 ): string {
