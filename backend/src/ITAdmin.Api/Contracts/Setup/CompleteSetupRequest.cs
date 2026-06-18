@@ -10,7 +10,6 @@ public sealed record CompleteSetupLdapSettingsRequest(
     string Name,
     string Host,
     string BaseDn,
-    string UserSearchBase,
     string UserSearchFilter,
     string BindUserName,
     string? BindUserDomain,

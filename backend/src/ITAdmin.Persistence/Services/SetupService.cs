@@ -111,7 +111,7 @@ public sealed partial class SetupService(
             new LdapUserLookupRequest(
                 Host: request.Ldap.Host,
                 BaseDn: request.Ldap.BaseDn,
-                UserSearchBase: request.Ldap.UserSearchBase,
+                UserSearchBase: string.Empty,
                 BindUserName: request.Ldap.BindUserName,
                 BindUserDomain: request.Ldap.BindUserDomain,
                 BindPassword: request.Ldap.BindPassword,
@@ -129,6 +129,53 @@ public sealed partial class SetupService(
             .ToList();
 
         return new SearchSetupAdminUsersResult(users);
+    }
+
+    public async Task<SearchSetupOrganizationalUnitsResult> SearchOrganizationalUnitsAsync(
+        SearchSetupOrganizationalUnitsRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var setupKeyValidation = SetupRequestValidator.ValidateSetupKey(
+            setupKeyValidator,
+            configuration,
+            request.SetupKey);
+        if (!SetupRequestValidator.TryMapSetupKeyValidationFailure(setupKeyValidation, out var setupKeyMessage, out _))
+        {
+            return new SearchSetupOrganizationalUnitsResult(Array.Empty<SetupOrganizationalUnitListItem>(), false, setupKeyMessage);
+        }
+
+        if (!await IsSetupRequiredAsync(cancellationToken))
+        {
+            return new SearchSetupOrganizationalUnitsResult(
+                Array.Empty<SetupOrganizationalUnitListItem>(),
+                false,
+                "Setup has already been completed.");
+        }
+
+        if (!SetupRequestValidator.TryValidateLdapSettings(request.Ldap, out var ldapMessage, out _))
+        {
+            return new SearchSetupOrganizationalUnitsResult(Array.Empty<SetupOrganizationalUnitListItem>(), false, ldapMessage);
+        }
+
+        var search = request.Search?.Trim();
+        if (!string.IsNullOrWhiteSpace(search) && search.Length < SetupConstants.MinOuSearchLength)
+        {
+            return new SearchSetupOrganizationalUnitsResult(Array.Empty<SetupOrganizationalUnitListItem>(), false);
+        }
+
+        var ldapResult = await ldapService.SearchOrganizationalUnitsAsync(
+            new LdapOrganizationalUnitSearchRequest(
+                Host: request.Ldap.Host,
+                BaseDn: request.Ldap.BaseDn,
+                BindUserName: request.Ldap.BindUserName,
+                BindUserDomain: request.Ldap.BindUserDomain,
+                BindPassword: request.Ldap.BindPassword,
+                Search: search,
+                ParentDistinguishedName: request.ParentDistinguishedName,
+                MaxResults: SetupConstants.MaxOuSearchResults),
+            cancellationToken);
+
+        return new SearchSetupOrganizationalUnitsResult(ldapResult.Items, ldapResult.HasMore);
     }
 
     public async Task<CompleteSetupResult> CompleteSetupAsync(
@@ -239,7 +286,7 @@ public sealed partial class SetupService(
             {
                 Host = ldap.Host,
                 BaseDn = ldap.BaseDn,
-                UserSearchBase = ldap.UserSearchBase,
+                UserSearchBase = string.Empty,
                 BindUserName = ldap.BindUserName,
                 BindUserDomain = ldap.BindUserDomain,
                 BindPassword = ldap.BindPassword
@@ -266,7 +313,7 @@ public sealed partial class SetupService(
                     new LdapUserProfileByObjectIdRequest(
                         Host: ldap.Host,
                         BaseDn: ldap.BaseDn,
-                        UserSearchBase: ldap.UserSearchBase,
+                        UserSearchBase: string.Empty,
                         BindUserName: ldap.BindUserName,
                         BindUserDomain: ldap.BindUserDomain,
                         BindPassword: ldap.BindPassword,
@@ -282,7 +329,7 @@ public sealed partial class SetupService(
                         new LdapUserProfileRequest(
                             Host: ldap.Host,
                             BaseDn: ldap.BaseDn,
-                            UserSearchBase: ldap.UserSearchBase,
+                            UserSearchBase: string.Empty,
                             UserSearchFilter: ldap.UserSearchFilter,
                             BindUserName: ldap.BindUserName,
                             BindUserDomain: ldap.BindUserDomain,
@@ -323,7 +370,7 @@ public sealed partial class SetupService(
                 Name = string.IsNullOrWhiteSpace(ldap.Name) ? "Default LDAP" : ldap.Name.Trim(),
                 Host = ldap.Host.Trim(),
                 BaseDn = ldap.BaseDn.Trim(),
-                UserSearchBase = ldap.UserSearchBase.Trim(),
+                UserSearchBase = string.Empty,
                 UserSearchFilter = ldap.UserSearchFilter.Trim(),
                 BindUserName = ldap.BindUserName.Trim(),
                 BindUserDomain = ldap.BindUserDomain?.Trim(),
@@ -340,7 +387,7 @@ public sealed partial class SetupService(
         activeLdapSetting.Name = string.IsNullOrWhiteSpace(ldap.Name) ? "Default LDAP" : ldap.Name.Trim();
         activeLdapSetting.Host = ldap.Host.Trim();
         activeLdapSetting.BaseDn = ldap.BaseDn.Trim();
-        activeLdapSetting.UserSearchBase = ldap.UserSearchBase.Trim();
+        activeLdapSetting.UserSearchBase = string.Empty;
         activeLdapSetting.UserSearchFilter = ldap.UserSearchFilter.Trim();
         activeLdapSetting.BindUserName = ldap.BindUserName.Trim();
         activeLdapSetting.BindUserDomain = ldap.BindUserDomain?.Trim();

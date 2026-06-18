@@ -94,7 +94,6 @@ public sealed class SetupRequestValidatorTests
                 "Default LDAP",
                 "dc01.test",
                 "DC=test,DC=local",
-                "OU=Users,DC=test,DC=local",
                 "(&(objectClass=user)(sAMAccountName={0}))",
                 "bind",
                 null,

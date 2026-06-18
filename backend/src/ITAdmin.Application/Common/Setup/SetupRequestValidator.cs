@@ -61,7 +61,6 @@ public static class SetupRequestValidator
         if (ldap is null ||
             string.IsNullOrWhiteSpace(ldap.Host) ||
             string.IsNullOrWhiteSpace(ldap.BaseDn) ||
-            string.IsNullOrWhiteSpace(ldap.UserSearchBase) ||
             string.IsNullOrWhiteSpace(ldap.UserSearchFilter) ||
             string.IsNullOrWhiteSpace(ldap.BindUserName) ||
             string.IsNullOrWhiteSpace(ldap.BindPassword))

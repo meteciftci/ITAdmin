@@ -1,6 +1,6 @@
 import axios from "axios";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -14,41 +14,46 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { SectionCard } from "@/components/common/SectionCard";
 import { completeSetup, getSetupStatus } from "@/features/setup/api";
+import { SetupWizardStepper } from "@/features/setup/components/SetupWizardStepper";
+import {
+  AdminUsersStep,
+  LdapConnectionStep,
+  ModulesStep,
+  ServerCheckStep,
+  SetupKeyStep,
+  SummaryStep,
+  useServerCheckPreflight,
+} from "@/features/setup/components/SetupWizardSteps";
 import {
   buildCompleteSetupRequest,
   createDefaultSetupFormValues,
+  isLdapFormComplete,
   mapCompleteSetupFailureToast,
   resolveResponseMessage,
-  type SetupFormValues,
+  type SetupWizardFormValues,
 } from "@/features/setup/setup-form";
+import {
+  canProceedFromWizardStep,
+  getNextWizardStep,
+  getPreviousWizardStep,
+  SETUP_WIZARD_STEPS,
+  type SetupWizardStep,
+} from "@/features/setup/setup-wizard-state";
 import { getApiErrorMessage } from "@/lib/api-error";
 
 const SETUP_STATUS_QUERY_KEY = ["setup", "status"] as const;
-
-type FieldErrors = Partial<Record<string, string>>;
-
-function FieldHint({ children }: { children: string }) {
-  return <p className="text-xs text-muted-foreground">{children}</p>;
-}
-
-function FieldError({ message }: { message?: string }) {
-  if (!message) return null;
-  return <p className="text-xs text-destructive">{message}</p>;
-}
 
 export function SetupRequiredPage() {
   const { t } = useTranslation(["setup", "common"]);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const [values, setValues] = useState<SetupFormValues>(() =>
+  const [currentStep, setCurrentStep] = useState<SetupWizardStep>("setupKey");
+  const [values, setValues] = useState<SetupWizardFormValues>(() =>
     createDefaultSetupFormValues(t("setup:defaults.connectionName")),
   );
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [ldapValidated, setLdapValidated] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const setupQuery = useQuery({
@@ -56,48 +61,33 @@ export function SetupRequiredPage() {
     queryFn: getSetupStatus,
   });
 
-  const validateForm = (): FieldErrors => {
-    const errors: FieldErrors = {};
+  const shouldLoadPreflight = currentStep === "serverCheck" || currentStep === "summary";
+  const { preflight, isLoading: isPreflightLoading, errorMessage: preflightError, reloadPreflight } =
+    useServerCheckPreflight(shouldLoadPreflight);
 
-    if (!values.setupKey.trim()) {
-      errors.setupKey = t("setup:validation.required");
-    }
+  const stepLabels = useMemo(
+    () =>
+      Object.fromEntries(
+        SETUP_WIZARD_STEPS.map((step) => [step, t(`setup:wizardSteps.${step}`)]),
+      ) as Record<SetupWizardStep, string>,
+    [t],
+  );
 
-    if (!values.ldap.host.trim()) {
-      errors["ldap.host"] = t("setup:validation.required");
-    }
+  const navigationContext = useMemo(
+    () => ({
+      values,
+      preflight,
+      ldapValidated,
+    }),
+    [values, preflight, ldapValidated],
+  );
 
-    if (!values.ldap.baseDn.trim()) {
-      errors["ldap.baseDn"] = t("setup:validation.required");
-    }
-
-    if (!values.ldap.userSearchBase.trim()) {
-      errors["ldap.userSearchBase"] = t("setup:validation.required");
-    }
-
-    if (!values.ldap.userSearchFilter.trim()) {
-      errors["ldap.userSearchFilter"] = t("setup:validation.required");
-    }
-
-    if (!values.ldap.bindUserName.trim()) {
-      errors["ldap.bindUserName"] = t("setup:validation.required");
-    }
-
-    if (!values.ldap.bindPassword.trim()) {
-      errors["ldap.bindPassword"] = t("setup:validation.required");
-    }
-
-    if (!values.admin.userName.trim()) {
-      errors["admin.userName"] = t("setup:validation.required");
-    }
-
-    return errors;
-  };
+  const canProceed = canProceedFromWizardStep(currentStep, navigationContext);
+  const previousStep = getPreviousWizardStep(currentStep);
+  const nextStep = getNextWizardStep(currentStep);
 
   const handleCompleteSetup = async () => {
-    const errors = validateForm();
-    setFieldErrors(errors);
-    if (Object.keys(errors).length > 0) {
+    if (isSubmitting) {
       return;
     }
 
@@ -109,6 +99,7 @@ export function SetupRequiredPage() {
       directoryUserProfileHint: t("setup:messages.directoryUserProfileHint"),
       ldapTimeoutHint: t("setup:messages.ldapTimeoutHint"),
     };
+
     try {
       const response = await completeSetup(buildCompleteSetupRequest(values));
       if (!response.isCompleted) {
@@ -117,9 +108,7 @@ export function SetupRequiredPage() {
       }
 
       await queryClient.invalidateQueries({ queryKey: SETUP_STATUS_QUERY_KEY });
-      toast.success(
-        resolveResponseMessage(response.message, t("setup:messages.completeSuccess")),
-      );
+      toast.success(resolveResponseMessage(response.message, t("setup:messages.completeSuccess")));
       navigate("/login", { replace: true });
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -140,25 +129,15 @@ export function SetupRequiredPage() {
     }
   };
 
-  function updateLdap<K extends keyof SetupFormValues["ldap"]>(
-    field: K,
-    value: SetupFormValues["ldap"][K],
-  ) {
-    setValues((current) => ({
-      ...current,
-      ldap: { ...current.ldap, [field]: value },
-    }));
-  }
-
-  function updateAdmin<K extends keyof SetupFormValues["admin"]>(
-    field: K,
-    value: SetupFormValues["admin"][K],
-  ) {
-    setValues((current) => ({
-      ...current,
-      admin: { ...current.admin, [field]: value },
-    }));
-  }
+  const ldapFieldErrors = useMemo(() => {
+    const errors: Partial<Record<string, string>> = {};
+    if (!values.ldap.host.trim()) errors["ldap.host"] = t("setup:validation.required");
+    if (!values.ldap.baseDn.trim()) errors["ldap.baseDn"] = t("setup:validation.required");
+    if (!values.ldap.userSearchFilter.trim()) errors["ldap.userSearchFilter"] = t("setup:validation.required");
+    if (!values.ldap.bindUserName.trim()) errors["ldap.bindUserName"] = t("setup:validation.required");
+    if (!values.ldap.bindPassword.trim()) errors["ldap.bindPassword"] = t("setup:validation.required");
+    return errors;
+  }, [t, values.ldap]);
 
   if (setupQuery.isLoading) {
     return (
@@ -174,172 +153,95 @@ export function SetupRequiredPage() {
 
   return (
     <main className="relative min-h-screen bg-muted/30 p-4 md:p-8">
-      <div className="mx-auto max-w-3xl space-y-6">
+      <div className="mx-auto max-w-4xl space-y-6">
         <Card className="border-border/70 shadow-lg">
-          <CardHeader className="space-y-2">
-            <CardTitle className="text-2xl">{t("setup:title")}</CardTitle>
-            <CardDescription>{t("setup:description")}</CardDescription>
+          <CardHeader className="space-y-4">
+            <div className="space-y-2">
+              <CardTitle className="text-2xl">{t("setup:title")}</CardTitle>
+              <CardDescription>{t("setup:description")}</CardDescription>
+            </div>
+            <SetupWizardStepper currentStep={currentStep} stepLabels={stepLabels} />
           </CardHeader>
         </Card>
 
-        <form
-          className="space-y-6"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void handleCompleteSetup();
-          }}
-        >
-          <SectionCard title={t("setup:sections.setupKey")}>
-            <div className="space-y-2">
-              <Label htmlFor="setupKey">{t("setup:fields.setupKey")}</Label>
-              <Input
-                id="setupKey"
-                type="password"
-                autoComplete="off"
-                value={values.setupKey}
-                onChange={(event) => {
-                  setValues((current) => ({ ...current, setupKey: event.target.value }));
-                  setFieldErrors((current) => {
-                    const next = { ...current };
-                    delete next.setupKey;
-                    return next;
-                  });
-                }}
-                disabled={isSubmitting}
-                required
-              />
-              <FieldError message={fieldErrors.setupKey} />
-            </div>
-          </SectionCard>
+        {currentStep === "setupKey" ? (
+          <SetupKeyStep
+            setupKey={values.setupKey}
+            onChange={(setupKey) => setValues((current) => ({ ...current, setupKey }))}
+            disabled={isSubmitting}
+            error={values.setupKey.trim() ? undefined : undefined}
+          />
+        ) : null}
 
-          <SectionCard title={t("setup:sections.ldap")}>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="ldapName">{t("setup:fields.name")}</Label>
-                <Input
-                  id="ldapName"
-                  value={values.ldap.name}
-                  onChange={(event) => updateLdap("name", event.target.value)}
-                  disabled={isSubmitting}
-                />
-              </div>
+        {currentStep === "serverCheck" ? (
+          <ServerCheckStep
+            preflight={preflight}
+            isLoading={isPreflightLoading}
+            errorMessage={preflightError}
+            onRetry={() => void reloadPreflight()}
+          />
+        ) : null}
 
-              <div className="space-y-2">
-                <Label htmlFor="ldapHost">{t("setup:fields.host")}</Label>
-                <Input
-                  id="ldapHost"
-                  value={values.ldap.host}
-                  onChange={(event) => updateLdap("host", event.target.value)}
-                  disabled={isSubmitting}
-                  required
-                />
-                <FieldHint>{t("setup:helpers.host")}</FieldHint>
-                <FieldError message={fieldErrors["ldap.host"]} />
-              </div>
+        {currentStep === "ldapConnection" ? (
+          <LdapConnectionStep
+            setupKey={values.setupKey}
+            ldap={values.ldap}
+            onChange={(ldap) => setValues((current) => ({ ...current, ldap }))}
+            ldapValidated={ldapValidated}
+            onValidatedChange={setLdapValidated}
+            disabled={isSubmitting}
+            fieldErrors={ldapFieldErrors}
+          />
+        ) : null}
 
-              <div className="space-y-2 md:col-span-2">
-                <p className="text-xs text-muted-foreground">{t("setup:helpers.ldapsHelp")}</p>
-              </div>
+        {currentStep === "modules" ? (
+          <ModulesStep
+            setupKey={values.setupKey}
+            ldap={values.ldap}
+            modules={values.modules}
+            onChange={(modules) => setValues((current) => ({ ...current, modules }))}
+            ldapValidated={ldapValidated}
+            disabled={isSubmitting}
+          />
+        ) : null}
 
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="ldapBaseDn">{t("setup:fields.baseDn")}</Label>
-                <Input
-                  id="ldapBaseDn"
-                  value={values.ldap.baseDn}
-                  onChange={(event) => updateLdap("baseDn", event.target.value)}
-                  disabled={isSubmitting}
-                  required
-                />
-                <FieldError message={fieldErrors["ldap.baseDn"]} />
-              </div>
+        {currentStep === "adminUsers" ? (
+          <AdminUsersStep
+            setupKey={values.setupKey}
+            ldap={values.ldap}
+            adminUsers={values.adminUsers}
+            onChange={(adminUsers) => setValues((current) => ({ ...current, adminUsers }))}
+            ldapValidated={ldapValidated}
+            disabled={isSubmitting}
+          />
+        ) : null}
 
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="ldapUserSearchBase">{t("setup:fields.userSearchBase")}</Label>
-                <Input
-                  id="ldapUserSearchBase"
-                  value={values.ldap.userSearchBase}
-                  onChange={(event) => updateLdap("userSearchBase", event.target.value)}
-                  disabled={isSubmitting}
-                />
-                <FieldError message={fieldErrors["ldap.userSearchBase"]} />
-              </div>
+        {currentStep === "summary" ? <SummaryStep values={values} preflight={preflight} /> : null}
 
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="ldapUserSearchFilter">{t("setup:fields.userSearchFilter")}</Label>
-                <Input
-                  id="ldapUserSearchFilter"
-                  value={values.ldap.userSearchFilter}
-                  onChange={(event) => updateLdap("userSearchFilter", event.target.value)}
-                  disabled={isSubmitting}
-                  required
-                />
-                <FieldHint>{t("setup:helpers.userSearchFilter")}</FieldHint>
-                <FieldError message={fieldErrors["ldap.userSearchFilter"]} />
-              </div>
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!previousStep || isSubmitting}
+            onClick={() => previousStep && setCurrentStep(previousStep)}
+          >
+            {t("setup:actions.back")}
+          </Button>
 
-              <div className="space-y-2">
-                <Label htmlFor="ldapBindUserName">{t("setup:fields.bindUserName")}</Label>
-                <Input
-                  id="ldapBindUserName"
-                  value={values.ldap.bindUserName}
-                  onChange={(event) => updateLdap("bindUserName", event.target.value)}
-                  disabled={isSubmitting}
-                  required
-                />
-                <FieldHint>{t("setup:helpers.bindUserName")}</FieldHint>
-                <FieldError message={fieldErrors["ldap.bindUserName"]} />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="ldapBindUserDomain">{t("setup:fields.bindUserDomain")}</Label>
-                <Input
-                  id="ldapBindUserDomain"
-                  value={values.ldap.bindUserDomain}
-                  onChange={(event) => updateLdap("bindUserDomain", event.target.value)}
-                  disabled={isSubmitting}
-                />
-                <FieldHint>{t("setup:helpers.bindUserDomain")}</FieldHint>
-              </div>
-
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="ldapBindPassword">{t("setup:fields.bindPassword")}</Label>
-                <Input
-                  id="ldapBindPassword"
-                  type="password"
-                  autoComplete="off"
-                  value={values.ldap.bindPassword}
-                  onChange={(event) => updateLdap("bindPassword", event.target.value)}
-                  disabled={isSubmitting}
-                  required
-                />
-                <FieldError message={fieldErrors["ldap.bindPassword"]} />
-              </div>
-            </div>
-          </SectionCard>
-
-          <SectionCard title={t("setup:sections.admin")}>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="adminUserName">{t("setup:fields.adminUserName")}</Label>
-                <Input
-                  id="adminUserName"
-                  autoComplete="username"
-                  value={values.admin.userName}
-                  onChange={(event) => updateAdmin("userName", event.target.value)}
-                  disabled={isSubmitting}
-                  required
-                />
-                <FieldError message={fieldErrors["admin.userName"]} />
-              </div>
-            </div>
-          </SectionCard>
-
-          <div className="flex justify-end">
-            <Button type="submit" disabled={isSubmitting}>
+          {currentStep === "summary" ? (
+            <Button type="button" disabled={!canProceed || isSubmitting} onClick={() => void handleCompleteSetup()}>
               {isSubmitting ? t("setup:actions.submitting") : t("setup:actions.complete")}
             </Button>
-          </div>
-        </form>
+          ) : (
+            <Button
+              type="button"
+              disabled={!canProceed || isSubmitting || (currentStep === "ldapConnection" && !isLdapFormComplete(values.ldap))}
+              onClick={() => nextStep && setCurrentStep(nextStep)}
+            >
+              {t("setup:actions.next")}
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="fixed bottom-6 right-6 flex items-center gap-2">

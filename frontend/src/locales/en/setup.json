@@ -1,19 +1,69 @@
 {
   "setup": {
     "title": "ITAdmin Initial Setup",
-    "description": "Verify the LDAP connection and define the first administrator user to continue.",
+    "description": "Complete the setup wizard step by step to prepare the portal.",
     "redirecting": "Redirecting...",
-    "sections": {
+    "wizardSteps": {
       "setupKey": "Setup key",
-      "ldap": "LDAP connection settings",
-      "admin": "First administrator user"
+      "serverCheck": "Server check",
+      "ldapConnection": "LDAP connection",
+      "modules": "Modules",
+      "adminUsers": "Admin users",
+      "summary": "Summary"
+    },
+    "steps": {
+      "setupKey": {
+        "title": "Setup key",
+        "description": "Enter the setup key. Validation happens in later steps."
+      },
+      "serverCheck": {
+        "title": "Server check",
+        "description": "Server and configuration checks run before setup can continue.",
+        "loading": "Loading server checks...",
+        "errorTitle": "Server check failed",
+        "loadFailed": "Server checks could not be loaded.",
+        "emptyTitle": "No check results",
+        "emptyDescription": "Server checks have not been loaded yet."
+      },
+      "ldapConnection": {
+        "title": "LDAP connection settings",
+        "description": "Enter and validate the LDAP connection the portal will use.",
+        "validateRequired": "Validate the LDAP connection before continuing.",
+        "validateFailed": "LDAP validation failed."
+      },
+      "modules": {
+        "title": "Modules",
+        "description": "Configure modules that will be enabled during setup.",
+        "ldapRequired": "Validate the LDAP connection before selecting OUs."
+      },
+      "adminUsers": {
+        "title": "Administrator users",
+        "description": "Select portal SuperAdmin users from LDAP.",
+        "ldapRequired": "Validate the LDAP connection before searching users.",
+        "searchPlaceholder": "Search by user name, display name, or email",
+        "minSearchLength": "Search must be at least 2 characters.",
+        "searching": "Searching users...",
+        "searchFailed": "User search failed.",
+        "selectedTitle": "Selected administrator users",
+        "emptySelectedTitle": "No users selected yet",
+        "emptySelectedDescription": "Select at least one administrator user from the search results."
+      },
+      "summary": {
+        "title": "Setup summary",
+        "description": "Review selected settings before completing setup.",
+        "ldapTitle": "LDAP",
+        "adManagementTitle": "AD Management",
+        "adminUsersTitle": "Administrator users",
+        "preflightTitle": "Server check",
+        "preflightReady": "Server checks passed.",
+        "preflightBlocked": "Server checks did not pass."
+      }
     },
     "fields": {
       "setupKey": "Setup key",
       "name": "Name",
       "host": "Host",
       "baseDn": "Base DN",
-      "userSearchBase": "User search base",
       "userSearchFilter": "User search filter",
       "bindUserName": "Bind user name",
       "bindUserDomain": "Bind user domain",
@@ -25,10 +75,45 @@
       "bindUserName": "DOMAIN\\user or user@domain.local format is recommended.",
       "bindUserDomain": "Optional. Enter if bind user domain is stored separately.",
       "userSearchFilter": "{0} is replaced with the user name.",
-      "ldapsHelp": "Connections are established over LDAPS (SSL/TLS) on port 636.",
-      "adminCredentials": "This user is validated against LDAP and becomes the portal SuperAdmin after setup. Display name and email are loaded from the AD profile."
+      "ldapsHelp": "Connections are established over LDAPS (SSL/TLS) on port 636."
+    },
+    "modules": {
+      "adManagement": {
+        "enable": "Enable AD Management",
+        "enableDescription": "Enables the Active Directory management module after setup.",
+        "usersSearchBase": "Users search base",
+        "groupsSearchBase": "Groups search base",
+        "computersSearchBase": "Computers search base",
+        "defaultUserOu": "Default user OU",
+        "defaultGroupOu": "Default group OU",
+        "defaultComputerOu": "Default computer OU",
+        "deletedObjectsEnabled": "Deleted objects enabled"
+      }
+    },
+    "ouPicker": {
+      "title": "Select organizational unit",
+      "description": "Search and select an OU from LDAP.",
+      "noSelection": "No OU selected yet.",
+      "searchPlaceholder": "Search by OU name or DN",
+      "minSearchLength": "Search must be at least 2 characters. Empty search lists first-level OUs.",
+      "loading": "Loading OUs...",
+      "emptyTitle": "No OUs found",
+      "emptyDescription": "No OUs matched your search criteria.",
+      "errors": {
+        "title": "OU search failed",
+        "searchFailed": "OU search could not be completed."
+      }
     },
     "actions": {
+      "back": "Back",
+      "next": "Next",
+      "retry": "Retry",
+      "validateLdap": "Validate LDAP",
+      "validatingLdap": "Validating LDAP...",
+      "browse": "Browse",
+      "search": "Search",
+      "select": "Select",
+      "remove": "Remove",
       "complete": "Complete setup",
       "submitting": "Completing setup..."
     },
@@ -36,14 +121,44 @@
       "completeSuccess": "Setup completed successfully.",
       "completeFailed": "Setup could not be completed.",
       "directoryUserNotFoundHint": "The administrator user could not be found in AD. Try the user name as sAMAccountName, DOMAIN\\user, or user@domain and check the User Search Filter setting.",
-      "directoryUserProfileHint": "The administrator user's AD profile could not be loaded. Check the user name, User Search Base, and User Search Filter settings.",
-      "ldapTimeoutHint": "The setup request timed out or the LDAP server did not respond. Check the LDAP server, network connectivity, and User Search settings."
+      "directoryUserProfileHint": "The administrator user's AD profile could not be loaded. Check the user name and User Search Filter setting.",
+      "ldapTimeoutHint": "The setup request timed out or the LDAP server did not respond. Check the LDAP server, network connectivity, and search settings."
     },
     "defaults": {
       "connectionName": "Default LDAP"
     },
     "validation": {
       "required": "Required field"
+    },
+    "setupPreflight": {
+      "databaseReachable": "Database is reachable.",
+      "databaseUnreachable": "Database is unreachable.",
+      "databaseQuerySucceeded": "Database query succeeded.",
+      "databaseQueryFailed": "Database query failed.",
+      "jwtKeyConfigured": "JWT key is configured.",
+      "jwtKeyMissing": "JWT key is missing.",
+      "jwtIssuerConfigured": "JWT issuer is configured.",
+      "jwtIssuerMissing": "JWT issuer is missing.",
+      "jwtAudienceConfigured": "JWT audience is configured.",
+      "jwtAudienceMissing": "JWT audience is missing.",
+      "setupKeyHashConfigured": "Setup key hash is configured.",
+      "setupKeyHashMissing": "Setup key hash is missing.",
+      "setupKeyHashValidFormat": "Setup key hash format is valid.",
+      "setupKeyHashInvalidFormat": "Setup key hash format is invalid.",
+      "dataProtectionApplicationNameConfigured": "Data Protection application name is configured.",
+      "dataProtectionApplicationNameMissing": "Data Protection application name is missing.",
+      "dataProtectionKeysPathConfigured": "Data Protection keys path is configured.",
+      "dataProtectionKeysPathMissing": "Data Protection keys path is missing.",
+      "dataProtectionKeysPathExists": "Data Protection keys path exists.",
+      "dataProtectionKeysPathMissingOnDisk": "Data Protection keys path is missing on disk.",
+      "dataProtectionKeysPathWritable": "Data Protection keys path is writable.",
+      "dataProtectionKeysPathNotWritable": "Data Protection keys path is not writable.",
+      "environmentNameAvailable": "Environment name is available.",
+      "environmentNameMissing": "Environment name is missing.",
+      "applicationNameAvailable": "Application name is available.",
+      "applicationNameMissing": "Application name is missing.",
+      "applicationVersionAvailable": "Application version is available.",
+      "applicationVersionMissing": "Application version is missing."
     }
   }
 }

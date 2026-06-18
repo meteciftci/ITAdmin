@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using ITAdmin.Application.Abstractions.Services;
+using ITAdmin.Application.Common.AdManagement;
 using ITAdmin.Application.Common.Constants;
 using ITAdmin.Application.Common.Models;
 
@@ -642,6 +643,175 @@ public sealed class LdapService(ILogger<LdapService> logger) : ILdapService
             LogUnexpectedLdapFailure(ex);
             return Task.FromResult<IReadOnlyCollection<LdapUserLookupItem>>(Array.Empty<LdapUserLookupItem>());
         }
+    }
+
+    public Task<LdapOrganizationalUnitSearchResult> SearchOrganizationalUnitsAsync(
+        LdapOrganizationalUnitSearchRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        _ = cancellationToken;
+
+        if (string.IsNullOrWhiteSpace(request.Host) ||
+            string.IsNullOrWhiteSpace(request.BaseDn) ||
+            string.IsNullOrWhiteSpace(request.BindUserName) ||
+            string.IsNullOrWhiteSpace(request.BindPassword))
+        {
+            return Task.FromResult(new LdapOrganizationalUnitSearchResult(
+                Array.Empty<SetupOrganizationalUnitListItem>(),
+                false));
+        }
+
+        var search = request.Search?.Trim();
+        if (!string.IsNullOrWhiteSpace(search) && search.Length < SetupConstants.MinOuSearchLength)
+        {
+            return Task.FromResult(new LdapOrganizationalUnitSearchResult(
+                Array.Empty<SetupOrganizationalUnitListItem>(),
+                false));
+        }
+
+        try
+        {
+            var bindIdentity = BuildBindIdentity(request.BindUserName, request.BindUserDomain);
+            if (string.IsNullOrWhiteSpace(bindIdentity))
+            {
+                return Task.FromResult(new LdapOrganizationalUnitSearchResult(
+                    Array.Empty<SetupOrganizationalUnitListItem>(),
+                    false));
+            }
+
+            using var connection = CreateConnection(request.Host, bindIdentity, request.BindPassword);
+            try
+            {
+                connection.Bind();
+            }
+            catch (LdapException)
+            {
+                return Task.FromResult(new LdapOrganizationalUnitSearchResult(
+                    Array.Empty<SetupOrganizationalUnitListItem>(),
+                    false));
+            }
+
+            var searchBase = string.IsNullOrWhiteSpace(request.ParentDistinguishedName)
+                ? request.BaseDn.Trim()
+                : request.ParentDistinguishedName.Trim();
+
+            var baseResult = TryResolveLdapSearchBase(connection, searchBase, BaseDnCouldNotBeResolvedMessage);
+            if (!baseResult.IsValid)
+            {
+                return Task.FromResult(new LdapOrganizationalUnitSearchResult(
+                    Array.Empty<SetupOrganizationalUnitListItem>(),
+                    false));
+            }
+
+            var filter = BuildOrganizationalUnitSearchFilter(search);
+            var scope = string.IsNullOrWhiteSpace(search) ? SearchScope.OneLevel : SearchScope.Subtree;
+            var maxResults = request.MaxResults > 0 ? request.MaxResults : SetupConstants.MaxOuSearchResults;
+            var fetchLimit = maxResults + 1;
+
+            var searchRequest = new SearchRequest(
+                searchBase,
+                filter,
+                scope,
+                "distinguishedName",
+                "displayName",
+                "name",
+                "ou")
+            {
+                SizeLimit = fetchLimit,
+                TimeLimit = LdapOperationTimeout
+            };
+
+            SearchResponse searchResponse;
+            try
+            {
+                searchResponse = (SearchResponse)connection.SendRequest(searchRequest);
+            }
+            catch (LdapException)
+            {
+                return Task.FromResult(new LdapOrganizationalUnitSearchResult(
+                    Array.Empty<SetupOrganizationalUnitListItem>(),
+                    false));
+            }
+
+            var collected = new List<SetupOrganizationalUnitListItem>(maxResults);
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (SearchResultEntry entry in searchResponse.Entries)
+            {
+                if (collected.Count >= maxResults)
+                {
+                    break;
+                }
+
+                if (!TryMapOrganizationalUnit(entry, out var item))
+                {
+                    continue;
+                }
+
+                if (!seen.Add(item.DistinguishedName))
+                {
+                    continue;
+                }
+
+                collected.Add(item);
+            }
+
+            var hasMore = searchResponse.Entries.Count > maxResults || collected.Count >= maxResults;
+            return Task.FromResult(new LdapOrganizationalUnitSearchResult(collected, hasMore));
+        }
+        catch (Exception exception) when (IsLikelyLdapNetworkTimeout(exception))
+        {
+            return Task.FromResult(new LdapOrganizationalUnitSearchResult(
+                Array.Empty<SetupOrganizationalUnitListItem>(),
+                false));
+        }
+        catch (Exception ex)
+        {
+            LogUnexpectedLdapFailure(ex);
+            return Task.FromResult(new LdapOrganizationalUnitSearchResult(
+                Array.Empty<SetupOrganizationalUnitListItem>(),
+                false));
+        }
+    }
+
+    private static string BuildOrganizationalUnitSearchFilter(string? search)
+    {
+        if (string.IsNullOrWhiteSpace(search))
+        {
+            return "(objectClass=organizationalUnit)";
+        }
+
+        var escaped = AdLdapFilterHelper.EscapeFilterValue(search.Trim());
+        return
+            $"(&(objectClass=organizationalUnit)(|(displayName=*{escaped}*)(name=*{escaped}*)(ou=*{escaped}*)(distinguishedName=*{escaped}*)))";
+    }
+
+    private static bool TryMapOrganizationalUnit(
+        SearchResultEntry entry,
+        out SetupOrganizationalUnitListItem item)
+    {
+        item = null!;
+        var distinguishedName = GetFirstString(TryGetDirectoryAttribute(entry, "distinguishedName"));
+        if (string.IsNullOrWhiteSpace(distinguishedName))
+        {
+            distinguishedName = entry.DistinguishedName;
+        }
+
+        if (string.IsNullOrWhiteSpace(distinguishedName))
+        {
+            return false;
+        }
+
+        var displayName = GetFirstString(TryGetDirectoryAttribute(entry, "displayName"));
+        var name = GetFirstString(TryGetDirectoryAttribute(entry, "name"));
+        var ou = GetFirstString(TryGetDirectoryAttribute(entry, "ou"));
+        item = new SetupOrganizationalUnitListItem(
+            distinguishedName,
+            name,
+            displayName,
+            ou,
+            AdOrganizationalUnitLabelBuilder.Build(distinguishedName, displayName, name, ou));
+        return true;
     }
 
     private static DirectoryAttribute? TryGetDirectoryAttribute(SearchResultEntry entry, string attributeName)

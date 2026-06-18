@@ -355,6 +355,148 @@ public sealed class SetupServiceTests
         Assert.DoesNotContain("bindpw", user.DisplayName, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task CompleteSetupAsync_PersistsEmptyUserSearchBase_NotBaseDn()
+    {
+        await using var context = CreateDbContext();
+        var ldap = CreateSuccessfulLdapFake();
+        ldap.ResolveUserProfile = _ => new LdapUserProfile("obj-empty-usb", "plain", "Plain User", null);
+
+        var service = CreateSetupService(context, ldap, "setup-secret");
+        var request = CreateMinimalCompleteRequest("setup-secret", ["plain"]);
+
+        var result = await service.CompleteSetupAsync(request);
+
+        Assert.True(result.IsCompleted);
+        var ldapSetting = await context.LdapSettings.SingleAsync();
+        Assert.Equal(string.Empty, ldapSetting.UserSearchBase);
+        Assert.NotEqual(ldapSetting.BaseDn, ldapSetting.UserSearchBase);
+    }
+
+    [Fact]
+    public async Task SearchOrganizationalUnitsAsync_ReturnsEmptyList_WhenSearchShorterThanMinimum()
+    {
+        await using var context = CreateDbContext();
+        var ldap = CreateSuccessfulLdapFake();
+        var service = CreateSetupService(context, ldap, "setup-secret");
+
+        var result = await service.SearchOrganizationalUnitsAsync(
+            new SearchSetupOrganizationalUnitsRequest(
+                "setup-secret",
+                CreateMinimalLdapSettings(),
+                "a",
+                null),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Empty(result.Items);
+        Assert.Equal(0, ldap.SearchOrganizationalUnitsCallCount);
+    }
+
+    [Fact]
+    public async Task SearchOrganizationalUnitsAsync_ReturnsFailure_WhenSetupKeyInvalid()
+    {
+        await using var context = CreateDbContext();
+        var ldap = CreateSuccessfulLdapFake();
+        var service = CreateSetupService(context, ldap, "setup-secret");
+
+        var result = await service.SearchOrganizationalUnitsAsync(
+            new SearchSetupOrganizationalUnitsRequest(
+                "wrong-key",
+                CreateMinimalLdapSettings(),
+                null,
+                null),
+            CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal("Invalid setup key.", result.ErrorMessage);
+        Assert.Equal(0, ldap.SearchOrganizationalUnitsCallCount);
+    }
+
+    [Fact]
+    public async Task SearchOrganizationalUnitsAsync_ReturnsFailure_WhenLdapSettingsInvalid()
+    {
+        await using var context = CreateDbContext();
+        var ldap = CreateSuccessfulLdapFake();
+        var service = CreateSetupService(context, ldap, "setup-secret");
+
+        var invalidLdap = CreateMinimalLdapSettings() with { BindPassword = string.Empty };
+        var result = await service.SearchOrganizationalUnitsAsync(
+            new SearchSetupOrganizationalUnitsRequest(
+                "setup-secret",
+                invalidLdap,
+                null,
+                null),
+            CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal("Invalid LDAP settings.", result.ErrorMessage);
+        Assert.Equal(0, ldap.SearchOrganizationalUnitsCallCount);
+    }
+
+    [Fact]
+    public async Task SearchOrganizationalUnitsAsync_WithEmptySearch_DelegatesToLdapService()
+    {
+        await using var context = CreateDbContext();
+        var ldap = CreateSuccessfulLdapFake();
+        ldap.SearchOrganizationalUnitsResult = new LdapOrganizationalUnitSearchResult(
+        [
+            new SetupOrganizationalUnitListItem(
+                "OU=Users,DC=test,DC=local",
+                "Users",
+                "Users",
+                "Users",
+                "Users"),
+        ],
+        false);
+
+        var service = CreateSetupService(context, ldap, "setup-secret");
+        var result = await service.SearchOrganizationalUnitsAsync(
+            new SearchSetupOrganizationalUnitsRequest(
+                "setup-secret",
+                CreateMinimalLdapSettings(),
+                null,
+                null),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Single(result.Items);
+        Assert.Equal(1, ldap.SearchOrganizationalUnitsCallCount);
+        Assert.Null(ldap.LastSearchOrganizationalUnitsRequest!.Search);
+    }
+
+    [Fact]
+    public async Task SearchOrganizationalUnitsAsync_DoesNotReturnSecrets()
+    {
+        await using var context = CreateDbContext();
+        var ldap = CreateSuccessfulLdapFake();
+        ldap.SearchOrganizationalUnitsResult = new LdapOrganizationalUnitSearchResult(
+        [
+            new SetupOrganizationalUnitListItem(
+                "OU=Users,DC=test,DC=local",
+                "Users",
+                "Users",
+                "Users",
+                "Users"),
+        ],
+        false);
+
+        var service = CreateSetupService(context, ldap, "setup-secret");
+        var result = await service.SearchOrganizationalUnitsAsync(
+            new SearchSetupOrganizationalUnitsRequest(
+                "setup-secret",
+                CreateMinimalLdapSettings(),
+                "user",
+                null),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        var item = Assert.Single(result.Items);
+        var serialized = System.Text.Json.JsonSerializer.Serialize(item);
+        Assert.DoesNotContain("bindpw", serialized, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("setup-secret", serialized, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static FakeLdapService CreateSuccessfulLdapFake()
     {
         return new FakeLdapService
@@ -410,7 +552,6 @@ public sealed class SetupServiceTests
             Name: "Default LDAP",
             Host: "dc01.test",
             BaseDn: "DC=test,DC=local",
-            UserSearchBase: "OU=Users,DC=test,DC=local",
             UserSearchFilter: "(&(objectClass=user)(sAMAccountName={0}))",
             BindUserName: "bind",
             BindUserDomain: null,

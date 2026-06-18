@@ -90,4 +90,18 @@ public sealed class FakeLdapService : ILdapService
     public LdapUserLookupRequest? LastSearchUsersRequest { get; private set; }
     public IReadOnlyCollection<LdapUserLookupItem> SearchUsersResult { get; set; } =
         Array.Empty<LdapUserLookupItem>();
+
+    public int SearchOrganizationalUnitsCallCount { get; private set; }
+    public LdapOrganizationalUnitSearchRequest? LastSearchOrganizationalUnitsRequest { get; private set; }
+    public LdapOrganizationalUnitSearchResult SearchOrganizationalUnitsResult { get; set; } =
+        new(Array.Empty<SetupOrganizationalUnitListItem>(), false);
+
+    public Task<LdapOrganizationalUnitSearchResult> SearchOrganizationalUnitsAsync(
+        LdapOrganizationalUnitSearchRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        SearchOrganizationalUnitsCallCount++;
+        LastSearchOrganizationalUnitsRequest = request;
+        return Task.FromResult(SearchOrganizationalUnitsResult);
+    }
 }

@@ -103,6 +103,46 @@ public sealed class SetupController(
         return Ok(new SearchSetupAdminUsersResponse(users));
     }
 
+    [HttpPost("search-organizational-units")]
+    public async Task<ActionResult<SearchSetupOrganizationalUnitsResponse>> SearchOrganizationalUnits(
+        [FromBody] SearchSetupOrganizationalUnitsRequest? request,
+        CancellationToken cancellationToken)
+    {
+        var isSetupRequired = await setupService.IsSetupRequiredAsync(cancellationToken);
+        if (!isSetupRequired)
+        {
+            return StatusCode(
+                StatusCodes.Status403Forbidden,
+                new { messageKey = SetupApiMessageKeys.Validation.SetupAlreadyCompleted });
+        }
+
+        if (!SetupControllerRequestMapper.TryMapSearchOrganizationalUnitsRequest(
+                request,
+                out var mappedRequest,
+                out var messageKey))
+        {
+            return BadRequest(new { messageKey });
+        }
+
+        var result = await setupService.SearchOrganizationalUnitsAsync(mappedRequest, cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return BadRequest(new { message = result.ErrorMessage });
+        }
+
+        var items = result.Items
+            .Select(item => new SetupOrganizationalUnitListItemResponse(
+                item.DistinguishedName,
+                item.Name,
+                item.DisplayName,
+                item.Ou,
+                item.Label))
+            .ToList();
+
+        return Ok(new SearchSetupOrganizationalUnitsResponse(items, result.HasMore));
+    }
+
     [HttpPost("complete")]
     public async Task<ActionResult<CompleteSetupResponse>> CompleteSetup(
         [FromBody] CompleteSetupRequest? request,

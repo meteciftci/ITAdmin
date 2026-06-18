@@ -23,4 +23,8 @@ public interface ILdapService
     Task<IReadOnlyCollection<LdapUserLookupItem>> SearchUsersAsync(
         LdapUserLookupRequest request,
         CancellationToken cancellationToken = default);
+
+    Task<LdapOrganizationalUnitSearchResult> SearchOrganizationalUnitsAsync(
+        LdapOrganizationalUnitSearchRequest request,
+        CancellationToken cancellationToken = default);
 }

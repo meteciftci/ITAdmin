@@ -20,7 +20,6 @@ export type CompleteSetupLdapRequest = {
   name: string;
   host: string;
   baseDn: string;
-  userSearchBase: string;
   userSearchFilter: string;
   bindUserName: string;
   bindUserDomain?: string | null;
@@ -64,7 +63,6 @@ export type ValidateSetupLdapRequest = {
   setupKey: string;
   host: string;
   baseDn: string;
-  userSearchBase: string;
   userSearchFilter: string;
   bindUserName: string;
   bindUserDomain?: string | null;
@@ -94,6 +92,26 @@ export type SearchSetupAdminUsersResponse = {
   users: SetupAdminUserSearchResultResponse[];
 };
 
+export type SearchSetupOrganizationalUnitsRequest = {
+  setupKey: string;
+  ldap: CompleteSetupLdapRequest;
+  search?: string | null;
+  parentDistinguishedName?: string | null;
+};
+
+export type SetupOrganizationalUnitListItemResponse = {
+  distinguishedName: string;
+  name?: string | null;
+  displayName?: string | null;
+  ou?: string | null;
+  label: string;
+};
+
+export type SearchSetupOrganizationalUnitsResponse = {
+  items: SetupOrganizationalUnitListItemResponse[];
+  hasMore: boolean;
+};
+
 export const getSetupStatus = async (): Promise<SetupStatusResponse> => {
   const { data } = await apiClient.get<SetupStatusResponse>("/setup/status");
   return data;
@@ -116,6 +134,16 @@ export const searchSetupAdminUsers = async (
 ): Promise<SearchSetupAdminUsersResponse> => {
   const { data } = await apiClient.post<SearchSetupAdminUsersResponse>(
     "/setup/search-admin-users",
+    request,
+  );
+  return data;
+};
+
+export const searchSetupOrganizationalUnits = async (
+  request: SearchSetupOrganizationalUnitsRequest,
+): Promise<SearchSetupOrganizationalUnitsResponse> => {
+  const { data } = await apiClient.post<SearchSetupOrganizationalUnitsResponse>(
+    "/setup/search-organizational-units",
     request,
   );
   return data;

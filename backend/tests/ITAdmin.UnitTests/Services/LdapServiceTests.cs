@@ -118,4 +118,41 @@ public sealed class LdapServiceTests
 
         Assert.Empty(result);
     }
+
+    [Fact]
+    public async Task ValidateSearchBasesAsync_WhenUserSearchBaseEmpty_SkipsUserSearchBaseValidation()
+    {
+        var service = new LdapService(NullLogger<LdapService>.Instance);
+        var request = new LdapSearchBasesValidationRequest
+        {
+            Host = string.Empty,
+            BaseDn = BaseDn,
+            UserSearchBase = string.Empty,
+            BindUserName = "bind",
+            BindPassword = "bindpw",
+        };
+
+        var result = await service.ValidateSearchBasesAsync(request);
+
+        Assert.False(result.IsValid);
+    }
+
+    [Fact]
+    public async Task GetUserProfileAsync_WhenUserSearchBaseEmpty_UsesBaseDnFallbackWithoutConnecting()
+    {
+        var service = new LdapService(NullLogger<LdapService>.Instance);
+        var request = new LdapUserProfileRequest(
+            Host: string.Empty,
+            BaseDn: BaseDn,
+            UserSearchBase: string.Empty,
+            UserSearchFilter: UserSearchFilter,
+            BindUserName: "bind",
+            BindUserDomain: null,
+            BindPassword: "bindpw",
+            UserName: "admin");
+
+        var result = await service.GetUserProfileAsync(request);
+
+        Assert.Null(result);
+    }
 }

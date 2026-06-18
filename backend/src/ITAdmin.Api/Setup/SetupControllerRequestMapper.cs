@@ -86,12 +86,39 @@ internal static class SetupControllerRequestMapper
         return true;
     }
 
+    public static bool TryMapSearchOrganizationalUnitsRequest(
+        SearchSetupOrganizationalUnitsRequest? request,
+        out AppModels.SearchSetupOrganizationalUnitsRequest mapped,
+        out string messageKey)
+    {
+        mapped = default!;
+        messageKey = SetupApiMessageKeys.Validation.InvalidRequestBody;
+
+        if (request is null)
+        {
+            return false;
+        }
+
+        if (request.Ldap is null)
+        {
+            messageKey = SetupApiMessageKeys.Validation.InvalidLdapSettings;
+            return false;
+        }
+
+        mapped = new AppModels.SearchSetupOrganizationalUnitsRequest(
+            request.SetupKey ?? string.Empty,
+            MapLdapSettings(request.Ldap),
+            request.Search,
+            request.ParentDistinguishedName);
+
+        return true;
+    }
+
     private static AppModels.CompleteSetupLdapSettings MapLdapSettings(CompleteSetupLdapSettingsRequest ldap) =>
         new(
             ldap.Name ?? string.Empty,
             ldap.Host ?? string.Empty,
             ldap.BaseDn ?? string.Empty,
-            ldap.UserSearchBase ?? string.Empty,
             ldap.UserSearchFilter ?? string.Empty,
             ldap.BindUserName ?? string.Empty,
             ldap.BindUserDomain,
@@ -102,7 +129,6 @@ internal static class SetupControllerRequestMapper
             Name: "Default LDAP",
             request.Host ?? string.Empty,
             request.BaseDn ?? string.Empty,
-            request.UserSearchBase ?? string.Empty,
             request.UserSearchFilter ?? string.Empty,
             request.BindUserName ?? string.Empty,
             request.BindUserDomain,

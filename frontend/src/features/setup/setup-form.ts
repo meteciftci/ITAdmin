@@ -15,43 +15,76 @@ export type SetupLdapFormValues = {
   name: string;
   host: string;
   baseDn: string;
-  userSearchBase: string;
   userSearchFilter: string;
   bindUserName: string;
   bindUserDomain: string;
   bindPassword: string;
 };
 
-export type SetupAdminFormValues = {
-  userName: string;
+export type SetupOuSelection = {
+  distinguishedName: string;
+  label: string;
 };
 
-export type SetupFormValues = {
+export type SetupAdManagementFormValues = {
+  isEnabled: boolean;
+  usersSearchBase: SetupOuSelection | null;
+  groupsSearchBase: SetupOuSelection | null;
+  computersSearchBase: SetupOuSelection | null;
+  defaultUserOu: SetupOuSelection | null;
+  defaultGroupOu: SetupOuSelection | null;
+  defaultComputerOu: SetupOuSelection | null;
+  deletedObjectsEnabled: boolean;
+};
+
+export type SetupModulesFormValues = {
+  adManagement: SetupAdManagementFormValues;
+};
+
+export type SetupAdminUserSelection = {
+  userName: string;
+  displayName: string;
+  email?: string | null;
+  distinguishedName?: string | null;
+  directoryObjectId?: string | null;
+};
+
+export type SetupWizardFormValues = {
   setupKey: string;
   ldap: SetupLdapFormValues;
-  admin: SetupAdminFormValues;
+  modules: SetupModulesFormValues;
+  adminUsers: SetupAdminUserSelection[];
 };
 
-/**
- * Builds the initial setup form state. The default connection name is supplied
- * by the caller so it can be sourced from the i18n locale rather than hard-coded.
- */
-export function createDefaultSetupFormValues(defaultConnectionName: string): SetupFormValues {
+export function createDefaultAdManagementFormValues(): SetupAdManagementFormValues {
+  return {
+    isEnabled: false,
+    usersSearchBase: null,
+    groupsSearchBase: null,
+    computersSearchBase: null,
+    defaultUserOu: null,
+    defaultGroupOu: null,
+    defaultComputerOu: null,
+    deletedObjectsEnabled: false,
+  };
+}
+
+export function createDefaultSetupFormValues(defaultConnectionName: string): SetupWizardFormValues {
   return {
     setupKey: "",
     ldap: {
       name: defaultConnectionName,
       host: "",
       baseDn: "",
-      userSearchBase: "",
       userSearchFilter: DEFAULT_USER_SEARCH_FILTER,
       bindUserName: "",
       bindUserDomain: "",
       bindPassword: "",
     },
-    admin: {
-      userName: "",
+    modules: {
+      adManagement: createDefaultAdManagementFormValues(),
     },
+    adminUsers: [],
   };
 }
 
@@ -60,14 +93,20 @@ function emptyToNull(value: string): string | null {
   return trimmed.length === 0 ? null : trimmed;
 }
 
-export function buildCompleteSetupLdapPayload(
-  ldap: SetupLdapFormValues,
-): CompleteSetupLdapRequest {
+function ouToPayload(selection: SetupOuSelection | null): string | null {
+  if (!selection) {
+    return null;
+  }
+
+  const dn = selection.distinguishedName.trim();
+  return dn.length === 0 ? null : dn;
+}
+
+export function buildCompleteSetupLdapPayload(ldap: SetupLdapFormValues): CompleteSetupLdapRequest {
   return {
-    name: ldap.name.trim(),
+    name: ldap.name.trim() || "Default LDAP",
     host: ldap.host.trim(),
     baseDn: ldap.baseDn.trim(),
-    userSearchBase: ldap.userSearchBase.trim(),
     userSearchFilter: ldap.userSearchFilter.trim(),
     bindUserName: ldap.bindUserName.trim(),
     bindUserDomain: emptyToNull(ldap.bindUserDomain),
@@ -75,31 +114,82 @@ export function buildCompleteSetupLdapPayload(
   };
 }
 
-function buildDefaultModulesPayload(): CompleteSetupModulesRequest {
+export function buildCompleteSetupModulesPayload(
+  modules: SetupModulesFormValues,
+): CompleteSetupModulesRequest {
+  const adManagement = modules.adManagement;
   return {
     adManagement: {
-      isEnabled: false,
-      deletedObjectsEnabled: false,
+      isEnabled: adManagement.isEnabled,
+      usersSearchBase: adManagement.isEnabled ? ouToPayload(adManagement.usersSearchBase) : null,
+      groupsSearchBase: adManagement.isEnabled ? ouToPayload(adManagement.groupsSearchBase) : null,
+      computersSearchBase: adManagement.isEnabled ? ouToPayload(adManagement.computersSearchBase) : null,
+      defaultUserOu: adManagement.isEnabled ? ouToPayload(adManagement.defaultUserOu) : null,
+      defaultGroupOu: adManagement.isEnabled ? ouToPayload(adManagement.defaultGroupOu) : null,
+      defaultComputerOu: adManagement.isEnabled ? ouToPayload(adManagement.defaultComputerOu) : null,
+      deletedObjectsEnabled: adManagement.deletedObjectsEnabled,
     },
   };
 }
 
-function buildAdminUsersPayload(admin: SetupAdminFormValues): CompleteSetupAdminUserRequest[] {
-  const userName = admin.userName.trim();
-  if (userName.length === 0) {
-    return [];
-  }
-
-  return [{ userName }];
+export function buildAdminUsersPayload(
+  adminUsers: SetupAdminUserSelection[],
+): CompleteSetupAdminUserRequest[] {
+  return adminUsers.map((user) => ({
+    userName: user.userName.trim(),
+    distinguishedName: emptyToNull(user.distinguishedName ?? ""),
+    directoryObjectId: emptyToNull(user.directoryObjectId ?? ""),
+  }));
 }
 
-export function buildCompleteSetupRequest(values: SetupFormValues): CompleteSetupRequest {
+export function buildCompleteSetupRequest(values: SetupWizardFormValues): CompleteSetupRequest {
   return {
     setupKey: values.setupKey,
     ldap: buildCompleteSetupLdapPayload(values.ldap),
-    modules: buildDefaultModulesPayload(),
-    adminUsers: buildAdminUsersPayload(values.admin),
+    modules: buildCompleteSetupModulesPayload(values.modules),
+    adminUsers: buildAdminUsersPayload(values.adminUsers),
   };
+}
+
+export function isLdapFormComplete(ldap: SetupLdapFormValues): boolean {
+  return (
+    ldap.host.trim().length > 0 &&
+    ldap.baseDn.trim().length > 0 &&
+    ldap.userSearchFilter.trim().length > 0 &&
+    ldap.bindUserName.trim().length > 0 &&
+    ldap.bindPassword.trim().length > 0
+  );
+}
+
+export function isAdManagementModuleValid(modules: SetupModulesFormValues): boolean {
+  const adManagement = modules.adManagement;
+  if (!adManagement.isEnabled) {
+    return true;
+  }
+
+  return (
+    adManagement.usersSearchBase !== null &&
+    adManagement.groupsSearchBase !== null &&
+    adManagement.computersSearchBase !== null
+  );
+}
+
+export function canAddAdminUser(
+  adminUsers: SetupAdminUserSelection[],
+  candidate: SetupAdminUserSelection,
+): boolean {
+  const normalizedUserName = candidate.userName.trim().toUpperCase();
+  const normalizedObjectId = candidate.directoryObjectId?.trim();
+
+  if (normalizedObjectId) {
+    return !adminUsers.some(
+      (user) => user.directoryObjectId?.trim().toLowerCase() === normalizedObjectId.toLowerCase(),
+    );
+  }
+
+  return !adminUsers.some(
+    (user) => user.userName.trim().toUpperCase() === normalizedUserName,
+  );
 }
 
 export function resolveResponseMessage(message: string | undefined, fallback: string): string {
@@ -129,4 +219,14 @@ export function mapCompleteSetupFailureToast(
     return hints.ldapTimeoutHint;
   }
   return trimmed.length > 0 ? trimmed : hints.genericFallback;
+}
+
+export function summaryContainsSecrets(summaryText: string): boolean {
+  const lowered = summaryText.toLowerCase();
+  return (
+    lowered.includes("setup key") ||
+    lowered.includes("bind password") ||
+    lowered.includes("jwt") ||
+    lowered.includes("connection string")
+  );
 }
