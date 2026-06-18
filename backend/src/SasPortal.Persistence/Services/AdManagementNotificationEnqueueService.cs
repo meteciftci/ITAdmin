@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net.Mail;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using SasPortal.Application.Abstractions.Notifications;
 using SasPortal.Application.Abstractions.Services;
 using SasPortal.Application.Common.AdManagement;
@@ -16,7 +17,8 @@ namespace SasPortal.Persistence.Services;
 public sealed partial class AdManagementNotificationEnqueueService(
     AppDbContext context,
     INotificationOutboxService outboxService,
-    INotificationTemplateRenderer templateRenderer) : IAdManagementNotificationEnqueueService
+    INotificationTemplateRenderer templateRenderer,
+    ILogger<AdManagementNotificationEnqueueService> logger) : IAdManagementNotificationEnqueueService
 {
     private const string DefaultApplicationName = "SAS-Portal";
 
@@ -121,8 +123,13 @@ public sealed partial class AdManagementNotificationEnqueueService(
                 messages.AddRange(channelResult.Messages);
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            logger.LogWarning(
+                ex,
+                "AD management notification enqueue failed. EventKey={EventKey} RelatedEntityId={RelatedEntityId}",
+                eventKey,
+                relatedEntityId);
             messages.Add("Notification enqueue failed.");
             skippedCount += 1;
         }
@@ -265,8 +272,9 @@ public sealed partial class AdManagementNotificationEnqueueService(
                 _ = new MailAddress(recipient);
                 return true;
             }
-            catch
+            catch (FormatException)
             {
+                // MailAddress rejects some valid-enough values; fall back to regex validation.
                 return EmailPattern().IsMatch(recipient);
             }
         }

@@ -315,8 +315,9 @@ public sealed partial class AdUserDirectoryService : IAdComputerOuMoveService
                 AdDirectoryFailureKind.ConnectionFailed,
                 cancellationToken);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            LogUnexpectedDirectoryFailure(ex);
             return await FailComputerOuMoveAsync(
         request,
                 auditAction,

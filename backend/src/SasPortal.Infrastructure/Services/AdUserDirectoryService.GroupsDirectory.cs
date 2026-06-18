@@ -155,8 +155,9 @@ public sealed partial class AdUserDirectoryService : IAdGroupDirectoryService
         {
             return GroupListConnectionFailed();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            LogUnexpectedDirectoryFailure(ex);
             return GroupListConnectionFailed();
         }
     }
@@ -232,8 +233,9 @@ public sealed partial class AdUserDirectoryService : IAdGroupDirectoryService
         {
             return GroupDetailConnectionFailed();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            LogUnexpectedDirectoryFailure(ex);
             return GroupDetailConnectionFailed();
         }
     }
@@ -467,6 +469,7 @@ public sealed partial class AdUserDirectoryService : IAdGroupDirectoryService
         }
         catch (Exception)
         {
+            // Unexpected member lookup failure falls back to DN-only metadata.
             return BuildMemberFallback(trimmedDn);
         }
     }

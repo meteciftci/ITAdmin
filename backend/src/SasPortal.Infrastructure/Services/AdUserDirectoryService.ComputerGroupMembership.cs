@@ -136,8 +136,9 @@ public sealed partial class AdUserDirectoryService : IAdComputerGroupMembershipS
                 AdManagementApiMessageKeys.Groups.QueryFailed,
                 AdDirectoryFailureKind.ConnectionFailed);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            LogUnexpectedDirectoryFailure(ex);
             return ConnectionFailedComputerGroupMembership(
                 request.ComputerId,
                 AdManagementApiMessageKeys.Groups.QueryFailed,
@@ -251,8 +252,9 @@ public sealed partial class AdUserDirectoryService : IAdComputerGroupMembershipS
         {
             return ComputerGroupSearchConnectionFailed();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            LogUnexpectedDirectoryFailure(ex);
             return ComputerGroupSearchConnectionFailed();
         }
     }
@@ -520,8 +522,9 @@ public sealed partial class AdUserDirectoryService : IAdComputerGroupMembershipS
                 AdDirectoryFailureKind.ConnectionFailed,
                 cancellationToken);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            LogUnexpectedDirectoryFailure(ex);
             return await FailComputerGroupOperationAsync(
         request,
                 operationType,

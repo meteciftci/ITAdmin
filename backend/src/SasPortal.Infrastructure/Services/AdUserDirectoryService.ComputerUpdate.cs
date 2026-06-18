@@ -229,8 +229,9 @@ public sealed partial class AdUserDirectoryService : IAdComputerUpdateService
                 AdDirectoryFailureKind.ConnectionFailed,
                 cancellationToken);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            LogUnexpectedDirectoryFailure(ex);
             return await FailComputerUpdateAsync(
         request,
                 auditAction,

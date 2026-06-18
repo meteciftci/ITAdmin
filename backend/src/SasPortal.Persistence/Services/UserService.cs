@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using SasPortal.Application.Abstractions.Security;
 using SasPortal.Application.Abstractions.Services;
 using SasPortal.Application.Common.Models;
@@ -11,7 +12,8 @@ namespace SasPortal.Persistence.Services;
 public sealed class UserService(
     AppDbContext context,
     ILdapService ldapService,
-    ISecretProtector secretProtector) : IUserService
+    ISecretProtector secretProtector,
+    ILogger<UserService> logger) : IUserService
 {
     private const string NationalIdApplicationSettingKey = "Directory:NationalIdAttribute";
     private const int AuditDescriptionMaxLength = 2000;
@@ -123,8 +125,9 @@ public sealed class UserService(
         {
             bindPassword = secretProtector.Unprotect(ldapSetting.EncryptedBindPassword);
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogWarning(ex, "LDAP bind password could not be decrypted for directory lookup.");
             return new UserDirectoryLookupResult(Array.Empty<UserDirectoryLookupItem>());
         }
 
@@ -222,8 +225,9 @@ public sealed class UserService(
             {
                 bindPassword = secretProtector.Unprotect(ldapSetting.EncryptedBindPassword);
             }
-            catch
+            catch (Exception ex)
             {
+                logger.LogWarning(ex, "LDAP bind password could not be decrypted for user creation.");
                 return new CreateUserResult(false, "LDAP settings are not configured.", null);
             }
 
@@ -316,8 +320,9 @@ public sealed class UserService(
 
             return new CreateUserResult(true, string.Empty, MapToDetail(user));
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "User creation failed.");
             return new CreateUserResult(false, "User could not be created.", null);
         }
     }
@@ -400,8 +405,9 @@ public sealed class UserService(
 
             return new UpdateUserStatusResult(true, string.Empty, MapToDetail(user));
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "User status update failed for user {UserId}.", request.UserId);
             return new UpdateUserStatusResult(false, "User status could not be updated.", null);
         }
     }
@@ -551,8 +557,9 @@ public sealed class UserService(
 
             return new UpdateUserRolesResult(true, string.Empty, MapToDetail(user));
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "User roles update failed for user {UserId}.", request.UserId);
             return new UpdateUserRolesResult(false, "User roles could not be updated.", null);
         }
     }

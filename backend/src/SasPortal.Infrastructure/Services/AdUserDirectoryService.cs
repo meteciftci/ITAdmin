@@ -123,8 +123,9 @@ public sealed partial class AdUserDirectoryService(
         {
             return ConnectionFailed();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            LogUnexpectedDirectoryFailure(ex);
             return ConnectionFailed();
         }
     }
@@ -207,8 +208,9 @@ public sealed partial class AdUserDirectoryService(
         {
             return ConnectionFailedDetail();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            LogUnexpectedDirectoryFailure(ex);
             return ConnectionFailedDetail();
         }
     }
@@ -475,8 +477,9 @@ public sealed partial class AdUserDirectoryService(
             objectGuid = new Guid(guidBytes);
             return true;
         }
-        catch
+        catch (Exception)
         {
+            // Invalid objectGUID bytes are treated as missing attribute data.
             return false;
         }
     }
@@ -568,8 +571,9 @@ public sealed partial class AdUserDirectoryService(
         {
             return System.Text.Encoding.UTF8.GetString(bytes).TrimEnd('\0');
         }
-        catch
+        catch (Exception)
         {
+            // Invalid LDAP string encoding falls back to null attribute value.
             return null;
         }
     }

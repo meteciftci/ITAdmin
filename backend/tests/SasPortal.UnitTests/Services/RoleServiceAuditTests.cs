@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using SasPortal.Application.Common.Models;
 using SasPortal.Domain.Entities;
 using SasPortal.Persistence.Context;
@@ -13,7 +14,7 @@ public sealed class RoleServiceAuditTests
     public async Task CreateRoleAsync_WritesReadableAuditDescription()
     {
         await using var context = CreateInMemoryDbContext();
-        var service = new RoleService(context);
+        var service = new RoleService(context, Microsoft.Extensions.Logging.Abstractions.NullLogger<RoleService>.Instance);
 
         var result = await service.CreateRoleAsync(new CreateRoleRequest(
             Name: "Helpdesk",
@@ -41,7 +42,7 @@ public sealed class RoleServiceAuditTests
     public async Task CreateRoleAsync_TruncatesAuditIpAddressAndUserAgent()
     {
         await using var context = CreateInMemoryDbContext();
-        var service = new RoleService(context);
+        var service = new RoleService(context, Microsoft.Extensions.Logging.Abstractions.NullLogger<RoleService>.Instance);
 
         var longIp = $"  {new string('1', 70)}  ";
         var longAgent = $"  {new string('b', 1030)}  ";
@@ -73,7 +74,7 @@ public sealed class RoleServiceAuditTests
         await using var context = dbContext;
 
         var role = await SeedRoleAsync(context, "Helpdesk", "Helpdesk", "old", true);
-        var service = new RoleService(context);
+        var service = new RoleService(context, Microsoft.Extensions.Logging.Abstractions.NullLogger<RoleService>.Instance);
 
         var result = await service.UpdateRoleAsync(new UpdateRoleRequest(
             RoleId: role.Id,
@@ -104,7 +105,7 @@ public sealed class RoleServiceAuditTests
         await using var context = dbContext;
 
         var role = await SeedRoleAsync(context, "Helpdesk", "Helpdesk", "same", true);
-        var service = new RoleService(context);
+        var service = new RoleService(context, Microsoft.Extensions.Logging.Abstractions.NullLogger<RoleService>.Instance);
 
         var result = await service.UpdateRoleAsync(new UpdateRoleRequest(
             RoleId: role.Id,
@@ -128,7 +129,7 @@ public sealed class RoleServiceAuditTests
         await using var context = dbContext;
 
         var role = await SeedRoleAsync(context, "Helpdesk", "Helpdesk", null, true);
-        var service = new RoleService(context);
+        var service = new RoleService(context, Microsoft.Extensions.Logging.Abstractions.NullLogger<RoleService>.Instance);
 
         var result = await service.UpdateRoleStatusAsync(new UpdateRoleStatusRequest(
             RoleId: role.Id,
@@ -150,7 +151,7 @@ public sealed class RoleServiceAuditTests
         await using var context = dbContext;
 
         var role = await SeedRoleAsync(context, "Helpdesk", "Helpdesk", null, false);
-        var service = new RoleService(context);
+        var service = new RoleService(context, Microsoft.Extensions.Logging.Abstractions.NullLogger<RoleService>.Instance);
 
         var result = await service.UpdateRoleStatusAsync(new UpdateRoleStatusRequest(
             RoleId: role.Id,
@@ -185,7 +186,7 @@ public sealed class RoleServiceAuditTests
         });
         await context.SaveChangesAsync();
 
-        var service = new RoleService(context);
+        var service = new RoleService(context, Microsoft.Extensions.Logging.Abstractions.NullLogger<RoleService>.Instance);
         var result = await service.UpdateRolePermissionsAsync(new UpdateRolePermissionsRequest(
             RoleId: role.Id,
             PermissionIds: [rolesView.Id, auditLogsView.Id],
@@ -228,7 +229,7 @@ public sealed class RoleServiceAuditTests
             });
         await context.SaveChangesAsync();
 
-        var service = new RoleService(context);
+        var service = new RoleService(context, Microsoft.Extensions.Logging.Abstractions.NullLogger<RoleService>.Instance);
         var result = await service.UpdateRolePermissionsAsync(new UpdateRolePermissionsRequest(
             RoleId: role.Id,
             PermissionIds: [],
@@ -262,7 +263,7 @@ public sealed class RoleServiceAuditTests
         });
         await context.SaveChangesAsync();
 
-        var service = new RoleService(context);
+        var service = new RoleService(context, Microsoft.Extensions.Logging.Abstractions.NullLogger<RoleService>.Instance);
         var result = await service.UpdateRolePermissionsAsync(new UpdateRolePermissionsRequest(
             RoleId: role.Id,
             PermissionIds: [usersView.Id],
@@ -283,7 +284,7 @@ public sealed class RoleServiceAuditTests
         await using var context = dbContext;
 
         var role = await SeedRoleAsync(context, "Helpdesk", "Helpdesk", null, true);
-        var service = new RoleService(context);
+        var service = new RoleService(context, Microsoft.Extensions.Logging.Abstractions.NullLogger<RoleService>.Instance);
 
         var result = await service.UpdateRolePermissionsAsync(new UpdateRolePermissionsRequest(
             RoleId: role.Id,

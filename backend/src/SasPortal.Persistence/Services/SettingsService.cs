@@ -265,8 +265,9 @@ public sealed class SettingsService(
             {
                 bindPassword = secretProtector.Unprotect(existing.EncryptedBindPassword);
             }
-            catch
+            catch (Exception ex)
             {
+                logger.LogWarning(ex, "Stored LDAP bind password could not be decrypted for validation.");
                 return new ValidateLdapSettingsResult(false, "LDAP validation could not be completed.");
             }
         }
@@ -716,7 +717,7 @@ public sealed class SettingsService(
             cancellationToken);
 
         await context.SaveChangesAsync(cancellationToken);
-        TryDeleteOldBrandingFile(previousLogoUrl, logoUrl, brandingUploadsFolder);
+        TryDeleteOldBrandingFile(previousLogoUrl, logoUrl, brandingUploadsFolder, "logo");
 
         return new BrandingLogoUploadResult(logoUrl);
     }
@@ -782,7 +783,7 @@ public sealed class SettingsService(
             cancellationToken);
 
         await context.SaveChangesAsync(cancellationToken);
-        TryDeleteOldBrandingFile(previousFaviconUrl, faviconUrl, brandingUploadsFolder);
+        TryDeleteOldBrandingFile(previousFaviconUrl, faviconUrl, brandingUploadsFolder, "favicon");
 
         return new BrandingFaviconUploadResult(faviconUrl);
     }
@@ -1010,7 +1011,11 @@ public sealed class SettingsService(
         return true;
     }
 
-    private static void TryDeleteOldBrandingFile(string? previousUrl, string newUrl, string brandingUploadsFolder)
+    private void TryDeleteOldBrandingFile(
+        string? previousUrl,
+        string newUrl,
+        string brandingUploadsFolder,
+        string assetType)
     {
         var normalizedPrevious = NormalizeNullable(previousUrl);
         if (string.IsNullOrWhiteSpace(normalizedPrevious)
@@ -1031,15 +1036,22 @@ public sealed class SettingsService(
         }
 
         var oldPath = Path.Combine(brandingUploadsFolder, oldFileName);
-        if (File.Exists(oldPath))
+        if (!File.Exists(oldPath))
         {
-            try
-            {
-                File.Delete(oldPath);
-            }
-            catch
-            {
-            }
+            return;
+        }
+
+        try
+        {
+            File.Delete(oldPath);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                ex,
+                "Best-effort branding file cleanup failed. AssetType={AssetType} FileName={FileName}",
+                assetType,
+                oldFileName);
         }
     }
 

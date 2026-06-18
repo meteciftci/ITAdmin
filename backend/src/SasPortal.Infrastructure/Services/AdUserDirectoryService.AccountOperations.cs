@@ -173,8 +173,9 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
                 cancellationToken,
                 ex);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            LogUnexpectedDirectoryFailure(ex, request.ActorUserId);
             return await FailAccountOperationAsync(
         request,
                 operationType,
@@ -312,8 +313,9 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
                 cancellationToken,
                 ex);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            LogUnexpectedDirectoryFailure(ex, request.ActorUserId);
             return await FailAccountOperationAsync(
         request,
                 operationType,
@@ -871,8 +873,9 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountOperationServ
                 new AdManagementAccountOperationNotificationRequest(eventKey, contextWithActor),
                 cancellationToken);
         }
-        catch
+        catch (Exception ex)
         {
+            LogBestEffortDirectoryFailure(ex);
             return null;
         }
     }

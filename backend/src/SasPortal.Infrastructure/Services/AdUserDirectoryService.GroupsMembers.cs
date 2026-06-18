@@ -170,8 +170,9 @@ public sealed partial class AdUserDirectoryService
         {
             return GroupMembersListConnectionFailed();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            LogUnexpectedDirectoryFailure(ex);
             return GroupMembersListConnectionFailed();
         }
     }
@@ -267,8 +268,9 @@ public sealed partial class AdUserDirectoryService
         {
             return MemberCandidatesConnectionFailed();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            LogUnexpectedDirectoryFailure(ex);
             return MemberCandidatesConnectionFailed();
         }
     }
@@ -527,8 +529,9 @@ public sealed partial class AdUserDirectoryService
                 AdDirectoryFailureKind.ConnectionFailed,
                 cancellationToken);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            LogUnexpectedDirectoryFailure(ex);
             return await FailGroupMemberOperationAsync(
         request,
                 operationType,

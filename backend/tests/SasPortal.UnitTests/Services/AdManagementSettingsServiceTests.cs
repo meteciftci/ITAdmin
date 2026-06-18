@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using SasPortal.Application.Common.AdManagement;
 using SasPortal.Application.Common.Constants;
 using SasPortal.Application.Common.Models;
@@ -721,7 +722,8 @@ public sealed class AdManagementSettingsServiceTests
             context,
             new FakeSecretProtector(),
             new AdOperationLogService(context),
-            validationService ?? new FakeAdManagementValidationService());
+            validationService ?? new FakeAdManagementValidationService(),
+            NullLogger<AdManagementSettingsService>.Instance);
 
     private static AdManagementValidationRequest CreateValidationRequest() =>
         new(

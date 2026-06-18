@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using SasPortal.Application.Common.Models;
 using SasPortal.Application.Common.Security;
 using SasPortal.Domain.Entities;
@@ -22,7 +23,7 @@ public sealed class UserServiceSuperAdminGuardTests
         var user = await SeedPortalUserAsync(context, userName: "only.super", isActive: true);
         await AssignRoleAsync(context, user.Id, superAdminRole.Id);
 
-        var service = new UserService(context, new FakeLdapService(), new FakeSecretProtector());
+        var service = new UserService(context, new FakeLdapService(), new FakeSecretProtector(), Microsoft.Extensions.Logging.Abstractions.NullLogger<UserService>.Instance);
         var result = await service.UpdateUserRolesAsync(new UpdateUserRolesRequest(
             UserId: user.Id,
             RoleIds: [],
@@ -50,7 +51,7 @@ public sealed class UserServiceSuperAdminGuardTests
         await AssignRoleAsync(context, firstSuperAdmin.Id, superAdminRole.Id);
         await AssignRoleAsync(context, secondSuperAdmin.Id, superAdminRole.Id);
 
-        var service = new UserService(context, new FakeLdapService(), new FakeSecretProtector());
+        var service = new UserService(context, new FakeLdapService(), new FakeSecretProtector(), Microsoft.Extensions.Logging.Abstractions.NullLogger<UserService>.Instance);
         var result = await service.UpdateUserRolesAsync(new UpdateUserRolesRequest(
             UserId: firstSuperAdmin.Id,
             RoleIds: [],
@@ -77,7 +78,7 @@ public sealed class UserServiceSuperAdminGuardTests
         await AssignRoleAsync(context, actor.Id, superAdminRole.Id);
         await AssignRoleAsync(context, otherSuperAdmin.Id, superAdminRole.Id);
 
-        var service = new UserService(context, new FakeLdapService(), new FakeSecretProtector());
+        var service = new UserService(context, new FakeLdapService(), new FakeSecretProtector(), Microsoft.Extensions.Logging.Abstractions.NullLogger<UserService>.Instance);
         var result = await service.UpdateUserRolesAsync(new UpdateUserRolesRequest(
             UserId: actor.Id,
             RoleIds: [],
@@ -102,7 +103,7 @@ public sealed class UserServiceSuperAdminGuardTests
         var actor = await SeedPortalUserAsync(context, userName: "last.super", isActive: true);
         await AssignRoleAsync(context, actor.Id, superAdminRole.Id);
 
-        var service = new UserService(context, new FakeLdapService(), new FakeSecretProtector());
+        var service = new UserService(context, new FakeLdapService(), new FakeSecretProtector(), Microsoft.Extensions.Logging.Abstractions.NullLogger<UserService>.Instance);
         var result = await service.UpdateUserRolesAsync(new UpdateUserRolesRequest(
             UserId: actor.Id,
             RoleIds: [],
@@ -130,7 +131,7 @@ public sealed class UserServiceSuperAdminGuardTests
         await AssignRoleAsync(context, activeSuperAdmin.Id, superAdminRole.Id);
         await AssignRoleAsync(context, inactiveSuperAdmin.Id, superAdminRole.Id);
 
-        var service = new UserService(context, new FakeLdapService(), new FakeSecretProtector());
+        var service = new UserService(context, new FakeLdapService(), new FakeSecretProtector(), Microsoft.Extensions.Logging.Abstractions.NullLogger<UserService>.Instance);
         var result = await service.UpdateUserRolesAsync(new UpdateUserRolesRequest(
             UserId: activeSuperAdmin.Id,
             RoleIds: [],
@@ -162,7 +163,7 @@ public sealed class UserServiceSuperAdminGuardTests
         await AssignRoleAsync(context, activeSuperAdmin.Id, superAdminRole.Id);
         await AssignRoleAsync(context, deletedSuperAdmin.Id, superAdminRole.Id);
 
-        var service = new UserService(context, new FakeLdapService(), new FakeSecretProtector());
+        var service = new UserService(context, new FakeLdapService(), new FakeSecretProtector(), Microsoft.Extensions.Logging.Abstractions.NullLogger<UserService>.Instance);
         var result = await service.UpdateUserRolesAsync(new UpdateUserRolesRequest(
             UserId: activeSuperAdmin.Id,
             RoleIds: [],
@@ -188,7 +189,7 @@ public sealed class UserServiceSuperAdminGuardTests
         var inactiveSuperAdmin = await SeedPortalUserAsync(context, userName: "inactive.super", isActive: false);
         await AssignRoleAsync(context, inactiveSuperAdmin.Id, superAdminRole.Id);
 
-        var service = new UserService(context, new FakeLdapService(), new FakeSecretProtector());
+        var service = new UserService(context, new FakeLdapService(), new FakeSecretProtector(), Microsoft.Extensions.Logging.Abstractions.NullLogger<UserService>.Instance);
         var result = await service.UpdateUserRolesAsync(new UpdateUserRolesRequest(
             UserId: inactiveSuperAdmin.Id,
             RoleIds: [],

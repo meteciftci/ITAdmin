@@ -142,8 +142,9 @@ public sealed partial class AdUserDirectoryService
                 maxDepth,
                 AdDirectoryFailureKind.ConnectionFailed);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            LogUnexpectedDirectoryFailure(ex);
             return EffectiveGroupsFailure(
                 AdManagementApiMessageKeys.Users.EffectiveGroupsFailed,
                 request.UserId,

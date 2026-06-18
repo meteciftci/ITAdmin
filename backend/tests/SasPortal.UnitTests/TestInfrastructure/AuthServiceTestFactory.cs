@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using SasPortal.Application.Common.Models;
 using SasPortal.Persistence.Context;
@@ -28,7 +29,8 @@ public static class AuthServiceTestFactory
                 Audience = "unit-tests",
                 AccessTokenMinutes = 30,
                 RefreshTokenDays = 7
-            }));
+            }),
+            NullLogger<AuthService>.Instance);
 
         return new AuthServiceTestContext(connection, dbContext, authService, ldapService, secretProtector, tokenService, settingsService);
     }

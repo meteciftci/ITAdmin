@@ -41,8 +41,9 @@ internal static class NotificationProviderSettingsJson
             var json = secretProtector.Unprotect(protectedJson);
             return DeserializePublic<T>(json);
         }
-        catch
+        catch (Exception)
         {
+            // Corrupt or incompatible protected provider settings are treated as unavailable.
             return null;
         }
     }

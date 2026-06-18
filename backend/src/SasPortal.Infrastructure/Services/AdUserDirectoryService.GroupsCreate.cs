@@ -293,8 +293,9 @@ public sealed partial class AdUserDirectoryService
         {
             return GroupOuConnectionFailed();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            LogUnexpectedDirectoryFailure(ex);
             return GroupOuConnectionFailed();
         }
     }

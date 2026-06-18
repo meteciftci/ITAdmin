@@ -134,8 +134,9 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
         {
             return ConnectionFailedGroupMembership(request.UserId);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            LogUnexpectedDirectoryFailure(ex);
             return ConnectionFailedGroupMembership(request.UserId);
         }
     }
@@ -222,8 +223,9 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
         {
             return GroupSearchConnectionFailed();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            LogUnexpectedDirectoryFailure(ex);
             return GroupSearchConnectionFailed();
         }
     }
@@ -463,8 +465,9 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
                 AdDirectoryFailureKind.ConnectionFailed,
                 cancellationToken);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            LogUnexpectedDirectoryFailure(ex);
             return await FailGroupOperationAsync(
         request,
                 operationType,

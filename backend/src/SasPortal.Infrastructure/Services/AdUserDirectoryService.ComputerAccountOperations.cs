@@ -212,8 +212,9 @@ public sealed partial class AdUserDirectoryService : IAdComputerAccountOperation
                 cancellationToken,
                 ex);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            LogUnexpectedDirectoryFailure(ex);
             return await FailComputerAccountOperationAsync(
         request,
                 operationType,

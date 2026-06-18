@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using SasPortal.Application.Abstractions.Notifications;
+using Microsoft.Extensions.Logging.Abstractions;
 using SasPortal.Application.Abstractions.Services;
 using SasPortal.Application.Common.AdManagement;
 using SasPortal.Application.Common.Constants;
@@ -96,7 +96,8 @@ public sealed class AdManagementNotificationEnqueueServiceTests
         new(
             dbContext,
             outbox,
-            new NotificationTemplateRenderer());
+            new NotificationTemplateRenderer(),
+            NullLogger<AdManagementNotificationEnqueueService>.Instance);
 
     private static AdUserCreatedNotificationEnqueueRequest BuildRequest(
         string? phone = null,

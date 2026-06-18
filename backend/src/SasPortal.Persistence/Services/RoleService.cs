@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 using SasPortal.Application.Abstractions.Services;
 using SasPortal.Application.Common.Models;
@@ -9,7 +10,7 @@ using SasPortal.Persistence.Context;
 
 namespace SasPortal.Persistence.Services;
 
-public sealed class RoleService(AppDbContext context) : IRoleService
+public sealed class RoleService(AppDbContext context, ILogger<RoleService> logger) : IRoleService
 {
     private const int AuditDescriptionMaxLength = 2000;
     private const int AuditIpAddressMaxLength = 64;
@@ -186,8 +187,9 @@ public sealed class RoleService(AppDbContext context) : IRoleService
         {
             return new CreateRoleResult(false, "A role with the same code already exists.", null);
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Role creation failed.");
             return new CreateRoleResult(false, "Role could not be created.", null);
         }
     }
@@ -264,8 +266,9 @@ public sealed class RoleService(AppDbContext context) : IRoleService
 
             return new UpdateRoleResult(true, string.Empty, MapRoleDetail(role));
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Role update failed for role {RoleId}.", request.RoleId);
             return new UpdateRoleResult(false, "Role could not be updated.", null);
         }
     }
@@ -323,8 +326,9 @@ public sealed class RoleService(AppDbContext context) : IRoleService
 
             return new UpdateRoleStatusResult(true, string.Empty, MapRoleDetail(role));
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Role status update failed for role {RoleId}.", request.RoleId);
             return new UpdateRoleStatusResult(false, "Role status could not be updated.", null);
         }
     }
@@ -485,8 +489,9 @@ public sealed class RoleService(AppDbContext context) : IRoleService
 
             return new UpdateRolePermissionsResult(true, string.Empty, MapRoleDetail(role));
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Role permissions update failed for role {RoleId}.", request.RoleId);
             return new UpdateRolePermissionsResult(false, "Role permissions could not be updated.", null);
         }
     }

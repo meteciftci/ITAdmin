@@ -65,8 +65,9 @@ public sealed partial class AdUserDirectoryService
                 connectionResult.Context.Connection.DefaultNamingContext ?? settings.DefaultNamingContext,
                 connectionResult.Context.Connection.BaseDn ?? settings.BaseDn);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            LogUnexpectedDirectoryFailure(ex);
             return BuildDomainOnlyFallback(
                 connectionResult.Context.Connection.DomainFqdn ?? settings.DomainFqdn,
                 connectionResult.Context.Connection.DefaultNamingContext ?? settings.DefaultNamingContext,
@@ -189,6 +190,7 @@ public sealed partial class AdUserDirectoryService
         }
         catch (Exception)
         {
+            // Unexpected LDAP attribute read failure falls back to empty suffix values.
             values = [];
             return false;
         }
@@ -233,6 +235,7 @@ public sealed partial class AdUserDirectoryService
         }
         catch (Exception)
         {
+            // Unexpected rootDSE read failure falls back to null metadata.
             return null;
         }
     }

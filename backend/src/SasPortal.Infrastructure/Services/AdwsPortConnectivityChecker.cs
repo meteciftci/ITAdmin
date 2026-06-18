@@ -1,9 +1,10 @@
 using System.Net.Sockets;
+using Microsoft.Extensions.Logging;
 using SasPortal.Application.Abstractions.Services;
 
 namespace SasPortal.Infrastructure.Services;
 
-public sealed class AdwsPortConnectivityChecker : IAdwsPortConnectivityChecker
+public sealed class AdwsPortConnectivityChecker(ILogger<AdwsPortConnectivityChecker> logger) : IAdwsPortConnectivityChecker
 {
     public async Task<bool> CanConnectAsync(
         string host,
@@ -30,8 +31,13 @@ public sealed class AdwsPortConnectivityChecker : IAdwsPortConnectivityChecker
         {
             return false;
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogWarning(
+                ex,
+                "ADWS port connectivity check failed. Host={Host} Port={Port}",
+                host.Trim(),
+                port);
             return false;
         }
     }

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using SasPortal.Application.Abstractions.Notifications;
 using SasPortal.Application.Abstractions.Security;
 using SasPortal.Application.Abstractions.Services;
@@ -13,7 +14,8 @@ public sealed class NotificationSender(
     AppDbContext context,
     ISecretProtector secretProtector,
     ISmsProviderRegistry smsProviderRegistry,
-    IEmailProviderRegistry emailProviderRegistry) : INotificationSender
+    IEmailProviderRegistry emailProviderRegistry,
+    ILogger<NotificationSender> logger) : INotificationSender
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -96,8 +98,9 @@ public sealed class NotificationSender(
             var json = secretProtector.Unprotect(protectedJson);
             return Deserialize<T>(json);
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogWarning(ex, "Notification provider protected settings could not be decrypted.");
             return null;
         }
     }

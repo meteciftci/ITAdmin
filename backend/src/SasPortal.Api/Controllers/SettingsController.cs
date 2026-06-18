@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using SasPortal.Api.Authorization;
 using SasPortal.Api.Contracts.Settings;
 using SasPortal.Application.Abstractions.Services;
@@ -15,7 +16,8 @@ namespace SasPortal.Api.Controllers;
 [Authorize]
 public sealed class SettingsController(
     ISettingsService settingsService,
-    IWebHostEnvironment webHostEnvironment) : ControllerBase
+    IWebHostEnvironment webHostEnvironment,
+    ILogger<SettingsController> logger) : ControllerBase
 {
     [HttpGet]
     [RequirePermission("Settings.View")]
@@ -407,7 +409,7 @@ public sealed class SettingsController(
         };
     }
 
-    private static bool ValidateImageDimensions(byte[] content, out string message)
+    private bool ValidateImageDimensions(byte[] content, out string message)
     {
         try
         {
@@ -427,14 +429,15 @@ public sealed class SettingsController(
             message = string.Empty;
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogWarning(ex, "Logo image dimension validation failed.");
             message = "Logo image could not be validated.";
             return false;
         }
     }
 
-    private static bool ValidateFaviconDimensions(byte[] content, out string message)
+    private bool ValidateFaviconDimensions(byte[] content, out string message)
     {
         try
         {
@@ -454,8 +457,9 @@ public sealed class SettingsController(
             message = string.Empty;
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogWarning(ex, "Favicon image dimension validation failed.");
             message = "Favicon image could not be validated.";
             return false;
         }

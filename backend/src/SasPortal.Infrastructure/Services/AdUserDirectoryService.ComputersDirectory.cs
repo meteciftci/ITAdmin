@@ -165,8 +165,9 @@ public sealed partial class AdUserDirectoryService : IAdComputerDirectoryService
         {
             return ComputerListConnectionFailed();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            LogUnexpectedDirectoryFailure(ex);
             return ComputerListConnectionFailed();
         }
     }
@@ -277,8 +278,9 @@ public sealed partial class AdUserDirectoryService : IAdComputerDirectoryService
         {
             return ComputerOperatingSystemOptionsConnectionFailed();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            LogUnexpectedDirectoryFailure(ex);
             return ComputerOperatingSystemOptionsConnectionFailed();
         }
     }
@@ -355,8 +357,9 @@ public sealed partial class AdUserDirectoryService : IAdComputerDirectoryService
         {
             return ComputerDetailConnectionFailed();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            LogUnexpectedDirectoryFailure(ex);
             return ComputerDetailConnectionFailed();
         }
     }
@@ -454,8 +457,9 @@ public sealed partial class AdUserDirectoryService : IAdComputerDirectoryService
         {
             return ComputerOuConnectionFailed();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            LogUnexpectedDirectoryFailure(ex);
             return ComputerOuConnectionFailed();
         }
     }
@@ -630,6 +634,7 @@ public sealed partial class AdUserDirectoryService : IAdComputerDirectoryService
         }
         catch (Exception)
         {
+            // Unexpected group lookup failure falls back to DN-only member metadata.
             return BuildComputerMemberOfFallback(trimmedDn);
         }
     }

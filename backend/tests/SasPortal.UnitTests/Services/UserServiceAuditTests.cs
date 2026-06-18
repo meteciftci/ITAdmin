@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using SasPortal.Application.Common.Models;
 using SasPortal.Domain.Entities;
 using SasPortal.Domain.Enums;
@@ -31,7 +32,7 @@ public sealed class UserServiceAuditTests
                 "12345678901")
         };
 
-        var service = new UserService(context, ldapService, new FakeSecretProtector());
+        var service = new UserService(context, ldapService, new FakeSecretProtector(), Microsoft.Extensions.Logging.Abstractions.NullLogger<UserService>.Instance);
         var result = await service.CreateUserAsync(new CreateUserRequest(
             DirectoryObjectId: Guid.NewGuid().ToString(),
             IsActive: true,
@@ -74,7 +75,7 @@ public sealed class UserServiceAuditTests
                 "12345678901")
         };
 
-        var service = new UserService(context, ldapService, new FakeSecretProtector());
+        var service = new UserService(context, ldapService, new FakeSecretProtector(), Microsoft.Extensions.Logging.Abstractions.NullLogger<UserService>.Instance);
         var longIp = $"  {new string('9', 70)}  ";
         var longAgent = $"  {new string('a', 1030)}  ";
 
@@ -104,7 +105,7 @@ public sealed class UserServiceAuditTests
         await using var context = dbContext;
 
         var user = await SeedPortalUserAsync(context, isActive: false);
-        var service = new UserService(context, new FakeLdapService(), new FakeSecretProtector());
+        var service = new UserService(context, new FakeLdapService(), new FakeSecretProtector(), Microsoft.Extensions.Logging.Abstractions.NullLogger<UserService>.Instance);
 
         var result = await service.UpdateUserStatusAsync(new UpdateUserStatusRequest(
             UserId: user.Id,
@@ -133,7 +134,7 @@ public sealed class UserServiceAuditTests
         await using var context = dbContext;
 
         var user = await SeedPortalUserAsync(context, isActive: true);
-        var service = new UserService(context, new FakeLdapService(), new FakeSecretProtector());
+        var service = new UserService(context, new FakeLdapService(), new FakeSecretProtector(), Microsoft.Extensions.Logging.Abstractions.NullLogger<UserService>.Instance);
 
         var result = await service.UpdateUserStatusAsync(new UpdateUserStatusRequest(
             UserId: user.Id,
@@ -169,7 +170,7 @@ public sealed class UserServiceAuditTests
         });
         await context.SaveChangesAsync();
 
-        var service = new UserService(context, new FakeLdapService(), new FakeSecretProtector());
+        var service = new UserService(context, new FakeLdapService(), new FakeSecretProtector(), Microsoft.Extensions.Logging.Abstractions.NullLogger<UserService>.Instance);
 
         var result = await service.UpdateUserRolesAsync(new UpdateUserRolesRequest(
             UserId: user.Id,
@@ -209,7 +210,7 @@ public sealed class UserServiceAuditTests
         });
         await context.SaveChangesAsync();
 
-        var service = new UserService(context, new FakeLdapService(), new FakeSecretProtector());
+        var service = new UserService(context, new FakeLdapService(), new FakeSecretProtector(), Microsoft.Extensions.Logging.Abstractions.NullLogger<UserService>.Instance);
 
         var result = await service.UpdateUserRolesAsync(new UpdateUserRolesRequest(
             UserId: user.Id,
@@ -232,7 +233,7 @@ public sealed class UserServiceAuditTests
         await using var context = dbContext;
 
         var user = await SeedPortalUserAsync(context, isActive: true);
-        var service = new UserService(context, new FakeLdapService(), new FakeSecretProtector());
+        var service = new UserService(context, new FakeLdapService(), new FakeSecretProtector(), Microsoft.Extensions.Logging.Abstractions.NullLogger<UserService>.Instance);
 
         var result = await service.UpdateUserRolesAsync(new UpdateUserRolesRequest(
             UserId: user.Id,

@@ -112,8 +112,9 @@ public sealed partial class AdUserDirectoryService
         {
             return OuConnectionFailed();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            LogUnexpectedDirectoryFailure(ex);
             return OuConnectionFailed();
         }
     }
@@ -321,8 +322,9 @@ public sealed partial class AdUserDirectoryService
                 null,
                 AdDirectoryFailureKind.ConnectionFailed);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            LogUnexpectedDirectoryFailure(ex);
             await WriteCreateFailureLogsAsync(
         request,
                 AdManagementApiMessageKeys.Users.CreateFailed,

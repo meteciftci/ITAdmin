@@ -2,14 +2,16 @@ using System.Collections;
 using System.DirectoryServices.Protocols;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Text;
+using Microsoft.Extensions.Logging;
 using SasPortal.Application.Abstractions.Services;
 using SasPortal.Application.Common.Constants;
 using SasPortal.Application.Common.Models;
 
 namespace SasPortal.Infrastructure.Services;
 
-public sealed class LdapService : ILdapService
+public sealed class LdapService(ILogger<LdapService> logger) : ILdapService
 {
     private static readonly TimeSpan LdapOperationTimeout = TimeSpan.FromSeconds(10);
 
@@ -65,8 +67,9 @@ public sealed class LdapService : ILdapService
         {
             return Task.FromResult(new LdapValidationResult(false, LdapOperationTimedOutMessage));
         }
-        catch
+        catch (Exception ex)
         {
+            LogUnexpectedLdapFailure(ex);
             return Task.FromResult(new LdapValidationResult(false, LdapBindFailureMessageResolver.ValidationFailedMessage));
         }
     }
@@ -131,8 +134,9 @@ public sealed class LdapService : ILdapService
         {
             return Task.FromResult(new LdapValidationResult(false, LdapOperationTimedOutMessage));
         }
-        catch
+        catch (Exception ex)
         {
+            LogUnexpectedLdapFailure(ex);
             return Task.FromResult(new LdapValidationResult(false, LdapBindFailureMessageResolver.ValidationFailedMessage));
         }
     }
@@ -232,8 +236,9 @@ public sealed class LdapService : ILdapService
         {
             return Task.FromResult(new LdapValidationResult(false, LdapOperationTimedOutMessage));
         }
-        catch
+        catch (Exception ex)
         {
+            LogUnexpectedLdapFailure(ex);
             return Task.FromResult(new LdapValidationResult(false, LdapBindFailureMessageResolver.ValidationFailedMessage));
         }
     }
@@ -328,8 +333,9 @@ public sealed class LdapService : ILdapService
             {
                 directoryObjectId = new Guid(guidBytes).ToString("D");
             }
-            catch
+            catch (Exception)
             {
+                // Invalid objectGUID attribute value; treat as missing profile data.
                 return Task.FromResult<LdapUserProfile?>(null);
             }
 
@@ -360,8 +366,9 @@ public sealed class LdapService : ILdapService
         {
             return Task.FromResult<LdapUserProfile?>(null);
         }
-        catch
+        catch (Exception ex)
         {
+            LogUnexpectedLdapFailure(ex);
             return Task.FromResult<LdapUserProfile?>(null);
         }
     }
@@ -381,12 +388,7 @@ public sealed class LdapService : ILdapService
             return Task.FromResult<LdapUserProfile?>(null);
         }
 
-        Guid directoryGuid;
-        try
-        {
-            directoryGuid = Guid.Parse(request.DirectoryObjectId.Trim());
-        }
-        catch
+        if (!Guid.TryParse(request.DirectoryObjectId.Trim(), out var directoryGuid))
         {
             return Task.FromResult<LdapUserProfile?>(null);
         }
@@ -467,8 +469,9 @@ public sealed class LdapService : ILdapService
             {
                 directoryObjectId = new Guid(guidBytes).ToString("D");
             }
-            catch
+            catch (Exception)
             {
+                // Invalid objectGUID attribute value; treat as missing profile data.
                 return Task.FromResult<LdapUserProfile?>(null);
             }
 
@@ -508,8 +511,9 @@ public sealed class LdapService : ILdapService
         {
             return Task.FromResult<LdapUserProfile?>(null);
         }
-        catch
+        catch (Exception ex)
         {
+            LogUnexpectedLdapFailure(ex);
             return Task.FromResult<LdapUserProfile?>(null);
         }
     }
@@ -620,8 +624,9 @@ public sealed class LdapService : ILdapService
                 {
                     directoryObjectId = new Guid(guidBytes).ToString("D");
                 }
-                catch
+                catch (Exception)
                 {
+                    // Skip directory entries with invalid objectGUID values.
                     continue;
                 }
 
@@ -663,8 +668,9 @@ public sealed class LdapService : ILdapService
         {
             return Task.FromResult<IReadOnlyCollection<LdapUserLookupItem>>(Array.Empty<LdapUserLookupItem>());
         }
-        catch
+        catch (Exception ex)
         {
+            LogUnexpectedLdapFailure(ex);
             return Task.FromResult<IReadOnlyCollection<LdapUserLookupItem>>(Array.Empty<LdapUserLookupItem>());
         }
     }
@@ -841,5 +847,15 @@ public sealed class LdapService : ILdapService
         return bindUserDomain.Contains('.')
             ? $"{bindUserName}@{bindUserDomain}"
             : $@"{bindUserDomain}\{bindUserName}";
+    }
+
+    private void LogUnexpectedLdapFailure(
+        Exception ex,
+        [CallerMemberName] string operationName = "")
+    {
+        logger.LogWarning(
+            ex,
+            "LDAP operation failed unexpectedly. Operation={OperationName}",
+            operationName);
     }
 }

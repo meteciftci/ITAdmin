@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SasPortal.Application.Abstractions.Security;
 using SasPortal.Application.Abstractions.Services;
@@ -16,7 +17,8 @@ public sealed class AuthService(
     ISecretProtector secretProtector,
     ITokenService tokenService,
     ISettingsService settingsService,
-    IOptions<JwtOptions> jwtOptions) : IAuthService
+    IOptions<JwtOptions> jwtOptions,
+    ILogger<AuthService> logger) : IAuthService
 {
     private const string SuperAdminRoleCode = "SuperAdmin";
     private const string ActiveDirectoryDirectorySource = "ActiveDirectory";
@@ -342,8 +344,9 @@ public sealed class AuthService(
                 null,
                 ServiceUnavailableErrorCode);
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Login failed due to an unexpected error.");
             await TryWriteSecurityLogAsync(
                 new SecurityLog
                 {
@@ -683,8 +686,9 @@ public sealed class AuthService(
                 accessExpiresAt,
                 absoluteRefreshExpiresAt);
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Token refresh failed due to an unexpected error.");
             await TryWriteSecurityLogAsync(
                 new SecurityLog
                 {
@@ -795,8 +799,9 @@ public sealed class AuthService(
             await context.SaveChangesAsync(cancellationToken);
             return new LogoutResult(true, "Logout succeeded.");
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Logout failed due to an unexpected error.");
             await TryWriteSecurityLogAsync(
                 new SecurityLog
                 {
@@ -820,9 +825,18 @@ public sealed class AuthService(
             await context.SecurityLogs.AddAsync(securityLog, cancellationToken);
             await context.SaveChangesAsync(cancellationToken);
         }
-        catch
+        catch (Exception ex)
         {
-            context.Entry(securityLog).State = EntityState.Detached;
+            try
+            {
+                context.Entry(securityLog).State = EntityState.Detached;
+            }
+            catch (ObjectDisposedException)
+            {
+                // Context may already be disposed when logging from a failing scope.
+            }
+
+            logger.LogError(ex, "Failed to write security log for event {EventType}", securityLog.EventType);
         }
     }
 
@@ -905,8 +919,9 @@ public sealed class AuthService(
 
             return MapToCurrentUserResult(user, roles, permissions, isSuperAdmin);
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Current user retrieval failed for user {UserId}", userId);
             return new CurrentUserResult(
                 false,
                 "Current user could not be retrieved.",
@@ -993,8 +1008,9 @@ public sealed class AuthService(
 
             return new UpdateCurrentUserPreferencesResult(true, "User preferences updated.", currentUser);
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "User preferences update failed for user {UserId}", request.UserId);
             return new UpdateCurrentUserPreferencesResult(
                 false,
                 "User preferences could not be updated.",

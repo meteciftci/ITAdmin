@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using SasPortal.Application.Abstractions.Security;
 using SasPortal.Application.Abstractions.Services;
 using SasPortal.Application.Common.Constants;
@@ -15,7 +16,8 @@ public sealed class AdManagementSettingsService(
     AppDbContext context,
     ISecretProtector secretProtector,
     IAdOperationLogService adOperationLogService,
-    IAdManagementValidationService validationService) : IAdManagementSettingsService
+    IAdManagementValidationService validationService,
+    ILogger<AdManagementSettingsService> logger) : IAdManagementSettingsService
 {
     private const int AuditDescriptionMaxLength = 2000;
     private const int AuditIpAddressMaxLength = 64;
@@ -327,8 +329,9 @@ public sealed class AdManagementSettingsService(
         {
             return secretProtector.Unprotect(encryptedStoredPassword);
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogWarning(ex, "AD management service account password could not be decrypted.");
             return null;
         }
     }
@@ -443,8 +446,9 @@ public sealed class AdManagementSettingsService(
             {
                 password = secretProtector.Unprotect(entity.EncryptedServiceAccountPassword);
             }
-            catch
+            catch (Exception ex)
             {
+                logger.LogWarning(ex, "AD management stored service account password could not be decrypted.");
                 password = null;
             }
         }
@@ -633,8 +637,9 @@ public sealed class AdManagementSettingsService(
                 .Select(x => x.Trim())
                 .ToList();
         }
-        catch
+        catch (Exception)
         {
+            // Invalid preferred domain controller JSON falls back to an empty list.
             return Array.Empty<string>();
         }
     }

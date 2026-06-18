@@ -40,8 +40,9 @@ public static class AdLdapSidHelper
 
             return sid;
         }
-        catch
+        catch (Exception)
         {
+            // Invalid SID bytes are treated as missing directory metadata.
             return null;
         }
     }

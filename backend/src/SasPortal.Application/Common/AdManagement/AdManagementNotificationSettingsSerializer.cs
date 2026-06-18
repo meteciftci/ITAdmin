@@ -35,8 +35,9 @@ public static class AdManagementNotificationSettingsSerializer
 
             return Normalize(MigrateFromLegacyUserCreated(dto.UserCreated));
         }
-        catch
+        catch (Exception)
         {
+            // Invalid or legacy notification settings JSON falls back to safe defaults.
             return CreateDefault();
         }
     }

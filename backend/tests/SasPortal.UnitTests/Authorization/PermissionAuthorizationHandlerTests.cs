@@ -1,7 +1,6 @@
 using System.Net;
 using System.Security.Claims;
 using Microsoft.Extensions.Logging.Abstractions;
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using SasPortal.Api.Authorization;

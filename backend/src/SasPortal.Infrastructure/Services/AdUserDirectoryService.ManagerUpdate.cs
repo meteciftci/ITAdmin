@@ -245,8 +245,9 @@ public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
                 cancellationToken,
                 messageKey);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            LogUnexpectedDirectoryFailure(ex);
             return await FailManagerUpdateAsync(
         request,
                 auditAction,

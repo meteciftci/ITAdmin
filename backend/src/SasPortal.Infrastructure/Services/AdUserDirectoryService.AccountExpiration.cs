@@ -228,8 +228,9 @@ public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpd
                 cancellationToken,
                 messageKey);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            LogUnexpectedDirectoryFailure(ex);
             return await FailAccountExpirationUpdateAsync(
         request,
                 auditAction,
