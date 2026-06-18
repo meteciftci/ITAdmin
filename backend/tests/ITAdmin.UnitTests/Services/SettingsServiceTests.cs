@@ -21,8 +21,8 @@ public sealed class SettingsServiceTests
         await dbContext.ApplicationSettings.AddRangeAsync(
             new ApplicationSetting
             {
-                Key = "Directory:NationalIdAttribute",
-                Value = "employeeId",
+                Key = "Branding:ApplicationName",
+                Value = "ITAdmin",
                 ValueType = SettingValueType.String,
                 IsEncrypted = false,
                 IsSystem = true,
@@ -55,9 +55,9 @@ public sealed class SettingsServiceTests
         Assert.True(encrypted.IsEncrypted);
         Assert.Null(encrypted.Value);
 
-        var plain = Assert.Single(result.ApplicationSettings, x => x.Key == "Directory:NationalIdAttribute");
+        var plain = Assert.Single(result.ApplicationSettings, x => x.Key == "Branding:ApplicationName");
         Assert.False(plain.IsEncrypted);
-        Assert.Equal("employeeId", plain.Value);
+        Assert.Equal("ITAdmin", plain.Value);
     }
 
     [Fact]
@@ -155,14 +155,14 @@ public sealed class SettingsServiceTests
     }
 
     [Fact]
-    public async Task UpdateApplicationSettingsAsync_UpsertsNationalIdAttribute_AndWritesDiffAudit()
+    public async Task UpdateApplicationSettingsAsync_UpsertsBrandingApplicationName_AndWritesDiffAudit()
     {
         await using var dbContext = CreateDbContext();
         var service = CreateService(dbContext);
         var request = new UpdateApplicationSettingsRequest(
             new[]
             {
-                new UpdateApplicationSettingRequest("Directory:NationalIdAttribute", "employeeId", SettingValueType.String)
+                new UpdateApplicationSettingRequest("Branding:ApplicationName", "ITAdmin Portal", SettingValueType.String)
             },
             Guid.NewGuid(),
             "tester",
@@ -174,24 +174,24 @@ public sealed class SettingsServiceTests
         Assert.True(result.IsSuccess);
 
         var setting = Assert.Single(dbContext.ApplicationSettings);
-        Assert.Equal("Directory:NationalIdAttribute", setting.Key);
-        Assert.Equal("employeeId", setting.Value);
+        Assert.Equal("Branding:ApplicationName", setting.Key);
+        Assert.Equal("ITAdmin Portal", setting.Value);
         Assert.Equal(SettingValueType.String, setting.ValueType);
 
         var audit = Assert.Single(dbContext.AuditLogs.Where(x => x.EntityName == "ApplicationSetting"));
         Assert.NotNull(audit.Description);
-        Assert.Contains("Directory:NationalIdAttribute", audit.Description!, StringComparison.Ordinal);
-        Assert.Contains("Value: <none> -> employeeId.", audit.Description!, StringComparison.Ordinal);
+        Assert.Contains("Branding:ApplicationName", audit.Description!, StringComparison.Ordinal);
+        Assert.Contains("Value: <none> -> ITAdmin Portal.", audit.Description!, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task UpdateApplicationSettingsAsync_NationalIdAttribute_IncludesPreviousValueInAudit()
+    public async Task UpdateApplicationSettingsAsync_BrandingApplicationName_IncludesPreviousValueInAudit()
     {
         await using var dbContext = CreateDbContext();
         await dbContext.ApplicationSettings.AddAsync(new ApplicationSetting
         {
-            Key = "Directory:NationalIdAttribute",
-            Value = "sAMAccountName",
+            Key = "Branding:ApplicationName",
+            Value = "Old Name",
             ValueType = SettingValueType.String,
             IsEncrypted = false,
             IsSystem = true,
@@ -205,7 +205,7 @@ public sealed class SettingsServiceTests
         var request = new UpdateApplicationSettingsRequest(
             new[]
             {
-                new UpdateApplicationSettingRequest("Directory:NationalIdAttribute", "employeeId", SettingValueType.String)
+                new UpdateApplicationSettingRequest("Branding:ApplicationName", "ITAdmin Portal", SettingValueType.String)
             },
             Guid.NewGuid(),
             "tester",
@@ -217,7 +217,7 @@ public sealed class SettingsServiceTests
         Assert.True(result.IsSuccess);
         var audit = Assert.Single(dbContext.AuditLogs.Where(x => x.EntityName == "ApplicationSetting"));
         Assert.NotNull(audit.Description);
-        Assert.Contains("Value: sAMAccountName -> employeeId.", audit.Description!, StringComparison.Ordinal);
+        Assert.Contains("Value: Old Name -> ITAdmin Portal.", audit.Description!, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -228,7 +228,7 @@ public sealed class SettingsServiceTests
         var request = new UpdateApplicationSettingsRequest(
             new[]
             {
-                new UpdateApplicationSettingRequest("Directory:NationalIdAttribute", "employeeId", SettingValueType.String)
+                new UpdateApplicationSettingRequest("Branding:ApplicationName", "ITAdmin Portal", SettingValueType.String)
             },
             Guid.NewGuid(),
             "tester",
@@ -587,7 +587,6 @@ public sealed class SettingsServiceTests
     }
 
     [Theory]
-    [InlineData("Directory:NationalIdAttribute", "employeeId", "LDAP attribute name that stores the national identity value.")]
     [InlineData("Branding:ApplicationName", "ITAdmin", "Application display name.")]
     [InlineData("Branding:BrowserTitle", "Portal", "Browser title shown in the tab.")]
     [InlineData("Branding:LogoUrl", "/uploads/branding/logo.png", "Application branding logo URL.")]

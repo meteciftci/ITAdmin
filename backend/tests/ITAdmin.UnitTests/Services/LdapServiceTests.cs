@@ -75,8 +75,7 @@ public sealed class LdapServiceTests
             BindUserName: "bind",
             BindUserDomain: null,
             BindPassword: "bindpw",
-            UserName: "admin",
-            NationalIdAttribute: null);
+            UserName: "admin");
 
         var result = await service.GetUserProfileAsync(request);
 
@@ -94,8 +93,7 @@ public sealed class LdapServiceTests
             BindUserName: "bind",
             BindUserDomain: null,
             BindPassword: "bindpw",
-            DirectoryObjectId: Guid.NewGuid().ToString("D"),
-            NationalIdAttribute: null);
+            DirectoryObjectId: Guid.NewGuid().ToString("D"));
 
         var result = await service.GetUserProfileByObjectIdAsync(request);
 
@@ -114,8 +112,7 @@ public sealed class LdapServiceTests
             BindUserDomain: null,
             BindPassword: "bindpw",
             Search: "admin",
-            MaxResults: 10,
-            NationalIdAttribute: null);
+            MaxResults: 10);
 
         var result = await service.SearchUsersAsync(request);
 

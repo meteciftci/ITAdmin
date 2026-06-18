@@ -137,16 +137,6 @@
         "faviconUploadFailed": "Favicon upload failed."
       }
     },
-    "directory": {
-      "fields": {
-        "nationalIdAttribute": "National identity attribute",
-        "nationalIdAttributeHelp": "Enter the Active Directory attribute name used to read the national identity value. Example: employeeId"
-      },
-      "messages": {
-        "saveSuccess": "AD settings saved.",
-        "saveFailed": "AD settings could not be saved."
-      }
-    },
     "adManagement": {
       "pageTabs": {
         "connection": "Connection and Service Account",

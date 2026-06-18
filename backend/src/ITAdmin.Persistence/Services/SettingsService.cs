@@ -17,7 +17,6 @@ public sealed class SettingsService(
     ISecretProtector secretProtector,
     ILogger<SettingsService> logger) : ISettingsService
 {
-    private const string NationalIdApplicationSettingKey = "Directory:NationalIdAttribute";
     private const string BrandingApplicationNameKey = "Branding:ApplicationName";
     private const string BrandingBrowserTitleKey = "Branding:BrowserTitle";
     private const string BrandingLogoUrlKey = "Branding:LogoUrl";
@@ -38,7 +37,6 @@ public sealed class SettingsService(
 
     private static readonly HashSet<string> UpdatableApplicationSettingKeys = new(StringComparer.Ordinal)
     {
-        NationalIdApplicationSettingKey,
         BrandingApplicationNameKey,
         BrandingBrowserTitleKey,
         BrandingLogoUrlKey,
@@ -336,11 +334,6 @@ public sealed class SettingsService(
             if (!UpdatableApplicationSettingKeys.Contains(key))
             {
                 return new UpdateSettingsResult(false, $"Application setting key is not allowed: {key}.", null);
-            }
-
-            if (key == NationalIdApplicationSettingKey && item.ValueType != SettingValueType.String)
-            {
-                return new UpdateSettingsResult(false, "Directory:NationalIdAttribute must use String value type.", null);
             }
 
             if (key == BrandingApplicationNameKey
@@ -1058,7 +1051,6 @@ public sealed class SettingsService(
 
     private static string ResolveApplicationSettingDescription(string key) => key switch
     {
-        NationalIdApplicationSettingKey => "LDAP attribute name that stores the national identity value.",
         BrandingApplicationNameKey => "Application display name.",
         BrandingBrowserTitleKey => "Browser title shown in the tab.",
         BrandingLogoUrlKey => "Application branding logo URL.",

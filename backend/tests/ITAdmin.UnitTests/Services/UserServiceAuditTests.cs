@@ -20,7 +20,6 @@ public sealed class UserServiceAuditTests
         await using var context = dbContext;
 
         await SeedActiveLdapSettingAsync(context);
-        await SeedNationalIdAttributeAsync(context);
 
         var ldapService = new FakeLdapService
         {
@@ -28,8 +27,7 @@ public sealed class UserServiceAuditTests
                 Guid.NewGuid().ToString(),
                 "mete.user",
                 "Mete User",
-                "mete.user@test.local",
-                "12345678901")
+                "mete.user@test.local")
         };
 
         var service = new UserService(context, ldapService, new FakeSecretProtector(), Microsoft.Extensions.Logging.Abstractions.NullLogger<UserService>.Instance);
@@ -63,7 +61,6 @@ public sealed class UserServiceAuditTests
         await using var context = dbContext;
 
         await SeedActiveLdapSettingAsync(context);
-        await SeedNationalIdAttributeAsync(context);
 
         var ldapService = new FakeLdapService
         {
@@ -71,8 +68,7 @@ public sealed class UserServiceAuditTests
                 Guid.NewGuid().ToString(),
                 "mete.user",
                 "Mete User",
-                "mete.user@test.local",
-                "12345678901")
+                "mete.user@test.local")
         };
 
         var service = new UserService(context, ldapService, new FakeSecretProtector(), Microsoft.Extensions.Logging.Abstractions.NullLogger<UserService>.Instance);
@@ -263,19 +259,6 @@ public sealed class UserServiceAuditTests
             IsDeleted = false
         });
 
-        await context.SaveChangesAsync();
-    }
-
-    private static async Task SeedNationalIdAttributeAsync(AppDbContext context)
-    {
-        await context.ApplicationSettings.AddAsync(new ApplicationSetting
-        {
-            Key = "Directory:NationalIdAttribute",
-            Value = "employeeId",
-            ValueType = SettingValueType.String,
-            IsActive = true,
-            IsDeleted = false
-        });
         await context.SaveChangesAsync();
     }
 

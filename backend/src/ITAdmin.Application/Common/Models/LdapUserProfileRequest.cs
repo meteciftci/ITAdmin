@@ -8,5 +8,4 @@ public sealed record LdapUserProfileRequest(
     string BindUserName,
     string? BindUserDomain,
     string BindPassword,
-    string UserName,
-    string? NationalIdAttribute);
+    string UserName);

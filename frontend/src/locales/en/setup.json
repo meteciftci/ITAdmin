@@ -18,9 +18,7 @@
       "bindUserName": "Bind user name",
       "bindUserDomain": "Bind user domain",
       "bindPassword": "Bind password",
-      "nationalIdAttribute": "National ID attribute",
-      "adminUserName": "User name",
-      "adminPassword": "Password"
+      "adminUserName": "User name"
     },
     "helpers": {
       "host": "e.g. dc01.domain.local",

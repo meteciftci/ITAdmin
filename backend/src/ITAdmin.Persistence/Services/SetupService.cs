@@ -101,7 +101,7 @@ public sealed partial class SetupService(
             return new SearchSetupAdminUsersResult(Array.Empty<SetupAdminUserSearchResult>(), ldapMessage);
         }
 
-        var search = request.Search.Trim();
+        var search = (request.Search ?? string.Empty).Trim();
         if (search.Length < SetupConstants.MinAdminUserSearchLength)
         {
             return new SearchSetupAdminUsersResult(Array.Empty<SetupAdminUserSearchResult>());
@@ -116,8 +116,7 @@ public sealed partial class SetupService(
                 BindUserDomain: request.Ldap.BindUserDomain,
                 BindPassword: request.Ldap.BindPassword,
                 Search: search,
-                MaxResults: SetupConstants.MaxAdminUserSearchResults,
-                NationalIdAttribute: null),
+                MaxResults: SetupConstants.MaxAdminUserSearchResults),
             cancellationToken);
 
         var users = lookupResults
@@ -185,7 +184,7 @@ public sealed partial class SetupService(
 
             await PersistLdapSettingsAsync(request.Ldap, now, cancellationToken);
             var superAdminRole = await EnsureDefaultRolesAndPermissionsAsync(now, cancellationToken);
-            await PersistAdManagementModuleSettingsAsync(request.Ldap, request.Modules, now, cancellationToken);
+            await PersistAdManagementModuleSettingsAsync(request.Ldap, request.Modules ?? new CompleteSetupModulesSettings(null), now, cancellationToken);
 
             var primaryAdminUser = await PersistAdminUsersAsync(resolvedProfiles, superAdminRole, now, cancellationToken);
             await MarkSetupCompletedAsync(now, cancellationToken);
@@ -271,8 +270,7 @@ public sealed partial class SetupService(
                         BindUserName: ldap.BindUserName,
                         BindUserDomain: ldap.BindUserDomain,
                         BindPassword: ldap.BindPassword,
-                        DirectoryObjectId: adminUser.DirectoryObjectId.Trim(),
-                        NationalIdAttribute: null),
+                        DirectoryObjectId: adminUser.DirectoryObjectId.Trim()),
                     cancellationToken);
             }
 
@@ -289,8 +287,7 @@ public sealed partial class SetupService(
                             BindUserName: ldap.BindUserName,
                             BindUserDomain: ldap.BindUserDomain,
                             BindPassword: ldap.BindPassword,
-                            UserName: candidateUserName,
-                            NationalIdAttribute: null),
+                            UserName: candidateUserName),
                         cancellationToken);
 
                     if (profile is not null)
@@ -362,7 +359,7 @@ public sealed partial class SetupService(
             .OrderByDescending(x => x.UpdatedAt ?? x.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
 
-        var adManagement = modules.AdManagement;
+        var adManagement = modules?.AdManagement;
         if (adManagement is null || !adManagement.IsEnabled)
         {
             if (entity is null)
@@ -380,6 +377,7 @@ public sealed partial class SetupService(
             else
             {
                 entity.IsEnabled = false;
+                entity.EncryptedServiceAccountPassword = null;
                 entity.UpdatedAt = now;
                 entity.UpdatedBy = SetupActor;
             }
@@ -406,9 +404,10 @@ public sealed partial class SetupService(
         entity.UsersRootOu = adManagement.UsersSearchBase!.Trim();
         entity.GroupsSearchBase = adManagement.GroupsSearchBase!.Trim();
         entity.ComputersSearchBase = adManagement.ComputersSearchBase!.Trim();
-        entity.DisabledUsersOu = string.IsNullOrWhiteSpace(adManagement.DefaultUserOu)
-            ? adManagement.UsersSearchBase!.Trim()
-            : adManagement.DefaultUserOu.Trim();
+        entity.DefaultUserOu = NormalizeOptionalOu(adManagement.DefaultUserOu);
+        entity.DefaultGroupOu = NormalizeOptionalOu(adManagement.DefaultGroupOu);
+        entity.DefaultComputerOu = NormalizeOptionalOu(adManagement.DefaultComputerOu);
+        entity.DeletedObjectsEnabled = adManagement.DeletedObjectsEnabled;
         entity.ServiceAccountUserName = ldap.BindUserName.Trim();
         entity.EncryptedServiceAccountPassword = secretProtector.Protect(ldap.BindPassword);
         entity.UpdatedAt = now;
@@ -529,6 +528,9 @@ public sealed partial class SetupService(
         setupCompletionSetting.UpdatedAt = now;
         setupCompletionSetting.UpdatedBy = SetupActor;
     }
+
+    private static string? NormalizeOptionalOu(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static string DeriveDomainFqdn(string baseDn, string host)
     {

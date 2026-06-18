@@ -290,11 +290,6 @@ public sealed class LdapService(ILogger<LdapService> logger) : ILdapService
                 "userPrincipalName"
             };
 
-            if (!string.IsNullOrWhiteSpace(request.NationalIdAttribute))
-            {
-                attributeNames.Add(request.NationalIdAttribute.Trim());
-            }
-
             var searchRequest = new SearchRequest(
                 searchBase,
                 searchFilter,
@@ -352,15 +347,8 @@ public sealed class LdapService(ILogger<LdapService> logger) : ILdapService
 
             var email = NormalizeOptionalString(GetFirstString(TryGetDirectoryAttribute(entry, "mail")));
 
-            string? nationalId = null;
-            if (!string.IsNullOrWhiteSpace(request.NationalIdAttribute))
-            {
-                nationalId = NormalizeNationalIdCandidate(
-                    GetFirstString(TryGetDirectoryAttribute(entry, request.NationalIdAttribute.Trim())));
-            }
-
             return Task.FromResult<LdapUserProfile?>(
-                new LdapUserProfile(directoryObjectId, resolvedUserName, displayName, email, nationalId));
+                new LdapUserProfile(directoryObjectId, resolvedUserName, displayName, email));
         }
         catch (Exception exception) when (IsLikelyLdapNetworkTimeout(exception))
         {
@@ -425,11 +413,6 @@ public sealed class LdapService(ILogger<LdapService> logger) : ILdapService
                 "userPrincipalName",
                 "distinguishedName"
             };
-
-            if (!string.IsNullOrWhiteSpace(request.NationalIdAttribute))
-            {
-                attributeNames.Add(request.NationalIdAttribute.Trim());
-            }
 
             var searchRequest = new SearchRequest(
                 searchBase,
@@ -497,15 +480,8 @@ public sealed class LdapService(ILogger<LdapService> logger) : ILdapService
 
             var email = NormalizeOptionalString(GetFirstString(TryGetDirectoryAttribute(entry, "mail")));
 
-            string? nationalId = null;
-            if (!string.IsNullOrWhiteSpace(request.NationalIdAttribute))
-            {
-                nationalId = NormalizeNationalIdCandidate(
-                    GetFirstString(TryGetDirectoryAttribute(entry, request.NationalIdAttribute.Trim())));
-            }
-
             return Task.FromResult<LdapUserProfile?>(
-                new LdapUserProfile(directoryObjectId, resolvedUserName, displayName, email, nationalId));
+                new LdapUserProfile(directoryObjectId, resolvedUserName, displayName, email));
         }
         catch (Exception exception) when (IsLikelyLdapNetworkTimeout(exception))
         {
@@ -576,11 +552,6 @@ public sealed class LdapService(ILogger<LdapService> logger) : ILdapService
                 "distinguishedName"
             };
 
-            if (!string.IsNullOrWhiteSpace(request.NationalIdAttribute))
-            {
-                attributeNames.Add(request.NationalIdAttribute.Trim());
-            }
-
             var searchRequest = new SearchRequest(
                 searchBase,
                 searchFilter,
@@ -650,13 +621,6 @@ public sealed class LdapService(ILogger<LdapService> logger) : ILdapService
 
                 var email = NormalizeOptionalString(GetFirstString(TryGetDirectoryAttribute(entry, "mail")));
 
-                string? nationalId = null;
-                if (!string.IsNullOrWhiteSpace(request.NationalIdAttribute))
-                {
-                    nationalId = NormalizeNationalIdCandidate(
-                        GetFirstString(TryGetDirectoryAttribute(entry, request.NationalIdAttribute.Trim())));
-                }
-
                 seenObjectIds.Add(directoryObjectId);
                 seenUserNames.Add(resolvedUserName);
                 collected.Add(new LdapUserLookupItem(
@@ -664,7 +628,6 @@ public sealed class LdapService(ILogger<LdapService> logger) : ILdapService
                     resolvedUserName,
                     displayName,
                     email,
-                    nationalId,
                     entry.DistinguishedName));
             }
 
@@ -724,9 +687,6 @@ public sealed class LdapService(ILogger<LdapService> logger) : ILdapService
     }
 
     private static string? NormalizeOptionalString(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-
-    private static string? NormalizeNationalIdCandidate(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static bool IsLikelyConnectionOrLdapTimeout(LdapException exception)

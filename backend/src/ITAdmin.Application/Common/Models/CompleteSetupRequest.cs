@@ -3,7 +3,7 @@ namespace ITAdmin.Application.Common.Models;
 public sealed record CompleteSetupRequest(
     string SetupKey,
     CompleteSetupLdapSettings Ldap,
-    CompleteSetupModulesSettings Modules,
+    CompleteSetupModulesSettings? Modules,
     IReadOnlyList<CompleteSetupAdminUser> AdminUsers);
 
 public sealed record CompleteSetupLdapSettings(

@@ -12,6 +12,10 @@ public class AdManagementSettings : AuditableEntity
     public string? BaseDn { get; set; }
     public string? UsersRootOu { get; set; }
     public string? DisabledUsersOu { get; set; }
+    public string? DefaultUserOu { get; set; }
+    public string? DefaultGroupOu { get; set; }
+    public string? DefaultComputerOu { get; set; }
+    public bool DeletedObjectsEnabled { get; set; }
     public string? GroupsSearchBase { get; set; }
     public string? ComputersSearchBase { get; set; }
     public string? PreferredDomainControllersJson { get; set; }

@@ -2,9 +2,9 @@ namespace ITAdmin.Api.Contracts.Setup;
 
 public sealed record CompleteSetupRequest(
     string SetupKey,
-    CompleteSetupLdapSettingsRequest Ldap,
-    CompleteSetupModulesRequest Modules,
-    IReadOnlyList<CompleteSetupAdminUserRequest> AdminUsers);
+    CompleteSetupLdapSettingsRequest? Ldap,
+    CompleteSetupModulesRequest? Modules,
+    IReadOnlyList<CompleteSetupAdminUserRequest>? AdminUsers);
 
 public sealed record CompleteSetupLdapSettingsRequest(
     string Name,

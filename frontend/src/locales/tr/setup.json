@@ -18,9 +18,7 @@
       "bindUserName": "Bind kullanıcı adı",
       "bindUserDomain": "Bind kullanıcı domain",
       "bindPassword": "Bind şifresi",
-      "nationalIdAttribute": "TC kimlik no özniteliği",
-      "adminUserName": "Kullanıcı adı",
-      "adminPassword": "Şifre"
+      "adminUserName": "Kullanıcı adı"
     },
     "helpers": {
       "host": "Örn: dc01.domain.local",

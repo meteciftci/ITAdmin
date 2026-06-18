@@ -77,8 +77,8 @@ public sealed class SetupServiceTests
         var ldap = CreateSuccessfulLdapFake();
         ldap.ResolveUserProfile = request => request.UserName switch
         {
-            "admin1" => new LdapUserProfile("obj-1", "admin1", "Admin One", "admin1@corp.test", null),
-            "admin2" => new LdapUserProfile("obj-2", "admin2", "Admin Two", "admin2@corp.test", null),
+            "admin1" => new LdapUserProfile("obj-1", "admin1", "Admin One", "admin1@corp.test"),
+            "admin2" => new LdapUserProfile("obj-2", "admin2", "Admin Two", "admin2@corp.test"),
             _ => null,
         };
 
@@ -105,7 +105,7 @@ public sealed class SetupServiceTests
     {
         await using var context = CreateDbContext();
         var ldap = CreateSuccessfulLdapFake();
-        ldap.ResolveUserProfile = _ => new LdapUserProfile("obj-3", "plain", "Plain User", "plain@ad.test", null);
+        ldap.ResolveUserProfile = _ => new LdapUserProfile("obj-3", "plain", "Plain User", "plain@ad.test");
 
         var service = CreateSetupService(context, ldap, "setup-secret");
         var request = CreateMinimalCompleteRequest("setup-secret", ["plain"]);
@@ -118,11 +118,11 @@ public sealed class SetupServiceTests
     }
 
     [Fact]
-    public async Task CompleteSetupAsync_DoesNotWriteNationalIdAttributeSetting()
+    public async Task CompleteSetupAsync_DoesNotPersistNationalIdApplicationSetting()
     {
         await using var context = CreateDbContext();
         var ldap = CreateSuccessfulLdapFake();
-        ldap.ResolveUserProfile = _ => new LdapUserProfile("obj-4", "plain", "Plain User", "plain@ad.test", "12345678901");
+        ldap.ResolveUserProfile = _ => new LdapUserProfile("obj-4", "plain", "Plain User", "plain@ad.test");
 
         var service = CreateSetupService(context, ldap, "setup-secret");
         var request = CreateMinimalCompleteRequest("setup-secret", ["plain"]);
@@ -138,7 +138,7 @@ public sealed class SetupServiceTests
     {
         await using var context = CreateDbContext();
         var ldap = CreateSuccessfulLdapFake();
-        ldap.ResolveUserProfile = _ => new LdapUserProfile("obj-5", "plain", "Plain User", null, null);
+        ldap.ResolveUserProfile = _ => new LdapUserProfile("obj-5", "plain", "Plain User", null);
 
         var service = CreateSetupService(context, ldap, "setup-secret");
         var request = CreateMinimalCompleteRequest("setup-secret", ["plain"]) with
@@ -193,7 +193,7 @@ public sealed class SetupServiceTests
     {
         await using var context = CreateDbContext();
         var ldap = CreateSuccessfulLdapFake();
-        ldap.ResolveUserProfile = _ => new LdapUserProfile("obj-6", "plain", "Plain User", null, null);
+        ldap.ResolveUserProfile = _ => new LdapUserProfile("obj-6", "plain", "Plain User", null);
 
         var service = CreateSetupService(context, ldap, "setup-secret");
         var request = CreateMinimalCompleteRequest("setup-secret", ["plain"]) with
@@ -218,6 +218,59 @@ public sealed class SetupServiceTests
         Assert.Equal("OU=Users,DC=test,DC=local", settings.UsersRootOu);
         Assert.Equal("OU=Groups,DC=test,DC=local", settings.GroupsSearchBase);
         Assert.Equal("OU=Computers,DC=test,DC=local", settings.ComputersSearchBase);
+        Assert.Equal("OU=NewUsers,DC=test,DC=local", settings.DefaultUserOu);
+        Assert.True(settings.DeletedObjectsEnabled);
+    }
+
+    [Fact]
+    public async Task CompleteSetupAsync_WhenAdManagementDisabled_DoesNotPersistServiceAccountPassword()
+    {
+        await using var context = CreateDbContext();
+        var ldap = CreateSuccessfulLdapFake();
+        ldap.ResolveUserProfile = _ => new LdapUserProfile("obj-8", "plain", "Plain User", null);
+
+        var service = CreateSetupService(context, ldap, "setup-secret");
+        var request = CreateMinimalCompleteRequest("setup-secret", ["plain"]) with
+        {
+            Modules = new CompleteSetupModulesSettings(
+                new CompleteSetupAdManagementModuleSettings(
+                    IsEnabled: false,
+                    UsersSearchBase: null,
+                    GroupsSearchBase: null,
+                    ComputersSearchBase: null,
+                    DefaultUserOu: null,
+                    DefaultGroupOu: null,
+                    DefaultComputerOu: null,
+                    DeletedObjectsEnabled: false))
+        };
+
+        var result = await service.CompleteSetupAsync(request);
+
+        Assert.True(result.IsCompleted);
+        var settings = await context.AdManagementSettings.SingleAsync();
+        Assert.False(settings.IsEnabled);
+        Assert.Null(settings.EncryptedServiceAccountPassword);
+    }
+
+    [Fact]
+    public async Task CompleteSetupAsync_WithNullModules_TreatsAdManagementAsDisabled()
+    {
+        await using var context = CreateDbContext();
+        var ldap = CreateSuccessfulLdapFake();
+        ldap.ResolveUserProfile = _ => new LdapUserProfile("obj-9", "plain", "Plain User", null);
+
+        var service = CreateSetupService(context, ldap, "setup-secret");
+        var request = new CompleteSetupRequest(
+            "setup-secret",
+            CreateMinimalLdapSettings(),
+            null,
+            [new CompleteSetupAdminUser("plain", null, null)]);
+
+        var result = await service.CompleteSetupAsync(request);
+
+        Assert.True(result.IsCompleted);
+        var settings = await context.AdManagementSettings.SingleAsync();
+        Assert.False(settings.IsEnabled);
     }
 
     [Fact]
@@ -285,7 +338,6 @@ public sealed class SetupServiceTests
                 "admin",
                 "Admin User",
                 "admin@corp.test",
-                null,
                 "CN=admin,OU=Users,DC=test,DC=local")
         ];
 
@@ -313,8 +365,7 @@ public sealed class SetupServiceTests
                 "obj-default",
                 request.UserName,
                 request.UserName,
-                $"{request.UserName}@corp.test",
-                null),
+                $"{request.UserName}@corp.test"),
         };
     }
 

@@ -15,7 +15,6 @@ public sealed class UserService(
     ISecretProtector secretProtector,
     ILogger<UserService> logger) : IUserService
 {
-    private const string NationalIdApplicationSettingKey = "Directory:NationalIdAttribute";
     private const int AuditDescriptionMaxLength = 2000;
     private const int AuditIpAddressMaxLength = 64;
     private const int AuditUserAgentMaxLength = 1024;
@@ -109,17 +108,6 @@ public sealed class UserService(
             return new UserDirectoryLookupResult(Array.Empty<UserDirectoryLookupItem>());
         }
 
-        var nationalIdAttrRaw = await context.ApplicationSettings
-            .AsNoTracking()
-            .Where(x =>
-                x.Key == NationalIdApplicationSettingKey &&
-                x.IsActive &&
-                !x.IsDeleted)
-            .Select(x => x.Value)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        var nationalIdAttribute = string.IsNullOrWhiteSpace(nationalIdAttrRaw) ? null : nationalIdAttrRaw.Trim();
-
         string bindPassword;
         try
         {
@@ -145,8 +133,7 @@ public sealed class UserService(
                 ldapSetting.BindUserDomain,
                 bindPassword,
                 search,
-                maxResults,
-                nationalIdAttribute),
+                maxResults),
             cancellationToken);
 
         var ldapList = ldapResults.ToList();
@@ -175,7 +162,7 @@ public sealed class UserService(
                 it.UserName,
                 it.DisplayName,
                 it.Email,
-                MaskNationalId(it.NationalId),
+                null,
                 existingSet.Contains(it.DirectoryObjectId)))
             .OrderBy(x => x.UserName, StringComparer.Ordinal)
             .ToList();
@@ -209,17 +196,6 @@ public sealed class UserService(
                 return new CreateUserResult(false, "LDAP settings are not configured.", null);
             }
 
-            var nationalIdAttrRaw = await context.ApplicationSettings
-                .AsNoTracking()
-                .Where(x =>
-                    x.Key == NationalIdApplicationSettingKey &&
-                    x.IsActive &&
-                    !x.IsDeleted)
-                .Select(x => x.Value)
-                .FirstOrDefaultAsync(cancellationToken);
-
-            var nationalIdAttribute = string.IsNullOrWhiteSpace(nationalIdAttrRaw) ? null : nationalIdAttrRaw.Trim();
-
             string bindPassword;
             try
             {
@@ -244,8 +220,7 @@ public sealed class UserService(
                     ldapSetting.BindUserName,
                     ldapSetting.BindUserDomain,
                     bindPassword,
-                    directoryObjectIdTrimmed,
-                    nationalIdAttribute),
+                    directoryObjectIdTrimmed),
                 cancellationToken);
 
             if (ldapProfile is null)
@@ -281,17 +256,13 @@ public sealed class UserService(
 
             var now = DateTime.UtcNow;
 
-            string? encryptedNationalId =
-                ldapProfile.NationalId is not null ? secretProtector.Protect(ldapProfile.NationalId) : null;
-            var maskedNationalId = ldapProfile.NationalId is not null ? MaskNationalId(ldapProfile.NationalId) : null;
-
             var user = new PortalUser
             {
                 DirectorySource = "ActiveDirectory",
                 DirectoryObjectId = ldapProfile.DirectoryObjectId,
                 PreferredLanguage = "tr",
-                NationalIdEncrypted = encryptedNationalId,
-                NationalIdMasked = maskedNationalId,
+                NationalIdEncrypted = null,
+                NationalIdMasked = null,
                 UserName = ldapProfile.UserName,
                 DisplayName = ldapProfile.DisplayName,
                 Email = ldapProfile.Email,
@@ -710,25 +681,5 @@ public sealed class UserService(
 
         var trimmed = value.Trim();
         return trimmed.Length <= maxLength ? trimmed : trimmed[..maxLength];
-    }
-
-    private static string? MaskNationalId(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return null;
-        }
-
-        var v = value.Trim();
-        if (v.Length <= 4)
-        {
-            return new string('*', v.Length);
-        }
-
-        var prefix = v[..3];
-        var suffix = v[^2..];
-        var middleLen = v.Length - 5;
-        var middle = middleLen > 0 ? new string('*', middleLen) : string.Empty;
-        return prefix + middle + suffix;
     }
 }

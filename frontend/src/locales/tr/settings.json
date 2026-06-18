@@ -137,16 +137,6 @@
         "faviconUploadFailed": "Favicon yüklenemedi."
       }
     },
-    "directory": {
-      "fields": {
-        "nationalIdAttribute": "Ulusal kimlik özniteliği",
-        "nationalIdAttributeHelp": "Active Directory kullanıcılarında ulusal kimlik değerinin okunacağı öznitelik adını girin. Örn: employeeId"
-      },
-      "messages": {
-        "saveSuccess": "AD ayarları kaydedildi.",
-        "saveFailed": "AD ayarları kaydedilemedi."
-      }
-    },
     "adManagement": {
       "pageTabs": {
         "connection": "Bağlantı ve Yetkili Hesap",

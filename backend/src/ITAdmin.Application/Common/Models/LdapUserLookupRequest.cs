@@ -8,5 +8,4 @@ public sealed record LdapUserLookupRequest(
     string? BindUserDomain,
     string BindPassword,
     string Search,
-    int MaxResults,
-    string? NationalIdAttribute);
+    int MaxResults);

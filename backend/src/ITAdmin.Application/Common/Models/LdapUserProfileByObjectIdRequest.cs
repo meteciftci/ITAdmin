@@ -7,5 +7,4 @@ public sealed record LdapUserProfileByObjectIdRequest(
     string BindUserName,
     string? BindUserDomain,
     string BindPassword,
-    string DirectoryObjectId,
-    string? NationalIdAttribute);
+    string DirectoryObjectId);

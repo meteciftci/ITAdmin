@@ -5,5 +5,4 @@ public sealed record LdapUserLookupItem(
     string UserName,
     string DisplayName,
     string? Email,
-    string? NationalId,
     string? DistinguishedName = null);

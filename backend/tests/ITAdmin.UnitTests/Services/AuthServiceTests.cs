@@ -603,15 +603,6 @@ public sealed class AuthServiceTests
         await context.PortalPermissions.AddAsync(permission);
         await context.PortalUserRoles.AddAsync(userRole);
         await context.PortalRolePermissions.AddAsync(rolePermission);
-        await context.ApplicationSettings.AddAsync(new ApplicationSetting
-        {
-            Key = "Directory:NationalIdAttribute",
-            Value = "employeeId",
-            ValueType = SettingValueType.String,
-            IsActive = true,
-            IsDeleted = false
-        });
-
         await context.SaveChangesAsync();
         return user;
     }
@@ -623,6 +614,5 @@ public sealed class AuthServiceTests
             directoryObjectId,
             userName,
             "Mete User",
-            "mete.user@test.local",
-            "12345678901");
+            "mete.user@test.local");
 }

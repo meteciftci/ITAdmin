@@ -4,5 +4,4 @@ public sealed record LdapUserProfile(
     string DirectoryObjectId,
     string UserName,
     string DisplayName,
-    string? Email,
-    string? NationalId);
+    string? Email);

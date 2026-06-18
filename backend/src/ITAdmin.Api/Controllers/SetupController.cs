@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using ITAdmin.Api.Contracts.Setup;
+using ITAdmin.Api.Setup;
 using ITAdmin.Application.Common.Constants;
 using ITAdmin.Application.Abstractions.Services;
-using AppModels = ITAdmin.Application.Common.Models;
 
 namespace ITAdmin.Api.Controllers;
 
@@ -45,7 +45,7 @@ public sealed class SetupController(
 
     [HttpPost("validate-ldap")]
     public async Task<ActionResult<ValidateLdapResponse>> ValidateLdap(
-        [FromBody] ValidateLdapRequest request,
+        [FromBody] ValidateLdapRequest? request,
         CancellationToken cancellationToken)
     {
         var isSetupRequired = await setupService.IsSetupRequiredAsync(cancellationToken);
@@ -56,18 +56,19 @@ public sealed class SetupController(
                 new { messageKey = SetupApiMessageKeys.Validation.SetupAlreadyCompleted });
         }
 
-        var result = await setupService.ValidateLdapAsync(
-            new AppModels.ValidateSetupLdapRequest(
-                request.SetupKey,
-                MapLdapSettings(request)),
-            cancellationToken);
+        if (!SetupControllerRequestMapper.TryMapValidateLdapRequest(request, out var mappedRequest, out var messageKey))
+        {
+            return BadRequest(new { messageKey });
+        }
+
+        var result = await setupService.ValidateLdapAsync(mappedRequest, cancellationToken);
 
         return Ok(new ValidateLdapResponse(result.IsValid, result.Message));
     }
 
     [HttpPost("search-admin-users")]
     public async Task<ActionResult<SearchSetupAdminUsersResponse>> SearchAdminUsers(
-        [FromBody] SearchSetupAdminUsersRequest request,
+        [FromBody] SearchSetupAdminUsersRequest? request,
         CancellationToken cancellationToken)
     {
         var isSetupRequired = await setupService.IsSetupRequiredAsync(cancellationToken);
@@ -78,12 +79,12 @@ public sealed class SetupController(
                 new { messageKey = SetupApiMessageKeys.Validation.SetupAlreadyCompleted });
         }
 
-        var result = await setupService.SearchAdminUsersAsync(
-            new AppModels.SearchSetupAdminUsersRequest(
-                request.SetupKey,
-                MapLdapSettings(request.Ldap),
-                request.Search),
-            cancellationToken);
+        if (!SetupControllerRequestMapper.TryMapSearchAdminUsersRequest(request, out var mappedRequest, out var messageKey))
+        {
+            return BadRequest(new { messageKey });
+        }
+
+        var result = await setupService.SearchAdminUsersAsync(mappedRequest, cancellationToken);
 
         if (!result.IsSuccess)
         {
@@ -104,21 +105,15 @@ public sealed class SetupController(
 
     [HttpPost("complete")]
     public async Task<ActionResult<CompleteSetupResponse>> CompleteSetup(
-        [FromBody] CompleteSetupRequest request,
+        [FromBody] CompleteSetupRequest? request,
         CancellationToken cancellationToken)
     {
-        var result = await setupService.CompleteSetupAsync(
-            new AppModels.CompleteSetupRequest(
-                request.SetupKey,
-                MapLdapSettings(request.Ldap),
-                MapModules(request.Modules),
-                request.AdminUsers
-                    .Select(adminUser => new AppModels.CompleteSetupAdminUser(
-                        adminUser.UserName,
-                        adminUser.DistinguishedName,
-                        adminUser.DirectoryObjectId))
-                    .ToList()),
-            cancellationToken);
+        if (!SetupControllerRequestMapper.TryMapCompleteSetupRequest(request, out var mappedRequest, out var messageKey))
+        {
+            return BadRequest(new { messageKey });
+        }
+
+        var result = await setupService.CompleteSetupAsync(mappedRequest, cancellationToken);
 
         var response = new CompleteSetupResponse(result.IsCompleted, result.Message);
         if (result.IsCompleted)
@@ -128,39 +123,4 @@ public sealed class SetupController(
 
         return BadRequest(response);
     }
-
-    private static AppModels.CompleteSetupLdapSettings MapLdapSettings(CompleteSetupLdapSettingsRequest ldap) =>
-        new(
-            ldap.Name,
-            ldap.Host,
-            ldap.BaseDn,
-            ldap.UserSearchBase,
-            ldap.UserSearchFilter,
-            ldap.BindUserName,
-            ldap.BindUserDomain,
-            ldap.BindPassword);
-
-    private static AppModels.CompleteSetupLdapSettings MapLdapSettings(ValidateLdapRequest request) =>
-        new(
-            Name: "Default LDAP",
-            request.Host,
-            request.BaseDn,
-            request.UserSearchBase,
-            request.UserSearchFilter,
-            request.BindUserName,
-            request.BindUserDomain,
-            request.BindPassword);
-
-    private static AppModels.CompleteSetupModulesSettings MapModules(CompleteSetupModulesRequest modules) =>
-        new(modules.AdManagement is null
-            ? null
-            : new AppModels.CompleteSetupAdManagementModuleSettings(
-                modules.AdManagement.IsEnabled,
-                modules.AdManagement.UsersSearchBase,
-                modules.AdManagement.GroupsSearchBase,
-                modules.AdManagement.ComputersSearchBase,
-                modules.AdManagement.DefaultUserOu,
-                modules.AdManagement.DefaultGroupOu,
-                modules.AdManagement.DefaultComputerOu,
-                modules.AdManagement.DeletedObjectsEnabled));
 }

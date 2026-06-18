@@ -16,18 +16,24 @@ public static class SetupRequestValidator
         message = string.Empty;
         messageKey = null;
 
-        if (string.IsNullOrWhiteSpace(request.SetupKey) ||
-            !TryValidateLdapSettings(request.Ldap, out message, out messageKey))
+        if (string.IsNullOrWhiteSpace(request.SetupKey))
+        {
+            message = "Invalid setup request.";
+            messageKey = SetupApiMessageKeys.Validation.InvalidSetupRequest;
+            return false;
+        }
+
+        if (!TryValidateLdapSettings(request.Ldap, out message, out messageKey))
         {
             message = string.IsNullOrWhiteSpace(message) ? "Invalid setup request." : message;
-            messageKey ??= SetupApiMessageKeys.Validation.InvalidSetupRequest;
+            messageKey ??= SetupApiMessageKeys.Validation.InvalidLdapSettings;
             return false;
         }
 
         if (request.AdminUsers is null || request.AdminUsers.Count == 0)
         {
             message = "At least one admin user is required.";
-            messageKey = SetupApiMessageKeys.Validation.InvalidSetupRequest;
+            messageKey = SetupApiMessageKeys.Validation.AdminUsersRequired;
             return false;
         }
 
@@ -45,22 +51,23 @@ public static class SetupRequestValidator
     }
 
     public static bool TryValidateLdapSettings(
-        CompleteSetupLdapSettings ldap,
+        CompleteSetupLdapSettings? ldap,
         out string message,
         out string? messageKey)
     {
         message = string.Empty;
         messageKey = null;
 
-        if (string.IsNullOrWhiteSpace(ldap.Host) ||
+        if (ldap is null ||
+            string.IsNullOrWhiteSpace(ldap.Host) ||
             string.IsNullOrWhiteSpace(ldap.BaseDn) ||
             string.IsNullOrWhiteSpace(ldap.UserSearchBase) ||
             string.IsNullOrWhiteSpace(ldap.UserSearchFilter) ||
             string.IsNullOrWhiteSpace(ldap.BindUserName) ||
             string.IsNullOrWhiteSpace(ldap.BindPassword))
         {
-            message = "Invalid setup request.";
-            messageKey = SetupApiMessageKeys.Validation.InvalidSetupRequest;
+            message = "Invalid LDAP settings.";
+            messageKey = SetupApiMessageKeys.Validation.InvalidLdapSettings;
             return false;
         }
 
@@ -113,14 +120,14 @@ public static class SetupRequestValidator
     }
 
     public static bool TryValidateModules(
-        CompleteSetupModulesSettings modules,
+        CompleteSetupModulesSettings? modules,
         out string message,
         out string? messageKey)
     {
         message = string.Empty;
         messageKey = null;
 
-        var adManagement = modules.AdManagement;
+        var adManagement = modules?.AdManagement;
         if (adManagement is null || !adManagement.IsEnabled)
         {
             return true;

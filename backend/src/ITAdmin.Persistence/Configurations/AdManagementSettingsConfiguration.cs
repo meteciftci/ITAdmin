@@ -45,6 +45,22 @@ public class AdManagementSettingsConfiguration : IEntityTypeConfiguration<AdMana
             .HasColumnName("disabled_users_ou")
             .HasMaxLength(500);
 
+        builder.Property(x => x.DefaultUserOu)
+            .HasColumnName("default_user_ou")
+            .HasMaxLength(500);
+
+        builder.Property(x => x.DefaultGroupOu)
+            .HasColumnName("default_group_ou")
+            .HasMaxLength(500);
+
+        builder.Property(x => x.DefaultComputerOu)
+            .HasColumnName("default_computer_ou")
+            .HasMaxLength(500);
+
+        builder.Property(x => x.DeletedObjectsEnabled)
+            .HasColumnName("deleted_objects_enabled")
+            .HasDefaultValue(false);
+
         builder.Property(x => x.GroupsSearchBase)
             .HasColumnName("groups_search_base")
             .HasMaxLength(500);

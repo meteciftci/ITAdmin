@@ -5,6 +5,7 @@ using ITAdmin.Api.Controllers;
 using ITAdmin.Application.Common.Constants;
 using ITAdmin.Application.Common.Models;
 using ITAdmin.UnitTests.Fakes;
+using ApiCompleteSetupRequest = ITAdmin.Api.Contracts.Setup.CompleteSetupRequest;
 using ApiSearchSetupAdminUsersRequest = ITAdmin.Api.Contracts.Setup.SearchSetupAdminUsersRequest;
 
 namespace ITAdmin.UnitTests.Setup;
@@ -111,6 +112,61 @@ public sealed class SetupControllerTests
         var result = await controller.SearchAdminUsers(CreateValidSearchRequest(), CancellationToken.None);
 
         Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task CompleteSetup_WhenRequestBodyNull_ReturnsBadRequest()
+    {
+        var setup = new FakeSetupService { IsSetupRequiredResult = true };
+        var controller = new SetupController(setup, new FakeSetupPreflightService());
+
+        var result = await controller.CompleteSetup(null, CancellationToken.None);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Equal(0, setup.CompleteSetupCallCount);
+        Assert.Contains("invalidRequestBody", badRequest.Value!.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CompleteSetup_WhenLdapNull_ReturnsBadRequest()
+    {
+        var setup = new FakeSetupService { IsSetupRequiredResult = true };
+        var controller = new SetupController(setup, new FakeSetupPreflightService());
+
+        var result = await controller.CompleteSetup(
+            new ApiCompleteSetupRequest(
+                "setup-secret",
+                null!,
+                new CompleteSetupModulesRequest(null),
+                [new CompleteSetupAdminUserRequest("admin", null, null)]),
+            CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Equal(0, setup.CompleteSetupCallCount);
+    }
+
+    [Fact]
+    public async Task SearchAdminUsers_WhenRequestBodyNull_ReturnsBadRequest()
+    {
+        var setup = new FakeSetupService { IsSetupRequiredResult = true };
+        var controller = new SetupController(setup, new FakeSetupPreflightService());
+
+        var result = await controller.SearchAdminUsers(null, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Equal(0, setup.SearchAdminUsersCallCount);
+    }
+
+    [Fact]
+    public async Task ValidateLdap_WhenRequestBodyNull_ReturnsBadRequest()
+    {
+        var setup = new FakeSetupService { IsSetupRequiredResult = true };
+        var controller = new SetupController(setup, new FakeSetupPreflightService());
+
+        var result = await controller.ValidateLdap(null, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Equal(0, setup.ValidateLdapCallCount);
     }
 
     private static ValidateLdapRequest CreateValidValidateRequest() => new()

@@ -22,7 +22,6 @@ public sealed class AuthService(
 {
     private const string SuperAdminRoleCode = "SuperAdmin";
     private const string ActiveDirectoryDirectorySource = "ActiveDirectory";
-    private const string NationalIdApplicationSettingKey = "Directory:NationalIdAttribute";
 
     public const string ServiceUnavailableErrorCode = "ServiceUnavailable";
     public const string LoginErrorCode = "LoginError";
@@ -91,17 +90,6 @@ public sealed class AuthService(
                 return new AuthTokenResult(false, ldapResult.Message, null, null, null, null);
             }
 
-            var nationalIdAttrRaw = await context.ApplicationSettings
-                .AsNoTracking()
-                .Where(x =>
-                    x.Key == NationalIdApplicationSettingKey &&
-                    x.IsActive &&
-                    !x.IsDeleted)
-                .Select(x => x.Value)
-                .FirstOrDefaultAsync(cancellationToken);
-
-            var nationalIdAttribute = string.IsNullOrWhiteSpace(nationalIdAttrRaw) ? null : nationalIdAttrRaw.Trim();
-
             var ldapProfile = await ldapService.GetUserProfileAsync(
                 new LdapUserProfileRequest(
                     Host: ldapSetting.Host,
@@ -111,8 +99,7 @@ public sealed class AuthService(
                     BindUserName: ldapSetting.BindUserName,
                     BindUserDomain: ldapSetting.BindUserDomain,
                     BindPassword: bindPassword,
-                    UserName: normalizedUserName,
-                    NationalIdAttribute: nationalIdAttribute),
+                    UserName: normalizedUserName),
                 cancellationToken);
 
             if (ldapProfile is null)
@@ -225,12 +212,6 @@ public sealed class AuthService(
             user.Email = ldapProfile.Email;
             user.DirectorySource = ActiveDirectoryDirectorySource;
             user.DirectoryObjectId = ldapProfile.DirectoryObjectId;
-
-            if (ldapProfile.NationalId is not null)
-            {
-                user.NationalIdEncrypted = secretProtector.Protect(ldapProfile.NationalId);
-                user.NationalIdMasked = MaskNationalId(ldapProfile.NationalId);
-            }
 
             var activeRoles = user.UserRoles
                 .Where(x => x.PortalRole.IsActive && !x.PortalRole.IsDeleted)
@@ -369,23 +350,6 @@ public sealed class AuthService(
                 null,
                 LoginErrorCode);
         }
-    }
-
-    private static string? MaskNationalId(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return null;
-        }
-
-        var trimmed = value.Trim();
-        var length = trimmed.Length;
-
-        string masked =
-            length <= 4 ? new string('*', length)
-            : $"{trimmed[..3]}{new string('*', length - 5)}{trimmed[^2..]}";
-
-        return masked.Length > 50 ? masked[..50] : masked;
     }
 
     private static string BuildLoginFailedDescription(string userName, string? reason)
