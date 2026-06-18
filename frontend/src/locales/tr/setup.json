@@ -43,6 +43,9 @@
       "directoryUserProfileHint": "Yönetici kullanıcı AD profil bilgisi alınamadı. Kullanıcı adını, User Search Base ve User Search Filter ayarlarını kontrol edin.",
       "ldapTimeoutHint": "Kurulum isteği zaman aşımına uğradı veya LDAP sunucusu yanıt vermedi. LDAP sunucusu, ağ bağlantısı, SSL ve User Search ayarlarını kontrol edin."
     },
+    "defaults": {
+      "connectionName": "Varsayılan LDAP"
+    },
     "validation": {
       "required": "Zorunlu alan",
       "invalidPort": "Geçerli bir port girin"

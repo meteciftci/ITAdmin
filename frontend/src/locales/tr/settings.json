@@ -64,7 +64,7 @@
     "ldap": {
       "sectionTitle": "LDAP Ayarları",
       "sectionDescription": "LDAP bağlantı ve kullanıcı arama ayarlarını yönetin.",
-      "useSslHelp": "LDAP bağlantısında SSL kullan.",
+      "ldapsHelp": "Bağlantı yalnızca LDAPS (SSL/TLS) üzerinden kurulur. Varsayılan LDAPS portu 636'dır.",
       "bindPasswordConfigured": "Bind şifresi yapılandırılmış.",
       "bindPasswordKeepHint": "Şifre alanı boş bırakılırsa mevcut şifre korunur.",
       "messages": {
@@ -75,7 +75,7 @@
         "name": "Ad",
         "host": "Host",
         "port": "Port",
-        "useSsl": "SSL Kullan",
+        "security": "Güvenlik",
         "baseDn": "Base DN",
         "userSearchBase": "Kullanıcı Arama Base",
         "userSearchFilter": "Kullanıcı Arama Filtresi",
@@ -284,8 +284,8 @@
           "preferredDomainControllers": "Tercih edilen DC'ler",
           "preferredDomainControllersHelp": "Her satıra bir DC FQDN veya host adı girin.",
           "ldapPort": "LDAP portu",
-          "useSsl": "SSL / LDAPS",
-          "useSslHelp": "LDAPS kullan.",
+          "security": "Güvenlik",
+          "ldapsHelp": "Bağlantı yalnızca LDAPS (SSL/TLS) üzerinden kurulur. Varsayılan LDAPS portu 636'dır.",
           "serviceAccountUserName": "Yetkili kullanıcı adı",
           "serviceAccountUserNameHelp": "DOMAIN\\kullanici, kullanici@domain.local veya sadece kullanici formatında girilebilir. Sadece kullanıcı adı girilirse NetBIOS domain adı ile tamamlanır.",
           "serviceAccountPassword": "Yetkili kullanıcı parolası",

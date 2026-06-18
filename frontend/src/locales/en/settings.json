@@ -64,7 +64,7 @@
     "ldap": {
       "sectionTitle": "LDAP Settings",
       "sectionDescription": "Manage LDAP connection and directory search settings.",
-      "useSslHelp": "Use SSL for LDAP connection.",
+      "ldapsHelp": "Connections are established over LDAPS (SSL/TLS) only. The default LDAPS port is 636.",
       "bindPasswordConfigured": "Bind password is configured.",
       "bindPasswordKeepHint": "If the password field is left empty, the existing password will be preserved.",
       "messages": {
@@ -75,7 +75,7 @@
         "name": "Name",
         "host": "Host",
         "port": "Port",
-        "useSsl": "Use SSL",
+        "security": "Security",
         "baseDn": "Base DN",
         "userSearchBase": "User Search Base",
         "userSearchFilter": "User Search Filter",
@@ -284,8 +284,8 @@
           "preferredDomainControllers": "Preferred domain controllers",
           "preferredDomainControllersHelp": "Enter one DC FQDN or host name per line.",
           "ldapPort": "LDAP port",
-          "useSsl": "SSL / LDAPS",
-          "useSslHelp": "Use LDAPS.",
+          "security": "Security",
+          "ldapsHelp": "Connections are established over LDAPS (SSL/TLS) only. The default LDAPS port is 636.",
           "serviceAccountUserName": "Service account user name",
           "serviceAccountUserNameHelp": "You can enter DOMAIN\\user, user@domain.local, or just user. If only the user name is entered, the NetBIOS domain name is used.",
           "serviceAccountPassword": "Service account password",

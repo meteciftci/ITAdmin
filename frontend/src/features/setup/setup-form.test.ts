@@ -6,7 +6,7 @@ import {
   SETUP_SECURE_CONNECTION_REQUIRED_MESSAGE_KEY,
   buildCompleteSetupLdapPayload,
   buildCompleteSetupRequest,
-  defaultSetupFormValues,
+  createDefaultSetupFormValues,
   mapCompleteSetupFailureToast,
 } from "./setup-form.ts";
 
@@ -18,15 +18,21 @@ const hints = {
   ldapTimeoutHint: "timed-out",
 };
 
+const defaults = createDefaultSetupFormValues("Default LDAP");
+
 describe("setup-form", () => {
   it("defaults the port to the standard LDAPS port", () => {
     assert.equal(STANDARD_LDAPS_PORT, "636");
-    assert.equal(defaultSetupFormValues.ldap.port, "636");
+    assert.equal(defaults.ldap.port, "636");
+  });
+
+  it("uses the provided default connection name", () => {
+    assert.equal(createDefaultSetupFormValues("Varsayılan LDAP").ldap.name, "Varsayılan LDAP");
   });
 
   it("always sends useSsl true in the LDAP payload", () => {
     const payload = buildCompleteSetupLdapPayload(
-      { ...defaultSetupFormValues.ldap, host: " dc01.test ", bindUserName: "bind" },
+      { ...defaults.ldap, host: " dc01.test ", bindUserName: "bind" },
       636,
     );
 
@@ -38,7 +44,7 @@ describe("setup-form", () => {
   it("always sends useSsl true in the complete-setup request", () => {
     const request = buildCompleteSetupRequest(
       {
-        ...defaultSetupFormValues,
+        ...defaults,
         setupKey: "key",
         admin: { userName: " admin ", password: "pw" },
       },
@@ -49,9 +55,14 @@ describe("setup-form", () => {
     assert.equal(request.admin.userName, "admin");
   });
 
+  it("sends the trimmed connection name without a hard-coded fallback", () => {
+    const payload = buildCompleteSetupLdapPayload({ ...defaults.ldap, name: "   " }, 636);
+    assert.equal(payload.name, "");
+  });
+
   it("normalizes optional fields to null", () => {
     const payload = buildCompleteSetupLdapPayload(
-      { ...defaultSetupFormValues.ldap, bindUserDomain: "   ", nationalIdAttribute: "" },
+      { ...defaults.ldap, bindUserDomain: "   ", nationalIdAttribute: "" },
       636,
     );
 

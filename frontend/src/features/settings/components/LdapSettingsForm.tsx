@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,7 +8,6 @@ export type LdapFormValues = {
   name: string;
   host: string;
   port: string;
-  useSsl: boolean;
   baseDn: string;
   userSearchBase: string;
   userSearchFilter: string;
@@ -91,25 +89,10 @@ export function LdapSettingsForm({
         />
 
         <div className="space-y-1.5">
-          <Label htmlFor="ldap-useSsl">{t("settings:ldap.fields.useSsl")}</Label>
-          <div className="flex h-9 items-center gap-2">
-            <Checkbox
-              id="ldap-useSsl"
-              checked={values.useSsl}
-              onChange={(event) => onChange("useSsl", event.target.checked)}
-              disabled={readOnly}
-            />
-            <label
-              htmlFor="ldap-useSsl"
-              className={
-                readOnly
-                  ? "cursor-not-allowed text-sm text-muted-foreground"
-                  : "cursor-pointer text-sm text-muted-foreground"
-              }
-            >
-              {t("settings:ldap.useSslHelp")}
-            </label>
-          </div>
+          <Label>{t("settings:ldap.fields.security")}</Label>
+          <p className="flex min-h-9 items-center text-sm text-muted-foreground">
+            {t("settings:ldap.ldapsHelp")}
+          </p>
         </div>
 
         <Field

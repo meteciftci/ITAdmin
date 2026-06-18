@@ -37,6 +37,12 @@ public sealed class LdapService : ILdapService
             return Task.FromResult(new LdapValidationResult(false, MissingRequiredFieldsMessage));
         }
 
+        // Only LDAPS is supported; never attempt a plain LDAP connection.
+        if (!request.UseSsl)
+        {
+            return Task.FromResult(new LdapValidationResult(false, SecureConnectionRequiredMessage));
+        }
+
         try
         {
             var identifier = new LdapDirectoryIdentifier(request.Host, request.Port);
@@ -86,6 +92,12 @@ public sealed class LdapService : ILdapService
             string.IsNullOrWhiteSpace(request.BindPassword))
         {
             return Task.FromResult(new LdapValidationResult(false, MissingRequiredFieldsMessage));
+        }
+
+        // Only LDAPS is supported; never attempt a plain LDAP connection.
+        if (!request.UseSsl)
+        {
+            return Task.FromResult(new LdapValidationResult(false, SecureConnectionRequiredMessage));
         }
 
         try
@@ -267,6 +279,12 @@ public sealed class LdapService : ILdapService
             return Task.FromResult<LdapUserProfile?>(null);
         }
 
+        // Only LDAPS is supported; never attempt a plain LDAP connection.
+        if (!request.UseSsl)
+        {
+            return Task.FromResult<LdapUserProfile?>(null);
+        }
+
         try
         {
             var identifier = new LdapDirectoryIdentifier(request.Host, request.Port);
@@ -392,6 +410,12 @@ public sealed class LdapService : ILdapService
             string.IsNullOrWhiteSpace(request.BindUserName) ||
             string.IsNullOrWhiteSpace(request.BindPassword) ||
             string.IsNullOrWhiteSpace(request.DirectoryObjectId))
+        {
+            return Task.FromResult<LdapUserProfile?>(null);
+        }
+
+        // Only LDAPS is supported; never attempt a plain LDAP connection.
+        if (!request.UseSsl)
         {
             return Task.FromResult<LdapUserProfile?>(null);
         }
@@ -541,6 +565,12 @@ public sealed class LdapService : ILdapService
             string.IsNullOrWhiteSpace(request.BaseDn) ||
             string.IsNullOrWhiteSpace(request.BindUserName) ||
             string.IsNullOrWhiteSpace(request.BindPassword))
+        {
+            return Task.FromResult<IReadOnlyCollection<LdapUserLookupItem>>(Array.Empty<LdapUserLookupItem>());
+        }
+
+        // Only LDAPS is supported; never attempt a plain LDAP connection.
+        if (!request.UseSsl)
         {
             return Task.FromResult<IReadOnlyCollection<LdapUserLookupItem>>(Array.Empty<LdapUserLookupItem>());
         }

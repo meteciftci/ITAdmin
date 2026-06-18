@@ -43,6 +43,9 @@
       "directoryUserProfileHint": "The administrator user's AD profile could not be loaded. Check the user name, User Search Base, and User Search Filter settings.",
       "ldapTimeoutHint": "The setup request timed out or the LDAP server did not respond. Check the LDAP server, network connectivity, SSL, and User Search settings."
     },
+    "defaults": {
+      "connectionName": "Default LDAP"
+    },
     "validation": {
       "required": "Required field",
       "invalidPort": "Enter a valid port"

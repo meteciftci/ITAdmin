@@ -29,7 +29,6 @@ export type AdManagementConnectionFormValues = {
   groupsSearchBase: string;
   computersSearchBase: string;
   preferredDomainControllers: string;
-  useSsl: boolean;
   ldapPort: string;
   serviceAccountUserName: string;
   serviceAccountPassword: string;
@@ -60,7 +59,6 @@ function buildInitialValues(
     computersSearchBase: settings?.computersSearchBase ?? "",
     preferredDomainControllers:
       settings?.preferredDomainControllers?.join("\n") ?? "",
-    useSsl: settings?.useSsl ?? true,
     ldapPort: String(settings?.ldapPort ?? 636),
     serviceAccountUserName: settings?.serviceAccountUserName ?? "",
     serviceAccountPassword: "",
@@ -227,7 +225,7 @@ export function AdManagementConnectionForm({
         groupsSearchBase: emptyToNull(values.groupsSearchBase),
         computersSearchBase: emptyToNull(values.computersSearchBase),
         preferredDomainControllers: parsePreferredDcs(values.preferredDomainControllers),
-        useSsl: values.useSsl,
+        useSsl: true,
         ldapPort,
         serviceAccountUserName: emptyToNull(values.serviceAccountUserName),
         serviceAccountPassword: values.serviceAccountPassword.trim().length === 0
@@ -353,23 +351,10 @@ export function AdManagementConnectionForm({
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="ad-mgmt-use-ssl">
-            {t("settings:adManagement.connection.fields.useSsl")}
-          </Label>
-          <div className="flex h-9 items-center gap-2">
-            <Checkbox
-              id="ad-mgmt-use-ssl"
-              checked={values.useSsl}
-              onChange={(event) => update("useSsl", event.target.checked)}
-              disabled={readOnly}
-            />
-            <label
-              htmlFor="ad-mgmt-use-ssl"
-              className="cursor-pointer text-sm text-muted-foreground"
-            >
-              {t("settings:adManagement.connection.fields.useSslHelp")}
-            </label>
-          </div>
+          <Label>{t("settings:adManagement.connection.fields.security")}</Label>
+          <p className="flex min-h-9 items-center text-sm text-muted-foreground">
+            {t("settings:adManagement.connection.fields.ldapsHelp")}
+          </p>
         </div>
 
         <div className="space-y-1.5">

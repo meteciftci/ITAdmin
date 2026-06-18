@@ -2,7 +2,6 @@ import type { CompleteSetupLdapRequest, CompleteSetupRequest } from "@/features/
 
 export const STANDARD_LDAPS_PORT = "636";
 
-const DEFAULT_LDAP_CONNECTION_NAME = "Default LDAP";
 const DEFAULT_USER_SEARCH_FILTER = "(&(objectClass=user)(sAMAccountName={0}))";
 
 /**
@@ -39,25 +38,31 @@ export type SetupFormValues = {
   admin: SetupAdminFormValues;
 };
 
-export const defaultSetupFormValues: SetupFormValues = {
-  setupKey: "",
-  ldap: {
-    name: DEFAULT_LDAP_CONNECTION_NAME,
-    host: "",
-    port: STANDARD_LDAPS_PORT,
-    baseDn: "",
-    userSearchBase: "",
-    userSearchFilter: DEFAULT_USER_SEARCH_FILTER,
-    bindUserName: "",
-    bindUserDomain: "",
-    bindPassword: "",
-    nationalIdAttribute: "",
-  },
-  admin: {
-    userName: "",
-    password: "",
-  },
-};
+/**
+ * Builds the initial setup form state. The default connection name is supplied
+ * by the caller so it can be sourced from the i18n locale rather than hard-coded.
+ */
+export function createDefaultSetupFormValues(defaultConnectionName: string): SetupFormValues {
+  return {
+    setupKey: "",
+    ldap: {
+      name: defaultConnectionName,
+      host: "",
+      port: STANDARD_LDAPS_PORT,
+      baseDn: "",
+      userSearchBase: "",
+      userSearchFilter: DEFAULT_USER_SEARCH_FILTER,
+      bindUserName: "",
+      bindUserDomain: "",
+      bindPassword: "",
+      nationalIdAttribute: "",
+    },
+    admin: {
+      userName: "",
+      password: "",
+    },
+  };
+}
 
 function emptyToNull(value: string): string | null {
   const trimmed = value.trim();
@@ -73,7 +78,7 @@ export function buildCompleteSetupLdapPayload(
   port: number,
 ): CompleteSetupLdapRequest {
   return {
-    name: ldap.name.trim() || DEFAULT_LDAP_CONNECTION_NAME,
+    name: ldap.name.trim(),
     host: ldap.host.trim(),
     port,
     useSsl: true,

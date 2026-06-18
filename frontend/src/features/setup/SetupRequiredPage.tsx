@@ -20,7 +20,7 @@ import { SectionCard } from "@/components/common/SectionCard";
 import { completeSetup, getSetupStatus } from "@/features/setup/api";
 import {
   buildCompleteSetupRequest,
-  defaultSetupFormValues,
+  createDefaultSetupFormValues,
   mapCompleteSetupFailureToast,
   resolveResponseMessage,
   type SetupFormValues,
@@ -45,7 +45,9 @@ export function SetupRequiredPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const [values, setValues] = useState<SetupFormValues>(defaultSetupFormValues);
+  const [values, setValues] = useState<SetupFormValues>(() =>
+    createDefaultSetupFormValues(t("setup:defaults.connectionName")),
+  );
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
