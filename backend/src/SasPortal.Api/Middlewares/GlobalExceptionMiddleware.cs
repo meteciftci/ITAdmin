@@ -17,22 +17,22 @@ public sealed class GlobalExceptionMiddleware(
         }
         catch (Exception exception)
         {
-            var traceId = context.TraceIdentifier;
+            var correlationId = CorrelationIdMiddleware.TryGetCorrelationId(context) ?? context.TraceIdentifier;
             var isDbConnectivity = DatabaseExceptionClassifier.IsDatabaseConnectivityException(exception);
 
             if (isDbConnectivity)
             {
                 logger.LogError(
                     exception,
-                    "Database connectivity exception occurred. TraceId: {TraceId}",
-                    traceId);
+                    "Database connectivity exception occurred. CorrelationId: {CorrelationId}",
+                    correlationId);
             }
             else
             {
                 logger.LogError(
                     exception,
-                    "Unhandled exception occurred. TraceId: {TraceId}",
-                    traceId);
+                    "Unhandled exception occurred. CorrelationId: {CorrelationId}",
+                    correlationId);
             }
 
             var statusCode = isDbConnectivity
@@ -54,7 +54,8 @@ public sealed class GlobalExceptionMiddleware(
                 Message: message,
                 Detail: detail,
                 StatusCode: statusCode,
-                TraceId: traceId);
+                TraceId: correlationId,
+                CorrelationId: correlationId);
 
             await context.Response.WriteAsync(JsonSerializer.Serialize(errorResponse));
         }

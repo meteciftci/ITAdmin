@@ -5,6 +5,11 @@
 
 # dotenv files
 .env
+.env.*
+
+# Local production overrides — never commit real secrets
+**/appsettings.Production.json
+**/appsettings.*.local.json
 
 # User-specific files
 *.rsuser

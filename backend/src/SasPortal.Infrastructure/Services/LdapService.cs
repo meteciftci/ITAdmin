@@ -16,7 +16,7 @@ public sealed class LdapService(ILogger<LdapService> logger) : ILdapService
     private static readonly TimeSpan LdapOperationTimeout = TimeSpan.FromSeconds(10);
 
     private const string LdapOperationTimedOutMessage =
-        "LDAP operation timed out. Verify host, port, SSL settings, and network connectivity.";
+        "LDAP operation timed out. Verify host, network connectivity, and LDAPS access on port 636.";
 
     private const string MissingRequiredFieldsMessage = "Required LDAP fields are missing.";
     private const string ValidationSucceededMessage = "LDAP validation succeeded.";

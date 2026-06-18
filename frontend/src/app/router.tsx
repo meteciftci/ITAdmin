@@ -6,6 +6,7 @@ import { lazy, Suspense, type ReactNode } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
 
 import { RootRedirect } from "@/app/RootRedirect";
+import { LoadingState } from "@/components/common/LoadingState";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { RequireAuth } from "@/features/auth/RequireAuth";
@@ -212,8 +213,8 @@ const NotFoundPage = lazy(() =>
 
 function RouteFallback() {
   return (
-    <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">
-      Loading...
+    <div className="flex min-h-screen items-center justify-center">
+      <LoadingState />
     </div>
   );
 }

@@ -3,10 +3,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
-using SasPortal.Api.Middlewares;
+using SasPortal.Application.Abstractions.Security;
 using SasPortal.Api.Authorization;
 using SasPortal.Api.Extensions;
 using SasPortal.Api.HostedServices;
+using SasPortal.Api.Middlewares;
 using SasPortal.Api.Security;
 using SasPortal.Application;
 using SasPortal.Application.Common.Models;
@@ -35,6 +36,7 @@ public partial class Program
 
         builder.Services.AddControllers();
         builder.Services.AddHttpContextAccessor();
+        builder.Services.AddScoped<ICorrelationIdAccessor, CorrelationIdAccessor>();
 
         // IIS / reverse proxy support: honor X-Forwarded-For / X-Forwarded-Proto only from
         // proxies declared in configuration (safe loopback-only default when config is empty).
@@ -91,6 +93,7 @@ public partial class Program
         // rate limiting, logging) observe the real client IP and original scheme.
         app.UseForwardedHeaders();
 
+        app.UseCorrelationId();
         app.UseGlobalExceptionHandling();
 
         if (app.Environment.IsDevelopment())

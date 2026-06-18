@@ -4,4 +4,5 @@ public sealed record ErrorResponse(
     string Message,
     string? Detail,
     int StatusCode,
-    string TraceId);
+    string TraceId,
+    string? CorrelationId = null);

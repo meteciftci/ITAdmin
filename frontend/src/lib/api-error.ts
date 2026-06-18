@@ -2,8 +2,44 @@ import { AxiosError } from "axios";
 
 type ApiErrorData = {
   message?: string;
+  Message?: string;
   title?: string;
+  Title?: string;
+  detail?: string;
+  Detail?: string;
+  messageKey?: string;
+  MessageKey?: string;
+  titleKey?: string;
+  TitleKey?: string;
 } | string;
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function pickStringField(data: unknown, keys: readonly string[]): string | null {
+  if (!isPlainObject(data)) return null;
+  for (const key of keys) {
+    const value = data[key];
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  return null;
+}
+
+function pickMessageKeyFromData(data: unknown): string | null {
+  return pickStringField(data, ["messageKey", "MessageKey"]);
+}
+
+function pickTitleKeyFromData(data: unknown): string | null {
+  return pickStringField(data, ["titleKey", "TitleKey"]);
+}
+
+function pickOriginalMessageFromData(data: unknown): string | null {
+  return pickStringField(data, ["message", "Message", "title", "Title", "detail", "Detail", "error"]);
+}
 
 export function getApiErrorMessage(error: unknown, fallback: string): string {
   const axiosError = error as AxiosError<ApiErrorData>;
@@ -14,12 +50,14 @@ export function getApiErrorMessage(error: unknown, fallback: string): string {
   }
 
   if (data && typeof data === "object") {
-    if (typeof data.message === "string" && data.message.trim()) {
-      return data.message;
+    const message = pickOriginalMessageFromData(data);
+    if (message) {
+      return message;
     }
 
-    if (typeof data.title === "string" && data.title.trim()) {
-      return data.title;
+    const messageKey = pickMessageKeyFromData(data);
+    if (messageKey) {
+      return messageKey;
     }
   }
 
@@ -52,6 +90,8 @@ export type ApiErrorInfo = {
   status?: number;
   traceId?: string | null;
   originalMessage?: string | null;
+  responseMessageKey?: string | null;
+  responseTitleKey?: string | null;
 };
 
 type GetApiErrorInfoOptions = {
@@ -59,38 +99,18 @@ type GetApiErrorInfoOptions = {
   fallbackDescription?: string;
 };
 
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 function pickTraceIdFromData(data: unknown): string | null {
-  if (!isPlainObject(data)) return null;
-  const keys = [
+  return pickStringField(data, [
     "traceId",
     "TraceId",
     "traceID",
     "trace_id",
     "correlationId",
     "CorrelationId",
-  ] as const;
-  for (const key of keys) {
-    const v = data[key];
-    if (typeof v === "string" && v.trim()) return v.trim();
-  }
-  return null;
+  ]);
 }
 
-function pickOriginalMessageFromData(data: unknown): string | null {
-  if (!isPlainObject(data)) return null;
-  const keys = ["message", "Message", "title", "detail", "error"] as const;
-  for (const key of keys) {
-    const v = data[key];
-    if (typeof v === "string" && v.trim()) return v.trim();
-  }
-  return null;
-}
-
-function mapStatusToInfo(status: number): Omit<ApiErrorInfo, "traceId" | "originalMessage" | "status"> & {
+function mapStatusToInfo(status: number): Omit<ApiErrorInfo, "traceId" | "originalMessage" | "status" | "responseMessageKey" | "responseTitleKey"> & {
   status: number;
 } {
   if (status === 401) {
@@ -150,7 +170,7 @@ function mapStatusToInfo(status: number): Omit<ApiErrorInfo, "traceId" | "origin
 /**
  * Classifies an API/Axios error for user-facing error states.
  * Prefer {@link ApiErrorInfo.titleKey} / {@link ApiErrorInfo.descriptionKey} with i18n in UI.
- * `options` is reserved for callers; unknown-kind fallbacks are applied in {@link ApiErrorState}.
+ * When the API returns `messageKey`/`titleKey`, they are exposed for optional i18n resolution.
  */
 export function getApiErrorInfo(
   error: unknown,
@@ -166,6 +186,8 @@ export function getApiErrorInfo(
       descriptionKey: "errors:api.unknown.description",
       traceId: null,
       originalMessage: null,
+      responseMessageKey: null,
+      responseTitleKey: null,
     };
   }
 
@@ -179,19 +201,24 @@ export function getApiErrorInfo(
       titleKey: "errors:api.network.title",
       descriptionKey: "errors:api.network.description",
       traceId: null,
-      originalMessage: pickOriginalMessageFromData(data) ?? null,
+      originalMessage: pickOriginalMessageFromData(data) ?? pickMessageKeyFromData(data) ?? null,
+      responseMessageKey: pickMessageKeyFromData(data),
+      responseTitleKey: pickTitleKeyFromData(data),
     };
   }
 
   const status = response.status;
   const base = mapStatusToInfo(status);
   const traceId = pickTraceIdFromData(data);
-  const originalMessage = pickOriginalMessageFromData(data);
+  const originalMessage =
+    pickOriginalMessageFromData(data) ?? pickMessageKeyFromData(data) ?? null;
 
   return {
     ...base,
     status,
     traceId: traceId ?? null,
-    originalMessage: originalMessage ?? null,
+    originalMessage,
+    responseMessageKey: pickMessageKeyFromData(data),
+    responseTitleKey: pickTitleKeyFromData(data),
   };
 }
