@@ -49,6 +49,7 @@ import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useA
 import type { AdGroupMemberItem } from "@/features/ad-management/types";
 import { getAdManagementApiErrorMessage } from "@/features/ad-management/ad-management-api-message";
 import { cn } from "@/lib/utils";
+import { PermissionCodes } from "@/lib/permission-codes";
 
 function MemberList({
   items,
@@ -117,10 +118,10 @@ function MemberList({
 export function AdGroupDetailPage() {
   const { t } = useTranslation(["adManagement", "common", "errors"]);
   const currentUser = useAuthStore((state) => state.user);
-  const canUpdateGroup = canAccess(currentUser, "AdManagement.Groups.Update");
-  const canDeleteGroup = canAccess(currentUser, "AdManagement.Groups.Delete");
-  const canManageMembers = canAccess(currentUser, "AdManagement.Groups.ManageMembers");
-  const canMoveOu = canAccess(currentUser, "AdManagement.Groups.MoveOu");
+  const canUpdateGroup = canAccess(currentUser, PermissionCodes.AdManagement.Groups.Update);
+  const canDeleteGroup = canAccess(currentUser, PermissionCodes.AdManagement.Groups.Delete);
+  const canManageMembers = canAccess(currentUser, PermissionCodes.AdManagement.Groups.ManageMembers);
+  const canMoveOu = canAccess(currentUser, PermissionCodes.AdManagement.Groups.MoveOu);
   const { id: groupId } = useParams<{ id: string }>();
   const location = useLocation();
   const [searchParams] = useSearchParams();

@@ -15,11 +15,11 @@ public sealed class PermissionAuthorizationHandlerTests
     public async Task HandleRequirementAsync_DoesNotWriteSecurityLog_WhenUserHasPermission()
     {
         var (handler, writer, _) = CreateHandler();
-        var requirement = new PermissionRequirement("Users.View");
+        var requirement = new PermissionRequirement(PermissionCodes.Users.View);
         var user = CreateAuthenticatedUser(
             userId: Guid.NewGuid(),
             userName: "allowed.user",
-            permissions: ["Users.View"]);
+            permissions: [PermissionCodes.Users.View]);
         var context = CreateContext(requirement, user);
 
         await handler.HandleAsync(context);
@@ -38,8 +38,8 @@ public sealed class PermissionAuthorizationHandlerTests
         httpContext.Request.Headers.UserAgent = "unit-test-agent";
 
         var userId = Guid.NewGuid();
-        var requirement = new PermissionRequirement("Users.View");
-        var user = CreateAuthenticatedUser(userId, "denied.user", permissions: ["Roles.View"]);
+        var requirement = new PermissionRequirement(PermissionCodes.Users.View);
+        var user = CreateAuthenticatedUser(userId, "denied.user", permissions: [PermissionCodes.Roles.View]);
         var context = CreateContext(requirement, user, httpContext);
 
         await handler.HandleAsync(context);
@@ -51,7 +51,7 @@ public sealed class PermissionAuthorizationHandlerTests
         Assert.Equal("denied.user", entry.UserName);
         Assert.Equal("203.0.113.10", entry.IpAddress);
         Assert.Equal("unit-test-agent", entry.UserAgent);
-        Assert.Contains("Users.View", entry.Description, StringComparison.Ordinal);
+        Assert.Contains(PermissionCodes.Users.View, entry.Description, StringComparison.Ordinal);
         Assert.Contains("GET /api/users", entry.Description, StringComparison.Ordinal);
     }
 
@@ -59,7 +59,7 @@ public sealed class PermissionAuthorizationHandlerTests
     public async Task HandleRequirementAsync_DoesNotWriteSecurityLog_WhenUserIsNotAuthenticated()
     {
         var (handler, writer, _) = CreateHandler();
-        var requirement = new PermissionRequirement("Users.View");
+        var requirement = new PermissionRequirement(PermissionCodes.Users.View);
         var user = new ClaimsPrincipal(new ClaimsIdentity());
         var context = CreateContext(requirement, user);
 
@@ -74,8 +74,8 @@ public sealed class PermissionAuthorizationHandlerTests
     {
         var (handler, writer, httpContext) = CreateHandler();
         var user = CreateAuthenticatedUser(Guid.NewGuid(), "denied.user", permissions: []);
-        var firstRequirement = new PermissionRequirement("Users.View");
-        var secondRequirement = new PermissionRequirement("Roles.View");
+        var firstRequirement = new PermissionRequirement(PermissionCodes.Users.View);
+        var secondRequirement = new PermissionRequirement(PermissionCodes.Roles.View);
 
         await handler.HandleAsync(CreateContext(firstRequirement, user, httpContext));
         await handler.HandleAsync(CreateContext(secondRequirement, user, httpContext));
@@ -92,7 +92,7 @@ public sealed class PermissionAuthorizationHandlerTests
         var forbiddenLogger = new ForbiddenAccessSecurityLogger(writer, accessor, NullLogger<ForbiddenAccessSecurityLogger>.Instance);
         var handler = new PermissionAuthorizationHandler(forbiddenLogger);
 
-        var requirement = new PermissionRequirement("Users.View");
+        var requirement = new PermissionRequirement(PermissionCodes.Users.View);
         var user = CreateAuthenticatedUser(Guid.NewGuid(), "denied.user", permissions: []);
         var context = CreateContext(requirement, user, httpContext);
 

@@ -24,19 +24,20 @@ import { AdManagementModuleStateGuard } from "@/features/ad-management/component
 import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useAdManagementModuleStatus";
 import { getAdManagementApiErrorMessage } from "@/features/ad-management/ad-management-api-message";
 import { canAccess } from "@/lib/permissions";
+import { PermissionCodes } from "@/lib/permission-codes";
 
 export function AdUserDetailPage() {
   const { t } = useTranslation(["adManagement", "common", "errors"]);
   const { id: userId } = useParams<{ id: string }>();
   const moduleStatus = useAdManagementModuleStatus();
   const currentUser = useAuthStore((state) => state.user);
-  const canUpdateUser = canAccess(currentUser, "AdManagement.Users.Update");
-  const canManageGroups = canAccess(currentUser, "AdManagement.Users.Groups.View");
-  const canMoveOu = canAccess(currentUser, "AdManagement.Users.MoveOu");
-  const canEnableUser = canAccess(currentUser, "AdManagement.Users.Enable");
-  const canDisableUser = canAccess(currentUser, "AdManagement.Users.Disable");
-  const canUnlockUser = canAccess(currentUser, "AdManagement.Users.Unlock");
-  const canViewOperationLogs = canAccess(currentUser, "AdOperationLogs.View");
+  const canUpdateUser = canAccess(currentUser, PermissionCodes.AdManagement.Users.Update);
+  const canManageGroups = canAccess(currentUser, PermissionCodes.AdManagement.Users.Groups.View);
+  const canMoveOu = canAccess(currentUser, PermissionCodes.AdManagement.Users.MoveOu);
+  const canEnableUser = canAccess(currentUser, PermissionCodes.AdManagement.Users.Enable);
+  const canDisableUser = canAccess(currentUser, PermissionCodes.AdManagement.Users.Disable);
+  const canUnlockUser = canAccess(currentUser, PermissionCodes.AdManagement.Users.Unlock);
+  const canViewOperationLogs = canAccess(currentUser, PermissionCodes.AdOperationLogs.View);
   const [showEmptyMappedFields, setShowEmptyMappedFields] = useState(false);
 
   const hasValidId = Boolean(userId?.trim()) && isGuidLike(userId);

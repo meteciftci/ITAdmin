@@ -1,3 +1,4 @@
+import type { PermissionCode } from "@/lib/permission-codes";
 import type { CurrentUser } from "@/features/auth/types";
 
 export const hasRole = (
@@ -15,7 +16,7 @@ export const isSuperAdmin = (user: CurrentUser | null): boolean => {
 
 export const hasPermission = (
   user: CurrentUser | null,
-  permissionCode: string,
+  permissionCode: PermissionCode,
 ): boolean => {
   if (!user) return false;
   if (user.isSuperAdmin) return true;
@@ -24,14 +25,14 @@ export const hasPermission = (
 
 export const canAccess = (
   user: CurrentUser | null,
-  permissionCode: string,
+  permissionCode: PermissionCode,
 ): boolean => {
   return hasPermission(user, permissionCode);
 };
 
 export const canAccessAny = (
   user: CurrentUser | null,
-  permissionCodes: readonly string[],
+  permissionCodes: readonly PermissionCode[],
 ): boolean => {
   if (!user) return false;
   if (user.isSuperAdmin) return true;

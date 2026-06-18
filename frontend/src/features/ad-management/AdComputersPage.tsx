@@ -43,6 +43,7 @@ import {
   resolveAdManagementApiMessage,
 } from "@/features/ad-management/ad-management-api-message";
 import { createApiErrorRouteState, getErrorRoutePath } from "@/lib/route-error";
+import { PermissionCodes } from "@/lib/permission-codes";
 
 const MIN_SEARCH_LENGTH = 2;
 
@@ -56,11 +57,11 @@ export function AdComputersPage() {
   const queryClient = useQueryClient();
   const currentUser = useAuthStore((state) => state.user);
   const moduleStatus = useAdManagementModuleStatus();
-  const canEnableComputer = canAccess(currentUser, "AdManagement.Computers.Enable");
-  const canDisableComputer = canAccess(currentUser, "AdManagement.Computers.Disable");
-  const canDeleteComputer = canAccess(currentUser, "AdManagement.Computers.Delete");
-  const canMoveOu = canAccess(currentUser, "AdManagement.Computers.MoveOu");
-  const canManageGroups = canAccess(currentUser, "AdManagement.Computers.Groups.View");
+  const canEnableComputer = canAccess(currentUser, PermissionCodes.AdManagement.Computers.Enable);
+  const canDisableComputer = canAccess(currentUser, PermissionCodes.AdManagement.Computers.Disable);
+  const canDeleteComputer = canAccess(currentUser, PermissionCodes.AdManagement.Computers.Delete);
+  const canMoveOu = canAccess(currentUser, PermissionCodes.AdManagement.Computers.MoveOu);
+  const canManageGroups = canAccess(currentUser, PermissionCodes.AdManagement.Computers.Groups.View);
   const navigate = useNavigate();
   const { listState, listPath, updateListState, clearListState } = useAdComputerListState();
   const [confirmTarget, setConfirmTarget] = useState<AccountConfirmTarget | null>(null);

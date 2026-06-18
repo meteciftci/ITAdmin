@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using SasPortal.Application.Common.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SasPortal.Api.Authorization;
@@ -15,7 +16,7 @@ namespace SasPortal.Api.Controllers;
 public sealed class UsersController(IUserService userService) : ControllerBase
 {
     [HttpGet]
-    [RequirePermission("Users.View")]
+    [RequirePermission(PermissionCodes.Users.View)]
     public async Task<ActionResult<PagedResponse<UserListItemResponse>>> GetUsers(
         [FromQuery] string? search,
         [FromQuery] bool? isActive,
@@ -48,7 +49,7 @@ public sealed class UsersController(IUserService userService) : ControllerBase
     }
 
     [HttpPost]
-    [RequirePermission("Users.Create")]
+    [RequirePermission(PermissionCodes.Users.Create)]
     public async Task<ActionResult<UserDetailResponse>> CreateUser(
         [FromBody] CreateUserRequest request,
         CancellationToken cancellationToken)
@@ -93,7 +94,7 @@ public sealed class UsersController(IUserService userService) : ControllerBase
     }
 
     [HttpGet("lookup-directory")]
-    [RequirePermission("Users.Create")]
+    [RequirePermission(PermissionCodes.Users.Create)]
     public async Task<ActionResult<UserDirectoryLookupResponse>> LookupDirectoryUsers(
         [FromQuery] string search,
         [FromQuery] int maxResults = 20,
@@ -121,7 +122,7 @@ public sealed class UsersController(IUserService userService) : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
-    [RequirePermission("Users.View")]
+    [RequirePermission(PermissionCodes.Users.View)]
     public async Task<ActionResult<UserDetailResponse>> GetUserById(
         Guid id,
         CancellationToken cancellationToken)
@@ -150,7 +151,7 @@ public sealed class UsersController(IUserService userService) : ControllerBase
     }
 
     [HttpPatch("{id:guid}/status")]
-    [RequirePermission("Users.Update")]
+    [RequirePermission(PermissionCodes.Users.Update)]
     public async Task<ActionResult<UserDetailResponse>> UpdateUserStatus(
         Guid id,
         [FromBody] UpdateUserStatusRequest request,
@@ -200,7 +201,7 @@ public sealed class UsersController(IUserService userService) : ControllerBase
     }
 
     [HttpPut("{id:guid}/roles")]
-    [RequirePermission("Users.AssignRoles")]
+    [RequirePermission(PermissionCodes.Users.AssignRoles)]
     public async Task<ActionResult<UserDetailResponse>> UpdateUserRoles(
         Guid id,
         [FromBody] UpdateUserRolesRequest request,

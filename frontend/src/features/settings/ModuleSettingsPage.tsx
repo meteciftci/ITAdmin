@@ -22,6 +22,7 @@ import {
 import { useAuthStore } from "@/features/auth/auth-store";
 import { canAccess } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
+import { PermissionCodes } from "@/lib/permission-codes";
 
 type AdManagementCardStatus = "loading" | "error" | "notConfigured" | "disabled" | "active";
 
@@ -53,7 +54,7 @@ function resolveAdManagementCardStatus(
 export function ModuleSettingsPage() {
   const { t } = useTranslation(["settings", "common"]);
   const user = useAuthStore((state) => state.user);
-  const canViewAdManagementSettings = canAccess(user, "AdManagement.Settings.View");
+  const canViewAdManagementSettings = canAccess(user, PermissionCodes.AdManagement.Settings.View);
 
   const adManagementSettingsQuery = useQuery({
     queryKey: AD_MANAGEMENT_SETTINGS_QUERY_KEY,

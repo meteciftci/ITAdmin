@@ -65,19 +65,19 @@ describe("ad organizational units navigation", () => {
     assert.match(routerSource, /path: "\/ad-management\/organizational-units\/:id"/);
     assert.match(
       routerSource,
-      /RequirePermission permission="AdManagement\.OrganizationalUnits\.View"/,
+      /RequirePermission permission=\{PermissionCodes\.AdManagement\.OrganizationalUnits\.View\}/,
     );
     assert.match(
       routerSource,
-      /RequirePermission permission="AdManagement\.OrganizationalUnits\.Create"/,
+      /RequirePermission permission=\{PermissionCodes\.AdManagement\.OrganizationalUnits\.Create\}/,
     );
     assert.match(
       routerSource,
-      /RequirePermission permission="AdManagement\.OrganizationalUnits\.Update"/,
+      /RequirePermission permission=\{PermissionCodes\.AdManagement\.OrganizationalUnits\.Update\}/,
     );
     assert.match(
       routerSource,
-      /RequirePermission permission="AdManagement\.OrganizationalUnits\.Move"/,
+      /RequirePermission permission=\{PermissionCodes\.AdManagement\.OrganizationalUnits\.Move\}/,
     );
     assert.match(routerSource, /AdOrganizationalUnitsPage/);
     assert.match(routerSource, /AdOrganizationalUnitCreatePage/);

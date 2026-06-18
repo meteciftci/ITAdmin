@@ -27,6 +27,7 @@ import type { NotificationTemplateListItem } from "@/features/notification-templ
 import { useAuthStore } from "@/features/auth/auth-store";
 import { canAccess } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
+import { PermissionCodes } from "@/lib/permission-codes";
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50];
 const DEFAULT_PAGE_SIZE = 10;
@@ -34,7 +35,7 @@ const DEFAULT_PAGE_SIZE = 10;
 export function NotificationTemplatesListTab() {
   const { t } = useTranslation(["notificationSettings", "notificationTemplates", "common"]);
   const user = useAuthStore((state) => state.user);
-  const canUpdate = canAccess(user, "NotificationTemplates.Update");
+  const canUpdate = canAccess(user, PermissionCodes.NotificationTemplates.Update);
 
   const [search, setSearch] = useState("");
 

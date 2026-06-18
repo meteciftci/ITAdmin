@@ -38,6 +38,7 @@ import type {
 import { useAuthStore } from "@/features/auth/auth-store";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { canAccess } from "@/lib/permissions";
+import { PermissionCodes } from "@/lib/permission-codes";
 
 type FormState = SaveNotificationTemplateRequest;
 
@@ -56,7 +57,7 @@ export function NotificationTemplatesPage() {
   const { t } = useTranslation(["notificationTemplates", "common"]);
   const queryClient = useQueryClient();
   const user = useAuthStore((state) => state.user);
-  const canUpdate = canAccess(user, "NotificationTemplates.Update");
+  const canUpdate = canAccess(user, PermissionCodes.NotificationTemplates.Update);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);

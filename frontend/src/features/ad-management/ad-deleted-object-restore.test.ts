@@ -41,7 +41,7 @@ describe("deleted object restore routing", () => {
   it("includes restore route with lazy import and permission guard", () => {
     assert.match(routerSource, /path: "\/ad-management\/deleted-objects\/:id\/restore"/);
     assert.match(routerSource, /AdDeletedObjectRestorePage/);
-    assert.match(routerSource, /RequirePermission permission="AdManagement\.DeletedObjects\.Restore"/);
+    assert.match(routerSource, /RequirePermission permission=\{PermissionCodes\.AdManagement\.DeletedObjects\.Restore\}/);
     assert.match(routerSource, /lazy\(\(\) =>\s*\n\s*import\("@\/features\/ad-management\/AdDeletedObjectRestorePage"\)/);
   });
 

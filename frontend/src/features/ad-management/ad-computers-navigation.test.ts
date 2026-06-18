@@ -95,8 +95,8 @@ describe("ad computers route and menu wiring", () => {
     assert.match(routerSource, /path: "\/ad-management\/computers"/);
     assert.match(routerSource, /path: "\/ad-management\/computers\/:id\/move-ou"/);
     assert.match(routerSource, /path: "\/ad-management\/computers\/:id"/);
-    assert.match(routerSource, /RequirePermission permission="AdManagement\.Computers\.View"/);
-    assert.match(routerSource, /RequirePermission permission="AdManagement\.Computers\.MoveOu"/);
+    assert.match(routerSource, /RequirePermission permission=\{PermissionCodes\.AdManagement\.Computers\.View\}/);
+    assert.match(routerSource, /RequirePermission permission=\{PermissionCodes\.AdManagement\.Computers\.MoveOu\}/);
     assert.match(routerSource, /AdMoveComputerOuPage/);
   });
 
@@ -106,7 +106,7 @@ describe("ad computers route and menu wiring", () => {
       "utf8",
     );
 
-    assert.match(sidebarSource, /AdManagement\.Computers\.View/);
+    assert.match(sidebarSource, /PermissionCodes\.AdManagement\.Computers\.View/);
     assert.match(sidebarSource, /to: "\/ad-management\/computers"/);
     assert.match(sidebarSource, /items\.adManagementComputers/);
     assert.match(sidebarSource, /isAdManagementComputersVisible/);

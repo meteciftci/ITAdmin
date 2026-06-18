@@ -11,6 +11,7 @@ import { canRestoreDeletedObject } from "@/features/ad-management/ad-deleted-obj
 import type { AdDeletedObjectDetail } from "@/features/ad-management/types";
 import { canAccess } from "@/lib/permissions";
 import { useAuthStore } from "@/features/auth/auth-store";
+import { PermissionCodes } from "@/lib/permission-codes";
 
 type Props = {
   detail: AdDeletedObjectDetail;
@@ -30,7 +31,7 @@ export function AdDeletedObjectDetailHeaderActions({
   const user = useAuthStore((state) => state.user);
 
   const canRestore =
-    canAccess(user, "AdManagement.DeletedObjects.Restore")
+    canAccess(user, PermissionCodes.AdManagement.DeletedObjects.Restore)
     && canRestoreDeletedObject(detail);
 
   return (

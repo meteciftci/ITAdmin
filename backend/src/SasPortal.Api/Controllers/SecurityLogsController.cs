@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using SasPortal.Application.Common.Security;
 using Microsoft.AspNetCore.Mvc;
 using SasPortal.Api.Authorization;
 using SasPortal.Api.Contracts.Common;
@@ -14,7 +15,7 @@ namespace SasPortal.Api.Controllers;
 public sealed class SecurityLogsController(ISecurityLogService securityLogService) : ControllerBase
 {
     [HttpGet]
-    [RequirePermission("SecurityLogs.View")]
+    [RequirePermission(PermissionCodes.SecurityLogs.View)]
     public async Task<ActionResult<PagedResponse<SecurityLogListItemResponse>>> GetSecurityLogs(
         [FromQuery] string? search,
         [FromQuery] List<string>? eventTypes,
@@ -67,7 +68,7 @@ public sealed class SecurityLogsController(ISecurityLogService securityLogServic
     }
 
     [HttpGet("filter-options")]
-    [RequirePermission("SecurityLogs.View")]
+    [RequirePermission(PermissionCodes.SecurityLogs.View)]
     public async Task<ActionResult<SecurityLogFilterOptionsResponse>> GetFilterOptions(
         CancellationToken cancellationToken = default)
     {

@@ -4,11 +4,12 @@ import { Navigate, useLocation } from "react-router-dom";
 
 import { useAuthStore } from "@/features/auth/auth-store";
 import { getErrorRoutePath } from "@/lib/route-error";
+import type { PermissionCode } from "@/lib/permission-codes";
 import { canAccess } from "@/lib/permissions";
 import { useTranslation } from "react-i18next";
 
 type RequirePermissionProps = {
-  permission: string;
+  permission: PermissionCode;
   children: ReactNode;
 };
 

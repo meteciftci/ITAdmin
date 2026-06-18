@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { canAccess } from "@/lib/permissions";
 import { useAuthStore } from "@/features/auth/auth-store";
+import { PermissionCodes } from "@/lib/permission-codes";
 
 type NotificationSettingsTabsProps = {
   activeTab: "providers" | "templates";
@@ -12,8 +13,8 @@ type NotificationSettingsTabsProps = {
 export function NotificationSettingsTabs({ activeTab }: NotificationSettingsTabsProps) {
   const { t } = useTranslation(["notificationSettings"]);
   const user = useAuthStore((state) => state.user);
-  const canViewProviders = canAccess(user, "NotificationProviders.View");
-  const canViewTemplates = canAccess(user, "NotificationTemplates.View");
+  const canViewProviders = canAccess(user, PermissionCodes.NotificationProviders.View);
+  const canViewTemplates = canAccess(user, PermissionCodes.NotificationTemplates.View);
 
   const tabClassName = (isActive: boolean) =>
     cn(

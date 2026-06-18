@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using SasPortal.Application.Common.Security;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using SasPortal.Api.Authorization;
@@ -15,7 +16,7 @@ namespace SasPortal.Api.Controllers;
 public sealed class RolesController(IRoleService roleService) : ControllerBase
 {
     [HttpGet]
-    [RequirePermission("Roles.View")]
+    [RequirePermission(PermissionCodes.Roles.View)]
     public async Task<ActionResult<PagedResponse<RoleListItemResponse>>> GetRoles(
         [FromQuery] string? search,
         [FromQuery] bool? isActive,
@@ -46,7 +47,7 @@ public sealed class RolesController(IRoleService roleService) : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
-    [RequirePermission("Roles.View")]
+    [RequirePermission(PermissionCodes.Roles.View)]
     public async Task<ActionResult<RoleDetailResponse>> GetRoleById(
         Guid id,
         CancellationToken cancellationToken = default)
@@ -61,7 +62,7 @@ public sealed class RolesController(IRoleService roleService) : ControllerBase
     }
 
     [HttpPost]
-    [RequirePermission("Roles.Create")]
+    [RequirePermission(PermissionCodes.Roles.Create)]
     public async Task<ActionResult<RoleDetailResponse>> CreateRole(
         [FromBody] CreateRoleRequest request,
         CancellationToken cancellationToken = default)
@@ -93,7 +94,7 @@ public sealed class RolesController(IRoleService roleService) : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
-    [RequirePermission("Roles.Update")]
+    [RequirePermission(PermissionCodes.Roles.Update)]
     public async Task<ActionResult<RoleDetailResponse>> UpdateRole(
         Guid id,
         [FromBody] UpdateRoleRequest request,
@@ -130,7 +131,7 @@ public sealed class RolesController(IRoleService roleService) : ControllerBase
     }
 
     [HttpPatch("{id:guid}/status")]
-    [RequirePermission("Roles.Update")]
+    [RequirePermission(PermissionCodes.Roles.Update)]
     public async Task<ActionResult<RoleDetailResponse>> UpdateRoleStatus(
         Guid id,
         [FromBody] UpdateRoleStatusRequest request,
@@ -165,7 +166,7 @@ public sealed class RolesController(IRoleService roleService) : ControllerBase
     }
 
     [HttpPut("{id:guid}/permissions")]
-    [RequirePermission("Roles.AssignPermissions")]
+    [RequirePermission(PermissionCodes.Roles.AssignPermissions)]
     public async Task<ActionResult<RoleDetailResponse>> UpdateRolePermissions(
         Guid id,
         [FromBody] UpdateRolePermissionsRequest request,

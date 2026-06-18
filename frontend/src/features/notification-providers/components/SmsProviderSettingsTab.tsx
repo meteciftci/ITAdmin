@@ -26,6 +26,7 @@ import type {
 import { useAuthStore } from "@/features/auth/auth-store";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { canAccess } from "@/lib/permissions";
+import { PermissionCodes } from "@/lib/permission-codes";
 
 type Props = {
   readOnly: boolean;
@@ -170,8 +171,8 @@ function SmsProviderSettingsForm({ initialSettings, readOnly }: SmsFormProps) {
   const { t } = useTranslation(["notificationProviders", "common"]);
   const queryClient = useQueryClient();
   const user = useAuthStore((state) => state.user);
-  const canUpdate = canAccess(user, "NotificationProviders.Update");
-  const canTest = canAccess(user, "NotificationProviders.Test");
+  const canUpdate = canAccess(user, PermissionCodes.NotificationProviders.Update);
+  const canTest = canAccess(user, PermissionCodes.NotificationProviders.Test);
   const isReadOnly = readOnly || !canUpdate;
 
   const [form, setForm] = useState<SmsFormState>(() => mapSettingsToForm(initialSettings));

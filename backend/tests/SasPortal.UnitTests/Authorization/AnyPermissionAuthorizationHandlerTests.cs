@@ -16,12 +16,12 @@ public sealed class AnyPermissionAuthorizationHandlerTests
         var handler = CreateHandler(out _);
         var requirement = new AnyPermissionRequirement(
         [
-            "AdManagement.Users.Create",
-            "AdManagement.Settings.View",
+            PermissionCodes.AdManagement.Users.Create,
+            PermissionCodes.AdManagement.Settings.View,
         ]);
         var user = new ClaimsPrincipal(new ClaimsIdentity(
         [
-            new Claim(CustomClaimTypes.Permission, "AdManagement.Settings.View"),
+            new Claim(CustomClaimTypes.Permission, PermissionCodes.AdManagement.Settings.View),
         ],
         authenticationType: "test"));
         var context = new AuthorizationHandlerContext(
@@ -40,14 +40,14 @@ public sealed class AnyPermissionAuthorizationHandlerTests
         var handler = CreateHandler(out var writer);
         var requirement = new AnyPermissionRequirement(
         [
-            "AdManagement.Users.Create",
-            "AdManagement.Settings.View",
+            PermissionCodes.AdManagement.Users.Create,
+            PermissionCodes.AdManagement.Settings.View,
         ]);
         var user = new ClaimsPrincipal(new ClaimsIdentity(
         [
             new Claim(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString("D")),
             new Claim(ClaimTypes.Name, "limited.user"),
-            new Claim(CustomClaimTypes.Permission, "Users.View"),
+            new Claim(CustomClaimTypes.Permission, PermissionCodes.Users.View),
         ],
         authenticationType: "test"));
         var context = new AuthorizationHandlerContext(
@@ -60,8 +60,8 @@ public sealed class AnyPermissionAuthorizationHandlerTests
         Assert.False(context.HasSucceeded);
         var entry = Assert.Single(writer.Entries);
         Assert.Equal(SecurityLogEventTypes.ForbiddenAccess, entry.EventType);
-        Assert.Contains("AdManagement.Users.Create", entry.Description, StringComparison.Ordinal);
-        Assert.Contains("AdManagement.Settings.View", entry.Description, StringComparison.Ordinal);
+        Assert.Contains(PermissionCodes.AdManagement.Users.Create, entry.Description, StringComparison.Ordinal);
+        Assert.Contains(PermissionCodes.AdManagement.Settings.View, entry.Description, StringComparison.Ordinal);
         Assert.Contains("(any)", entry.Description, StringComparison.Ordinal);
     }
 

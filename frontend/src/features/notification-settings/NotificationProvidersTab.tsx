@@ -6,11 +6,12 @@ import { EmailProviderSettingsTab } from "@/features/notification-providers/comp
 import { SmsProviderSettingsTab } from "@/features/notification-providers/components/SmsProviderSettingsTab";
 import { useAuthStore } from "@/features/auth/auth-store";
 import { canAccess } from "@/lib/permissions";
+import { PermissionCodes } from "@/lib/permission-codes";
 
 export function NotificationProvidersTab() {
   const { t } = useTranslation(["notificationProviders", "notificationSettings", "common"]);
   const user = useAuthStore((state) => state.user);
-  const canUpdate = canAccess(user, "NotificationProviders.Update");
+  const canUpdate = canAccess(user, PermissionCodes.NotificationProviders.Update);
 
   return (
     <div className="space-y-4">

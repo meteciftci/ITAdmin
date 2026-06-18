@@ -89,7 +89,7 @@ describe("group list and detail move OU actions", () => {
     );
 
     assert.match(routerSource, /path: "\/ad-management\/groups\/:id\/move-ou"/);
-    assert.match(routerSource, /RequirePermission permission="AdManagement\.Groups\.MoveOu"/);
+    assert.match(routerSource, /RequirePermission permission=\{PermissionCodes\.AdManagement\.Groups\.MoveOu\}/);
     assert.match(routerSource, /AdMoveGroupOuPage/);
   });
 });

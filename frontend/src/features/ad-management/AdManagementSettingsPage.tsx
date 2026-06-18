@@ -4,11 +4,12 @@ import { AdManagementSettingsTab } from "@/features/ad-management/AdManagementSe
 import { useAuthStore } from "@/features/auth/auth-store";
 import { canAccess } from "@/lib/permissions";
 import { useTranslation } from "react-i18next";
+import { PermissionCodes } from "@/lib/permission-codes";
 
 export function AdManagementSettingsPage() {
   const { t } = useTranslation(["settings"]);
   const user = useAuthStore((state) => state.user);
-  const canUpdateAdManagementSettings = canAccess(user, "AdManagement.Settings.Update");
+  const canUpdateAdManagementSettings = canAccess(user, PermissionCodes.AdManagement.Settings.Update);
 
   return (
     <section className="space-y-4">

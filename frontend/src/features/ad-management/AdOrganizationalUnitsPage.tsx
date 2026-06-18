@@ -30,16 +30,17 @@ import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useA
 import { useAdOrganizationalUnitListState } from "@/features/ad-management/use-ad-ou-list-state";
 import type { AdOrganizationalUnitManageListItem } from "@/features/ad-management/types";
 import { createApiErrorRouteState, getErrorRoutePath } from "@/lib/route-error";
+import { PermissionCodes } from "@/lib/permission-codes";
 
 const MIN_SEARCH_LENGTH = 2;
 
 export function AdOrganizationalUnitsPage() {
   const { t } = useTranslation(["adManagement", "common", "errors"]);
   const currentUser = useAuthStore((state) => state.user);
-  const canCreate = canAccess(currentUser, "AdManagement.OrganizationalUnits.Create");
-  const canUpdate = canAccess(currentUser, "AdManagement.OrganizationalUnits.Update");
-  const canMove = canAccess(currentUser, "AdManagement.OrganizationalUnits.Move");
-  const canDelete = canAccess(currentUser, "AdManagement.OrganizationalUnits.Delete");
+  const canCreate = canAccess(currentUser, PermissionCodes.AdManagement.OrganizationalUnits.Create);
+  const canUpdate = canAccess(currentUser, PermissionCodes.AdManagement.OrganizationalUnits.Update);
+  const canMove = canAccess(currentUser, PermissionCodes.AdManagement.OrganizationalUnits.Move);
+  const canDelete = canAccess(currentUser, PermissionCodes.AdManagement.OrganizationalUnits.Delete);
   const moduleStatus = useAdManagementModuleStatus();
   const navigate = useNavigate();
   const { listState, listPath, updateListState, clearListState } = useAdOrganizationalUnitListState();

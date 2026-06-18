@@ -42,6 +42,7 @@ import { AdOrganizationalUnitTechnicalField } from "@/features/ad-management/com
 import { AdManagementModuleStateGuard } from "@/features/ad-management/components/AdManagementModuleStateGuard";
 import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useAdManagementModuleStatus";
 import { getAdManagementApiErrorMessage } from "@/features/ad-management/ad-management-api-message";
+import { PermissionCodes } from "@/lib/permission-codes";
 
 export function AdOrganizationalUnitDetailPage() {
   const { t } = useTranslation(["adManagement", "common", "errors"]);
@@ -51,11 +52,11 @@ export function AdOrganizationalUnitDetailPage() {
   const currentUser = useAuthStore((state) => state.user);
   const moduleStatus = useAdManagementModuleStatus();
 
-  const canCreate = canAccess(currentUser, "AdManagement.OrganizationalUnits.Create");
-  const canUpdate = canAccess(currentUser, "AdManagement.OrganizationalUnits.Update");
-  const canMove = canAccess(currentUser, "AdManagement.OrganizationalUnits.Move");
-  const canDelete = canAccess(currentUser, "AdManagement.OrganizationalUnits.Delete");
-  const canViewOperationLogs = canAccess(currentUser, "AdOperationLogs.View");
+  const canCreate = canAccess(currentUser, PermissionCodes.AdManagement.OrganizationalUnits.Create);
+  const canUpdate = canAccess(currentUser, PermissionCodes.AdManagement.OrganizationalUnits.Update);
+  const canMove = canAccess(currentUser, PermissionCodes.AdManagement.OrganizationalUnits.Move);
+  const canDelete = canAccess(currentUser, PermissionCodes.AdManagement.OrganizationalUnits.Delete);
+  const canViewOperationLogs = canAccess(currentUser, PermissionCodes.AdOperationLogs.View);
 
   const [deleteOpen, setDeleteOpen] = useState(false);
 

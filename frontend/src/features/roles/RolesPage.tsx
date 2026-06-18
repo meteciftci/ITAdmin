@@ -32,6 +32,7 @@ import { createApiErrorRouteState, getErrorRoutePath } from "@/lib/route-error";
 import { canAccess } from "@/lib/permissions";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import { PermissionCodes } from "@/lib/permission-codes";
 
 type StatusFilter = "active" | "passive" | "all";
 type TypeFilter = "all" | "system" | "custom";
@@ -40,10 +41,10 @@ export function RolesPage() {
   const { t } = useTranslation(["roles", "common"]);
   const queryClient = useQueryClient();
   const currentUser = useAuthStore((state) => state.user);
-  const canCreate = canAccess(currentUser, "Roles.Create");
-  const canUpdate = canAccess(currentUser, "Roles.Update");
-  const canAssignPermissions = canAccess(currentUser, "Roles.AssignPermissions");
-  const canViewPermissions = canAccess(currentUser, "Permissions.View");
+  const canCreate = canAccess(currentUser, PermissionCodes.Roles.Create);
+  const canUpdate = canAccess(currentUser, PermissionCodes.Roles.Update);
+  const canAssignPermissions = canAccess(currentUser, PermissionCodes.Roles.AssignPermissions);
+  const canViewPermissions = canAccess(currentUser, PermissionCodes.Permissions.View);
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");

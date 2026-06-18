@@ -100,7 +100,7 @@ describe("computer list and detail move OU actions", () => {
     );
 
     assert.match(routerSource, /path: "\/ad-management\/computers\/:id\/move-ou"/);
-    assert.match(routerSource, /RequirePermission permission="AdManagement\.Computers\.MoveOu"/);
+    assert.match(routerSource, /RequirePermission permission=\{PermissionCodes\.AdManagement\.Computers\.MoveOu\}/);
     assert.match(routerSource, /AdMoveComputerOuPage/);
   });
 });

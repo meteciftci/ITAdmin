@@ -34,6 +34,7 @@ import {
   resolveAdManagementApiMessage,
 } from "@/features/ad-management/ad-management-api-message";
 import { createApiErrorRouteState, getErrorRoutePath } from "@/lib/route-error";
+import { PermissionCodes } from "@/lib/permission-codes";
 
 type AccountConfirmTarget = {
   user: AdUserListItem;
@@ -47,13 +48,13 @@ export function AdUsersPage() {
   const queryClient = useQueryClient();
   const currentUser = useAuthStore((state) => state.user);
   const moduleStatus = useAdManagementModuleStatus();
-  const canCreateUser = canAccess(currentUser, "AdManagement.Users.Create");
-  const canUpdateUser = canAccess(currentUser, "AdManagement.Users.Update");
-  const canEnableUser = canAccess(currentUser, "AdManagement.Users.Enable");
-  const canDisableUser = canAccess(currentUser, "AdManagement.Users.Disable");
-  const canUnlockUser = canAccess(currentUser, "AdManagement.Users.Unlock");
-  const canManageGroups = canAccess(currentUser, "AdManagement.Users.Groups.View");
-  const canMoveOu = canAccess(currentUser, "AdManagement.Users.MoveOu");
+  const canCreateUser = canAccess(currentUser, PermissionCodes.AdManagement.Users.Create);
+  const canUpdateUser = canAccess(currentUser, PermissionCodes.AdManagement.Users.Update);
+  const canEnableUser = canAccess(currentUser, PermissionCodes.AdManagement.Users.Enable);
+  const canDisableUser = canAccess(currentUser, PermissionCodes.AdManagement.Users.Disable);
+  const canUnlockUser = canAccess(currentUser, PermissionCodes.AdManagement.Users.Unlock);
+  const canManageGroups = canAccess(currentUser, PermissionCodes.AdManagement.Users.Groups.View);
+  const canMoveOu = canAccess(currentUser, PermissionCodes.AdManagement.Users.MoveOu);
   const navigate = useNavigate();
   const { listState, listPath, updateListState, clearListState } = useAdUserListState();
 

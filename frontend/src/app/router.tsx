@@ -12,6 +12,7 @@ import { RequireAuth } from "@/features/auth/RequireAuth";
 import { RequireAnyPermission } from "@/features/auth/RequireAnyPermission";
 import { RequirePermission } from "@/features/auth/RequirePermission";
 import { SetupRequiredPage } from "@/features/setup/SetupRequiredPage";
+import { PermissionCodes } from "@/lib/permission-codes";
 
 const HomePage = lazy(() =>
   import("@/features/home/HomePage").then((module) => ({ default: module.HomePage })),
@@ -262,7 +263,7 @@ export const router = createBrowserRouter([
     path: "/audit-logs",
     element: (
       <RequireAuth>
-        <RequirePermission permission="AuditLogs.View">
+        <RequirePermission permission={PermissionCodes.AuditLogs.View}>
           <AppLayout>
             <LazyRoute>
               <AuditLogsPage />
@@ -276,7 +277,7 @@ export const router = createBrowserRouter([
     path: "/security-logs",
     element: (
       <RequireAuth>
-        <RequirePermission permission="SecurityLogs.View">
+        <RequirePermission permission={PermissionCodes.SecurityLogs.View}>
           <AppLayout>
             <LazyRoute>
               <SecurityLogsPage />
@@ -290,7 +291,7 @@ export const router = createBrowserRouter([
     path: "/notification-outbox",
     element: (
       <RequireAuth>
-        <RequirePermission permission="NotificationOutbox.View">
+        <RequirePermission permission={PermissionCodes.NotificationOutbox.View}>
           <AppLayout>
             <LazyRoute>
               <NotificationOutboxPage />
@@ -304,7 +305,7 @@ export const router = createBrowserRouter([
     path: "/monitoring/module-logs/ad-operation-logs",
     element: (
       <RequireAuth>
-        <RequirePermission permission="AdOperationLogs.View">
+        <RequirePermission permission={PermissionCodes.AdOperationLogs.View}>
           <AppLayout>
             <LazyRoute>
               <AdOperationLogsPage />
@@ -318,7 +319,7 @@ export const router = createBrowserRouter([
     path: "/permissions",
     element: (
       <RequireAuth>
-        <RequirePermission permission="Permissions.View">
+        <RequirePermission permission={PermissionCodes.Permissions.View}>
           <AppLayout>
             <LazyRoute>
               <PermissionsPage />
@@ -332,7 +333,7 @@ export const router = createBrowserRouter([
     path: "/roles",
     element: (
       <RequireAuth>
-        <RequirePermission permission="Roles.View">
+        <RequirePermission permission={PermissionCodes.Roles.View}>
           <AppLayout>
             <LazyRoute>
               <RolesPage />
@@ -346,7 +347,7 @@ export const router = createBrowserRouter([
     path: "/users",
     element: (
       <RequireAuth>
-        <RequirePermission permission="Users.View">
+        <RequirePermission permission={PermissionCodes.Users.View}>
           <AppLayout>
             <LazyRoute>
               <UsersPage />
@@ -362,10 +363,10 @@ export const router = createBrowserRouter([
       <RequireAuth>
         <RequireAnyPermission
           permissions={[
-            "Settings.View",
-            "NotificationProviders.View",
-            "NotificationTemplates.View",
-            "AdManagement.Settings.View",
+            PermissionCodes.Settings.View,
+            PermissionCodes.NotificationProviders.View,
+            PermissionCodes.NotificationTemplates.View,
+            PermissionCodes.AdManagement.Settings.View,
           ]}
         >
           <AppLayout>
@@ -381,7 +382,7 @@ export const router = createBrowserRouter([
     path: "/settings/application",
     element: (
       <RequireAuth>
-        <RequirePermission permission="Settings.View">
+        <RequirePermission permission={PermissionCodes.Settings.View}>
           <AppLayout>
             <LazyRoute>
               <ApplicationSettingsPage />
@@ -412,7 +413,7 @@ export const router = createBrowserRouter([
     element: (
       <RequireAuth>
         <RequireAnyPermission
-          permissions={["NotificationProviders.View", "NotificationTemplates.View"]}
+          permissions={[PermissionCodes.NotificationProviders.View, PermissionCodes.NotificationTemplates.View]}
         >
           <AppLayout>
             <LazyRoute>
@@ -427,7 +428,7 @@ export const router = createBrowserRouter([
     path: "/settings/notifications/providers",
     element: (
       <RequireAuth>
-        <RequirePermission permission="NotificationProviders.View">
+        <RequirePermission permission={PermissionCodes.NotificationProviders.View}>
           <AppLayout>
             <LazyRoute>
               <NotificationSettingsProvidersPage activeTab="providers" />
@@ -441,7 +442,7 @@ export const router = createBrowserRouter([
     path: "/settings/notifications/templates",
     element: (
       <RequireAuth>
-        <RequirePermission permission="NotificationTemplates.View">
+        <RequirePermission permission={PermissionCodes.NotificationTemplates.View}>
           <AppLayout>
             <LazyRoute>
               <NotificationSettingsTemplatesPage activeTab="templates" />
@@ -455,7 +456,7 @@ export const router = createBrowserRouter([
     path: "/settings/notifications/templates/create",
     element: (
       <RequireAuth>
-        <RequirePermission permission="NotificationTemplates.Update">
+        <RequirePermission permission={PermissionCodes.NotificationTemplates.Update}>
           <AppLayout>
             <LazyRoute>
               <NotificationTemplateFormPage mode="create" />
@@ -469,7 +470,7 @@ export const router = createBrowserRouter([
     path: "/settings/notifications/templates/:id/edit",
     element: (
       <RequireAuth>
-        <RequirePermission permission="NotificationTemplates.Update">
+        <RequirePermission permission={PermissionCodes.NotificationTemplates.Update}>
           <AppLayout>
             <LazyRoute>
               <NotificationTemplateFormPage mode="edit" />
@@ -483,7 +484,7 @@ export const router = createBrowserRouter([
     path: "/settings/modules",
     element: (
       <RequireAuth>
-        <RequireAnyPermission permissions={["AdManagement.Settings.View"]}>
+        <RequireAnyPermission permissions={[PermissionCodes.AdManagement.Settings.View]}>
           <AppLayout>
             <LazyRoute>
               <ModuleSettingsPage />
@@ -497,7 +498,7 @@ export const router = createBrowserRouter([
     path: "/settings/modules/ad-management",
     element: (
       <RequireAuth>
-        <RequirePermission permission="AdManagement.Settings.View">
+        <RequirePermission permission={PermissionCodes.AdManagement.Settings.View}>
           <AppLayout>
             <LazyRoute>
               <AdManagementSettingsPage />
@@ -511,7 +512,7 @@ export const router = createBrowserRouter([
     path: "/ad-management/users",
     element: (
       <RequireAuth>
-        <RequirePermission permission="AdManagement.Users.View">
+        <RequirePermission permission={PermissionCodes.AdManagement.Users.View}>
           <AppLayout>
             <LazyRoute>
               <AdUsersPage />
@@ -525,7 +526,7 @@ export const router = createBrowserRouter([
     path: "/ad-management/users/create",
     element: (
       <RequireAuth>
-        <RequirePermission permission="AdManagement.Users.Create">
+        <RequirePermission permission={PermissionCodes.AdManagement.Users.Create}>
           <AppLayout>
             <LazyRoute>
               <AdCreateUserPage />
@@ -539,7 +540,7 @@ export const router = createBrowserRouter([
     path: "/ad-management/users/:id",
     element: (
       <RequireAuth>
-        <RequirePermission permission="AdManagement.Users.View">
+        <RequirePermission permission={PermissionCodes.AdManagement.Users.View}>
           <AppLayout>
             <LazyRoute>
               <AdUserDetailPage />
@@ -553,7 +554,7 @@ export const router = createBrowserRouter([
     path: "/ad-management/users/:id/edit",
     element: (
       <RequireAuth>
-        <RequirePermission permission="AdManagement.Users.Update">
+        <RequirePermission permission={PermissionCodes.AdManagement.Users.Update}>
           <AppLayout>
             <LazyRoute>
               <AdEditUserPage />
@@ -567,7 +568,7 @@ export const router = createBrowserRouter([
     path: "/ad-management/users/:id/groups",
     element: (
       <RequireAuth>
-        <RequirePermission permission="AdManagement.Users.Groups.View">
+        <RequirePermission permission={PermissionCodes.AdManagement.Users.Groups.View}>
           <AppLayout>
             <LazyRoute>
               <AdUserGroupsPage />
@@ -581,7 +582,7 @@ export const router = createBrowserRouter([
     path: "/ad-management/users/:id/move-ou",
     element: (
       <RequireAuth>
-        <RequirePermission permission="AdManagement.Users.MoveOu">
+        <RequirePermission permission={PermissionCodes.AdManagement.Users.MoveOu}>
           <AppLayout>
             <LazyRoute>
               <AdMoveUserOuPage />
@@ -595,7 +596,7 @@ export const router = createBrowserRouter([
     path: "/ad-management/groups",
     element: (
       <RequireAuth>
-        <RequirePermission permission="AdManagement.Groups.View">
+        <RequirePermission permission={PermissionCodes.AdManagement.Groups.View}>
           <AppLayout>
             <LazyRoute>
               <AdGroupsPage />
@@ -609,7 +610,7 @@ export const router = createBrowserRouter([
     path: "/ad-management/groups/create",
     element: (
       <RequireAuth>
-        <RequirePermission permission="AdManagement.Groups.Create">
+        <RequirePermission permission={PermissionCodes.AdManagement.Groups.Create}>
           <AppLayout>
             <LazyRoute>
               <AdGroupCreatePage />
@@ -623,7 +624,7 @@ export const router = createBrowserRouter([
     path: "/ad-management/groups/:id/edit",
     element: (
       <RequireAuth>
-        <RequirePermission permission="AdManagement.Groups.Update">
+        <RequirePermission permission={PermissionCodes.AdManagement.Groups.Update}>
           <AppLayout>
             <LazyRoute>
               <AdEditGroupPage />
@@ -637,7 +638,7 @@ export const router = createBrowserRouter([
     path: "/ad-management/groups/:id/move-ou",
     element: (
       <RequireAuth>
-        <RequirePermission permission="AdManagement.Groups.MoveOu">
+        <RequirePermission permission={PermissionCodes.AdManagement.Groups.MoveOu}>
           <AppLayout>
             <LazyRoute>
               <AdMoveGroupOuPage />
@@ -651,7 +652,7 @@ export const router = createBrowserRouter([
     path: "/ad-management/groups/:id",
     element: (
       <RequireAuth>
-        <RequirePermission permission="AdManagement.Groups.View">
+        <RequirePermission permission={PermissionCodes.AdManagement.Groups.View}>
           <AppLayout>
             <LazyRoute>
               <AdGroupDetailPage />
@@ -665,7 +666,7 @@ export const router = createBrowserRouter([
     path: "/ad-management/computers",
     element: (
       <RequireAuth>
-        <RequirePermission permission="AdManagement.Computers.View">
+        <RequirePermission permission={PermissionCodes.AdManagement.Computers.View}>
           <AppLayout>
             <LazyRoute>
               <AdComputersPage />
@@ -679,7 +680,7 @@ export const router = createBrowserRouter([
     path: "/ad-management/computers/:id/move-ou",
     element: (
       <RequireAuth>
-        <RequirePermission permission="AdManagement.Computers.MoveOu">
+        <RequirePermission permission={PermissionCodes.AdManagement.Computers.MoveOu}>
           <AppLayout>
             <LazyRoute>
               <AdMoveComputerOuPage />
@@ -693,7 +694,7 @@ export const router = createBrowserRouter([
     path: "/ad-management/computers/:id/groups",
     element: (
       <RequireAuth>
-        <RequirePermission permission="AdManagement.Computers.Groups.View">
+        <RequirePermission permission={PermissionCodes.AdManagement.Computers.Groups.View}>
           <AppLayout>
             <LazyRoute>
               <AdComputerGroupsPage />
@@ -707,7 +708,7 @@ export const router = createBrowserRouter([
     path: "/ad-management/computers/:id",
     element: (
       <RequireAuth>
-        <RequirePermission permission="AdManagement.Computers.View">
+        <RequirePermission permission={PermissionCodes.AdManagement.Computers.View}>
           <AppLayout>
             <LazyRoute>
               <AdComputerDetailPage />
@@ -721,7 +722,7 @@ export const router = createBrowserRouter([
     path: "/ad-management/organizational-units",
     element: (
       <RequireAuth>
-        <RequirePermission permission="AdManagement.OrganizationalUnits.View">
+        <RequirePermission permission={PermissionCodes.AdManagement.OrganizationalUnits.View}>
           <AppLayout>
             <LazyRoute>
               <AdOrganizationalUnitsPage />
@@ -735,7 +736,7 @@ export const router = createBrowserRouter([
     path: "/ad-management/organizational-units/create",
     element: (
       <RequireAuth>
-        <RequirePermission permission="AdManagement.OrganizationalUnits.Create">
+        <RequirePermission permission={PermissionCodes.AdManagement.OrganizationalUnits.Create}>
           <AppLayout>
             <LazyRoute>
               <AdOrganizationalUnitCreatePage />
@@ -749,7 +750,7 @@ export const router = createBrowserRouter([
     path: "/ad-management/organizational-units/:id/rename",
     element: (
       <RequireAuth>
-        <RequirePermission permission="AdManagement.OrganizationalUnits.Update">
+        <RequirePermission permission={PermissionCodes.AdManagement.OrganizationalUnits.Update}>
           <AppLayout>
             <LazyRoute>
               <AdOrganizationalUnitRenamePage />
@@ -763,7 +764,7 @@ export const router = createBrowserRouter([
     path: "/ad-management/organizational-units/:id/move",
     element: (
       <RequireAuth>
-        <RequirePermission permission="AdManagement.OrganizationalUnits.Move">
+        <RequirePermission permission={PermissionCodes.AdManagement.OrganizationalUnits.Move}>
           <AppLayout>
             <LazyRoute>
               <AdOrganizationalUnitMovePage />
@@ -777,7 +778,7 @@ export const router = createBrowserRouter([
     path: "/ad-management/organizational-units/:id",
     element: (
       <RequireAuth>
-        <RequirePermission permission="AdManagement.OrganizationalUnits.View">
+        <RequirePermission permission={PermissionCodes.AdManagement.OrganizationalUnits.View}>
           <AppLayout>
             <LazyRoute>
               <AdOrganizationalUnitDetailPage />
@@ -791,7 +792,7 @@ export const router = createBrowserRouter([
     path: "/ad-management/deleted-objects",
     element: (
       <RequireAuth>
-        <RequirePermission permission="AdManagement.DeletedObjects.View">
+        <RequirePermission permission={PermissionCodes.AdManagement.DeletedObjects.View}>
           <AppLayout>
             <LazyRoute>
               <AdDeletedObjectsPage />
@@ -805,7 +806,7 @@ export const router = createBrowserRouter([
     path: "/ad-management/deleted-objects/:id",
     element: (
       <RequireAuth>
-        <RequirePermission permission="AdManagement.DeletedObjects.View">
+        <RequirePermission permission={PermissionCodes.AdManagement.DeletedObjects.View}>
           <AppLayout>
             <LazyRoute>
               <AdDeletedObjectDetailPage />
@@ -819,7 +820,7 @@ export const router = createBrowserRouter([
     path: "/ad-management/deleted-objects/:id/restore",
     element: (
       <RequireAuth>
-        <RequirePermission permission="AdManagement.DeletedObjects.Restore">
+        <RequirePermission permission={PermissionCodes.AdManagement.DeletedObjects.Restore}>
           <AppLayout>
             <LazyRoute>
               <AdDeletedObjectRestorePage />

@@ -24,6 +24,7 @@ import { useBrandingSettings } from "@/hooks/useBrandingSettings";
 import { resolveApiAssetUrl } from "@/lib/api-client";
 import { canAccess } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
+import { PermissionCodes } from "@/lib/permission-codes";
 
 function isRouteActive(pathname: string, to: string) {
   return pathname === to || pathname.startsWith(`${to}/`);
@@ -45,10 +46,10 @@ export function AppSidebar() {
   } = useLayoutShell();
 
   const canViewAdManagementModule =
-    canAccess(user, "AdManagement.Users.View")
-    || canAccess(user, "AdManagement.Groups.View")
-    || canAccess(user, "AdManagement.Computers.View")
-    || canAccess(user, "AdManagement.OrganizationalUnits.View");
+    canAccess(user, PermissionCodes.AdManagement.Users.View)
+    || canAccess(user, PermissionCodes.AdManagement.Groups.View)
+    || canAccess(user, PermissionCodes.AdManagement.Computers.View)
+    || canAccess(user, PermissionCodes.AdManagement.OrganizationalUnits.View);
   const adManagementSettingsQuery = useQuery({
     queryKey: AD_MANAGEMENT_SETTINGS_QUERY_KEY,
     queryFn: getAdManagementSettings,

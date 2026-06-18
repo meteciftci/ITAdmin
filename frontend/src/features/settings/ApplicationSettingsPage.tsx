@@ -30,14 +30,15 @@ import { useAuthStore } from "@/features/auth/auth-store";
 import { canAccess } from "@/lib/permissions";
 import { createApiErrorRouteState, getErrorRoutePath } from "@/lib/route-error";
 import { useTranslation } from "react-i18next";
+import { PermissionCodes } from "@/lib/permission-codes";
 
 const SETTINGS_BASE_PATH = "/settings/application";
 
 export function ApplicationSettingsPage() {
   const { t } = useTranslation(["settings", "common"]);
   const currentUser = useAuthStore((state) => state.user);
-  const canViewSystemSettings = canAccess(currentUser, "Settings.View");
-  const canUpdateSystemSettings = canAccess(currentUser, "Settings.Update");
+  const canViewSystemSettings = canAccess(currentUser, PermissionCodes.Settings.View);
+  const canUpdateSystemSettings = canAccess(currentUser, PermissionCodes.Settings.Update);
   const isSystemReadOnly = !canUpdateSystemSettings;
 
   const [activeTab, setActiveTab] = useState<ApplicationSettingsTabValue>(

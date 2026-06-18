@@ -20,6 +20,7 @@ import {
 
 import type { CurrentUser } from "@/features/auth/types";
 import { canAccess, canAccessAny } from "@/lib/permissions";
+import { PermissionCodes } from "@/lib/permission-codes";
 
 export type SidebarLinkItem = {
   kind: "link";
@@ -97,7 +98,7 @@ function isAdManagementUsersVisible(
   user: CurrentUser | null,
   moduleState?: AdManagementModuleSidebarState,
 ): boolean {
-  if (!canAccess(user, "AdManagement.Users.View")) {
+  if (!canAccess(user, PermissionCodes.AdManagement.Users.View)) {
     return false;
   }
 
@@ -108,7 +109,7 @@ function isAdManagementGroupsVisible(
   user: CurrentUser | null,
   moduleState?: AdManagementModuleSidebarState,
 ): boolean {
-  if (!canAccess(user, "AdManagement.Groups.View")) {
+  if (!canAccess(user, PermissionCodes.AdManagement.Groups.View)) {
     return false;
   }
 
@@ -119,7 +120,7 @@ function isAdManagementComputersVisible(
   user: CurrentUser | null,
   moduleState?: AdManagementModuleSidebarState,
 ): boolean {
-  if (!canAccess(user, "AdManagement.Computers.View")) {
+  if (!canAccess(user, PermissionCodes.AdManagement.Computers.View)) {
     return false;
   }
 
@@ -130,7 +131,7 @@ function isAdManagementOrganizationalUnitsVisible(
   user: CurrentUser | null,
   moduleState?: AdManagementModuleSidebarState,
 ): boolean {
-  if (!canAccess(user, "AdManagement.OrganizationalUnits.View")) {
+  if (!canAccess(user, PermissionCodes.AdManagement.OrganizationalUnits.View)) {
     return false;
   }
 
@@ -141,7 +142,7 @@ function isAdManagementDeletedObjectsVisible(
   user: CurrentUser | null,
   moduleState?: AdManagementModuleSidebarState,
 ): boolean {
-  if (!canAccess(user, "AdManagement.DeletedObjects.View")) {
+  if (!canAccess(user, PermissionCodes.AdManagement.DeletedObjects.View)) {
     return false;
   }
 
@@ -227,27 +228,27 @@ export const getSidebarGroups = (
         titleKey: "items.auditLogs",
         to: "/audit-logs",
         icon: ClipboardList,
-        visible: canAccess(user, "AuditLogs.View"),
+        visible: canAccess(user, PermissionCodes.AuditLogs.View),
       },
       {
         kind: "link",
         titleKey: "items.securityLogs",
         to: "/security-logs",
         icon: ShieldAlert,
-        visible: canAccess(user, "SecurityLogs.View"),
+        visible: canAccess(user, PermissionCodes.SecurityLogs.View),
       },
       {
         kind: "collapsible",
         titleKey: "items.moduleLogs",
         routePrefix: "/monitoring/module-logs",
         icon: ListTree,
-        visible: canAccess(user, "AdOperationLogs.View"),
+        visible: canAccess(user, PermissionCodes.AdOperationLogs.View),
         children: [
           {
             titleKey: "items.adOperationLogs",
             to: "/monitoring/module-logs/ad-operation-logs",
             icon: Activity,
-            visible: canAccess(user, "AdOperationLogs.View"),
+            visible: canAccess(user, PermissionCodes.AdOperationLogs.View),
           },
         ],
       },
@@ -256,7 +257,7 @@ export const getSidebarGroups = (
         titleKey: "items.notificationOutbox",
         to: "/notification-outbox",
         icon: Inbox,
-        visible: canAccess(user, "NotificationOutbox.View"),
+        visible: canAccess(user, PermissionCodes.NotificationOutbox.View),
       },
     ],
   },
@@ -268,21 +269,21 @@ export const getSidebarGroups = (
         titleKey: "items.users",
         to: "/users",
         icon: Users,
-        visible: canAccess(user, "Users.View"),
+        visible: canAccess(user, PermissionCodes.Users.View),
       },
       {
         kind: "link",
         titleKey: "items.roles",
         to: "/roles",
         icon: Shield,
-        visible: canAccess(user, "Roles.View"),
+        visible: canAccess(user, PermissionCodes.Roles.View),
       },
       {
         kind: "link",
         titleKey: "items.permissions",
         to: "/permissions",
         icon: KeyRound,
-        visible: canAccess(user, "Permissions.View"),
+        visible: canAccess(user, PermissionCodes.Permissions.View),
       },
       {
         kind: "collapsible",
@@ -290,32 +291,32 @@ export const getSidebarGroups = (
         routePrefix: "/settings",
         icon: SlidersHorizontal,
         visible: canAccessAny(user, [
-          "Settings.View",
-          "NotificationProviders.View",
-          "NotificationTemplates.View",
-          "AdManagement.Settings.View",
+          PermissionCodes.Settings.View,
+          PermissionCodes.NotificationProviders.View,
+          PermissionCodes.NotificationTemplates.View,
+          PermissionCodes.AdManagement.Settings.View,
         ]),
         children: [
           {
             titleKey: "items.applicationSettings",
             to: "/settings/application",
             icon: SlidersHorizontal,
-            visible: canAccess(user, "Settings.View"),
+            visible: canAccess(user, PermissionCodes.Settings.View),
           },
           {
             titleKey: "items.notificationSettings",
             to: "/settings/notifications",
             icon: BellRing,
             visible: canAccessAny(user, [
-              "NotificationProviders.View",
-              "NotificationTemplates.View",
+              PermissionCodes.NotificationProviders.View,
+              PermissionCodes.NotificationTemplates.View,
             ]),
           },
           {
             titleKey: "items.moduleSettings",
             to: "/settings/modules",
             icon: Boxes,
-            visible: canAccess(user, "AdManagement.Settings.View"),
+            visible: canAccess(user, PermissionCodes.AdManagement.Settings.View),
           },
         ],
       },

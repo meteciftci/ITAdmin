@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using SasPortal.Application.Common.Security;
 using Microsoft.AspNetCore.Mvc;
 using SasPortal.Api.Authorization;
 using SasPortal.Api.Contracts.Common;
@@ -14,7 +15,7 @@ namespace SasPortal.Api.Controllers;
 public sealed class PermissionsController(IPermissionService permissionService) : ControllerBase
 {
     [HttpGet]
-    [RequirePermission("Permissions.View")]
+    [RequirePermission(PermissionCodes.Permissions.View)]
     public async Task<ActionResult<PagedResponse<PermissionListItemResponse>>> GetPermissions(
         [FromQuery] string? search,
         [FromQuery] bool? isActive,
@@ -42,7 +43,7 @@ public sealed class PermissionsController(IPermissionService permissionService) 
     }
 
     [HttpGet("{id:guid}")]
-    [RequirePermission("Permissions.View")]
+    [RequirePermission(PermissionCodes.Permissions.View)]
     public async Task<ActionResult<PermissionDetailResponse>> GetPermissionById(
         Guid id,
         CancellationToken cancellationToken = default)

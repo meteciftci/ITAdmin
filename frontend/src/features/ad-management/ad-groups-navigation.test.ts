@@ -96,7 +96,7 @@ describe("ad groups route and menu wiring", () => {
 
     assert.match(routerSource, /path: "\/ad-management\/groups"/);
     assert.match(routerSource, /path: "\/ad-management\/groups\/:id"/);
-    assert.match(routerSource, /RequirePermission permission="AdManagement\.Groups\.View"/);
+    assert.match(routerSource, /RequirePermission permission=\{PermissionCodes\.AdManagement\.Groups\.View\}/);
   });
 
   it("shows groups menu item only for groups permission", () => {

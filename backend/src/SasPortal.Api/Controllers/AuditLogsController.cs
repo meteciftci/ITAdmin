@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using SasPortal.Application.Common.Security;
 using Microsoft.AspNetCore.Mvc;
 using SasPortal.Api.Authorization;
 using SasPortal.Api.Contracts.AuditLogs;
@@ -14,7 +15,7 @@ namespace SasPortal.Api.Controllers;
 public sealed class AuditLogsController(IAuditLogService auditLogService) : ControllerBase
 {
     [HttpGet]
-    [RequirePermission("AuditLogs.View")]
+    [RequirePermission(PermissionCodes.AuditLogs.View)]
     public async Task<ActionResult<PagedResponse<AuditLogListItemResponse>>> GetAuditLogs(
         [FromQuery] string? search,
         [FromQuery] string? action,
@@ -72,7 +73,7 @@ public sealed class AuditLogsController(IAuditLogService auditLogService) : Cont
     }
 
     [HttpGet("filter-options")]
-    [RequirePermission("AuditLogs.View")]
+    [RequirePermission(PermissionCodes.AuditLogs.View)]
     public async Task<ActionResult<AuditLogFilterOptionsResponse>> GetFilterOptions(
         CancellationToken cancellationToken = default)
     {

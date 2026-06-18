@@ -57,6 +57,7 @@ import {
 } from "@/features/ad-management/ad-management-api-message";
 import { canAccess } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
+import { PermissionCodes } from "@/lib/permission-codes";
 
 const DEFAULT_MEMBERSHIP_PAGE_SIZE = 10;
 const MEMBERSHIP_PAGE_SIZE_OPTIONS = [10, 25, 50] as const;
@@ -71,8 +72,8 @@ export function AdComputerGroupsPage() {
   const moduleStatus = useAdManagementModuleStatus();
   const hasValidId = Boolean(computerId?.trim()) && isGuidLike(computerId);
 
-  const canAddGroup = canAccess(currentUser, "AdManagement.Computers.Groups.Add");
-  const canRemoveGroup = canAccess(currentUser, "AdManagement.Computers.Groups.Remove");
+  const canAddGroup = canAccess(currentUser, PermissionCodes.AdManagement.Computers.Groups.Add);
+  const canRemoveGroup = canAccess(currentUser, PermissionCodes.AdManagement.Computers.Groups.Remove);
 
   const [selectedGroups, setSelectedGroups] = useState<AdComputerGroupCandidateItem[]>([]);
   const [removeTarget, setRemoveTarget] = useState<AdComputerGroupMembershipItem | null>(null);

@@ -30,6 +30,7 @@ import type { NotificationOutboxListItem } from "@/features/notification-outbox/
 import { useAuthStore } from "@/features/auth/auth-store";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { canAccess } from "@/lib/permissions";
+import { PermissionCodes } from "@/lib/permission-codes";
 
 const MIN_SEARCH_LENGTH = 3;
 
@@ -37,8 +38,8 @@ export function NotificationOutboxPage() {
   const { t } = useTranslation(["notificationOutbox", "common"]);
   const queryClient = useQueryClient();
   const user = useAuthStore((state) => state.user);
-  const canRetry = canAccess(user, "NotificationOutbox.Retry");
-  const canCancel = canAccess(user, "NotificationOutbox.Cancel");
+  const canRetry = canAccess(user, PermissionCodes.NotificationOutbox.Retry);
+  const canCancel = canAccess(user, PermissionCodes.NotificationOutbox.Cancel);
 
   const [channel, setChannel] = useState("");
   const [status, setStatus] = useState("");

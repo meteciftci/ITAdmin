@@ -29,17 +29,18 @@ import { AdGroupsSearchToolbar } from "@/features/ad-management/components/AdGro
 import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useAdManagementModuleStatus";
 import { useAdGroupListState } from "@/features/ad-management/use-ad-group-list-state";
 import { createApiErrorRouteState, getErrorRoutePath } from "@/lib/route-error";
+import { PermissionCodes } from "@/lib/permission-codes";
 
 const MIN_SEARCH_LENGTH = 2;
 
 export function AdGroupsPage() {
   const { t } = useTranslation(["adManagement", "common", "errors"]);
   const currentUser = useAuthStore((state) => state.user);
-  const canCreateGroup = canAccess(currentUser, "AdManagement.Groups.Create");
-  const canUpdateGroup = canAccess(currentUser, "AdManagement.Groups.Update");
-  const canManageMembers = canAccess(currentUser, "AdManagement.Groups.ManageMembers");
-  const canMoveOu = canAccess(currentUser, "AdManagement.Groups.MoveOu");
-  const canDeleteGroup = canAccess(currentUser, "AdManagement.Groups.Delete");
+  const canCreateGroup = canAccess(currentUser, PermissionCodes.AdManagement.Groups.Create);
+  const canUpdateGroup = canAccess(currentUser, PermissionCodes.AdManagement.Groups.Update);
+  const canManageMembers = canAccess(currentUser, PermissionCodes.AdManagement.Groups.ManageMembers);
+  const canMoveOu = canAccess(currentUser, PermissionCodes.AdManagement.Groups.MoveOu);
+  const canDeleteGroup = canAccess(currentUser, PermissionCodes.AdManagement.Groups.Delete);
   const [deleteGroupId, setDeleteGroupId] = useState<string | null>(null);
   const moduleStatus = useAdManagementModuleStatus();
   const navigate = useNavigate();

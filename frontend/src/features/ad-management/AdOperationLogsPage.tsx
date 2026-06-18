@@ -40,12 +40,13 @@ import {
 } from "@/features/ad-management/operation-logs-types";
 import { createApiErrorRouteState, getErrorRoutePath } from "@/lib/route-error";
 import { canAccess } from "@/lib/permissions";
+import { PermissionCodes } from "@/lib/permission-codes";
 
 export function AdOperationLogsPage() {
   const { t, i18n } = useTranslation(["adOperationLogs", "common"]);
   const [searchParams, setSearchParams] = useSearchParams();
   const user = useAuthStore((state) => state.user);
-  const canViewSettings = canAccess(user, "AdManagement.Settings.View");
+  const canViewSettings = canAccess(user, PermissionCodes.AdManagement.Settings.View);
   const { getOperationLabel, getStatusLabel } = useAdOperationLogLabels();
   const initialTargetObjectGuid = searchParams.get("targetObjectGuid")?.trim() ?? "";
 

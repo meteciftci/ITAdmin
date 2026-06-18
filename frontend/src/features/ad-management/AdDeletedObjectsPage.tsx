@@ -26,6 +26,7 @@ import { useAdDeletedObjectListState } from "@/features/ad-management/use-ad-del
 import { createApiErrorRouteState, getErrorRoutePath } from "@/lib/route-error";
 import { canAccess } from "@/lib/permissions";
 import { useAuthStore } from "@/features/auth/auth-store";
+import { PermissionCodes } from "@/lib/permission-codes";
 
 const MIN_SEARCH_LENGTH = 2;
 
@@ -35,7 +36,7 @@ export function AdDeletedObjectsPage() {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const { listState, listPath, updateListState, clearListState } = useAdDeletedObjectListState();
-  const canRestore = canAccess(user, "AdManagement.DeletedObjects.Restore");
+  const canRestore = canAccess(user, PermissionCodes.AdManagement.DeletedObjects.Restore);
 
   const normalizedSearch = listState.search.trim();
   const hasTypeFilter = listState.type !== AD_DELETED_OBJECTS_LIST_DEFAULTS.type;

@@ -28,6 +28,7 @@ import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useA
 import type { AdComputerMemberOfItem } from "@/features/ad-management/types";
 import { getAdManagementApiErrorMessage } from "@/features/ad-management/ad-management-api-message";
 import { cn } from "@/lib/utils";
+import { PermissionCodes } from "@/lib/permission-codes";
 
 function MemberOfList({
   items,
@@ -89,12 +90,12 @@ export function AdComputerDetailPage() {
   const location = useLocation();
   const currentUser = useAuthStore((state) => state.user);
   const moduleStatus = useAdManagementModuleStatus();
-  const canUpdateComputer = canAccess(currentUser, "AdManagement.Computers.Update");
-  const canMoveOu = canAccess(currentUser, "AdManagement.Computers.MoveOu");
-  const canEnableComputer = canAccess(currentUser, "AdManagement.Computers.Enable");
-  const canDisableComputer = canAccess(currentUser, "AdManagement.Computers.Disable");
-  const canDeleteComputer = canAccess(currentUser, "AdManagement.Computers.Delete");
-  const canManageGroups = canAccess(currentUser, "AdManagement.Computers.Groups.View");
+  const canUpdateComputer = canAccess(currentUser, PermissionCodes.AdManagement.Computers.Update);
+  const canMoveOu = canAccess(currentUser, PermissionCodes.AdManagement.Computers.MoveOu);
+  const canEnableComputer = canAccess(currentUser, PermissionCodes.AdManagement.Computers.Enable);
+  const canDisableComputer = canAccess(currentUser, PermissionCodes.AdManagement.Computers.Disable);
+  const canDeleteComputer = canAccess(currentUser, PermissionCodes.AdManagement.Computers.Delete);
+  const canManageGroups = canAccess(currentUser, PermissionCodes.AdManagement.Computers.Groups.View);
   const hasValidId = Boolean(computerId?.trim()) && isGuidLike(computerId);
   const returnPath = resolveAdComputerReturnPath(location.state, AD_COMPUTERS_LIST_PATH);
 

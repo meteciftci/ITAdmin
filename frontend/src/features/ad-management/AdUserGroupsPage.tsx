@@ -53,6 +53,7 @@ import {
 } from "@/features/ad-management/ad-management-api-message";
 import { canAccess } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
+import { PermissionCodes } from "@/lib/permission-codes";
 
 const DEFAULT_MEMBERSHIP_PAGE_SIZE = 10;
 const MEMBERSHIP_PAGE_SIZE_OPTIONS = [10, 25, 50] as const;
@@ -71,8 +72,8 @@ export function AdUserGroupsPage() {
   const currentUser = useAuthStore((state) => state.user);
   const moduleStatus = useAdManagementModuleStatus();
 
-  const canAddGroup = canAccess(currentUser, "AdManagement.Users.Groups.Add");
-  const canRemoveGroup = canAccess(currentUser, "AdManagement.Users.Groups.Remove");
+  const canAddGroup = canAccess(currentUser, PermissionCodes.AdManagement.Users.Groups.Add);
+  const canRemoveGroup = canAccess(currentUser, PermissionCodes.AdManagement.Users.Groups.Remove);
 
   const [selectedGroups, setSelectedGroups] = useState<AdGroupSearchItem[]>([]);
   const [removeTarget, setRemoveTarget] = useState<AdUserGroupMembershipItem | null>(null);

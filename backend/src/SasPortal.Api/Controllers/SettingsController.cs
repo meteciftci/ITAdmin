@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using SasPortal.Application.Common.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -20,7 +21,7 @@ public sealed class SettingsController(
     ILogger<SettingsController> logger) : ControllerBase
 {
     [HttpGet]
-    [RequirePermission("Settings.View")]
+    [RequirePermission(PermissionCodes.Settings.View)]
     public async Task<ActionResult<SettingsOverviewResponse>> GetSettings(CancellationToken cancellationToken)
     {
         var settings = await settingsService.GetSettingsAsync(cancellationToken);
@@ -36,7 +37,7 @@ public sealed class SettingsController(
     }
 
     [HttpPut("ldap")]
-    [RequirePermission("Settings.Update")]
+    [RequirePermission(PermissionCodes.Settings.Update)]
     public async Task<ActionResult<LdapSettingsResponse>> UpdateLdapSettings(
         [FromBody] UpdateLdapSettingsRequest request,
         CancellationToken cancellationToken)
@@ -72,7 +73,7 @@ public sealed class SettingsController(
     }
 
     [HttpPost("ldap/validate")]
-    [RequirePermission("Settings.Update")]
+    [RequirePermission(PermissionCodes.Settings.Update)]
     public async Task<ActionResult<ValidateLdapSettingsResponse>> ValidateLdapSettings(
         [FromBody] ValidateLdapSettingsRequest request,
         CancellationToken cancellationToken)
@@ -99,7 +100,7 @@ public sealed class SettingsController(
     }
 
     [HttpPut("application")]
-    [RequirePermission("Settings.Update")]
+    [RequirePermission(PermissionCodes.Settings.Update)]
     public async Task<ActionResult<SettingsOverviewResponse>> UpdateApplicationSettings(
         [FromBody] UpdateApplicationSettingsRequest request,
         CancellationToken cancellationToken)
@@ -136,7 +137,7 @@ public sealed class SettingsController(
     }
 
     [HttpPut("session-security")]
-    [RequirePermission("Settings.Update")]
+    [RequirePermission(PermissionCodes.Settings.Update)]
     public async Task<ActionResult<SettingsOverviewResponse>> UpdateSessionSecuritySettings(
         [FromBody] UpdateSessionSecuritySettingsRequest request,
         CancellationToken cancellationToken)
@@ -164,7 +165,7 @@ public sealed class SettingsController(
     }
 
     [HttpPost("branding/logo")]
-    [RequirePermission("Settings.Update")]
+    [RequirePermission(PermissionCodes.Settings.Update)]
     public async Task<ActionResult<BrandingLogoUploadResponse>> UploadBrandingLogo(
         [FromForm] IFormFile? file,
         CancellationToken cancellationToken)
@@ -226,7 +227,7 @@ public sealed class SettingsController(
     }
 
     [HttpPost("branding/favicon")]
-    [RequirePermission("Settings.Update")]
+    [RequirePermission(PermissionCodes.Settings.Update)]
     public async Task<ActionResult<BrandingFaviconUploadResponse>> UploadBrandingFavicon(
         [FromForm] IFormFile? file,
         CancellationToken cancellationToken)
