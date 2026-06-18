@@ -104,8 +104,6 @@ public sealed class AdManagementValidationServiceTests
             null,
             null,
             preferredDomainControllers ?? Array.Empty<string>(),
-            true,
-            636,
             "svc_ad",
             "secret-password");
 }

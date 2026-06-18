@@ -56,14 +56,6 @@ public class AdManagementSettingsConfiguration : IEntityTypeConfiguration<AdMana
         builder.Property(x => x.PreferredDomainControllersJson)
             .HasColumnName("preferred_domain_controllers_json");
 
-        builder.Property(x => x.UseSsl)
-            .HasColumnName("use_ssl")
-            .HasDefaultValue(true);
-
-        builder.Property(x => x.LdapPort)
-            .HasColumnName("ldap_port")
-            .HasDefaultValue(636);
-
         builder.Property(x => x.ServiceAccountUserName)
             .HasColumnName("service_account_user_name")
             .HasMaxLength(250);

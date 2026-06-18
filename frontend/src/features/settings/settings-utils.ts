@@ -5,7 +5,6 @@ export function createEmptyLdapForm(): LdapFormValues {
   return {
     name: "",
     host: "",
-    port: "636",
     baseDn: "",
     userSearchBase: "",
     userSearchFilter: "",

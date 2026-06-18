@@ -821,8 +821,6 @@ public static class AdOperationLogSnapshotBuilder
                 groupsSearchBase = entity.GroupsSearchBase,
                 computersSearchBase = entity.ComputersSearchBase,
                 preferredDomainControllers,
-                useSsl = entity.UseSsl,
-                ldapPort = entity.LdapPort,
                 serviceAccountUserName = entity.ServiceAccountUserName,
                 hasServiceAccountPassword = !string.IsNullOrWhiteSpace(entity.EncryptedServiceAccountPassword),
                 powerShellHealthEnabled = entity.PowerShellHealthEnabled,
@@ -853,8 +851,6 @@ public static class AdOperationLogSnapshotBuilder
                 domainFqdn = entity.DomainFqdn,
                 defaultUserCreationUpnSuffix = entity.DefaultUserCreationUpnSuffix,
                 netbiosDomainName = entity.NetbiosDomainName,
-                useSsl = entity.UseSsl,
-                ldapPort = entity.LdapPort,
                 preferredDomainControllers,
                 passwordChanged,
                 passwordCleared = request.ClearServiceAccountPassword,
@@ -1295,16 +1291,6 @@ public static class AdOperationLogSnapshotBuilder
         if (!string.Equals(NormalizeNullable(beforeEntity.ComputersSearchBase), NormalizeNullable(request.ComputersSearchBase), StringComparison.OrdinalIgnoreCase))
         {
             changedFields.Add("computersSearchBase");
-        }
-
-        if (beforeEntity.UseSsl != request.UseSsl)
-        {
-            changedFields.Add("useSsl");
-        }
-
-        if (beforeEntity.LdapPort != request.LdapPort)
-        {
-            changedFields.Add("ldapPort");
         }
 
         if (!string.Equals(NormalizeNullable(beforeEntity.ServiceAccountUserName), NormalizeNullable(request.ServiceAccountUserName), StringComparison.OrdinalIgnoreCase))

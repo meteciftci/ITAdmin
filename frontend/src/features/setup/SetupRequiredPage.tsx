@@ -67,11 +67,6 @@ export function SetupRequiredPage() {
       errors["ldap.host"] = t("setup:validation.required");
     }
 
-    const port = Number.parseInt(values.ldap.port, 10);
-    if (!Number.isFinite(port) || port < 1 || port > 65535) {
-      errors["ldap.port"] = t("setup:validation.invalidPort");
-    }
-
     if (!values.ldap.baseDn.trim()) {
       errors["ldap.baseDn"] = t("setup:validation.required");
     }
@@ -106,18 +101,16 @@ export function SetupRequiredPage() {
       return;
     }
 
-    const port = Number.parseInt(values.ldap.port, 10);
     setIsSubmitting(true);
     const completeFailedFallback = t("setup:messages.completeFailed");
     const failureHints = {
       genericFallback: completeFailedFallback,
-      secureConnectionRequiredHint: t("setup:messages.secureConnectionRequired"),
       directoryUserNotFoundHint: t("setup:messages.directoryUserNotFoundHint"),
       directoryUserProfileHint: t("setup:messages.directoryUserProfileHint"),
       ldapTimeoutHint: t("setup:messages.ldapTimeoutHint"),
     };
     try {
-      const response = await completeSetup(buildCompleteSetupRequest(values, port));
+      const response = await completeSetup(buildCompleteSetupRequest(values));
       if (!response.isCompleted) {
         toast.error(mapCompleteSetupFailureToast(response.message, failureHints));
         return;
@@ -244,18 +237,8 @@ export function SetupRequiredPage() {
                 <FieldError message={fieldErrors["ldap.host"]} />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="ldapPort">{t("setup:fields.port")}</Label>
-                <Input
-                  id="ldapPort"
-                  inputMode="numeric"
-                  value={values.ldap.port}
-                  onChange={(event) => updateLdap("port", event.target.value)}
-                  disabled={isSubmitting}
-                  required
-                />
-                <FieldHint>{t("setup:helpers.port")}</FieldHint>
-                <FieldError message={fieldErrors["ldap.port"]} />
+              <div className="space-y-2 md:col-span-2">
+                <p className="text-xs text-muted-foreground">{t("setup:helpers.ldapsHelp")}</p>
               </div>
 
               <div className="space-y-2 md:col-span-2">

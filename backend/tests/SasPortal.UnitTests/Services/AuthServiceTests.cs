@@ -520,8 +520,6 @@ public sealed class AuthServiceTests
         {
             Name = "Primary LDAP",
             Host = "ldap.test.local",
-            Port = 389,
-            UseSsl = false,
             BaseDn = "DC=test,DC=local",
             UserSearchBase = "OU=Users,DC=test,DC=local",
             UserSearchFilter = "(sAMAccountName={0})",

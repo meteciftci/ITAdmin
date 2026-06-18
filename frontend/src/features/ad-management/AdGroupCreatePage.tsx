@@ -51,7 +51,6 @@ export function AdGroupCreatePage() {
     queryFn: getAdManagementSettings,
   });
 
-  const useSsl = settingsQuery.data?.useSsl ?? false;
   const effectiveTargetOu =
     selectedOuDistinguishedName ?? settingsQuery.data?.groupsSearchBase ?? null;
 
@@ -87,7 +86,6 @@ export function AdGroupCreatePage() {
 
   const canSubmit =
     moduleStatus.isOperational
-    && useSsl
     && displayName.trim().length > 0
     && technicalName.trim().length > 0
     && effectiveSamAccountName.trim().length > 0
@@ -126,12 +124,6 @@ export function AdGroupCreatePage() {
         />
 
         <SectionCard title={t("adManagement:groups.create.formTitle")}>
-          {!useSsl ? (
-            <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-muted-foreground">
-              {t("adManagement:groups.create.warnings.ldapsRequired")}
-            </p>
-          ) : null}
-
           <div className="space-y-6">
             <div className="grid gap-4 md:grid-cols-2">
               <Field
@@ -139,14 +131,13 @@ export function AdGroupCreatePage() {
                 value={displayName}
                 onChange={setDisplayName}
                 required
-                disabled={!useSsl || createMutation.isPending}
               />
               <Field
                 label={t("adManagement:groups.create.fields.technicalName")}
                 value={technicalName}
                 onChange={setTechnicalName}
                 required
-                disabled={!useSsl || createMutation.isPending}
+                disabled={createMutation.isPending}
               />
               <Field
                 label={t("adManagement:groups.create.fields.samAccountName")}
@@ -162,14 +153,14 @@ export function AdGroupCreatePage() {
                   setSamAccountName(value);
                 }}
                 required
-                disabled={!useSsl || createMutation.isPending}
+                disabled={createMutation.isPending}
               />
               <div className="space-y-1.5">
                 <Label>{t("adManagement:groups.create.fields.scope")} *</Label>
                 <Select
                   value={groupScope}
                   onChange={(event) => setGroupScope(event.target.value as AdGroupScope)}
-                  disabled={!useSsl || createMutation.isPending}
+                  disabled={createMutation.isPending}
                   className="h-10"
                 >
                   {GROUP_SCOPE_OPTIONS.map((scope) => (
@@ -185,7 +176,7 @@ export function AdGroupCreatePage() {
               label={t("adManagement:groups.create.fields.description")}
               value={description}
               onChange={setDescription}
-              disabled={!useSsl || createMutation.isPending}
+              disabled={createMutation.isPending}
             />
 
             <AdOuSearchCombobox
@@ -198,7 +189,7 @@ export function AdGroupCreatePage() {
               searchKey="adManagement:groups.create.fields.ouSearch"
               emptyKey="adManagement:groups.create.empty.ouNotFound"
               errorKey="adManagement:groups.create.errors.ouLoadFailed"
-              disabled={!useSsl || createMutation.isPending}
+              disabled={createMutation.isPending}
             />
 
             <div className="flex flex-wrap justify-end gap-2">

@@ -13,8 +13,6 @@ public sealed record AdManagementSettingsResponse(
     string? GroupsSearchBase,
     string? ComputersSearchBase,
     IReadOnlyList<string> PreferredDomainControllers,
-    bool UseSsl,
-    int LdapPort,
     string? ServiceAccountUserName,
     bool HasServiceAccountPassword,
     bool PowerShellHealthEnabled,

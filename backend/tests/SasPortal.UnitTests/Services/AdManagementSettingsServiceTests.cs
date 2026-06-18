@@ -20,8 +20,6 @@ public sealed class AdManagementSettingsServiceTests
 
         Assert.False(result.IsConfigured);
         Assert.False(result.IsEnabled);
-        Assert.True(result.UseSsl);
-        Assert.Equal(636, result.LdapPort);
         Assert.Equal(30, result.PowerShellTimeoutSeconds);
         Assert.False(result.HasServiceAccountPassword);
         Assert.Empty(result.PreferredDomainControllers);
@@ -298,23 +296,6 @@ public sealed class AdManagementSettingsServiceTests
             Assert.DoesNotContain("topsecret-token", entry.RequestSummaryJson ?? string.Empty, StringComparison.Ordinal);
             Assert.DoesNotContain("topsecret-token", entry.ErrorMessage ?? string.Empty, StringComparison.Ordinal);
         }
-    }
-
-    [Fact]
-    public async Task UpdateSettingsAsync_RejectsInvalidLdapPort()
-    {
-        await using var dbContext = CreateDbContext();
-        var service = CreateService(dbContext);
-
-        var request = CreateRequest(
-            isEnabled: false,
-            serviceAccountPassword: null,
-            ldapPort: 0);
-
-        var result = await service.UpdateSettingsAsync(request);
-
-        Assert.False(result.IsSuccess);
-        Assert.Empty(dbContext.AdManagementSettings);
     }
 
     [Fact]
@@ -762,7 +743,6 @@ public sealed class AdManagementSettingsServiceTests
         string? serviceAccountPassword = null,
         bool clearServiceAccountPassword = false,
         IReadOnlyList<string>? preferredDomainControllers = null,
-        int ldapPort = 636,
         int powerShellTimeoutSeconds = 30) =>
         new(
             IsEnabled: isEnabled,
@@ -776,8 +756,6 @@ public sealed class AdManagementSettingsServiceTests
             GroupsSearchBase: null,
             ComputersSearchBase: null,
             PreferredDomainControllers: preferredDomainControllers,
-            UseSsl: true,
-            LdapPort: ldapPort,
             ServiceAccountUserName: serviceAccountUserName,
             ServiceAccountPassword: serviceAccountPassword,
             ClearServiceAccountPassword: clearServiceAccountPassword,

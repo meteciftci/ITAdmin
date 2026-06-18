@@ -56,7 +56,6 @@
     "validation": {
       "nameRequired": "Ad alanı zorunludur.",
       "hostRequired": "Host alanı zorunludur.",
-      "portRange": "Port 1 ile 65535 arasında olmalıdır.",
       "baseDnRequired": "Base DN alanı zorunludur.",
       "userSearchFilterRequired": "Kullanıcı arama filtresi zorunludur.",
       "bindUserNameRequired": "Bind kullanıcı adı zorunludur."
@@ -64,7 +63,7 @@
     "ldap": {
       "sectionTitle": "LDAP Ayarları",
       "sectionDescription": "LDAP bağlantı ve kullanıcı arama ayarlarını yönetin.",
-      "ldapsHelp": "Bağlantı yalnızca LDAPS (SSL/TLS) üzerinden kurulur. Varsayılan LDAPS portu 636'dır.",
+      "ldapsHelp": "Bağlantı LDAPS (SSL/TLS) üzerinden 636 portu ile kurulur.",
       "bindPasswordConfigured": "Bind şifresi yapılandırılmış.",
       "bindPasswordKeepHint": "Şifre alanı boş bırakılırsa mevcut şifre korunur.",
       "messages": {
@@ -74,8 +73,6 @@
       "fields": {
         "name": "Ad",
         "host": "Host",
-        "port": "Port",
-        "security": "Güvenlik",
         "baseDn": "Base DN",
         "userSearchBase": "Kullanıcı Arama Base",
         "userSearchFilter": "Kullanıcı Arama Filtresi",
@@ -90,11 +87,10 @@
         "genericCouldNotValidate": "LDAP bağlantısı doğrulanamadı.",
         "backendMessages": {
           "serviceAccountAuthFailed": "LDAP servis hesabı kimlik doğrulaması başarısız.",
-          "serverConnectionFailed": "LDAP sunucusuna bağlantı kurulamadı veya bind domain çözümlenemedi. Host, port, SSL ve Bind Kullanıcı Domain ayarlarını kontrol edin.",
+          "serverConnectionFailed": "LDAP sunucusuna bağlantı kurulamadı veya bind domain çözümlenemedi. Host ve Bind Kullanıcı Domain ayarlarını kontrol edin.",
           "validationFailed": "LDAP doğrulaması başarısız.",
           "requiredLdapFieldsMissing": "Zorunlu LDAP alanları eksik.",
           "requiredLdapValidationFieldsMissing": "Zorunlu LDAP doğrulama alanları eksik.",
-          "portRange": "LDAP portu 1 ile 65535 arasında olmalıdır.",
           "bindPasswordRequiredWithoutActive": "Aktif LDAP ayarı yoksa bind şifresi zorunludur.",
           "validationCouldNotComplete": "LDAP doğrulaması tamamlanamadı.",
           "directoryUserNotFound": "Dizin kullanıcısı bulunamadı.",
@@ -283,9 +279,7 @@
           "computersSearchBase": "Bilgisayarlar arama base",
           "preferredDomainControllers": "Tercih edilen DC'ler",
           "preferredDomainControllersHelp": "Her satıra bir DC FQDN veya host adı girin.",
-          "ldapPort": "LDAP portu",
-          "security": "Güvenlik",
-          "ldapsHelp": "Bağlantı yalnızca LDAPS (SSL/TLS) üzerinden kurulur. Varsayılan LDAPS portu 636'dır.",
+          "ldapsHelp": "Bağlantı LDAPS (SSL/TLS) üzerinden 636 portu ile kurulur.",
           "serviceAccountUserName": "Yetkili kullanıcı adı",
           "serviceAccountUserNameHelp": "DOMAIN\\kullanici, kullanici@domain.local veya sadece kullanici formatında girilebilir. Sadece kullanıcı adı girilirse NetBIOS domain adı ile tamamlanır.",
           "serviceAccountPassword": "Yetkili kullanıcı parolası",

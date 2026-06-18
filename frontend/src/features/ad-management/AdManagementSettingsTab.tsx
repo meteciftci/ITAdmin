@@ -44,8 +44,6 @@ function buildSettingsKey(settings: AdManagementSettings | undefined): string {
     settings.groupsSearchBase,
     settings.computersSearchBase,
     settings.preferredDomainControllers.join("|"),
-    settings.useSsl,
-    settings.ldapPort,
     settings.serviceAccountUserName,
     settings.hasServiceAccountPassword,
     settings.powerShellHealthEnabled,

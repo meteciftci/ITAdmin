@@ -10,14 +10,12 @@ public sealed class LdapServiceTests
     private const string UserSearchFilter = "(&(objectClass=user)(sAMAccountName={0}))";
 
     [Fact]
-    public async Task ValidateAsync_WhenUseSslDisabled_FailsWithoutConnecting()
+    public async Task ValidateAsync_WhenHostMissing_FailsWithoutConnecting()
     {
         var service = new LdapService();
         var request = new LdapValidationRequest
         {
-            Host = Host,
-            Port = 389,
-            UseSsl = false,
+            Host = string.Empty,
             BaseDn = BaseDn,
             UserSearchFilter = UserSearchFilter,
             BindUserName = "bind",
@@ -32,14 +30,12 @@ public sealed class LdapServiceTests
     }
 
     [Fact]
-    public async Task ValidateBindAsync_WhenUseSslDisabled_FailsWithoutConnecting()
+    public async Task ValidateBindAsync_WhenHostMissing_FailsWithoutConnecting()
     {
         var service = new LdapService();
         var request = new LdapBindValidationRequest
         {
-            Host = Host,
-            Port = 389,
-            UseSsl = false,
+            Host = string.Empty,
             BindUserName = "bind",
             BindPassword = "bindpw",
         };
@@ -50,14 +46,12 @@ public sealed class LdapServiceTests
     }
 
     [Fact]
-    public async Task ValidateSearchBasesAsync_WhenUseSslDisabled_FailsWithoutConnecting()
+    public async Task ValidateSearchBasesAsync_WhenHostMissing_FailsWithoutConnecting()
     {
         var service = new LdapService();
         var request = new LdapSearchBasesValidationRequest
         {
-            Host = Host,
-            Port = 389,
-            UseSsl = false,
+            Host = string.Empty,
             BaseDn = BaseDn,
             BindUserName = "bind",
             BindPassword = "bindpw",
@@ -69,13 +63,11 @@ public sealed class LdapServiceTests
     }
 
     [Fact]
-    public async Task GetUserProfileAsync_WhenUseSslDisabled_ReturnsNullWithoutConnecting()
+    public async Task GetUserProfileAsync_WhenHostMissing_ReturnsNullWithoutConnecting()
     {
         var service = new LdapService();
         var request = new LdapUserProfileRequest(
-            Host: Host,
-            Port: 389,
-            UseSsl: false,
+            Host: string.Empty,
             BaseDn: BaseDn,
             UserSearchBase: string.Empty,
             UserSearchFilter: UserSearchFilter,
@@ -91,13 +83,11 @@ public sealed class LdapServiceTests
     }
 
     [Fact]
-    public async Task GetUserProfileByObjectIdAsync_WhenUseSslDisabled_ReturnsNullWithoutConnecting()
+    public async Task GetUserProfileByObjectIdAsync_WhenHostMissing_ReturnsNullWithoutConnecting()
     {
         var service = new LdapService();
         var request = new LdapUserProfileByObjectIdRequest(
-            Host: Host,
-            Port: 389,
-            UseSsl: false,
+            Host: string.Empty,
             BaseDn: BaseDn,
             UserSearchBase: string.Empty,
             BindUserName: "bind",
@@ -112,13 +102,11 @@ public sealed class LdapServiceTests
     }
 
     [Fact]
-    public async Task SearchUsersAsync_WhenUseSslDisabled_ReturnsEmptyWithoutConnecting()
+    public async Task SearchUsersAsync_WhenHostMissing_ReturnsEmptyWithoutConnecting()
     {
         var service = new LdapService();
         var request = new LdapUserLookupRequest(
-            Host: Host,
-            Port: 389,
-            UseSsl: false,
+            Host: string.Empty,
             BaseDn: BaseDn,
             UserSearchBase: string.Empty,
             BindUserName: "bind",

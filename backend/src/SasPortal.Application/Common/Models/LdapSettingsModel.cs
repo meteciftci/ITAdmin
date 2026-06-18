@@ -4,8 +4,6 @@ public sealed record LdapSettingsModel(
     Guid Id,
     string Name,
     string Host,
-    int Port,
-    bool UseSsl,
     string BaseDn,
     string UserSearchBase,
     string UserSearchFilter,

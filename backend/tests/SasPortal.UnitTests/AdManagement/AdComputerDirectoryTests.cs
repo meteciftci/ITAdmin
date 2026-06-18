@@ -81,8 +81,6 @@ public sealed class AdComputerDirectoryTests
             null,
             " ",
             Array.Empty<string>(),
-            false,
-            389,
             null,
             null);
 
@@ -102,8 +100,6 @@ public sealed class AdComputerDirectoryTests
             null,
             "  OU=Computers,DC=corp,DC=local  ",
             Array.Empty<string>(),
-            false,
-            389,
             null,
             null);
 

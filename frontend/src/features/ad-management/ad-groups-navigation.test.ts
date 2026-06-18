@@ -302,24 +302,19 @@ describe("ad groups route and menu wiring", () => {
     assert.doesNotMatch(trLocale, /"managedBy": "Managed By"/);
   });
 
-  it("uses group-specific LDAPS warning on create page instead of user password message", () => {
+  it("does not gate group create on configurable LDAPS settings", () => {
     const createPageSource = readFileSync(
       new URL("./AdGroupCreatePage.tsx", import.meta.url),
       "utf8",
     );
-    const trLocale = readFileSync(
-      new URL("../../locales/tr/adManagement.json", import.meta.url),
-      "utf8",
-    );
-    const enLocale = readFileSync(
-      new URL("../../locales/en/adManagement.json", import.meta.url),
+    const userCreatePageSource = readFileSync(
+      new URL("./AdCreateUserPage.tsx", import.meta.url),
       "utf8",
     );
 
-    assert.match(createPageSource, /groups\.create\.warnings\.ldapsRequired/);
-    assert.doesNotMatch(createPageSource, /users\.create\.ldapsRequired/);
-    assert.doesNotMatch(createPageSource, /users\.create\.warnings\.ldapsRequired/);
-    assert.match(trLocale, /"ldapsRequired": "AD yazma işlemleri için LDAPS bağlantısı gereklidir/);
-    assert.match(enLocale, /"ldapsRequired": "LDAPS is required for AD write operations/);
+    assert.doesNotMatch(createPageSource, /useSsl/);
+    assert.doesNotMatch(createPageSource, /groups\.create\.warnings\.ldapsRequired/);
+    assert.doesNotMatch(userCreatePageSource, /useSsl/);
+    assert.doesNotMatch(userCreatePageSource, /users\.create\.warnings\.ldapsRequired/);
   });
 });

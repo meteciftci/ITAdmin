@@ -15,8 +15,6 @@ public class AdManagementSettings : AuditableEntity
     public string? GroupsSearchBase { get; set; }
     public string? ComputersSearchBase { get; set; }
     public string? PreferredDomainControllersJson { get; set; }
-    public bool UseSsl { get; set; } = true;
-    public int LdapPort { get; set; } = 636;
     public string? ServiceAccountUserName { get; set; }
     public string? EncryptedServiceAccountPassword { get; set; }
     public bool PowerShellHealthEnabled { get; set; }

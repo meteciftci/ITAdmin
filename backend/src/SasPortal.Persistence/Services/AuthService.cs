@@ -58,8 +58,6 @@ public sealed class AuthService(
                 new LdapValidationRequest
                 {
                     Host = ldapSetting.Host,
-                    Port = ldapSetting.Port,
-                    UseSsl = ldapSetting.UseSsl,
                     BaseDn = ldapSetting.BaseDn,
                     UserSearchBase = ldapSetting.UserSearchBase,
                     UserSearchFilter = ldapSetting.UserSearchFilter,
@@ -105,8 +103,6 @@ public sealed class AuthService(
             var ldapProfile = await ldapService.GetUserProfileAsync(
                 new LdapUserProfileRequest(
                     Host: ldapSetting.Host,
-                    Port: ldapSetting.Port,
-                    UseSsl: ldapSetting.UseSsl,
                     BaseDn: ldapSetting.BaseDn,
                     UserSearchBase: ldapSetting.UserSearchBase,
                     UserSearchFilter: ldapSetting.UserSearchFilter,

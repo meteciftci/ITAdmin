@@ -48,8 +48,6 @@ function getLocalizedLdapValidationMessage(
       "settings:ldap.validation.backendMessages.requiredLdapFieldsMissing",
     "Required LDAP validation fields are missing.":
       "settings:ldap.validation.backendMessages.requiredLdapValidationFieldsMissing",
-    "LDAP port must be between 1 and 65535.":
-      "settings:ldap.validation.backendMessages.portRange",
     "Bind password is required when no active LDAP setting exists.":
       "settings:ldap.validation.backendMessages.bindPasswordRequiredWithoutActive",
     "LDAP validation could not be completed.":

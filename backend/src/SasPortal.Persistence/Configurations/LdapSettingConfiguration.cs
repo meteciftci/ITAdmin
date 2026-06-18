@@ -23,14 +23,6 @@ public class LdapSettingConfiguration : IEntityTypeConfiguration<LdapSetting>
             .HasMaxLength(250)
             .IsRequired();
 
-        builder.Property(x => x.Port)
-            .HasColumnName("port")
-            .IsRequired();
-
-        builder.Property(x => x.UseSsl)
-            .HasColumnName("use_ssl")
-            .HasDefaultValue(false);
-
         builder.Property(x => x.BaseDn)
             .HasColumnName("base_dn")
             .HasMaxLength(500)

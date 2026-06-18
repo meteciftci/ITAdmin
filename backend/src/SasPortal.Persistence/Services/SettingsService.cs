@@ -149,8 +149,6 @@ public sealed class SettingsService(
             {
                 Name = name,
                 Host = host,
-                Port = request.Port,
-                UseSsl = request.UseSsl,
                 BaseDn = baseDn,
                 UserSearchBase = userSearchBase ?? string.Empty,
                 UserSearchFilter = userSearchFilter,
@@ -169,15 +167,11 @@ public sealed class SettingsService(
         {
             var oldName = ldapSetting.Name;
             var oldHost = ldapSetting.Host;
-            var oldPort = ldapSetting.Port;
-            var oldUseSsl = ldapSetting.UseSsl;
             var oldBindUserName = ldapSetting.BindUserName;
             var oldBindUserDomain = ldapSetting.BindUserDomain;
 
             ldapSetting.Name = name;
             ldapSetting.Host = host;
-            ldapSetting.Port = request.Port;
-            ldapSetting.UseSsl = request.UseSsl;
             ldapSetting.BaseDn = baseDn;
             ldapSetting.UserSearchBase = userSearchBase ?? string.Empty;
             ldapSetting.UserSearchFilter = userSearchFilter;
@@ -203,10 +197,6 @@ public sealed class SettingsService(
                         ldapSetting.Name,
                         oldHost,
                         ldapSetting.Host,
-                        oldPort,
-                        ldapSetting.Port,
-                        oldUseSsl,
-                        ldapSetting.UseSsl,
                         !string.Equals(oldBindUserName, ldapSetting.BindUserName, StringComparison.Ordinal)
                         || !string.Equals(oldBindUserDomain, ldapSetting.BindUserDomain, StringComparison.Ordinal),
                         !string.IsNullOrWhiteSpace(providedBindPassword)),
@@ -231,10 +221,6 @@ public sealed class SettingsService(
                         ldapSetting.Name,
                         null,
                         ldapSetting.Host,
-                        null,
-                        ldapSetting.Port,
-                        null,
-                        ldapSetting.UseSsl,
                         true,
                         true),
                     ActorUserId = request.ActorUserId,
@@ -291,8 +277,6 @@ public sealed class SettingsService(
         var searchBasesRequest = new LdapSearchBasesValidationRequest
         {
             Host = request.Host.Trim(),
-            Port = request.Port,
-            UseSsl = request.UseSsl,
             BaseDn = request.BaseDn.Trim(),
             UserSearchBase = NormalizeNullable(request.UserSearchBase) ?? string.Empty,
             BindUserName = request.BindUserName.Trim(),
@@ -315,8 +299,6 @@ public sealed class SettingsService(
             new LdapValidationRequest
             {
                 Host = request.Host.Trim(),
-                Port = request.Port,
-                UseSsl = request.UseSsl,
                 BaseDn = request.BaseDn.Trim(),
                 UserSearchBase = NormalizeNullable(request.UserSearchBase) ?? string.Empty,
                 UserSearchFilter = request.UserSearchFilter.Trim(),
@@ -817,12 +799,6 @@ public sealed class SettingsService(
             return false;
         }
 
-        if (request.Port is < 1 or > 65535)
-        {
-            message = "LDAP port must be between 1 and 65535.";
-            return false;
-        }
-
         message = string.Empty;
         return true;
     }
@@ -836,12 +812,6 @@ public sealed class SettingsService(
             string.IsNullOrWhiteSpace(request.BindUserName))
         {
             message = "Required LDAP validation fields are missing.";
-            return false;
-        }
-
-        if (request.Port is < 1 or > 65535)
-        {
-            message = "LDAP port must be between 1 and 65535.";
             return false;
         }
 
@@ -860,8 +830,6 @@ public sealed class SettingsService(
             setting.Id,
             setting.Name,
             setting.Host,
-            setting.Port,
-            setting.UseSsl,
             setting.BaseDn,
             setting.UserSearchBase,
             setting.UserSearchFilter,
@@ -876,20 +844,11 @@ public sealed class SettingsService(
         string name,
         string? oldHost,
         string newHost,
-        int? oldPort,
-        int newPort,
-        bool? oldUseSsl,
-        bool newUseSsl,
         bool bindUserChanged,
         bool bindPasswordChanged)
     {
         var hostPart = oldHost is null ? $"Host: <none> -> {newHost}." : $"Host: {oldHost} -> {newHost}.";
-        var portPart = oldPort is null ? $"Port: <none> -> {newPort}." : $"Port: {oldPort} -> {newPort}.";
-        var sslPart = oldUseSsl is null
-            ? $"SSL: <none> -> {FormatSsl(newUseSsl)}."
-            : $"SSL: {FormatSsl(oldUseSsl.Value)} -> {FormatSsl(newUseSsl)}.";
-
-        var description = $"LDAP settings updated: {name}. {hostPart} {portPart} {sslPart}";
+        var description = $"LDAP settings updated: {name}. {hostPart}";
         if (bindUserChanged)
         {
             description += " Bind user changed.";
@@ -902,8 +861,6 @@ public sealed class SettingsService(
 
         return TruncateAuditDescription(description.Trim());
     }
-
-    private static string FormatSsl(bool value) => value ? "Enabled" : "Disabled";
 
     private static BrandingSettings BuildBrandingSettings(IEnumerable<ApplicationSettingItem> settings)
     {

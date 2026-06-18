@@ -14,8 +14,6 @@ public sealed record UpdateAdManagementSettingsRequest(
     string? GroupsSearchBase,
     string? ComputersSearchBase,
     IReadOnlyList<string>? PreferredDomainControllers,
-    bool UseSsl,
-    int LdapPort,
     string? ServiceAccountUserName,
     string? ServiceAccountPassword,
     bool ClearServiceAccountPassword,

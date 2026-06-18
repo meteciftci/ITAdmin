@@ -114,28 +114,6 @@ public sealed class SetupServiceTests
     }
 
     [Fact]
-    public async Task CompleteSetupAsync_WhenUseSslDisabled_FailsWithoutCallingLdap()
-    {
-        await using var context = CreateDbContext();
-        var ldap = new FakeLdapService
-        {
-            ResolveUserProfile = _ => new LdapUserProfile("obj-ssl", "user", "User", null, null),
-        };
-
-        var service = CreateSetupService(context, ldap, "setup-secret");
-        var baseRequest = CreateMinimalCompleteRequest("user", "p");
-        var request = baseRequest with { Ldap = baseRequest.Ldap with { UseSsl = false } };
-
-        var result = await service.CompleteSetupAsync(request);
-
-        Assert.False(result.IsCompleted);
-        Assert.Equal(SetupApiMessageKeys.Validation.SecureConnectionRequired, result.Message);
-        Assert.Equal(0, ldap.ValidateCallCount);
-        Assert.Equal(0, ldap.GetUserProfileCallCount);
-        Assert.False(await context.PortalUsers.AnyAsync());
-    }
-
-    [Fact]
     public async Task CompleteSetupAsync_WhenProfileLookupFails_ReturnsDetailedEnglishMessage()
     {
         await using var context = CreateDbContext();
@@ -191,8 +169,6 @@ public sealed class SetupServiceTests
             new CompleteSetupLdapSettings(
                 Name: "Default LDAP",
                 Host: "dc01.test",
-                Port: 636,
-                UseSsl: true,
                 BaseDn: "DC=test,DC=local",
                 UserSearchBase: "",
                 UserSearchFilter: "(&(objectClass=user)(sAMAccountName={0}))",

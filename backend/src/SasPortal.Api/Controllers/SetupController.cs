@@ -33,17 +33,9 @@ public sealed class SetupController(ISetupService setupService, ILdapService lda
                 new { messageKey = SetupApiMessageKeys.Validation.SetupAlreadyCompleted });
         }
 
-        // Only LDAPS is supported; reject plain LDAP before any connection attempt.
-        if (!request.UseSsl)
-        {
-            return BadRequest(new { messageKey = SetupApiMessageKeys.Validation.SecureConnectionRequired });
-        }
-
         var validationRequest = new AppModels.LdapValidationRequest
         {
             Host = request.Host,
-            Port = request.Port,
-            UseSsl = request.UseSsl,
             BaseDn = request.BaseDn,
             UserSearchBase = request.UserSearchBase,
             UserSearchFilter = request.UserSearchFilter,
@@ -69,8 +61,6 @@ public sealed class SetupController(ISetupService setupService, ILdapService lda
                 new AppModels.CompleteSetupLdapSettings(
                     request.Ldap.Name,
                     request.Ldap.Host,
-                    request.Ldap.Port,
-                    request.Ldap.UseSsl,
                     request.Ldap.BaseDn,
                     request.Ldap.UserSearchBase,
                     request.Ldap.UserSearchFilter,

@@ -172,8 +172,6 @@ public sealed class AdUserDirectoryServiceGroupMembershipLoggingTests
       null,
       null,
       [],
-      false,
-      389,
       "svc",
       "secret");
 

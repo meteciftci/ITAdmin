@@ -26,8 +26,6 @@ export function buildUpdateAdManagementSettingsPayload(
     computersSearchBase: overrides.computersSearchBase ?? settings.computersSearchBase,
     preferredDomainControllers:
       overrides.preferredDomainControllers ?? settings.preferredDomainControllers,
-    useSsl: overrides.useSsl ?? settings.useSsl,
-    ldapPort: overrides.ldapPort ?? settings.ldapPort,
     serviceAccountUserName:
       overrides.serviceAccountUserName ?? settings.serviceAccountUserName,
     serviceAccountPassword: overrides.serviceAccountPassword ?? null,

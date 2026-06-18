@@ -364,8 +364,6 @@ public sealed class AdOperationLogStandardTests
             BaseDn = "DC=corp,DC=example,DC=com",
             UsersRootOu = "OU=Users,DC=corp,DC=example,DC=com",
             DisabledUsersOu = "OU=Disabled,DC=corp,DC=example,DC=com",
-            UseSsl = true,
-            LdapPort = 636,
             ServiceAccountUserName = "svc_ad",
             EncryptedServiceAccountPassword = "protected:secret",
             PowerShellHealthEnabled = false,

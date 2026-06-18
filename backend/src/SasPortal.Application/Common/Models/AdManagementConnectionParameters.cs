@@ -10,7 +10,5 @@ public sealed record AdManagementConnectionParameters(
     string? GroupsSearchBase,
     string? ComputersSearchBase,
     IReadOnlyList<string> PreferredDomainControllers,
-    bool UseSsl,
-    int LdapPort,
     string? ServiceAccountUserName,
     string? ServiceAccountPassword);

@@ -7,17 +7,15 @@ namespace SasPortal.UnitTests.AdManagement;
 public sealed class AdUpdateUserInfrastructureTests
 {
     [Fact]
-    public void GetLdapsRequiredMessageKey_WhenSslDisabled_ReturnsMessageKey()
+    public void IsLdapsEnabled_AlwaysReturnsTrue()
     {
-        var messageKey = AdDirectoryConnectionRequirements.GetLdapsRequiredMessageKey(useSsl: false);
-
-        Assert.Equal(AdManagementApiMessageKeys.Common.LdapsRequired, messageKey);
+        Assert.True(AdDirectoryConnectionRequirements.IsLdapsEnabled());
     }
 
     [Fact]
-    public void GetLdapsRequiredMessageKey_WhenSslEnabled_ReturnsNull()
+    public void GetLdapsRequiredMessageKey_AlwaysReturnsNull()
     {
-        Assert.Null(AdDirectoryConnectionRequirements.GetLdapsRequiredMessageKey(useSsl: true));
+        Assert.Null(AdDirectoryConnectionRequirements.GetLdapsRequiredMessageKey());
     }
 
     [Fact]

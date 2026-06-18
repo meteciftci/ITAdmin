@@ -123,17 +123,10 @@ public sealed class SetupService(
             string.IsNullOrWhiteSpace(request.Ldap.UserSearchFilter) ||
             string.IsNullOrWhiteSpace(request.Ldap.BindUserName) ||
             string.IsNullOrWhiteSpace(request.Ldap.BindPassword) ||
-            request.Ldap.Port <= 0 ||
             string.IsNullOrWhiteSpace(request.Admin.UserName) ||
             string.IsNullOrWhiteSpace(request.Admin.Password))
         {
             return new CompleteSetupResult(false, "Invalid setup request.");
-        }
-
-        // Only LDAPS is supported; plain LDAP must never complete initial setup.
-        if (!request.Ldap.UseSsl)
-        {
-            return new CompleteSetupResult(false, SetupApiMessageKeys.Validation.SecureConnectionRequired);
         }
 
         var configuredSetupKey = configuration["Setup:SetupKey"];
@@ -164,8 +157,6 @@ public sealed class SetupService(
             new LdapValidationRequest
             {
                 Host = request.Ldap.Host,
-                Port = request.Ldap.Port,
-                UseSsl = request.Ldap.UseSsl,
                 BaseDn = request.Ldap.BaseDn,
                 UserSearchBase = request.Ldap.UserSearchBase,
                 UserSearchFilter = request.Ldap.UserSearchFilter,
@@ -197,8 +188,6 @@ public sealed class SetupService(
             ldapProfile = await ldapService.GetUserProfileAsync(
                 new LdapUserProfileRequest(
                     Host: request.Ldap.Host,
-                    Port: request.Ldap.Port,
-                    UseSsl: request.Ldap.UseSsl,
                     BaseDn: request.Ldap.BaseDn,
                     UserSearchBase: request.Ldap.UserSearchBase,
                     UserSearchFilter: request.Ldap.UserSearchFilter,
@@ -252,8 +241,6 @@ public sealed class SetupService(
                 {
                     Name = string.IsNullOrWhiteSpace(request.Ldap.Name) ? "Default LDAP" : request.Ldap.Name,
                     Host = request.Ldap.Host,
-                    Port = request.Ldap.Port,
-                    UseSsl = request.Ldap.UseSsl,
                     BaseDn = request.Ldap.BaseDn,
                     UserSearchBase = request.Ldap.UserSearchBase,
                     UserSearchFilter = request.Ldap.UserSearchFilter,
@@ -271,8 +258,6 @@ public sealed class SetupService(
             {
                 activeLdapSetting.Name = string.IsNullOrWhiteSpace(request.Ldap.Name) ? "Default LDAP" : request.Ldap.Name;
                 activeLdapSetting.Host = request.Ldap.Host;
-                activeLdapSetting.Port = request.Ldap.Port;
-                activeLdapSetting.UseSsl = request.Ldap.UseSsl;
                 activeLdapSetting.BaseDn = request.Ldap.BaseDn;
                 activeLdapSetting.UserSearchBase = request.Ldap.UserSearchBase;
                 activeLdapSetting.UserSearchFilter = request.Ldap.UserSearchFilter;

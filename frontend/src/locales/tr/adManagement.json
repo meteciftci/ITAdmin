@@ -121,11 +121,7 @@
           "ouPlaceholder": "OU seçin"
         },
         "actions": {
-          "submit": "Kullanıcı oluştur",
-          "goToSettings": "AD Yönetim ayarlarına git"
-        },
-        "warnings": {
-          "ldapsRequired": "Kullanıcı oluşturma sırasında parola atanacağı için LDAPS bağlantısı gereklidir. AD Yönetim ayarlarında SSL etkin değilse kullanıcı oluşturulamaz."
+          "submit": "Kullanıcı oluştur"
         },
         "messages": {
           "created": "Kullanıcı oluşturuldu.",
@@ -488,9 +484,6 @@
         "actions": {
           "open": "Grup Oluştur",
           "submit": "Oluştur"
-        },
-        "warnings": {
-          "ldapsRequired": "AD yazma işlemleri için LDAPS bağlantısı gereklidir. AD Yönetim ayarlarında SSL etkin değilse grup oluşturulamaz."
         },
         "messages": {
           "created": "Grup oluşturuldu",
@@ -1122,13 +1115,13 @@
         "missingServiceAccountPassword": "AD yönetim servis hesabı parolası tanımlı değil.",
         "connectionFailed": "AD bağlantısı kurulamadı.",
         "invalidRequest": "Geçersiz istek.",
-        "ldapsRequired": "AD işlemleri için LDAPS bağlantısı zorunludur. Lütfen AD yönetim ayarlarında SSL'i etkinleştirin."
+        "ldapsRequired": "AD işlemleri için LDAPS bağlantısı zorunludur. Bağlantılar her zaman 636 portu üzerinden LDAPS kullanır."
       },
       "settings": {
         "updateSucceeded": "AD yönetim ayarları güncellendi.",
         "serviceAccountPasswordRequired": "AD yönetimi etkinken servis hesabı parolası zorunludur.",
         "missingRequiredFields": "AD yönetim ayarları için zorunlu alanlar eksik.",
-        "ldapPortOutOfRange": "LDAP portu 1 ile 65535 arasında olmalıdır.",
+        "ldapPortOutOfRange": "LDAP portu yapılandırılamaz. Bağlantılar her zaman 636 portu üzerinden LDAPS kullanır.",
         "powerShellTimeoutOutOfRange": "PowerShell zaman aşımı 5 ile 300 saniye arasında olmalıdır.",
         "defaultUpnSuffixInvalid": "Varsayılan kullanıcı oluşturma UPN soneki geçerli bir alan adı soneki olmalıdır."
       },

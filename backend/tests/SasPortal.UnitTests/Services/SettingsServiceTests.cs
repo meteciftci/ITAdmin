@@ -70,8 +70,6 @@ public sealed class SettingsServiceTests
         var request = new UpdateLdapSettingsRequest(
             Name: "LDAP-Updated",
             Host: "ldap.updated.local",
-            Port: 636,
-            UseSsl: true,
             BaseDn: "DC=updated,DC=local",
             UserSearchBase: "OU=Users,DC=updated,DC=local",
             UserSearchFilter: "(sAMAccountName={0})",
@@ -108,8 +106,6 @@ public sealed class SettingsServiceTests
         var request = new UpdateLdapSettingsRequest(
             Name: "LDAP-Updated",
             Host: "ldap.updated.local",
-            Port: 636,
-            UseSsl: true,
             BaseDn: "DC=updated,DC=local",
             UserSearchBase: "OU=Users,DC=updated,DC=local",
             UserSearchFilter: "(sAMAccountName={0})",
@@ -1154,8 +1150,6 @@ public sealed class SettingsServiceTests
         {
             Name = "LDAP",
             Host = "ldap.local",
-            Port = 389,
-            UseSsl = false,
             BaseDn = "DC=local,DC=test",
             UserSearchBase = "OU=Users,DC=local,DC=test",
             UserSearchFilter = "(sAMAccountName={0})",
@@ -1179,8 +1173,6 @@ public sealed class SettingsServiceTests
         => new(
             Name: "LDAP",
             Host: "ldap.local",
-            Port: 389,
-            UseSsl: false,
             BaseDn: "DC=local,DC=test",
             UserSearchBase: "OU=Users,DC=local,DC=test",
             UserSearchFilter: "(sAMAccountName={0})",

@@ -45,7 +45,6 @@ public sealed class AdManagementValidationService : IAdManagementValidationServi
             connection.NetbiosDomainName);
 
         var primaryHost = ResolvePrimaryHost(connection);
-        var port = connection.LdapPort;
         var password = connection.ServiceAccountPassword!;
 
         LdapConnection? primaryConnection = null;
@@ -53,8 +52,6 @@ public sealed class AdManagementValidationService : IAdManagementValidationServi
         {
             primaryConnection = TryBind(
                 primaryHost,
-                port,
-                connection.UseSsl,
                 bindIdentity,
                 password);
         }
@@ -200,8 +197,6 @@ public sealed class AdManagementValidationService : IAdManagementValidationServi
 
         if (!TryValidateDomainFqdnHost(
                 connection.DomainFqdn!,
-                port,
-                connection.UseSsl,
                 bindIdentity,
                 password,
                 details,
@@ -223,8 +218,6 @@ public sealed class AdManagementValidationService : IAdManagementValidationServi
             {
                 dcConnection = TryBind(
                     dc,
-                    port,
-                    connection.UseSsl,
                     bindIdentity,
                     password);
             }
@@ -284,8 +277,6 @@ public sealed class AdManagementValidationService : IAdManagementValidationServi
 
     private static bool TryValidateDomainFqdnHost(
         string domainFqdn,
-        int port,
-        bool useSsl,
         string bindIdentity,
         string password,
         List<AdManagementValidationDetail> details,
@@ -297,7 +288,7 @@ public sealed class AdManagementValidationService : IAdManagementValidationServi
         LdapConnection? domainConnection = null;
         try
         {
-            domainConnection = TryBind(domainFqdn, port, useSsl, bindIdentity, password);
+            domainConnection = TryBind(domainFqdn, bindIdentity, password);
         }
         catch
         {
@@ -339,12 +330,10 @@ public sealed class AdManagementValidationService : IAdManagementValidationServi
 
     private static LdapConnection? TryBind(
         string host,
-        int port,
-        bool useSsl,
         string userName,
         string password)
     {
-        var identifier = new LdapDirectoryIdentifier(host, port);
+        var identifier = new LdapDirectoryIdentifier(host, LdapConnectionDefaults.StandardLdapsPort);
         var connection = new LdapConnection(identifier)
         {
             AuthType = AuthType.Basic,
@@ -352,10 +341,7 @@ public sealed class AdManagementValidationService : IAdManagementValidationServi
         };
 
         connection.SessionOptions.ProtocolVersion = 3;
-        if (useSsl)
-        {
-            connection.SessionOptions.SecureSocketLayer = true;
-        }
+        connection.SessionOptions.SecureSocketLayer = true;
 
         try
         {

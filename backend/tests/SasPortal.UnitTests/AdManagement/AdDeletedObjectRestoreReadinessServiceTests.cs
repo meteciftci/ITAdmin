@@ -467,8 +467,6 @@ public sealed class AdDeletedObjectRestoreReadinessServiceTests
             null,
             null,
             ["dc1.corp.example.com"],
-            true,
-            636,
             "svc_ad_mgmt",
             true,
             false,
@@ -509,8 +507,6 @@ public sealed class AdDeletedObjectRestoreReadinessServiceTests
                     settings.GroupsSearchBase,
                     settings.ComputersSearchBase,
                     settings.PreferredDomainControllers,
-                    settings.UseSsl,
-                    settings.LdapPort,
                     settings.ServiceAccountUserName,
                     password));
 

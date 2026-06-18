@@ -7,7 +7,6 @@ import { useTranslation } from "react-i18next";
 export type LdapFormValues = {
   name: string;
   host: string;
-  port: string;
   baseDn: string;
   userSearchBase: string;
   userSearchFilter: string;
@@ -71,28 +70,8 @@ export function LdapSettingsForm({
           }
         />
 
-        <Field
-          label={t("settings:ldap.fields.port")}
-          error={fieldErrors.port}
-          required
-          input={
-            <Input
-              type="number"
-              min={1}
-              max={65535}
-              value={values.port}
-              onChange={(event) => onChange("port", event.target.value)}
-              readOnly={readOnly}
-              aria-invalid={Boolean(fieldErrors.port)}
-            />
-          }
-        />
-
-        <div className="space-y-1.5">
-          <Label>{t("settings:ldap.fields.security")}</Label>
-          <p className="flex min-h-9 items-center text-sm text-muted-foreground">
-            {t("settings:ldap.ldapsHelp")}
-          </p>
+        <div className="space-y-1.5 md:col-span-2">
+          <p className="text-sm text-muted-foreground">{t("settings:ldap.ldapsHelp")}</p>
         </div>
 
         <Field

@@ -8,8 +8,6 @@ public sealed record CompleteSetupRequest(
 public sealed record CompleteSetupLdapSettingsRequest(
     string Name,
     string Host,
-    int Port,
-    bool UseSsl,
     string BaseDn,
     string UserSearchBase,
     string UserSearchFilter,

@@ -37,8 +37,6 @@ export type LdapSettings = {
   id: string;
   name: string;
   host: string;
-  port: number;
-  useSsl: boolean;
   baseDn: string;
   userSearchBase: string;
   userSearchFilter: string;
@@ -62,8 +60,6 @@ export type ApplicationSetting = {
 export type UpdateLdapSettingsRequest = {
   name: string;
   host: string;
-  port: number;
-  useSsl: boolean;
   baseDn: string;
   userSearchBase: string;
   userSearchFilter: string;
@@ -76,8 +72,6 @@ export type UpdateLdapSettingsRequest = {
 export type ValidateLdapSettingsRequest = {
   name: string;
   host: string;
-  port: number;
-  useSsl: boolean;
   baseDn: string;
   userSearchBase: string;
   userSearchFilter: string;

@@ -1,14 +1,6 @@
 import type { CompleteSetupLdapRequest, CompleteSetupRequest } from "@/features/setup/api";
 
-export const STANDARD_LDAPS_PORT = "636";
-
 const DEFAULT_USER_SEARCH_FILTER = "(&(objectClass=user)(sAMAccountName={0}))";
-
-/**
- * Backend message keys that the setup flow can surface to the user. They mirror
- * {@code SetupApiMessageKeys} on the backend and are resolved to localized text.
- */
-export const SETUP_SECURE_CONNECTION_REQUIRED_MESSAGE_KEY = "apiMessages.setup.secureConnectionRequired";
 
 const DIRECTORY_USER_NOT_FOUND = "Directory user could not be found.";
 const DIRECTORY_USER_PROFILE_COULD_NOT_BE_LOADED_PREFIX = "Directory user profile could not be loaded";
@@ -17,7 +9,6 @@ const LDAP_OPERATION_TIMED_OUT_PREFIX = "LDAP operation timed out";
 export type SetupLdapFormValues = {
   name: string;
   host: string;
-  port: string;
   baseDn: string;
   userSearchBase: string;
   userSearchFilter: string;
@@ -48,7 +39,6 @@ export function createDefaultSetupFormValues(defaultConnectionName: string): Set
     ldap: {
       name: defaultConnectionName,
       host: "",
-      port: STANDARD_LDAPS_PORT,
       baseDn: "",
       userSearchBase: "",
       userSearchFilter: DEFAULT_USER_SEARCH_FILTER,
@@ -69,19 +59,12 @@ function emptyToNull(value: string): string | null {
   return trimmed.length === 0 ? null : trimmed;
 }
 
-/**
- * Builds the LDAP portion of the complete-setup request. Connections are always
- * LDAPS, so {@code useSsl} is forced to {@code true} regardless of form state.
- */
 export function buildCompleteSetupLdapPayload(
   ldap: SetupLdapFormValues,
-  port: number,
 ): CompleteSetupLdapRequest {
   return {
     name: ldap.name.trim(),
     host: ldap.host.trim(),
-    port,
-    useSsl: true,
     baseDn: ldap.baseDn.trim(),
     userSearchBase: ldap.userSearchBase.trim(),
     userSearchFilter: ldap.userSearchFilter.trim(),
@@ -92,13 +75,10 @@ export function buildCompleteSetupLdapPayload(
   };
 }
 
-export function buildCompleteSetupRequest(
-  values: SetupFormValues,
-  port: number,
-): CompleteSetupRequest {
+export function buildCompleteSetupRequest(values: SetupFormValues): CompleteSetupRequest {
   return {
     setupKey: values.setupKey,
-    ldap: buildCompleteSetupLdapPayload(values.ldap, port),
+    ldap: buildCompleteSetupLdapPayload(values.ldap),
     admin: {
       userName: values.admin.userName.trim(),
       password: values.admin.password,
@@ -113,7 +93,6 @@ export function resolveResponseMessage(message: string | undefined, fallback: st
 
 export type CompleteSetupFailureHints = {
   genericFallback: string;
-  secureConnectionRequiredHint: string;
   directoryUserNotFoundHint: string;
   directoryUserProfileHint: string;
   ldapTimeoutHint: string;
@@ -124,9 +103,6 @@ export function mapCompleteSetupFailureToast(
   hints: CompleteSetupFailureHints,
 ): string {
   const trimmed = backendMessage?.trim() ?? "";
-  if (trimmed === SETUP_SECURE_CONNECTION_REQUIRED_MESSAGE_KEY) {
-    return hints.secureConnectionRequiredHint;
-  }
   if (trimmed === DIRECTORY_USER_NOT_FOUND) {
     return hints.directoryUserNotFoundHint;
   }

@@ -7,8 +7,6 @@ export type SetupStatusResponse = {
 export type CompleteSetupLdapRequest = {
   name: string;
   host: string;
-  port: number;
-  useSsl: boolean;
   baseDn: string;
   userSearchBase: string;
   userSearchFilter: string;

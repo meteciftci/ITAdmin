@@ -29,10 +29,6 @@ function getLdapFormErrors(
   if (!form.bindUserName.trim()) {
     errors.bindUserName = t("settings:validation.bindUserNameRequired");
   }
-  const parsedPort = Number(form.port);
-  if (!Number.isInteger(parsedPort) || parsedPort < 1 || parsedPort > 65535) {
-    errors.port = t("settings:validation.portRange");
-  }
   return errors;
 }
 
@@ -62,7 +58,6 @@ export function useLdapSettingsForm({
     setLdapForm({
       name: ldap?.name ?? "",
       host: ldap?.host ?? "",
-      port: ldap?.port ? String(ldap.port) : "636",
       baseDn: ldap?.baseDn ?? "",
       userSearchBase: ldap?.userSearchBase ?? "",
       userSearchFilter: ldap?.userSearchFilter ?? "",
@@ -93,8 +88,6 @@ export function useLdapSettingsForm({
     const payload = {
       name: ldapForm.name.trim(),
       host: ldapForm.host.trim(),
-      port: Number(ldapForm.port),
-      useSsl: true,
       baseDn: ldapForm.baseDn.trim(),
       userSearchBase: ldapForm.userSearchBase.trim(),
       userSearchFilter: ldapForm.userSearchFilter.trim(),
@@ -112,8 +105,6 @@ export function useLdapSettingsForm({
     const payload = {
       name: ldapForm.name.trim(),
       host: ldapForm.host.trim(),
-      port: Number(ldapForm.port),
-      useSsl: true,
       baseDn: ldapForm.baseDn.trim(),
       userSearchBase: ldapForm.userSearchBase.trim(),
       userSearchFilter: ldapForm.userSearchFilter.trim(),

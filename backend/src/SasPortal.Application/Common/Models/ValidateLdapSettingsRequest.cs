@@ -3,8 +3,6 @@ namespace SasPortal.Application.Common.Models;
 public sealed record ValidateLdapSettingsRequest(
     string Name,
     string Host,
-    int Port,
-    bool UseSsl,
     string BaseDn,
     string UserSearchBase,
     string UserSearchFilter,

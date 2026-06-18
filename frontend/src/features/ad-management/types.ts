@@ -54,8 +54,6 @@ export type AdManagementSettings = {
   groupsSearchBase: string | null;
   computersSearchBase: string | null;
   preferredDomainControllers: string[];
-  useSsl: boolean;
-  ldapPort: number;
   serviceAccountUserName: string | null;
   hasServiceAccountPassword: boolean;
   powerShellHealthEnabled: boolean;
@@ -78,8 +76,6 @@ export type UpdateAdManagementSettingsRequest = {
   groupsSearchBase: string | null;
   computersSearchBase: string | null;
   preferredDomainControllers: string[];
-  useSsl: boolean;
-  ldapPort: number;
   serviceAccountUserName: string | null;
   serviceAccountPassword?: string | null;
   clearServiceAccountPassword: boolean;

@@ -43,8 +43,6 @@ public sealed class SettingsController(
             new AppModels.UpdateLdapSettingsRequest(
                 request.Name,
                 request.Host,
-                request.Port,
-                request.UseSsl,
                 request.BaseDn,
                 request.UserSearchBase,
                 request.UserSearchFilter,
@@ -81,8 +79,6 @@ public sealed class SettingsController(
             new AppModels.ValidateLdapSettingsRequest(
                 request.Name,
                 request.Host,
-                request.Port,
-                request.UseSsl,
                 request.BaseDn,
                 request.UserSearchBase,
                 request.UserSearchFilter,
@@ -319,8 +315,6 @@ public sealed class SettingsController(
             ldap.Id,
             ldap.Name,
             ldap.Host,
-            ldap.Port,
-            ldap.UseSsl,
             ldap.BaseDn,
             ldap.UserSearchBase,
             ldap.UserSearchFilter,

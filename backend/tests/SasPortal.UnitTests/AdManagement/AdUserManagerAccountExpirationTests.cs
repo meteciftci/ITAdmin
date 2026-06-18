@@ -140,8 +140,6 @@ public sealed class AdUserManagerAccountExpirationTests
             null,
             null,
             Array.Empty<string>(),
-            false,
-            389,
             null,
             null);
 

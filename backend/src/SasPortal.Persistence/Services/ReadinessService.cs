@@ -68,8 +68,6 @@ public sealed class ReadinessService(
                 new LdapBindValidationRequest
                 {
                     Host = ldapSetting.Host,
-                    Port = ldapSetting.Port,
-                    UseSsl = ldapSetting.UseSsl,
                     BindUserName = ldapSetting.BindUserName,
                     BindUserDomain = ldapSetting.BindUserDomain,
                     BindPassword = bindPassword

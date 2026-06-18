@@ -2,8 +2,6 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
-  STANDARD_LDAPS_PORT,
-  SETUP_SECURE_CONNECTION_REQUIRED_MESSAGE_KEY,
   buildCompleteSetupLdapPayload,
   buildCompleteSetupRequest,
   createDefaultSetupFormValues,
@@ -12,7 +10,6 @@ import {
 
 const hints = {
   genericFallback: "generic",
-  secureConnectionRequiredHint: "ldaps-required",
   directoryUserNotFoundHint: "user-not-found",
   directoryUserProfileHint: "profile-not-loaded",
   ldapTimeoutHint: "timed-out",
@@ -21,62 +18,47 @@ const hints = {
 const defaults = createDefaultSetupFormValues("Default LDAP");
 
 describe("setup-form", () => {
-  it("defaults the port to the standard LDAPS port", () => {
-    assert.equal(STANDARD_LDAPS_PORT, "636");
-    assert.equal(defaults.ldap.port, "636");
-  });
-
   it("uses the provided default connection name", () => {
     assert.equal(createDefaultSetupFormValues("Varsayılan LDAP").ldap.name, "Varsayılan LDAP");
   });
 
-  it("always sends useSsl true in the LDAP payload", () => {
-    const payload = buildCompleteSetupLdapPayload(
-      { ...defaults.ldap, host: " dc01.test ", bindUserName: "bind" },
-      636,
-    );
+  it("builds the LDAP payload from trimmed form values", () => {
+    const payload = buildCompleteSetupLdapPayload({
+      ...defaults.ldap,
+      host: " dc01.test ",
+      bindUserName: "bind",
+    });
 
-    assert.equal(payload.useSsl, true);
     assert.equal(payload.host, "dc01.test");
-    assert.equal(payload.port, 636);
+    assert.equal(payload.bindUserName, "bind");
+    assert.equal("port" in payload, false);
+    assert.equal("useSsl" in payload, false);
   });
 
-  it("always sends useSsl true in the complete-setup request", () => {
-    const request = buildCompleteSetupRequest(
-      {
-        ...defaults,
-        setupKey: "key",
-        admin: { userName: " admin ", password: "pw" },
-      },
-      636,
-    );
+  it("builds the complete-setup request without port or useSsl", () => {
+    const request = buildCompleteSetupRequest({
+      ...defaults,
+      setupKey: "key",
+      admin: { userName: " admin ", password: "pw" },
+    });
 
-    assert.equal(request.ldap.useSsl, true);
     assert.equal(request.admin.userName, "admin");
+    assert.equal("port" in request.ldap, false);
+    assert.equal("useSsl" in request.ldap, false);
   });
 
   it("sends the trimmed connection name without a hard-coded fallback", () => {
-    const payload = buildCompleteSetupLdapPayload({ ...defaults.ldap, name: "   " }, 636);
+    const payload = buildCompleteSetupLdapPayload({ ...defaults.ldap, name: "   " });
     assert.equal(payload.name, "");
   });
 
   it("normalizes optional fields to null", () => {
     const payload = buildCompleteSetupLdapPayload(
       { ...defaults.ldap, bindUserDomain: "   ", nationalIdAttribute: "" },
-      636,
     );
 
     assert.equal(payload.bindUserDomain, null);
     assert.equal(payload.nationalIdAttribute, null);
-  });
-
-  it("maps the secure-connection-required message key to its hint", () => {
-    const result = mapCompleteSetupFailureToast(
-      SETUP_SECURE_CONNECTION_REQUIRED_MESSAGE_KEY,
-      hints,
-    );
-
-    assert.equal(result, hints.secureConnectionRequiredHint);
   });
 
   it("falls back to the generic hint for an empty message", () => {

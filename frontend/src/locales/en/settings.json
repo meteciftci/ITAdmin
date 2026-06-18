@@ -56,7 +56,6 @@
     "validation": {
       "nameRequired": "Name is required.",
       "hostRequired": "Host is required.",
-      "portRange": "Port must be between 1 and 65535.",
       "baseDnRequired": "Base DN is required.",
       "userSearchFilterRequired": "User Search Filter is required.",
       "bindUserNameRequired": "Bind User Name is required."
@@ -64,7 +63,7 @@
     "ldap": {
       "sectionTitle": "LDAP Settings",
       "sectionDescription": "Manage LDAP connection and directory search settings.",
-      "ldapsHelp": "Connections are established over LDAPS (SSL/TLS) only. The default LDAPS port is 636.",
+      "ldapsHelp": "Connections are established over LDAPS (SSL/TLS) on port 636.",
       "bindPasswordConfigured": "Bind password is configured.",
       "bindPasswordKeepHint": "If the password field is left empty, the existing password will be preserved.",
       "messages": {
@@ -74,8 +73,6 @@
       "fields": {
         "name": "Name",
         "host": "Host",
-        "port": "Port",
-        "security": "Security",
         "baseDn": "Base DN",
         "userSearchBase": "User Search Base",
         "userSearchFilter": "User Search Filter",
@@ -90,11 +87,10 @@
         "genericCouldNotValidate": "LDAP connection could not be validated.",
         "backendMessages": {
           "serviceAccountAuthFailed": "LDAP service account authentication failed.",
-          "serverConnectionFailed": "Could not connect to the LDAP server or resolve the bind domain. Check host, port, SSL, and bind user domain settings.",
+          "serverConnectionFailed": "Could not connect to the LDAP server or resolve the bind domain. Check host and bind user domain settings.",
           "validationFailed": "LDAP validation failed.",
           "requiredLdapFieldsMissing": "Required LDAP fields are missing.",
           "requiredLdapValidationFieldsMissing": "Required LDAP validation fields are missing.",
-          "portRange": "LDAP port must be between 1 and 65535.",
           "bindPasswordRequiredWithoutActive": "Bind password is required when no active LDAP setting exists.",
           "validationCouldNotComplete": "LDAP validation could not be completed.",
           "directoryUserNotFound": "Directory user could not be found.",
@@ -283,9 +279,7 @@
           "computersSearchBase": "Computers search base",
           "preferredDomainControllers": "Preferred domain controllers",
           "preferredDomainControllersHelp": "Enter one DC FQDN or host name per line.",
-          "ldapPort": "LDAP port",
-          "security": "Security",
-          "ldapsHelp": "Connections are established over LDAPS (SSL/TLS) only. The default LDAPS port is 636.",
+          "ldapsHelp": "Connections are established over LDAPS (SSL/TLS) on port 636.",
           "serviceAccountUserName": "Service account user name",
           "serviceAccountUserNameHelp": "You can enter DOMAIN\\user, user@domain.local, or just user. If only the user name is entered, the NetBIOS domain name is used.",
           "serviceAccountPassword": "Service account password",

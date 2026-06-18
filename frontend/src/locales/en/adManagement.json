@@ -121,11 +121,7 @@
           "ouPlaceholder": "Select OU"
         },
         "actions": {
-          "submit": "Create user",
-          "goToSettings": "Go to AD Management settings"
-        },
-        "warnings": {
-          "ldapsRequired": "Creating a user requires setting an initial password, so LDAPS is required. If SSL is not enabled in AD Management settings, user creation is disabled."
+          "submit": "Create user"
         },
         "messages": {
           "created": "User created.",
@@ -488,9 +484,6 @@
         "actions": {
           "open": "Create Group",
           "submit": "Create"
-        },
-        "warnings": {
-          "ldapsRequired": "LDAPS is required for AD write operations. If SSL is not enabled in AD Management settings, group creation is disabled."
         },
         "messages": {
           "created": "Group created",
@@ -1122,13 +1115,13 @@
         "missingServiceAccountPassword": "AD management service account password is not configured.",
         "connectionFailed": "Could not connect to AD.",
         "invalidRequest": "Invalid request.",
-        "ldapsRequired": "LDAPS connection is required for AD operations. Please enable SSL in AD management settings."
+        "ldapsRequired": "LDAPS connection is required for AD operations. Connections always use LDAPS on port 636."
       },
       "settings": {
         "updateSucceeded": "AD management settings were updated.",
         "serviceAccountPasswordRequired": "Service account password is required when AD management is enabled.",
         "missingRequiredFields": "Required fields are missing for AD management settings.",
-        "ldapPortOutOfRange": "LDAP port must be between 1 and 65535.",
+        "ldapPortOutOfRange": "LDAP port cannot be configured. Connections always use LDAPS on port 636.",
         "powerShellTimeoutOutOfRange": "PowerShell timeout must be between 5 and 300 seconds.",
         "defaultUpnSuffixInvalid": "Default user creation UPN suffix must be a valid domain suffix."
       },

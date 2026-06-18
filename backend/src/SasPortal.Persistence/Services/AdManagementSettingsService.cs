@@ -20,8 +20,6 @@ public sealed class AdManagementSettingsService(
     private const int AuditDescriptionMaxLength = 2000;
     private const int AuditIpAddressMaxLength = 64;
     private const int AuditUserAgentMaxLength = 1024;
-    private const int LdapPortMin = 1;
-    private const int LdapPortMax = 65535;
     private const int PowerShellTimeoutMin = 5;
     private const int PowerShellTimeoutMax = 300;
 
@@ -122,8 +120,6 @@ public sealed class AdManagementSettingsService(
                 GroupsSearchBase: groupsSearchBase,
                 ComputersSearchBase: computersSearchBase,
                 PreferredDomainControllers: preferredControllers,
-                UseSsl: request.UseSsl,
-                LdapPort: request.LdapPort,
                 ServiceAccountUserName: serviceAccountUserName,
                 ServiceAccountPassword: effectivePassword);
 
@@ -191,8 +187,6 @@ public sealed class AdManagementSettingsService(
         entity.GroupsSearchBase = groupsSearchBase;
         entity.ComputersSearchBase = computersSearchBase;
         entity.PreferredDomainControllersJson = preferredControllersJson;
-        entity.UseSsl = request.UseSsl;
-        entity.LdapPort = request.LdapPort;
         entity.ServiceAccountUserName = serviceAccountUserName;
         entity.PowerShellHealthEnabled = request.PowerShellHealthEnabled;
         entity.PowerShellTimeoutSeconds = request.PowerShellTimeoutSeconds;
@@ -465,8 +459,6 @@ public sealed class AdManagementSettingsService(
             entity.GroupsSearchBase,
             entity.ComputersSearchBase,
             ParsePreferredDomainControllers(entity.PreferredDomainControllersJson),
-            entity.UseSsl,
-            entity.LdapPort,
             entity.ServiceAccountUserName,
             password);
     }
@@ -508,8 +500,6 @@ public sealed class AdManagementSettingsService(
                 GroupsSearchBase: null,
                 ComputersSearchBase: null,
                 PreferredDomainControllers: Array.Empty<string>(),
-                UseSsl: true,
-                LdapPort: 636,
                 ServiceAccountUserName: null,
                 HasServiceAccountPassword: false,
                 PowerShellHealthEnabled: false,
@@ -533,8 +523,6 @@ public sealed class AdManagementSettingsService(
             GroupsSearchBase: entity.GroupsSearchBase,
             ComputersSearchBase: entity.ComputersSearchBase,
             PreferredDomainControllers: ParsePreferredDomainControllers(entity.PreferredDomainControllersJson),
-            UseSsl: entity.UseSsl,
-            LdapPort: entity.LdapPort,
             ServiceAccountUserName: entity.ServiceAccountUserName,
             HasServiceAccountPassword: !string.IsNullOrWhiteSpace(entity.EncryptedServiceAccountPassword),
             PowerShellHealthEnabled: entity.PowerShellHealthEnabled,
@@ -573,12 +561,6 @@ public sealed class AdManagementSettingsService(
 
     private static bool ValidateUpdateRequest(UpdateAdManagementSettingsRequest request, out string messageKey)
     {
-        if (request.LdapPort is < LdapPortMin or > LdapPortMax)
-        {
-            messageKey = AdManagementApiMessageKeys.Settings.LdapPortOutOfRange;
-            return false;
-        }
-
         if (request.PowerShellTimeoutSeconds is < PowerShellTimeoutMin or > PowerShellTimeoutMax)
         {
             messageKey = AdManagementApiMessageKeys.Settings.PowerShellTimeoutOutOfRange;

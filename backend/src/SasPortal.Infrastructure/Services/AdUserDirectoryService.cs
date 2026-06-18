@@ -238,14 +238,6 @@ public sealed partial class AdUserDirectoryService(
                     : AdDirectoryFailureKind.NotConfigured);
         }
 
-        var ldapsError = AdDirectoryConnectionRequirements.GetLdapsRequiredMessageKey(connection.UseSsl);
-        if (ldapsError is not null)
-        {
-            return ConnectionResolveResult.Failed(
-                AdManagementApiMessageKeys.Common.LdapsRequired,
-                AdDirectoryFailureKind.InvalidRequest);
-        }
-
         return ConnectionResolveResult.Success(new DirectoryConnectionContext(connection));
     }
 
@@ -256,7 +248,7 @@ public sealed partial class AdUserDirectoryService(
             context.Connection.ServiceAccountUserName,
             context.Connection.NetbiosDomainName);
 
-        var identifier = new LdapDirectoryIdentifier(host, context.Connection.LdapPort);
+        var identifier = new LdapDirectoryIdentifier(host, LdapConnectionDefaults.StandardLdapsPort);
         var ldapConnection = new LdapConnection(identifier)
         {
             AuthType = AuthType.Basic,
@@ -265,10 +257,7 @@ public sealed partial class AdUserDirectoryService(
 
         ldapConnection.SessionOptions.ProtocolVersion = 3;
         ldapConnection.Timeout = LdapOperationTimeout;
-        if (context.Connection.UseSsl)
-        {
-            ldapConnection.SessionOptions.SecureSocketLayer = true;
-        }
+        ldapConnection.SessionOptions.SecureSocketLayer = true;
 
         ldapConnection.Bind();
         return ldapConnection;

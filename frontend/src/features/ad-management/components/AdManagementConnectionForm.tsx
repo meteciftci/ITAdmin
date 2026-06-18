@@ -29,7 +29,6 @@ export type AdManagementConnectionFormValues = {
   groupsSearchBase: string;
   computersSearchBase: string;
   preferredDomainControllers: string;
-  ldapPort: string;
   serviceAccountUserName: string;
   serviceAccountPassword: string;
   clearServiceAccountPassword: boolean;
@@ -59,7 +58,6 @@ function buildInitialValues(
     computersSearchBase: settings?.computersSearchBase ?? "",
     preferredDomainControllers:
       settings?.preferredDomainControllers?.join("\n") ?? "",
-    ldapPort: String(settings?.ldapPort ?? 636),
     serviceAccountUserName: settings?.serviceAccountUserName ?? "",
     serviceAccountPassword: "",
     clearServiceAccountPassword: false,
@@ -120,10 +118,6 @@ export function AdManagementConnectionForm({
   const hasPassword = settings?.hasServiceAccountPassword ?? false;
 
   const canSubmit = useMemo(() => {
-    const port = Number.parseInt(values.ldapPort, 10);
-    if (!Number.isFinite(port) || port < 1 || port > 65535) {
-      return false;
-    }
     const timeout = Number.parseInt(values.powerShellTimeoutSeconds, 10);
     if (!Number.isFinite(timeout) || timeout < 5 || timeout > 300) {
       return false;
@@ -161,7 +155,6 @@ export function AdManagementConnectionForm({
     values.disabledUsersOu,
     values.domainFqdn,
     values.isEnabled,
-    values.ldapPort,
     values.netbiosDomainName,
     values.powerShellTimeoutSeconds,
     values.serviceAccountPassword,
@@ -185,7 +178,6 @@ export function AdManagementConnectionForm({
       return;
     }
 
-    const ldapPort = Number.parseInt(values.ldapPort, 10);
     const timeout = Number.parseInt(values.powerShellTimeoutSeconds, 10);
 
     const baseSettings: AdManagementSettings = settings ?? {
@@ -201,8 +193,6 @@ export function AdManagementConnectionForm({
       groupsSearchBase: null,
       computersSearchBase: null,
       preferredDomainControllers: [],
-      useSsl: true,
-      ldapPort: 636,
       serviceAccountUserName: null,
       hasServiceAccountPassword: false,
       powerShellHealthEnabled: false,
@@ -225,8 +215,6 @@ export function AdManagementConnectionForm({
         groupsSearchBase: emptyToNull(values.groupsSearchBase),
         computersSearchBase: emptyToNull(values.computersSearchBase),
         preferredDomainControllers: parsePreferredDcs(values.preferredDomainControllers),
-        useSsl: true,
-        ldapPort,
         serviceAccountUserName: emptyToNull(values.serviceAccountUserName),
         serviceAccountPassword: values.serviceAccountPassword.trim().length === 0
           ? null
@@ -335,24 +323,8 @@ export function AdManagementConnectionForm({
           </p>
         </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="ad-mgmt-ldap-port">
-            {t("settings:adManagement.connection.fields.ldapPort")}
-          </Label>
-          <Input
-            id="ad-mgmt-ldap-port"
-            type="number"
-            min={1}
-            max={65535}
-            value={values.ldapPort}
-            onChange={(event) => update("ldapPort", event.target.value)}
-            readOnly={readOnly}
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <Label>{t("settings:adManagement.connection.fields.security")}</Label>
-          <p className="flex min-h-9 items-center text-sm text-muted-foreground">
+        <div className="space-y-1.5 md:col-span-2">
+          <p className="text-sm text-muted-foreground">
             {t("settings:adManagement.connection.fields.ldapsHelp")}
           </p>
         </div>

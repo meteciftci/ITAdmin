@@ -80,7 +80,6 @@ export function AdCreateUserPage() {
     enabled: moduleStatus.isOperational,
   });
 
-  const useSsl = settingsQuery.data?.useSsl ?? false;
   const effectiveTargetOu =
     selectedOuDistinguishedName ?? settingsQuery.data?.usersRootOu ?? null;
 
@@ -158,10 +157,6 @@ export function AdCreateUserPage() {
   });
 
   function handleSubmit() {
-    if (!useSsl) {
-      return;
-    }
-
     if (!effectiveUpnSuffix.trim()) {
       toast.error(t("adManagement:users.create.errors.upnSuffixRequired"));
       return;
@@ -200,7 +195,6 @@ export function AdCreateUserPage() {
 
   const canSubmit =
     moduleStatus.isOperational &&
-    useSsl &&
     Boolean(givenName.trim()) &&
     Boolean(surname.trim()) &&
     Boolean(initialPassword.trim()) &&
@@ -225,18 +219,6 @@ export function AdCreateUserPage() {
         }
       />
 
-      {!useSsl && settingsQuery.isSuccess ? (
-        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm">
-          <p>{t("adManagement:users.create.warnings.ldapsRequired")}</p>
-          <Link
-            to="/settings/modules/ad-management"
-            className="mt-2 inline-block text-sm font-medium text-primary underline-offset-4 hover:underline"
-          >
-            {t("adManagement:users.create.actions.goToSettings")}
-          </Link>
-        </div>
-      ) : null}
-
       <SectionCard>
         {upnSuffixBlocking ? (
           <p className="text-sm text-destructive">
@@ -252,20 +234,17 @@ export function AdCreateUserPage() {
                 value={givenName}
                 onChange={setGivenName}
                 required
-                disabled={!useSsl}
               />
               <Field
                 label={t("adManagement:users.create.fields.surname")}
                 value={surname}
                 onChange={setSurname}
                 required
-                disabled={!useSsl}
               />
               <Field
                 label={t("adManagement:users.create.fields.department")}
                 value={department}
                 onChange={setDepartment}
-                disabled={!useSsl}
               />
             </FormSection>
 
@@ -277,14 +256,13 @@ export function AdCreateUserPage() {
                   setUsernameTouched(true);
                   setSamAccountName(value);
                 }}
-                disabled={!useSsl}
               />
               <div className="space-y-1.5">
                 <Label>{t("adManagement:users.create.fields.upnSuffix")} *</Label>
                 <Select
                   value={effectiveUpnSuffix}
                   onChange={(event) => setUpnSuffix(event.target.value)}
-                  disabled={!useSsl || suffixItems.length === 0}
+                  disabled={suffixItems.length === 0}
                   className="h-10"
                 >
                   {suffixItems.map((item) => (
@@ -312,7 +290,6 @@ export function AdCreateUserPage() {
                 onChange={setInitialPassword}
                 type="password"
                 required
-                disabled={!useSsl}
               />
             </FormSection>
 
@@ -323,7 +300,7 @@ export function AdCreateUserPage() {
               onMustChangePasswordChange={setMustChangePasswordAtNextLogon}
               targetOu={effectiveTargetOu}
               onTargetOuChange={setSelectedOuDistinguishedName}
-              disabled={!moduleStatus.isOperational || !useSsl || createMutation.isPending}
+              disabled={!moduleStatus.isOperational || createMutation.isPending}
             />
 
             {editableMappings.length > 0 ? (
@@ -339,7 +316,6 @@ export function AdCreateUserPage() {
                         [mapping.logicalField]: value,
                       }))
                     }
-                    disabled={!useSsl}
                   />
                 ))}
               </FormSection>

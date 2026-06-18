@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using SasPortal.Application.Abstractions.Services;
+using SasPortal.Application.Common.Constants;
 using SasPortal.Application.Common.Models;
 
 namespace SasPortal.Infrastructure.Services;
@@ -16,7 +17,6 @@ public sealed class LdapService : ILdapService
         "LDAP operation timed out. Verify host, port, SSL settings, and network connectivity.";
 
     private const string MissingRequiredFieldsMessage = "Required LDAP fields are missing.";
-    private const string SecureConnectionRequiredMessage = "Only LDAPS (SSL/TLS) connections are supported.";
     private const string ValidationSucceededMessage = "LDAP validation succeeded.";
     private const string DirectoryUserNotFoundMessage = "Directory user could not be found.";
     private const string DirectoryUserDistinguishedNameNotFoundMessage = "Directory user distinguished name could not be resolved.";
@@ -30,29 +30,21 @@ public sealed class LdapService : ILdapService
         _ = cancellationToken;
 
         if (string.IsNullOrWhiteSpace(request.Host) ||
-            request.Port <= 0 ||
             string.IsNullOrWhiteSpace(request.BindUserName) ||
             string.IsNullOrWhiteSpace(request.BindPassword))
         {
             return Task.FromResult(new LdapValidationResult(false, MissingRequiredFieldsMessage));
         }
 
-        // Only LDAPS is supported; never attempt a plain LDAP connection.
-        if (!request.UseSsl)
-        {
-            return Task.FromResult(new LdapValidationResult(false, SecureConnectionRequiredMessage));
-        }
-
         try
         {
-            var identifier = new LdapDirectoryIdentifier(request.Host, request.Port);
             var bindIdentity = BuildBindIdentity(request.BindUserName, request.BindUserDomain);
             if (string.IsNullOrWhiteSpace(bindIdentity))
             {
                 return Task.FromResult(new LdapValidationResult(false, MissingRequiredFieldsMessage));
             }
 
-            using var connection = CreateConnection(identifier, request.UseSsl, bindIdentity, request.BindPassword);
+            using var connection = CreateConnection(request.Host, bindIdentity, request.BindPassword);
             connection.Bind();
             return Task.FromResult(new LdapValidationResult(true, BindValidationSucceededMessage));
         }
@@ -86,7 +78,6 @@ public sealed class LdapService : ILdapService
         _ = cancellationToken;
 
         if (string.IsNullOrWhiteSpace(request.Host) ||
-            request.Port <= 0 ||
             string.IsNullOrWhiteSpace(request.BaseDn) ||
             string.IsNullOrWhiteSpace(request.BindUserName) ||
             string.IsNullOrWhiteSpace(request.BindPassword))
@@ -94,22 +85,15 @@ public sealed class LdapService : ILdapService
             return Task.FromResult(new LdapValidationResult(false, MissingRequiredFieldsMessage));
         }
 
-        // Only LDAPS is supported; never attempt a plain LDAP connection.
-        if (!request.UseSsl)
-        {
-            return Task.FromResult(new LdapValidationResult(false, SecureConnectionRequiredMessage));
-        }
-
         try
         {
-            var identifier = new LdapDirectoryIdentifier(request.Host, request.Port);
             var bindIdentity = BuildBindIdentity(request.BindUserName, request.BindUserDomain);
             if (string.IsNullOrWhiteSpace(bindIdentity))
             {
                 return Task.FromResult(new LdapValidationResult(false, MissingRequiredFieldsMessage));
             }
 
-            using var connection = CreateConnection(identifier, request.UseSsl, bindIdentity, request.BindPassword);
+            using var connection = CreateConnection(request.Host, bindIdentity, request.BindPassword);
             try
             {
                 connection.Bind();
@@ -156,7 +140,6 @@ public sealed class LdapService : ILdapService
     public Task<LdapValidationResult> ValidateAsync(LdapValidationRequest request, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(request.Host) ||
-            request.Port <= 0 ||
             string.IsNullOrWhiteSpace(request.BaseDn) ||
             string.IsNullOrWhiteSpace(request.UserSearchFilter) ||
             string.IsNullOrWhiteSpace(request.BindUserName) ||
@@ -167,22 +150,15 @@ public sealed class LdapService : ILdapService
             return Task.FromResult(new LdapValidationResult(false, MissingRequiredFieldsMessage));
         }
 
-        // Only LDAPS is supported; never attempt a plain LDAP connection.
-        if (!request.UseSsl)
-        {
-            return Task.FromResult(new LdapValidationResult(false, SecureConnectionRequiredMessage));
-        }
-
         try
         {
-            var identifier = new LdapDirectoryIdentifier(request.Host, request.Port);
             var bindIdentity = BuildBindIdentity(request.BindUserName, request.BindUserDomain);
             if (string.IsNullOrWhiteSpace(bindIdentity))
             {
                 return Task.FromResult(new LdapValidationResult(false, MissingRequiredFieldsMessage));
             }
 
-            using var serviceConnection = CreateConnection(identifier, request.UseSsl, bindIdentity, request.BindPassword);
+            using var serviceConnection = CreateConnection(request.Host, bindIdentity, request.BindPassword);
             try
             {
                 serviceConnection.Bind();
@@ -237,7 +213,7 @@ public sealed class LdapService : ILdapService
                 return Task.FromResult(new LdapValidationResult(false, DirectoryUserDistinguishedNameNotFoundMessage));
             }
 
-            using var userConnection = CreateConnection(identifier, request.UseSsl, userDn, request.TestPassword);
+            using var userConnection = CreateConnection(request.Host, userDn, request.TestPassword);
             try
             {
                 userConnection.Bind();
@@ -269,7 +245,6 @@ public sealed class LdapService : ILdapService
         _ = cancellationToken;
 
         if (string.IsNullOrWhiteSpace(request.Host) ||
-            request.Port <= 0 ||
             string.IsNullOrWhiteSpace(request.BaseDn) ||
             string.IsNullOrWhiteSpace(request.UserSearchFilter) ||
             string.IsNullOrWhiteSpace(request.BindUserName) ||
@@ -279,22 +254,15 @@ public sealed class LdapService : ILdapService
             return Task.FromResult<LdapUserProfile?>(null);
         }
 
-        // Only LDAPS is supported; never attempt a plain LDAP connection.
-        if (!request.UseSsl)
-        {
-            return Task.FromResult<LdapUserProfile?>(null);
-        }
-
         try
         {
-            var identifier = new LdapDirectoryIdentifier(request.Host, request.Port);
             var bindIdentity = BuildBindIdentity(request.BindUserName, request.BindUserDomain);
             if (string.IsNullOrWhiteSpace(bindIdentity))
             {
                 return Task.FromResult<LdapUserProfile?>(null);
             }
 
-            using var serviceConnection = CreateConnection(identifier, request.UseSsl, bindIdentity, request.BindPassword);
+            using var serviceConnection = CreateConnection(request.Host, bindIdentity, request.BindPassword);
             try
             {
                 serviceConnection.Bind();
@@ -405,17 +373,10 @@ public sealed class LdapService : ILdapService
         _ = cancellationToken;
 
         if (string.IsNullOrWhiteSpace(request.Host) ||
-            request.Port <= 0 ||
             string.IsNullOrWhiteSpace(request.BaseDn) ||
             string.IsNullOrWhiteSpace(request.BindUserName) ||
             string.IsNullOrWhiteSpace(request.BindPassword) ||
             string.IsNullOrWhiteSpace(request.DirectoryObjectId))
-        {
-            return Task.FromResult<LdapUserProfile?>(null);
-        }
-
-        // Only LDAPS is supported; never attempt a plain LDAP connection.
-        if (!request.UseSsl)
         {
             return Task.FromResult<LdapUserProfile?>(null);
         }
@@ -437,14 +398,13 @@ public sealed class LdapService : ILdapService
 
         try
         {
-            var identifier = new LdapDirectoryIdentifier(request.Host, request.Port);
             var bindIdentity = BuildBindIdentity(request.BindUserName, request.BindUserDomain);
             if (string.IsNullOrWhiteSpace(bindIdentity))
             {
                 return Task.FromResult<LdapUserProfile?>(null);
             }
 
-            using var serviceConnection = CreateConnection(identifier, request.UseSsl, bindIdentity, request.BindPassword);
+            using var serviceConnection = CreateConnection(request.Host, bindIdentity, request.BindPassword);
             try
             {
                 serviceConnection.Bind();
@@ -561,16 +521,9 @@ public sealed class LdapService : ILdapService
         _ = cancellationToken;
 
         if (string.IsNullOrWhiteSpace(request.Host) ||
-            request.Port <= 0 ||
             string.IsNullOrWhiteSpace(request.BaseDn) ||
             string.IsNullOrWhiteSpace(request.BindUserName) ||
             string.IsNullOrWhiteSpace(request.BindPassword))
-        {
-            return Task.FromResult<IReadOnlyCollection<LdapUserLookupItem>>(Array.Empty<LdapUserLookupItem>());
-        }
-
-        // Only LDAPS is supported; never attempt a plain LDAP connection.
-        if (!request.UseSsl)
         {
             return Task.FromResult<IReadOnlyCollection<LdapUserLookupItem>>(Array.Empty<LdapUserLookupItem>());
         }
@@ -588,14 +541,13 @@ public sealed class LdapService : ILdapService
 
         try
         {
-            var identifier = new LdapDirectoryIdentifier(request.Host, request.Port);
             var bindIdentity = BuildBindIdentity(request.BindUserName, request.BindUserDomain);
             if (string.IsNullOrWhiteSpace(bindIdentity))
             {
                 return Task.FromResult<IReadOnlyCollection<LdapUserLookupItem>>(Array.Empty<LdapUserLookupItem>());
             }
 
-            using var serviceConnection = CreateConnection(identifier, request.UseSsl, bindIdentity, request.BindPassword);
+            using var serviceConnection = CreateConnection(request.Host, bindIdentity, request.BindPassword);
             try
             {
                 serviceConnection.Bind();
@@ -793,12 +745,9 @@ public sealed class LdapService : ILdapService
         };
     }
 
-    private static LdapConnection CreateConnection(
-        LdapDirectoryIdentifier identifier,
-        bool useSsl,
-        string userName,
-        string password)
+    private static LdapConnection CreateConnection(string host, string userName, string password)
     {
+        var identifier = new LdapDirectoryIdentifier(host, LdapConnectionDefaults.StandardLdapsPort);
         var connection = new LdapConnection(identifier)
         {
             AuthType = AuthType.Basic,
@@ -806,11 +755,8 @@ public sealed class LdapService : ILdapService
         };
 
         connection.SessionOptions.ProtocolVersion = 3;
+        connection.SessionOptions.SecureSocketLayer = true;
         connection.Timeout = LdapOperationTimeout;
-        if (useSsl)
-        {
-            connection.SessionOptions.SecureSocketLayer = true;
-        }
 
         return connection;
     }

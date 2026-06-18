@@ -136,8 +136,6 @@ public sealed class UserService(
         var ldapResults = await ldapService.SearchUsersAsync(
             new LdapUserLookupRequest(
                 ldapSetting.Host,
-                ldapSetting.Port,
-                ldapSetting.UseSsl,
                 ldapSetting.BaseDn,
                 ldapSetting.UserSearchBase,
                 ldapSetting.BindUserName,
@@ -237,8 +235,6 @@ public sealed class UserService(
             var ldapProfile = await ldapService.GetUserProfileByObjectIdAsync(
                 new LdapUserProfileByObjectIdRequest(
                     ldapSetting.Host,
-                    ldapSetting.Port,
-                    ldapSetting.UseSsl,
                     ldapSetting.BaseDn,
                     ldapSetting.UserSearchBase,
                     ldapSetting.BindUserName,

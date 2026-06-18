@@ -7,6 +7,5 @@ public static class SetupApiMessageKeys
     public static class Validation
     {
         public const string SetupAlreadyCompleted = Prefix + "setupAlreadyCompleted";
-        public const string SecureConnectionRequired = Prefix + "secureConnectionRequired";
     }
 }

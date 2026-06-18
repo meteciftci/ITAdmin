@@ -13,8 +13,6 @@ public sealed record AdManagementSettingsUpdateRequest
     public string? GroupsSearchBase { get; init; }
     public string? ComputersSearchBase { get; init; }
     public IReadOnlyList<string>? PreferredDomainControllers { get; init; }
-    public bool UseSsl { get; init; } = true;
-    public int LdapPort { get; init; } = 636;
     public string? ServiceAccountUserName { get; init; }
     public string? ServiceAccountPassword { get; init; }
     public bool ClearServiceAccountPassword { get; init; }
