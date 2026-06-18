@@ -836,11 +836,21 @@
         }
       },
       "move": {
-        "title": "OU Taşı",
+        "pageTitle": "OU Taşı",
+        "formTitle": "Hedef Üst OU Seçimi",
         "description": "Organizasyon birimini başka bir üst OU altına taşıyın.",
-        "invalidTarget": "Hedef OU, taşınan OU'nun kendisi veya altı olamaz.",
-        "success": "Organizasyon birimi taşındı.",
-        "error": "Organizasyon birimi taşınamadı."
+        "sections": {
+          "sourceOu": "Taşınacak OU",
+          "targetParent": "Hedef Üst OU"
+        },
+        "actions": {
+          "submit": "Taşı"
+        },
+        "messages": {
+          "moved": "Organizasyon birimi taşındı.",
+          "moveFailed": "Organizasyon birimi taşınamadı."
+        },
+        "invalidTarget": "Hedef OU, taşınan OU'nun kendisi veya altı olamaz."
       },
       "delete": {
         "title": "OU Sil",

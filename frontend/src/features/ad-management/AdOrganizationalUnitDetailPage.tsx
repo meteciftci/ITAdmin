@@ -20,6 +20,7 @@ import { adDetailOutlineButtonClass } from "@/features/ad-management/ad-user-det
 import {
   buildAdOrganizationalUnitCreatePath,
   buildAdOrganizationalUnitDetailPath,
+  buildAdOrganizationalUnitMovePath,
   buildAdOrganizationalUnitRenamePath,
 } from "@/features/ad-management/ad-ou-detail-path";
 import {
@@ -34,10 +35,7 @@ import {
   AD_MANAGEMENT_ORGANIZATIONAL_UNITS_QUERY_KEY,
   getAdOrganizationalUnitById,
 } from "@/features/ad-management/api";
-import {
-  AdDeleteOrganizationalUnitDialog,
-  AdMoveOrganizationalUnitDialog,
-} from "@/features/ad-management/components/AdOrganizationalUnitDialogs";
+import { AdDeleteOrganizationalUnitDialog } from "@/features/ad-management/components/AdOrganizationalUnitDialogs";
 import { AdOrganizationalUnitCountBadge } from "@/features/ad-management/components/AdOrganizationalUnitCountBadge";
 import { AdOrganizationalUnitRecentOperationsSection } from "@/features/ad-management/components/AdOrganizationalUnitRecentOperationsSection";
 import { AdOrganizationalUnitTechnicalField } from "@/features/ad-management/components/AdOrganizationalUnitTechnicalField";
@@ -59,7 +57,6 @@ export function AdOrganizationalUnitDetailPage() {
   const canDelete = canAccess(currentUser, "AdManagement.OrganizationalUnits.Delete");
   const canViewOperationLogs = canAccess(currentUser, "AdOperationLogs.View");
 
-  const [moveOpen, setMoveOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   const organizationalUnitId = id?.trim() ?? "";
@@ -154,7 +151,13 @@ export function AdOrganizationalUnitDetailPage() {
                     </DropdownMenuItem>
                   ) : null}
                   {canMove ? (
-                    <DropdownMenuItem onClick={() => setMoveOpen(true)}>
+                    <DropdownMenuItem
+                      onClick={() =>
+                        navigate(buildAdOrganizationalUnitMovePath(organizationalUnit.objectGuid), {
+                          state: buildAdOrganizationalUnitDetailReturnState(detailPath),
+                        })
+                      }
+                    >
                       {t("adManagement:organizationalUnits.actions.move")}
                     </DropdownMenuItem>
                   ) : null}
@@ -300,20 +303,12 @@ export function AdOrganizationalUnitDetailPage() {
       </section>
 
       {organizationalUnit ? (
-        <>
-          <AdMoveOrganizationalUnitDialog
-            open={moveOpen}
-            organizationalUnit={organizationalUnit}
-            onOpenChange={setMoveOpen}
-            onSuccess={() => detailQuery.refetch()}
-          />
-          <AdDeleteOrganizationalUnitDialog
-            open={deleteOpen}
-            organizationalUnit={organizationalUnit}
-            onOpenChange={setDeleteOpen}
-            onDeleted={() => navigate(returnPath)}
-          />
-        </>
+        <AdDeleteOrganizationalUnitDialog
+          open={deleteOpen}
+          organizationalUnit={organizationalUnit}
+          onOpenChange={setDeleteOpen}
+          onDeleted={() => navigate(returnPath)}
+        />
       ) : null}
     </AdManagementModuleStateGuard>
   );

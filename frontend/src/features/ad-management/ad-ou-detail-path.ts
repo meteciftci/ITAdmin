@@ -21,6 +21,10 @@ export function buildAdOrganizationalUnitRenamePath(organizationalUnitId: string
   return `${AD_ORGANIZATIONAL_UNITS_LIST_PATH}/${organizationalUnitId}/rename`;
 }
 
+export function buildAdOrganizationalUnitMovePath(organizationalUnitId: string): string {
+  return `${AD_ORGANIZATIONAL_UNITS_LIST_PATH}/${organizationalUnitId}/move`;
+}
+
 export function readAdOrganizationalUnitCreateParentDn(
   searchParams: URLSearchParams,
 ): string | null {

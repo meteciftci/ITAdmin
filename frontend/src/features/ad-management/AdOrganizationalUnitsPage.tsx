@@ -16,16 +16,14 @@ import { buildAdOrganizationalUnitsListReturnState } from "@/features/ad-managem
 import {
   buildAdOrganizationalUnitCreatePath,
   buildAdOrganizationalUnitDetailPath,
+  buildAdOrganizationalUnitMovePath,
   buildAdOrganizationalUnitRenamePath,
 } from "@/features/ad-management/ad-ou-detail-path";
 import {
   AD_MANAGEMENT_ORGANIZATIONAL_UNITS_QUERY_KEY,
   getAdOrganizationalUnits,
 } from "@/features/ad-management/api";
-import {
-  AdDeleteOrganizationalUnitDialog,
-  AdMoveOrganizationalUnitDialog,
-} from "@/features/ad-management/components/AdOrganizationalUnitDialogs";
+import { AdDeleteOrganizationalUnitDialog } from "@/features/ad-management/components/AdOrganizationalUnitDialogs";
 import { AdManagementModuleStateGuard } from "@/features/ad-management/components/AdManagementModuleStateGuard";
 import { AdOrganizationalUnitsSearchToolbar } from "@/features/ad-management/components/AdOrganizationalUnitsSearchToolbar";
 import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useAdManagementModuleStatus";
@@ -46,7 +44,6 @@ export function AdOrganizationalUnitsPage() {
   const navigate = useNavigate();
   const { listState, listPath, updateListState, clearListState } = useAdOrganizationalUnitListState();
 
-  const [moveTarget, setMoveTarget] = useState<AdOrganizationalUnitManageListItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AdOrganizationalUnitManageListItem | null>(null);
 
   const emptyText = t("common:notAvailable");
@@ -101,7 +98,11 @@ export function AdOrganizationalUnitsPage() {
             state: buildAdOrganizationalUnitsListReturnState(),
           });
         },
-        onMove: setMoveTarget,
+        onMove: (item) => {
+          navigate(buildAdOrganizationalUnitMovePath(item.objectGuid), {
+            state: buildAdOrganizationalUnitsListReturnState(),
+          });
+        },
         onDelete: setDeleteTarget,
       }),
     [t, emptyText, navigate, canCreate, canUpdate, canMove, canDelete],
@@ -194,15 +195,6 @@ export function AdOrganizationalUnitsPage() {
         </SectionCard>
       </section>
 
-      <AdMoveOrganizationalUnitDialog
-        open={Boolean(moveTarget)}
-        organizationalUnit={moveTarget}
-        onOpenChange={(open) => {
-          if (!open) {
-            setMoveTarget(null);
-          }
-        }}
-      />
       <AdDeleteOrganizationalUnitDialog
         open={Boolean(deleteTarget)}
         organizationalUnit={deleteTarget}

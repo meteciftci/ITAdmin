@@ -836,11 +836,21 @@
         }
       },
       "move": {
-        "title": "Move OU",
+        "pageTitle": "Move OU",
+        "formTitle": "Select target parent OU",
         "description": "Move the organizational unit under another parent OU.",
-        "invalidTarget": "The target OU cannot be the OU itself or one of its descendants.",
-        "success": "Organizational unit moved.",
-        "error": "Organizational unit could not be moved."
+        "sections": {
+          "sourceOu": "OU to move",
+          "targetParent": "Target parent OU"
+        },
+        "actions": {
+          "submit": "Move"
+        },
+        "messages": {
+          "moved": "Organizational unit moved.",
+          "moveFailed": "Organizational unit could not be moved."
+        },
+        "invalidTarget": "The target OU cannot be the OU itself or one of its descendants."
       },
       "delete": {
         "title": "Delete OU",

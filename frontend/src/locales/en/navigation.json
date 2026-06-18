@@ -15,6 +15,7 @@
       "adManagementOrganizationalUnits": "Organizational units",
       "adManagementOrganizationalUnitsCreate": "Create OU",
       "adManagementOrganizationalUnitsRename": "Rename OU",
+      "adManagementOrganizationalUnitsMove": "Move OU",
       "adManagementOrganizationalUnitDetail": "OU detail",
       "adManagementDeletedObjects": "Deleted objects",
       "adManagementUsersCreate": "Create AD user",

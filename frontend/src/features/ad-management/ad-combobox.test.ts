@@ -65,16 +65,21 @@ describe("ad combobox usage in OU flows", () => {
     assert.match(createPageSource, /searchContext="manage"/);
   });
 
-  it("organizational unit move dialog uses AdOuSearchCombobox", () => {
+  it("organizational unit move page uses AdOuSearchCombobox with manage context", () => {
+    const movePageSource = readFileSync(
+      new URL("./AdOrganizationalUnitMovePage.tsx", import.meta.url),
+      "utf8",
+    );
     const dialogsSource = readFileSync(
       new URL("./components/AdOrganizationalUnitDialogs.tsx", import.meta.url),
       "utf8",
     );
 
-    assert.match(dialogsSource, /AdMoveOrganizationalUnitDialog/);
-    assert.match(dialogsSource, /AdOuSearchCombobox/);
-    assert.match(dialogsSource, /searchContext="manage"/);
-    assert.match(dialogsSource, /excludeDistinguishedName/);
+    assert.match(movePageSource, /AdOuSearchCombobox/);
+    assert.match(movePageSource, /searchContext="manage"/);
+    assert.match(movePageSource, /excludeDistinguishedName/);
+    assert.doesNotMatch(dialogsSource, /AdMoveOrganizationalUnitDialog/);
+    assert.doesNotMatch(dialogsSource, /AdOuSearchCombobox/);
   });
 
   it("user, group and computer OU move flows use AdOuSearchCombobox", () => {

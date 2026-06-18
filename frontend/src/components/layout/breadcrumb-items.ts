@@ -42,6 +42,10 @@ export function getBreadcrumbKeyByPath(pathname: string): string | null {
     return "items.adManagementOrganizationalUnitsRename";
   }
 
+  if (/^\/ad-management\/organizational-units\/[^/]+\/move$/.test(pathname)) {
+    return "items.adManagementOrganizationalUnitsMove";
+  }
+
   if (
     /^\/ad-management\/organizational-units\/[^/]+$/.test(pathname)
     && pathname !== "/ad-management/organizational-units/create"

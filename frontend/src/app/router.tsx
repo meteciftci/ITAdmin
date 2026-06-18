@@ -182,6 +182,11 @@ const AdOrganizationalUnitRenamePage = lazy(() =>
     default: module.AdOrganizationalUnitRenamePage,
   })),
 );
+const AdOrganizationalUnitMovePage = lazy(() =>
+  import("@/features/ad-management/AdOrganizationalUnitMovePage").then((module) => ({
+    default: module.AdOrganizationalUnitMovePage,
+  })),
+);
 const AdDeletedObjectsPage = lazy(() =>
   import("@/features/ad-management/AdDeletedObjectsPage").then((module) => ({
     default: module.AdDeletedObjectsPage,
@@ -748,6 +753,20 @@ export const router = createBrowserRouter([
           <AppLayout>
             <LazyRoute>
               <AdOrganizationalUnitRenamePage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/ad-management/organizational-units/:id/move",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission="AdManagement.OrganizationalUnits.Move">
+          <AppLayout>
+            <LazyRoute>
+              <AdOrganizationalUnitMovePage />
             </LazyRoute>
           </AppLayout>
         </RequirePermission>

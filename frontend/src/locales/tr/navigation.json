@@ -15,6 +15,7 @@
       "adManagementOrganizationalUnits": "Organizasyon Birimleri",
       "adManagementOrganizationalUnitsCreate": "OU Oluştur",
       "adManagementOrganizationalUnitsRename": "OU Yeniden Adlandır",
+      "adManagementOrganizationalUnitsMove": "OU Taşı",
       "adManagementOrganizationalUnitDetail": "OU Detayı",
       "adManagementDeletedObjects": "Silinen Nesneler",
       "adManagementUsersCreate": "AD kullanıcısı oluştur",

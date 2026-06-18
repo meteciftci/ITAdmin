@@ -6,6 +6,7 @@ import {
   AD_ORGANIZATIONAL_UNIT_CREATE_PATH,
   buildAdOrganizationalUnitCreatePath,
   buildAdOrganizationalUnitDetailPath,
+  buildAdOrganizationalUnitMovePath,
   buildAdOrganizationalUnitRenamePath,
 } from "./ad-ou-detail-path.ts";
 import { AD_ORGANIZATIONAL_UNITS_LIST_PATH } from "./ad-ous-list-path.ts";
@@ -28,7 +29,7 @@ function readLocaleOperations(locale: "tr" | "en"): Record<string, string> {
 }
 
 describe("ad organizational units navigation", () => {
-  it("builds organizational unit detail and rename paths", () => {
+  it("builds organizational unit detail, rename and move paths", () => {
     assert.equal(
       buildAdOrganizationalUnitDetailPath(organizationalUnitId),
       `${AD_ORGANIZATIONAL_UNITS_LIST_PATH}/${organizationalUnitId}`,
@@ -36,6 +37,10 @@ describe("ad organizational units navigation", () => {
     assert.equal(
       buildAdOrganizationalUnitRenamePath(organizationalUnitId),
       `${AD_ORGANIZATIONAL_UNITS_LIST_PATH}/${organizationalUnitId}/rename`,
+    );
+    assert.equal(
+      buildAdOrganizationalUnitMovePath(organizationalUnitId),
+      `${AD_ORGANIZATIONAL_UNITS_LIST_PATH}/${organizationalUnitId}/move`,
     );
   });
 
@@ -56,6 +61,7 @@ describe("ad organizational units navigation", () => {
     assert.match(routerSource, /path: "\/ad-management\/organizational-units"/);
     assert.match(routerSource, /path: "\/ad-management\/organizational-units\/create"/);
     assert.match(routerSource, /path: "\/ad-management\/organizational-units\/:id\/rename"/);
+    assert.match(routerSource, /path: "\/ad-management\/organizational-units\/:id\/move"/);
     assert.match(routerSource, /path: "\/ad-management\/organizational-units\/:id"/);
     assert.match(
       routerSource,
@@ -69,9 +75,14 @@ describe("ad organizational units navigation", () => {
       routerSource,
       /RequirePermission permission="AdManagement\.OrganizationalUnits\.Update"/,
     );
+    assert.match(
+      routerSource,
+      /RequirePermission permission="AdManagement\.OrganizationalUnits\.Move"/,
+    );
     assert.match(routerSource, /AdOrganizationalUnitsPage/);
     assert.match(routerSource, /AdOrganizationalUnitCreatePage/);
     assert.match(routerSource, /AdOrganizationalUnitRenamePage/);
+    assert.match(routerSource, /AdOrganizationalUnitMovePage/);
     assert.match(routerSource, /AdOrganizationalUnitDetailPage/);
   });
 
@@ -115,7 +126,7 @@ describe("ad organizational units navigation", () => {
     assert.doesNotMatch(pageSource, /renameTarget/);
   });
 
-  it("uses list toolbar, DataTable, pagination, count badges and move/delete dialogs", () => {
+  it("uses list toolbar, DataTable, pagination, count badges and delete dialog", () => {
     const pageSource = readFileSync(
       new URL("./AdOrganizationalUnitsPage.tsx", import.meta.url),
       "utf8",
@@ -141,6 +152,11 @@ describe("ad organizational units navigation", () => {
       "utf8",
     );
 
+    const movePageSource = readFileSync(
+      new URL("./AdOrganizationalUnitMovePage.tsx", import.meta.url),
+      "utf8",
+    );
+
     assert.match(toolbarSource, /organizationalUnits\.searchPlaceholder/);
     assert.match(toolbarSource, /canSearch/);
     assert.match(toolbarSource, /AD_ORGANIZATIONAL_UNIT_CREATE_PATH/);
@@ -149,16 +165,23 @@ describe("ad organizational units navigation", () => {
     assert.match(pageSource, /DataTablePagination/);
     assert.match(pageSource, /buildAdOrganizationalUnitCreatePath/);
     assert.match(pageSource, /buildAdOrganizationalUnitRenamePath/);
+    assert.match(pageSource, /buildAdOrganizationalUnitMovePath/);
+    assert.doesNotMatch(pageSource, /moveTarget/);
+    assert.doesNotMatch(pageSource, /AdMoveOrganizationalUnitDialog/);
     assert.match(columnsSource, /AdOrganizationalUnitCountBadge/);
     assert.match(columnsSource, /organizationalUnits\.table\.organizationalUnit/);
     assert.match(columnsSource, /getAdOrganizationalUnitPrimaryLabel/);
-    assert.doesNotMatch(dialogsSource, /AdRenameOrganizationalUnitDialog/);
-    assert.doesNotMatch(dialogsSource, /AdCreateOrganizationalUnitDialog/);
-    assert.match(dialogsSource, /AdMoveOrganizationalUnitDialog/);
+    assert.doesNotMatch(dialogsSource, /AdMoveOrganizationalUnitDialog/);
     assert.match(dialogsSource, /AdDeleteOrganizationalUnitDialog/);
+    assert.match(movePageSource, /moveAdOrganizationalUnit/);
+    assert.match(movePageSource, /excludeDistinguishedName=\{organizationalUnit\.distinguishedName\}/);
+    assert.match(movePageSource, /searchContext="manage"/);
+    assert.match(movePageSource, /disabled=\{!canSubmit\}/);
+    assert.match(movePageSource, /buildAdOrganizationalUnitDetailPath/);
     assert.match(createPageSource, /createAdOrganizationalUnit/);
     assert.match(renamePageSource, /renameAdOrganizationalUnit/);
     assert.match(renamePageSource, /organizationalUnits\.rename\.pageTitle/);
+    assert.match(movePageSource, /organizationalUnits\.move\.pageTitle/);
   });
 
   it("detail page uses technical fields, count stat cards and rename route navigation", () => {
@@ -173,6 +196,9 @@ describe("ad organizational units navigation", () => {
     assert.match(detailSource, /organizationalUnits\.detail\.sections\.contentSummary/);
     assert.match(detailSource, /organizationalUnits\.detail\.sections\.childOrganizationalUnits/);
     assert.match(detailSource, /buildAdOrganizationalUnitRenamePath/);
+    assert.match(detailSource, /buildAdOrganizationalUnitMovePath/);
+    assert.doesNotMatch(detailSource, /moveOpen/);
+    assert.doesNotMatch(detailSource, /AdMoveOrganizationalUnitDialog/);
     assert.match(detailSource, /line-clamp-2/);
     assert.doesNotMatch(detailSource, /AdRenameOrganizationalUnitDialog/);
     assert.doesNotMatch(detailSource, /renameOpen/);
@@ -240,6 +266,7 @@ describe("ad organizational units i18n", () => {
           empty: { searchRequired: string };
           create: { pageTitle: string; messages: { created: string } };
           rename: { pageTitle: string; messages: { renamed: string } };
+          move: { pageTitle: string; messages: { moved: string } };
           detail: { title: string; recentOperations: string };
           actions: { create: string; rename: string; move: string; delete: string };
         };
@@ -257,6 +284,7 @@ describe("ad organizational units i18n", () => {
           empty: { searchRequired: string };
           create: { pageTitle: string; messages: { created: string } };
           rename: { pageTitle: string; messages: { renamed: string } };
+          move: { pageTitle: string; messages: { moved: string } };
           detail: { title: string; recentOperations: string };
           actions: { create: string; rename: string; move: string; delete: string };
         };
@@ -280,6 +308,10 @@ describe("ad organizational units i18n", () => {
       "OU Yeniden Adlandır",
     );
     assert.equal(
+      trAdManagement.adManagement.organizationalUnits.move.pageTitle,
+      "OU Taşı",
+    );
+    assert.equal(
       trAdManagement.adManagement.organizationalUnits.detail.title,
       "OU Detayı",
     );
@@ -289,6 +321,10 @@ describe("ad organizational units i18n", () => {
     assert.equal(
       enAdManagement.adManagement.organizationalUnits.rename.pageTitle,
       "Rename OU",
+    );
+    assert.equal(
+      enAdManagement.adManagement.organizationalUnits.move.pageTitle,
+      "Move OU",
     );
     assert.ok(enAdManagement.adManagement.apiMessages.organizationalUnits.notEmpty);
   });
@@ -302,6 +338,7 @@ describe("ad organizational units i18n", () => {
           adManagementOrganizationalUnits: string;
           adManagementOrganizationalUnitsCreate: string;
           adManagementOrganizationalUnitsRename: string;
+          adManagementOrganizationalUnitsMove: string;
         };
       };
     };
@@ -313,6 +350,7 @@ describe("ad organizational units i18n", () => {
           adManagementOrganizationalUnits: string;
           adManagementOrganizationalUnitsCreate: string;
           adManagementOrganizationalUnitsRename: string;
+          adManagementOrganizationalUnitsMove: string;
         };
       };
     };
@@ -322,8 +360,16 @@ describe("ad organizational units i18n", () => {
       "OU Yeniden Adlandır",
     );
     assert.equal(
+      trNavigation.navigation.items.adManagementOrganizationalUnitsMove,
+      "OU Taşı",
+    );
+    assert.equal(
       enNavigation.navigation.items.adManagementOrganizationalUnitsRename,
       "Rename OU",
+    );
+    assert.equal(
+      enNavigation.navigation.items.adManagementOrganizationalUnitsMove,
+      "Move OU",
     );
   });
 
@@ -333,6 +379,7 @@ describe("ad organizational units i18n", () => {
       readFileSync(new URL("./AdOrganizationalUnitDetailPage.tsx", import.meta.url), "utf8"),
       readFileSync(new URL("./AdOrganizationalUnitCreatePage.tsx", import.meta.url), "utf8"),
       readFileSync(new URL("./AdOrganizationalUnitRenamePage.tsx", import.meta.url), "utf8"),
+      readFileSync(new URL("./AdOrganizationalUnitMovePage.tsx", import.meta.url), "utf8"),
       readFileSync(
         new URL("./components/AdOrganizationalUnitsSearchToolbar.tsx", import.meta.url),
         "utf8",
