@@ -18,7 +18,6 @@
     "modulesHub": {
       "adManagement": {
         "title": "AD Yönetim",
-        "description": "Domain bağlantısı, yetkili hesap ve attribute mapping ayarları.",
         "openSettings": "Ayarları Aç",
         "status": {
           "loading": {
@@ -45,9 +44,6 @@
       },
       "emptyTitle": "Görüntüleyebileceğiniz modül ayarı bulunmuyor."
     },
-    "actions": {
-      "save": "Kaydet"
-    },
     "tabs": {
       "ldap": "LDAP Ayarları",
       "branding": "Uygulama Kimliği",
@@ -61,8 +57,6 @@
       "bindUserNameRequired": "Bind kullanıcı adı zorunludur."
     },
     "ldap": {
-      "sectionTitle": "LDAP Ayarları",
-      "sectionDescription": "LDAP bağlantı ve kullanıcı arama ayarlarını yönetin.",
       "ldapsHelp": "Bağlantı LDAPS (SSL/TLS) üzerinden 636 portu ile kurulur.",
       "bindPasswordConfigured": "Bind şifresi yapılandırılmış.",
       "bindPasswordKeepHint": "Şifre alanı boş bırakılırsa mevcut şifre korunur.",
@@ -103,9 +97,6 @@
       }
     },
     "application": {
-      "sectionTitle": "Uygulama Kimliği",
-      "sectionDescription": "Uygulama görsel kimliğini ve genel görünüm ayarlarını yönetin.",
-      "brandingSectionTitle": "Uygulama Kimliği",
       "fields": {
         "applicationName": "Uygulama adı",
         "browserTitle": "Tarayıcı başlığı",
@@ -119,8 +110,6 @@
       "noFileSelected": "Dosya seçilmedi",
       "selectedFile": "Seçilen dosya",
       "actions": {
-        "selectLogo": "Logo seç",
-        "selectFavicon": "Favicon seç",
         "selectLogoFile": "Logo dosyası seç",
         "selectFaviconFile": "Favicon dosyası seç"
       },
@@ -149,8 +138,6 @@
       }
     },
     "directory": {
-      "sectionTitle": "AD Yönetim Modülü Ayarları",
-      "sectionDescription": "Active Directory kullanıcı ve kimlik özniteliklerini yönetin.",
       "fields": {
         "nationalIdAttribute": "Ulusal kimlik özniteliği",
         "nationalIdAttributeHelp": "Active Directory kullanıcılarında ulusal kimlik değerinin okunacağı öznitelik adını girin. Örn: employeeId"
@@ -218,10 +205,6 @@
           "missing": "Şablon yok",
           "passive": "Pasif"
         },
-        "status": {
-          "active": "Aktif",
-          "passive": "Pasif"
-        },
         "validation": {
           "duplicateRule": "Aynı olay ve kanal için zaten bildirim kuralı var.",
           "recipientRequired": "Alıcı kaynağı zorunludur.",
@@ -236,8 +219,7 @@
         "messages": {
           "ruleAdded": "Bildirim kuralı eklendi.",
           "ruleUpdated": "Bildirim kuralı güncellendi.",
-          "ruleRemoved": "Bildirim kuralı kaldırıldı.",
-          "saveFailed": "Bildirim ayarları kaydedilemedi."
+          "ruleRemoved": "Bildirim kuralı kaldırıldı."
         }
       },
       "userCreationDefaults": {
@@ -264,7 +246,6 @@
       },
       "readOnlyNotice": "AD Yönetim ayarlarını görüntüleyebilirsiniz. Güncelleme yapmak için ek yetki gerekir.",
       "connection": {
-        "title": "Bağlantı ve Yetkili Hesap",
         "description": "Active Directory yönetim modülünün kullanacağı domain, OU ve servis hesabı bilgilerini yapılandırın.",
         "fields": {
           "isEnabled": "AD Yönetim modülü aktif",
@@ -291,8 +272,7 @@
         "passwordKeepHint": "Parola alanı boş bırakılırsa mevcut parola korunur.",
         "clearPassword": "Mevcut parolayı temizle",
         "actions": {
-          "save": "AD ayarlarını kaydet",
-          "validate": "Ayarları doğrula"
+          "save": "AD ayarlarını kaydet"
         },
         "lastValidation": "Son doğrulama: {{status}} - {{message}}",
         "lastValidationUnknown": "Doğrulama detayı gösterilemiyor.",
@@ -322,9 +302,6 @@
           "isEnabled": "Aktif",
           "isEditable": "Düzenlenebilir",
           "isSensitive": "Hassas veri",
-          "isSearchable": "Aranabilir",
-          "isSearchableHelp": "Bu alan AD kullanıcı aramasına dahil edilir.",
-          "isSearchableSensitiveDisabled": "Hassas veri alanları aranabilir yapılamaz.",
           "validationType": "Validasyon tipi",
           "maskingStrategy": "Maskeleme yöntemi",
           "sortOrder": "Sıra",
@@ -332,7 +309,6 @@
         },
         "fields": {
           "logicalField": "Logical field",
-          "logicalField Help": "Oluşturma sırasında girilir, sonradan değiştirilemez. Örn: mobilePhone.",
           "logicalFieldHelp": "Sistem içi anahtar. Oluşturulduktan sonra değiştirilmez.",
           "displayNameHelp": "Kullanıcı arayüzünde gösterilecek ad.",
           "displayName": "Alan adı",
@@ -396,21 +372,10 @@
       }
     },
     "sessionSecurity": {
-      "title": "Oturum Güvenliği",
-      "description": "Token sürelerini, boşta kalma zaman aşımını ve beni hatırla davranışını yönetin.",
-      "futureNote": "Bu ayarlar sonraki oturum güvenliği adımlarında kullanılacaktır.",
       "fields": {
         "sessionDurationMinutes": {
           "label": "Oturum süresi",
           "description": "Access token süresi ve boşta kalma zaman aşımı için kullanılacak ortak süreyi belirler."
-        },
-        "accessTokenMinutes": {
-          "label": "Access token süresi",
-          "description": "Kısa süreli erişim tokenının kaç dakika geçerli olacağını belirler."
-        },
-        "idleTimeoutMinutes": {
-          "label": "Boşta kalma zaman aşımı",
-          "description": "Kullanıcı işlem yapmazsa oturumun kaç dakika sonra sonlandırılacağını belirler."
         },
         "idleWarningSeconds": {
           "label": "Oturum uyarı süresi",
@@ -441,7 +406,6 @@
       },
       "validation": {
         "range": "Değer {{min}} ile {{max}} arasında olmalıdır.",
-        "warningLessThanIdle": "Oturum uyarı süresi, boşta kalma zaman aşımından kısa olmalıdır.",
         "warningLessThanSessionDuration": "Oturum uyarı süresi, oturum süresinden kısa olmalıdır."
       }
     }

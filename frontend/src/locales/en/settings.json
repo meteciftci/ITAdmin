@@ -18,7 +18,6 @@
     "modulesHub": {
       "adManagement": {
         "title": "AD Management",
-        "description": "Domain connection, service account, and attribute mapping settings.",
         "openSettings": "Open settings",
         "status": {
           "loading": {
@@ -45,9 +44,6 @@
       },
       "emptyTitle": "There are no module settings you can view."
     },
-    "actions": {
-      "save": "Save"
-    },
     "tabs": {
       "ldap": "LDAP Settings",
       "branding": "Application Branding",
@@ -61,8 +57,6 @@
       "bindUserNameRequired": "Bind User Name is required."
     },
     "ldap": {
-      "sectionTitle": "LDAP Settings",
-      "sectionDescription": "Manage LDAP connection and directory search settings.",
       "ldapsHelp": "Connections are established over LDAPS (SSL/TLS) on port 636.",
       "bindPasswordConfigured": "Bind password is configured.",
       "bindPasswordKeepHint": "If the password field is left empty, the existing password will be preserved.",
@@ -103,9 +97,6 @@
       }
     },
     "application": {
-      "sectionTitle": "Application Branding",
-      "sectionDescription": "Manage application visual identity and branding settings.",
-      "brandingSectionTitle": "Application Branding",
       "fields": {
         "applicationName": "Application name",
         "browserTitle": "Browser title",
@@ -119,8 +110,6 @@
       "noFileSelected": "No file selected",
       "selectedFile": "Selected file",
       "actions": {
-        "selectLogo": "Select logo",
-        "selectFavicon": "Select favicon",
         "selectLogoFile": "Select logo file",
         "selectFaviconFile": "Select favicon file"
       },
@@ -149,8 +138,6 @@
       }
     },
     "directory": {
-      "sectionTitle": "AD Management Settings",
-      "sectionDescription": "Manage Active Directory user and identity attributes.",
       "fields": {
         "nationalIdAttribute": "National identity attribute",
         "nationalIdAttributeHelp": "Enter the Active Directory attribute name used to read the national identity value. Example: employeeId"
@@ -218,10 +205,6 @@
           "missing": "No template",
           "passive": "Passive"
         },
-        "status": {
-          "active": "Active",
-          "passive": "Passive"
-        },
         "validation": {
           "duplicateRule": "A notification rule already exists for this event and channel.",
           "recipientRequired": "Recipient source is required.",
@@ -236,8 +219,7 @@
         "messages": {
           "ruleAdded": "Notification rule added.",
           "ruleUpdated": "Notification rule updated.",
-          "ruleRemoved": "Notification rule removed.",
-          "saveFailed": "Notification settings could not be saved."
+          "ruleRemoved": "Notification rule removed."
         }
       },
       "userCreationDefaults": {
@@ -264,7 +246,6 @@
       },
       "readOnlyNotice": "You can view AD management settings. Additional permission is required to update them.",
       "connection": {
-        "title": "Connection and Service Account",
         "description": "Configure the domain, OUs, and service account that the AD Management module uses.",
         "fields": {
           "isEnabled": "AD Management module enabled",
@@ -291,8 +272,7 @@
         "passwordKeepHint": "Leaving the password field empty keeps the existing password.",
         "clearPassword": "Clear stored password",
         "actions": {
-          "save": "Save AD settings",
-          "validate": "Validate settings"
+          "save": "Save AD settings"
         },
         "lastValidation": "Last validation: {{status}} - {{message}}",
         "lastValidationUnknown": "Validation details are unavailable.",
@@ -392,21 +372,10 @@
       }
     },
     "sessionSecurity": {
-      "title": "Session Security",
-      "description": "Manage token lifetimes, idle timeout, and remember me behavior.",
-      "futureNote": "These settings will take effect in upcoming session security enhancements.",
       "fields": {
         "sessionDurationMinutes": {
           "label": "Session duration",
           "description": "Defines the shared duration used for the access token and idle timeout."
-        },
-        "accessTokenMinutes": {
-          "label": "Access token duration",
-          "description": "Defines how many minutes the short-lived access token remains valid."
-        },
-        "idleTimeoutMinutes": {
-          "label": "Idle timeout",
-          "description": "Defines how many minutes of inactivity before the session ends."
         },
         "idleWarningSeconds": {
           "label": "Session warning duration",
@@ -437,7 +406,6 @@
       },
       "validation": {
         "range": "Value must be between {{min}} and {{max}}.",
-        "warningLessThanIdle": "Session warning duration must be shorter than the idle timeout.",
         "warningLessThanSessionDuration": "Session warning duration must be shorter than the session duration."
       }
     }
