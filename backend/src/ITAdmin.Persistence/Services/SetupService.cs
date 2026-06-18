@@ -9,8 +9,6 @@ using ITAdmin.Application.Common.Security;
 using ITAdmin.Domain.Entities;
 using ITAdmin.Domain.Enums;
 using ITAdmin.Persistence.Context;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace ITAdmin.Persistence.Services;
 
@@ -19,6 +17,7 @@ public sealed class SetupService(
     ILdapService ldapService,
     ISecretProtector secretProtector,
     IConfiguration configuration,
+    ISetupKeyValidator setupKeyValidator,
     ILogger<SetupService> logger) : ISetupService
 {
     private const string SuperAdminRoleCode = "SuperAdmin";
@@ -130,19 +129,16 @@ public sealed class SetupService(
             return new CompleteSetupResult(false, "Invalid setup request.");
         }
 
-        var configuredSetupKey = configuration["Setup:SetupKey"];
-        if (string.IsNullOrWhiteSpace(configuredSetupKey))
+        var configuredSetupKeyHash = configuration[SetupKeyHashValidator.ConfigurationKey];
+        var setupKeyValidation = setupKeyValidator.Validate(configuredSetupKeyHash, request.SetupKey);
+        switch (setupKeyValidation)
         {
-            return new CompleteSetupResult(false, "Setup key is not configured.");
-        }
-
-        var requestSetupKeyBytes = Encoding.UTF8.GetBytes(request.SetupKey);
-        var configuredSetupKeyBytes = Encoding.UTF8.GetBytes(configuredSetupKey);
-        var isSetupKeyValid = requestSetupKeyBytes.Length == configuredSetupKeyBytes.Length &&
-                              CryptographicOperations.FixedTimeEquals(requestSetupKeyBytes, configuredSetupKeyBytes);
-        if (!isSetupKeyValid)
-        {
-            return new CompleteSetupResult(false, "Invalid setup key.");
+            case SetupKeyValidationOutcome.MissingHashConfiguration:
+                return new CompleteSetupResult(false, "Setup key hash is not configured.");
+            case SetupKeyValidationOutcome.InvalidHashFormat:
+                return new CompleteSetupResult(false, "Setup key hash format is invalid.");
+            case SetupKeyValidationOutcome.InvalidKey:
+                return new CompleteSetupResult(false, "Invalid setup key.");
         }
 
         var isSetupRequired = await IsSetupRequiredAsync(cancellationToken);

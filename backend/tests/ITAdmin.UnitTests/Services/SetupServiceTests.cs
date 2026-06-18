@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using ITAdmin.Application.Common.Constants;
 using ITAdmin.Application.Common.Models;
+using ITAdmin.Application.Common.Security;
 using ITAdmin.Persistence.Context;
 using ITAdmin.Persistence.Services;
 using ITAdmin.UnitTests.Fakes;
@@ -56,6 +57,7 @@ public sealed class SetupServiceTests
 
         var service = CreateSetupService(context, ldap, "setup-secret");
         var request = CreateMinimalCompleteRequest(
+            setupKey: "setup-secret",
             adminUserName: @"DOMAIN\mete",
             adminPassword: "p");
 
@@ -85,7 +87,7 @@ public sealed class SetupServiceTests
         };
 
         var service = CreateSetupService(context, ldap, "setup-secret");
-        var request = CreateMinimalCompleteRequest("plain", "p");
+        var request = CreateMinimalCompleteRequest("setup-secret", "plain", "p");
 
         var result = await service.CompleteSetupAsync(request);
 
@@ -104,13 +106,77 @@ public sealed class SetupServiceTests
         };
 
         var service = CreateSetupService(context, ldap, "setup-secret");
-        var request = CreateMinimalCompleteRequest("noemail", "p");
+        var request = CreateMinimalCompleteRequest("setup-secret", "noemail", "p");
 
         var result = await service.CompleteSetupAsync(request);
 
         Assert.True(result.IsCompleted);
         var user = await context.PortalUsers.SingleAsync();
         Assert.Null(user.Email);
+    }
+
+    [Fact]
+    public async Task CompleteSetupAsync_RejectsInvalidSetupKey()
+    {
+        await using var context = CreateDbContext();
+        var ldap = new FakeLdapService();
+        var service = CreateSetupService(context, ldap, "setup-secret");
+        var request = CreateMinimalCompleteRequest("wrong-key", "user", "p");
+
+        var result = await service.CompleteSetupAsync(request);
+
+        Assert.False(result.IsCompleted);
+        Assert.Equal("Invalid setup key.", result.Message);
+    }
+
+    [Fact]
+    public async Task CompleteSetupAsync_RejectsMissingSetupKeyHashConfiguration()
+    {
+        await using var context = CreateDbContext();
+        var ldap = new FakeLdapService();
+        var service = CreateSetupService(context, ldap, setupKeyPlaintext: "setup-secret", includeSetupKeyHash: false);
+        var request = CreateMinimalCompleteRequest("setup-secret", "user", "p");
+
+        var result = await service.CompleteSetupAsync(request);
+
+        Assert.False(result.IsCompleted);
+        Assert.Equal("Setup key hash is not configured.", result.Message);
+    }
+
+    [Fact]
+    public async Task CompleteSetupAsync_RejectsInvalidSetupKeyHashFormat()
+    {
+        await using var context = CreateDbContext();
+        var ldap = new FakeLdapService();
+        var service = CreateSetupService(
+            context,
+            ldap,
+            setupKeyPlaintext: "setup-secret",
+            configuredSetupKeyHash: "invalid-hash");
+        var request = CreateMinimalCompleteRequest("setup-secret", "user", "p");
+
+        var result = await service.CompleteSetupAsync(request);
+
+        Assert.False(result.IsCompleted);
+        Assert.Equal("Setup key hash format is invalid.", result.Message);
+    }
+
+    [Fact]
+    public async Task CompleteSetupAsync_WorksWithoutNationalIdAttribute()
+    {
+        await using var context = CreateDbContext();
+        var ldap = new FakeLdapService
+        {
+            ResolveUserProfile = _ => new LdapUserProfile("obj-4", "plain", "Plain User", "plain@ad.test", null),
+        };
+
+        var service = CreateSetupService(context, ldap, "setup-secret");
+        var request = CreateMinimalCompleteRequest("setup-secret", "plain", "p");
+
+        var result = await service.CompleteSetupAsync(request);
+
+        Assert.True(result.IsCompleted);
+        Assert.False(await context.ApplicationSettings.AnyAsync(x => x.Key == "Directory:NationalIdAttribute"));
     }
 
     [Fact]
@@ -123,7 +189,7 @@ public sealed class SetupServiceTests
         };
 
         var service = CreateSetupService(context, ldap, "setup-secret");
-        var request = CreateMinimalCompleteRequest("someuser", "p");
+        var request = CreateMinimalCompleteRequest("setup-secret", "someuser", "p");
 
         var result = await service.CompleteSetupAsync(request);
 
@@ -134,13 +200,19 @@ public sealed class SetupServiceTests
     private static SetupService CreateSetupService(
         AppDbContext context,
         FakeLdapService ldap,
-        string setupKey)
+        string setupKeyPlaintext,
+        bool includeSetupKeyHash = true,
+        string? configuredSetupKeyHash = null)
     {
+        var values = new Dictionary<string, string?>();
+        if (includeSetupKeyHash)
+        {
+            values[SetupKeyHashValidator.ConfigurationKey] =
+                configuredSetupKeyHash ?? SetupKeyHashValidator.ComputeConfiguredHash(setupKeyPlaintext);
+        }
+
         IConfiguration configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["Setup:SetupKey"] = setupKey,
-            })
+            .AddInMemoryCollection(values)
             .Build();
 
         return new SetupService(
@@ -148,6 +220,7 @@ public sealed class SetupServiceTests
             ldap,
             new FakeSecretProtector(),
             configuration,
+            new SetupKeyHashValidator(),
             NullLogger<SetupService>.Instance);
     }
 
@@ -161,11 +234,12 @@ public sealed class SetupServiceTests
     }
 
     private static CompleteSetupRequest CreateMinimalCompleteRequest(
+        string setupKey,
         string adminUserName,
         string adminPassword)
     {
         return new CompleteSetupRequest(
-            "setup-secret",
+            setupKey,
             new CompleteSetupLdapSettings(
                 Name: "Default LDAP",
                 Host: "dc01.test",

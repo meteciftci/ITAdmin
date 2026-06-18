@@ -29,6 +29,8 @@ public partial class Program
 
         configureBuilder?.Invoke(builder);
 
+        builder.Configuration.AddITAdminPrefixedEnvironmentVariables();
+
         builder.Host.UseSerilog((context, loggerConfiguration) =>
         {
             loggerConfiguration.ReadFrom.Configuration(context.Configuration);

@@ -4,6 +4,22 @@ export type SetupStatusResponse = {
   isSetupRequired: boolean;
 };
 
+export type SetupPreflightCheckResponse = {
+  key: string;
+  status: "ok" | "warning" | "error";
+  messageKey: string;
+  detail?: string | null;
+};
+
+export type SetupPreflightResponse = {
+  checks: SetupPreflightCheckResponse[];
+};
+
+export const getSetupPreflight = async (): Promise<SetupPreflightResponse> => {
+  const { data } = await apiClient.get<SetupPreflightResponse>("/setup/preflight");
+  return data;
+};
+
 export type CompleteSetupLdapRequest = {
   name: string;
   host: string;

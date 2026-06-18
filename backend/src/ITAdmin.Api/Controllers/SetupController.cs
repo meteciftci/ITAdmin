@@ -1,21 +1,47 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using ITAdmin.Api.Contracts.Setup;
-using ITAdmin.Application.Abstractions.Services;
 using ITAdmin.Application.Common.Constants;
+using ITAdmin.Application.Abstractions.Services;
 using AppModels = ITAdmin.Application.Common.Models;
 
 namespace ITAdmin.Api.Controllers;
 
 [ApiController]
 [Route("api/setup")]
-public sealed class SetupController(ISetupService setupService, ILdapService ldapService) : ControllerBase
+public sealed class SetupController(
+    ISetupService setupService,
+    ISetupPreflightService setupPreflightService,
+    ILdapService ldapService) : ControllerBase
 {
     [HttpGet("status")]
     public async Task<ActionResult<SetupStatusResponse>> GetStatus(CancellationToken cancellationToken)
     {
         var isSetupRequired = await setupService.IsSetupRequiredAsync(cancellationToken);
         return Ok(new SetupStatusResponse(isSetupRequired));
+    }
+
+    [HttpGet("preflight")]
+    public async Task<ActionResult<SetupPreflightResponse>> GetPreflight(CancellationToken cancellationToken)
+    {
+        var isSetupRequired = await setupService.IsSetupRequiredAsync(cancellationToken);
+        if (!isSetupRequired)
+        {
+            return StatusCode(
+                StatusCodes.Status403Forbidden,
+                new { messageKey = SetupApiMessageKeys.Validation.SetupAlreadyCompleted });
+        }
+
+        var result = await setupPreflightService.CheckAsync(cancellationToken);
+        var checks = result.Checks
+            .Select(check => new SetupPreflightCheckResponse(
+                check.Key,
+                check.Status,
+                check.MessageKey,
+                check.Detail))
+            .ToList();
+
+        return Ok(new SetupPreflightResponse(checks));
     }
 
     [HttpPost("validate-ldap")]
