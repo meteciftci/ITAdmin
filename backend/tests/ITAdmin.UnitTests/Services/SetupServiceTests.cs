@@ -497,6 +497,67 @@ public sealed class SetupServiceTests
         Assert.DoesNotContain("setup-secret", serialized, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task SearchOrganizationalUnitsAsync_ReturnsFailure_WhenParentDnOutsideBaseDn()
+    {
+        await using var context = CreateDbContext();
+        var ldap = CreateSuccessfulLdapFake();
+        var service = CreateSetupService(context, ldap, "setup-secret");
+
+        var result = await service.SearchOrganizationalUnitsAsync(
+            new SearchSetupOrganizationalUnitsRequest(
+                "setup-secret",
+                CreateMinimalLdapSettings(),
+                null,
+                "OU=External,DC=other,DC=local"),
+            CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(SetupService.ParentOrganizationalUnitOutsideBaseDnMessage, result.ErrorMessage);
+        Assert.Equal(0, ldap.SearchOrganizationalUnitsCallCount);
+    }
+
+    [Fact]
+    public async Task SearchOrganizationalUnitsAsync_DelegatesToLdapService_WhenParentDnUnderBaseDn()
+    {
+        await using var context = CreateDbContext();
+        var ldap = CreateSuccessfulLdapFake();
+        ldap.SearchOrganizationalUnitsResult = new LdapOrganizationalUnitSearchResult([], false);
+
+        var service = CreateSetupService(context, ldap, "setup-secret");
+        var result = await service.SearchOrganizationalUnitsAsync(
+            new SearchSetupOrganizationalUnitsRequest(
+                "setup-secret",
+                CreateMinimalLdapSettings(),
+                null,
+                "OU=Users,DC=test,DC=local"),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(1, ldap.SearchOrganizationalUnitsCallCount);
+        Assert.Equal("OU=Users,DC=test,DC=local", ldap.LastSearchOrganizationalUnitsRequest!.ParentDistinguishedName);
+    }
+
+    [Fact]
+    public async Task SearchOrganizationalUnitsAsync_DelegatesToLdapService_WhenParentDnEqualsBaseDn()
+    {
+        await using var context = CreateDbContext();
+        var ldap = CreateSuccessfulLdapFake();
+        ldap.SearchOrganizationalUnitsResult = new LdapOrganizationalUnitSearchResult([], false);
+
+        var service = CreateSetupService(context, ldap, "setup-secret");
+        var result = await service.SearchOrganizationalUnitsAsync(
+            new SearchSetupOrganizationalUnitsRequest(
+                "setup-secret",
+                CreateMinimalLdapSettings(),
+                null,
+                "DC=test,DC=local"),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(1, ldap.SearchOrganizationalUnitsCallCount);
+    }
+
     private static FakeLdapService CreateSuccessfulLdapFake()
     {
         return new FakeLdapService

@@ -99,6 +99,7 @@
       "loading": "Loading OUs...",
       "emptyTitle": "No OUs found",
       "emptyDescription": "No OUs matched your search criteria.",
+      "hasMore": "More results are available. Narrow your search.",
       "errors": {
         "title": "OU search failed",
         "searchFailed": "OU search could not be completed."
@@ -111,6 +112,7 @@
       "validateLdap": "Validate LDAP",
       "validatingLdap": "Validating LDAP...",
       "browse": "Browse",
+      "clear": "Clear",
       "search": "Search",
       "select": "Select",
       "remove": "Remove",
@@ -121,7 +123,7 @@
       "completeSuccess": "Setup completed successfully.",
       "completeFailed": "Setup could not be completed.",
       "directoryUserNotFoundHint": "The administrator user could not be found in AD. Try the user name as sAMAccountName, DOMAIN\\user, or user@domain and check the User Search Filter setting.",
-      "directoryUserProfileHint": "The administrator user's AD profile could not be loaded. Check the user name and User Search Filter setting.",
+      "directoryUserProfileHint": "The administrator user's AD profile could not be loaded. Check the user name, Base DN, and User Search Filter setting.",
       "ldapTimeoutHint": "The setup request timed out or the LDAP server did not respond. Check the LDAP server, network connectivity, and search settings."
     },
     "defaults": {

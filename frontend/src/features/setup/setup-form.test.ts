@@ -2,12 +2,16 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  applyLdapConfigChange,
   buildCompleteSetupLdapPayload,
   buildCompleteSetupRequest,
   canAddAdminUser,
   createDefaultSetupFormValues,
   isAdManagementModuleValid,
+  isOuSearchBelowMinLength,
   mapCompleteSetupFailureToast,
+  shouldFetchAdminUserSearchResults,
+  shouldFetchOuSearchResults,
   summaryContainsSecrets,
 } from "./setup-form.ts";
 import {
@@ -109,6 +113,49 @@ describe("setup-form", () => {
     assert.equal(summaryContainsSecrets("host: dc01"), false);
     assert.equal(summaryContainsSecrets("setup key: hidden"), true);
     assert.equal(summaryContainsSecrets("bind password"), true);
+  });
+
+  it("clears LDAP-dependent OU selections and admin users when LDAP config changes", () => {
+    const current = {
+      ...defaults,
+      setupKey: "key",
+      modules: {
+        adManagement: {
+          ...defaults.modules.adManagement,
+          isEnabled: true,
+          usersSearchBase: { distinguishedName: "OU=Users,DC=test,DC=local", label: "Users" },
+          groupsSearchBase: { distinguishedName: "OU=Groups,DC=test,DC=local", label: "Groups" },
+          computersSearchBase: { distinguishedName: "OU=Computers,DC=test,DC=local", label: "Computers" },
+          defaultUserOu: { distinguishedName: "OU=NewUsers,DC=test,DC=local", label: "New Users" },
+          defaultGroupOu: null,
+          defaultComputerOu: null,
+          deletedObjectsEnabled: true,
+        },
+      },
+      adminUsers: [{ userName: "admin", displayName: "Admin User" }],
+    };
+
+    const next = applyLdapConfigChange(current, { ...current.ldap, host: "dc02.test" });
+
+    assert.equal(next.ldap.host, "dc02.test");
+    assert.equal(next.modules.adManagement.usersSearchBase, null);
+    assert.equal(next.modules.adManagement.defaultUserOu, null);
+    assert.equal(next.modules.adManagement.isEnabled, true);
+    assert.equal(next.modules.adManagement.deletedObjectsEnabled, true);
+    assert.equal(next.adminUsers.length, 0);
+  });
+
+  it("does not trigger OU search when search is below minimum length", () => {
+    assert.equal(isOuSearchBelowMinLength("a"), true);
+    assert.equal(shouldFetchOuSearchResults(true, "a"), false);
+    assert.equal(shouldFetchOuSearchResults(true, ""), true);
+    assert.equal(shouldFetchOuSearchResults(true, "ou"), true);
+  });
+
+  it("does not trigger admin user search when LDAP is not validated", () => {
+    assert.equal(shouldFetchAdminUserSearchResults(false, "admin"), false);
+    assert.equal(shouldFetchAdminUserSearchResults(true, "a"), false);
+    assert.equal(shouldFetchAdminUserSearchResults(true, "admin"), true);
   });
 });
 

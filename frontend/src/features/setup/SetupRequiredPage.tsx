@@ -23,9 +23,10 @@ import {
   ServerCheckStep,
   SetupKeyStep,
   SummaryStep,
-  useServerCheckPreflight,
 } from "@/features/setup/components/SetupWizardSteps";
+import { useServerCheckPreflight } from "@/features/setup/hooks/useServerCheckPreflight";
 import {
+  applyLdapConfigChange,
   buildCompleteSetupRequest,
   createDefaultSetupFormValues,
   isLdapFormComplete,
@@ -129,6 +130,11 @@ export function SetupRequiredPage() {
     }
   };
 
+  const handleLdapChange = (ldap: SetupWizardFormValues["ldap"]) => {
+    setLdapValidated(false);
+    setValues((current) => applyLdapConfigChange(current, ldap));
+  };
+
   const ldapFieldErrors = useMemo(() => {
     const errors: Partial<Record<string, string>> = {};
     if (!values.ldap.host.trim()) errors["ldap.host"] = t("setup:validation.required");
@@ -186,7 +192,7 @@ export function SetupRequiredPage() {
           <LdapConnectionStep
             setupKey={values.setupKey}
             ldap={values.ldap}
-            onChange={(ldap) => setValues((current) => ({ ...current, ldap }))}
+            onChange={handleLdapChange}
             ldapValidated={ldapValidated}
             onValidatedChange={setLdapValidated}
             disabled={isSubmitting}

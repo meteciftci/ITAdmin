@@ -174,6 +174,59 @@ export function isAdManagementModuleValid(modules: SetupModulesFormValues): bool
   );
 }
 
+export const MIN_OU_SEARCH_LENGTH = 2;
+export const MIN_ADMIN_USER_SEARCH_LENGTH = 2;
+
+export function isOuSearchBelowMinLength(search: string): boolean {
+  const trimmed = search.trim();
+  return trimmed.length > 0 && trimmed.length < MIN_OU_SEARCH_LENGTH;
+}
+
+export function shouldFetchOuSearchResults(open: boolean, search: string): boolean {
+  if (!open) {
+    return false;
+  }
+
+  const trimmed = search.trim();
+  return trimmed.length === 0 || trimmed.length >= MIN_OU_SEARCH_LENGTH;
+}
+
+export function shouldFetchAdminUserSearchResults(ldapValidated: boolean, search: string): boolean {
+  if (!ldapValidated) {
+    return false;
+  }
+
+  return search.trim().length >= MIN_ADMIN_USER_SEARCH_LENGTH;
+}
+
+export function clearAdManagementOuSelections(
+  modules: SetupModulesFormValues,
+): SetupModulesFormValues {
+  return {
+    adManagement: {
+      ...modules.adManagement,
+      usersSearchBase: null,
+      groupsSearchBase: null,
+      computersSearchBase: null,
+      defaultUserOu: null,
+      defaultGroupOu: null,
+      defaultComputerOu: null,
+    },
+  };
+}
+
+export function applyLdapConfigChange(
+  current: SetupWizardFormValues,
+  ldap: SetupLdapFormValues,
+): SetupWizardFormValues {
+  return {
+    ...current,
+    ldap,
+    modules: clearAdManagementOuSelections(current.modules),
+    adminUsers: [],
+  };
+}
+
 export function canAddAdminUser(
   adminUsers: SetupAdminUserSelection[],
   candidate: SetupAdminUserSelection,

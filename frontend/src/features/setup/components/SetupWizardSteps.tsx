@@ -12,7 +12,6 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import type { SetupPreflightResponse } from "@/features/setup/api";
 import {
-  getSetupPreflight,
   searchSetupAdminUsers,
   validateSetupLdap,
 } from "@/features/setup/api";
@@ -20,6 +19,7 @@ import { SetupOuPicker } from "@/features/setup/components/SetupOuPicker";
 import {
   buildCompleteSetupLdapPayload,
   canAddAdminUser,
+  shouldFetchAdminUserSearchResults,
   type SetupAdminUserSelection,
   type SetupAdManagementFormValues,
   type SetupLdapFormValues,
@@ -156,7 +156,6 @@ export function LdapConnectionStep({
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
 
   const updateField = <K extends keyof SetupLdapFormValues>(field: K, value: SetupLdapFormValues[K]) => {
-    onValidatedChange(false);
     setValidationMessage(null);
     onChange({ ...ldap, [field]: value });
   };
@@ -433,58 +432,59 @@ export function AdminUsersStep({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [results, setResults] = useState<SetupAdminUserSelection[]>([]);
 
-  const runSearch = useCallback(async () => {
-    const trimmed = search.trim();
-    if (trimmed.length < 2) {
-      setResults([]);
-      return;
-    }
+  const runSearch = useCallback(
+    async (query: string) => {
+      setIsSearching(true);
+      setErrorMessage(null);
+      try {
+        const response = await searchSetupAdminUsers({
+          setupKey,
+          ldap: buildCompleteSetupLdapPayload(ldap),
+          search: query,
+        });
 
-    setIsSearching(true);
-    setErrorMessage(null);
-    try {
-      const response = await searchSetupAdminUsers({
-        setupKey,
-        ldap: buildCompleteSetupLdapPayload(ldap),
-        search: trimmed,
-      });
-
-      setResults(
-        response.users.map((user) => ({
-          userName: user.userName,
-          displayName: user.displayName,
-          email: user.email,
-          distinguishedName: user.distinguishedName,
-          directoryObjectId: user.directoryObjectId,
-        })),
-      );
-    } catch (error) {
-      const fallback = t("setup:steps.adminUsers.searchFailed");
-      setErrorMessage(axios.isAxiosError(error) ? getApiErrorMessage(error, fallback) : fallback);
-      setResults([]);
-    } finally {
-      setIsSearching(false);
-    }
-  }, [ldap, search, setupKey, t]);
+        setResults(
+          response.users.map((user) => ({
+            userName: user.userName,
+            displayName: user.displayName,
+            email: user.email,
+            distinguishedName: user.distinguishedName,
+            directoryObjectId: user.directoryObjectId,
+          })),
+        );
+      } catch (error) {
+        const fallback = t("setup:steps.adminUsers.searchFailed");
+        setErrorMessage(axios.isAxiosError(error) ? getApiErrorMessage(error, fallback) : fallback);
+        setResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    },
+    [ldap, setupKey, t],
+  );
 
   useEffect(() => {
-    if (!ldapValidated) {
-      setResults([]);
+    if (!shouldFetchAdminUserSearchResults(ldapValidated, search)) {
       return;
     }
 
-    const trimmed = search.trim();
-    if (trimmed.length < 2) {
-      setResults([]);
-      return;
-    }
-
+    const query = search.trim();
     const timeoutId = window.setTimeout(() => {
-      void runSearch();
+      void runSearch(query);
     }, 300);
 
     return () => window.clearTimeout(timeoutId);
   }, [ldapValidated, runSearch, search]);
+
+  const handleSearchChange = (nextSearch: string) => {
+    setSearch(nextSearch);
+    if (!shouldFetchAdminUserSearchResults(ldapValidated, nextSearch)) {
+      setResults([]);
+      setErrorMessage(null);
+    }
+  };
+
+  const visibleResults = shouldFetchAdminUserSearchResults(ldapValidated, search) ? results : [];
 
   const handleSelect = (candidate: SetupAdminUserSelection) => {
     if (!canAddAdminUser(adminUsers, candidate)) {
@@ -509,7 +509,7 @@ export function AdminUsersStep({
         <Input
           id="adminUserSearch"
           value={search}
-          onChange={(event) => setSearch(event.target.value)}
+          onChange={(event) => handleSearchChange(event.target.value)}
           disabled={searchDisabled}
           placeholder={t("setup:steps.adminUsers.searchPlaceholder")}
         />
@@ -519,9 +519,9 @@ export function AdminUsersStep({
       {isSearching ? <LoadingState text={t("setup:steps.adminUsers.searching")} /> : null}
       {errorMessage ? <FieldError message={errorMessage} /> : null}
 
-      {!isSearching && results.length > 0 ? (
+      {!isSearching && visibleResults.length > 0 ? (
         <ul className="space-y-2">
-          {results.map((user) => {
+          {visibleResults.map((user) => {
             const isSelected = !canAddAdminUser(adminUsers, user);
             return (
               <li key={`${user.userName}-${user.directoryObjectId ?? "no-id"}`} className="rounded-lg border px-3 py-2">
@@ -631,34 +631,4 @@ export function SummaryStep({ values, preflight }: SummaryStepProps) {
       </div>
     </SectionCard>
   );
-}
-
-export function useServerCheckPreflight(enabled: boolean) {
-  const { t } = useTranslation(["setup"]);
-  const [preflight, setPreflight] = useState<SetupPreflightResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  const loadPreflight = useCallback(async () => {
-    setIsLoading(true);
-    setErrorMessage(null);
-    try {
-      const response = await getSetupPreflight();
-      setPreflight(response);
-    } catch (error) {
-      const fallback = t("setup:steps.serverCheck.loadFailed");
-      setErrorMessage(axios.isAxiosError(error) ? getApiErrorMessage(error, fallback) : fallback);
-      setPreflight(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [t]);
-
-  useEffect(() => {
-    if (enabled) {
-      void loadPreflight();
-    }
-  }, [enabled, loadPreflight]);
-
-  return { preflight, isLoading, errorMessage, reloadPreflight: loadPreflight };
 }

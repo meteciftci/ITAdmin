@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using ITAdmin.Application.Abstractions.Security;
 using ITAdmin.Application.Abstractions.Services;
+using ITAdmin.Application.Common.AdManagement;
 using ITAdmin.Application.Common.Constants;
 using ITAdmin.Application.Common.Models;
 using ITAdmin.Application.Common.Security;
@@ -28,7 +29,10 @@ public sealed partial class SetupService(
     private const string ActiveDirectoryDirectorySource = "ActiveDirectory";
 
     internal const string DirectoryUserProfileCouldNotBeLoadedMessage =
-        "Directory user profile could not be loaded. Check the administrator user name, User Search Base, and User Search Filter.";
+        "Directory user profile could not be loaded. Check the administrator user name, Base DN, and User Search Filter.";
+
+    internal const string ParentOrganizationalUnitOutsideBaseDnMessage =
+        "Parent organizational unit is outside the configured Base DN.";
 
     internal const string AdminUserNotFoundInDirectoryMessage =
         "One or more selected admin users could not be found in the directory.";
@@ -161,6 +165,16 @@ public sealed partial class SetupService(
         if (!string.IsNullOrWhiteSpace(search) && search.Length < SetupConstants.MinOuSearchLength)
         {
             return new SearchSetupOrganizationalUnitsResult(Array.Empty<SetupOrganizationalUnitListItem>(), false);
+        }
+
+        var parentDistinguishedName = request.ParentDistinguishedName?.Trim();
+        if (!string.IsNullOrWhiteSpace(parentDistinguishedName) &&
+            !AdLdapDnHelper.IsEqualOrDescendantOf(parentDistinguishedName, request.Ldap.BaseDn))
+        {
+            return new SearchSetupOrganizationalUnitsResult(
+                Array.Empty<SetupOrganizationalUnitListItem>(),
+                false,
+                ParentOrganizationalUnitOutsideBaseDnMessage);
         }
 
         var ldapResult = await ldapService.SearchOrganizationalUnitsAsync(

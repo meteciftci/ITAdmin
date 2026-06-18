@@ -99,6 +99,7 @@
       "loading": "OU listesi yükleniyor...",
       "emptyTitle": "OU bulunamadı",
       "emptyDescription": "Arama kriterlerinize uygun OU bulunamadı.",
+      "hasMore": "Daha fazla sonuç var. Aramayı daraltın.",
       "errors": {
         "title": "OU araması başarısız",
         "searchFailed": "OU araması tamamlanamadı."
@@ -111,6 +112,7 @@
       "validateLdap": "LDAP doğrula",
       "validatingLdap": "LDAP doğrulanıyor...",
       "browse": "Gözat",
+      "clear": "Temizle",
       "search": "Ara",
       "select": "Seç",
       "remove": "Kaldır",
@@ -121,7 +123,7 @@
       "completeSuccess": "Kurulum başarıyla tamamlandı.",
       "completeFailed": "Kurulum tamamlanamadı.",
       "directoryUserNotFoundHint": "Yönetici kullanıcı AD içinde bulunamadı. Kullanıcı adını sAMAccountName, DOMAIN\\kullanici veya kullanici@domain formatlarından biriyle deneyin ve User Search Filter ayarını kontrol edin.",
-      "directoryUserProfileHint": "Yönetici kullanıcı AD profil bilgisi alınamadı. Kullanıcı adını ve User Search Filter ayarını kontrol edin.",
+      "directoryUserProfileHint": "Yönetici kullanıcı AD profil bilgisi alınamadı. Kullanıcı adını, Base DN ve User Search Filter ayarlarını kontrol edin.",
       "ldapTimeoutHint": "Kurulum isteği zaman aşımına uğradı veya LDAP sunucusu yanıt vermedi. LDAP sunucusu, ağ bağlantısı ve arama ayarlarını kontrol edin."
     },
     "defaults": {

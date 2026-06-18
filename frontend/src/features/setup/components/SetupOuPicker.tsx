@@ -20,12 +20,12 @@ import { Label } from "@/components/ui/label";
 import { searchSetupOrganizationalUnits } from "@/features/setup/api";
 import {
   buildCompleteSetupLdapPayload,
+  isOuSearchBelowMinLength,
+  shouldFetchOuSearchResults,
   type SetupLdapFormValues,
   type SetupOuSelection,
 } from "@/features/setup/setup-form";
 import { getApiErrorMessage } from "@/lib/api-error";
-
-const MIN_SEARCH_LENGTH = 2;
 
 type SetupOuPickerProps = {
   id: string;
@@ -54,11 +54,13 @@ export function SetupOuPicker({
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [items, setItems] = useState<SetupOuSelection[]>([]);
+  const [hasMore, setHasMore] = useState(false);
 
   const loadResults = useCallback(
     async (searchTerm: string) => {
       setIsLoading(true);
       setErrorMessage(null);
+      setHasMore(false);
       try {
         const response = await searchSetupOrganizationalUnits({
           setupKey,
@@ -73,10 +75,12 @@ export function SetupOuPicker({
             label: item.label,
           })),
         );
+        setHasMore(response.hasMore);
       } catch (error) {
         const fallback = t("setup:ouPicker.errors.searchFailed");
         setErrorMessage(axios.isAxiosError(error) ? getApiErrorMessage(error, fallback) : fallback);
         setItems([]);
+        setHasMore(false);
       } finally {
         setIsLoading(false);
       }
@@ -85,23 +89,26 @@ export function SetupOuPicker({
   );
 
   useEffect(() => {
-    if (!open) {
+    if (!shouldFetchOuSearchResults(open, search)) {
       return;
     }
 
     const trimmed = search.trim();
-    if (trimmed.length > 0 && trimmed.length < MIN_SEARCH_LENGTH) {
-      setItems([]);
-      setErrorMessage(null);
-      return;
-    }
-
     const timeoutId = window.setTimeout(() => {
       void loadResults(trimmed);
     }, 300);
 
     return () => window.clearTimeout(timeoutId);
   }, [loadResults, open, search]);
+
+  const handleSearchChange = (nextSearch: string) => {
+    setSearch(nextSearch);
+    setHasMore(false);
+    if (isOuSearchBelowMinLength(nextSearch)) {
+      setItems([]);
+      setErrorMessage(null);
+    }
+  };
 
   const handleOpen = () => {
     if (disabled) {
@@ -112,12 +119,21 @@ export function SetupOuPicker({
     setSearch("");
     setItems([]);
     setErrorMessage(null);
+    setHasMore(false);
   };
 
   const handleSelect = (selection: SetupOuSelection) => {
     onChange(selection);
     setOpen(false);
   };
+
+  const handleClear = () => {
+    onChange(null);
+  };
+
+  const trimmedSearch = search.trim();
+  const showShortSearchEmptyState =
+    isOuSearchBelowMinLength(search) && !isLoading && !errorMessage;
 
   return (
     <div className="space-y-2">
@@ -138,9 +154,16 @@ export function SetupOuPicker({
             <p className="text-sm text-muted-foreground">{t("setup:ouPicker.noSelection")}</p>
           )}
         </div>
-        <Button type="button" variant="outline" onClick={handleOpen} disabled={disabled}>
-          {t("setup:actions.browse")}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {!required && value ? (
+            <Button type="button" variant="outline" onClick={handleClear} disabled={disabled}>
+              {t("setup:actions.clear")}
+            </Button>
+          ) : null}
+          <Button type="button" variant="outline" onClick={handleOpen} disabled={disabled}>
+            {t("setup:actions.browse")}
+          </Button>
+        </div>
       </div>
 
       <Dialog open={open}>
@@ -155,7 +178,7 @@ export function SetupOuPicker({
               <Input
                 id={`${id}-search`}
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={(event) => handleSearchChange(event.target.value)}
                 placeholder={t("setup:ouPicker.searchPlaceholder")}
                 autoComplete="off"
               />
@@ -169,39 +192,49 @@ export function SetupOuPicker({
                 title={t("setup:ouPicker.errors.title")}
                 description={errorMessage}
                 retry={
-                  <Button type="button" variant="outline" size="sm" onClick={() => void loadResults(search.trim())}>
-                    {t("setup:actions.retry")}
-                  </Button>
+                  shouldFetchOuSearchResults(true, search) ? (
+                    <Button type="button" variant="outline" size="sm" onClick={() => void loadResults(trimmedSearch)}>
+                      {t("setup:actions.retry")}
+                    </Button>
+                  ) : null
                 }
               />
             ) : null}
 
-            {!isLoading && !errorMessage && items.length === 0 ? (
+            {showShortSearchEmptyState ? (
               <EmptyState
                 title={t("setup:ouPicker.emptyTitle")}
-                description={
-                  search.trim().length > 0 && search.trim().length < MIN_SEARCH_LENGTH
-                    ? t("setup:ouPicker.minSearchLength")
-                    : t("setup:ouPicker.emptyDescription")
-                }
+                description={t("setup:ouPicker.minSearchLength")}
+              />
+            ) : null}
+
+            {!isLoading && !errorMessage && !showShortSearchEmptyState && items.length === 0 ? (
+              <EmptyState
+                title={t("setup:ouPicker.emptyTitle")}
+                description={t("setup:ouPicker.emptyDescription")}
               />
             ) : null}
 
             {!isLoading && !errorMessage && items.length > 0 ? (
-              <ul className="max-h-72 space-y-2 overflow-y-auto">
-                {items.map((item) => (
-                  <li key={item.distinguishedName}>
-                    <button
-                      type="button"
-                      className="w-full rounded-lg border px-3 py-2 text-left hover:bg-muted/30"
-                      onClick={() => handleSelect(item)}
-                    >
-                      <p className="text-sm font-medium">{item.label}</p>
-                      <p className="truncate font-mono text-xs text-muted-foreground">{item.distinguishedName}</p>
-                    </button>
-                  </li>
-                ))}
-              </ul>
+              <div className="space-y-2">
+                <ul className="max-h-72 space-y-2 overflow-y-auto">
+                  {items.map((item) => (
+                    <li key={item.distinguishedName}>
+                      <button
+                        type="button"
+                        className="w-full rounded-lg border px-3 py-2 text-left hover:bg-muted/30"
+                        onClick={() => handleSelect(item)}
+                      >
+                        <p className="text-sm font-medium">{item.label}</p>
+                        <p className="truncate font-mono text-xs text-muted-foreground">{item.distinguishedName}</p>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                {hasMore ? (
+                  <p className="text-xs text-muted-foreground">{t("setup:ouPicker.hasMore")}</p>
+                ) : null}
+              </div>
             ) : null}
           </DialogBody>
           <DialogFooter>
