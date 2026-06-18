@@ -1,7 +1,5 @@
 #Requires -Version 5.1
 #Requires -RunAsAdministrator
-Set-StrictMode -Version Latest
-$ErrorActionPreference = "Stop"
 
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
@@ -20,6 +18,10 @@ param(
     [Parameter()]
     [switch]$RestartAppPool
 )
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+
 
 $Script:ITAdminBackupRedactedMarker = "[REDACTED]"
 

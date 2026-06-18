@@ -1,6 +1,4 @@
 #Requires -Version 5.1
-Set-StrictMode -Version Latest
-$ErrorActionPreference = "Stop"
 
 [CmdletBinding()]
 param(
@@ -19,6 +17,10 @@ param(
     [ValidateRange(1, 100)]
     [int]$Count = 1
 )
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+
 
 function ConvertTo-ITAdminBase64Url {
     param(

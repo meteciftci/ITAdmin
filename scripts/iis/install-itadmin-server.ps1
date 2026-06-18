@@ -1,7 +1,5 @@
 #Requires -Version 5.1
 #Requires -RunAsAdministrator
-Set-StrictMode -Version Latest
-$ErrorActionPreference = "Stop"
 
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
@@ -46,6 +44,10 @@ param(
     [Parameter()]
     [string]$DatabaseUser = "itadmin_app"
 )
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+
 
 $ScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 . (Join-Path $ScriptRoot "new-itadmin-secret.ps1")

@@ -1,6 +1,4 @@
 #Requires -Version 5.1
-Set-StrictMode -Version Latest
-$ErrorActionPreference = "Stop"
 
 [CmdletBinding()]
 param(
@@ -10,6 +8,10 @@ param(
     [Parameter()]
     [string]$AppPoolName = "ITAdmin"
 )
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+
 
 function Format-ITAdminSecretValue {
     param(
