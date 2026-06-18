@@ -1,6 +1,0 @@
-@SasPortal.Api_HostAddress = http://localhost:5263
-
-GET {{SasPortal.Api_HostAddress}}/health
-Accept: application/json
-
-###

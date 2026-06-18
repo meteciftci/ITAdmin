@@ -1,3 +1,3 @@
-# SAS Portal v2 Frontend
+# ITAdmin Frontend
 
 Frontend geliştirme dokümantasyonu proje tamamlandığında hazırlanacaktır.

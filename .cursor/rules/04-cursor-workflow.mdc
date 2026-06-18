@@ -1,12 +1,12 @@
 ---
-description: SASPortal projesinde Cursor/AI agent ile çalışırken uygulanacak görev kapsamı, refactor, doğrulama, güvenlik, dependency ve git disiplin kuralları.
+description: ITAdmin projesinde Cursor/AI agent ile çalışırken uygulanacak görev kapsamı, refactor, doğrulama, güvenlik, dependency ve git disiplin kuralları.
 globs:
 alwaysApply: true
 ---
 
-# SASPortal Cursor Workflow Rules
+# ITAdmin Cursor Workflow Rules
 
-Bu kural dosyası SASPortal projesinde Cursor Agent veya Inline Edit kullanılırken her zaman uygulanır.
+Bu kural dosyası ITAdmin projesinde Cursor Agent veya Inline Edit kullanılırken her zaman uygulanır.
 
 Amaç; AI agent’ın kapsam dışına çıkmasını, kontrolsüz dosya üretmesini, mevcut mimariyi bozmasını, yarım refactor bırakmasını ve proje standardıyla çelişen kod yazmasını engellemektir.
 
@@ -17,7 +17,7 @@ Amaç; AI agent’ın kapsam dışına çıkmasını, kontrolsüz dosya üretmes
 Her görevde ilgili kural dosyaları dikkate alınır:
 
 ```text
-.cursor/rules/01_sasportal_skeleton.mdc
+.cursor/rules/01_itadmin_skeleton.mdc
 .cursor/rules/02_backend_rules.mdc
 .cursor/rules/03_frontend_rules.mdc
 .cursor/rules/05_database_rules.mdc
@@ -422,4 +422,4 @@ Gerekirse ortak yapıyı genişlet.
 
 En son feature-specific kod yaz.
 
-Cursor veya AI agent, SASPortal’ın mevcut kurallarıyla çelişen kod üretmemelidir.
+Cursor veya AI agent, ITAdmin’ın mevcut kurallarıyla çelişen kod üretmemelidir.

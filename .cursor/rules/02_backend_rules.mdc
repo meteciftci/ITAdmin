@@ -1,5 +1,5 @@
 ---
-description: SASPortal backend kodu için katman, servis, API, auth, permission, validation, external integration, notification, background job, audit ve güvenlik kuralları.
+description: ITAdmin backend kodu için katman, servis, API, auth, permission, validation, external integration, notification, background job, audit ve güvenlik kuralları.
 globs:
   - "backend/**/*.cs"
   - "backend/**/*.csproj"
@@ -7,9 +7,9 @@ globs:
 alwaysApply: true
 ---
 
-# SASPortal Backend Rules
+# ITAdmin Backend Rules
 
-Bu kurallar SASPortal backend dosyaları üzerinde çalışırken uygulanır.
+Bu kurallar ITAdmin backend dosyaları üzerinde çalışırken uygulanır.
 
 Amaç; backend kodunun katmanlı, güvenli, test edilebilir, permission-aware, log standardına uyumlu ve mevcut proje mimarisiyle tutarlı kalmasını sağlamaktır.
 
@@ -48,22 +48,22 @@ Kurallar:
 Backend ana yapı:
 
 ```text
-backend/src/SasPortal.Api
-backend/src/SasPortal.Application
-backend/src/SasPortal.Domain
-backend/src/SasPortal.Infrastructure
-backend/src/SasPortal.Persistence
+backend/src/ITAdmin.Api
+backend/src/ITAdmin.Application
+backend/src/ITAdmin.Domain
+backend/src/ITAdmin.Infrastructure
+backend/src/ITAdmin.Persistence
 backend/tests
 ```
 
 Katman sorumlulukları:
 
 ```text
-SasPortal.Api            HTTP endpoint, middleware, auth wiring, DI giriş noktası
-SasPortal.Application    Use-case interface, model, service contract, business abstraction
-SasPortal.Domain         Entity, enum, domain model
-SasPortal.Infrastructure Dış sistem, LDAP/AD, HTTP provider, teknik servis implementasyonları
-SasPortal.Persistence    EF Core, DbContext, repository/service persistence, migration/configuration
+ITAdmin.Api            HTTP endpoint, middleware, auth wiring, DI giriş noktası
+ITAdmin.Application    Use-case interface, model, service contract, business abstraction
+ITAdmin.Domain         Entity, enum, domain model
+ITAdmin.Infrastructure Dış sistem, LDAP/AD, HTTP provider, teknik servis implementasyonları
+ITAdmin.Persistence    EF Core, DbContext, repository/service persistence, migration/configuration
 tests                    Unit/integration testler
 ```
 
@@ -75,7 +75,7 @@ Kurallar:
 * Infrastructure implementasyonu Application içine doğrudan gömülmez.
 * Domain katmanı HTTP, EF veya frontend bilgisi taşımaz.
 * Yeni kod mevcut katman düzenine göre konumlandırılır.
-* `Sas.*` namespace kullanılmaz; proje namespace standardı `SasPortal.*` şeklindedir.
+* `Sas.*` namespace kullanılmaz; proje namespace standardı `ITAdmin.*` şeklindedir.
 
 ---
 

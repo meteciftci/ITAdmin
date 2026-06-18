@@ -10,10 +10,10 @@ type StoredAuthPreferences = {
   updatedAt: number;
 };
 
-const LEGACY_AUTH_STORAGE_KEY = "sasportal-auth";
+const LEGACY_AUTH_STORAGE_KEY = "itadmin-auth";
 
-const AUTH_SESSION_STORAGE_KEY = "sasportal-auth-session";
-const AUTH_PERSISTENT_STORAGE_KEY = "sasportal-auth-persistent";
+const AUTH_SESSION_STORAGE_KEY = "itadmin-auth-session";
+const AUTH_PERSISTENT_STORAGE_KEY = "itadmin-auth-persistent";
 
 type AuthState = {
   user: CurrentUser | null;

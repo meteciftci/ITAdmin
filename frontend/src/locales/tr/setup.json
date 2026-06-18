@@ -1,6 +1,6 @@
 {
   "setup": {
-    "title": "SAS Portal İlk Kurulum",
+    "title": "ITAdmin İlk Kurulum",
     "description": "Devam etmek için LDAP bağlantısını doğrulayın ve ilk yönetici kullanıcısını tanımlayın.",
     "redirecting": "Yönlendiriliyor...",
     "sections": {

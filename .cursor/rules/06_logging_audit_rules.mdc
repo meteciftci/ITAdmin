@@ -1,5 +1,5 @@
 ---
-description: SASPortal loglama, AuditLog, SecurityLog, ApplicationLog, modül operasyon logları, CorrelationId, hassas veri, provider/outbox logları ve log ekranı kuralları.
+description: ITAdmin loglama, AuditLog, SecurityLog, ApplicationLog, modül operasyon logları, CorrelationId, hassas veri, provider/outbox logları ve log ekranı kuralları.
 globs:
   - "backend/src/**/*.cs"
   - "frontend/src/features/audit-logs/**/*.{ts,tsx}"
@@ -8,9 +8,9 @@ globs:
 alwaysApply: true
 ---
 
-# SASPortal Logging & Audit Rules
+# ITAdmin Logging & Audit Rules
 
-Bu kurallar SASPortal içinde loglama, audit, security event, correlation id, modül operasyon logları, notification/outbox logları ve log ekranlarıyla ilgili kod yazılırken uygulanır.
+Bu kurallar ITAdmin içinde loglama, audit, security event, correlation id, modül operasyon logları, notification/outbox logları ve log ekranlarıyla ilgili kod yazılırken uygulanır.
 
 Amaç; sistemdeki teknik olayları, güvenlik olaylarını ve kullanıcı aksiyonlarını doğru log türünde, güvenli içerikle ve okunabilir şekilde takip etmektir.
 
@@ -20,7 +20,7 @@ Bu dosya modül özelinde kural yazmaz. Tüm modüller aynı loglama prensipleri
 
 ## 1. Log Türleri
 
-SASPortal içinde loglar amaçlarına göre ayrılır.
+ITAdmin içinde loglar amaçlarına göre ayrılır.
 
 Temel log türleri:
 

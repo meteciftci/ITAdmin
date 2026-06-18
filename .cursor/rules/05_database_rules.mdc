@@ -1,13 +1,13 @@
 ---
-description: SASPortal veritabanı, EF Core, PostgreSQL, tablo/kolon isimlendirme, migration, seed, index, JSON settings, outbox ve veri standardı kuralları.
+description: ITAdmin veritabanı, EF Core, PostgreSQL, tablo/kolon isimlendirme, migration, seed, index, JSON settings, outbox ve veri standardı kuralları.
 globs:
-  - "backend/src/SasPortal.Domain/**/*.cs"
-  - "backend/src/SasPortal.Persistence/**/*.cs"
-  - "backend/src/SasPortal.Application/**/*.cs"
+  - "backend/src/ITAdmin.Domain/**/*.cs"
+  - "backend/src/ITAdmin.Persistence/**/*.cs"
+  - "backend/src/ITAdmin.Application/**/*.cs"
 alwaysApply: true
 ---
 
-# SASPortal Database Rules
+# ITAdmin Database Rules
 
 Bu kurallar veritabanı, entity, EF Core, migration, seed ve persistence kodu yazılırken uygulanır.
 
@@ -21,8 +21,8 @@ Bu dosya modül özelinde kural yazmaz. Tüm modüller aynı genel veri standart
 
 * Veritabanı PostgreSQL’dir.
 * ORM olarak Entity Framework Core kullanılır.
-* Entity modelleri `SasPortal.Domain` içinde bulunur.
-* DbContext ve EF configuration dosyaları `SasPortal.Persistence` içinde bulunur.
+* Entity modelleri `ITAdmin.Domain` içinde bulunur.
+* DbContext ve EF configuration dosyaları `ITAdmin.Persistence` içinde bulunur.
 * Controller içine DbContext inject edilmez.
 * Entity doğrudan API response olarak dönülmez.
 
@@ -33,20 +33,20 @@ Bu dosya modül özelinde kural yazmaz. Tüm modüller aynı genel veri standart
 Doğru backend namespace/kök yapı:
 
 ```text
-SasPortal.Domain
-SasPortal.Application
-SasPortal.Persistence
-SasPortal.Infrastructure
-SasPortal.Api
+ITAdmin.Domain
+ITAdmin.Application
+ITAdmin.Persistence
+ITAdmin.Infrastructure
+ITAdmin.Api
 ```
 
 Kurallar:
 
 * `Sas.Domain`, `Sas.Persistence`, `Sas.Application` gibi eski/yanlış namespace kullanılmaz.
-* Yeni entity `SasPortal.Domain/Entities` altında oluşturulur.
-* Yeni enum `SasPortal.Domain/Enums` altında oluşturulur.
-* Yeni EF configuration `SasPortal.Persistence/Configurations` altında oluşturulur.
-* DbContext değişiklikleri `SasPortal.Persistence/Context` standardına uyar.
+* Yeni entity `ITAdmin.Domain/Entities` altında oluşturulur.
+* Yeni enum `ITAdmin.Domain/Enums` altında oluşturulur.
+* Yeni EF configuration `ITAdmin.Persistence/Configurations` altında oluşturulur.
+* DbContext değişiklikleri `ITAdmin.Persistence/Context` standardına uyar.
 
 ---
 
@@ -289,7 +289,7 @@ public sealed class PortalUserConfiguration : IEntityTypeConfiguration<PortalUse
 Kurallar:
 
 * `OnModelCreating` şişirilmez.
-* Configuration dosyaları `SasPortal.Persistence/Configurations` altında tutulur.
+* Configuration dosyaları `ITAdmin.Persistence/Configurations` altında tutulur.
 * MaxLength, required, index ve delete behavior açıkça belirtilir.
 * JSON alanları bilinçli column type ile tanımlanır.
 * Decimal/date/string hassasiyetleri açıkça tanımlanır.

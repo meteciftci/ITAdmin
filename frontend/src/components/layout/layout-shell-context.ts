@@ -7,5 +7,5 @@ export type LayoutShellContextValue = {
   setMobileSidebarOpen: (next: boolean) => void;
 };
 
-export const SIDEBAR_KEY = "sasportal.sidebar.collapsed";
+export const SIDEBAR_KEY = "itadmin.sidebar.collapsed";
 export const LayoutShellContext = createContext<LayoutShellContextValue | null>(null);

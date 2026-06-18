@@ -26,13 +26,13 @@ jobs:
           dotnet-version: "10.0.x"
 
       - name: Restore
-        run: dotnet restore backend/SasPortal.slnx
+        run: dotnet restore backend/ITAdmin.slnx
 
       - name: Build
-        run: dotnet build backend/SasPortal.slnx --configuration Release --no-restore
+        run: dotnet build backend/ITAdmin.slnx --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test backend/SasPortal.slnx --configuration Release --no-build
+        run: dotnet test backend/ITAdmin.slnx --configuration Release --no-build
 
   frontend:
     name: Frontend

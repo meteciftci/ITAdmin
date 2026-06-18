@@ -75,7 +75,7 @@
         "applicationName": {
           "label": "Application name",
           "description": "Portal application name",
-          "example": "SAS-Portal"
+          "example": "ITAdmin"
         },
         "operationDate": {
           "label": "Operation date",

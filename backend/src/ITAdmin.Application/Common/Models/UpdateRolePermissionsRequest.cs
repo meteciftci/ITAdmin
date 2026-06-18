@@ -1,0 +1,8 @@
+namespace ITAdmin.Application.Common.Models;
+
+public sealed record UpdateRolePermissionsRequest(
+    Guid RoleId,
+    IReadOnlyCollection<Guid> PermissionIds,
+    string? ActorUserName,
+    string? ActorIpAddress,
+    string? ActorUserAgent);

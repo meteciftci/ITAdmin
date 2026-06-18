@@ -1,5 +1,5 @@
 export const AD_ORGANIZATIONAL_UNITS_LIST_STORAGE_KEY =
-  "sasportal.adManagement.organizationalUnits.listState";
+  "itadmin.adManagement.organizationalUnits.listState";
 
 export type AdOrganizationalUnitsListState = {
   search: string;

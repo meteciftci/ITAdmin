@@ -1,4 +1,4 @@
-export const AD_GROUPS_LIST_STORAGE_KEY = "sasportal.adManagement.groups.listState";
+export const AD_GROUPS_LIST_STORAGE_KEY = "itadmin.adManagement.groups.listState";
 
 export type AdGroupsListState = {
   search: string;

@@ -71,7 +71,7 @@ function collectFeatureSourceFiles(directory: string): string[] {
 
 function extractBackendApiMessageKeys(): string[] {
   const keysFile = new URL(
-    "../../../../backend/src/SasPortal.Application/Common/Constants/AdManagementApiMessageKeys.cs",
+    "../../../../backend/src/ITAdmin.Application/Common/Constants/AdManagementApiMessageKeys.cs",
     import.meta.url,
   );
   const source = readFileSync(keysFile, "utf8");

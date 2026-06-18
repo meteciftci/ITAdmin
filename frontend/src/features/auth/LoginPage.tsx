@@ -108,7 +108,7 @@ export function LoginPage() {
   });
   const rememberMeEnabled = sessionOptionsQuery.data?.rememberMeEnabled ?? true;
   const { data: branding } = useBrandingSettings();
-  const appName = branding.applicationName || "SAS Portal v2";
+  const appName = branding.applicationName || "ITAdmin";
   const resolvedLogoUrl = resolveApiAssetUrl(branding.logoUrl);
   const forgotPasswordUrl = sanitizeForgotPasswordUrl(branding.forgotPasswordUrl);
   const initials = appName

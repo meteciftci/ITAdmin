@@ -1,6 +1,6 @@
 {
   "setup": {
-    "title": "SAS Portal Initial Setup",
+    "title": "ITAdmin Initial Setup",
     "description": "Verify the LDAP connection and define the first administrator user to continue.",
     "redirecting": "Redirecting...",
     "sections": {

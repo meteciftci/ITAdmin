@@ -7,7 +7,7 @@ export type ThemeContextValue = {
   setTheme: (theme: ThemeMode) => void;
 };
 
-export const THEME_KEY = "sasportal.theme";
+export const THEME_KEY = "itadmin.theme";
 export const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 const getSystemTheme = (): "light" | "dark" =>

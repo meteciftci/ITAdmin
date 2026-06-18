@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ITAdmin.Api/ITAdmin.Api.csproj" />
+    <Project Path="src/ITAdmin.Application/ITAdmin.Application.csproj" />
+    <Project Path="src/ITAdmin.Domain/ITAdmin.Domain.csproj" />
+    <Project Path="src/ITAdmin.Infrastructure/ITAdmin.Infrastructure.csproj" />
+    <Project Path="src/ITAdmin.Persistence/ITAdmin.Persistence.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ITAdmin.IntegrationTests/ITAdmin.IntegrationTests.csproj" />
+    <Project Path="tests/ITAdmin.UnitTests/ITAdmin.UnitTests.csproj" />
+  </Folder>
+</Solution>

@@ -1,3 +1,3 @@
 export function getDefaultBrandingFooterText(): string {
-  return `© ${new Date().getFullYear()} SAS Portal`;
+  return `© ${new Date().getFullYear()} ITAdmin`;
 }

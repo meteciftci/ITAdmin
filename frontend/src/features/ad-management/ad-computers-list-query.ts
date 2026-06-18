@@ -1,6 +1,6 @@
 import type { AdComputerStatusFilter } from "@/features/ad-management/types";
 
-export const AD_COMPUTERS_LIST_STORAGE_KEY = "sasportal.adManagement.computers.listState";
+export const AD_COMPUTERS_LIST_STORAGE_KEY = "itadmin.adManagement.computers.listState";
 
 export type AdComputersListState = {
   search: string;

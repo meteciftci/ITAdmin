@@ -1,13 +1,13 @@
 ---
-description: SASPortal frontend kodu için React, TypeScript, feature yapısı, API client, TanStack Query, TanStack Table, UI component, form, routing, permission, state ve i18n kuralları.
+description: ITAdmin frontend kodu için React, TypeScript, feature yapısı, API client, TanStack Query, TanStack Table, UI component, form, routing, permission, state ve i18n kuralları.
 globs:
   - "frontend/**/*.{ts,tsx,json,css}"
 alwaysApply: true
 ---
 
-# SASPortal Frontend Rules
+# ITAdmin Frontend Rules
 
-Bu kurallar SASPortal frontend dosyaları üzerinde çalışırken uygulanır.
+Bu kurallar ITAdmin frontend dosyaları üzerinde çalışırken uygulanır.
 
 Amaç; frontend kodunun tutarlı, sürdürülebilir, permission-aware, i18n uyumlu, tekrar kullanılabilir component standardına bağlı ve modüler kalmasını sağlamaktır.
 

@@ -1,6 +1,6 @@
 import { AxiosHeaders, type InternalAxiosRequestConfig } from "axios";
 
-export const CSRF_COOKIE_NAME = "sasportal.csrf_token";
+export const CSRF_COOKIE_NAME = "itadmin.csrf_token";
 export const CSRF_HEADER_NAME = "X-CSRF-TOKEN";
 
 const UNSAFE_HTTP_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);

@@ -75,7 +75,7 @@
         "applicationName": {
           "label": "Uygulama adı",
           "description": "Portal uygulama adı",
-          "example": "SAS-Portal"
+          "example": "ITAdmin"
         },
         "operationDate": {
           "label": "İşlem tarihi",

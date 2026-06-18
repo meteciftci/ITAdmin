@@ -1,0 +1,296 @@
+---
+description: ITAdmin projesinin genel iskelet, teknoloji, mimari sınırlar, modül geliştirme yaklaşımı ve temel proje standartları.
+globs:
+alwaysApply: true
+---
+
+# ITAdmin Skeleton Rules
+
+Bu kurallar ITAdmin projesinde her zaman uygulanır.
+
+Amaç; proje genelinde tutarlı mimari, dosya organizasyonu, UI standardı, veri standardı ve geliştirme disiplini sağlamaktır.
+
+Bu dosya modül özelinde detay kural yazmaz. Modüller geliştirilirken bu genel çerçeveye, ilgili backend/frontend/database/logging/i18n kural dosyalarına ve mevcut proje patternlerine uyulur.
+
+---
+
+## 1. Proje Kimliği
+
+* Proje adı: `ITAdmin`
+* Açılım: `ITAdmin`
+* Varsayılan görünen ad: `ITAdmin`
+* Proje kurumsal yönetim portalı olarak geliştirilir.
+* Proje modüler büyüyecek şekilde tasarlanır.
+* Her modül çekirdek mimariyle uyumlu olmalıdır.
+
+---
+
+## 2. Ana Teknoloji Kararları
+
+Backend:
+
+* ASP.NET Core Web API
+* C#
+* Entity Framework Core
+* PostgreSQL
+* Permission-based authorization
+* JWT access token + refresh token
+* Serilog
+* Hangfire veya mevcut background job standardı
+
+Frontend:
+
+* React
+* TypeScript
+* Vite
+* TanStack Query
+* TanStack Table
+* Zustand
+* i18next
+* Ortak UI componentleri
+
+Veri:
+
+* PostgreSQL
+* EF Core migration
+* UTC tarih standardı
+* Permission seed standardı
+* Audit/Security log standardı
+
+---
+
+## 3. Proje Katmanları
+
+Backend ana katmanları:
+
+```text
+backend/src/ITAdmin.Api
+backend/src/ITAdmin.Application
+backend/src/ITAdmin.Domain
+backend/src/ITAdmin.Infrastructure
+backend/src/ITAdmin.Persistence
+backend/tests
+```
+
+Frontend ana yapısı:
+
+```text
+frontend/src/app
+frontend/src/components
+frontend/src/features
+frontend/src/hooks
+frontend/src/lib
+frontend/src/locales
+frontend/src/pages
+```
+
+Kurallar:
+
+* Yeni backend kodu doğru katmana yazılır.
+* Yeni frontend kodu ilgili feature altında konumlanır.
+* Ortak UI parçaları `components/common` veya `components/ui` altında tutulur.
+* Ortak logic `hooks` veya `lib` altında tutulur.
+* Aynı iş için ikinci bir paralel yapı kurulmaz.
+
+---
+
+## 4. Modüler Geliştirme İlkesi
+
+ITAdmin modüler büyür.
+
+Her modül şu genel yapıya uymalıdır:
+
+* Modülün ayarları varsa merkezi ayar yaklaşımıyla yönetilir.
+* Modül aktif/pasif durumu varsa backend ve frontend aynı durumu dikkate alır.
+* Modül aktif değilse kullanıcıya kontrollü durum ekranı gösterilir.
+* Modül endpointleri permission ile korunur.
+* Modül frontend aksiyonları permission-aware olur.
+* Modül kritik işlemleri audit log üretir.
+* Modül dış sistem işlemleri kullanıcı dostu hata döner.
+* Modül hassas veri loglamaz.
+* Modül UI’ı uygulama genel tasarım standardına uyar.
+
+Modül geliştirirken her modül için ayrı rule dosyası yazılmaz. Genel backend, frontend, database, logging ve i18n kuralları uygulanır.
+
+---
+
+## 5. Çekirdek Güvenlik İlkeleri
+
+* Backend permission kontrolü asıl güvenlik katmanıdır.
+* Frontend permission kontrolü sadece UX içindir.
+* Şifre, token, API key, secret, connection string password loglanmaz.
+* AD/dış sistem credential değerleri response veya log içine yazılmaz.
+* Refresh token plain text saklanmaz.
+* Kullanıcıya stack trace dönülmez.
+* Kritik işlemler audit/security standardına göre loglanır.
+
+---
+
+## 6. UI Standardı
+
+Uygulama arayüzü tutarlı olmalıdır.
+
+Kurallar:
+
+* Liste ekranları ortak tablo standardını kullanır.
+* Tablolar TanStack Table ve ortak DataTable componentleri ile yapılır.
+* Search input görünür kalır.
+* Search dışındaki filtreler ortak filtre panelinde toplanır.
+* Pagination ortak component ile yapılır.
+* Loading, empty, error state ortak componentlerle gösterilir.
+* Kritik işlemler confirm dialog ile yapılır.
+* Dialoglar kısa formlar içindir.
+* Uzun/çok alanlı iş akışları ayrı sayfa olarak tasarlanır.
+* Switch/checkbox/select/button kullanımı proje genelinde tutarlı olmalıdır.
+* Dark/light tema bozulmamalıdır.
+* Uzun teknik değerler tabloyu veya layout’u taşırmamalıdır.
+
+---
+
+## 7. Veri ve API Standardı
+
+* Entity doğrudan API response olarak dönülmez.
+* API response için contract/DTO kullanılır.
+* Liste endpointleri mümkünse pagination destekler.
+* Büyük veri listeleri backend pagination ile çalışır.
+* Küçük/tek response listeleri frontend client-side pagination kullanabilir.
+* Date/time değerleri UTC saklanır.
+* API response tarihleri frontend’de ortak tarih componentiyle gösterilir.
+* Backend hata mesajları kullanıcı dostu olmalıdır.
+* Raw exception frontend’e dönülmez.
+
+---
+
+## 8. Ayarlar Standardı
+
+Ayar kullanan yapılar için genel kurallar:
+
+* Ayarlar merkezi servis üzerinden okunur/yazılır.
+* Hassas ayarlar korumalı saklanır.
+* Hassas değerler response içinde maskelenir veya hiç dönülmez.
+* Ayar güncelleme audit log üretir.
+* Ayar kaydı yoksa modül/özellik varsayılan güvenli davranışa geçer.
+* Ayar yokken kritik modül aktif varsayılmaz.
+* Frontend ayar ekranları backend validation yerine geçmez.
+
+---
+
+## 9. Dış Sistem Entegrasyon Standardı
+
+Dış sistem entegrasyonları için genel kurallar:
+
+* Entegrasyon configuration merkezi ayarlardan alınır.
+* Secret değerler loglanmaz.
+* Provider response içinde hassas veri varsa sanitize edilir.
+* Test bağlantısı/test gönderimi gibi akışlar kullanıcı dostu sonuç döner.
+* Background job hataları ana iş akışını gereksiz yere bozmaz; iş kararına göre loglanır.
+* Retry/cancel gibi işlemler ayrı ve kontrollü tasarlanır.
+* Custom HTTP body/header/template üretiminde güvenli escaping uygulanır.
+* JSON gönderimlerinde body valid JSON olarak doğrulanır.
+
+---
+
+## 10. Loglama Standardı
+
+ITAdmin’da log türleri birbirine karıştırılmaz.
+
+* Application log: teknik olay ve exception
+* Audit log: kullanıcı aksiyonu
+* Security log: güvenlik/oturum olayı
+* Modül operasyon logu: dış sistem veya modül operasyon detayı, yalnızca açık mimari karar varsa
+
+Kurallar:
+
+* Audit log kritik kullanıcı aksiyonlarını izler.
+* Security log login, logout, forbidden gibi olayları izler.
+* Teknik exception Serilog/Application log’a gider.
+* Modül operasyon logu audit log yerine geçmez.
+* Loglarda hassas veri bulunmaz.
+* Log ekranlarında hassas veri gösterilmez.
+
+---
+
+## 11. i18n Standardı
+
+* Kullanıcıya görünen metinler hardcoded yazılmaz.
+* Türkçe ve İngilizce karşılıklar birlikte eklenir.
+* Teknik enum/code değerleri kullanıcıya label olarak çevrilir.
+* Ortak metinler `common` namespace altında tutulur.
+* Feature’a özel metinler ilgili locale dosyasında tutulur.
+* Eksik translation key bırakılmaz.
+
+---
+
+## 12. Geliştirme Disiplini
+
+Her görevde:
+
+* Önce mevcut yapı incelenir.
+* Mevcut pattern varsa ona uyulur.
+* Sadece verilen kapsam uygulanır.
+* Gereksiz refactor yapılmaz.
+* Refactor istenirse davranış korunur.
+* Yeni dependency kullanıcı onayı olmadan eklenmez.
+* Yeni migration kullanıcı onayı olmadan oluşturulmaz.
+* Git commit/push yapılmaz.
+* Git init yapılmaz.
+* Line ending/file mode/chmod gibi alakasız değişiklik yapılmaz.
+
+---
+
+## 13. Standardizasyon İlkesi
+
+Bir yapı uygulama genelinde tekrar ediyorsa ortaklaştırılır.
+
+Örnekler:
+
+* Tablo
+* Pagination
+* Toolbar
+* Filter panel
+* Confirm dialog
+* Empty/loading/error state
+* Row actions
+* Date/time rendering
+* Status badge
+* API client
+* Query key pattern
+* Permission check helper
+
+Aynı işi her feature içinde tekrar yazma.
+
+---
+
+## 14. Anti-Patternler
+
+Yapma:
+
+```text
+Her tabloyu raw HTML table ile yeniden yazma.
+Her ekranda ayrı pagination üretme.
+Her filtre için farklı UI yaklaşımı kullanma.
+Component içinde doğrudan axios çağırma.
+Backend permission kontrolünü frontend’e taşıma.
+Controller içinde iş mantığı yazma.
+Entity’yi API response olarak dönme.
+Secret/log/token/şifre loglama.
+Kullanıcı istemeden dependency ekleme.
+Kullanıcı istemeden migration oluşturma.
+Git init yapma.
+File mode/line ending değişiklikleri üretme.
+Aynı iş için ikinci paralel component sistemi kurma.
+```
+
+---
+
+## 15. Temel İlke
+
+Önce kural, sonra kod.
+
+Önce mevcut pattern, sonra yeni kod.
+
+Önce tutarlılık, sonra hız.
+
+Bir işi yaparken uygulama genel standardını bozma.
+
+Küçük görev yapılır ama yarım standardizasyon bırakılmaz.

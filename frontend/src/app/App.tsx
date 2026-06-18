@@ -46,7 +46,7 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    document.title = brandingQuery.data.browserTitle || "SAS Portal v2";
+    document.title = brandingQuery.data.browserTitle || "ITAdmin";
   }, [brandingQuery.data.browserTitle]);
 
   useEffect(() => {

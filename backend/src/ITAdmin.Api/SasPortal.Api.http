@@ -1,0 +1,6 @@
+@ITAdmin.Api_HostAddress = http://localhost:5263
+
+GET {{ITAdmin.Api_HostAddress}}/health
+Accept: application/json
+
+###

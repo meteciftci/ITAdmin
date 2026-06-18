@@ -28,7 +28,7 @@ export type BuildBrandingPayloadParams = {
   faviconUrlToPersist: string | null;
 };
 
-const DEFAULT_APPLICATION_LABEL = "SAS Portal v2";
+const DEFAULT_APPLICATION_LABEL = "ITAdmin";
 
 export type UseBrandingSettingsFormReturn = {
   brandingApplicationName: string;

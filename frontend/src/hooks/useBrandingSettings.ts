@@ -7,8 +7,8 @@ import { getDefaultBrandingFooterText } from "@/lib/branding-footer";
 export const BRANDING_QUERY_KEY = ["settings", "branding"] as const;
 
 const DEFAULT_BRANDING: BrandingSettings = {
-  applicationName: "SAS Portal v2",
-  browserTitle: "SAS Portal v2",
+  applicationName: "ITAdmin",
+  browserTitle: "ITAdmin",
   logoUrl: null,
   faviconUrl: "/favicon.svg",
   forgotPasswordUrl: null,

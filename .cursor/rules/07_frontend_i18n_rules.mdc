@@ -1,13 +1,13 @@
 ---
-description: SASPortal frontend için çok dil, translation key, namespace, enum label, ortak component metinleri, tarih formatlama ve i18n kalite kuralları.
+description: ITAdmin frontend için çok dil, translation key, namespace, enum label, ortak component metinleri, tarih formatlama ve i18n kalite kuralları.
 globs:
   - "frontend/**/*.{ts,tsx,json}"
 alwaysApply: true
 ---
 
-# SASPortal Frontend i18n Rules
+# ITAdmin Frontend i18n Rules
 
-Bu kurallar SASPortal frontend dosyaları üzerinde çalışırken uygulanır.
+Bu kurallar ITAdmin frontend dosyaları üzerinde çalışırken uygulanır.
 
 Amaç; kullanıcıya görünen tüm metinlerin çok dilli, tutarlı, okunabilir, namespace yapısına uygun ve teknik code/enum değerlerinden ayrılmış olmasını sağlamaktır.
 
@@ -15,7 +15,7 @@ Amaç; kullanıcıya görünen tüm metinlerin çok dilli, tutarlı, okunabilir,
 
 ## 1. Genel Amaç
 
-SASPortal çok dilli geliştirilecektir.
+ITAdmin çok dilli geliştirilecektir.
 
 Desteklenen ilk diller:
 

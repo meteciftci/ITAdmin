@@ -1,6 +1,6 @@
 import type { AdUserStatusFilter } from "@/features/ad-management/types";
 
-export const AD_USERS_LIST_STORAGE_KEY = "sasportal.adManagement.users.listState";
+export const AD_USERS_LIST_STORAGE_KEY = "itadmin.adManagement.users.listState";
 
 export type AdUsersListState = {
   search: string;

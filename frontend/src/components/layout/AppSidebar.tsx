@@ -63,7 +63,7 @@ export function AppSidebar() {
     isLoading: adManagementSettingsQuery.isLoading,
   });
   const { data: branding } = useBrandingSettings();
-  const appName = branding.applicationName || "SAS Portal v2";
+  const appName = branding.applicationName || "ITAdmin";
   const resolvedLogoUrl = resolveApiAssetUrl(branding.logoUrl);
   const initials = appName
     .split(" ")
