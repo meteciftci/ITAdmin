@@ -196,6 +196,27 @@ public sealed class AdOrganizationalUnitTests
     }
 
     [Fact]
+    public void OrganizationalUnitPickerSearch_RequiresMinimumSearchBeforeLdapQuery()
+    {
+        var userOuSearchSource = File.ReadAllText(
+            Path.Combine(
+                FindRepositoryRoot(),
+                "backend/src/SasPortal.Infrastructure/Services/AdUserDirectoryService.Create.cs"));
+        var groupOuSearchSource = File.ReadAllText(
+            Path.Combine(
+                FindRepositoryRoot(),
+                "backend/src/SasPortal.Infrastructure/Services/AdUserDirectoryService.GroupsCreate.cs"));
+        var computerOuSearchSource = File.ReadAllText(
+            Path.Combine(
+                FindRepositoryRoot(),
+                "backend/src/SasPortal.Infrastructure/Services/AdUserDirectoryService.ComputersDirectory.cs"));
+
+        Assert.Contains("AdLdapAttributeCatalog.IsSearchTermValid(query.Search)", userOuSearchSource, StringComparison.Ordinal);
+        Assert.Contains("AdLdapAttributeCatalog.IsSearchTermValid(query.Search)", groupOuSearchSource, StringComparison.Ordinal);
+        Assert.Contains("AdLdapAttributeCatalog.IsSearchTermValid(query.Search)", computerOuSearchSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void OrganizationalUnitInfrastructure_ContainsGuardAndMutationPatterns()
     {
         var source = File.ReadAllText(

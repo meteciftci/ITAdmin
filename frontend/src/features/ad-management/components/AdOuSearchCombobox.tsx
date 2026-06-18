@@ -23,6 +23,8 @@ import { isInvalidOrganizationalUnitMoveTarget } from "@/features/ad-management/
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { cn } from "@/lib/utils";
 
+const MIN_SEARCH_LENGTH = 2;
+
 type OuSearchContext = "users" | "groups" | "computers" | "manage";
 
 type Props = {
@@ -59,12 +61,14 @@ export function AdOuSearchCombobox({
   const [search, setSearch] = useState("");
   const [selectedItem, setSelectedItem] = useState<AdOrganizationalUnitListItem | null>(null);
   const debouncedSearch = useDebouncedValue(search, 350);
+  const normalizedSearch = debouncedSearch.trim();
+  const canSearch = normalizedSearch.length >= MIN_SEARCH_LENGTH;
 
   const ouQuery = useQuery({
-    queryKey: ["ad-management", "organizational-units", searchContext, debouncedSearch],
+    queryKey: ["ad-management", "organizational-units", searchContext, normalizedSearch],
     queryFn: async () => {
       const params = {
-        search: debouncedSearch.trim() || undefined,
+        search: normalizedSearch,
         pageSize: 50,
       };
 
@@ -98,7 +102,7 @@ export function AdOuSearchCombobox({
 
       return searchOrganizationalUnits(params);
     },
-    enabled: open && !disabled,
+    enabled: open && canSearch && !disabled,
   });
 
   const items = useMemo(() => {
@@ -161,20 +165,25 @@ export function AdOuSearchCombobox({
             autoFocus
           />
           <div className="mt-2 max-h-56 overflow-y-auto">
-            {ouQuery.isLoading ? (
+            {!canSearch ? (
+              <p className="px-2 py-3 text-sm text-muted-foreground">
+                {t("adManagement:organizationalUnits.empty.searchRequired")}
+              </p>
+            ) : null}
+            {canSearch && ouQuery.isLoading ? (
               <p className="px-2 py-3 text-sm text-muted-foreground">{t("common:loading")}</p>
             ) : null}
-            {ouQuery.isError ? (
+            {canSearch && ouQuery.isError ? (
               <p className="px-2 py-3 text-sm text-destructive">
                 {t(errorKey)}
               </p>
             ) : null}
-            {ouQuery.isSuccess && !items.length ? (
+            {canSearch && ouQuery.isSuccess && !items.length ? (
               <p className="px-2 py-3 text-sm text-muted-foreground">
                 {t(emptyKey)}
               </p>
             ) : null}
-            {items.length > 0 ? (
+            {canSearch && items.length > 0 ? (
               <ul className="space-y-1">
                 {items.map((item) => (
                   <li key={item.distinguishedName}>

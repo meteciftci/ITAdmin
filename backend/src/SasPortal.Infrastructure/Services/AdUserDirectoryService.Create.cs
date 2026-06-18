@@ -28,6 +28,14 @@ public sealed partial class AdUserDirectoryService
             ? OuSearchDefaultPageSize
             : Math.Min(query.PageSize, OuSearchMaxPageSize);
 
+        if (!AdLdapAttributeCatalog.IsSearchTermValid(query.Search))
+        {
+            return new AdOrganizationalUnitSearchResult(
+                true,
+                string.Empty,
+                new AdOrganizationalUnitSearchPage([], false));
+        }
+
         var connectionResult = await ResolveConnectionAsync(cancellationToken);
         if (!connectionResult.IsSuccess || connectionResult.Context is null)
         {

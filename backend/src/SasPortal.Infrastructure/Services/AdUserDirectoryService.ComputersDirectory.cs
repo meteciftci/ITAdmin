@@ -369,6 +369,14 @@ public sealed partial class AdUserDirectoryService : IAdComputerDirectoryService
             ? ComputerOuSearchDefaultPageSize
             : Math.Min(query.PageSize, ComputerOuSearchMaxPageSize);
 
+        if (!AdLdapAttributeCatalog.IsSearchTermValid(query.Search))
+        {
+            return new AdOrganizationalUnitSearchResult(
+                true,
+                string.Empty,
+                new AdOrganizationalUnitSearchPage([], false));
+        }
+
         var connectionResult = await ResolveConnectionAsync(cancellationToken);
         if (!connectionResult.IsSuccess || connectionResult.Context is null)
         {

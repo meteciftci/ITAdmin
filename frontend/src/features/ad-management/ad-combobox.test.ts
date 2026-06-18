@@ -52,6 +52,25 @@ describe("ad combobox popover standard", () => {
     assert.match(source, /truncate font-mono text-xs text-muted-foreground/);
     assert.match(source, /min-w-0/);
   });
+
+  it("AdOuSearchCombobox requires minimum search length before querying", () => {
+    const source = readComboboxSource("AdOuSearchCombobox.tsx");
+
+    assert.match(source, /MIN_SEARCH_LENGTH = 2/);
+    assert.match(source, /normalizedSearch = debouncedSearch\.trim\(\)/);
+    assert.match(source, /canSearch = normalizedSearch\.length >= MIN_SEARCH_LENGTH/);
+    assert.match(source, /enabled: open && canSearch && !disabled/);
+    assert.match(source, /organizationalUnits\.empty\.searchRequired/);
+    assert.doesNotMatch(source, /enabled: open && !disabled/);
+    assert.doesNotMatch(source, /search: debouncedSearch\.trim\(\) \|\| undefined/);
+  });
+
+  it("AdOuSearchCombobox preserves selected label via selectedItem state", () => {
+    const source = readComboboxSource("AdOuSearchCombobox.tsx");
+
+    assert.match(source, /selectedItem\?\.distinguishedName === value/);
+    assert.match(source, /return selectedItem\.label/);
+  });
 });
 
 describe("ad combobox usage in OU flows", () => {
