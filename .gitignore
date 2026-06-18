@@ -500,4 +500,6 @@ dist/
 # Runtime branding uploads (keep folder structure only)
 backend/src/ITAdmin.Api/wwwroot/uploads/branding/*
 !backend/src/ITAdmin.Api/wwwroot/uploads/branding/.gitkeep
-test-sastest.zsh
+deploy-itadmin-iis.ps1
+publish-iis.zsh
+test-itadmin.zsh
