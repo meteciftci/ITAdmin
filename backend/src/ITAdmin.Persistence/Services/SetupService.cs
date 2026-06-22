@@ -465,6 +465,7 @@ public sealed partial class SetupService(
         entity.UsersRootOu = adManagement.UsersSearchBase!.Trim();
         entity.GroupsSearchBase = adManagement.GroupsSearchBase!.Trim();
         entity.ComputersSearchBase = adManagement.ComputersSearchBase!.Trim();
+        entity.DisabledUsersOu = NormalizeOptionalOu(adManagement.DisabledUsersOu);
         entity.DefaultUserOu = NormalizeOptionalOu(adManagement.DefaultUserOu);
         entity.DefaultGroupOu = NormalizeOptionalOu(adManagement.DefaultGroupOu);
         entity.DefaultComputerOu = NormalizeOptionalOu(adManagement.DefaultComputerOu);

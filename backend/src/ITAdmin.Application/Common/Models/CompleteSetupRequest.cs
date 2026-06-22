@@ -23,6 +23,7 @@ public sealed record CompleteSetupAdManagementModuleSettings(
     string? UsersSearchBase,
     string? GroupsSearchBase,
     string? ComputersSearchBase,
+    string? DisabledUsersOu,
     string? DefaultUserOu,
     string? DefaultGroupOu,
     string? DefaultComputerOu,

@@ -33,6 +33,7 @@ public sealed class SetupRequestValidatorTests
                 UsersSearchBase: null,
                 GroupsSearchBase: "OU=Groups,DC=test,DC=local",
                 ComputersSearchBase: "OU=Computers,DC=test,DC=local",
+                DisabledUsersOu: null,
                 DefaultUserOu: null,
                 DefaultGroupOu: null,
                 DefaultComputerOu: null,

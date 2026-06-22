@@ -56,7 +56,8 @@
         "adminUsersTitle": "Yönetici kullanıcıları",
         "preflightTitle": "Sunucu kontrolü",
         "preflightReady": "Sunucu kontrolleri geçildi.",
-        "preflightBlocked": "Sunucu kontrolleri geçilmedi."
+        "preflightBlocked": "Sunucu kontrolleri geçilmedi.",
+        "notSelected": "Seçilmedi"
       }
     },
     "fields": {
@@ -84,6 +85,8 @@
         "usersSearchBase": "Kullanıcı arama base",
         "groupsSearchBase": "Grup arama base",
         "computersSearchBase": "Bilgisayar arama base",
+        "disabledUsersOu": "Pasif Kullanıcılar OU",
+        "disabledUsersOuHelper": "Pasife alınan kullanıcıların taşınacağı OU.",
         "defaultUserOu": "Varsayılan kullanıcı OU",
         "defaultGroupOu": "Varsayılan grup OU",
         "defaultComputerOu": "Varsayılan bilgisayar OU",

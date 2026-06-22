@@ -56,7 +56,8 @@
         "adminUsersTitle": "Administrator users",
         "preflightTitle": "Server check",
         "preflightReady": "Server checks passed.",
-        "preflightBlocked": "Server checks did not pass."
+        "preflightBlocked": "Server checks did not pass.",
+        "notSelected": "Not selected"
       }
     },
     "fields": {
@@ -84,6 +85,8 @@
         "usersSearchBase": "Users search base",
         "groupsSearchBase": "Groups search base",
         "computersSearchBase": "Computers search base",
+        "disabledUsersOu": "Disabled Users OU",
+        "disabledUsersOuHelper": "OU where disabled users will be moved.",
         "defaultUserOu": "Default user OU",
         "defaultGroupOu": "Default group OU",
         "defaultComputerOu": "Default computer OU",

@@ -81,6 +81,42 @@ describe("setup-form", () => {
     assert.equal(request.modules.adManagement?.computersSearchBase, "OU=Computers,DC=test,DC=local");
   });
 
+  it("writes disabled users OU into modules payload when selected", () => {
+    const request = buildCompleteSetupRequest({
+      ...defaults,
+      setupKey: "key",
+      modules: {
+        adManagement: {
+          ...defaults.modules.adManagement,
+          isEnabled: true,
+          usersSearchBase: { distinguishedName: "OU=Users,DC=test,DC=local", label: "Users" },
+          groupsSearchBase: { distinguishedName: "OU=Groups,DC=test,DC=local", label: "Groups" },
+          computersSearchBase: { distinguishedName: "OU=Computers,DC=test,DC=local", label: "Computers" },
+          disabledUsersOu: { distinguishedName: "OU=Disabled,DC=test,DC=local", label: "Disabled Users" },
+        },
+      },
+      adminUsers: [{ userName: "admin", displayName: "Admin" }],
+    });
+
+    assert.equal(request.modules.adManagement?.disabledUsersOu, "OU=Disabled,DC=test,DC=local");
+  });
+
+  it("allows AD Management setup without disabled users OU", () => {
+    assert.equal(
+      isAdManagementModuleValid({
+        adManagement: {
+          ...defaults.modules.adManagement,
+          isEnabled: true,
+          usersSearchBase: { distinguishedName: "OU=Users,DC=test,DC=local", label: "Users" },
+          groupsSearchBase: { distinguishedName: "OU=Groups,DC=test,DC=local", label: "Groups" },
+          computersSearchBase: { distinguishedName: "OU=Computers,DC=test,DC=local", label: "Computers" },
+          disabledUsersOu: null,
+        },
+      }),
+      true,
+    );
+  });
+
   it("does not require AD Management OU fields when disabled", () => {
     assert.equal(isAdManagementModuleValid(defaults.modules), true);
   });
@@ -126,6 +162,7 @@ describe("setup-form", () => {
           usersSearchBase: { distinguishedName: "OU=Users,DC=test,DC=local", label: "Users" },
           groupsSearchBase: { distinguishedName: "OU=Groups,DC=test,DC=local", label: "Groups" },
           computersSearchBase: { distinguishedName: "OU=Computers,DC=test,DC=local", label: "Computers" },
+          disabledUsersOu: { distinguishedName: "OU=Disabled,DC=test,DC=local", label: "Disabled Users" },
           defaultUserOu: { distinguishedName: "OU=NewUsers,DC=test,DC=local", label: "New Users" },
           defaultGroupOu: null,
           defaultComputerOu: null,
@@ -139,6 +176,7 @@ describe("setup-form", () => {
 
     assert.equal(next.ldap.host, "dc02.test");
     assert.equal(next.modules.adManagement.usersSearchBase, null);
+    assert.equal(next.modules.adManagement.disabledUsersOu, null);
     assert.equal(next.modules.adManagement.defaultUserOu, null);
     assert.equal(next.modules.adManagement.isEnabled, true);
     assert.equal(next.modules.adManagement.deletedObjectsEnabled, true);

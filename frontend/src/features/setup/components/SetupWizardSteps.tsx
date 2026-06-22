@@ -364,6 +364,18 @@ export function ModulesStep({
             disabled={pickerDisabled}
             required
           />
+          <div className="space-y-2">
+            <SetupOuPicker
+              id="disabledUsersOu"
+              label={t("setup:modules.adManagement.disabledUsersOu")}
+              value={adManagement.disabledUsersOu}
+              onChange={(value) => setAdManagement(updateAdManagement(adManagement, { disabledUsersOu: value }))}
+              setupKey={setupKey}
+              ldap={ldap}
+              disabled={pickerDisabled}
+            />
+            <FieldHint>{t("setup:modules.adManagement.disabledUsersOuHelper")}</FieldHint>
+          </div>
           <SetupOuPicker
             id="defaultUserOu"
             label={t("setup:modules.adManagement.defaultUserOu")}
@@ -606,6 +618,17 @@ export function SummaryStep({ values, preflight }: SummaryStepProps) {
               <li>{t("setup:modules.adManagement.usersSearchBase")}: {adManagement.usersSearchBase?.label ?? "-"}</li>
               <li>{t("setup:modules.adManagement.groupsSearchBase")}: {adManagement.groupsSearchBase?.label ?? "-"}</li>
               <li>{t("setup:modules.adManagement.computersSearchBase")}: {adManagement.computersSearchBase?.label ?? "-"}</li>
+              <li>
+                {t("setup:modules.adManagement.disabledUsersOu")}:{" "}
+                {adManagement.disabledUsersOu ? (
+                  <span title={adManagement.disabledUsersOu.distinguishedName}>
+                    {adManagement.disabledUsersOu.label}
+                    <span className="font-mono text-xs"> ({adManagement.disabledUsersOu.distinguishedName})</span>
+                  </span>
+                ) : (
+                  t("setup:steps.summary.notSelected")
+                )}
+              </li>
               {adManagement.defaultUserOu ? <li>{t("setup:modules.adManagement.defaultUserOu")}: {adManagement.defaultUserOu.label}</li> : null}
               {adManagement.defaultGroupOu ? <li>{t("setup:modules.adManagement.defaultGroupOu")}: {adManagement.defaultGroupOu.label}</li> : null}
               {adManagement.defaultComputerOu ? <li>{t("setup:modules.adManagement.defaultComputerOu")}: {adManagement.defaultComputerOu.label}</li> : null}

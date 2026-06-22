@@ -31,6 +31,7 @@ export type SetupAdManagementFormValues = {
   usersSearchBase: SetupOuSelection | null;
   groupsSearchBase: SetupOuSelection | null;
   computersSearchBase: SetupOuSelection | null;
+  disabledUsersOu: SetupOuSelection | null;
   defaultUserOu: SetupOuSelection | null;
   defaultGroupOu: SetupOuSelection | null;
   defaultComputerOu: SetupOuSelection | null;
@@ -62,6 +63,7 @@ export function createDefaultAdManagementFormValues(): SetupAdManagementFormValu
     usersSearchBase: null,
     groupsSearchBase: null,
     computersSearchBase: null,
+    disabledUsersOu: null,
     defaultUserOu: null,
     defaultGroupOu: null,
     defaultComputerOu: null,
@@ -124,6 +126,7 @@ export function buildCompleteSetupModulesPayload(
       usersSearchBase: adManagement.isEnabled ? ouToPayload(adManagement.usersSearchBase) : null,
       groupsSearchBase: adManagement.isEnabled ? ouToPayload(adManagement.groupsSearchBase) : null,
       computersSearchBase: adManagement.isEnabled ? ouToPayload(adManagement.computersSearchBase) : null,
+      disabledUsersOu: adManagement.isEnabled ? ouToPayload(adManagement.disabledUsersOu) : null,
       defaultUserOu: adManagement.isEnabled ? ouToPayload(adManagement.defaultUserOu) : null,
       defaultGroupOu: adManagement.isEnabled ? ouToPayload(adManagement.defaultGroupOu) : null,
       defaultComputerOu: adManagement.isEnabled ? ouToPayload(adManagement.defaultComputerOu) : null,
@@ -208,6 +211,7 @@ export function clearAdManagementOuSelections(
       usersSearchBase: null,
       groupsSearchBase: null,
       computersSearchBase: null,
+      disabledUsersOu: null,
       defaultUserOu: null,
       defaultGroupOu: null,
       defaultComputerOu: null,

@@ -149,6 +149,7 @@ public sealed class SetupServiceTests
                     UsersSearchBase: null,
                     GroupsSearchBase: null,
                     ComputersSearchBase: null,
+                    DisabledUsersOu: null,
                     DefaultUserOu: null,
                     DefaultGroupOu: null,
                     DefaultComputerOu: null,
@@ -176,6 +177,7 @@ public sealed class SetupServiceTests
                     UsersSearchBase: null,
                     GroupsSearchBase: "OU=Groups,DC=test,DC=local",
                     ComputersSearchBase: "OU=Computers,DC=test,DC=local",
+                    DisabledUsersOu: null,
                     DefaultUserOu: null,
                     DefaultGroupOu: null,
                     DefaultComputerOu: null,
@@ -204,6 +206,7 @@ public sealed class SetupServiceTests
                     UsersSearchBase: "OU=Users,DC=test,DC=local",
                     GroupsSearchBase: "OU=Groups,DC=test,DC=local",
                     ComputersSearchBase: "OU=Computers,DC=test,DC=local",
+                    DisabledUsersOu: "OU=Disabled,DC=test,DC=local",
                     DefaultUserOu: "OU=NewUsers,DC=test,DC=local",
                     DefaultGroupOu: null,
                     DefaultComputerOu: null,
@@ -218,8 +221,39 @@ public sealed class SetupServiceTests
         Assert.Equal("OU=Users,DC=test,DC=local", settings.UsersRootOu);
         Assert.Equal("OU=Groups,DC=test,DC=local", settings.GroupsSearchBase);
         Assert.Equal("OU=Computers,DC=test,DC=local", settings.ComputersSearchBase);
+        Assert.Equal("OU=Disabled,DC=test,DC=local", settings.DisabledUsersOu);
         Assert.Equal("OU=NewUsers,DC=test,DC=local", settings.DefaultUserOu);
         Assert.True(settings.DeletedObjectsEnabled);
+    }
+
+    [Fact]
+    public async Task CompleteSetupAsync_WhenAdManagementEnabledWithoutDisabledUsersOu_Succeeds()
+    {
+        await using var context = CreateDbContext();
+        var ldap = CreateSuccessfulLdapFake();
+        ldap.ResolveUserProfile = _ => new LdapUserProfile("obj-7", "plain", "Plain User", null);
+
+        var service = CreateSetupService(context, ldap, "setup-secret");
+        var request = CreateMinimalCompleteRequest("setup-secret", ["plain"]) with
+        {
+            Modules = new CompleteSetupModulesSettings(
+                new CompleteSetupAdManagementModuleSettings(
+                    IsEnabled: true,
+                    UsersSearchBase: "OU=Users,DC=test,DC=local",
+                    GroupsSearchBase: "OU=Groups,DC=test,DC=local",
+                    ComputersSearchBase: "OU=Computers,DC=test,DC=local",
+                    DisabledUsersOu: null,
+                    DefaultUserOu: null,
+                    DefaultGroupOu: null,
+                    DefaultComputerOu: null,
+                    DeletedObjectsEnabled: false))
+        };
+
+        var result = await service.CompleteSetupAsync(request);
+
+        Assert.True(result.IsCompleted);
+        var settings = await context.AdManagementSettings.SingleAsync();
+        Assert.Null(settings.DisabledUsersOu);
     }
 
     [Fact]
@@ -238,6 +272,7 @@ public sealed class SetupServiceTests
                     UsersSearchBase: null,
                     GroupsSearchBase: null,
                     ComputersSearchBase: null,
+                    DisabledUsersOu: null,
                     DefaultUserOu: null,
                     DefaultGroupOu: null,
                     DefaultComputerOu: null,

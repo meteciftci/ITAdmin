@@ -142,6 +142,7 @@ internal static class SetupControllerRequestMapper
                 modules.AdManagement.UsersSearchBase,
                 modules.AdManagement.GroupsSearchBase,
                 modules.AdManagement.ComputersSearchBase,
+                modules.AdManagement.DisabledUsersOu,
                 modules.AdManagement.DefaultUserOu,
                 modules.AdManagement.DefaultGroupOu,
                 modules.AdManagement.DefaultComputerOu,

@@ -31,6 +31,7 @@ export type CompleteSetupAdManagementModuleRequest = {
   usersSearchBase?: string | null;
   groupsSearchBase?: string | null;
   computersSearchBase?: string | null;
+  disabledUsersOu?: string | null;
   defaultUserOu?: string | null;
   defaultGroupOu?: string | null;
   defaultComputerOu?: string | null;
