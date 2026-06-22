@@ -22,6 +22,8 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+$ScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+. (Join-Path $ScriptRoot "ITAdmin-Iis.Common.ps1")
 
 $Script:ITAdminBackupRedactedMarker = "[REDACTED]"
 
@@ -85,32 +87,37 @@ function Restore-ITAdminDataProtectionKeys {
     Write-Host "Restored DataProtection keys to: $TargetKeysPath"
 }
 
-function Restore-ITAdminMachineEnvironment {
+function Restore-ITAdminEnvironmentVariables {
     param(
         [Parameter(Mandatory = $true)]
-        [hashtable]$MachineEnvironment
+        [hashtable]$Variables,
+
+        [Parameter(Mandatory = $true)]
+        [string]$TargetDescription
     )
 
     $restoredCount = 0
     $skippedCount = 0
+    $variablesToApply = @{}
 
-    foreach ($entry in $MachineEnvironment.GetEnumerator()) {
+    foreach ($entry in $Variables.GetEnumerator()) {
         $name = [string]$entry.Key
         $value = [string]$entry.Value
 
         if (Test-ITAdminRedactedSecretValue -Value $value) {
-            Write-Warning "Skipped redacted machine environment variable: $name"
+            Write-Warning "Skipped redacted $TargetDescription environment variable: $name"
             $skippedCount++
             continue
         }
 
-        Set-ITAdminMachineEnvironmentVariable -Name $name -Value $value
+        $variablesToApply[$name] = $value
         $restoredCount++
     }
 
-    Write-Host "Restored machine environment variables: $restoredCount"
-    if ($skippedCount -gt 0) {
-        Write-Warning "Skipped $skippedCount redacted machine environment variables. Reconfigure secrets manually or rerun backup with -IncludeSecrets."
+    return @{
+        Variables = $variablesToApply
+        RestoredCount = $restoredCount
+        SkippedCount = $skippedCount
     }
 }
 
@@ -146,6 +153,30 @@ try {
     $dataProtectionArchivePath = Join-Path $workingDirectory "data-protection-keys.zip"
     Restore-ITAdminDataProtectionKeys -ArchivePath $dataProtectionArchivePath -TargetKeysPath $keysPath
 
+    Import-Module WebAdministration -ErrorAction Stop
+
+    if ($null -ne $metadata.appPoolEnvironmentVariables) {
+        $appPoolEnvironment = @{}
+        foreach ($property in $metadata.appPoolEnvironmentVariables.PSObject.Properties) {
+            $appPoolEnvironment[$property.Name] = [string]$property.Value
+        }
+
+        $appPoolRestore = Restore-ITAdminEnvironmentVariables -Variables $appPoolEnvironment -TargetDescription "app pool"
+        if ($appPoolRestore.Variables.Count -gt 0) {
+            if ($PSCmdlet.ShouldProcess($AppPoolName, "Restore app pool environment variables")) {
+                Set-ITAdminAppPoolEnvironmentVariables -PoolName $AppPoolName -Variables $appPoolRestore.Variables
+            }
+        }
+
+        Write-Host "Restored app pool environment variables: $($appPoolRestore.RestoredCount)"
+        if ($appPoolRestore.SkippedCount -gt 0) {
+            Write-Warning "Skipped $($appPoolRestore.SkippedCount) redacted app pool environment variables. Reconfigure secrets manually or rerun backup with -IncludeSecrets."
+        }
+    }
+    else {
+        Write-Warning "Backup does not contain appPoolEnvironmentVariables."
+    }
+
     if ($RestoreMachineEnvironment) {
         if ($null -eq $metadata.machineEnvironmentVariables) {
             Write-Warning "Backup does not contain machineEnvironmentVariables."
@@ -156,15 +187,22 @@ try {
                 $machineEnvironment[$property.Name] = [string]$property.Value
             }
 
-            Restore-ITAdminMachineEnvironment -MachineEnvironment $machineEnvironment
+            $machineRestore = Restore-ITAdminEnvironmentVariables -Variables $machineEnvironment -TargetDescription "machine"
+            foreach ($entry in $machineRestore.Variables.GetEnumerator()) {
+                Set-ITAdminMachineEnvironmentVariable -Name $entry.Key -Value $entry.Value
+            }
+
+            Write-Host "Restored machine environment variables: $($machineRestore.RestoredCount)"
+            if ($machineRestore.SkippedCount -gt 0) {
+                Write-Warning "Skipped $($machineRestore.SkippedCount) redacted machine environment variables. Reconfigure secrets manually or rerun backup with -IncludeSecrets."
+            }
         }
     }
     else {
-        Write-Host "Machine environment restore skipped. Use -RestoreMachineEnvironment to apply ITADMIN_* values from backup."
+        Write-Host "Machine environment restore skipped. Use -RestoreMachineEnvironment to apply legacy machine-level ITADMIN_* values from backup."
     }
 
     if ($RestartAppPool) {
-        Import-Module WebAdministration -ErrorAction Stop
         if (Test-Path "IIS:\AppPools\$AppPoolName") {
             Restart-WebAppPool -Name $AppPoolName
             Write-Host "Restarted app pool: $AppPoolName"

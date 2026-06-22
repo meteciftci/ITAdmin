@@ -1,5 +1,8 @@
 #Requires -Version 5.1
 
+# Optional developer utility for generating cryptographic secrets and setup key hashes.
+# ITAdmin installation does not require this script; install-itadmin-server.ps1 generates secrets inline.
+
 [CmdletBinding()]
 param(
     [Parameter()]

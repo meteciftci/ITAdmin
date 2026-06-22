@@ -13,7 +13,7 @@ param(
     [string]$RuntimeRoot = "C:\ProgramData\ITAdmin",
 
     [Parameter()]
-    [string]$OutputDirectory = "C:\ProgramData\ITAdmin\Backups",
+    [string]$BackupDirectory,
 
     [Parameter()]
     [switch]$IncludeSecrets
@@ -22,13 +22,10 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+$ScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+. (Join-Path $ScriptRoot "ITAdmin-Iis.Common.ps1")
 
 $Script:ITAdminBackupRedactedMarker = "[REDACTED]"
-$Script:ITAdminSecretVariablePatterns = @(
-    "ITADMIN_ConnectionStrings__DefaultConnection",
-    "ITADMIN_Jwt__Key",
-    "ITADMIN_Setup__SetupKeyHash"
-)
 
 function Test-ITAdminAdministrator {
     $currentIdentity = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -36,177 +33,97 @@ function Test-ITAdminAdministrator {
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
-function Format-ITAdminBackupSecretValue {
+function ConvertTo-ITAdminBackupEnvironmentSnapshot {
     param(
         [Parameter(Mandatory = $true)]
-        [string]$Name,
-
-        [AllowNull()]
-        [string]$Value,
+        [hashtable]$Snapshot,
 
         [Parameter(Mandatory = $true)]
         [bool]$IncludeSecrets
     )
 
-    if ([string]::IsNullOrWhiteSpace($Value)) {
-        return $null
-    }
-
-    if (-not $IncludeSecrets) {
-        foreach ($pattern in $Script:ITAdminSecretVariablePatterns) {
-            if ($Name -eq $pattern) {
-                return $Script:ITAdminBackupRedactedMarker
-            }
-        }
-
-        if ($Name -match '(?i)(Password|Secret|Key|Hash|Token)') {
-            return $Script:ITAdminBackupRedactedMarker
-        }
-    }
-
-    return $Value
-}
-
-function Get-ITAdminMachineEnvironmentForBackup {
-    param(
-        [Parameter(Mandatory = $true)]
-        [bool]$IncludeSecrets
-    )
-
-    $prefix = "ITADMIN_"
-    $values = @{}
-
-    foreach ($entry in [Environment]::GetEnvironmentVariables("Machine").GetEnumerator()) {
-        $name = [string]$entry.Key
-        if (-not $name.StartsWith($prefix, [System.StringComparison]::Ordinal)) {
+    $output = @{}
+    foreach ($entry in $Snapshot.GetEnumerator()) {
+        if ($IncludeSecrets) {
+            $output[$entry.Key] = [string]$entry.Value
             continue
         }
 
-        $values[$name] = Format-ITAdminBackupSecretValue `
-            -Name $name `
-            -Value ([string]$entry.Value) `
-            -IncludeSecrets:$IncludeSecrets
+        $output[$entry.Key] = Format-ITAdminSecretValue -Name $entry.Key -Value $entry.Value
     }
 
-    return $values
-}
-
-function Get-ITAdminAppPoolEnvironmentForBackup {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$PoolName
-    )
-
-    $values = @{}
-    $filterPath = "system.applicationHost/applicationPools/add[@name='$PoolName']/environmentVariables/add"
-    $items = Get-WebConfiguration -PSPath "MACHINE/WEBROOT/APPHOST" -Filter $filterPath -ErrorAction SilentlyContinue
-
-    if ($null -eq $items) {
-        return $values
-    }
-
-    foreach ($item in @($items)) {
-        if ($null -ne $item.name) {
-            $values[[string]$item.name] = [string]$item.value
-        }
-    }
-
-    return $values
-}
-
-function Get-ITAdminSiteBindingsForBackup {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$Site
-    )
-
-    $bindings = @()
-    $siteBindings = Get-WebBinding -Name $Site -ErrorAction SilentlyContinue
-    if ($null -eq $siteBindings) {
-        return $bindings
-    }
-
-    foreach ($binding in @($siteBindings)) {
-        $bindings += [ordered]@{
-            protocol = [string]$binding.protocol
-            bindingInformation = [string]$binding.bindingInformation
-        }
-    }
-
-    return $bindings
+    return $output
 }
 
 if (-not (Test-ITAdminAdministrator)) {
     throw "This script must be run from an elevated PowerShell session."
 }
 
-if ($IncludeSecrets) {
-    Write-Warning "IncludeSecrets is enabled. The backup will contain live secrets. Store the backup in a secure location and restrict access."
-}
-
 Import-Module WebAdministration -ErrorAction Stop
 
+if ([string]::IsNullOrWhiteSpace($BackupDirectory)) {
+    $BackupDirectory = Join-Path $RuntimeRoot "Backups"
+}
+
+if (-not (Test-Path -LiteralPath $BackupDirectory)) {
+    New-Item -ItemType Directory -Path $BackupDirectory -Force | Out-Null
+}
+
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
-$backupFolderName = "itadmin-runtime-backup-$timestamp"
-$backupWorkingDirectory = Join-Path $OutputDirectory $backupFolderName
-$metadataPath = Join-Path $backupWorkingDirectory "runtime-config.json"
-$dataProtectionKeysPath = Join-Path $RuntimeRoot "DataProtection-Keys"
-$dataProtectionArchivePath = Join-Path $backupWorkingDirectory "data-protection-keys.zip"
-$finalArchivePath = Join-Path $OutputDirectory "$backupFolderName.zip"
+$workingDirectory = Join-Path ([IO.Path]::GetTempPath()) ("itadmin-backup-{0}" -f ([Guid]::NewGuid().ToString("N")))
+$archivePath = Join-Path $BackupDirectory ("itadmin-runtime-backup-{0}.zip" -f $timestamp)
 
-New-Item -ItemType Directory -Path $backupWorkingDirectory -Force | Out-Null
+New-Item -ItemType Directory -Path $workingDirectory -Force | Out-Null
 
-$site = Get-Website -Name $SiteName -ErrorAction SilentlyContinue
-$physicalPath = $null
-$siteState = $null
-if ($null -ne $site) {
-    $physicalPath = [string]$site.PhysicalPath
-    $siteState = [string]$site.State
-}
+try {
+    $appPoolEnvironment = Get-ITAdminAppPoolEnvironmentSnapshot -PoolName $AppPoolName
+    $machineEnvironment = Get-ITAdminMachineEnvironmentSnapshot
 
-$metadata = [ordered]@{
-    version = 1
-    createdAtUtc = (Get-Date).ToUniversalTime().ToString("o")
-    siteName = $SiteName
-    appPoolName = $AppPoolName
-    siteState = $siteState
-    physicalPath = $physicalPath
-    runtimeRoot = $RuntimeRoot
-    hostName = $null
-    bindings = Get-ITAdminSiteBindingsForBackup -Site $SiteName
-    appPoolEnvironmentVariables = Get-ITAdminAppPoolEnvironmentForBackup -PoolName $AppPoolName
-    machineEnvironmentVariables = Get-ITAdminMachineEnvironmentForBackup -IncludeSecrets:$IncludeSecrets
-    dataProtectionKeysPath = $dataProtectionKeysPath
-    includeSecrets = [bool]$IncludeSecrets
-}
+    $keysPathResult = Get-ITAdminEffectiveRuntimeVariable `
+        -Name "ITADMIN_DataProtection__KeysPath" `
+        -AppPoolEnvironment $appPoolEnvironment `
+        -MachineEnvironment $machineEnvironment
 
-if ($metadata.bindings.Count -gt 0) {
-    $firstBinding = $metadata.bindings[0].bindingInformation
-    if ($firstBinding -match ':(?<host>[^:]+)$') {
-        $metadata.hostName = $Matches["host"]
+    $keysPath = $keysPathResult.Value
+    if ([string]::IsNullOrWhiteSpace($keysPath)) {
+        $keysPath = Join-Path $RuntimeRoot "DataProtection-Keys"
     }
-}
 
-$metadata | ConvertTo-Json -Depth 6 | Set-Content -Path $metadataPath -Encoding UTF8
+    $metadata = [ordered]@{
+        createdAtUtc = (Get-Date).ToUniversalTime().ToString("o")
+        siteName = $SiteName
+        appPoolName = $AppPoolName
+        runtimeRoot = $RuntimeRoot
+        dataProtectionKeysPath = $keysPath
+        includeSecrets = [bool]$IncludeSecrets
+        appPoolEnvironmentVariables = ConvertTo-ITAdminBackupEnvironmentSnapshot -Snapshot $appPoolEnvironment -IncludeSecrets ([bool]$IncludeSecrets)
+        machineEnvironmentVariables = ConvertTo-ITAdminBackupEnvironmentSnapshot -Snapshot $machineEnvironment -IncludeSecrets ([bool]$IncludeSecrets)
+    }
 
-if (Test-Path -LiteralPath $dataProtectionKeysPath) {
-    $keyFiles = Get-ChildItem -LiteralPath $dataProtectionKeysPath -File -ErrorAction SilentlyContinue
-    if ($keyFiles.Count -gt 0) {
-        Compress-Archive -Path (Join-Path $dataProtectionKeysPath "*") -DestinationPath $dataProtectionArchivePath -Force
+    $metadataPath = Join-Path $workingDirectory "runtime-config.json"
+    $metadata | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $metadataPath -Encoding UTF8
+
+    $dataProtectionArchivePath = Join-Path $workingDirectory "data-protection-keys.zip"
+    if (Test-Path -LiteralPath $keysPath) {
+        Compress-Archive -Path (Join-Path $keysPath "*") -DestinationPath $dataProtectionArchivePath -Force
     }
     else {
-        Write-Warning "DataProtection key path exists but contains no files: $dataProtectionKeysPath"
+        Write-Warning "DataProtection keys path not found: $keysPath"
     }
-}
-else {
-    Write-Warning "DataProtection key path not found: $dataProtectionKeysPath"
-}
 
-Compress-Archive -Path (Join-Path $backupWorkingDirectory "*") -DestinationPath $finalArchivePath -Force
-Remove-Item -LiteralPath $backupWorkingDirectory -Recurse -Force
+    if ($PSCmdlet.ShouldProcess($archivePath, "Create runtime configuration backup")) {
+        Compress-Archive -Path (Join-Path $workingDirectory "*") -DestinationPath $archivePath -Force
+    }
 
-Write-Host "Backup created: $finalArchivePath"
-Write-Host ("Secrets included: {0}" -f ([bool]$IncludeSecrets))
-if (-not $IncludeSecrets) {
-    Write-Host "Secret values were redacted in runtime-config.json."
+    Write-Host "Backup created: $archivePath"
+    Write-Host "IncludeSecrets: $($IncludeSecrets.IsPresent)"
+
+    Write-ITAdminEnvironmentSnapshot -Title "Backed up app pool environment variables:" -Snapshot $appPoolEnvironment -MaskSecrets:(-not $IncludeSecrets)
+    Write-Host ""
+    Write-ITAdminEnvironmentSnapshot -Title "Backed up machine environment variables:" -Snapshot $machineEnvironment -MaskSecrets:(-not $IncludeSecrets)
+}
+finally {
+    if (Test-Path -LiteralPath $workingDirectory) {
+        Remove-Item -LiteralPath $workingDirectory -Recurse -Force -ErrorAction SilentlyContinue
+    }
 }
