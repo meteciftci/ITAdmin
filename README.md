@@ -2,13 +2,13 @@
 
 **Enterprise IT administration portal** for directory operations, identity governance, notifications, and audit-ready platform management — built for production Windows Server deployments.
 
-ITAdmin combines a modular ASP.NET Core API with a modern React frontend. Server-side bootstrap scripts prepare a clean, repeatable production runtime on **Windows Server 2025** with **IIS** and **PostgreSQL 18**, without baking secrets into the repository or application publish output.
+ITAdmin combines a modular ASP.NET Core API with a modern React frontend. Deployment is split by role: the **build machine** produces a ready-to-ship package; the **Windows Server** runs a single install script that deploys the app, configures IIS runtime, and validates the installation — without baking secrets into the repository or publish output.
 
 ---
 
 ## Overview
 
-ITAdmin is designed as a long-lived corporate management platform: permission-aware, audit-friendly, and safe to operate in regulated environments. Application binaries and server runtime configuration are intentionally separated — bootstrap scripts prepare the host, publish delivers the app, and machine-level secrets stay outside source control.
+ITAdmin is designed as a long-lived corporate management platform: permission-aware, audit-friendly, and safe to operate in regulated environments.
 
 | Layer | Stack |
 | --- | --- |
@@ -16,6 +16,13 @@ ITAdmin is designed as a long-lived corporate management platform: permission-aw
 | **Frontend** | React, TypeScript, Vite, TanStack Query & Table |
 | **Auth** | Active Directory login + local user model, JWT + refresh tokens |
 | **Ops** | Permission-based authorization, audit & security logs, Serilog |
+
+**Deployment model**
+
+| Role | What happens |
+| --- | --- |
+| **Developer / build** | `scripts/build-itadmin-package.zsh` or `scripts/build-itadmin-package.ps1` produces `artifacts/itadmin-package.zip` and optionally `artifacts/itadmin-migrations.sql` |
+| **Windows Server** | `scripts/iis/install-itadmin-server.ps1` deploys the package zip to IIS, writes runtime configuration, runs optional SQL migration, and smoke-tests `/api/setup/status` |
 
 ---
 
@@ -25,8 +32,10 @@ ITAdmin is designed as a long-lived corporate management platform: permission-aw
 - **Active Directory management** — users, groups, computers, OUs, and deleted-object workflows
 - **Notification platform** — providers, templates, rules, and outbox-driven delivery
 - **Audit & security logging** — structured, searchable operational visibility
-- **Production-ready hosting model** — IIS app pool + machine env secrets + DataProtection key ring
-- **Idempotent server bootstrap** — safe to re-run for IIS/site/runtime folder alignment without reckless secret rotation
+- **Production-ready hosting model** — IIS app pool runtime config + DataProtection key ring
+- **Single-script server install** — one elevated PowerShell script for deploy, runtime config, and smoke test
+- **App Pool environment variables** — primary runtime configuration source for secrets and settings
+- **Idempotent install** — safe to re-run for IIS/site/runtime alignment; existing config can be preserved or overwritten explicitly
 
 ---
 
@@ -36,36 +45,63 @@ ITAdmin is designed as a long-lived corporate management platform: permission-aw
 | --- | --- |
 | Operating system | Windows Server 2025 Standard / Datacenter |
 | Web server | IIS with ASP.NET Core Hosting Bundle |
-| Database | PostgreSQL 18 |
-| Script runtime | PowerShell 5.1+ (elevated for bootstrap/backup/restore) |
+| Database | PostgreSQL 18 (existing instance recommended) |
+| Script runtime | PowerShell 5.1+ (elevated for install and runtime inspection) |
 
-> Install the **ASP.NET Core Hosting Bundle** manually before going live. Bootstrap scripts detect its presence but do not download or install it automatically.
+> Install the **ASP.NET Core Hosting Bundle** manually before going live. The install script detects its presence but does not download or install it automatically.
+
+> **`psql.exe`** is required only when using `MigrationMode=SqlFile` on the Windows Server. Manual migration (default) does not require PostgreSQL client tools on the IIS host.
 
 ---
 
-## Server bootstrap approach
+## Deployment approach
 
-Production host preparation lives in `scripts/iis/`. These scripts **prepare the server** — they do not publish or deploy application binaries.
+### Build machine
 
 ```text
-Bootstrap (scripts/iis)  -->  Publish / deploy app files  -->  Initial setup UI
-     IIS + runtime               C:\inetpub\wwwroot\ITAdmin        /setup
+scripts/build-itadmin-package.zsh   (macOS / Linux)
+scripts/build-itadmin-package.ps1   (Windows)
+
+  -> artifacts/itadmin-package.zip
+  -> artifacts/itadmin-migrations.sql   (optional, separate from the zip)
 ```
 
-**What bootstrap configures**
+The package zip contains only application deploy files (`web.config`, `ITAdmin.Api.dll`, `wwwroot/`, etc.). It does **not** need to include migration artifacts.
 
-- IIS site and application pool (`No Managed Code`, `AlwaysRunning`)
-- Runtime directories under `C:\ProgramData\ITAdmin`
-- NTFS permissions for `IIS AppPool\<AppPoolName>`
-- Machine-level `ITADMIN_*` environment variables for secrets and runtime config
-- App pool env limited to `ASPNETCORE_ENVIRONMENT` only
-- Optional PostgreSQL 18 local install from a **local installer path** (no internet download)
+### Windows Server
 
-**What bootstrap does not do**
+Copy these files to a deployment folder (example: `C:\Deploy-Temp\`):
 
-- Publish or copy `ITAdmin.Api.dll`, frontend assets, or packages
+```text
+C:\Deploy-Temp\
+  install-itadmin-server.ps1      (from scripts/iis/)
+  itadmin-package.zip               (from artifacts/)
+  itadmin-migrations.sql            (optional — from artifacts/)
+```
+
+Run the installer:
+
+```powershell
+cd C:\Deploy-Temp
+.\install-itadmin-server.ps1
+```
+
+**What the install script does**
+
+- Validates administrator privileges, IIS features, and Hosting Bundle
+- Creates or updates IIS site and application pool (`No Managed Code`, `AlwaysRunning`)
+- Creates runtime directories under `C:\ProgramData\ITAdmin`
+- Sets NTFS permissions for `IIS AppPool\<AppPoolName>`
+- Writes runtime configuration to **App Pool environment variables**
+- Deploys `itadmin-package.zip` to the site physical path
+- Applies migration according to selected migration mode
+- Restarts app pool/site and smoke-tests `/api/setup/status`
+
+**What the install script does not do**
+
+- Build or publish application binaries (`dotnet publish`, `npm`, `dotnet ef`, etc.)
 - Download PostgreSQL or Hosting Bundle installers
-- Store plaintext setup keys on the server
+- Store plaintext setup keys on disk
 
 ---
 
@@ -75,19 +111,19 @@ Bootstrap (scripts/iis)  -->  Publish / deploy app files  -->  Initial setup UI
 
 ```text
 C:\ProgramData\ITAdmin\
-├── DataProtection-Keys\     # ASP.NET Core key ring (critical — back up)
-├── Logs\
-└── Backups\                 # Default backup output
+├── DataProtection-Keys\     # ASP.NET Core key ring (critical — back up via your ops process)
+└── Logs\
 
-C:\inetpub\wwwroot\ITAdmin\  # Default publish / site root (created empty)
+C:\inetpub\wwwroot\ITAdmin\  # Default site root (populated by install script)
 ```
 
-### Machine-level environment (`ITADMIN_` prefix)
+### App Pool environment variables (primary runtime source)
 
-Secrets and runtime settings use **machine-scoped** variables. ASP.NET Core nested keys use double underscore (`__`).
+Runtime configuration and secrets are stored on the **IIS application pool** using ASP.NET Core nested-key naming (`__`).
 
 | Variable | Purpose |
 | --- | --- |
+| `ASPNETCORE_ENVIRONMENT` | `Production` or `Staging` |
 | `ITADMIN_ConnectionStrings__DefaultConnection` | PostgreSQL connection string |
 | `ITADMIN_Jwt__Key` | JWT signing key |
 | `ITADMIN_Jwt__Issuer` | JWT issuer (`ITAdmin`) |
@@ -95,17 +131,15 @@ Secrets and runtime settings use **machine-scoped** variables. ASP.NET Core nest
 | `ITADMIN_Setup__SetupKeyHash` | Setup key hash (`sha256:<base64url>`) |
 | `ITADMIN_DataProtection__ApplicationName` | e.g. `ITAdmin-Production` |
 | `ITADMIN_DataProtection__KeysPath` | DataProtection key ring path |
-| `ITADMIN_DataProtection__CertificateThumbprint` | Optional key encryption cert |
+| `ITADMIN_DataProtection__CertificateThumbprint` | Optional DataProtection key encryption certificate |
 
-### App pool environment
+### Machine-level environment (legacy visibility only)
 
-Only hosting context belongs at the app pool level:
+Machine-level `ITADMIN_*` and `ASPNETCORE_ENVIRONMENT` values may still exist on servers upgraded from older layouts. They are **not** the primary runtime source for new installs.
 
-| Variable | Example |
-| --- | --- |
-| `ASPNETCORE_ENVIRONMENT` | `Production` or `Staging` |
+`show-itadmin-runtime-config.ps1` displays both App Pool and machine-level values for visibility. Effective configuration prefers App Pool values; machine values are labeled as legacy.
 
-**Never** store secrets in app pool `environmentVariables`.
+> New installs use App Pool environment variables as the primary source. Do not rely on machine-level `ITADMIN_*` for runtime behavior.
 
 ---
 
@@ -115,16 +149,12 @@ Initial portal setup is gated by a one-time setup key.
 
 | Rule | Detail |
 | --- | --- |
-| Generated once | Bootstrap creates a random setup key at first install |
-| Shown once | Plaintext key is displayed **a single time** in the bootstrap console output |
+| Generated by install script | `install-itadmin-server.ps1` creates a random setup key when no existing hash is preserved |
+| Shown once | Plaintext key is displayed **a single time** in the install script output (only when newly generated) |
 | Never persisted | Plaintext is **not** written to disk, env, or logs |
-| Hash stored | Server keeps `ITADMIN_Setup__SetupKeyHash` as `sha256:<base64url>` (UTF-8 + SHA-256) |
+| Hash stored | App Pool env keeps `ITADMIN_Setup__SetupKeyHash` as `sha256:<base64url>` (UTF-8 + SHA-256) |
 
-Generate hash material manually when needed:
-
-```powershell
-.\scripts\iis\new-itadmin-secret.ps1 -SetupKey
-```
+If an existing setup key hash is preserved during install, the plaintext key is not available and cannot be recovered from the server.
 
 ---
 
@@ -141,116 +171,171 @@ C:\ProgramData\ITAdmin\DataProtection-Keys
 | Key ring backed up and restored | Encrypted secrets remain readable after migration |
 | Key ring lost | Database encrypted secrets **cannot be decrypted** |
 
-Treat the DataProtection key ring as **infrastructure-critical**. Include it in every server migration and disaster-recovery plan alongside database backups.
+Treat the DataProtection key ring as **infrastructure-critical**. Include it in server migration and disaster-recovery planning alongside database backups.
+
+### HTTPS certificate vs DataProtection certificate
+
+These are **separate** values:
+
+| Certificate | Used for |
+| --- | --- |
+| **HTTPS certificate thumbprint** | IIS HTTPS binding only (TLS for the website) |
+| **DataProtection certificate thumbprint** | Optional; encrypts DataProtection keys at rest when explicitly configured |
+
+The install script does **not** automatically use the HTTPS certificate for DataProtection. If no DataProtection certificate is provided, `ITADMIN_DataProtection__CertificateThumbprint` is not set.
 
 ---
 
-## Bootstrap scripts
-
-All scripts are in [`scripts/iis/`](scripts/iis/).
+## Deployment scripts
 
 | Script | Role |
 | --- | --- |
-| [`install-itadmin-server.ps1`](scripts/iis/install-itadmin-server.ps1) | Full server bootstrap — IIS, folders, permissions, machine env |
-| [`new-itadmin-secret.ps1`](scripts/iis/new-itadmin-secret.ps1) | Cryptographic secrets and setup key hash generation |
-| [`show-itadmin-runtime-config.ps1`](scripts/iis/show-itadmin-runtime-config.ps1) | Inspect IIS/runtime state (secrets masked) |
-| [`backup-itadmin-runtime-config.ps1`](scripts/iis/backup-itadmin-runtime-config.ps1) | Backup metadata JSON + DataProtection keys zip |
-| [`restore-itadmin-runtime-config.ps1`](scripts/iis/restore-itadmin-runtime-config.ps1) | Restore keys and optionally machine env |
+| [`scripts/build-itadmin-package.zsh`](scripts/build-itadmin-package.zsh) | macOS/Linux build utility — publish API, build frontend, create package zip and optional SQL migration script |
+| [`scripts/build-itadmin-package.ps1`](scripts/build-itadmin-package.ps1) | Windows build utility — same outputs as the zsh script |
+| [`scripts/iis/install-itadmin-server.ps1`](scripts/iis/install-itadmin-server.ps1) | Single Windows Server install/deploy script — IIS, runtime config, package deploy, migration mode, smoke test |
+| [`scripts/iis/show-itadmin-runtime-config.ps1`](scripts/iis/show-itadmin-runtime-config.ps1) | Inspect IIS site, App Pool env, legacy machine env, and DataProtection key path (secrets masked) |
 
 ### Database modes (`install-itadmin-server.ps1`)
 
 | Mode | Behavior |
 | --- | --- |
-| `Existing` | Prompt for existing PostgreSQL connection details |
-| `InstallLocalPostgreSql` | Silent install from a local PostgreSQL 18 installer |
-| `Skip` | Skip DB provisioning; preserve existing connection string if present |
+| `Existing` | **Recommended for production.** Prompt for or accept PostgreSQL host, port, database, user, and password. Default database: `itadmin`. Default user: `itadmin_app`. |
+| `Skip` | Skip database configuration; preserve an existing connection string from App Pool env when overwriting is not selected |
+| `InstallLocalPostgreSql` | Advanced / parameter-only. Silent install from a **local** PostgreSQL 18 installer path (`-PostgreSqlInstallerPath`). Not the primary operational flow. |
+
+### Migration modes (`install-itadmin-server.ps1`)
+
+| Mode | Default | Behavior |
+| --- | --- | --- |
+| `Manual` | **Yes** | SQL migration is expected to be applied manually on the database (by DBA/admin) before or after install. Install script does not run SQL. Smoke test still runs. |
+| `SqlFile` | No | Applies `itadmin-migrations.sql` via `psql.exe` using the runtime connection string. Requires PostgreSQL client tools on the IIS server. Default path: `$PSScriptRoot\itadmin-migrations.sql` (override with `-MigrationSqlPath`). |
+| `Skip` | No | Migration step is skipped entirely |
+
+Parameters:
+
+- `-MigrationMode Manual|SqlFile|Skip`
+- `-MigrationSqlPath <path>` (for `SqlFile`)
+- `-SkipMigration` — backward-compatible alias for `MigrationMode=Skip`
+
+The package zip does **not** need to contain migration artifacts. `itadmin-migrations.sql` is an optional file copied alongside the zip, not inside it.
 
 ---
 
 ## Quick start
 
-### 1. Bootstrap the server
+### 1. Build package on the development machine
 
-Run from an **elevated** PowerShell session on the target Windows Server:
+**macOS / Linux:**
+
+```bash
+./scripts/build-itadmin-package.zsh
+```
+
+**Windows:**
+
+```powershell
+.\scripts\build-itadmin-package.ps1
+```
+
+**Output:**
+
+```text
+artifacts/itadmin-package.zip
+artifacts/itadmin-migrations.sql    (optional — for SqlFile migration mode)
+```
+
+### 2. Copy files to the Windows Server
+
+Copy to a deployment folder (example `C:\Deploy-Temp\`):
+
+| File | Required |
+| --- | --- |
+| `install-itadmin-server.ps1` | Yes — from `scripts/iis/` in the repository |
+| `itadmin-package.zip` | Yes — from `artifacts/` |
+| `itadmin-migrations.sql` | Optional — from `artifacts/`; needed only for `SqlFile` migration mode |
+
+```text
+C:\Deploy-Temp\
+  install-itadmin-server.ps1
+  itadmin-package.zip
+  itadmin-migrations.sql    optional
+```
+
+### 3. Run the installer
+
+From an **elevated** PowerShell session:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
-cd C:\path\to\ITAdmin\scripts\iis
+cd C:\Deploy-Temp
+.\install-itadmin-server.ps1
+```
 
+The script prompts interactively for hostname, HTTPS, database connection, runtime config overwrite, and migration mode (default: **Manual**).
+
+Unattended example:
+
+```powershell
 .\install-itadmin-server.ps1 `
   -HostName "itadmin.example.com" `
   -EnvironmentName Production `
   -DatabaseMode Existing `
-  -CertificateThumbprint "YOUR_CERT_THUMBPRINT"
+  -CertificateThumbprint "YOUR_HTTPS_CERT_THUMBPRINT" `
+  -MigrationMode Manual
 ```
 
-Save the **setup key** printed at the end — it will not be shown again.
+Save the **setup key** if the script prints one at the end — it is shown only once and is not stored on the server.
 
-### 2. Publish application files
+### 4. Migration
 
-Deploy the built API and frontend assets to the site root (default `C:\inetpub\wwwroot\ITAdmin`). This step is separate from bootstrap and uses your standard publish pipeline.
+- **`Manual` (default):** Ensure `artifacts/itadmin-migrations.sql` (or your own migration process) has been applied on the PostgreSQL database before relying on the portal. If smoke test fails, verify migration was applied.
+- **`SqlFile`:** Place `itadmin-migrations.sql` in the same folder as the install script (or pass `-MigrationSqlPath`). PostgreSQL client tools (`psql.exe`) must be available on the server.
+- **`Skip`:** No migration step; use only when the database is already up to date.
 
-### 3. Complete initial setup
+### 5. Complete initial setup
 
-Open the setup URL (shown at bootstrap completion):
+Open the setup URL shown at install completion:
 
 ```text
 https://itadmin.example.com/setup
 ```
 
-Enter the setup key and finish portal configuration (directory, admin user, core settings).
+Enter the setup key and finish portal configuration (directory, admin users, modules).
 
-### 4. Verify runtime state
+### 6. Verify runtime configuration
+
+Copy `show-itadmin-runtime-config.ps1` to the server if needed, then run from an elevated or normal session (read-only inspection):
 
 ```powershell
 .\show-itadmin-runtime-config.ps1
 ```
 
+Confirm App Pool environment variables show the expected effective configuration and that legacy machine-level values are not mistaken for the primary source.
+
 ---
 
 ## Security notes
 
-- Secrets live in **machine-level** `ITADMIN_*` variables — not in repo, appsettings, or app pool env
-- Bootstrap output **masks** connection strings, JWT keys, and hashes in routine log lines
-- Re-running bootstrap preserves existing JWT key, setup hash, and connection string when already configured
-- Use HTTPS in production; pass `-CertificateThumbprint` during bootstrap for TLS binding
-- Restrict filesystem and backup access to `C:\ProgramData\ITAdmin` — especially `DataProtection-Keys` and backup zips with `-IncludeSecrets`
+- Runtime secrets and configuration live in **App Pool environment variables** — not in the repository, appsettings, or publish output
+- Machine-level `ITADMIN_*` values are **legacy visibility only** on older servers; new installs use App Pool env as the primary source
+- Install script output **masks** connection strings, JWT keys, setup hashes, and thumbprints in routine log lines
+- Plaintext setup keys are **never** persisted on the server
+- Re-running install can preserve or overwrite existing runtime config; the script asks explicitly (unless `-ForceRuntimeConfig` is used)
+- Use HTTPS in production; pass `-CertificateThumbprint` for IIS TLS binding
+- **HTTPS and DataProtection certificates are separate** — do not assume the TLS cert is used for DataProtection
+- Restrict filesystem access to `C:\ProgramData\ITAdmin` — especially `DataProtection-Keys`
 
 ---
 
-## Backup & restore
+## Backup & operational responsibility
 
-Default backup location: `C:\ProgramData\ITAdmin\Backups`
+ITAdmin does not ship automated backup/restore scripts for runtime configuration. Treat the following as **manual operational responsibilities** under your organization's backup policies:
 
-**Redacted backup** (recommended default — secrets replaced with `[REDACTED]`):
-
-```powershell
-.\backup-itadmin-runtime-config.ps1
-```
-
-**Full migration backup** (contains live secrets — store securely):
-
-```powershell
-.\backup-itadmin-runtime-config.ps1 -IncludeSecrets
-```
-
-**Restore DataProtection keys:**
-
-```powershell
-.\restore-itadmin-runtime-config.ps1 `
-  -BackupPath "C:\ProgramData\ITAdmin\Backups\itadmin-runtime-backup-YYYYMMDD-HHMMSS.zip"
-```
-
-**Restore machine env and restart app pool:**
-
-```powershell
-.\restore-itadmin-runtime-config.ps1 `
-  -BackupPath "C:\ProgramData\ITAdmin\Backups\itadmin-runtime-backup-YYYYMMDD-HHMMSS.zip" `
-  -RestoreMachineEnvironment `
-  -RestartAppPool
-```
-
-Redacted secret placeholders are skipped during machine env restore with warnings — reconfigure those values manually or use a backup created with `-IncludeSecrets`.
+| Asset | Notes |
+| --- | --- |
+| **PostgreSQL database** | Regular backups per DBA standards; apply `itadmin-migrations.sql` (or your migration process) when upgrading |
+| **DataProtection key ring** | `C:\ProgramData\ITAdmin\DataProtection-Keys` — loss makes encrypted DB values unreadable |
+| **App Pool environment variables** | Document or export securely after install; required to rebuild the same runtime on a new server |
 
 ---
 
@@ -258,23 +343,33 @@ Redacted secret placeholders are skipped during machine env restore with warning
 
 ```text
 ITAdmin/
-├── backend/          # ASP.NET Core API (layered: Api, Application, Domain, Infrastructure, Persistence)
-├── frontend/         # React + TypeScript SPA
-├── scripts/iis/      # Production server bootstrap scripts
-└── README.md         # This file
+├── backend/                    # ASP.NET Core API (Api, Application, Domain, Infrastructure, Persistence)
+├── frontend/                   # React + TypeScript SPA
+├── scripts/
+│   ├── build-itadmin-package.zsh
+│   ├── build-itadmin-package.ps1
+│   └── iis/
+│       ├── install-itadmin-server.ps1
+│       └── show-itadmin-runtime-config.ps1
+├── artifacts/                  # Build output (gitignored): package zip, SQL migration script
+└── README.md
 ```
 
 ---
 
 ## Status
 
-ITAdmin is under active development as a modular enterprise portal. Core platform capabilities — identity, permissions, AD management, notifications, and operational logging — are in place; production bootstrap tooling in `scripts/iis/` provides the standardized Windows Server deployment path documented above.
+ITAdmin is under active development as a modular enterprise portal. Core platform capabilities — identity, permissions, AD management, notifications, and operational logging — are in place. The deployment scripts above provide the standardized path from build artifact to production IIS host.
 
 ---
 
 ## Requirements
 
-- Windows Server 2025 Standard or Datacenter
-- IIS with WebAdministration module and ASP.NET Core Hosting Bundle
-- PostgreSQL 18 (existing instance or local install via bootstrap)
-- PowerShell 5.1+ with elevation for bootstrap, backup, and restore operations
+| Requirement | Notes |
+| --- | --- |
+| Windows Server 2025 Standard or Datacenter | Target install host |
+| IIS + WebAdministration module | Install script can enable required Windows features |
+| ASP.NET Core Hosting Bundle | Install manually before production use |
+| PostgreSQL 18 | Existing instance recommended (`DatabaseMode=Existing`) |
+| PowerShell 5.1+ | Elevated session required for `install-itadmin-server.ps1` |
+| `psql.exe` | Only when `MigrationMode=SqlFile` on the Windows Server |
