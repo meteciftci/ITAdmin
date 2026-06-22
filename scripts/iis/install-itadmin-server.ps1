@@ -57,6 +57,13 @@ param(
     [switch]$ForceRuntimeConfig,
 
     [Parameter()]
+    [ValidateSet("Manual", "SqlFile", "Skip")]
+    [string]$MigrationMode,
+
+    [Parameter()]
+    [string]$MigrationSqlPath,
+
+    [Parameter()]
     [switch]$SkipMigration,
 
     [Parameter()]
@@ -414,7 +421,7 @@ function Show-ITAdminExistingRuntimeConfiguration {
         }
     }
 
-    Write-ITAdminBootstrapMessage -Message "Machine environment variables (legacy ITADMIN_* / ASPNETCORE_ENVIRONMENT):"
+    Write-ITAdminBootstrapMessage -Message "Machine environment variables (legacy ITADMIN_* / ASPNETCORE_ENVIRONMENT — visibility only, not primary runtime source):"
     if ($MachineEnvironment.Count -eq 0) {
         Write-ITAdminBootstrapMessage -Message "  [none]"
     }
@@ -422,6 +429,8 @@ function Show-ITAdminExistingRuntimeConfiguration {
         foreach ($entry in ($MachineEnvironment.GetEnumerator() | Sort-Object Name)) {
             Write-ITAdminBootstrapMessage -Message ("  {0}={1}" -f $entry.Key, (Format-ITAdminRuntimeVariableForDisplay -Name $entry.Key -Value $entry.Value))
         }
+
+        Write-ITAdminBootstrapMessage -Message "Legacy machine environment values are not used as the primary runtime source. New configuration is written to app pool environment variables."
     }
 }
 
@@ -561,13 +570,11 @@ function Ensure-ITAdminRuntimeDirectories {
 
     $dataProtectionPath = Join-Path $RuntimeRootPath "DataProtection-Keys"
     $logsPath = Join-Path $RuntimeRootPath "Logs"
-    $backupsPath = Join-Path $RuntimeRootPath "Backups"
 
     $paths = @(
         $RuntimeRootPath,
         $dataProtectionPath,
         $logsPath,
-        $backupsPath,
         $PhysicalSitePath
     )
 
@@ -1044,7 +1051,8 @@ function Build-ITAdminRuntimeEnvironmentVariables {
             -MachineEnvironment $MachineEnvironment
         if (-not [string]::IsNullOrWhiteSpace($existingConnectionString)) {
             $variables["ITADMIN_ConnectionStrings__DefaultConnection"] = $existingConnectionString
-            Write-ITAdminBootstrapMessage -Message ("Preserved ITADMIN_ConnectionStrings__DefaultConnection: {0}" -f (Hide-ITAdminConnectionString -ConnectionString $existingConnectionString))
+            $connectionSource = if ($AppPoolEnvironment.ContainsKey("ITADMIN_ConnectionStrings__DefaultConnection")) { "AppPool" } else { "MachineLegacy" }
+            Write-ITAdminBootstrapMessage -Message ("Preserved ITADMIN_ConnectionStrings__DefaultConnection from {0}: {1}" -f $connectionSource, (Hide-ITAdminConnectionString -ConnectionString $existingConnectionString))
         }
     }
 
@@ -1055,7 +1063,8 @@ function Build-ITAdminRuntimeEnvironmentVariables {
     }
     else {
         $variables["ITADMIN_Jwt__Key"] = $existingJwtKey
-        Write-ITAdminBootstrapMessage -Message "Preserved existing ITADMIN_Jwt__Key."
+        $jwtSource = if ($AppPoolEnvironment.ContainsKey("ITADMIN_Jwt__Key")) { "AppPool" } else { "MachineLegacy" }
+        Write-ITAdminBootstrapMessage -Message "Preserved existing ITADMIN_Jwt__Key from $jwtSource."
     }
 
     $variables["ITADMIN_Jwt__Issuer"] = "ITAdmin"
@@ -1072,7 +1081,8 @@ function Build-ITAdminRuntimeEnvironmentVariables {
     }
     else {
         $variables["ITADMIN_Setup__SetupKeyHash"] = $existingSetupKeyHash
-        Write-ITAdminBootstrapMessage -Message "Preserved existing ITADMIN_Setup__SetupKeyHash. Plaintext setup key is not available."
+        $setupSource = if ($AppPoolEnvironment.ContainsKey("ITADMIN_Setup__SetupKeyHash")) { "AppPool" } else { "MachineLegacy" }
+        Write-ITAdminBootstrapMessage -Message "Preserved existing ITADMIN_Setup__SetupKeyHash from $setupSource. Plaintext setup key is not available."
     }
 
     $variables["ITADMIN_DataProtection__ApplicationName"] = $DataProtectionApplicationName
@@ -1183,80 +1193,84 @@ function Deploy-ITAdminPackage {
 function Invoke-ITAdminDatabaseMigration {
     param(
         [Parameter(Mandatory = $true)]
-        [string]$PhysicalPath,
+        [ValidateSet("Manual", "SqlFile", "Skip")]
+        [string]$Mode,
+
+        [Parameter()]
+        [string]$SqlFilePath,
 
         [Parameter(Mandatory = $true)]
-        [string]$ConnectionString,
-
-        [Parameter(Mandatory = $true)]
-        [bool]$SkipMigrationRequested
+        [AllowNull()]
+        [string]$ConnectionString
     )
 
-    if ($SkipMigrationRequested) {
-        Write-ITAdminBootstrapMessage -Message "Database migration skipped because -SkipMigration was specified." -Level Warning
-        return "Skipped"
-    }
+    switch ($Mode) {
+        "Skip" {
+            Write-ITAdminBootstrapMessage -Message "Database migration skipped."
+            return "Skipped"
+        }
 
-    if ([string]::IsNullOrWhiteSpace($ConnectionString)) {
-        throw "Database migration cannot run without a connection string. Configure DatabaseMode Existing or preserve an existing connection string."
-    }
+        "Manual" {
+            Write-ITAdminBootstrapMessage -Message "Database migration is expected to be applied manually."
+            return "Manual"
+        }
 
-    $bundlePath = Join-Path $PhysicalPath "_deploy\ITAdmin.Migrations.exe"
-    $sqlPath = Join-Path $PhysicalPath "_deploy\itadmin-migrations.sql"
-
-    if (Test-Path -LiteralPath $bundlePath) {
-        Write-ITAdminBootstrapMessage -Message "Applying database migrations using EF migration bundle."
-        if ($PSCmdlet.ShouldProcess($bundlePath, "Apply EF migration bundle")) {
-            & $bundlePath --connection $ConnectionString
-            if ($LASTEXITCODE -ne 0) {
-                throw "Migration bundle failed with exit code $LASTEXITCODE."
+        "SqlFile" {
+            if ([string]::IsNullOrWhiteSpace($SqlFilePath)) {
+                throw "SQL migration file path is required for SqlFile migration mode."
             }
-        }
 
-        return "Applied (bundle)"
-    }
+            if (-not (Test-Path -LiteralPath $SqlFilePath)) {
+                throw "SQL migration file not found: $SqlFilePath"
+            }
 
-    if (Test-Path -LiteralPath $sqlPath) {
-        $psqlPath = Find-ITAdminPsqlExecutable
-        if ($null -eq $psqlPath) {
-            throw "psql.exe was not found. Install PostgreSQL client tools or include ITAdmin.Migrations.exe in the package."
-        }
+            if ([string]::IsNullOrWhiteSpace($ConnectionString)) {
+                throw "Database migration cannot run without a connection string. Configure DatabaseMode Existing or preserve an existing connection string."
+            }
 
-        $connectionParts = ConvertFrom-ITAdminPostgreSqlConnectionString -ConnectionString $ConnectionString
-        if ([string]::IsNullOrWhiteSpace($connectionParts.Host) -or
-            [string]::IsNullOrWhiteSpace($connectionParts.Database) -or
-            [string]::IsNullOrWhiteSpace($connectionParts.Username) -or
-            [string]::IsNullOrWhiteSpace($connectionParts.Password)) {
-            throw "Connection string is missing required PostgreSQL fields for SQL migration."
-        }
+            $psqlPath = Find-ITAdminPsqlExecutable
+            if ($null -eq $psqlPath) {
+                throw "psql.exe was not found. Run the SQL migration file manually on the database server or install PostgreSQL client tools."
+            }
 
-        $portValue = if ($null -ne $connectionParts.Port -and $connectionParts.Port -gt 0) { $connectionParts.Port } else { 5432 }
+            $connectionParts = ConvertFrom-ITAdminPostgreSqlConnectionString -ConnectionString $ConnectionString
+            if ([string]::IsNullOrWhiteSpace($connectionParts.Host) -or
+                [string]::IsNullOrWhiteSpace($connectionParts.Database) -or
+                [string]::IsNullOrWhiteSpace($connectionParts.Username) -or
+                [string]::IsNullOrWhiteSpace($connectionParts.Password)) {
+                throw "Connection string is missing required PostgreSQL fields for SQL migration."
+            }
 
-        Write-ITAdminBootstrapMessage -Message "Applying database migrations using idempotent SQL script."
-        if ($PSCmdlet.ShouldProcess($sqlPath, "Apply SQL migration script")) {
-            $env:PGPASSWORD = $connectionParts.Password
-            try {
-                & $psqlPath `
-                    -h $connectionParts.Host `
-                    -p $portValue `
-                    -U $connectionParts.Username `
-                    -d $connectionParts.Database `
-                    -v ON_ERROR_STOP=1 `
-                    -f $sqlPath | Out-Null
+            $portValue = if ($null -ne $connectionParts.Port -and $connectionParts.Port -gt 0) { $connectionParts.Port } else { 5432 }
 
-                if ($LASTEXITCODE -ne 0) {
-                    throw "SQL migration script failed with exit code $LASTEXITCODE."
+            Write-ITAdminBootstrapMessage -Message "Applying database migration from SQL file: $SqlFilePath"
+            if ($PSCmdlet.ShouldProcess($SqlFilePath, "Apply SQL migration script")) {
+                $env:PGPASSWORD = $connectionParts.Password
+                try {
+                    & $psqlPath `
+                        -h $connectionParts.Host `
+                        -p $portValue `
+                        -U $connectionParts.Username `
+                        -d $connectionParts.Database `
+                        -v ON_ERROR_STOP=1 `
+                        -f $SqlFilePath | Out-Null
+
+                    if ($LASTEXITCODE -ne 0) {
+                        throw "SQL migration script failed with exit code $LASTEXITCODE."
+                    }
+                }
+                finally {
+                    Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
                 }
             }
-            finally {
-                Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
-            }
+
+            return "Applied (SqlFile)"
         }
 
-        return "Applied (sql)"
+        default {
+            throw "Unsupported migration mode: $Mode"
+        }
     }
-
-    throw "No migration artifact found in package. Expected _deploy\ITAdmin.Migrations.exe or _deploy\itadmin-migrations.sql."
 }
 
 function Get-ITAdminRecentApplicationLogTail {
@@ -1520,6 +1534,27 @@ if (-not (Test-ITAdminParameterWasBound -Name "DatabaseMode") -or [string]::IsNu
     }
 }
 
+if ($SkipMigration.IsPresent) {
+    $MigrationMode = "Skip"
+}
+
+if (-not (Test-ITAdminParameterWasBound -Name "MigrationMode") -or [string]::IsNullOrWhiteSpace($MigrationMode)) {
+    Write-ITAdminBootstrapMessage -Message "Migration mode:"
+    Write-ITAdminBootstrapMessage -Message "  1. Manual - SQL migration applied or will be applied manually on the database"
+    Write-ITAdminBootstrapMessage -Message "  2. SqlFile - Apply SQL file from this server"
+    Write-ITAdminBootstrapMessage -Message "  3. Skip - Skip migration step entirely"
+    $migrationChoice = Read-ITAdminPromptValue -Prompt "Select migration mode [1/2/3]" -DefaultValue "1"
+    switch ($migrationChoice) {
+        "2" { $MigrationMode = "SqlFile" }
+        "3" { $MigrationMode = "Skip" }
+        default { $MigrationMode = "Manual" }
+    }
+}
+
+if ($MigrationMode -eq "SqlFile" -and [string]::IsNullOrWhiteSpace($MigrationSqlPath)) {
+    $MigrationSqlPath = Join-Path $PSScriptRoot "itadmin-migrations.sql"
+}
+
 Import-Module WebAdministration -ErrorAction Stop
 
 Ensure-ITAdminWindowsFeatures
@@ -1619,9 +1654,9 @@ Deploy-ITAdminPackage `
     -AppPoolIdentityName $appPoolIdentity
 
 $migrationResult = Invoke-ITAdminDatabaseMigration `
-    -PhysicalPath $PhysicalPath `
-    -ConnectionString $effectiveConnectionString `
-    -SkipMigrationRequested $SkipMigration.IsPresent
+    -Mode $MigrationMode `
+    -SqlFilePath $MigrationSqlPath `
+    -ConnectionString $effectiveConnectionString
 
 Remove-ITAdminAppOfflineFile -PhysicalPath $PhysicalPath
 Start-ITAdminWebStack -SiteName $SiteName -AppPoolName $AppPoolName
@@ -1655,7 +1690,13 @@ if (-not $SkipSmokeTest.IsPresent) {
         Write-Host $smokeTest.LogTail
         Write-ITAdminBootstrapMessage -Message "Recent Windows application event log entries:" -Level Error
         Write-Host $smokeTest.EventLogTail
-        throw "Smoke test failed. Installation did not complete successfully."
+
+        $migrationHint = ""
+        if ($MigrationMode -eq "Manual") {
+            $migrationHint = " Verify that database migration was applied manually before retrying."
+        }
+
+        throw "Smoke test failed.$migrationHint Installation did not complete successfully."
     }
 }
 else {

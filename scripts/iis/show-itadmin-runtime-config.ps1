@@ -12,9 +12,6 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$ScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
-. (Join-Path $ScriptRoot "ITAdmin-Iis.Common.ps1")
-
 $Script:ITAdminKnownRuntimeVariableNames = @(
     "ASPNETCORE_ENVIRONMENT",
     "ITADMIN_ConnectionStrings__DefaultConnection",
@@ -26,6 +23,152 @@ $Script:ITAdminKnownRuntimeVariableNames = @(
     "ITADMIN_DataProtection__KeysPath",
     "ITADMIN_DataProtection__CertificateThumbprint"
 )
+
+function Format-ITAdminSecretValue {
+    param(
+        [AllowNull()]
+        [string]$Name,
+
+        [AllowNull()]
+        [string]$Value
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return "[not set]"
+    }
+
+    if ($Name -match '(?i)(ConnectionStrings|Password|Secret|Key|Hash|Token|Thumbprint)') {
+        if ($Name -match '(?i)ConnectionStrings') {
+            return [regex]::Replace(
+                $Value,
+                '(?i)(Password|Pwd)\s*=\s*[^;]+',
+                '$1=[REDACTED]'
+            )
+        }
+
+        return "[REDACTED]"
+    }
+
+    return $Value
+}
+
+function Get-ITAdminMachineEnvironmentSnapshot {
+    $snapshot = @{}
+    $prefix = "ITADMIN_"
+
+    foreach ($entry in [Environment]::GetEnvironmentVariables("Machine").GetEnumerator()) {
+        $name = [string]$entry.Key
+        if (-not $name.StartsWith($prefix, [System.StringComparison]::Ordinal) -and $name -ne "ASPNETCORE_ENVIRONMENT") {
+            continue
+        }
+
+        $snapshot[$name] = [string]$entry.Value
+    }
+
+    return $snapshot
+}
+
+function Get-ITAdminAppPoolEnvironmentSnapshot {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$PoolName
+    )
+
+    $snapshot = @{}
+    $filterPath = "system.applicationHost/applicationPools/add[@name='$PoolName']/environmentVariables/add"
+    $items = Get-WebConfiguration -PSPath "MACHINE/WEBROOT/APPHOST" -Filter $filterPath -ErrorAction SilentlyContinue
+
+    if ($null -eq $items) {
+        return $snapshot
+    }
+
+    foreach ($item in @($items)) {
+        if ($null -ne $item.name) {
+            $snapshot[[string]$item.name] = [string]$item.value
+        }
+    }
+
+    return $snapshot
+}
+
+function Get-ITAdminEffectiveRuntimeVariable {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Name,
+
+        [Parameter(Mandatory = $true)]
+        [hashtable]$AppPoolEnvironment,
+
+        [Parameter(Mandatory = $true)]
+        [hashtable]$MachineEnvironment
+    )
+
+    if ($AppPoolEnvironment.ContainsKey($Name) -and -not [string]::IsNullOrWhiteSpace($AppPoolEnvironment[$Name])) {
+        return @{
+            Value = [string]$AppPoolEnvironment[$Name]
+            Source = "AppPool"
+        }
+    }
+
+    if ($MachineEnvironment.ContainsKey($Name) -and -not [string]::IsNullOrWhiteSpace($MachineEnvironment[$Name])) {
+        return @{
+            Value = [string]$MachineEnvironment[$Name]
+            Source = "MachineLegacy"
+        }
+    }
+
+    return @{
+        Value = $null
+        Source = "NotSet"
+    }
+}
+
+function Get-ITAdminDataProtectionStatus {
+    param(
+        [AllowNull()]
+        [string]$KeysPath
+    )
+
+    if ([string]::IsNullOrWhiteSpace($KeysPath)) {
+        return [PSCustomObject]@{
+            Path = $null
+            Exists = $false
+            FileCount = 0
+        }
+    }
+
+    $exists = Test-Path -LiteralPath $KeysPath
+    $fileCount = 0
+    if ($exists) {
+        $fileCount = (Get-ChildItem -LiteralPath $KeysPath -File -ErrorAction SilentlyContinue | Measure-Object).Count
+    }
+
+    return [PSCustomObject]@{
+        Path = $KeysPath
+        Exists = $exists
+        FileCount = $fileCount
+    }
+}
+
+function Write-ITAdminEnvironmentSnapshot {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Title,
+
+        [Parameter(Mandatory = $true)]
+        [hashtable]$Snapshot
+    )
+
+    Write-Host $Title
+    if ($Snapshot.Count -eq 0) {
+        Write-Host "  [none]"
+        return
+    }
+
+    foreach ($entry in ($Snapshot.GetEnumerator() | Sort-Object Name)) {
+        Write-Host ("  {0}={1}" -f $entry.Key, (Format-ITAdminSecretValue -Name $entry.Key -Value $entry.Value))
+    }
+}
 
 Import-Module WebAdministration -ErrorAction Stop
 
@@ -67,10 +210,10 @@ $appPoolEnvironment = Get-ITAdminAppPoolEnvironmentSnapshot -PoolName $AppPoolNa
 $machineEnvironment = Get-ITAdminMachineEnvironmentSnapshot
 
 Write-Host ""
-Write-ITAdminEnvironmentSnapshot -Title "App pool environment variables:" -Snapshot $appPoolEnvironment -MaskSecrets
+Write-ITAdminEnvironmentSnapshot -Title "App pool environment variables (primary runtime source):" -Snapshot $appPoolEnvironment
 
 Write-Host ""
-Write-ITAdminEnvironmentSnapshot -Title "Machine environment variables (legacy ITADMIN_* / ASPNETCORE_ENVIRONMENT):" -Snapshot $machineEnvironment -MaskSecrets
+Write-ITAdminEnvironmentSnapshot -Title "Machine environment variables (legacy visibility only):" -Snapshot $machineEnvironment
 
 Write-Host ""
 Write-Host "Effective runtime configuration:"
@@ -100,7 +243,7 @@ Write-Host ("  Key file count: {0}" -f $dataProtectionStatus.FileCount)
 Write-Host ""
 Write-Host "Configuration source note:"
 Write-Host "  App pool environment variables are the primary runtime configuration source."
-Write-Host "  Machine-level ITADMIN_* values are legacy and shown for migration visibility only."
+Write-Host "  Machine-level ITADMIN_* values are legacy and shown for visibility only."
 
 Write-Host ""
 Write-Host "== End runtime configuration =="

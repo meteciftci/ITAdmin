@@ -9,11 +9,10 @@ param(
     [string]$OutputPackagePath,
 
     [Parameter()]
-    [string]$Configuration = "Release",
+    [string]$OutputMigrationSqlPath,
 
     [Parameter()]
-    [ValidateSet("bundle", "sql", "auto")]
-    [string]$MigrationArtifactMode = "auto"
+    [string]$Configuration = "Release"
 )
 
 Set-StrictMode -Version Latest
@@ -29,7 +28,7 @@ function Write-ITAdminPackageMessage {
 }
 
 if ([string]::IsNullOrWhiteSpace($RepositoryRoot)) {
-    $RepositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
+    $RepositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 }
 
 $backendRoot = Join-Path $RepositoryRoot "backend"
@@ -38,10 +37,14 @@ $apiProject = Join-Path $backendRoot "src\ITAdmin.Api\ITAdmin.Api.csproj"
 $persistenceProject = Join-Path $backendRoot "src\ITAdmin.Persistence\ITAdmin.Persistence.csproj"
 $stagingRoot = Join-Path $RepositoryRoot "artifacts\package-staging"
 $publishRoot = Join-Path $stagingRoot "publish"
-$deployRoot = Join-Path $publishRoot "_deploy"
+$installScriptPath = Join-Path $RepositoryRoot "scripts\iis\install-itadmin-server.ps1"
 
 if ([string]::IsNullOrWhiteSpace($OutputPackagePath)) {
-    $OutputPackagePath = Join-Path $PSScriptRoot "itadmin-package.zip"
+    $OutputPackagePath = Join-Path $RepositoryRoot "artifacts\itadmin-package.zip"
+}
+
+if ([string]::IsNullOrWhiteSpace($OutputMigrationSqlPath)) {
+    $OutputMigrationSqlPath = Join-Path $RepositoryRoot "artifacts\itadmin-migrations.sql"
 }
 
 if (-not (Test-Path -LiteralPath $apiProject)) {
@@ -59,7 +62,8 @@ if (Test-Path -LiteralPath $stagingRoot) {
 }
 
 New-Item -ItemType Directory -Path $publishRoot -Force | Out-Null
-New-Item -ItemType Directory -Path $deployRoot -Force | Out-Null
+New-Item -ItemType Directory -Path (Split-Path -Parent $OutputPackagePath) -Force | Out-Null
+New-Item -ItemType Directory -Path (Split-Path -Parent $OutputMigrationSqlPath) -Force | Out-Null
 
 Write-ITAdminPackageMessage -Message "Publishing backend API..."
 dotnet publish $apiProject -c $Configuration -o $publishRoot --no-self-contained
@@ -95,43 +99,16 @@ if (-not (Test-Path -LiteralPath $frontendDist)) {
 New-Item -ItemType Directory -Path $wwwrootPath -Force | Out-Null
 Copy-Item -Path (Join-Path $frontendDist "*") -Destination $wwwrootPath -Recurse -Force
 
-$migrationBundlePath = Join-Path $deployRoot "ITAdmin.Migrations.exe"
-$migrationSqlPath = Join-Path $deployRoot "itadmin-migrations.sql"
-$migrationCreated = $false
+Write-ITAdminPackageMessage -Message "Creating idempotent SQL migration script..."
+dotnet ef migrations script `
+    --idempotent `
+    --project $persistenceProject `
+    --startup-project $apiProject `
+    --output $OutputMigrationSqlPath `
+    --configuration $Configuration
 
-if ($MigrationArtifactMode -in @("bundle", "auto")) {
-    Write-ITAdminPackageMessage -Message "Creating EF migration bundle..."
-    dotnet ef migrations bundle `
-        --project $persistenceProject `
-        --startup-project $apiProject `
-        --output $migrationBundlePath `
-        --configuration $Configuration `
-        --target-runtime win-x64 `
-        --self-contained false
-
-    if ($LASTEXITCODE -eq 0 -and (Test-Path -LiteralPath $migrationBundlePath)) {
-        $migrationCreated = $true
-        Write-ITAdminPackageMessage -Message "Migration bundle created: $migrationBundlePath"
-    }
-    elseif ($MigrationArtifactMode -eq "bundle") {
-        throw "EF migration bundle creation failed."
-    }
-}
-
-if (-not $migrationCreated) {
-    Write-ITAdminPackageMessage -Message "Creating idempotent SQL migration script..."
-    dotnet ef migrations script `
-        --idempotent `
-        --project $persistenceProject `
-        --startup-project $apiProject `
-        --output $migrationSqlPath `
-        --configuration $Configuration
-
-    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $migrationSqlPath)) {
-        throw "EF migration SQL script creation failed."
-    }
-
-    Write-ITAdminPackageMessage -Message "Migration SQL script created: $migrationSqlPath"
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $OutputMigrationSqlPath)) {
+    throw "EF migration SQL script creation failed."
 }
 
 $webConfigPath = Join-Path $publishRoot "web.config"
@@ -151,10 +128,6 @@ if (-not (Test-Path -LiteralPath $indexPath)) {
     throw "Package validation failed: wwwroot\index.html is missing."
 }
 
-if (-not (Test-Path -LiteralPath $migrationBundlePath) -and -not (Test-Path -LiteralPath $migrationSqlPath)) {
-    throw "Package validation failed: migration artifact is missing."
-}
-
 if (Test-Path -LiteralPath $OutputPackagePath) {
     Remove-Item -LiteralPath $OutputPackagePath -Force
 }
@@ -162,4 +135,10 @@ if (Test-Path -LiteralPath $OutputPackagePath) {
 Compress-Archive -Path (Join-Path $publishRoot "*") -DestinationPath $OutputPackagePath -Force
 
 Write-ITAdminPackageMessage -Message "Package created: $OutputPackagePath"
+Write-ITAdminPackageMessage -Message "SQL migration script created: $OutputMigrationSqlPath"
+Write-ITAdminPackageMessage -Message ""
+Write-ITAdminPackageMessage -Message "Copy these files to the Windows Server deployment folder:"
+Write-ITAdminPackageMessage -Message "  $OutputPackagePath"
+Write-ITAdminPackageMessage -Message "  $installScriptPath"
+Write-ITAdminPackageMessage -Message "  $OutputMigrationSqlPath (optional, for SqlFile migration mode)"
 Write-ITAdminPackageMessage -Message "== ITAdmin deployment package build completed =="

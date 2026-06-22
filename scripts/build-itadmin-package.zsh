@@ -9,9 +9,10 @@ API_PROJECT="${BACKEND_ROOT}/src/ITAdmin.Api/ITAdmin.Api.csproj"
 PERSISTENCE_PROJECT="${BACKEND_ROOT}/src/ITAdmin.Persistence/ITAdmin.Persistence.csproj"
 STAGING_ROOT="${REPOSITORY_ROOT}/artifacts/package-staging"
 PUBLISH_ROOT="${STAGING_ROOT}/publish"
-DEPLOY_ROOT="${PUBLISH_ROOT}/_deploy"
-OUTPUT_PACKAGE_PATH="${OUTPUT_PACKAGE_PATH:-${SCRIPT_DIR}/iis/itadmin-package.zip}"
+OUTPUT_PACKAGE_PATH="${OUTPUT_PACKAGE_PATH:-${REPOSITORY_ROOT}/artifacts/itadmin-package.zip}"
+OUTPUT_MIGRATION_SQL_PATH="${OUTPUT_MIGRATION_SQL_PATH:-${REPOSITORY_ROOT}/artifacts/itadmin-migrations.sql}"
 CONFIGURATION="${CONFIGURATION:-Release}"
+INSTALL_SCRIPT_PATH="${REPOSITORY_ROOT}/scripts/iis/install-itadmin-server.ps1"
 
 log() {
   printf '%s\n' "$1"
@@ -30,7 +31,7 @@ fi
 log "== Building ITAdmin deployment package =="
 
 rm -rf "${STAGING_ROOT}"
-mkdir -p "${PUBLISH_ROOT}" "${DEPLOY_ROOT}"
+mkdir -p "${PUBLISH_ROOT}" "$(dirname "${OUTPUT_PACKAGE_PATH}")" "$(dirname "${OUTPUT_MIGRATION_SQL_PATH}")"
 
 log "Publishing backend API..."
 dotnet publish "${API_PROJECT}" -c "${CONFIGURATION}" -o "${PUBLISH_ROOT}" --no-self-contained
@@ -55,37 +56,13 @@ fi
 mkdir -p "${WWWROOT_PATH}"
 cp -R "${FRONTEND_DIST}/." "${WWWROOT_PATH}/"
 
-MIGRATION_BUNDLE_PATH="${DEPLOY_ROOT}/ITAdmin.Migrations.exe"
-MIGRATION_SQL_PATH="${DEPLOY_ROOT}/itadmin-migrations.sql"
-
-if [[ "$(uname -s)" == "Darwin" || "$(uname -s)" == "Linux" ]]; then
-  log "Creating idempotent SQL migration script (non-Windows host fallback)..."
-  dotnet ef migrations script \
-    --idempotent \
-    --project "${PERSISTENCE_PROJECT}" \
-    --startup-project "${API_PROJECT}" \
-    --output "${MIGRATION_SQL_PATH}" \
-    --configuration "${CONFIGURATION}"
-else
-  log "Creating EF migration bundle..."
-  if dotnet ef migrations bundle \
-    --project "${PERSISTENCE_PROJECT}" \
-    --startup-project "${API_PROJECT}" \
-    --output "${MIGRATION_BUNDLE_PATH}" \
-    --configuration "${CONFIGURATION}" \
-    --target-runtime win-x64 \
-    --self-contained false; then
-    log "Migration bundle created: ${MIGRATION_BUNDLE_PATH}"
-  else
-    log "Migration bundle creation failed. Falling back to idempotent SQL script..."
-    dotnet ef migrations script \
-      --idempotent \
-      --project "${PERSISTENCE_PROJECT}" \
-      --startup-project "${API_PROJECT}" \
-      --output "${MIGRATION_SQL_PATH}" \
-      --configuration "${CONFIGURATION}"
-  fi
-fi
+log "Creating idempotent SQL migration script..."
+dotnet ef migrations script \
+  --idempotent \
+  --project "${PERSISTENCE_PROJECT}" \
+  --startup-project "${API_PROJECT}" \
+  --output "${OUTPUT_MIGRATION_SQL_PATH}" \
+  --configuration "${CONFIGURATION}"
 
 WEB_CONFIG_PATH="${PUBLISH_ROOT}/web.config"
 API_DLL_PATH="${PUBLISH_ROOT}/ITAdmin.Api.dll"
@@ -107,12 +84,6 @@ if [[ ! -f "${INDEX_PATH}" ]]; then
   exit 1
 fi
 
-if [[ ! -f "${MIGRATION_BUNDLE_PATH}" && ! -f "${MIGRATION_SQL_PATH}" ]]; then
-  echo "Package validation failed: migration artifact is missing." >&2
-  exit 1
-fi
-
-mkdir -p "$(dirname "${OUTPUT_PACKAGE_PATH}")"
 rm -f "${OUTPUT_PACKAGE_PATH}"
 
 (
@@ -121,4 +92,16 @@ rm -f "${OUTPUT_PACKAGE_PATH}"
 )
 
 log "Package created: ${OUTPUT_PACKAGE_PATH}"
+if [[ -f "${OUTPUT_MIGRATION_SQL_PATH}" ]]; then
+  log "SQL migration script created: ${OUTPUT_MIGRATION_SQL_PATH}"
+fi
+
+log ""
+log "Copy these files to the Windows Server deployment folder:"
+log "  ${OUTPUT_PACKAGE_PATH}"
+log "  ${INSTALL_SCRIPT_PATH}"
+if [[ -f "${OUTPUT_MIGRATION_SQL_PATH}" ]]; then
+  log "  ${OUTPUT_MIGRATION_SQL_PATH} (optional, for SqlFile migration mode)"
+fi
+
 log "== ITAdmin deployment package build completed =="
