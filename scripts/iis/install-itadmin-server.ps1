@@ -1,7 +1,7 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 #Requires -RunAsAdministrator
 
-[CmdletBinding(SupportsShouldProcess = $true)]
+[CmdletBinding()]
 param(
     [Parameter()]
     [string]$SiteName = "ITAdmin",
@@ -23,7 +23,7 @@ param(
     [string]$EnvironmentName = "Production",
 
     [Parameter()]
-    [ValidateSet("Existing", "InstallLocalPostgreSql", "Skip")]
+    [ValidateSet("Existing", "Skip", "InstallLocalPostgreSql")]
     [string]$DatabaseMode,
 
     [Parameter()]
@@ -88,66 +88,7 @@ $Script:ITAdminKnownRuntimeVariableNames = @(
     "ITADMIN_DataProtection__CertificateThumbprint"
 )
 
-function ConvertTo-ITAdminBase64Url {
-    param(
-        [Parameter(Mandatory = $true)]
-        [byte[]]$Bytes
-    )
-
-    $base64 = [Convert]::ToBase64String($Bytes)
-    return $base64.TrimEnd('=').Replace('+', '-').Replace('/', '_')
-}
-
-function New-ITAdminCryptographicSecret {
-    param(
-        [Parameter()]
-        [ValidateRange(1, 4096)]
-        [int]$ByteLength = 64,
-
-        [Parameter()]
-        [ValidateSet("Base64Url", "Base64", "Hex")]
-        [string]$Format = "Base64Url"
-    )
-
-    $bytes = New-Object byte[] $ByteLength
-    $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
-    try {
-        $rng.GetBytes($bytes)
-    }
-    finally {
-        if ($null -ne $rng) {
-            $rng.Dispose()
-        }
-    }
-
-    switch ($Format) {
-        "Base64Url" { return ConvertTo-ITAdminBase64Url -Bytes $bytes }
-        "Base64" { return [Convert]::ToBase64String($bytes) }
-        "Hex" { return ([BitConverter]::ToString($bytes)).Replace("-", "").ToLowerInvariant() }
-        default { throw "Unsupported secret format: $Format" }
-    }
-}
-
-function New-ITAdminSetupKeyMaterial {
-    param(
-        [Parameter()]
-        [ValidateRange(16, 128)]
-        [int]$PlaintextByteLength = 32
-    )
-
-    $plaintext = New-ITAdminCryptographicSecret -ByteLength $PlaintextByteLength -Format "Base64Url"
-    $hashBytes = [System.Security.Cryptography.SHA256]::Create().ComputeHash(
-        [System.Text.Encoding]::UTF8.GetBytes($plaintext)
-    )
-    $hash = "sha256:{0}" -f (ConvertTo-ITAdminBase64Url -Bytes $hashBytes)
-
-    return [PSCustomObject]@{
-        PlaintextSetupKey = $plaintext
-        SetupKeyHash = $hash
-    }
-}
-
-function Write-ITAdminBootstrapMessage {
+function Write-ITAdminMessage {
     param(
         [Parameter(Mandatory = $true)]
         [string]$Message,
@@ -213,26 +154,107 @@ function Read-ITAdminYesNoPrompt {
     return $inputValue -match '^(y|yes)$'
 }
 
+function Read-ITAdminSecurePrompt {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Prompt
+    )
+
+    return Read-Host -Prompt $Prompt -AsSecureString
+}
+
+function ConvertFrom-ITAdminSecureString {
+    param(
+        [Parameter(Mandatory = $true)]
+        [Security.SecureString]$SecureString
+    )
+
+    $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecureString)
+    try {
+        return [Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
+    }
+    finally {
+        [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+    }
+}
+
 function Test-ITAdminAdministrator {
     $currentIdentity = [Security.Principal.WindowsIdentity]::GetCurrent()
     $principal = New-Object Security.Principal.WindowsPrincipal($currentIdentity)
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
+function ConvertTo-ITAdminBase64Url {
+    param(
+        [Parameter(Mandatory = $true)]
+        [byte[]]$Bytes
+    )
+
+    $base64 = [Convert]::ToBase64String($Bytes)
+    return $base64.TrimEnd('=').Replace('+', '-').Replace('/', '_')
+}
+
+function New-ITAdminCryptographicSecret {
+    param(
+        [Parameter()]
+        [ValidateRange(1, 4096)]
+        [int]$ByteLength = 64,
+
+        [Parameter()]
+        [ValidateSet("Base64Url", "Base64", "Hex")]
+        [string]$Format = "Base64Url"
+    )
+
+    $bytes = New-Object byte[] $ByteLength
+    $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+    try {
+        $rng.GetBytes($bytes)
+    }
+    finally {
+        if ($null -ne $rng) {
+            $rng.Dispose()
+        }
+    }
+
+    switch ($Format) {
+        "Base64Url" { return ConvertTo-ITAdminBase64Url -Bytes $bytes }
+        "Base64" { return [Convert]::ToBase64String($bytes) }
+        "Hex" { return ([BitConverter]::ToString($bytes)).Replace("-", "").ToLowerInvariant() }
+        default { throw "Unsupported secret format: $Format" }
+    }
+}
+
+function New-ITAdminSetupKeyMaterial {
+    param(
+        [Parameter()]
+        [ValidateRange(16, 128)]
+        [int]$PlaintextByteLength = 32
+    )
+
+    $plaintext = New-ITAdminCryptographicSecret -ByteLength $PlaintextByteLength -Format "Base64Url"
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $hashBytes = $sha.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($plaintext))
+    }
+    finally {
+        if ($null -ne $sha) {
+            $sha.Dispose()
+        }
+    }
+
+    return [PSCustomObject]@{
+        PlaintextSetupKey = $plaintext
+        SetupKeyHash = "sha256:{0}" -f (ConvertTo-ITAdminBase64Url -Bytes $hashBytes)
+    }
+}
+
 function Hide-ITAdminSecretValue {
     param(
         [AllowNull()]
-        [string]$Value,
-
-        [Parameter()]
-        [string]$Placeholder = "[REDACTED]"
+        [string]$Value
     )
 
-    if ([string]::IsNullOrWhiteSpace($Value)) {
-        return $Placeholder
-    }
-
-    return $Placeholder
+    return "[REDACTED]"
 }
 
 function Hide-ITAdminConnectionString {
@@ -340,41 +362,21 @@ function Set-ITAdminAppPoolEnvironmentVariables {
 
     $filterPath = "system.applicationHost/applicationPools/add[@name='$PoolName']/environmentVariables"
 
-    if ($PSCmdlet.ShouldProcess($PoolName, "Set app pool environment variables")) {
-        Clear-WebConfiguration `
+    Clear-WebConfiguration `
+        -PSPath "MACHINE/WEBROOT/APPHOST" `
+        -Filter $filterPath `
+        -ErrorAction SilentlyContinue
+
+    foreach ($entry in ($current.GetEnumerator() | Sort-Object Name)) {
+        Add-WebConfigurationProperty `
             -PSPath "MACHINE/WEBROOT/APPHOST" `
             -Filter $filterPath `
-            -ErrorAction SilentlyContinue
-
-        foreach ($entry in ($current.GetEnumerator() | Sort-Object Name)) {
-            Add-WebConfigurationProperty `
-                -PSPath "MACHINE/WEBROOT/APPHOST" `
-                -Filter $filterPath `
-                -Name "." `
-                -Value @{
-                    name = [string]$entry.Key
-                    value = [string]$entry.Value
-                } | Out-Null
-        }
+            -Name "." `
+            -Value @{
+                name = [string]$entry.Key
+                value = [string]$entry.Value
+            } | Out-Null
     }
-}
-
-function Set-ITAdminAppPoolEnvironmentVariable {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$PoolName,
-
-        [Parameter(Mandatory = $true)]
-        [string]$VariableName,
-
-        [Parameter(Mandatory = $true)]
-        [AllowEmptyString()]
-        [string]$VariableValue
-    )
-
-    $update = @{}
-    $update[$VariableName] = $VariableValue
-    Set-ITAdminAppPoolEnvironmentVariables -PoolName $PoolName -Variables $update
 }
 
 function Get-ITAdminEffectiveRuntimeVariable {
@@ -390,14 +392,23 @@ function Get-ITAdminEffectiveRuntimeVariable {
     )
 
     if ($AppPoolEnvironment.ContainsKey($Name) -and -not [string]::IsNullOrWhiteSpace($AppPoolEnvironment[$Name])) {
-        return [string]$AppPoolEnvironment[$Name]
+        return [PSCustomObject]@{
+            Value = [string]$AppPoolEnvironment[$Name]
+            Source = "AppPool"
+        }
     }
 
     if ($MachineEnvironment.ContainsKey($Name) -and -not [string]::IsNullOrWhiteSpace($MachineEnvironment[$Name])) {
-        return [string]$MachineEnvironment[$Name]
+        return [PSCustomObject]@{
+            Value = [string]$MachineEnvironment[$Name]
+            Source = "MachineLegacy"
+        }
     }
 
-    return $null
+    return [PSCustomObject]@{
+        Value = $null
+        Source = "NotSet"
+    }
 }
 
 function Show-ITAdminExistingRuntimeConfiguration {
@@ -409,28 +420,28 @@ function Show-ITAdminExistingRuntimeConfiguration {
         [hashtable]$MachineEnvironment
     )
 
-    Write-ITAdminBootstrapMessage -Message "Existing runtime configuration detected."
+    Write-ITAdminMessage -Message "Existing runtime configuration detected."
 
-    Write-ITAdminBootstrapMessage -Message "App pool environment variables:"
+    Write-ITAdminMessage -Message "App pool environment variables (primary runtime source):"
     if ($AppPoolEnvironment.Count -eq 0) {
-        Write-ITAdminBootstrapMessage -Message "  [none]"
+        Write-ITAdminMessage -Message "  [none]"
     }
     else {
         foreach ($entry in ($AppPoolEnvironment.GetEnumerator() | Sort-Object Name)) {
-            Write-ITAdminBootstrapMessage -Message ("  {0}={1}" -f $entry.Key, (Format-ITAdminRuntimeVariableForDisplay -Name $entry.Key -Value $entry.Value))
+            Write-ITAdminMessage -Message ("  {0}={1}" -f $entry.Key, (Format-ITAdminRuntimeVariableForDisplay -Name $entry.Key -Value $entry.Value))
         }
     }
 
-    Write-ITAdminBootstrapMessage -Message "Machine environment variables (legacy ITADMIN_* / ASPNETCORE_ENVIRONMENT — visibility only, not primary runtime source):"
+    Write-ITAdminMessage -Message "Machine environment variables (legacy visibility only):"
     if ($MachineEnvironment.Count -eq 0) {
-        Write-ITAdminBootstrapMessage -Message "  [none]"
+        Write-ITAdminMessage -Message "  [none]"
     }
     else {
         foreach ($entry in ($MachineEnvironment.GetEnumerator() | Sort-Object Name)) {
-            Write-ITAdminBootstrapMessage -Message ("  {0}={1}" -f $entry.Key, (Format-ITAdminRuntimeVariableForDisplay -Name $entry.Key -Value $entry.Value))
+            Write-ITAdminMessage -Message ("  {0}={1}" -f $entry.Key, (Format-ITAdminRuntimeVariableForDisplay -Name $entry.Key -Value $entry.Value))
         }
 
-        Write-ITAdminBootstrapMessage -Message "Legacy machine environment values are not used as the primary runtime source. New configuration is written to app pool environment variables."
+        Write-ITAdminMessage -Message "Legacy machine values are shown for visibility only. New runtime config is written to app pool environment variables."
     }
 }
 
@@ -467,7 +478,7 @@ function Resolve-ITAdminRuntimeConfigOverwrite {
     }
 
     if ($ForceRuntimeConfig) {
-        Write-ITAdminBootstrapMessage -Message "ForceRuntimeConfig specified. Existing runtime configuration will be overwritten."
+        Write-ITAdminMessage -Message "ForceRuntimeConfig specified. Existing runtime configuration will be overwritten."
         return $true
     }
 
@@ -494,7 +505,7 @@ function Ensure-ITAdminWindowsFeatures {
     foreach ($featureName in $requiredFeatures) {
         $feature = Get-WindowsFeature -Name $featureName -ErrorAction SilentlyContinue
         if ($null -eq $feature) {
-            Write-ITAdminBootstrapMessage -Message "Windows feature not found on this server: $featureName" -Level Warning
+            Write-ITAdminMessage -Message "Windows feature not found on this server: $featureName" -Level Warning
             continue
         }
 
@@ -504,27 +515,25 @@ function Ensure-ITAdminWindowsFeatures {
     }
 
     if ($missingFeatures.Count -eq 0) {
-        Write-ITAdminBootstrapMessage -Message "Required IIS Windows features are installed."
+        Write-ITAdminMessage -Message "Required IIS Windows features are installed."
         return
     }
 
-    Write-ITAdminBootstrapMessage -Message ("Installing missing IIS features: {0}" -f ($missingFeatures -join ", "))
-    if ($PSCmdlet.ShouldProcess($env:COMPUTERNAME, "Install Windows features")) {
-        $result = Install-WindowsFeature -Name $missingFeatures -IncludeManagementTools
-        if ($null -ne $result -and $result.RestartNeeded -eq "Yes") {
-            Write-ITAdminBootstrapMessage -Message "A server restart may be required to complete IIS feature installation." -Level Warning
-        }
+    Write-ITAdminMessage -Message ("Installing missing IIS features: {0}" -f ($missingFeatures -join ", "))
+    $result = Install-WindowsFeature -Name $missingFeatures -IncludeManagementTools
+    if ($null -ne $result -and $result.RestartNeeded -eq "Yes") {
+        Write-ITAdminMessage -Message "A server restart may be required to complete IIS feature installation." -Level Warning
     }
 }
 
 function Test-ITAdminAspNetCoreHostingBundle {
     $hostingDllPath = Join-Path $env:ProgramFiles "IIS\Asp.Net Core Module\V2\aspnetcorev2.dll"
     if (Test-Path -LiteralPath $hostingDllPath) {
-        Write-ITAdminBootstrapMessage -Message "ASP.NET Core Hosting Bundle appears to be installed."
+        Write-ITAdminMessage -Message "ASP.NET Core Hosting Bundle appears to be installed."
         return
     }
 
-    throw "ASP.NET Core Hosting Bundle was not detected (aspnetcorev2.dll missing). Install the .NET Hosting Bundle on this server before running ITAdmin installation."
+    throw "ASP.NET Core Hosting Bundle was not detected. Install the .NET Hosting Bundle on this server before running ITAdmin installation."
 }
 
 function Get-ITAdminCertificateInfoByThumbprint {
@@ -571,29 +580,18 @@ function Ensure-ITAdminRuntimeDirectories {
     $dataProtectionPath = Join-Path $RuntimeRootPath "DataProtection-Keys"
     $logsPath = Join-Path $RuntimeRootPath "Logs"
 
-    $paths = @(
-        $RuntimeRootPath,
-        $dataProtectionPath,
-        $logsPath,
-        $PhysicalSitePath
-    )
-
-    foreach ($path in $paths) {
+    foreach ($path in @($RuntimeRootPath, $dataProtectionPath, $logsPath, $PhysicalSitePath)) {
         if (-not (Test-Path -LiteralPath $path)) {
-            if ($PSCmdlet.ShouldProcess($path, "Create directory")) {
-                New-Item -ItemType Directory -Path $path -Force | Out-Null
-                Write-ITAdminBootstrapMessage -Message "Created directory: $path"
-            }
+            New-Item -ItemType Directory -Path $path -Force | Out-Null
+            Write-ITAdminMessage -Message "Created directory: $path"
         }
     }
 
-    if ($PSCmdlet.ShouldProcess($RuntimeRootPath, "Set directory ACLs")) {
-        foreach ($path in @($dataProtectionPath, $logsPath)) {
-            & icacls $path /grant "${AppPoolIdentityName}:(OI)(CI)M" /T | Out-Null
-        }
-
-        & icacls $PhysicalSitePath /grant "${AppPoolIdentityName}:(OI)(CI)RX" /T | Out-Null
+    foreach ($path in @($dataProtectionPath, $logsPath)) {
+        & icacls $path /grant "${AppPoolIdentityName}:(OI)(CI)M" /T | Out-Null
     }
+
+    & icacls $PhysicalSitePath /grant "${AppPoolIdentityName}:(OI)(CI)RX" /T | Out-Null
 }
 
 function Ensure-ITAdminAppPool {
@@ -603,23 +601,19 @@ function Ensure-ITAdminAppPool {
     )
 
     if (-not (Test-Path "IIS:\AppPools\$PoolName")) {
-        Write-ITAdminBootstrapMessage -Message "Creating app pool: $PoolName"
-        if ($PSCmdlet.ShouldProcess($PoolName, "Create app pool")) {
-            New-WebAppPool -Name $PoolName | Out-Null
-        }
+        Write-ITAdminMessage -Message "Creating app pool: $PoolName"
+        New-WebAppPool -Name $PoolName | Out-Null
     }
     else {
-        Write-ITAdminBootstrapMessage -Message "App pool exists: $PoolName"
+        Write-ITAdminMessage -Message "App pool exists: $PoolName"
     }
 
-    if ($PSCmdlet.ShouldProcess($PoolName, "Configure app pool")) {
-        Set-ItemProperty "IIS:\AppPools\$PoolName" -Name managedRuntimeVersion -Value ""
-        Set-ItemProperty "IIS:\AppPools\$PoolName" -Name enable32BitAppOnWin64 -Value $false
-        Set-ItemProperty "IIS:\AppPools\$PoolName" -Name startMode -Value "AlwaysRunning"
-        Set-ItemProperty "IIS:\AppPools\$PoolName" -Name autoStart -Value $true
-        Set-ItemProperty "IIS:\AppPools\$PoolName" -Name processModel.identityType -Value "ApplicationPoolIdentity"
-        Set-ItemProperty "IIS:\AppPools\$PoolName" -Name processModel.loadUserProfile -Value $true
-    }
+    Set-ItemProperty "IIS:\AppPools\$PoolName" -Name managedRuntimeVersion -Value ""
+    Set-ItemProperty "IIS:\AppPools\$PoolName" -Name enable32BitAppOnWin64 -Value $false
+    Set-ItemProperty "IIS:\AppPools\$PoolName" -Name startMode -Value "AlwaysRunning"
+    Set-ItemProperty "IIS:\AppPools\$PoolName" -Name autoStart -Value $true
+    Set-ItemProperty "IIS:\AppPools\$PoolName" -Name processModel.identityType -Value "ApplicationPoolIdentity"
+    Set-ItemProperty "IIS:\AppPools\$PoolName" -Name processModel.loadUserProfile -Value $true
 }
 
 function Ensure-ITAdminSite {
@@ -637,47 +631,40 @@ function Ensure-ITAdminSite {
         [string]$SitePhysicalPath,
 
         [Parameter()]
+        [AllowNull()]
         [string]$HttpsCertificateThumbprint
     )
 
     $existingSite = Get-Website -Name $Site -ErrorAction SilentlyContinue
     if ($null -eq $existingSite) {
-        Write-ITAdminBootstrapMessage -Message "Creating IIS site: $Site"
-        if ($PSCmdlet.ShouldProcess($Site, "Create IIS site")) {
-            New-Website `
-                -Name $Site `
-                -PhysicalPath $SitePhysicalPath `
-                -ApplicationPool $PoolName `
-                -Port 80 `
-                -HostHeader $SiteHostName | Out-Null
-        }
+        Write-ITAdminMessage -Message "Creating IIS site: $Site"
+        New-Website `
+            -Name $Site `
+            -PhysicalPath $SitePhysicalPath `
+            -ApplicationPool $PoolName `
+            -Port 80 `
+            -HostHeader $SiteHostName | Out-Null
     }
     else {
-        Write-ITAdminBootstrapMessage -Message "IIS site exists: $Site"
-        if ($PSCmdlet.ShouldProcess($Site, "Update IIS site")) {
-            Set-ItemProperty "IIS:\Sites\$Site" -Name physicalPath -Value $SitePhysicalPath
-            Set-ItemProperty "IIS:\Sites\$Site" -Name applicationPool -Value $PoolName
-        }
+        Write-ITAdminMessage -Message "IIS site exists: $Site"
+        Set-ItemProperty "IIS:\Sites\$Site" -Name physicalPath -Value $SitePhysicalPath
+        Set-ItemProperty "IIS:\Sites\$Site" -Name applicationPool -Value $PoolName
     }
 
     $httpBinding = Get-WebBinding -Name $Site -Protocol "http" -HostHeader $SiteHostName -Port 80 -ErrorAction SilentlyContinue
     if ($null -eq $httpBinding) {
-        if ($PSCmdlet.ShouldProcess($Site, "Create HTTP binding")) {
-            New-WebBinding -Name $Site -Protocol "http" -Port 80 -HostHeader $SiteHostName | Out-Null
-        }
+        New-WebBinding -Name $Site -Protocol "http" -Port 80 -HostHeader $SiteHostName | Out-Null
     }
 
     if (-not [string]::IsNullOrWhiteSpace($HttpsCertificateThumbprint)) {
         $httpsBinding = Get-WebBinding -Name $Site -Protocol "https" -HostHeader $SiteHostName -Port 443 -ErrorAction SilentlyContinue
         if ($null -eq $httpsBinding) {
-            if ($PSCmdlet.ShouldProcess($Site, "Create HTTPS binding")) {
-                New-WebBinding `
-                    -Name $Site `
-                    -Protocol "https" `
-                    -Port 443 `
-                    -HostHeader $SiteHostName `
-                    -SslFlags 1 | Out-Null
-            }
+            New-WebBinding `
+                -Name $Site `
+                -Protocol "https" `
+                -Port 443 `
+                -HostHeader $SiteHostName `
+                -SslFlags 1 | Out-Null
         }
 
         $certInfo = Get-ITAdminCertificateInfoByThumbprint -Thumbprint $HttpsCertificateThumbprint
@@ -686,14 +673,17 @@ function Ensure-ITAdminSite {
             throw "HTTPS web binding could not be found for ${SiteHostName}:443"
         }
 
-        Write-ITAdminBootstrapMessage -Message "Applying HTTPS certificate binding using store $($certInfo.StoreName)"
-        if ($PSCmdlet.ShouldProcess($Site, "Apply HTTPS certificate")) {
-            $httpsBinding.AddSslCertificate($certInfo.Thumbprint, $certInfo.StoreName)
-        }
+        Write-ITAdminMessage -Message "Applying HTTPS certificate binding using store $($certInfo.StoreName)"
+        $httpsBinding.AddSslCertificate($certInfo.Thumbprint, $certInfo.StoreName)
     }
 }
 
 function Find-ITAdminPsqlExecutable {
+    $command = Get-Command "psql.exe" -ErrorAction SilentlyContinue
+    if ($null -ne $command) {
+        return $command.Source
+    }
+
     $candidateRoots = @(
         "C:\Program Files\PostgreSQL",
         "C:\Program Files (x86)\PostgreSQL"
@@ -706,6 +696,7 @@ function Find-ITAdminPsqlExecutable {
 
         $versionDirs = Get-ChildItem -Path $root -Directory -ErrorAction SilentlyContinue |
             Sort-Object Name -Descending
+
         foreach ($versionDir in $versionDirs) {
             $psqlPath = Join-Path $versionDir.FullName "bin\psql.exe"
             if (Test-Path -LiteralPath $psqlPath) {
@@ -715,10 +706,6 @@ function Find-ITAdminPsqlExecutable {
     }
 
     return $null
-}
-
-function New-ITAdminDatabasePassword {
-    return New-ITAdminCryptographicSecret -ByteLength 32 -Format "Base64Url"
 }
 
 function New-ITAdminPostgreSqlConnectionString {
@@ -773,30 +760,6 @@ function ConvertFrom-ITAdminPostgreSqlConnectionString {
     return [PSCustomObject]$parts
 }
 
-function Read-ITAdminSecurePrompt {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$Prompt
-    )
-
-    return Read-Host -Prompt $Prompt -AsSecureString
-}
-
-function ConvertFrom-ITAdminSecureString {
-    param(
-        [Parameter(Mandatory = $true)]
-        [Security.SecureString]$SecureString
-    )
-
-    $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecureString)
-    try {
-        return [Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
-    }
-    finally {
-        [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
-    }
-}
-
 function Show-ITAdminDatabaseTargetSummary {
     param(
         [Parameter(Mandatory = $true)]
@@ -812,21 +775,18 @@ function Show-ITAdminDatabaseTargetSummary {
         [string]$User
     )
 
-    Write-ITAdminBootstrapMessage -Message "Effective database target:"
-    Write-ITAdminBootstrapMessage -Message "  Host: $HostNameValue"
-    Write-ITAdminBootstrapMessage -Message "  Port: $Port"
-    Write-ITAdminBootstrapMessage -Message "  Database: $Name"
-    Write-ITAdminBootstrapMessage -Message "  Username: $User"
-    Write-ITAdminBootstrapMessage -Message "  Password: [REDACTED]"
+    Write-ITAdminMessage -Message "Effective database target:"
+    Write-ITAdminMessage -Message "  Host: $HostNameValue"
+    Write-ITAdminMessage -Message "  Port: $Port"
+    Write-ITAdminMessage -Message "  Database: $Name"
+    Write-ITAdminMessage -Message "  Username: $User"
+    Write-ITAdminMessage -Message "  Password: [REDACTED]"
 }
 
 function Resolve-ITAdminDatabaseConnectionString {
     param(
         [Parameter(Mandatory = $true)]
         [string]$Mode,
-
-        [Parameter()]
-        [string]$InstallerPath,
 
         [Parameter()]
         [int]$Port,
@@ -860,14 +820,14 @@ function Resolve-ITAdminDatabaseConnectionString {
                 -AppPoolEnvironment $AppPoolEnvironment `
                 -MachineEnvironment $MachineEnvironment
 
-            if ([string]::IsNullOrWhiteSpace($existing)) {
-                Write-ITAdminBootstrapMessage -Message "DatabaseMode is Skip and no existing connection string was found in app pool or machine environment." -Level Warning
+            if ([string]::IsNullOrWhiteSpace($existing.Value)) {
+                Write-ITAdminMessage -Message "DatabaseMode is Skip and no existing connection string was found." -Level Warning
             }
             else {
-                Write-ITAdminBootstrapMessage -Message ("Keeping existing connection string: {0}" -f (Hide-ITAdminConnectionString -ConnectionString $existing))
+                Write-ITAdminMessage -Message ("Keeping existing connection string from {0}: {1}" -f $existing.Source, (Hide-ITAdminConnectionString -ConnectionString $existing.Value))
             }
 
-            return $existing
+            return $existing.Value
         }
 
         "Existing" {
@@ -888,7 +848,6 @@ function Resolve-ITAdminDatabaseConnectionString {
                 $User = Read-ITAdminPromptValue -Prompt "Database user" -DefaultValue $User
             }
 
-            $passwordPlain = $null
             if ($null -ne $PasswordSecure) {
                 $passwordPlain = ConvertFrom-ITAdminSecureString -SecureString $PasswordSecure
             }
@@ -902,11 +861,9 @@ function Resolve-ITAdminDatabaseConnectionString {
                 -Name $Name `
                 -User $User
 
-            if (-not $OverwriteRuntimeConfig -or -not (Test-ITAdminParameterWasBound -Name "DatabaseName")) {
-                $confirmed = Read-ITAdminYesNoPrompt -Prompt "Confirm database name '$Name'?" -DefaultValue $true
-                if (-not $confirmed) {
-                    throw "Database configuration was not confirmed."
-                }
+            $confirmed = Read-ITAdminYesNoPrompt -Prompt "Confirm database name '$Name'?" -DefaultValue $true
+            if (-not $confirmed) {
+                throw "Database configuration was not confirmed."
             }
 
             return New-ITAdminPostgreSqlConnectionString `
@@ -918,70 +875,7 @@ function Resolve-ITAdminDatabaseConnectionString {
         }
 
         "InstallLocalPostgreSql" {
-            if ([string]::IsNullOrWhiteSpace($InstallerPath)) {
-                $InstallerPath = Read-Host -Prompt "PostgreSQL 18 installer path (local .exe)"
-            }
-
-            if (-not (Test-Path -LiteralPath $InstallerPath)) {
-                throw "PostgreSQL installer not found: $InstallerPath"
-            }
-
-            Write-ITAdminBootstrapMessage -Message "Starting PostgreSQL silent installation from local installer."
-            $superPassword = New-ITAdminDatabasePassword
-            $servicePassword = New-ITAdminDatabasePassword
-
-            $arguments = @(
-                "--mode", "unattended",
-                "--unattendedmodeui", "none",
-                "--superpassword", $superPassword,
-                "--servicename", "postgresql-x64-18",
-                "--servicepassword", $servicePassword,
-                "--serverport", $Port
-            )
-
-            if ($PSCmdlet.ShouldProcess($InstallerPath, "Install PostgreSQL")) {
-                $process = Start-Process -FilePath $InstallerPath -ArgumentList $arguments -Wait -PassThru -NoNewWindow
-                if ($process.ExitCode -ne 0) {
-                    throw "PostgreSQL installer exited with code $($process.ExitCode)."
-                }
-            }
-
-            $appPassword = New-ITAdminDatabasePassword
-            $psqlPath = Find-ITAdminPsqlExecutable
-            if ($null -eq $psqlPath) {
-                throw "psql.exe was not found after PostgreSQL installation. Create database/user manually, then rerun with DatabaseMode Existing."
-            }
-
-            $escapedAppPassword = $appPassword.Replace("'", "''")
-            $createRoleSql = @"
-DO `$`$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '$User') THEN
-        CREATE ROLE $User LOGIN PASSWORD '$escapedAppPassword';
-    END IF;
-END
-`$`$;
-"@
-
-            $env:PGPASSWORD = $superPassword
-            try {
-                & $psqlPath -U postgres -h $HostNameValue -p $Port -d postgres -v ON_ERROR_STOP=1 -c $createRoleSql | Out-Null
-
-                $databaseExists = (& $psqlPath -U postgres -h $HostNameValue -p $Port -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '$Name'").Trim()
-                if ($databaseExists -ne "1") {
-                    & $psqlPath -U postgres -h $HostNameValue -p $Port -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE $Name OWNER $User;" | Out-Null
-                }
-            }
-            finally {
-                Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
-            }
-
-            return New-ITAdminPostgreSqlConnectionString `
-                -HostNameValue $HostNameValue `
-                -Port $Port `
-                -Name $Name `
-                -User $User `
-                -Password $appPassword
+            throw "InstallLocalPostgreSql is not part of the primary installer flow. Use DatabaseMode Existing after preparing PostgreSQL."
         }
 
         default {
@@ -1028,43 +922,44 @@ function Build-ITAdminRuntimeEnvironmentVariables {
     $existingSetupKeyHash = $null
 
     if (-not $OverwriteRuntimeConfig) {
-        $existingJwtKey = Get-ITAdminEffectiveRuntimeVariable `
+        $existingJwt = Get-ITAdminEffectiveRuntimeVariable `
             -Name "ITADMIN_Jwt__Key" `
             -AppPoolEnvironment $AppPoolEnvironment `
             -MachineEnvironment $MachineEnvironment
-        $existingSetupKeyHash = Get-ITAdminEffectiveRuntimeVariable `
+        $existingJwtKey = $existingJwt.Value
+
+        $existingSetup = Get-ITAdminEffectiveRuntimeVariable `
             -Name "ITADMIN_Setup__SetupKeyHash" `
             -AppPoolEnvironment $AppPoolEnvironment `
             -MachineEnvironment $MachineEnvironment
+        $existingSetupKeyHash = $existingSetup.Value
     }
 
     $variables["ASPNETCORE_ENVIRONMENT"] = $AspNetCoreEnvironment
 
     if (-not [string]::IsNullOrWhiteSpace($ConnectionString)) {
         $variables["ITADMIN_ConnectionStrings__DefaultConnection"] = $ConnectionString
-        Write-ITAdminBootstrapMessage -Message ("Configured ITADMIN_ConnectionStrings__DefaultConnection: {0}" -f (Hide-ITAdminConnectionString -ConnectionString $ConnectionString))
+        Write-ITAdminMessage -Message ("Configured ITADMIN_ConnectionStrings__DefaultConnection: {0}" -f (Hide-ITAdminConnectionString -ConnectionString $ConnectionString))
     }
     elseif (-not $OverwriteRuntimeConfig) {
-        $existingConnectionString = Get-ITAdminEffectiveRuntimeVariable `
+        $existingConnection = Get-ITAdminEffectiveRuntimeVariable `
             -Name "ITADMIN_ConnectionStrings__DefaultConnection" `
             -AppPoolEnvironment $AppPoolEnvironment `
             -MachineEnvironment $MachineEnvironment
-        if (-not [string]::IsNullOrWhiteSpace($existingConnectionString)) {
-            $variables["ITADMIN_ConnectionStrings__DefaultConnection"] = $existingConnectionString
-            $connectionSource = if ($AppPoolEnvironment.ContainsKey("ITADMIN_ConnectionStrings__DefaultConnection")) { "AppPool" } else { "MachineLegacy" }
-            Write-ITAdminBootstrapMessage -Message ("Preserved ITADMIN_ConnectionStrings__DefaultConnection from {0}: {1}" -f $connectionSource, (Hide-ITAdminConnectionString -ConnectionString $existingConnectionString))
+
+        if (-not [string]::IsNullOrWhiteSpace($existingConnection.Value)) {
+            $variables["ITADMIN_ConnectionStrings__DefaultConnection"] = $existingConnection.Value
+            Write-ITAdminMessage -Message ("Preserved ITADMIN_ConnectionStrings__DefaultConnection from {0}: {1}" -f $existingConnection.Source, (Hide-ITAdminConnectionString -ConnectionString $existingConnection.Value))
         }
     }
 
     if ($OverwriteRuntimeConfig -or [string]::IsNullOrWhiteSpace($existingJwtKey)) {
-        $jwtKey = New-ITAdminCryptographicSecret -ByteLength 64 -Format "Base64Url"
-        $variables["ITADMIN_Jwt__Key"] = $jwtKey
-        Write-ITAdminBootstrapMessage -Message "Configured new ITADMIN_Jwt__Key."
+        $variables["ITADMIN_Jwt__Key"] = New-ITAdminCryptographicSecret -ByteLength 64 -Format "Base64Url"
+        Write-ITAdminMessage -Message "Configured new ITADMIN_Jwt__Key."
     }
     else {
         $variables["ITADMIN_Jwt__Key"] = $existingJwtKey
-        $jwtSource = if ($AppPoolEnvironment.ContainsKey("ITADMIN_Jwt__Key")) { "AppPool" } else { "MachineLegacy" }
-        Write-ITAdminBootstrapMessage -Message "Preserved existing ITADMIN_Jwt__Key from $jwtSource."
+        Write-ITAdminMessage -Message "Preserved existing ITADMIN_Jwt__Key."
     }
 
     $variables["ITADMIN_Jwt__Issuer"] = "ITAdmin"
@@ -1077,12 +972,11 @@ function Build-ITAdminRuntimeEnvironmentVariables {
             $SetupKeyPlaintextToShow.Value = $setupMaterial.PlaintextSetupKey
         }
 
-        Write-ITAdminBootstrapMessage -Message "Configured new ITADMIN_Setup__SetupKeyHash."
+        Write-ITAdminMessage -Message "Configured new ITADMIN_Setup__SetupKeyHash."
     }
     else {
         $variables["ITADMIN_Setup__SetupKeyHash"] = $existingSetupKeyHash
-        $setupSource = if ($AppPoolEnvironment.ContainsKey("ITADMIN_Setup__SetupKeyHash")) { "AppPool" } else { "MachineLegacy" }
-        Write-ITAdminBootstrapMessage -Message "Preserved existing ITADMIN_Setup__SetupKeyHash from $setupSource. Plaintext setup key is not available."
+        Write-ITAdminMessage -Message "Preserved existing ITADMIN_Setup__SetupKeyHash. Plaintext setup key is not available."
     }
 
     $variables["ITADMIN_DataProtection__ApplicationName"] = $DataProtectionApplicationName
@@ -1090,11 +984,11 @@ function Build-ITAdminRuntimeEnvironmentVariables {
 
     if (-not [string]::IsNullOrWhiteSpace($DataProtectionCertificateThumbprint)) {
         $variables["ITADMIN_DataProtection__CertificateThumbprint"] = $DataProtectionCertificateThumbprint.Replace(" ", "").ToUpperInvariant()
-        Write-ITAdminBootstrapMessage -Message "Configured ITADMIN_DataProtection__CertificateThumbprint."
+        Write-ITAdminMessage -Message "Configured ITADMIN_DataProtection__CertificateThumbprint."
     }
     else {
         $variables["ITADMIN_DataProtection__CertificateThumbprint"] = ""
-        Write-ITAdminBootstrapMessage -Message "DataProtection certificate thumbprint was not provided. ITADMIN_DataProtection__CertificateThumbprint will not be set."
+        Write-ITAdminMessage -Message "DataProtection certificate thumbprint was not provided. ITADMIN_DataProtection__CertificateThumbprint will not be set."
     }
 
     return $variables
@@ -1118,13 +1012,13 @@ function Test-ITAdminPackagePath {
 function Test-ITAdminDeployedPackage {
     param(
         [Parameter(Mandatory = $true)]
-        [string]$PhysicalPath
+        [string]$SiteRoot
     )
 
-    $webConfigPath = Join-Path $PhysicalPath "web.config"
-    $apiDllPath = Join-Path $PhysicalPath "ITAdmin.Api.dll"
-    $apiExePath = Join-Path $PhysicalPath "ITAdmin.Api.exe"
-    $indexPath = Join-Path $PhysicalPath "wwwroot\index.html"
+    $webConfigPath = Join-Path $SiteRoot "web.config"
+    $apiDllPath = Join-Path $SiteRoot "ITAdmin.Api.dll"
+    $apiExePath = Join-Path $SiteRoot "ITAdmin.Api.exe"
+    $indexPath = Join-Path $SiteRoot "wwwroot\index.html"
 
     if (-not (Test-Path -LiteralPath $webConfigPath)) {
         throw "Deployed package is missing required file: web.config"
@@ -1145,49 +1039,47 @@ function Deploy-ITAdminPackage {
         [string]$PackageArchivePath,
 
         [Parameter(Mandatory = $true)]
-        [string]$PhysicalPath,
+        [string]$SiteRoot,
 
         [Parameter(Mandatory = $true)]
-        [string]$SiteName,
+        [string]$DeploySiteName,
 
         [Parameter(Mandatory = $true)]
-        [string]$AppPoolName,
+        [string]$DeployAppPoolName,
 
         [Parameter(Mandatory = $true)]
         [string]$AppPoolIdentityName
     )
 
-    Write-ITAdminBootstrapMessage -Message "Starting package deployment from: $PackageArchivePath"
+    Write-ITAdminMessage -Message "Starting package deployment from: $PackageArchivePath"
 
-    if ($PSCmdlet.ShouldProcess($PhysicalPath, "Deploy ITAdmin package")) {
-        if (Get-Website -Name $SiteName -ErrorAction SilentlyContinue) {
-            Stop-Website -Name $SiteName -ErrorAction SilentlyContinue
-        }
-
-        if (Test-Path "IIS:\AppPools\$AppPoolName") {
-            Stop-WebAppPool -Name $AppPoolName -ErrorAction SilentlyContinue
-            Start-Sleep -Seconds 2
-        }
-
-        if (-not (Test-Path -LiteralPath $PhysicalPath)) {
-            New-Item -ItemType Directory -Path $PhysicalPath -Force | Out-Null
-        }
-
-        $offlineFile = Join-Path $PhysicalPath "app_offline.htm"
-        Set-Content -LiteralPath $offlineFile -Value "<html><body><h1>ITAdmin deployment in progress</h1></body></html>" -Encoding UTF8
-
-        Get-ChildItem -LiteralPath $PhysicalPath -Force |
-            Where-Object { $_.Name -ne "app_offline.htm" } |
-            Remove-Item -Recurse -Force
-
-        Expand-Archive -LiteralPath $PackageArchivePath -DestinationPath $PhysicalPath -Force
-
-        Test-ITAdminDeployedPackage -PhysicalPath $PhysicalPath
-
-        & icacls $PhysicalPath /grant "${AppPoolIdentityName}:(OI)(CI)RX" /T | Out-Null
-
-        Write-ITAdminBootstrapMessage -Message "Package deployment completed."
+    if (Get-Website -Name $DeploySiteName -ErrorAction SilentlyContinue) {
+        Stop-Website -Name $DeploySiteName -ErrorAction SilentlyContinue
     }
+
+    if (Test-Path "IIS:\AppPools\$DeployAppPoolName") {
+        Stop-WebAppPool -Name $DeployAppPoolName -ErrorAction SilentlyContinue
+        Start-Sleep -Seconds 2
+    }
+
+    if (-not (Test-Path -LiteralPath $SiteRoot)) {
+        New-Item -ItemType Directory -Path $SiteRoot -Force | Out-Null
+    }
+
+    $offlineFile = Join-Path $SiteRoot "app_offline.htm"
+    Set-Content -LiteralPath $offlineFile -Value "<html><body><h1>ITAdmin deployment in progress</h1></body></html>" -Encoding UTF8
+
+    Get-ChildItem -LiteralPath $SiteRoot -Force |
+        Where-Object { $_.Name -ne "app_offline.htm" } |
+        Remove-Item -Recurse -Force
+
+    Expand-Archive -LiteralPath $PackageArchivePath -DestinationPath $SiteRoot -Force
+
+    Test-ITAdminDeployedPackage -SiteRoot $SiteRoot
+
+    & icacls $SiteRoot /grant "${AppPoolIdentityName}:(OI)(CI)RX" /T | Out-Null
+
+    Write-ITAdminMessage -Message "Package deployment completed."
 }
 
 function Invoke-ITAdminDatabaseMigration {
@@ -1197,21 +1089,22 @@ function Invoke-ITAdminDatabaseMigration {
         [string]$Mode,
 
         [Parameter()]
+        [AllowNull()]
         [string]$SqlFilePath,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter()]
         [AllowNull()]
         [string]$ConnectionString
     )
 
     switch ($Mode) {
         "Skip" {
-            Write-ITAdminBootstrapMessage -Message "Database migration skipped."
+            Write-ITAdminMessage -Message "Database migration skipped."
             return "Skipped"
         }
 
         "Manual" {
-            Write-ITAdminBootstrapMessage -Message "Database migration is expected to be applied manually."
+            Write-ITAdminMessage -Message "Database migration is expected to be applied manually."
             return "Manual"
         }
 
@@ -1243,25 +1136,23 @@ function Invoke-ITAdminDatabaseMigration {
 
             $portValue = if ($null -ne $connectionParts.Port -and $connectionParts.Port -gt 0) { $connectionParts.Port } else { 5432 }
 
-            Write-ITAdminBootstrapMessage -Message "Applying database migration from SQL file: $SqlFilePath"
-            if ($PSCmdlet.ShouldProcess($SqlFilePath, "Apply SQL migration script")) {
-                $env:PGPASSWORD = $connectionParts.Password
-                try {
-                    & $psqlPath `
-                        -h $connectionParts.Host `
-                        -p $portValue `
-                        -U $connectionParts.Username `
-                        -d $connectionParts.Database `
-                        -v ON_ERROR_STOP=1 `
-                        -f $SqlFilePath | Out-Null
+            Write-ITAdminMessage -Message "Applying database migration from SQL file: $SqlFilePath"
+            $env:PGPASSWORD = $connectionParts.Password
+            try {
+                & $psqlPath `
+                    -h $connectionParts.Host `
+                    -p $portValue `
+                    -U $connectionParts.Username `
+                    -d $connectionParts.Database `
+                    -v ON_ERROR_STOP=1 `
+                    -f $SqlFilePath | Out-Null
 
-                    if ($LASTEXITCODE -ne 0) {
-                        throw "SQL migration script failed with exit code $LASTEXITCODE."
-                    }
+                if ($LASTEXITCODE -ne 0) {
+                    throw "SQL migration script failed with exit code $LASTEXITCODE."
                 }
-                finally {
-                    Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
-                }
+            }
+            finally {
+                Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
             }
 
             return "Applied (SqlFile)"
@@ -1328,7 +1219,7 @@ function Get-ITAdminRecentWindowsEventLogErrors {
     }
 
     if ($messages.Count -eq 0) {
-        return "[no recent IIS/.NET application event log entries found]"
+        return "[no recent IIS or .NET application event log entries found]"
     }
 
     return ($messages | Select-Object -First $MaxEvents) -join [Environment]::NewLine
@@ -1381,7 +1272,7 @@ function Test-ITAdminSetupStatusEndpoint {
             }
         }
 
-        Write-ITAdminBootstrapMessage -Message "Smoke test attempt $attempt/$MaxAttempts failed for $uri. Retrying in $DelaySeconds second(s)..."
+        Write-ITAdminMessage -Message "Smoke test attempt $attempt/$MaxAttempts failed for $uri. Retrying in $DelaySeconds second(s)..."
         Start-Sleep -Seconds $DelaySeconds
     }
 
@@ -1396,33 +1287,33 @@ function Test-ITAdminSetupStatusEndpoint {
     }
 }
 
-function Start-ITAdminWebStack {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$SiteName,
-
-        [Parameter(Mandatory = $true)]
-        [string]$AppPoolName
-    )
-
-    if ($PSCmdlet.ShouldProcess($AppPoolName, "Start app pool")) {
-        Start-WebAppPool -Name $AppPoolName
-    }
-
-    if ($PSCmdlet.ShouldProcess($SiteName, "Start website")) {
-        Start-Website -Name $SiteName
-    }
-}
-
 function Remove-ITAdminAppOfflineFile {
     param(
         [Parameter(Mandatory = $true)]
-        [string]$PhysicalPath
+        [string]$SiteRoot
     )
 
-    $offlineFile = Join-Path $PhysicalPath "app_offline.htm"
+    $offlineFile = Join-Path $SiteRoot "app_offline.htm"
     if (Test-Path -LiteralPath $offlineFile) {
         Remove-Item -LiteralPath $offlineFile -Force
+    }
+}
+
+function Start-ITAdminWebStack {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$StartSiteName,
+
+        [Parameter(Mandatory = $true)]
+        [string]$StartAppPoolName
+    )
+
+    if (Test-Path "IIS:\AppPools\$StartAppPoolName") {
+        Start-WebAppPool -Name $StartAppPoolName
+    }
+
+    if (Get-Website -Name $StartSiteName -ErrorAction SilentlyContinue) {
+        Start-Website -Name $StartSiteName
     }
 }
 
@@ -1432,20 +1323,20 @@ function Show-ITAdminFinalSummary {
         [hashtable]$Summary
     )
 
-    Write-ITAdminBootstrapMessage -Message "== ITAdmin installation summary =="
-    Write-ITAdminBootstrapMessage -Message ("Site name: {0}" -f $Summary.SiteName)
-    Write-ITAdminBootstrapMessage -Message ("App pool name: {0}" -f $Summary.AppPoolName)
-    Write-ITAdminBootstrapMessage -Message ("Hostname: {0}" -f $Summary.HostName)
-    Write-ITAdminBootstrapMessage -Message ("Physical path: {0}" -f $Summary.PhysicalPath)
-    Write-ITAdminBootstrapMessage -Message ("Runtime root: {0}" -f $Summary.RuntimeRoot)
-    Write-ITAdminBootstrapMessage -Message ("Setup URL: {0}" -f $Summary.SetupUrl)
+    Write-ITAdminMessage -Message "== ITAdmin installation summary =="
+    Write-ITAdminMessage -Message ("Site name: {0}" -f $Summary.SiteName)
+    Write-ITAdminMessage -Message ("App pool name: {0}" -f $Summary.AppPoolName)
+    Write-ITAdminMessage -Message ("Hostname: {0}" -f $Summary.HostName)
+    Write-ITAdminMessage -Message ("Physical path: {0}" -f $Summary.PhysicalPath)
+    Write-ITAdminMessage -Message ("Runtime root: {0}" -f $Summary.RuntimeRoot)
+    Write-ITAdminMessage -Message ("Setup URL: {0}" -f $Summary.SetupUrl)
 
     if ($null -ne $Summary.DatabaseSummary) {
-        Write-ITAdminBootstrapMessage -Message $Summary.DatabaseSummary
+        Write-ITAdminMessage -Message $Summary.DatabaseSummary
     }
 
-    Write-ITAdminBootstrapMessage -Message ("Migration: {0}" -f $Summary.MigrationResult)
-    Write-ITAdminBootstrapMessage -Message ("Smoke test: {0}" -f $Summary.SmokeTestResult)
+    Write-ITAdminMessage -Message ("Migration: {0}" -f $Summary.MigrationResult)
+    Write-ITAdminMessage -Message ("Smoke test: {0}" -f $Summary.SmokeTestResult)
 
     if (-not [string]::IsNullOrWhiteSpace($Summary.SetupKeyPlaintext)) {
         Write-Host ""
@@ -1454,7 +1345,7 @@ function Show-ITAdminFinalSummary {
         Write-Host ""
     }
     elseif ($Summary.SetupKeyPreserved) {
-        Write-ITAdminBootstrapMessage -Message "Existing setup key hash was preserved. Plaintext setup key is not available."
+        Write-ITAdminMessage -Message "Existing setup key hash was preserved. Plaintext setup key is not available."
     }
 }
 
@@ -1466,7 +1357,7 @@ if (-not (Test-ITAdminAdministrator)) {
     throw "This script must be run from an elevated PowerShell session."
 }
 
-Write-ITAdminBootstrapMessage -Message "== ITAdmin installation started =="
+Write-ITAdminMessage -Message "== ITAdmin installation started =="
 
 if ([string]::IsNullOrWhiteSpace($PackagePath)) {
     $PackagePath = Join-Path $PSScriptRoot "itadmin-package.zip"
@@ -1481,7 +1372,7 @@ if (-not (Test-ITAdminParameterWasBound -Name "AppPoolName")) {
 }
 
 if (-not (Test-ITAdminParameterWasBound -Name "HostName") -or [string]::IsNullOrWhiteSpace($HostName)) {
-    $HostName = Read-ITAdminPromptValue -Prompt "Host name (e.g. itadmin.domain.local)" -DefaultValue $null
+    $HostName = Read-ITAdminPromptValue -Prompt "Host name (example: itadmin.domain.local)" -DefaultValue $null
     if ([string]::IsNullOrWhiteSpace($HostName)) {
         throw "Host name is required."
     }
@@ -1524,13 +1415,13 @@ if (-not (Test-ITAdminParameterWasBound -Name "DataProtectionCertificateThumbpri
 }
 
 if (-not (Test-ITAdminParameterWasBound -Name "DatabaseMode") -or [string]::IsNullOrWhiteSpace($DatabaseMode)) {
-    Write-ITAdminBootstrapMessage -Message "Database mode:"
-    Write-ITAdminBootstrapMessage -Message "  1. Existing PostgreSQL"
-    Write-ITAdminBootstrapMessage -Message "  2. Skip database configuration"
-    $databaseChoice = Read-ITAdminPromptValue -Prompt "Select database mode [1/2]" -DefaultValue "2"
+    Write-ITAdminMessage -Message "Database mode:"
+    Write-ITAdminMessage -Message "  1. Existing PostgreSQL"
+    Write-ITAdminMessage -Message "  2. Skip database configuration"
+    $databaseChoice = Read-ITAdminPromptValue -Prompt "Select database mode [1/2]" -DefaultValue "1"
     switch ($databaseChoice) {
-        "1" { $DatabaseMode = "Existing" }
-        default { $DatabaseMode = "Skip" }
+        "2" { $DatabaseMode = "Skip" }
+        default { $DatabaseMode = "Existing" }
     }
 }
 
@@ -1539,10 +1430,10 @@ if ($SkipMigration.IsPresent) {
 }
 
 if (-not (Test-ITAdminParameterWasBound -Name "MigrationMode") -or [string]::IsNullOrWhiteSpace($MigrationMode)) {
-    Write-ITAdminBootstrapMessage -Message "Migration mode:"
-    Write-ITAdminBootstrapMessage -Message "  1. Manual - SQL migration applied or will be applied manually on the database"
-    Write-ITAdminBootstrapMessage -Message "  2. SqlFile - Apply SQL file from this server"
-    Write-ITAdminBootstrapMessage -Message "  3. Skip - Skip migration step entirely"
+    Write-ITAdminMessage -Message "Migration mode:"
+    Write-ITAdminMessage -Message "  1. Manual - SQL migration applied or will be applied manually on the database"
+    Write-ITAdminMessage -Message "  2. SqlFile - Apply SQL file from this server"
+    Write-ITAdminMessage -Message "  3. Skip - Skip migration step entirely"
     $migrationChoice = Read-ITAdminPromptValue -Prompt "Select migration mode [1/2/3]" -DefaultValue "1"
     switch ($migrationChoice) {
         "2" { $MigrationMode = "SqlFile" }
@@ -1597,12 +1488,11 @@ if ($hasExistingRuntimeConfiguration) {
 
 $overwriteRuntimeConfig = Resolve-ITAdminRuntimeConfigOverwrite -HasExistingConfiguration $hasExistingRuntimeConfiguration
 if (-not $overwriteRuntimeConfig -and $hasExistingRuntimeConfiguration) {
-    Write-ITAdminBootstrapMessage -Message "Existing runtime configuration will be preserved and migrated to app pool environment variables where needed."
+    Write-ITAdminMessage -Message "Existing runtime configuration will be preserved and migrated to app pool environment variables where needed."
 }
 
 $connectionString = Resolve-ITAdminDatabaseConnectionString `
     -Mode $DatabaseMode `
-    -InstallerPath $PostgreSqlInstallerPath `
     -Port $PostgreSqlPort `
     -HostNameValue $DatabaseHost `
     -Name $DatabaseName `
@@ -1632,34 +1522,34 @@ if ($null -eq $setupKeyPlaintextToShow) {
     $setupKeyPreserved = -not $overwriteRuntimeConfig -and $hasExistingRuntimeConfiguration
 }
 
-Write-ITAdminBootstrapMessage -Message "Applying runtime configuration to app pool environment variables."
+Write-ITAdminMessage -Message "Applying runtime configuration to app pool environment variables."
 Set-ITAdminAppPoolEnvironmentVariables -PoolName $AppPoolName -Variables $runtimeVariables
 
 $effectiveAppPoolEnvironment = Get-ITAdminAppPoolEnvironmentVariables -PoolName $AppPoolName
-Write-ITAdminBootstrapMessage -Message "Effective runtime configuration (app pool environment):"
+Write-ITAdminMessage -Message "Effective runtime configuration (app pool environment):"
 foreach ($entry in ($effectiveAppPoolEnvironment.GetEnumerator() | Sort-Object Name)) {
-    Write-ITAdminBootstrapMessage -Message ("  {0}={1}" -f $entry.Key, (Format-ITAdminRuntimeVariableForDisplay -Name $entry.Key -Value $entry.Value))
+    Write-ITAdminMessage -Message ("  {0}={1}" -f $entry.Key, (Format-ITAdminRuntimeVariableForDisplay -Name $entry.Key -Value $entry.Value))
 }
 
-$effectiveConnectionString = Get-ITAdminEffectiveRuntimeVariable `
+$effectiveConnection = Get-ITAdminEffectiveRuntimeVariable `
     -Name "ITADMIN_ConnectionStrings__DefaultConnection" `
     -AppPoolEnvironment $effectiveAppPoolEnvironment `
     -MachineEnvironment @{}
 
 Deploy-ITAdminPackage `
     -PackageArchivePath $PackagePath `
-    -PhysicalPath $PhysicalPath `
-    -SiteName $SiteName `
-    -AppPoolName $AppPoolName `
+    -SiteRoot $PhysicalPath `
+    -DeploySiteName $SiteName `
+    -DeployAppPoolName $AppPoolName `
     -AppPoolIdentityName $appPoolIdentity
 
 $migrationResult = Invoke-ITAdminDatabaseMigration `
     -Mode $MigrationMode `
     -SqlFilePath $MigrationSqlPath `
-    -ConnectionString $effectiveConnectionString
+    -ConnectionString $effectiveConnection.Value
 
-Remove-ITAdminAppOfflineFile -PhysicalPath $PhysicalPath
-Start-ITAdminWebStack -SiteName $SiteName -AppPoolName $AppPoolName
+Remove-ITAdminAppOfflineFile -SiteRoot $PhysicalPath
+Start-ITAdminWebStack -StartSiteName $SiteName -StartAppPoolName $AppPoolName
 
 $baseScheme = if ([string]::IsNullOrWhiteSpace($CertificateThumbprint)) { "http" } else { "https" }
 $baseUrl = "{0}://{1}" -f $baseScheme, $HostName
@@ -1670,25 +1560,25 @@ if (-not $SkipSmokeTest.IsPresent) {
     $smokeTest = Test-ITAdminSetupStatusEndpoint -BaseUrl $baseUrl -RuntimeRootPath $RuntimeRoot
     if ($smokeTest.Success) {
         $smokeTestResult = "Passed (HTTP 200)"
-        Write-ITAdminBootstrapMessage -Message "Smoke test passed for $($smokeTest.Uri)"
+        Write-ITAdminMessage -Message "Smoke test passed for $($smokeTest.Uri)"
     }
     else {
-        Write-ITAdminBootstrapMessage -Message "Smoke test failed for $($smokeTest.Uri)" -Level Error
+        Write-ITAdminMessage -Message "Smoke test failed for $($smokeTest.Uri)" -Level Error
         if ($null -ne $smokeTest.StatusCode) {
-            Write-ITAdminBootstrapMessage -Message ("HTTP status: {0}" -f $smokeTest.StatusCode) -Level Error
+            Write-ITAdminMessage -Message ("HTTP status: {0}" -f $smokeTest.StatusCode) -Level Error
         }
 
         if (-not [string]::IsNullOrWhiteSpace($smokeTest.Body)) {
-            Write-ITAdminBootstrapMessage -Message ("Response body: {0}" -f $smokeTest.Body) -Level Error
+            Write-ITAdminMessage -Message ("Response body: {0}" -f $smokeTest.Body) -Level Error
         }
 
         if (-not [string]::IsNullOrWhiteSpace($smokeTest.Error)) {
-            Write-ITAdminBootstrapMessage -Message ("Last error: {0}" -f $smokeTest.Error) -Level Error
+            Write-ITAdminMessage -Message ("Last error: {0}" -f $smokeTest.Error) -Level Error
         }
 
-        Write-ITAdminBootstrapMessage -Message "Recent application log tail:" -Level Error
+        Write-ITAdminMessage -Message "Recent application log tail:" -Level Error
         Write-Host $smokeTest.LogTail
-        Write-ITAdminBootstrapMessage -Message "Recent Windows application event log entries:" -Level Error
+        Write-ITAdminMessage -Message "Recent Windows application event log entries:" -Level Error
         Write-Host $smokeTest.EventLogTail
 
         $migrationHint = ""
@@ -1700,12 +1590,12 @@ if (-not $SkipSmokeTest.IsPresent) {
     }
 }
 else {
-    Write-ITAdminBootstrapMessage -Message "Smoke test skipped because -SkipSmokeTest was specified." -Level Warning
+    Write-ITAdminMessage -Message "Smoke test skipped because -SkipSmokeTest was specified." -Level Warning
 }
 
 $databaseSummary = $null
-if (-not [string]::IsNullOrWhiteSpace($effectiveConnectionString)) {
-    $dbParts = ConvertFrom-ITAdminPostgreSqlConnectionString -ConnectionString $effectiveConnectionString
+if (-not [string]::IsNullOrWhiteSpace($effectiveConnection.Value)) {
+    $dbParts = ConvertFrom-ITAdminPostgreSqlConnectionString -ConnectionString $effectiveConnection.Value
     $databaseSummary = "Database: Host=$($dbParts.Host); Port=$($dbParts.Port); Database=$($dbParts.Database); Username=$($dbParts.Username); Password=[REDACTED]"
 }
 
@@ -1723,4 +1613,4 @@ Show-ITAdminFinalSummary -Summary @{
     SetupKeyPreserved = $setupKeyPreserved
 }
 
-Write-ITAdminBootstrapMessage -Message "== ITAdmin installation completed =="
+Write-ITAdminMessage -Message "== ITAdmin installation completed =="
