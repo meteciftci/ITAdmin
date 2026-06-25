@@ -10,6 +10,7 @@ import {
   AD_UPN_SUFFIXES_QUERY_KEY,
   getAdUpnSuffixes,
 } from "@/features/ad-management/api";
+import { AdOuSearchCombobox } from "@/features/ad-management/components/AdOuSearchCombobox";
 import { isSavedDefaultMissingFromAdList } from "@/features/ad-management/resolve-default-upn-suffix";
 import type {
   AdManagementSettings,
@@ -38,13 +39,16 @@ function hasMinimumConnectionSettings(settings: AdManagementSettings | undefined
   );
 }
 
-export function AdUserCreationDefaultsForm({
+export function AdCreationDefaultsForm({
   settings,
   readOnly,
   isSaving,
   onSave,
 }: Props) {
   const { t } = useTranslation(["settings", "common"]);
+  const [defaultUserOu, setDefaultUserOu] = useState(settings?.defaultUserOu ?? null);
+  const [defaultGroupOu, setDefaultGroupOu] = useState(settings?.defaultGroupOu ?? null);
+  const [defaultComputerOu, setDefaultComputerOu] = useState(settings?.defaultComputerOu ?? null);
   const [selectedSuffix, setSelectedSuffix] = useState(
     settings?.defaultUserCreationUpnSuffix ?? "",
   );
@@ -94,6 +98,9 @@ export function AdUserCreationDefaultsForm({
 
     onSave(
       buildUpdateAdManagementSettingsPayload(settings, {
+        defaultUserOu,
+        defaultGroupOu,
+        defaultComputerOu,
         defaultUserCreationUpnSuffix: effectiveValue.trim() || null,
       }),
     );
@@ -103,16 +110,16 @@ export function AdUserCreationDefaultsForm({
     <div className="space-y-4">
       <div>
         <h3 className="text-sm font-semibold">
-          {t("settings:adManagement.userCreationDefaults.title")}
+          {t("settings:adManagement.creationDefaults.title")}
         </h3>
         <p className="mt-1 text-xs text-muted-foreground">
-          {t("settings:adManagement.userCreationDefaults.description")}
+          {t("settings:adManagement.creationDefaults.description")}
         </p>
       </div>
 
       {!connectionReady ? (
         <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm">
-          {t("settings:adManagement.userCreationDefaults.warnings.connectionRequired")}
+          {t("settings:adManagement.creationDefaults.warnings.connectionRequired")}
         </p>
       ) : null}
 
@@ -120,14 +127,69 @@ export function AdUserCreationDefaultsForm({
         <p className="text-sm text-destructive">
           {upnSuffixesQuery.isLoading
             ? t("common:loading")
-            : t("settings:adManagement.userCreationDefaults.errors.suffixListLoadFailed")}
+            : t("settings:adManagement.creationDefaults.errors.suffixListLoadFailed")}
         </p>
+      ) : null}
+
+      {connectionReady ? (
+        <div className="grid max-w-2xl gap-4">
+          <AdOuSearchCombobox
+            value={defaultUserOu}
+            onChange={setDefaultUserOu}
+            searchContext="users"
+            allowClear
+            required={false}
+            disabled={readOnly || isSaving}
+            fieldLabelKey="settings:adManagement.creationDefaults.fields.defaultUserOu"
+            placeholderKey="settings:adManagement.creationDefaults.fields.defaultUserOuPlaceholder"
+            searchKey="settings:adManagement.creationDefaults.fields.defaultUserOuSearch"
+            emptyKey="settings:adManagement.creationDefaults.empty.ouNotFound"
+            errorKey="settings:adManagement.creationDefaults.errors.ouLoadFailed"
+          />
+          <p className="-mt-2 text-xs text-muted-foreground">
+            {t("settings:adManagement.creationDefaults.fields.defaultUserOuHelp")}
+          </p>
+
+          <AdOuSearchCombobox
+            value={defaultGroupOu}
+            onChange={setDefaultGroupOu}
+            searchContext="groups"
+            allowClear
+            required={false}
+            disabled={readOnly || isSaving}
+            fieldLabelKey="settings:adManagement.creationDefaults.fields.defaultGroupOu"
+            placeholderKey="settings:adManagement.creationDefaults.fields.defaultGroupOuPlaceholder"
+            searchKey="settings:adManagement.creationDefaults.fields.defaultGroupOuSearch"
+            emptyKey="settings:adManagement.creationDefaults.empty.ouNotFound"
+            errorKey="settings:adManagement.creationDefaults.errors.ouLoadFailed"
+          />
+          <p className="-mt-2 text-xs text-muted-foreground">
+            {t("settings:adManagement.creationDefaults.fields.defaultGroupOuHelp")}
+          </p>
+
+          <AdOuSearchCombobox
+            value={defaultComputerOu}
+            onChange={setDefaultComputerOu}
+            searchContext="computers"
+            allowClear
+            required={false}
+            disabled={readOnly || isSaving}
+            fieldLabelKey="settings:adManagement.creationDefaults.fields.defaultComputerOu"
+            placeholderKey="settings:adManagement.creationDefaults.fields.defaultComputerOuPlaceholder"
+            searchKey="settings:adManagement.creationDefaults.fields.defaultComputerOuSearch"
+            emptyKey="settings:adManagement.creationDefaults.empty.ouNotFound"
+            errorKey="settings:adManagement.creationDefaults.errors.ouLoadFailed"
+          />
+          <p className="-mt-2 text-xs text-muted-foreground">
+            {t("settings:adManagement.creationDefaults.fields.defaultComputerOuHelp")}
+          </p>
+        </div>
       ) : null}
 
       {connectionReady && !listBlocking ? (
         <div className="max-w-md space-y-1.5">
           <Label htmlFor="ad-default-user-creation-upn-suffix">
-            {t("settings:adManagement.userCreationDefaults.fields.defaultUpnSuffix")}
+            {t("settings:adManagement.creationDefaults.fields.defaultUpnSuffix")}
           </Label>
           <Select
             id="ad-default-user-creation-upn-suffix"
@@ -137,7 +199,7 @@ export function AdUserCreationDefaultsForm({
             className="h-10"
           >
             <option value="">
-              {t("settings:adManagement.userCreationDefaults.fields.none")}
+              {t("settings:adManagement.creationDefaults.fields.none")}
             </option>
             {selectOptions.map((item) => (
               <option key={item.value} value={item.value}>
@@ -146,7 +208,7 @@ export function AdUserCreationDefaultsForm({
             ))}
           </Select>
           <p className="text-xs text-muted-foreground">
-            {t("settings:adManagement.userCreationDefaults.fields.defaultUpnSuffixHelp")}
+            {t("settings:adManagement.creationDefaults.fields.defaultUpnSuffixHelp")}
           </p>
           {upnSuffixesQuery.data?.warning ? (
             <p className="text-xs text-amber-600 dark:text-amber-400">
@@ -155,7 +217,7 @@ export function AdUserCreationDefaultsForm({
           ) : null}
           {savedMissingFromAd ? (
             <p className="text-xs text-amber-600 dark:text-amber-400">
-              {t("settings:adManagement.userCreationDefaults.warnings.savedSuffixMissingFromAd")}
+              {t("settings:adManagement.creationDefaults.warnings.savedSuffixMissingFromAd")}
             </p>
           ) : null}
         </div>
@@ -169,7 +231,7 @@ export function AdUserCreationDefaultsForm({
         >
           {isSaving
             ? t("common:actions.save")
-            : t("settings:adManagement.userCreationDefaults.actions.save")}
+            : t("settings:adManagement.creationDefaults.actions.save")}
         </Button>
       ) : null}
     </div>

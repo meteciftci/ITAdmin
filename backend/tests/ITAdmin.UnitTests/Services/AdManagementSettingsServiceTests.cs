@@ -697,6 +697,71 @@ public sealed class AdManagementSettingsServiceTests
     }
 
     [Fact]
+    public async Task GetSettingsAsync_ReturnsDefaultCreationOuFields()
+    {
+        await using var dbContext = CreateDbContext();
+        dbContext.AdManagementSettings.Add(new ITAdmin.Domain.Entities.AdManagementSettings
+        {
+            IsEnabled = true,
+            DomainFqdn = "corp.example.com",
+            DefaultUserOu = "OU=NewUsers,DC=corp,DC=example,DC=com",
+            DefaultGroupOu = "OU=NewGroups,DC=corp,DC=example,DC=com",
+            DefaultComputerOu = "OU=NewComputers,DC=corp,DC=example,DC=com",
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "seed",
+        });
+        await dbContext.SaveChangesAsync();
+
+        var service = CreateService(dbContext);
+        var result = await service.GetSettingsAsync();
+
+        Assert.Equal("OU=NewUsers,DC=corp,DC=example,DC=com", result.DefaultUserOu);
+        Assert.Equal("OU=NewGroups,DC=corp,DC=example,DC=com", result.DefaultGroupOu);
+        Assert.Equal("OU=NewComputers,DC=corp,DC=example,DC=com", result.DefaultComputerOu);
+    }
+
+    [Fact]
+    public async Task UpdateSettingsAsync_PersistsDefaultCreationOuFields()
+    {
+        await using var dbContext = CreateDbContext();
+        dbContext.AdManagementSettings.Add(new ITAdmin.Domain.Entities.AdManagementSettings
+        {
+            IsEnabled = false,
+            DomainFqdn = "corp.example.com",
+            NetbiosDomainName = "CORP",
+            DefaultNamingContext = "DC=corp,DC=example,DC=com",
+            BaseDn = "DC=corp,DC=example,DC=com",
+            UsersRootOu = "OU=Users,DC=corp,DC=example,DC=com",
+            DisabledUsersOu = "OU=Disabled,DC=corp,DC=example,DC=com",
+            ServiceAccountUserName = "svc_ad",
+            EncryptedServiceAccountPassword = new FakeSecretProtector().Protect("secret"),
+            DefaultUserOu = "OU=OldUsers,DC=corp,DC=example,DC=com",
+            DefaultGroupOu = "OU=OldGroups,DC=corp,DC=example,DC=com",
+            DefaultComputerOu = "OU=OldComputers,DC=corp,DC=example,DC=com",
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "seed",
+        });
+        await dbContext.SaveChangesAsync();
+
+        var service = CreateService(dbContext);
+        var request = CreateRequest(
+            defaultUserOu: "OU=NewUsers,DC=corp,DC=example,DC=com",
+            defaultGroupOu: "OU=NewGroups,DC=corp,DC=example,DC=com",
+            defaultComputerOu: "OU=NewComputers,DC=corp,DC=example,DC=com",
+            defaultUserCreationUpnSuffix: "corp.example.com");
+
+        var result = await service.UpdateSettingsAsync(request);
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Settings);
+        Assert.Equal("OU=NewUsers,DC=corp,DC=example,DC=com", result.Settings.DefaultUserOu);
+        Assert.Equal("OU=NewGroups,DC=corp,DC=example,DC=com", result.Settings.DefaultGroupOu);
+        Assert.Equal("OU=NewComputers,DC=corp,DC=example,DC=com", result.Settings.DefaultComputerOu);
+        Assert.Equal("corp.example.com", result.Settings.DefaultUserCreationUpnSuffix);
+        Assert.Equal("OU=Disabled,DC=corp,DC=example,DC=com", result.Settings.DisabledUsersOu);
+    }
+
+    [Fact]
     public async Task GetSettingsAsync_WhenRecordExists_ReturnsIsConfiguredTrue()
     {
         await using var dbContext = CreateDbContext();
@@ -736,6 +801,9 @@ public sealed class AdManagementSettingsServiceTests
         bool isEnabled = false,
         string? domainFqdn = "corp.example.com",
         string? defaultUserCreationUpnSuffix = null,
+        string? defaultUserOu = null,
+        string? defaultGroupOu = null,
+        string? defaultComputerOu = null,
         string? netbiosDomainName = "CORP",
         string? defaultNamingContext = "DC=corp,DC=example,DC=com",
         string? baseDn = "DC=corp,DC=example,DC=com",
@@ -750,6 +818,9 @@ public sealed class AdManagementSettingsServiceTests
             IsEnabled: isEnabled,
             DomainFqdn: domainFqdn,
             DefaultUserCreationUpnSuffix: defaultUserCreationUpnSuffix,
+            DefaultUserOu: defaultUserOu,
+            DefaultGroupOu: defaultGroupOu,
+            DefaultComputerOu: defaultComputerOu,
             NetbiosDomainName: netbiosDomainName,
             DefaultNamingContext: defaultNamingContext,
             BaseDn: baseDn,

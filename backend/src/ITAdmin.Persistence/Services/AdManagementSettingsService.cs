@@ -70,6 +70,9 @@ public sealed class AdManagementSettingsService(
         var baseDn = NormalizeNullable(request.BaseDn);
         var usersRootOu = NormalizeNullable(request.UsersRootOu);
         var disabledUsersOu = NormalizeNullable(request.DisabledUsersOu);
+        var defaultUserOu = NormalizeNullable(request.DefaultUserOu);
+        var defaultGroupOu = NormalizeNullable(request.DefaultGroupOu);
+        var defaultComputerOu = NormalizeNullable(request.DefaultComputerOu);
         var groupsSearchBase = NormalizeNullable(request.GroupsSearchBase);
         var computersSearchBase = NormalizeNullable(request.ComputersSearchBase);
         var serviceAccountUserName = NormalizeNullable(request.ServiceAccountUserName);
@@ -181,6 +184,9 @@ public sealed class AdManagementSettingsService(
         entity.DomainFqdn = domainFqdn;
         entity.DefaultUserCreationUpnSuffix = NormalizeDefaultUserCreationUpnSuffix(
             request.DefaultUserCreationUpnSuffix);
+        entity.DefaultUserOu = defaultUserOu;
+        entity.DefaultGroupOu = defaultGroupOu;
+        entity.DefaultComputerOu = defaultComputerOu;
         entity.NetbiosDomainName = netbios;
         entity.DefaultNamingContext = defaultNc;
         entity.BaseDn = baseDn;
@@ -496,6 +502,9 @@ public sealed class AdManagementSettingsService(
                 IsEnabled: false,
                 DomainFqdn: null,
                 DefaultUserCreationUpnSuffix: null,
+                DefaultUserOu: null,
+                DefaultGroupOu: null,
+                DefaultComputerOu: null,
                 NetbiosDomainName: null,
                 DefaultNamingContext: null,
                 BaseDn: null,
@@ -519,6 +528,9 @@ public sealed class AdManagementSettingsService(
             IsEnabled: entity.IsEnabled,
             DomainFqdn: entity.DomainFqdn,
             DefaultUserCreationUpnSuffix: entity.DefaultUserCreationUpnSuffix,
+            DefaultUserOu: entity.DefaultUserOu,
+            DefaultGroupOu: entity.DefaultGroupOu,
+            DefaultComputerOu: entity.DefaultComputerOu,
             NetbiosDomainName: entity.NetbiosDomainName,
             DefaultNamingContext: entity.DefaultNamingContext,
             BaseDn: entity.BaseDn,

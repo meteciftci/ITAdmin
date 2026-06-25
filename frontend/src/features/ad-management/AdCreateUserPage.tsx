@@ -18,6 +18,7 @@ import {
   normalizeAdUsername,
 } from "@/features/ad-management/ad-user-name";
 import { resolveDefaultUpnSuffix } from "@/features/ad-management/resolve-default-upn-suffix";
+import { resolveAdUserCreateTargetOu } from "@/features/ad-management/resolve-ad-create-target-ou";
 import {
   AD_MANAGEMENT_MAPPINGS_QUERY_KEY,
   AD_MANAGEMENT_SETTINGS_QUERY_KEY,
@@ -80,8 +81,10 @@ export function AdCreateUserPage() {
     enabled: moduleStatus.isOperational,
   });
 
-  const effectiveTargetOu =
-    selectedOuDistinguishedName ?? settingsQuery.data?.usersRootOu ?? null;
+  const effectiveTargetOu = resolveAdUserCreateTargetOu(
+    selectedOuDistinguishedName,
+    settingsQuery.data,
+  );
 
   const suffixItems = useMemo(
     () => upnSuffixesQuery.data?.items ?? [],
@@ -413,7 +416,7 @@ function AccountOrganizationSection({
   mustChangePasswordAtNextLogon: boolean;
   onMustChangePasswordChange: (checked: boolean) => void;
   targetOu: string | null;
-  onTargetOuChange: (distinguishedName: string) => void;
+  onTargetOuChange: (distinguishedName: string | null) => void;
   disabled?: boolean;
 }) {
   const { t } = useTranslation("adManagement");

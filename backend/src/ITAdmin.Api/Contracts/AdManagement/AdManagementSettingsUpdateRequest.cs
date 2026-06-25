@@ -5,6 +5,9 @@ public sealed record AdManagementSettingsUpdateRequest
     public bool IsEnabled { get; init; }
     public string? DomainFqdn { get; init; }
     public string? DefaultUserCreationUpnSuffix { get; init; }
+    public string? DefaultUserOu { get; init; }
+    public string? DefaultGroupOu { get; init; }
+    public string? DefaultComputerOu { get; init; }
     public string? NetbiosDomainName { get; init; }
     public string? DefaultNamingContext { get; init; }
     public string? BaseDn { get; init; }

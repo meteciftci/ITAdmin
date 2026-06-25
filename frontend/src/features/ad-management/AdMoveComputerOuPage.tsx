@@ -136,11 +136,12 @@ export function AdMoveComputerOuPage() {
     },
   });
 
-  const handleTargetOuChange = (value: string) => {
+  const handleTargetOuChange = (value: string | null) => {
     setTargetOuDistinguishedName(value);
     const parentOu = currentParentOu?.trim();
+    const normalizedValue = value?.trim();
     setSameOuWarning(Boolean(
-      parentOu && value.trim() && parentOu.toLowerCase() === value.trim().toLowerCase(),
+      parentOu && normalizedValue && parentOu.toLowerCase() === normalizedValue.toLowerCase(),
     ));
   };
 

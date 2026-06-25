@@ -26,6 +26,7 @@ import { AdOuSearchCombobox } from "@/features/ad-management/components/AdOuSear
 import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useAdManagementModuleStatus";
 import type { AdGroupScope } from "@/features/ad-management/types";
 import { getAdManagementApiErrorMessage } from "@/features/ad-management/ad-management-api-message";
+import { resolveAdGroupCreateTargetOu } from "@/features/ad-management/resolve-ad-create-target-ou";
 import { cn } from "@/lib/utils";
 
 const GROUP_SCOPE_OPTIONS: AdGroupScope[] = ["Global", "DomainLocal", "Universal"];
@@ -51,8 +52,10 @@ export function AdGroupCreatePage() {
     queryFn: getAdManagementSettings,
   });
 
-  const effectiveTargetOu =
-    selectedOuDistinguishedName ?? settingsQuery.data?.groupsSearchBase ?? null;
+  const effectiveTargetOu = resolveAdGroupCreateTargetOu(
+    selectedOuDistinguishedName,
+    settingsQuery.data,
+  );
 
   const autoSamAccountName = useMemo(() => {
     if (!technicalName.trim()) {

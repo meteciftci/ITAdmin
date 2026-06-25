@@ -114,10 +114,11 @@ export function AdMoveGroupOuPage() {
     },
   });
 
-  const handleTargetOuChange = (value: string) => {
+  const handleTargetOuChange = (value: string | null) => {
     setTargetOuDistinguishedName(value);
     const parentOu = currentParentOu?.trim();
-    setSameOuWarning(Boolean(parentOu && value.trim() && parentOu.toLowerCase() === value.trim().toLowerCase()));
+    const normalizedValue = value?.trim();
+    setSameOuWarning(Boolean(parentOu && normalizedValue && parentOu.toLowerCase() === normalizedValue.toLowerCase()));
   };
 
   if (!hasValidId) {

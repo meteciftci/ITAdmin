@@ -141,7 +141,7 @@
       "pageTabs": {
         "connection": "Connection and Service Account",
         "attributeMapping": "Attribute Mapping",
-        "userCreationDefaults": "User Creation Defaults",
+        "creationDefaults": "Creation Defaults",
         "notifications": "Notifications"
       },
       "notifications": {
@@ -212,26 +212,42 @@
           "ruleRemoved": "Notification rule removed."
         }
       },
-      "userCreationDefaults": {
-        "title": "User Creation Defaults",
-        "description": "Configure default values for the AD user creation screen.",
+      "creationDefaults": {
+        "title": "Creation Defaults",
+        "description": "Configure default targets used by AD user, group, and computer creation flows.",
         "fields": {
+          "defaultUserOu": "Default user OU",
+          "defaultUserOuHelp": "Default OU selected on the user creation page.",
+          "defaultUserOuPlaceholder": "Select default user OU",
+          "defaultUserOuSearch": "Search user OUs",
+          "defaultGroupOu": "Default group OU",
+          "defaultGroupOuHelp": "Default OU selected on the group creation page.",
+          "defaultGroupOuPlaceholder": "Select default group OU",
+          "defaultGroupOuSearch": "Search group OUs",
+          "defaultComputerOu": "Default computer OU",
+          "defaultComputerOuHelp": "Default OU used by computer creation flows.",
+          "defaultComputerOuPlaceholder": "Select default computer OU",
+          "defaultComputerOuSearch": "Search computer OUs",
           "defaultUpnSuffix": "Default UPN suffix",
-          "defaultUpnSuffixHelp": "The UPN suffix selected by default on the create user screen.",
+          "defaultUpnSuffixHelp": "UPN suffix selected by default on the user creation page.",
           "none": "Not selected"
+        },
+        "empty": {
+          "ouNotFound": "No OU found."
         },
         "actions": {
           "save": "Save defaults"
         },
         "warnings": {
-          "connectionRequired": "Save AD connection settings before selecting user creation defaults.",
+          "connectionRequired": "Save AD connection settings before selecting creation defaults.",
           "savedSuffixMissingFromAd": "The saved default suffix was not returned by AD."
         },
         "errors": {
-          "suffixListLoadFailed": "UPN suffix list could not be loaded."
+          "suffixListLoadFailed": "UPN suffix list could not be loaded.",
+          "ouLoadFailed": "OU list could not be loaded."
         },
         "messages": {
-          "saveSuccess": "User creation defaults saved."
+          "saveSuccess": "Creation defaults saved."
         }
       },
       "readOnlyNotice": "You can view AD management settings. Additional permission is required to update them.",

@@ -5,7 +5,7 @@ import { AdOuSearchCombobox } from "@/features/ad-management/components/AdOuSear
 
 type Props = {
   targetOuDistinguishedName: string | null;
-  onTargetOuChange: (value: string) => void;
+  onTargetOuChange: (value: string | null) => void;
   disabled?: boolean;
   sameOuWarning: boolean;
 };

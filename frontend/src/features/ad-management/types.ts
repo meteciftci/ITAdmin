@@ -46,6 +46,9 @@ export type AdManagementSettings = {
   isEnabled: boolean;
   domainFqdn: string | null;
   defaultUserCreationUpnSuffix: string | null;
+  defaultUserOu: string | null;
+  defaultGroupOu: string | null;
+  defaultComputerOu: string | null;
   netbiosDomainName: string | null;
   defaultNamingContext: string | null;
   baseDn: string | null;
@@ -68,6 +71,9 @@ export type UpdateAdManagementSettingsRequest = {
   isEnabled: boolean;
   domainFqdn: string | null;
   defaultUserCreationUpnSuffix: string | null;
+  defaultUserOu: string | null;
+  defaultGroupOu: string | null;
+  defaultComputerOu: string | null;
   netbiosDomainName: string | null;
   defaultNamingContext: string | null;
   baseDn: string | null;

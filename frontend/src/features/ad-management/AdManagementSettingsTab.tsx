@@ -22,7 +22,7 @@ import { AdAttributeMappingsSection } from "@/features/ad-management/components/
 import { AdManagementConnectionForm } from "@/features/ad-management/components/AdManagementConnectionForm";
 import { AdDeletedObjectRestoreReadinessCard } from "@/features/ad-management/components/AdDeletedObjectRestoreReadinessCard";
 import { AdManagementNotificationsForm } from "@/features/ad-management/components/AdManagementNotificationsForm";
-import { AdUserCreationDefaultsForm } from "@/features/ad-management/components/AdUserCreationDefaultsForm";
+import { AdCreationDefaultsForm } from "@/features/ad-management/components/AdCreationDefaultsForm";
 import type {
   AdAttributeMapping,
   AdManagementSettings,
@@ -36,6 +36,9 @@ function buildSettingsKey(settings: AdManagementSettings | undefined): string {
     settings.isEnabled,
     settings.domainFqdn,
     settings.defaultUserCreationUpnSuffix,
+    settings.defaultUserOu,
+    settings.defaultGroupOu,
+    settings.defaultComputerOu,
     settings.netbiosDomainName,
     settings.defaultNamingContext,
     settings.baseDn,
@@ -69,7 +72,7 @@ type Props = {
   readOnly: boolean;
 };
 
-type AdManagementInnerTab = "connection" | "mappings" | "userCreationDefaults" | "notifications";
+type AdManagementInnerTab = "connection" | "mappings" | "creationDefaults" | "notifications";
 
 export function AdManagementSettingsTab({ readOnly }: Props) {
   const { t } = useTranslation(["settings", "common"]);
@@ -278,8 +281,8 @@ export function AdManagementSettingsTab({ readOnly }: Props) {
           <TabsTrigger value="mappings">
             {t("settings:adManagement.pageTabs.attributeMapping")}
           </TabsTrigger>
-          <TabsTrigger value="userCreationDefaults">
-            {t("settings:adManagement.pageTabs.userCreationDefaults")}
+          <TabsTrigger value="creationDefaults">
+            {t("settings:adManagement.pageTabs.creationDefaults")}
           </TabsTrigger>
           <TabsTrigger value="notifications">
             {t("settings:adManagement.pageTabs.notifications")}
@@ -307,8 +310,8 @@ export function AdManagementSettingsTab({ readOnly }: Props) {
           />
         </TabsContent>
 
-        <TabsContent value="userCreationDefaults" className="pt-4">
-          <AdUserCreationDefaultsForm
+        <TabsContent value="creationDefaults" className="pt-4">
+          <AdCreationDefaultsForm
             key={`${buildSettingsKey(settingsQuery.data)}::defaults`}
             settings={settingsQuery.data}
             readOnly={readOnly}
@@ -316,7 +319,7 @@ export function AdManagementSettingsTab({ readOnly }: Props) {
             onSave={(payload) =>
               saveSettings(
                 payload,
-                t("settings:adManagement.userCreationDefaults.messages.saveSuccess"),
+                t("settings:adManagement.creationDefaults.messages.saveSuccess"),
               )}
           />
         </TabsContent>

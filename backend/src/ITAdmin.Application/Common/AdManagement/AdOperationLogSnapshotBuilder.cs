@@ -813,6 +813,9 @@ public static class AdOperationLogSnapshotBuilder
                 isEnabled = entity.IsEnabled,
                 domainFqdn = entity.DomainFqdn,
                 defaultUserCreationUpnSuffix = entity.DefaultUserCreationUpnSuffix,
+                defaultUserOu = entity.DefaultUserOu,
+                defaultGroupOu = entity.DefaultGroupOu,
+                defaultComputerOu = entity.DefaultComputerOu,
                 netbiosDomainName = entity.NetbiosDomainName,
                 defaultNamingContext = entity.DefaultNamingContext,
                 baseDn = entity.BaseDn,
@@ -1256,6 +1259,21 @@ public static class AdOperationLogSnapshotBuilder
                 StringComparison.OrdinalIgnoreCase))
         {
             changedFields.Add("defaultUserCreationUpnSuffix");
+        }
+
+        if (!string.Equals(NormalizeNullable(beforeEntity.DefaultUserOu), NormalizeNullable(request.DefaultUserOu), StringComparison.OrdinalIgnoreCase))
+        {
+            changedFields.Add("defaultUserOu");
+        }
+
+        if (!string.Equals(NormalizeNullable(beforeEntity.DefaultGroupOu), NormalizeNullable(request.DefaultGroupOu), StringComparison.OrdinalIgnoreCase))
+        {
+            changedFields.Add("defaultGroupOu");
+        }
+
+        if (!string.Equals(NormalizeNullable(beforeEntity.DefaultComputerOu), NormalizeNullable(request.DefaultComputerOu), StringComparison.OrdinalIgnoreCase))
+        {
+            changedFields.Add("defaultComputerOu");
         }
 
         if (!string.Equals(NormalizeNullable(beforeEntity.NetbiosDomainName), NormalizeNullable(request.NetbiosDomainName), StringComparison.OrdinalIgnoreCase))

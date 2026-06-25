@@ -141,7 +141,7 @@
       "pageTabs": {
         "connection": "Bağlantı ve Yetkili Hesap",
         "attributeMapping": "Attribute Eşleştirme",
-        "userCreationDefaults": "Kullanıcı Oluşturma Varsayılanları",
+        "creationDefaults": "Oluşturma Varsayılanları",
         "notifications": "Bildirimler"
       },
       "notifications": {
@@ -212,26 +212,42 @@
           "ruleRemoved": "Bildirim kuralı kaldırıldı."
         }
       },
-      "userCreationDefaults": {
-        "title": "Kullanıcı Oluşturma Varsayılanları",
-        "description": "AD kullanıcı oluşturma ekranı için varsayılan değerleri yapılandırın.",
+      "creationDefaults": {
+        "title": "Oluşturma Varsayılanları",
+        "description": "AD kullanıcı, grup ve bilgisayar oluşturma ekranlarında kullanılacak varsayılan hedefleri yapılandırın.",
         "fields": {
+          "defaultUserOu": "Varsayılan kullanıcı OU",
+          "defaultUserOuHelp": "Kullanıcı oluşturma ekranında varsayılan seçili gelecek OU.",
+          "defaultUserOuPlaceholder": "Varsayılan kullanıcı OU seçin",
+          "defaultUserOuSearch": "Kullanıcı OU ara",
+          "defaultGroupOu": "Varsayılan grup OU",
+          "defaultGroupOuHelp": "Grup oluşturma ekranında varsayılan seçili gelecek OU.",
+          "defaultGroupOuPlaceholder": "Varsayılan grup OU seçin",
+          "defaultGroupOuSearch": "Grup OU ara",
+          "defaultComputerOu": "Varsayılan bilgisayar OU",
+          "defaultComputerOuHelp": "Bilgisayar oluşturma akışında kullanılacak varsayılan OU.",
+          "defaultComputerOuPlaceholder": "Varsayılan bilgisayar OU seçin",
+          "defaultComputerOuSearch": "Bilgisayar OU ara",
           "defaultUpnSuffix": "Varsayılan UPN suffix",
-          "defaultUpnSuffixHelp": "Kullanıcı oluşturma ekranında varsayılan seçili gelecek UPN suffix.",
+          "defaultUpnSuffixHelp": "UPN suffix kullanıcı oluşturma ekranında varsayılan seçili gelir.",
           "none": "Seçilmedi"
+        },
+        "empty": {
+          "ouNotFound": "OU bulunamadı."
         },
         "actions": {
           "save": "Varsayılanları kaydet"
         },
         "warnings": {
-          "connectionRequired": "Kullanıcı oluşturma varsayılanlarını seçmek için önce AD bağlantı ayarlarını kaydedin.",
+          "connectionRequired": "Oluşturma varsayılanlarını seçmek için önce AD bağlantı ayarlarını kaydedin.",
           "savedSuffixMissingFromAd": "Kayıtlı varsayılan suffix AD listesinden gelmedi."
         },
         "errors": {
-          "suffixListLoadFailed": "UPN suffix listesi yüklenemedi."
+          "suffixListLoadFailed": "UPN suffix listesi yüklenemedi.",
+          "ouLoadFailed": "OU listesi yüklenemedi."
         },
         "messages": {
-          "saveSuccess": "Kullanıcı oluşturma varsayılanları kaydedildi."
+          "saveSuccess": "Oluşturma varsayılanları kaydedildi."
         }
       },
       "readOnlyNotice": "AD Yönetim ayarlarını görüntüleyebilirsiniz. Güncelleme yapmak için ek yetki gerekir.",

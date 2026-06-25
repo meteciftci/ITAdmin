@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Input } from "@/components/ui/input";
@@ -29,11 +29,13 @@ type OuSearchContext = "users" | "groups" | "computers" | "manage";
 
 type Props = {
   value: string | null;
-  onChange: (distinguishedName: string) => void;
+  onChange: (distinguishedName: string | null) => void;
   disabled?: boolean;
   className?: string;
   showFieldLabel?: boolean;
   searchContext?: OuSearchContext;
+  allowClear?: boolean;
+  required?: boolean;
   fieldLabelKey?: string;
   placeholderKey?: string;
   searchKey?: string;
@@ -49,6 +51,8 @@ export function AdOuSearchCombobox({
   className,
   showFieldLabel = true,
   searchContext = "users",
+  allowClear = false,
+  required = true,
   fieldLabelKey = "adManagement:users.create.fields.ou",
   placeholderKey = "adManagement:users.create.fields.ouPlaceholder",
   searchKey = "adManagement:users.create.fields.ouSearch",
@@ -136,18 +140,27 @@ export function AdOuSearchCombobox({
     setSearch("");
   }
 
+  function handleClear() {
+    setSelectedItem(null);
+    onChange(null);
+    setSearch("");
+  }
+
   return (
     <div className={cn("w-full min-w-0 space-y-1.5", className)}>
       {showFieldLabel ? (
-        <Label>{t(fieldLabelKey)} *</Label>
+        <Label>
+          {t(fieldLabelKey)}
+          {required ? " *" : ""}
+        </Label>
       ) : null}
       <Popover open={open} onOpenChange={setOpen}>
-        <div className={AD_COMBOBOX_TRIGGER_WRAPPER_CLASSNAME}>
+        <div className={cn(AD_COMBOBOX_TRIGGER_WRAPPER_CLASSNAME, "flex items-center gap-1")}>
           <PopoverTrigger asChild>
             <button
               type="button"
               disabled={disabled}
-              className={AD_COMBOBOX_TRIGGER_BUTTON_CLASSNAME}
+              className={cn(AD_COMBOBOX_TRIGGER_BUTTON_CLASSNAME, "min-w-0 flex-1")}
             >
               <span className={cn(AD_COMBOBOX_TRIGGER_LABEL_CLASSNAME, !triggerLabel && "text-muted-foreground")}>
                 {triggerLabel || t(placeholderKey)}
@@ -155,6 +168,16 @@ export function AdOuSearchCombobox({
               <ChevronDown className="ml-2 size-4 shrink-0 opacity-60" />
             </button>
           </PopoverTrigger>
+          {allowClear && value && !disabled ? (
+            <button
+              type="button"
+              className="inline-flex size-9 shrink-0 items-center justify-center rounded-md border border-input text-muted-foreground hover:bg-muted"
+              onClick={handleClear}
+              aria-label={t("common:actions.clear")}
+            >
+              <X className="size-4" />
+            </button>
+          ) : null}
         </div>
         <PopoverContent {...AD_COMBOBOX_POPOVER_CONTENT_PROPS}>
           <Input

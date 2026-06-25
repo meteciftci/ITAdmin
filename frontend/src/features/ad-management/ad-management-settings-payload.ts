@@ -17,6 +17,9 @@ export function buildUpdateAdManagementSettingsPayload(
     domainFqdn: overrides.domainFqdn ?? settings.domainFqdn,
     defaultUserCreationUpnSuffix:
       overrides.defaultUserCreationUpnSuffix ?? settings.defaultUserCreationUpnSuffix ?? null,
+    defaultUserOu: overrides.defaultUserOu ?? settings.defaultUserOu ?? null,
+    defaultGroupOu: overrides.defaultGroupOu ?? settings.defaultGroupOu ?? null,
+    defaultComputerOu: overrides.defaultComputerOu ?? settings.defaultComputerOu ?? null,
     netbiosDomainName: overrides.netbiosDomainName ?? settings.netbiosDomainName,
     defaultNamingContext: overrides.defaultNamingContext ?? settings.defaultNamingContext,
     baseDn: overrides.baseDn ?? settings.baseDn,
