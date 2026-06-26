@@ -21,36 +21,54 @@ describe("AdManagementNotificationsForm provider readiness", () => {
     assert.match(source, /retry:\s*false/);
   });
 
-  it("shows provider warning card and loading message when providers are not ready", () => {
+  it("returns BlockingStateCard while provider readiness is loading", () => {
     const source = readSource("components/AdManagementNotificationsForm.tsx");
 
-    assert.match(source, /providerMissing\.title/);
-    assert.match(source, /providerMissing\.description/);
-    assert.match(source, /providerMissing\.hint/);
-    assert.match(source, /providerReadiness\.loading/);
-    assert.match(source, /providerSettingsUnavailable/);
-    assert.match(source, /smsProviderQuery\.isError/);
-    assert.match(source, /emailProviderQuery\.isError/);
-    assert.match(source, /<Alert/);
+    assert.match(source, /if \(providerReadinessLoading\)/);
+    assert.match(source, /BlockingStateCard/);
+    assert.match(source, /providerReadiness\.title/);
+    assert.match(source, /providerReadiness\.description/);
+    assert.doesNotMatch(
+      source.slice(source.indexOf("if (providerReadinessLoading)"), source.indexOf("if (showProviderWarning)")),
+      /DataTableToolbar/,
+    );
   });
 
-  it("disables add button and guards rule mutations when providers are not ready", () => {
+  it("returns BlockingStateCard when no provider is ready", () => {
     const source = readSource("components/AdManagementNotificationsForm.tsx");
 
-    assert.match(source, /addButtonDisabled/);
-    assert.match(source, /addDisabledReason/);
+    assert.match(source, /if \(showProviderWarning\)/);
+    assert.match(source, /providerMissing\.title/);
+    assert.match(source, /providerMissing\.accessNote/);
+    assert.match(source, /providerMissing\.hint/);
+
+    const warningBranch = source.slice(
+      source.indexOf("if (showProviderWarning)"),
+      source.indexOf("return (\n    <div className=\"space-y-4\">"),
+    );
+    assert.doesNotMatch(warningBranch, /DataTableToolbar/);
+    assert.doesNotMatch(warningBranch, /EmptyState/);
+    assert.doesNotMatch(warningBranch, /AdManagementNotificationRuleDialog/);
+  });
+
+  it("guards rule mutations when channel provider is not ready", () => {
+    const source = readSource("components/AdManagementNotificationsForm.tsx");
+
     assert.match(source, /guardRuleMutation/);
     assert.match(source, /messages\.providerNotReady/);
-    assert.match(source, /handleOpenCreateDialog/);
     assert.match(source, /handleToggleEnabled/);
     assert.match(source, /handleRemove/);
     assert.match(source, /handleRuleSubmit/);
   });
 
-  it("does not render dialog when no provider is ready", () => {
+  it("renders notification rules UI when providers are ready", () => {
     const source = readSource("components/AdManagementNotificationsForm.tsx");
-    assert.match(source, /\{canMutateRules \? \(/);
-    assert.match(source, /AdManagementNotificationRuleDialog/);
+    const readyBranch = source.slice(source.lastIndexOf('return (\n    <div className="space-y-4">'));
+
+    assert.match(readyBranch, /DataTableToolbar/);
+    assert.match(readyBranch, /DataTable/);
+    assert.match(readyBranch, /AdManagementNotificationRuleDialog/);
+    assert.match(readyBranch, /handleOpenCreateDialog/);
   });
 });
 
@@ -90,7 +108,7 @@ describe("ad management notifications i18n", () => {
     for (const key of [
       "providerMissing",
       "providerReadiness",
-      "addDisabledReason",
+      "accessNote",
       "providerNotReady",
       "channelUnavailable",
     ]) {

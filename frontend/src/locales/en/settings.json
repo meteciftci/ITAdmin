@@ -239,12 +239,14 @@
         },
         "providerMissing": {
           "title": "Notification provider not configured",
-          "description": "Configure an SMS or email notification provider before creating AD Management notification rules. If you do not have access to these settings, contact your system administrator.",
-          "unavailableDescription": "Notification provider settings could not be read. If you do not have access to these settings, contact your system administrator.",
+          "description": "Configure an SMS or email notification provider before creating AD Management notification rules.",
+          "unavailableDescription": "Notification provider settings could not be read.",
+          "accessNote": "If you do not have access to these settings, contact your system administrator.",
           "hint": "After a notification provider is configured, you can define AD Management event rules from this tab."
         },
         "providerReadiness": {
-          "loading": "Checking notification provider status..."
+          "title": "Checking notification providers",
+          "description": "Checking whether SMS and email notification providers are ready."
         },
         "actions": {
           "add": "Add Notification",

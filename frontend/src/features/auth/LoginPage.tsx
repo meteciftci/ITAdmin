@@ -1,6 +1,7 @@
 import type { FormEvent } from "react";
 import axios from "axios";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { BlockingStateCard } from "@/components/common/BlockingStateCard";
 import { ServiceUnavailableState } from "@/components/common/ServiceUnavailableState";
 import { Button } from "@/components/ui/button";
 import {
@@ -221,99 +222,98 @@ export function LoginPage() {
             <CardDescription className="text-center">{t("login.description")}</CardDescription>
           </CardHeader>
           <CardContent>
-            <form className="space-y-4" onSubmit={onSubmit}>
-              {routeNoticeMessage ? (
-                <Alert>
-                  <AlertDescription>{routeNoticeMessage}</AlertDescription>
-                </Alert>
-              ) : null}
+            {readiness.isPending ? (
+              <BlockingStateCard
+                variant="info"
+                size="compact"
+                centered
+                title={t("auth:login.serviceCheck.title")}
+                description={t("auth:login.serviceCheck.description")}
+              />
+            ) : readiness.data && !readiness.isHealthy ? (
+              <ServiceUnavailableState
+                readiness={readiness.data}
+                compact
+                isLoading={readiness.isFetching}
+                onRetry={() => {
+                  void queryClient.invalidateQueries({
+                    queryKey: ["health", "readiness"],
+                  });
+                }}
+              />
+            ) : (
+              <form className="space-y-4" onSubmit={onSubmit}>
+                {routeNoticeMessage ? (
+                  <Alert>
+                    <AlertDescription>{routeNoticeMessage}</AlertDescription>
+                  </Alert>
+                ) : null}
 
-              {readiness.isPending ? (
-                <p className="text-xs text-muted-foreground">
-                  {t("login.serviceCheckInProgress")}
-                </p>
-              ) : null}
-
-              {readiness.data && !readiness.isHealthy ? (
-                <ServiceUnavailableState
-                  readiness={readiness.data}
-                  compact
-                  isLoading={readiness.isFetching}
-                  onRetry={() => {
-                    void queryClient.invalidateQueries({
-                      queryKey: ["health", "readiness"],
-                    });
-                  }}
-                />
-              ) : null}
-
-              <div className="space-y-2">
-                <Label htmlFor="userName">{t("login.userName")}</Label>
-                <Input
-                  id="userName"
-                  value={userName}
-                  onChange={(event) => setUserName(event.target.value)}
-                  autoComplete="username"
-                  required
-                  disabled={loginBlocked}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">{t("login.password")}</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  autoComplete="current-password"
-                  required
-                  disabled={loginBlocked}
-                />
-              </div>
-
-              {rememberMeEnabled ? (
-                <div className="flex items-start gap-3 rounded-md border border-border/60 bg-muted/20 p-3">
-                  <Checkbox
-                    id="rememberMe"
-                    className="mt-0.5"
-                    checked={rememberMe}
-                    onChange={(event) => setRememberMe(event.target.checked)}
-                    disabled={loginBlocked}
+                <div className="space-y-2">
+                  <Label htmlFor="userName">{t("login.userName")}</Label>
+                  <Input
+                    id="userName"
+                    value={userName}
+                    onChange={(event) => setUserName(event.target.value)}
+                    autoComplete="username"
+                    required
                   />
-                  <div className="space-y-1">
-                    <Label htmlFor="rememberMe" className="cursor-pointer font-normal leading-none">
-                      {t("login.rememberMe")}
-                    </Label>
-                    <p className="text-xs text-muted-foreground">{t("login.rememberMeDescription")}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">{t("login.password")}</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    autoComplete="current-password"
+                    required
+                  />
+                </div>
+
+                {rememberMeEnabled ? (
+                  <div className="flex items-start gap-3 rounded-md border border-border/60 bg-muted/20 p-3">
+                    <Checkbox
+                      id="rememberMe"
+                      className="mt-0.5"
+                      checked={rememberMe}
+                      onChange={(event) => setRememberMe(event.target.checked)}
+                    />
+                    <div className="space-y-1">
+                      <Label htmlFor="rememberMe" className="cursor-pointer font-normal leading-none">
+                        {t("login.rememberMe")}
+                      </Label>
+                      <p className="text-xs text-muted-foreground">{t("login.rememberMeDescription")}</p>
+                    </div>
                   </div>
-                </div>
-              ) : null}
+                ) : null}
 
-              {forgotPasswordUrl ? (
-                <div className="flex justify-end">
-                  <a
-                    href={forgotPasswordUrl}
-                    className="text-sm text-primary hover:underline"
-                  >
-                    {t("login.forgotPassword")}
-                  </a>
-                </div>
-              ) : null}
+                {forgotPasswordUrl ? (
+                  <div className="flex justify-end">
+                    <a
+                      href={forgotPasswordUrl}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      {t("login.forgotPassword")}
+                    </a>
+                  </div>
+                ) : null}
 
-              {errorMessage ? (
-                <Alert variant="destructive">
-                  <AlertDescription>{errorMessage}</AlertDescription>
-                </Alert>
-              ) : null}
+                {errorMessage ? (
+                  <Alert variant="destructive">
+                    <AlertDescription>{errorMessage}</AlertDescription>
+                  </Alert>
+                ) : null}
 
-              <Button
-                className="w-full"
-                type="submit"
-                disabled={loginMutation.isPending || loginBlocked}
-              >
-                {loginMutation.isPending ? t("login.loading") : t("login.submit")}
-              </Button>
-            </form>
+                <Button
+                  className="w-full"
+                  type="submit"
+                  disabled={loginMutation.isPending}
+                >
+                  {loginMutation.isPending ? t("login.loading") : t("login.submit")}
+                </Button>
+              </form>
+            )}
           </CardContent>
         </Card>
       </div>

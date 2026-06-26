@@ -239,12 +239,14 @@
         },
         "providerMissing": {
           "title": "Bildirim sağlayıcısı yapılandırılmamış",
-          "description": "AD Yönetim bildirim kuralları oluşturmak için önce SMS veya e-posta bildirim sağlayıcısını yapılandırın. Bu ayarlara erişim yetkiniz yoksa sistem yöneticinizle iletişime geçin.",
-          "unavailableDescription": "Bildirim sağlayıcı ayarları okunamadı. Bu ayarlara erişim yetkiniz yoksa sistem yöneticinizle iletişime geçin.",
+          "description": "AD Yönetim bildirim kuralları oluşturmak için önce SMS veya e-posta bildirim sağlayıcısını yapılandırın.",
+          "unavailableDescription": "Bildirim sağlayıcı ayarları okunamadı.",
+          "accessNote": "Bu ayarlara erişim yetkiniz yoksa sistem yöneticinizle iletişime geçin.",
           "hint": "Bildirim sağlayıcısı yapılandırıldıktan sonra bu sekmeden AD Yönetim olayları için bildirim kuralları tanımlayabilirsiniz."
         },
         "providerReadiness": {
-          "loading": "Bildirim sağlayıcı durumu kontrol ediliyor..."
+          "title": "Bildirim sağlayıcıları kontrol ediliyor",
+          "description": "SMS ve e-posta bildirim sağlayıcılarının hazır olup olmadığı kontrol ediliyor."
         },
         "actions": {
           "add": "Bildirim Ekle",

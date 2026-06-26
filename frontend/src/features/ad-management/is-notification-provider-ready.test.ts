@@ -12,7 +12,7 @@ import { AD_NOTIFICATION_CHANNELS } from "./types.ts";
 import type {
   EmailProviderSettings,
   SmsProviderSettings,
-} from "@/features/notification-providers/types";
+} from "../notification-providers/types.ts";
 
 function createSmsSettings(
   overrides: Partial<SmsProviderSettings> = {},

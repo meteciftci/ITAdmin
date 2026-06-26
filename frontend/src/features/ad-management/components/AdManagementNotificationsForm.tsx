@@ -9,7 +9,7 @@ import {
 } from "@/components/common/data-table";
 import { useClientDataTable } from "@/components/common/data-table-hooks";
 import { EmptyState } from "@/components/common/EmptyState";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { BlockingStateCard } from "@/components/common/BlockingStateCard";
 import { Button } from "@/components/ui/button";
 import { createAdNotificationRuleColumns } from "@/features/ad-management/ad-notification-rule-columns";
 import {
@@ -419,7 +419,38 @@ export function AdManagementNotificationsForm({
   });
 
   const hasRows = rules.length > 0;
-  const addButtonDisabled = readOnly || providerReadinessLoading || !canMutateRules;
+
+  if (providerReadinessLoading) {
+    return (
+      <BlockingStateCard
+        variant="info"
+        size="compact"
+        title={t("settings:adManagement.notifications.providerReadiness.title")}
+        description={t("settings:adManagement.notifications.providerReadiness.description")}
+      />
+    );
+  }
+
+  if (showProviderWarning) {
+    return (
+      <BlockingStateCard
+        variant="warning"
+        size="compact"
+        title={t("settings:adManagement.notifications.providerMissing.title")}
+        description={
+          providerSettingsUnavailable
+            ? t("settings:adManagement.notifications.providerMissing.unavailableDescription")
+            : t("settings:adManagement.notifications.providerMissing.description")
+        }
+        details={
+          <>
+            <p>{t("settings:adManagement.notifications.providerMissing.accessNote")}</p>
+            <p>{t("settings:adManagement.notifications.providerMissing.hint")}</p>
+          </>
+        }
+      />
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -427,46 +458,13 @@ export function AdManagementNotificationsForm({
         {t("settings:adManagement.notifications.rulesTitle")}
       </h3>
 
-      {providerReadinessLoading ? (
-        <p className="text-sm text-muted-foreground">
-          {t("settings:adManagement.notifications.providerReadiness.loading")}
-        </p>
-      ) : null}
-
-      {showProviderWarning ? (
-        <Alert>
-          <AlertTitle>
-            {t("settings:adManagement.notifications.providerMissing.title")}
-          </AlertTitle>
-          <AlertDescription className="space-y-2">
-            <p>
-              {providerSettingsUnavailable
-                ? t("settings:adManagement.notifications.providerMissing.unavailableDescription")
-                : t("settings:adManagement.notifications.providerMissing.description")}
-            </p>
-            <p className="text-muted-foreground">
-              {t("settings:adManagement.notifications.providerMissing.hint")}
-            </p>
-          </AlertDescription>
-        </Alert>
-      ) : null}
-
       <DataTableToolbar
         searchValue={search}
         onSearchChange={setSearch}
         searchPlaceholder={t("settings:adManagement.notifications.searchPlaceholder")}
         actions={
           !readOnly ? (
-            <Button
-              type="button"
-              disabled={addButtonDisabled}
-              title={
-                addButtonDisabled
-                  ? t("settings:adManagement.notifications.actions.addDisabledReason")
-                  : undefined
-              }
-              onClick={handleOpenCreateDialog}
-            >
+            <Button type="button" onClick={handleOpenCreateDialog}>
               {t("settings:adManagement.notifications.actions.add")}
             </Button>
           ) : null
@@ -491,19 +489,17 @@ export function AdManagementNotificationsForm({
         />
       )}
 
-      {canMutateRules ? (
-        <AdManagementNotificationRuleDialog
-          open={dialog.open}
-          mode={dialog.mode}
-          initialRule={dialog.rule}
-          existingRules={rules}
-          mappings={mappings}
-          channelReadiness={channelReadiness}
-          readOnly={readOnly}
-          onOpenChange={handleDialogOpenChange}
-          onSubmit={handleRuleSubmit}
-        />
-      ) : null}
+      <AdManagementNotificationRuleDialog
+        open={dialog.open}
+        mode={dialog.mode}
+        initialRule={dialog.rule}
+        existingRules={rules}
+        mappings={mappings}
+        channelReadiness={channelReadiness}
+        readOnly={readOnly}
+        onOpenChange={handleDialogOpenChange}
+        onSubmit={handleRuleSubmit}
+      />
     </div>
   );
 }

@@ -1,8 +1,8 @@
-import { AD_NOTIFICATION_CHANNELS } from "@/features/ad-management/types";
+import { AD_NOTIFICATION_CHANNELS } from "./types.ts";
 import type {
   EmailProviderSettings,
   SmsProviderSettings,
-} from "@/features/notification-providers/types";
+} from "../notification-providers/types.ts";
 
 const SUCCESS_VALIDATION_STATUS = "Ok";
 
