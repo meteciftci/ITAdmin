@@ -234,17 +234,29 @@
           "duplicateRule": "Aynı olay ve kanal için zaten bildirim kuralı var.",
           "recipientRequired": "Alıcı kaynağı zorunludur.",
           "recipientValueRequired": "Alıcı kaynağı değeri zorunludur.",
-          "requiredFields": "Olay ve kanal seçilmelidir."
+          "requiredFields": "Olay ve kanal seçilmelidir.",
+          "channelUnavailable": "Seçilen kanal için bildirim sağlayıcısı yapılandırılmamış. Hazır bir kanal seçin."
+        },
+        "providerMissing": {
+          "title": "Bildirim sağlayıcısı yapılandırılmamış",
+          "description": "AD Yönetim bildirim kuralları oluşturmak için önce SMS veya e-posta bildirim sağlayıcısını yapılandırın. Bu ayarlara erişim yetkiniz yoksa sistem yöneticinizle iletişime geçin.",
+          "unavailableDescription": "Bildirim sağlayıcı ayarları okunamadı. Bu ayarlara erişim yetkiniz yoksa sistem yöneticinizle iletişime geçin.",
+          "hint": "Bildirim sağlayıcısı yapılandırıldıktan sonra bu sekmeden AD Yönetim olayları için bildirim kuralları tanımlayabilirsiniz."
+        },
+        "providerReadiness": {
+          "loading": "Bildirim sağlayıcı durumu kontrol ediliyor..."
         },
         "actions": {
           "add": "Bildirim Ekle",
           "edit": "Düzenle",
-          "remove": "Kaldır"
+          "remove": "Kaldır",
+          "addDisabledReason": "Bildirim kuralı eklemek için önce SMS veya e-posta bildirim sağlayıcısını yapılandırın."
         },
         "messages": {
           "ruleAdded": "Bildirim kuralı eklendi.",
           "ruleUpdated": "Bildirim kuralı güncellendi.",
-          "ruleRemoved": "Bildirim kuralı kaldırıldı."
+          "ruleRemoved": "Bildirim kuralı kaldırıldı.",
+          "providerNotReady": "Bildirim sağlayıcısı yapılandırılmadan bildirim kuralı değiştirilemez."
         }
       },
       "creationDefaults": {

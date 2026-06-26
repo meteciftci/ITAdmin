@@ -17,6 +17,8 @@ type CreateAdNotificationRuleColumnsOptions = {
   resolveTemplateStatus: (eventKey: string, channel: string) => TemplateReadiness;
   readOnly: boolean;
   isSaving: boolean;
+  canMutateRules: boolean;
+  isRuleMutable: (rule: AdManagementNotificationRule) => boolean;
   onToggleEnabled: (rule: AdManagementNotificationRule, enabled: boolean) => void;
   onEdit: (rule: AdManagementNotificationRule) => void;
   onRemove: (rule: AdManagementNotificationRule) => void;
@@ -31,10 +33,14 @@ export function createAdNotificationRuleColumns({
   resolveTemplateStatus,
   readOnly,
   isSaving,
+  canMutateRules,
+  isRuleMutable,
   onToggleEnabled,
   onEdit,
   onRemove,
 }: CreateAdNotificationRuleColumnsOptions): ColumnDef<AdManagementNotificationRule, unknown>[] {
+  const isActionDisabled = (rule: AdManagementNotificationRule) =>
+    readOnly || isSaving || !canMutateRules || !isRuleMutable(rule);
   return [
     {
       id: "event",
@@ -65,7 +71,7 @@ export function createAdNotificationRuleColumns({
       cell: ({ row }) => (
         <Switch
           checked={row.original.isEnabled}
-          disabled={readOnly || isSaving}
+          disabled={isActionDisabled(row.original)}
           onCheckedChange={(checked) => onToggleEnabled(row.original, checked)}
           aria-label={t("settings:adManagement.notifications.fields.status")}
         />
@@ -81,7 +87,7 @@ export function createAdNotificationRuleColumns({
             type="button"
             variant="outline"
             size="sm"
-            disabled={readOnly || isSaving}
+            disabled={isActionDisabled(row.original)}
             onClick={() => onEdit(row.original)}
           >
             {t("settings:adManagement.notifications.actions.edit")}
@@ -90,7 +96,7 @@ export function createAdNotificationRuleColumns({
             type="button"
             variant="outline"
             size="sm"
-            disabled={readOnly || isSaving}
+            disabled={isActionDisabled(row.original)}
             onClick={() => onRemove(row.original)}
           >
             {t("settings:adManagement.notifications.actions.remove")}

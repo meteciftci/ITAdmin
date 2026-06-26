@@ -30,6 +30,8 @@ import {
   AD_NOTIFICATION_EVENT_KEYS,
   AD_NOTIFICATION_RECIPIENT_SOURCE_TYPES,
 } from "@/features/ad-management/types";
+import type { AdNotificationChannelReadiness } from "@/features/ad-management/is-notification-provider-ready";
+import { isAdNotificationChannelReady } from "@/features/ad-management/is-notification-provider-ready";
 
 export type NotificationRuleDialogMode = "create" | "edit";
 
@@ -43,6 +45,7 @@ type Props = {
   initialRule: AdManagementNotificationRule | null;
   existingRules: AdManagementNotificationRule[];
   mappings: AdAttributeMapping[];
+  channelReadiness: AdNotificationChannelReadiness;
   readOnly: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (rule: AdManagementNotificationRule) => void;
@@ -112,7 +115,7 @@ const AdManagementNotificationRuleDialogForm = forwardRef<
   NotificationRuleDialogFormHandle,
   RuleDialogFormProps
 >(function AdManagementNotificationRuleDialogForm(
-  { mode, initialRule, existingRules, mappings, readOnly, onSubmit },
+  { mode, initialRule, existingRules, mappings, channelReadiness, readOnly, onSubmit },
   ref,
 ) {
   const { t } = useTranslation(["settings", "common"]);
@@ -183,6 +186,10 @@ const AdManagementNotificationRuleDialogForm = forwardRef<
       return t("settings:adManagement.notifications.validation.requiredFields");
     }
 
+    if (!isAdNotificationChannelReady(form.channel, channelReadiness)) {
+      return t("settings:adManagement.notifications.validation.channelUnavailable");
+    }
+
     const duplicate = existingRules.some((rule) => {
       if (mode === "edit" && initialRule && rule.id === initialRule.id) {
         return false;
@@ -204,7 +211,7 @@ const AdManagementNotificationRuleDialogForm = forwardRef<
     }
 
     return null;
-  }, [existingRules, form, initialRule, mode, t]);
+  }, [channelReadiness, existingRules, form, initialRule, mode, t]);
 
   const handleSubmit = useCallback(() => {
     const validationError = validate();
@@ -227,6 +234,11 @@ const AdManagementNotificationRuleDialogForm = forwardRef<
   }, [form, initialRule, mode, onSubmit, validate]);
 
   useImperativeHandle(ref, () => ({ submit: handleSubmit }), [handleSubmit]);
+
+  const channelUnavailableInEdit =
+    mode === "edit"
+    && Boolean(form.channel)
+    && !isAdNotificationChannelReady(form.channel, channelReadiness);
 
   return (
     <div className="space-y-5 px-6 py-5">
@@ -265,14 +277,29 @@ const AdManagementNotificationRuleDialogForm = forwardRef<
           }}
         >
           <option value="">{t("settings:adManagement.notifications.fields.selectChannel")}</option>
-          <option value={AD_NOTIFICATION_CHANNELS.sms}>
+          <option
+            value={AD_NOTIFICATION_CHANNELS.sms}
+            disabled={!channelReadiness.sms}
+          >
             {t("settings:adManagement.notifications.channels.sms")}
           </option>
-          <option value={AD_NOTIFICATION_CHANNELS.email}>
+          <option
+            value={AD_NOTIFICATION_CHANNELS.email}
+            disabled={!channelReadiness.email}
+          >
             {t("settings:adManagement.notifications.channels.email")}
           </option>
         </Select>
       </div>
+
+      {channelUnavailableInEdit ? (
+        <p
+          className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+          role="alert"
+        >
+          {t("settings:adManagement.notifications.validation.channelUnavailable")}
+        </p>
+      ) : null}
 
       {form.channel ? (
         <div className="space-y-2">
@@ -370,6 +397,7 @@ export function AdManagementNotificationRuleDialog({
   initialRule,
   existingRules,
   mappings,
+  channelReadiness,
   readOnly,
   onOpenChange,
   onSubmit,
@@ -403,6 +431,7 @@ export function AdManagementNotificationRuleDialog({
           initialRule={initialRule}
           existingRules={existingRules}
           mappings={mappings}
+          channelReadiness={channelReadiness}
           readOnly={readOnly}
           onSubmit={(rule) => {
             onSubmit(rule);

@@ -1,6 +1,7 @@
 import { useMemo, useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import {
   DataTable,
   DataTablePagination,
@@ -8,6 +9,7 @@ import {
 } from "@/components/common/data-table";
 import { useClientDataTable } from "@/components/common/data-table-hooks";
 import { EmptyState } from "@/components/common/EmptyState";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { createAdNotificationRuleColumns } from "@/features/ad-management/ad-notification-rule-columns";
 import {
@@ -22,6 +24,10 @@ import {
   AdManagementNotificationRuleDialog,
   type NotificationRuleDialogMode,
 } from "@/features/ad-management/components/AdManagementNotificationRuleDialog";
+import {
+  getAdNotificationChannelReadiness,
+  isAdNotificationChannelReady,
+} from "@/features/ad-management/is-notification-provider-ready";
 import type {
   AdManagementNotificationRule,
   AdManagementNotificationSettings,
@@ -29,6 +35,12 @@ import type {
   UpdateAdManagementSettingsRequest,
 } from "@/features/ad-management/types";
 import { AD_NOTIFICATION_CHANNELS } from "@/features/ad-management/types";
+import {
+  getEmailProviderSettings,
+  getSmsProviderSettings,
+  NOTIFICATION_EMAIL_SETTINGS_QUERY_KEY,
+  NOTIFICATION_SMS_SETTINGS_QUERY_KEY,
+} from "@/features/notification-providers/api";
 import {
   NOTIFICATION_TEMPLATES_QUERY_KEY,
   getNotificationTemplates,
@@ -136,8 +148,55 @@ export function AdManagementNotificationsForm({
     queryFn: () => getNotificationTemplates({ moduleKey: "AdManagement" }),
   });
 
+  const smsProviderQuery = useQuery({
+    queryKey: NOTIFICATION_SMS_SETTINGS_QUERY_KEY,
+    queryFn: getSmsProviderSettings,
+    retry: false,
+  });
+
+  const emailProviderQuery = useQuery({
+    queryKey: NOTIFICATION_EMAIL_SETTINGS_QUERY_KEY,
+    queryFn: getEmailProviderSettings,
+    retry: false,
+  });
+
   const templates = useMemo(() => templatesQuery.data ?? [], [templatesQuery.data]);
   const mappings = useMemo(() => mappingsQuery.data ?? [], [mappingsQuery.data]);
+
+  const providerReadinessLoading = smsProviderQuery.isLoading || emailProviderQuery.isLoading;
+
+  const channelReadiness = useMemo(
+    () =>
+      getAdNotificationChannelReadiness(
+        smsProviderQuery.isSuccess ? smsProviderQuery.data : null,
+        emailProviderQuery.isSuccess ? emailProviderQuery.data : null,
+      ),
+    [
+      smsProviderQuery.isSuccess,
+      smsProviderQuery.data,
+      emailProviderQuery.isSuccess,
+      emailProviderQuery.data,
+    ],
+  );
+
+  const smsReady = channelReadiness.sms;
+  const emailReady = channelReadiness.email;
+  const hasAnyReadyProvider = smsReady || emailReady;
+  const providerSettingsUnavailable =
+    !providerReadinessLoading
+    && smsProviderQuery.isError
+    && emailProviderQuery.isError;
+  const canMutateRules =
+    !readOnly && !providerReadinessLoading && hasAnyReadyProvider;
+
+  const isRuleMutable = useCallback(
+    (rule: AdManagementNotificationRule) =>
+      isAdNotificationChannelReady(rule.channel, channelReadiness),
+    [channelReadiness],
+  );
+
+  const showProviderWarning =
+    !providerReadinessLoading && !hasAnyReadyProvider;
 
   const eventLabel = useMemo(
     () =>
@@ -149,6 +208,10 @@ export function AdManagementNotificationsForm({
       }) as Record<string, string>,
     [t],
   );
+
+  const notifyProviderNotReady = useCallback(() => {
+    toast.error(t("settings:adManagement.notifications.messages.providerNotReady"));
+  }, [t]);
 
   const persistRules = useCallback(
     (nextRules: AdManagementNotificationRule[], successMessage: string) => {
@@ -166,7 +229,61 @@ export function AdManagementNotificationsForm({
     [settings, readOnly, onSave],
   );
 
+  const guardRuleMutation = useCallback(
+    (rule?: AdManagementNotificationRule) => {
+      if (providerReadinessLoading) {
+        return false;
+      }
+
+      if (!canMutateRules) {
+        notifyProviderNotReady();
+        return false;
+      }
+
+      if (rule && !isRuleMutable(rule)) {
+        notifyProviderNotReady();
+        return false;
+      }
+
+      return true;
+    },
+    [
+      canMutateRules,
+      isRuleMutable,
+      notifyProviderNotReady,
+      providerReadinessLoading,
+    ],
+  );
+
+  const handleOpenCreateDialog = useCallback(() => {
+    if (!guardRuleMutation()) {
+      return;
+    }
+
+    setDialog({ open: true, mode: "create", rule: null });
+  }, [guardRuleMutation]);
+
+  const handleOpenEditDialog = useCallback((rule: AdManagementNotificationRule) => {
+    if (!guardRuleMutation(rule)) {
+      return;
+    }
+
+    setDialog({ open: true, mode: "edit", rule });
+  }, [guardRuleMutation]);
+
+  function handleDialogOpenChange(open: boolean) {
+    if (open && !guardRuleMutation(dialog.rule ?? undefined)) {
+      return;
+    }
+
+    setDialog((prev) => ({ ...prev, open }));
+  }
+
   function handleRuleSubmit(rule: AdManagementNotificationRule) {
+    if (!guardRuleMutation(rule)) {
+      return;
+    }
+
     const nextRules =
       dialog.mode === "edit"
         ? rules.map((item) => (item.id === rule.id ? rule : item))
@@ -183,22 +300,30 @@ export function AdManagementNotificationsForm({
 
   const handleToggleEnabled = useCallback(
     (rule: AdManagementNotificationRule, enabled: boolean) => {
+      if (!guardRuleMutation(rule)) {
+        return;
+      }
+
       const nextRules = rules.map((item) =>
         item.id === rule.id ? { ...item, isEnabled: enabled } : item,
       );
       setRules(nextRules);
       persistRules(nextRules, t("settings:adManagement.notifications.messages.ruleUpdated"));
     },
-    [rules, persistRules, t],
+    [guardRuleMutation, rules, persistRules, t],
   );
 
   const handleRemove = useCallback(
     (rule: AdManagementNotificationRule) => {
+      if (!guardRuleMutation(rule)) {
+        return;
+      }
+
       const nextRules = rules.filter((item) => item.id !== rule.id);
       setRules(nextRules);
       persistRules(nextRules, t("settings:adManagement.notifications.messages.ruleRemoved"));
     },
-    [rules, persistRules, t],
+    [guardRuleMutation, rules, persistRules, t],
   );
 
   const templateStatusLabel = useCallback(
@@ -241,8 +366,10 @@ export function AdManagementNotificationsForm({
         resolveTemplateStatus: resolveTemplateReadinessForRule,
         readOnly,
         isSaving,
+        canMutateRules,
+        isRuleMutable,
         onToggleEnabled: handleToggleEnabled,
-        onEdit: (rule) => setDialog({ open: true, mode: "edit", rule }),
+        onEdit: handleOpenEditDialog,
         onRemove: handleRemove,
       }),
     [
@@ -254,7 +381,10 @@ export function AdManagementNotificationsForm({
       mappings,
       resolveTemplateReadinessForRule,
       templateStatusLabel,
+      canMutateRules,
+      isRuleMutable,
       handleToggleEnabled,
+      handleOpenEditDialog,
       handleRemove,
     ],
   );
@@ -289,12 +419,37 @@ export function AdManagementNotificationsForm({
   });
 
   const hasRows = rules.length > 0;
+  const addButtonDisabled = readOnly || providerReadinessLoading || !canMutateRules;
 
   return (
     <div className="space-y-4">
       <h3 className="text-base font-medium">
         {t("settings:adManagement.notifications.rulesTitle")}
       </h3>
+
+      {providerReadinessLoading ? (
+        <p className="text-sm text-muted-foreground">
+          {t("settings:adManagement.notifications.providerReadiness.loading")}
+        </p>
+      ) : null}
+
+      {showProviderWarning ? (
+        <Alert>
+          <AlertTitle>
+            {t("settings:adManagement.notifications.providerMissing.title")}
+          </AlertTitle>
+          <AlertDescription className="space-y-2">
+            <p>
+              {providerSettingsUnavailable
+                ? t("settings:adManagement.notifications.providerMissing.unavailableDescription")
+                : t("settings:adManagement.notifications.providerMissing.description")}
+            </p>
+            <p className="text-muted-foreground">
+              {t("settings:adManagement.notifications.providerMissing.hint")}
+            </p>
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
       <DataTableToolbar
         searchValue={search}
@@ -304,7 +459,13 @@ export function AdManagementNotificationsForm({
           !readOnly ? (
             <Button
               type="button"
-              onClick={() => setDialog({ open: true, mode: "create", rule: null })}
+              disabled={addButtonDisabled}
+              title={
+                addButtonDisabled
+                  ? t("settings:adManagement.notifications.actions.addDisabledReason")
+                  : undefined
+              }
+              onClick={handleOpenCreateDialog}
             >
               {t("settings:adManagement.notifications.actions.add")}
             </Button>
@@ -330,16 +491,19 @@ export function AdManagementNotificationsForm({
         />
       )}
 
-      <AdManagementNotificationRuleDialog
-        open={dialog.open}
-        mode={dialog.mode}
-        initialRule={dialog.rule}
-        existingRules={rules}
-        mappings={mappings}
-        readOnly={readOnly}
-        onOpenChange={(open) => setDialog((prev) => ({ ...prev, open }))}
-        onSubmit={handleRuleSubmit}
-      />
+      {canMutateRules ? (
+        <AdManagementNotificationRuleDialog
+          open={dialog.open}
+          mode={dialog.mode}
+          initialRule={dialog.rule}
+          existingRules={rules}
+          mappings={mappings}
+          channelReadiness={channelReadiness}
+          readOnly={readOnly}
+          onOpenChange={handleDialogOpenChange}
+          onSubmit={handleRuleSubmit}
+        />
+      ) : null}
     </div>
   );
 }

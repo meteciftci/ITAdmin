@@ -234,17 +234,29 @@
           "duplicateRule": "A notification rule already exists for this event and channel.",
           "recipientRequired": "Recipient source is required.",
           "recipientValueRequired": "Recipient source value is required.",
-          "requiredFields": "Event and channel must be selected."
+          "requiredFields": "Event and channel must be selected.",
+          "channelUnavailable": "The notification provider for the selected channel is not configured. Choose a ready channel."
+        },
+        "providerMissing": {
+          "title": "Notification provider not configured",
+          "description": "Configure an SMS or email notification provider before creating AD Management notification rules. If you do not have access to these settings, contact your system administrator.",
+          "unavailableDescription": "Notification provider settings could not be read. If you do not have access to these settings, contact your system administrator.",
+          "hint": "After a notification provider is configured, you can define AD Management event rules from this tab."
+        },
+        "providerReadiness": {
+          "loading": "Checking notification provider status..."
         },
         "actions": {
           "add": "Add Notification",
           "edit": "Edit",
-          "remove": "Remove"
+          "remove": "Remove",
+          "addDisabledReason": "Configure an SMS or email notification provider before adding a notification rule."
         },
         "messages": {
           "ruleAdded": "Notification rule added.",
           "ruleUpdated": "Notification rule updated.",
-          "ruleRemoved": "Notification rule removed."
+          "ruleRemoved": "Notification rule removed.",
+          "providerNotReady": "Notification rules cannot be changed until a notification provider is configured."
         }
       },
       "creationDefaults": {
