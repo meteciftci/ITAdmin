@@ -34,6 +34,12 @@
       "notificationSettings": "Bildirim Ayarları",
       "moduleSettings": "Modül Ayarları",
       "adManagementSettings": "AD Yönetim Ayarları",
+      "licenseManagement": "Lisans Yönetimi",
+      "licenseManagementOverview": "Genel Bakış",
+      "licenseManagementCompanies": "Firmalar",
+      "licenseManagementProducts": "Ürünler",
+      "licenseManagementAcquisitions": "Edinimler",
+      "licenseManagementPackages": "Lisans Paketleri",
       "error": "Hata"
     }
   }

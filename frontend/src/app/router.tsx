@@ -204,6 +204,36 @@ const AdDeletedObjectRestorePage = lazy(() =>
     default: module.AdDeletedObjectRestorePage,
   })),
 );
+const LicenseManagementRedirectPage = lazy(() =>
+  import("@/features/license-management/LicenseManagementOverviewPage").then((module) => ({
+    default: module.LicenseManagementRedirectPage,
+  })),
+);
+const LicenseManagementOverviewPage = lazy(() =>
+  import("@/features/license-management/LicenseManagementOverviewPage").then((module) => ({
+    default: module.LicenseManagementOverviewPage,
+  })),
+);
+const LicenseCompaniesPage = lazy(() =>
+  import("@/features/license-management/LicenseCompaniesPage").then((module) => ({
+    default: module.LicenseCompaniesPage,
+  })),
+);
+const LicenseProductsPage = lazy(() =>
+  import("@/features/license-management/LicenseProductsPage").then((module) => ({
+    default: module.LicenseProductsPage,
+  })),
+);
+const LicenseAcquisitionsPage = lazy(() =>
+  import("@/features/license-management/LicenseAcquisitionsPage").then((module) => ({
+    default: module.LicenseAcquisitionsPage,
+  })),
+);
+const LicensePackagesPage = lazy(() =>
+  import("@/features/license-management/LicensePackagesPage").then((module) => ({
+    default: module.LicensePackagesPage,
+  })),
+);
 const ErrorPage = lazy(() =>
   import("@/pages/ErrorPage").then((module) => ({ default: module.ErrorPage })),
 );
@@ -825,6 +855,90 @@ export const router = createBrowserRouter([
           <AppLayout>
             <LazyRoute>
               <AdDeletedObjectRestorePage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/license-management",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission={PermissionCodes.LicenseManagement.View}>
+          <AppLayout>
+            <LazyRoute>
+              <LicenseManagementRedirectPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/license-management/overview",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission={PermissionCodes.LicenseManagement.View}>
+          <AppLayout>
+            <LazyRoute>
+              <LicenseManagementOverviewPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/license-management/companies",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission={PermissionCodes.LicenseManagement.View}>
+          <AppLayout>
+            <LazyRoute>
+              <LicenseCompaniesPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/license-management/products",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission={PermissionCodes.LicenseManagement.View}>
+          <AppLayout>
+            <LazyRoute>
+              <LicenseProductsPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/license-management/acquisitions",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission={PermissionCodes.LicenseManagement.View}>
+          <AppLayout>
+            <LazyRoute>
+              <LicenseAcquisitionsPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/license-management/packages",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission={PermissionCodes.LicenseManagement.View}>
+          <AppLayout>
+            <LazyRoute>
+              <LicensePackagesPage />
             </LazyRoute>
           </AppLayout>
         </RequirePermission>

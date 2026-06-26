@@ -101,6 +101,13 @@ export const PermissionCodes = {
       Delete: "AdManagement.OrganizationalUnits.Delete",
     },
   },
+  LicenseManagement: {
+    View: "LicenseManagement.View",
+    ManageCatalog: "LicenseManagement.ManageCatalog",
+    ManageAcquisitions: "LicenseManagement.ManageAcquisitions",
+    ViewReports: "LicenseManagement.ViewReports",
+    ManageSettings: "LicenseManagement.ManageSettings",
+  },
 } as const;
 
 type DeepPermissionValue<T> = T extends string

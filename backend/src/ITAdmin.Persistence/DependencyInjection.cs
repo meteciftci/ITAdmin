@@ -5,6 +5,7 @@ using ITAdmin.Application.Abstractions.Services;
 using ITAdmin.Application.Common.Options;
 using ITAdmin.Persistence.Context;
 using ITAdmin.Persistence.Services;
+using ITAdmin.Persistence.Services.LicenseManagement;
 
 namespace ITAdmin.Persistence;
 
@@ -42,6 +43,11 @@ public static class DependencyInjection
         services.AddScoped<INotificationTemplateService, NotificationTemplateService>();
         services.AddScoped<IAdManagementNotificationEnqueueService, AdManagementNotificationEnqueueService>();
         services.AddScoped<INotificationOutboxBatchProcessor, NotificationOutboxBatchProcessor>();
+        services.AddScoped<ILicenseManagementOverviewService, LicenseManagementOverviewService>();
+        services.AddScoped<ILicenseCompanyService, LicenseCompanyService>();
+        services.AddScoped<ILicensedProductService, LicensedProductService>();
+        services.AddScoped<ILicenseAcquisitionService, LicenseAcquisitionService>();
+        services.AddScoped<ILicensePackageService, LicensePackageService>();
         services.Configure<NotificationOutboxOptions>(configuration.GetSection(NotificationOutboxOptions.SectionName));
 
         return services;

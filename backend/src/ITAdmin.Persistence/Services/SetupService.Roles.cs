@@ -69,6 +69,11 @@ public sealed partial class SetupService
         ("NotificationOutbox", PermissionCodes.NotificationOutbox.Cancel, "Cancel notification outbox items."),
         ("NotificationTemplates", PermissionCodes.NotificationTemplates.View, "View notification templates."),
         ("NotificationTemplates", PermissionCodes.NotificationTemplates.Update, "Update notification templates."),
+        ("LicenseManagement", PermissionCodes.LicenseManagement.View, "View license management."),
+        ("LicenseManagement", PermissionCodes.LicenseManagement.ManageCatalog, "Manage license catalog (companies and products)."),
+        ("LicenseManagement", PermissionCodes.LicenseManagement.ManageAcquisitions, "Manage license acquisitions and packages."),
+        ("LicenseManagement", PermissionCodes.LicenseManagement.ViewReports, "View license management reports."),
+        ("LicenseManagement", PermissionCodes.LicenseManagement.ManageSettings, "Manage license management settings."),
         ("Setup", PermissionCodes.Setup.Manage, "Manage setup.")
     ];
 

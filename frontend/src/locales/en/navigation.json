@@ -34,6 +34,12 @@
       "notificationSettings": "Notification Settings",
       "moduleSettings": "Module Settings",
       "adManagementSettings": "AD Management Settings",
+      "licenseManagement": "License Management",
+      "licenseManagementOverview": "Overview",
+      "licenseManagementCompanies": "Companies",
+      "licenseManagementProducts": "Products",
+      "licenseManagementAcquisitions": "Acquisitions",
+      "licenseManagementPackages": "License Packages",
       "error": "Error"
     }
   }

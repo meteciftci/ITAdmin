@@ -1,0 +1,198 @@
+import { useEffect, useMemo, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+
+import { CheckboxField } from "@/components/common/CheckboxField";
+import { FormError } from "@/components/common/FormError";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  createLicenseCompany,
+  updateLicenseCompany,
+} from "@/features/license-management/api";
+import { validateCompanyForm } from "@/features/license-management/form-validation";
+import type { LicenseCompanyDetail } from "@/features/license-management/types";
+import { getApiErrorMessage } from "@/lib/api-error";
+import { useTranslation } from "react-i18next";
+
+type Props = {
+  open: boolean;
+  mode: "create" | "edit";
+  company?: LicenseCompanyDetail | null;
+  onClose: () => void;
+  onSaved: () => void;
+};
+
+export function CompanyFormDialog({ open, mode, company, onClose, onSaved }: Props) {
+  const { t } = useTranslation(["licenseManagement", "common"]);
+  const [name, setName] = useState("");
+  const [taxNumber, setTaxNumber] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [website, setWebsite] = useState("");
+  const [address, setAddress] = useState("");
+  const [supportPhone, setSupportPhone] = useState("");
+  const [supportEmail, setSupportEmail] = useState("");
+  const [contactPersonName, setContactPersonName] = useState("");
+  const [contactPersonPhone, setContactPersonPhone] = useState("");
+  const [contactPersonEmail, setContactPersonEmail] = useState("");
+  const [notes, setNotes] = useState("");
+  const [isActive, setIsActive] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    /* eslint-disable react-hooks/set-state-in-effect -- hydrate fields when dialog opens */
+    setName(company?.name ?? "");
+    setTaxNumber(company?.taxNumber ?? "");
+    setPhone(company?.phone ?? "");
+    setEmail(company?.email ?? "");
+    setWebsite(company?.website ?? "");
+    setAddress(company?.address ?? "");
+    setSupportPhone(company?.supportPhone ?? "");
+    setSupportEmail(company?.supportEmail ?? "");
+    setContactPersonName(company?.contactPersonName ?? "");
+    setContactPersonPhone(company?.contactPersonPhone ?? "");
+    setContactPersonEmail(company?.contactPersonEmail ?? "");
+    setNotes(company?.notes ?? "");
+    setIsActive(company?.isActive ?? true);
+    setErrorMessage(null);
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [open, company]);
+
+  const validationKey = useMemo(
+    () => validateCompanyForm(name, email, supportEmail, contactPersonEmail, website),
+    [name, email, supportEmail, contactPersonEmail, website],
+  );
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      const payload = {
+        name: name.trim(),
+        taxNumber: taxNumber || null,
+        phone: phone || null,
+        email: email || null,
+        website: website || null,
+        address: address || null,
+        supportPhone: supportPhone || null,
+        supportEmail: supportEmail || null,
+        contactPersonName: contactPersonName || null,
+        contactPersonPhone: contactPersonPhone || null,
+        contactPersonEmail: contactPersonEmail || null,
+        notes: notes || null,
+        isActive,
+      };
+      if (mode === "edit" && company) {
+        await updateLicenseCompany(company.id, payload);
+      } else {
+        await createLicenseCompany(payload);
+      }
+    },
+    onSuccess: () => {
+      onSaved();
+      onClose();
+    },
+    onError: (error) => {
+      setErrorMessage(getApiErrorMessage(error, t("licenseManagement:messages.operationFailed")));
+    },
+  });
+
+  return (
+    <Dialog open={open}>
+      <DialogContent className="max-w-2xl" onOpenChange={(next) => !next && onClose()}>
+        <DialogHeader>
+          <DialogTitle>
+            {mode === "edit"
+              ? t("licenseManagement:actions.editCompany")
+              : t("licenseManagement:actions.addCompany")}
+          </DialogTitle>
+        </DialogHeader>
+        <DialogBody className="space-y-4">
+          {errorMessage ? <FormError message={errorMessage} /> : null}
+          {validationKey ? (
+            <FormError message={t(`licenseManagement:messages.${validationKey}`)} />
+          ) : null}
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="company-name">{t("licenseManagement:form.companyName")}</Label>
+              <Input id="company-name" value={name} onChange={(e) => setName(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="company-email">{t("licenseManagement:table.email")}</Label>
+              <Input id="company-email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="company-phone">{t("licenseManagement:table.phone")}</Label>
+              <Input id="company-phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="company-tax">{t("licenseManagement:form.taxNumber")}</Label>
+              <Input id="company-tax" value={taxNumber} onChange={(e) => setTaxNumber(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="company-website">{t("licenseManagement:form.website")}</Label>
+              <Input id="company-website" value={website} onChange={(e) => setWebsite(e.target.value)} />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="company-address">{t("licenseManagement:form.address")}</Label>
+              <Textarea id="company-address" value={address} onChange={(e) => setAddress(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="company-support-email">{t("licenseManagement:form.supportEmail")}</Label>
+              <Input id="company-support-email" value={supportEmail} onChange={(e) => setSupportEmail(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="company-support-phone">{t("licenseManagement:form.supportPhone")}</Label>
+              <Input id="company-support-phone" value={supportPhone} onChange={(e) => setSupportPhone(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="company-contact-name">{t("licenseManagement:form.contactPersonName")}</Label>
+              <Input id="company-contact-name" value={contactPersonName} onChange={(e) => setContactPersonName(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="company-contact-phone">{t("licenseManagement:form.contactPersonPhone")}</Label>
+              <Input id="company-contact-phone" value={contactPersonPhone} onChange={(e) => setContactPersonPhone(e.target.value)} />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="company-contact-email">{t("licenseManagement:form.contactPersonEmail")}</Label>
+              <Input id="company-contact-email" value={contactPersonEmail} onChange={(e) => setContactPersonEmail(e.target.value)} />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="company-notes">{t("licenseManagement:form.notes")}</Label>
+              <Textarea id="company-notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
+            </div>
+            <CheckboxField
+              id="company-active"
+              label={t("common:status.active")}
+              checked={isActive}
+              onCheckedChange={(checked) => setIsActive(checked === true)}
+            />
+          </div>
+        </DialogBody>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            {t("common:actions.cancel")}
+          </Button>
+          <Button
+            disabled={Boolean(validationKey) || mutation.isPending}
+            onClick={() => mutation.mutate()}
+          >
+            {t("common:actions.save")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

@@ -16,6 +16,7 @@ import {
   SlidersHorizontal,
   Users,
   FolderTree,
+  FileKey,
 } from "lucide-react";
 
 import type { CurrentUser } from "@/features/auth/types";
@@ -160,6 +161,10 @@ function isAdManagementSectionVisible(
     || isAdManagementDeletedObjectsVisible(user, moduleState);
 }
 
+function isLicenseManagementSectionVisible(user: CurrentUser | null): boolean {
+  return canAccess(user, PermissionCodes.LicenseManagement.View);
+}
+
 export const getSidebarGroups = (
   user: CurrentUser | null,
   adManagementModule?: AdManagementModuleSidebarState,
@@ -215,6 +220,45 @@ export const getSidebarGroups = (
             to: "/ad-management/deleted-objects",
             icon: Archive,
             visible: isAdManagementDeletedObjectsVisible(user, adManagementModule),
+          },
+        ],
+      },
+      {
+        kind: "collapsible",
+        titleKey: "items.licenseManagement",
+        routePrefix: "/license-management",
+        icon: FileKey,
+        visible: isLicenseManagementSectionVisible(user),
+        children: [
+          {
+            titleKey: "items.licenseManagementOverview",
+            to: "/license-management/overview",
+            icon: House,
+            visible: isLicenseManagementSectionVisible(user),
+          },
+          {
+            titleKey: "items.licenseManagementCompanies",
+            to: "/license-management/companies",
+            icon: Users,
+            visible: isLicenseManagementSectionVisible(user),
+          },
+          {
+            titleKey: "items.licenseManagementProducts",
+            to: "/license-management/products",
+            icon: Boxes,
+            visible: isLicenseManagementSectionVisible(user),
+          },
+          {
+            titleKey: "items.licenseManagementAcquisitions",
+            to: "/license-management/acquisitions",
+            icon: ClipboardList,
+            visible: isLicenseManagementSectionVisible(user),
+          },
+          {
+            titleKey: "items.licenseManagementPackages",
+            to: "/license-management/packages",
+            icon: KeyRound,
+            visible: isLicenseManagementSectionVisible(user),
           },
         ],
       },

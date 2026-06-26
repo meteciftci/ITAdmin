@@ -144,4 +144,13 @@ public static class PermissionCodes
             public const string Delete = "AdManagement.OrganizationalUnits.Delete";
         }
     }
+
+    public static class LicenseManagement
+    {
+        public const string View = "LicenseManagement.View";
+        public const string ManageCatalog = "LicenseManagement.ManageCatalog";
+        public const string ManageAcquisitions = "LicenseManagement.ManageAcquisitions";
+        public const string ViewReports = "LicenseManagement.ViewReports";
+        public const string ManageSettings = "LicenseManagement.ManageSettings";
+    }
 }

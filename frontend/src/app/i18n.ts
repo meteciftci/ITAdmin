@@ -19,6 +19,7 @@ import trNotificationProviders from "@/locales/tr/notificationProviders.json";
 import trNotificationOutbox from "@/locales/tr/notificationOutbox.json";
 import trNotificationTemplates from "@/locales/tr/notificationTemplates.json";
 import trNotificationSettings from "@/locales/tr/notificationSettings.json";
+import trLicenseManagement from "@/locales/tr/licenseManagement.json";
 
 import enAuth from "@/locales/en/auth.json";
 import enAuditLogs from "@/locales/en/auditLogs.json";
@@ -38,6 +39,7 @@ import enNotificationProviders from "@/locales/en/notificationProviders.json";
 import enNotificationOutbox from "@/locales/en/notificationOutbox.json";
 import enNotificationTemplates from "@/locales/en/notificationTemplates.json";
 import enNotificationSettings from "@/locales/en/notificationSettings.json";
+import enLicenseManagement from "@/locales/en/licenseManagement.json";
 
 export type SupportedLanguage = "tr" | "en";
 
@@ -66,6 +68,7 @@ const resources = {
     notificationOutbox: trNotificationOutbox.notificationOutbox,
     notificationTemplates: trNotificationTemplates.notificationTemplates,
     notificationSettings: trNotificationSettings.notificationSettings,
+    licenseManagement: trLicenseManagement.licenseManagement,
   },
   en: {
     common: enCommon.common,
@@ -86,6 +89,7 @@ const resources = {
     notificationOutbox: enNotificationOutbox.notificationOutbox,
     notificationTemplates: enNotificationTemplates.notificationTemplates,
     notificationSettings: enNotificationSettings.notificationSettings,
+    licenseManagement: enLicenseManagement.licenseManagement,
   },
 } as const;
 
@@ -113,6 +117,7 @@ void i18n.use(initReactI18next).init({
     "notificationOutbox",
     "notificationTemplates",
     "notificationSettings",
+    "licenseManagement",
   ],
   defaultNS: "common",
 });
