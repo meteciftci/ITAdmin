@@ -1,5 +1,4 @@
 import {
-  isAdManagementModuleValid,
   isLdapFormComplete,
   type SetupWizardFormValues,
 } from "./setup-form.ts";
@@ -8,7 +7,6 @@ export const SETUP_WIZARD_STEPS = [
   "setupKey",
   "serverCheck",
   "ldapConnection",
-  "modules",
   "adminUsers",
   "summary",
 ] as const;
@@ -54,8 +52,6 @@ export function canProceedFromWizardStep(
       return context.preflight?.canContinue === true;
     case "ldapConnection":
       return isLdapFormComplete(context.values.ldap) && context.ldapValidated;
-    case "modules":
-      return isAdManagementModuleValid(context.values.modules);
     case "adminUsers":
       return context.values.adminUsers.length > 0;
     case "summary":
@@ -63,17 +59,12 @@ export function canProceedFromWizardStep(
         context.values.setupKey.trim().length > 0 &&
         isLdapFormComplete(context.values.ldap) &&
         context.ldapValidated &&
-        isAdManagementModuleValid(context.values.modules) &&
         context.values.adminUsers.length > 0 &&
         context.preflight?.canContinue === true
       );
     default:
       return false;
   }
-}
-
-export function isLdapDependentStep(step: SetupWizardStep): boolean {
-  return step === "modules" || step === "adminUsers";
 }
 
 export function resolvePreflightMessageKey(messageKey: string): string {

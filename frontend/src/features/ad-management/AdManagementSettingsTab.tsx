@@ -20,9 +20,11 @@ import { getAdManagementSaveErrorMessage } from "@/features/ad-management/ad-man
 import { AdAttributeMappingDialog, type AdAttributeMappingDialogFormState } from "@/features/ad-management/components/AdAttributeMappingDialog";
 import { AdAttributeMappingsSection } from "@/features/ad-management/components/AdAttributeMappingsSection";
 import { AdManagementConnectionForm } from "@/features/ad-management/components/AdManagementConnectionForm";
+import { AdManagementScopesForm } from "@/features/ad-management/components/AdManagementScopesForm";
 import { AdDeletedObjectRestoreReadinessCard } from "@/features/ad-management/components/AdDeletedObjectRestoreReadinessCard";
 import { AdManagementNotificationsForm } from "@/features/ad-management/components/AdManagementNotificationsForm";
 import { AdCreationDefaultsForm } from "@/features/ad-management/components/AdCreationDefaultsForm";
+import { isAdManagementConnectionReady } from "@/features/ad-management/is-ad-management-connection-ready";
 import type {
   AdAttributeMapping,
   AdManagementSettings,
@@ -51,6 +53,7 @@ function buildSettingsKey(settings: AdManagementSettings | undefined): string {
     settings.hasServiceAccountPassword,
     settings.powerShellHealthEnabled,
     settings.powerShellTimeoutSeconds,
+    settings.lastValidationStatus,
   ].join("::");
 }
 
@@ -72,7 +75,19 @@ type Props = {
   readOnly: boolean;
 };
 
-type AdManagementInnerTab = "connection" | "mappings" | "creationDefaults" | "notifications";
+type AdManagementInnerTab =
+  | "connection"
+  | "scopes"
+  | "mappings"
+  | "creationDefaults"
+  | "notifications";
+
+const LOCKED_TABS: AdManagementInnerTab[] = [
+  "scopes",
+  "mappings",
+  "creationDefaults",
+  "notifications",
+];
 
 export function AdManagementSettingsTab({ readOnly }: Props) {
   const { t } = useTranslation(["settings", "common"]);
@@ -80,15 +95,25 @@ export function AdManagementSettingsTab({ readOnly }: Props) {
 
   const [activeTab, setActiveTab] = useState<AdManagementInnerTab>("connection");
 
-  const handleTabChange = useCallback((value: string) => {
-    setActiveTab(value as AdManagementInnerTab);
-  }, []);
-
   const settingsQuery = useQuery({
     queryKey: AD_MANAGEMENT_SETTINGS_QUERY_KEY,
     queryFn: getAdManagementSettings,
     refetchOnWindowFocus: false,
   });
+
+  const connectionReady = isAdManagementConnectionReady(settingsQuery.data);
+
+  const handleTabChange = useCallback(
+    (value: string) => {
+      const nextTab = value as AdManagementInnerTab;
+      if (!connectionReady && LOCKED_TABS.includes(nextTab)) {
+        return;
+      }
+
+      setActiveTab(nextTab);
+    },
+    [connectionReady],
+  );
 
   const mappingsQuery = useQuery({
     queryKey: AD_MANAGEMENT_MAPPINGS_QUERY_KEY,
@@ -273,18 +298,27 @@ export function AdManagementSettingsTab({ readOnly }: Props) {
 
   return (
     <div className="space-y-6">
+      {!connectionReady ? (
+        <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm">
+          {t("settings:adManagement.tabsDisabledHint")}
+        </p>
+      ) : null}
+
       <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
           <TabsTrigger value="connection">
             {t("settings:adManagement.pageTabs.connection")}
           </TabsTrigger>
-          <TabsTrigger value="mappings">
+          <TabsTrigger value="scopes" disabled={!connectionReady}>
+            {t("settings:adManagement.pageTabs.scopes")}
+          </TabsTrigger>
+          <TabsTrigger value="mappings" disabled={!connectionReady}>
             {t("settings:adManagement.pageTabs.attributeMapping")}
           </TabsTrigger>
-          <TabsTrigger value="creationDefaults">
+          <TabsTrigger value="creationDefaults" disabled={!connectionReady}>
             {t("settings:adManagement.pageTabs.creationDefaults")}
           </TabsTrigger>
-          <TabsTrigger value="notifications">
+          <TabsTrigger value="notifications" disabled={!connectionReady}>
             {t("settings:adManagement.pageTabs.notifications")}
           </TabsTrigger>
         </TabsList>
@@ -307,6 +341,20 @@ export function AdManagementSettingsTab({ readOnly }: Props) {
           <AdDeletedObjectRestoreReadinessCard
             settings={settingsQuery.data}
             readOnly={readOnly}
+          />
+        </TabsContent>
+
+        <TabsContent value="scopes" className="pt-4">
+          <AdManagementScopesForm
+            key={`${buildSettingsKey(settingsQuery.data)}::scopes`}
+            settings={settingsQuery.data}
+            readOnly={readOnly}
+            isSaving={updateSettingsMutation.isPending}
+            onSave={(payload) =>
+              saveSettings(
+                payload,
+                t("settings:adManagement.scopes.messages.saveSuccess"),
+              )}
           />
         </TabsContent>
 

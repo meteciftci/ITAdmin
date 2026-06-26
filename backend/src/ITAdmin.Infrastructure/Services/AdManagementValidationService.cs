@@ -24,8 +24,6 @@ public sealed class AdManagementValidationService : IAdManagementValidationServi
             || string.IsNullOrWhiteSpace(connection.NetbiosDomainName)
             || string.IsNullOrWhiteSpace(connection.DefaultNamingContext)
             || string.IsNullOrWhiteSpace(connection.BaseDn)
-            || string.IsNullOrWhiteSpace(connection.UsersRootOu)
-            || string.IsNullOrWhiteSpace(connection.DisabledUsersOu)
             || string.IsNullOrWhiteSpace(connection.ServiceAccountUserName)
             || string.IsNullOrWhiteSpace(connection.ServiceAccountPassword))
         {
@@ -116,41 +114,47 @@ public sealed class AdManagementValidationService : IAdManagementValidationServi
                 AdManagementValidationStatuses.Ok,
                 null));
 
-            if (!TryResolveBase(primaryConnection, connection.UsersRootOu!))
+            if (!string.IsNullOrWhiteSpace(connection.UsersRootOu))
             {
-                details.Add(ValidationDetail(
+                if (!TryResolveBase(primaryConnection, connection.UsersRootOu!))
+                {
+                    details.Add(ValidationDetail(
+                        "usersRootOu",
+                        AdManagementValidationStatuses.Failed,
+                        AdManagementApiMessageKeys.SettingsValidation.UsersRootOuNotResolved));
+                    return Task.FromResult(ValidationResult(
+                        false,
+                        AdManagementApiMessageKeys.SettingsValidation.UsersRootOuNotResolved,
+                        checkedAt,
+                        details));
+                }
+
+                details.Add(new AdManagementValidationDetail(
                     "usersRootOu",
-                    AdManagementValidationStatuses.Failed,
-                    AdManagementApiMessageKeys.SettingsValidation.UsersRootOuNotResolved));
-                return Task.FromResult(ValidationResult(
-                    false,
-                    AdManagementApiMessageKeys.SettingsValidation.UsersRootOuNotResolved,
-                    checkedAt,
-                    details));
+                    AdManagementValidationStatuses.Ok,
+                    null));
             }
 
-            details.Add(new AdManagementValidationDetail(
-                "usersRootOu",
-                AdManagementValidationStatuses.Ok,
-                null));
-
-            if (!TryResolveBase(primaryConnection, connection.DisabledUsersOu!))
+            if (!string.IsNullOrWhiteSpace(connection.DisabledUsersOu))
             {
-                details.Add(ValidationDetail(
-                    "disabledUsersOu",
-                    AdManagementValidationStatuses.Failed,
-                    AdManagementApiMessageKeys.SettingsValidation.DisabledUsersOuNotResolved));
-                return Task.FromResult(ValidationResult(
-                    false,
-                    AdManagementApiMessageKeys.SettingsValidation.DisabledUsersOuNotResolved,
-                    checkedAt,
-                    details));
-            }
+                if (!TryResolveBase(primaryConnection, connection.DisabledUsersOu!))
+                {
+                    details.Add(ValidationDetail(
+                        "disabledUsersOu",
+                        AdManagementValidationStatuses.Failed,
+                        AdManagementApiMessageKeys.SettingsValidation.DisabledUsersOuNotResolved));
+                    return Task.FromResult(ValidationResult(
+                        false,
+                        AdManagementApiMessageKeys.SettingsValidation.DisabledUsersOuNotResolved,
+                        checkedAt,
+                        details));
+                }
 
-            details.Add(new AdManagementValidationDetail(
-                "disabledUsersOu",
-                AdManagementValidationStatuses.Ok,
-                null));
+                details.Add(new AdManagementValidationDetail(
+                    "disabledUsersOu",
+                    AdManagementValidationStatuses.Ok,
+                    null));
+            }
 
             if (!string.IsNullOrWhiteSpace(connection.GroupsSearchBase))
             {

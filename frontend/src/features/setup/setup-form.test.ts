@@ -7,11 +7,8 @@ import {
   buildCompleteSetupRequest,
   canAddAdminUser,
   createDefaultSetupFormValues,
-  isAdManagementModuleValid,
-  isOuSearchBelowMinLength,
   mapCompleteSetupFailureToast,
   shouldFetchAdminUserSearchResults,
-  shouldFetchOuSearchResults,
   summaryContainsSecrets,
 } from "./setup-form.ts";
 import {
@@ -47,7 +44,7 @@ describe("setup-form", () => {
     assert.equal("userSearchBase" in payload, false);
   });
 
-  it("builds the complete-setup request with adminUsers and modules", () => {
+  it("builds the complete-setup request without modules payload", () => {
     const request = buildCompleteSetupRequest({
       ...defaults,
       setupKey: "key",
@@ -56,138 +53,40 @@ describe("setup-form", () => {
 
     assert.equal(request.adminUsers.length, 1);
     assert.equal(request.adminUsers[0]?.userName, "admin");
-    assert.equal(request.modules.adManagement?.isEnabled, false);
+    assert.equal("modules" in request, false);
     assert.equal("userSearchBase" in request.ldap, false);
   });
 
-  it("writes selected OU DN values into modules payload", () => {
-    const request = buildCompleteSetupRequest({
-      ...defaults,
-      setupKey: "key",
-      modules: {
-        adManagement: {
-          ...defaults.modules.adManagement,
-          isEnabled: true,
-          usersSearchBase: { distinguishedName: "OU=Users,DC=test,DC=local", label: "Users" },
-          groupsSearchBase: { distinguishedName: "OU=Groups,DC=test,DC=local", label: "Groups" },
-          computersSearchBase: { distinguishedName: "OU=Computers,DC=test,DC=local", label: "Computers" },
-        },
-      },
-      adminUsers: [{ userName: "admin", displayName: "Admin" }],
-    });
-
-    assert.equal(request.modules.adManagement?.usersSearchBase, "OU=Users,DC=test,DC=local");
-    assert.equal(request.modules.adManagement?.groupsSearchBase, "OU=Groups,DC=test,DC=local");
-    assert.equal(request.modules.adManagement?.computersSearchBase, "OU=Computers,DC=test,DC=local");
-  });
-
-  it("writes disabled users OU into modules payload when selected", () => {
-    const request = buildCompleteSetupRequest({
-      ...defaults,
-      setupKey: "key",
-      modules: {
-        adManagement: {
-          ...defaults.modules.adManagement,
-          isEnabled: true,
-          usersSearchBase: { distinguishedName: "OU=Users,DC=test,DC=local", label: "Users" },
-          groupsSearchBase: { distinguishedName: "OU=Groups,DC=test,DC=local", label: "Groups" },
-          computersSearchBase: { distinguishedName: "OU=Computers,DC=test,DC=local", label: "Computers" },
-          disabledUsersOu: { distinguishedName: "OU=Disabled,DC=test,DC=local", label: "Disabled Users" },
-        },
-      },
-      adminUsers: [{ userName: "admin", displayName: "Admin" }],
-    });
-
-    assert.equal(request.modules.adManagement?.disabledUsersOu, "OU=Disabled,DC=test,DC=local");
-  });
-
-  it("allows AD Management setup without disabled users OU", () => {
-    assert.equal(
-      isAdManagementModuleValid({
-        adManagement: {
-          ...defaults.modules.adManagement,
-          isEnabled: true,
-          usersSearchBase: { distinguishedName: "OU=Users,DC=test,DC=local", label: "Users" },
-          groupsSearchBase: { distinguishedName: "OU=Groups,DC=test,DC=local", label: "Groups" },
-          computersSearchBase: { distinguishedName: "OU=Computers,DC=test,DC=local", label: "Computers" },
-          disabledUsersOu: null,
-        },
-      }),
-      true,
-    );
-  });
-
-  it("does not require AD Management OU fields when disabled", () => {
-    assert.equal(isAdManagementModuleValid(defaults.modules), true);
-  });
-
-  it("requires AD Management search bases when enabled", () => {
-    assert.equal(
-      isAdManagementModuleValid({
-        adManagement: {
-          ...defaults.modules.adManagement,
-          isEnabled: true,
-        },
-      }),
-      false,
-    );
-  });
-
   it("prevents duplicate admin user selection", () => {
-    const existing = [{ userName: "admin", displayName: "Admin" }];
     assert.equal(
-      canAddAdminUser(existing, { userName: "admin", displayName: "Admin Duplicate" }),
+      canAddAdminUser(
+        [{ userName: "admin", displayName: "Admin" }],
+        { userName: "ADMIN", displayName: "Admin Duplicate" },
+      ),
       false,
     );
   });
 
   it("falls back to the generic hint for an empty message", () => {
-    assert.equal(mapCompleteSetupFailureToast("", hints), hints.genericFallback);
+    assert.equal(mapCompleteSetupFailureToast(undefined, hints), "generic");
   });
 
   it("summary helper detects secret-like labels", () => {
-    assert.equal(summaryContainsSecrets("host: dc01"), false);
-    assert.equal(summaryContainsSecrets("setup key: hidden"), true);
-    assert.equal(summaryContainsSecrets("bind password"), true);
+    assert.equal(summaryContainsSecrets("Setup key is configured"), true);
+    assert.equal(summaryContainsSecrets("LDAP host configured"), false);
   });
 
-  it("clears LDAP-dependent OU selections and admin users when LDAP config changes", () => {
-    const current = {
-      ...defaults,
-      setupKey: "key",
-      modules: {
-        adManagement: {
-          ...defaults.modules.adManagement,
-          isEnabled: true,
-          usersSearchBase: { distinguishedName: "OU=Users,DC=test,DC=local", label: "Users" },
-          groupsSearchBase: { distinguishedName: "OU=Groups,DC=test,DC=local", label: "Groups" },
-          computersSearchBase: { distinguishedName: "OU=Computers,DC=test,DC=local", label: "Computers" },
-          disabledUsersOu: { distinguishedName: "OU=Disabled,DC=test,DC=local", label: "Disabled Users" },
-          defaultUserOu: { distinguishedName: "OU=NewUsers,DC=test,DC=local", label: "New Users" },
-          defaultGroupOu: null,
-          defaultComputerOu: null,
-          deletedObjectsEnabled: true,
-        },
+  it("clears admin users when LDAP config changes", () => {
+    const next = applyLdapConfigChange(
+      {
+        ...defaults,
+        adminUsers: [{ userName: "admin", displayName: "Admin" }],
       },
-      adminUsers: [{ userName: "admin", displayName: "Admin User" }],
-    };
+      { ...defaults.ldap, host: "new-host" },
+    );
 
-    const next = applyLdapConfigChange(current, { ...current.ldap, host: "dc02.test" });
-
-    assert.equal(next.ldap.host, "dc02.test");
-    assert.equal(next.modules.adManagement.usersSearchBase, null);
-    assert.equal(next.modules.adManagement.disabledUsersOu, null);
-    assert.equal(next.modules.adManagement.defaultUserOu, null);
-    assert.equal(next.modules.adManagement.isEnabled, true);
-    assert.equal(next.modules.adManagement.deletedObjectsEnabled, true);
     assert.equal(next.adminUsers.length, 0);
-  });
-
-  it("does not trigger OU search when search is below minimum length", () => {
-    assert.equal(isOuSearchBelowMinLength("a"), true);
-    assert.equal(shouldFetchOuSearchResults(true, "a"), false);
-    assert.equal(shouldFetchOuSearchResults(true, ""), true);
-    assert.equal(shouldFetchOuSearchResults(true, "ou"), true);
+    assert.equal(next.ldap.host, "new-host");
   });
 
   it("does not trigger admin user search when LDAP is not validated", () => {
@@ -198,38 +97,32 @@ describe("setup-form", () => {
 });
 
 describe("setup-wizard-state", () => {
-  it("navigates forward and backward across steps", () => {
+  it("navigates forward and backward across five steps", () => {
+    assert.equal(SETUP_WIZARD_STEPS.length, 5);
     assert.equal(getNextWizardStep("setupKey"), "serverCheck");
-    assert.equal(getPreviousWizardStep("serverCheck"), "setupKey");
-    assert.equal(getNextWizardStep("summary"), null);
-    assert.equal(getPreviousWizardStep("setupKey"), null);
-    assert.equal(SETUP_WIZARD_STEPS.length, 6);
+    assert.equal(getNextWizardStep("ldapConnection"), "adminUsers");
+    assert.equal(getPreviousWizardStep("adminUsers"), "ldapConnection");
+    assert.equal(getPreviousWizardStep("summary"), "adminUsers");
   });
 
   it("blocks server check next when canContinue is false", () => {
     const canProceed = canProceedFromWizardStep("serverCheck", {
       values: { ...defaults, setupKey: "key" },
-      preflight: { checks: [], canContinue: false },
+      preflight: { canContinue: false },
       ldapValidated: false,
     });
 
     assert.equal(canProceed, false);
   });
 
-  it("requires ldap validation before modules step can proceed", () => {
+  it("requires ldap validation before admin users step can proceed", () => {
     const canProceed = canProceedFromWizardStep("ldapConnection", {
       values: {
         ...defaults,
         setupKey: "key",
-        ldap: {
-          ...defaults.ldap,
-          host: "dc01",
-          baseDn: "DC=test,DC=local",
-          bindUserName: "bind",
-          bindPassword: "pw",
-        },
+        ldap: { ...defaults.ldap, host: "dc", baseDn: "dc=test", bindUserName: "bind", bindPassword: "pw" },
       },
-      preflight: { checks: [], canContinue: true },
+      preflight: { canContinue: true },
       ldapValidated: false,
     });
 

@@ -7,7 +7,6 @@
       "setupKey": "Kurulum anahtarı",
       "serverCheck": "Sunucu kontrolü",
       "ldapConnection": "LDAP bağlantısı",
-      "modules": "Modüller",
       "adminUsers": "Yönetici kullanıcıları",
       "summary": "Özet"
     },
@@ -31,11 +30,6 @@
         "validateRequired": "Sonraki adıma geçmeden önce LDAP bağlantısını doğrulayın.",
         "validateFailed": "LDAP doğrulaması başarısız oldu."
       },
-      "modules": {
-        "title": "Modüller",
-        "description": "Kurulum sırasında etkinleştirilecek modülleri yapılandırın.",
-        "ldapRequired": "OU seçimi için önce LDAP bağlantısını doğrulayın."
-      },
       "adminUsers": {
         "title": "Yönetici kullanıcıları",
         "description": "LDAP üzerinden portal SuperAdmin kullanıcılarını seçin.",
@@ -52,7 +46,6 @@
         "title": "Kurulum özeti",
         "description": "Kurulum tamamlanmadan önce seçilen ayarları gözden geçirin.",
         "ldapTitle": "LDAP",
-        "adManagementTitle": "AD Management",
         "adminUsersTitle": "Yönetici kullanıcıları",
         "preflightTitle": "Sunucu kontrolü",
         "preflightReady": "Sunucu kontrolleri geçildi.",
@@ -77,36 +70,6 @@
       "bindUserDomain": "Opsiyonel. Bind kullanıcı domain bilgisi ayrı tutuluyorsa girin.",
       "userSearchFilter": "{0} kullanıcı adı ile değiştirilir.",
       "ldapsHelp": "Bağlantı LDAPS (SSL/TLS) üzerinden 636 portu ile kurulur."
-    },
-    "modules": {
-      "adManagement": {
-        "enable": "AD Management etkin",
-        "enableDescription": "Active Directory yönetim modülünü kurulum sonrası etkinleştirir.",
-        "usersSearchBase": "Kullanıcı arama base",
-        "groupsSearchBase": "Grup arama base",
-        "computersSearchBase": "Bilgisayar arama base",
-        "disabledUsersOu": "Pasif Kullanıcılar OU",
-        "disabledUsersOuHelper": "Pasife alınan kullanıcıların taşınacağı OU.",
-        "defaultUserOu": "Varsayılan kullanıcı OU",
-        "defaultGroupOu": "Varsayılan grup OU",
-        "defaultComputerOu": "Varsayılan bilgisayar OU",
-        "deletedObjectsEnabled": "Silinen nesneler etkin"
-      }
-    },
-    "ouPicker": {
-      "title": "Organizational Unit seç",
-      "description": "LDAP üzerinden OU arayın ve seçin.",
-      "noSelection": "Henüz OU seçilmedi.",
-      "searchPlaceholder": "OU adı veya DN ile arayın",
-      "minSearchLength": "Arama en az 2 karakter olmalıdır. Boş arama ilk seviye OU'ları listeler.",
-      "loading": "OU listesi yükleniyor...",
-      "emptyTitle": "OU bulunamadı",
-      "emptyDescription": "Arama kriterlerinize uygun OU bulunamadı.",
-      "hasMore": "Daha fazla sonuç var. Aramayı daraltın.",
-      "errors": {
-        "title": "OU araması başarısız",
-        "searchFailed": "OU araması tamamlanamadı."
-      }
     },
     "actions": {
       "back": "Geri",

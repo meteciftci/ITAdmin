@@ -10,7 +10,8 @@ import {
   AD_UPN_SUFFIXES_QUERY_KEY,
   getAdUpnSuffixes,
 } from "@/features/ad-management/api";
-import { AdOuSearchCombobox } from "@/features/ad-management/components/AdOuSearchCombobox";
+import { AdOuPickerField } from "@/features/ad-management/components/AdOuPickerField";
+import { isAdManagementConnectionReady } from "@/features/ad-management/is-ad-management-connection-ready";
 import { isSavedDefaultMissingFromAdList } from "@/features/ad-management/resolve-default-upn-suffix";
 import type {
   AdManagementSettings,
@@ -23,21 +24,6 @@ type Props = {
   isSaving: boolean;
   onSave: (payload: UpdateAdManagementSettingsRequest) => void;
 };
-
-function hasMinimumConnectionSettings(settings: AdManagementSettings | undefined): boolean {
-  if (!settings?.isEnabled) {
-    return false;
-  }
-
-  return Boolean(
-    settings.domainFqdn?.trim()
-      && settings.netbiosDomainName?.trim()
-      && settings.defaultNamingContext?.trim()
-      && settings.baseDn?.trim()
-      && settings.serviceAccountUserName?.trim()
-      && settings.hasServiceAccountPassword,
-  );
-}
 
 export function AdCreationDefaultsForm({
   settings,
@@ -53,7 +39,7 @@ export function AdCreationDefaultsForm({
     settings?.defaultUserCreationUpnSuffix ?? "",
   );
 
-  const connectionReady = hasMinimumConnectionSettings(settings);
+  const connectionReady = isAdManagementConnectionReady(settings);
 
   const upnSuffixesQuery = useQuery({
     queryKey: AD_UPN_SUFFIXES_QUERY_KEY,
@@ -117,12 +103,6 @@ export function AdCreationDefaultsForm({
         </p>
       </div>
 
-      {!connectionReady ? (
-        <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm">
-          {t("settings:adManagement.creationDefaults.warnings.connectionRequired")}
-        </p>
-      ) : null}
-
       {connectionReady && listBlocking ? (
         <p className="text-sm text-destructive">
           {upnSuffixesQuery.isLoading
@@ -133,7 +113,7 @@ export function AdCreationDefaultsForm({
 
       {connectionReady ? (
         <div className="grid max-w-2xl gap-4">
-          <AdOuSearchCombobox
+          <AdOuPickerField
             value={defaultUserOu}
             onChange={setDefaultUserOu}
             searchContext="users"
@@ -150,7 +130,7 @@ export function AdCreationDefaultsForm({
             {t("settings:adManagement.creationDefaults.fields.defaultUserOuHelp")}
           </p>
 
-          <AdOuSearchCombobox
+          <AdOuPickerField
             value={defaultGroupOu}
             onChange={setDefaultGroupOu}
             searchContext="groups"
@@ -167,7 +147,7 @@ export function AdCreationDefaultsForm({
             {t("settings:adManagement.creationDefaults.fields.defaultGroupOuHelp")}
           </p>
 
-          <AdOuSearchCombobox
+          <AdOuPickerField
             value={defaultComputerOu}
             onChange={setDefaultComputerOu}
             searchContext="computers"

@@ -25,34 +25,11 @@ public sealed class SetupRequestValidatorTests
     }
 
     [Fact]
-    public void TryValidateModules_RequiresAdManagementSearchBasesWhenEnabled()
-    {
-        var modules = new CompleteSetupModulesSettings(
-            new CompleteSetupAdManagementModuleSettings(
-                IsEnabled: true,
-                UsersSearchBase: null,
-                GroupsSearchBase: "OU=Groups,DC=test,DC=local",
-                ComputersSearchBase: "OU=Computers,DC=test,DC=local",
-                DisabledUsersOu: null,
-                DefaultUserOu: null,
-                DefaultGroupOu: null,
-                DefaultComputerOu: null,
-                DeletedObjectsEnabled: false));
-
-        var isValid = SetupRequestValidator.TryValidateModules(modules, out var message, out var messageKey);
-
-        Assert.False(isValid);
-        Assert.Equal("AD Management module is missing required fields.", message);
-        Assert.Equal("apiMessages.setup.adManagementModuleMissingRequiredFields", messageKey);
-    }
-
-    [Fact]
     public void TryValidateCompleteSetupRequest_RejectsNullAdminUsers()
     {
         var request = new CompleteSetupRequest(
             "setup-secret",
             CreateRequest([]).Ldap,
-            new CompleteSetupModulesSettings(null),
             null!);
 
         var isValid = SetupRequestValidator.TryValidateCompleteSetupRequest(request, out var message, out var messageKey);
@@ -60,16 +37,6 @@ public sealed class SetupRequestValidatorTests
         Assert.False(isValid);
         Assert.Equal("At least one admin user is required.", message);
         Assert.Equal("apiMessages.setup.adminUsersRequired", messageKey);
-    }
-
-    [Fact]
-    public void TryValidateModules_AcceptsNullModulesAsDisabled()
-    {
-        var isValid = SetupRequestValidator.TryValidateModules(null, out var message, out var messageKey);
-
-        Assert.True(isValid);
-        Assert.Empty(message);
-        Assert.Null(messageKey);
     }
 
     [Fact]
@@ -99,6 +66,5 @@ public sealed class SetupRequestValidatorTests
                 "bind",
                 null,
                 "bindpw"),
-            new CompleteSetupModulesSettings(null),
             adminUsers);
 }

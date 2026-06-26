@@ -136,7 +136,18 @@ describe("ad creation defaults integration", () => {
 
     assert.match(tabSource, /AdCreationDefaultsForm/);
     assert.match(tabSource, /creationDefaults/);
+    assert.match(tabSource, /AdManagementScopesForm/);
+    assert.match(tabSource, /scopes/);
     assert.doesNotMatch(formSource, /disabledUsersOu/i);
     assert.doesNotMatch(formSource, /disabledUsers/i);
+  });
+
+  it("connection form does not include OU scope text inputs", () => {
+    const source = readSource("components/AdManagementConnectionForm.tsx");
+    assert.doesNotMatch(source, /ad-mgmt-users-root-ou/);
+    assert.doesNotMatch(source, /ad-mgmt-disabled-users-ou/);
+    assert.doesNotMatch(source, /ad-mgmt-groups-search-base/);
+    assert.doesNotMatch(source, /ad-mgmt-computers-search-base/);
+    assert.doesNotMatch(source, /connection\.fields\.usersRootOu/);
   });
 });

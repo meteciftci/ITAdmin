@@ -26,22 +26,6 @@ export type CompleteSetupLdapRequest = {
   bindPassword: string;
 };
 
-export type CompleteSetupAdManagementModuleRequest = {
-  isEnabled: boolean;
-  usersSearchBase?: string | null;
-  groupsSearchBase?: string | null;
-  computersSearchBase?: string | null;
-  disabledUsersOu?: string | null;
-  defaultUserOu?: string | null;
-  defaultGroupOu?: string | null;
-  defaultComputerOu?: string | null;
-  deletedObjectsEnabled: boolean;
-};
-
-export type CompleteSetupModulesRequest = {
-  adManagement?: CompleteSetupAdManagementModuleRequest | null;
-};
-
 export type CompleteSetupAdminUserRequest = {
   userName: string;
   distinguishedName?: string | null;
@@ -51,7 +35,6 @@ export type CompleteSetupAdminUserRequest = {
 export type CompleteSetupRequest = {
   setupKey: string;
   ldap: CompleteSetupLdapRequest;
-  modules: CompleteSetupModulesRequest;
   adminUsers: CompleteSetupAdminUserRequest[];
 };
 
@@ -93,26 +76,6 @@ export type SearchSetupAdminUsersResponse = {
   users: SetupAdminUserSearchResultResponse[];
 };
 
-export type SearchSetupOrganizationalUnitsRequest = {
-  setupKey: string;
-  ldap: CompleteSetupLdapRequest;
-  search?: string | null;
-  parentDistinguishedName?: string | null;
-};
-
-export type SetupOrganizationalUnitListItemResponse = {
-  distinguishedName: string;
-  name?: string | null;
-  displayName?: string | null;
-  ou?: string | null;
-  label: string;
-};
-
-export type SearchSetupOrganizationalUnitsResponse = {
-  items: SetupOrganizationalUnitListItemResponse[];
-  hasMore: boolean;
-};
-
 export const getSetupStatus = async (): Promise<SetupStatusResponse> => {
   const { data } = await apiClient.get<SetupStatusResponse>("/setup/status");
   return data;
@@ -135,16 +98,6 @@ export const searchSetupAdminUsers = async (
 ): Promise<SearchSetupAdminUsersResponse> => {
   const { data } = await apiClient.post<SearchSetupAdminUsersResponse>(
     "/setup/search-admin-users",
-    request,
-  );
-  return data;
-};
-
-export const searchSetupOrganizationalUnits = async (
-  request: SearchSetupOrganizationalUnitsRequest,
-): Promise<SearchSetupOrganizationalUnitsResponse> => {
-  const { data } = await apiClient.post<SearchSetupOrganizationalUnitsResponse>(
-    "/setup/search-organizational-units",
     request,
   );
   return data;

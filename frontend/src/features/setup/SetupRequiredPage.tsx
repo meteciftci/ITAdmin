@@ -19,7 +19,6 @@ import { SetupWizardStepper } from "@/features/setup/components/SetupWizardStepp
 import {
   AdminUsersStep,
   LdapConnectionStep,
-  ModulesStep,
   ServerCheckStep,
   SetupKeyStep,
   SummaryStep,
@@ -197,17 +196,6 @@ export function SetupRequiredPage() {
             onValidatedChange={setLdapValidated}
             disabled={isSubmitting}
             fieldErrors={ldapFieldErrors}
-          />
-        ) : null}
-
-        {currentStep === "modules" ? (
-          <ModulesStep
-            setupKey={values.setupKey}
-            ldap={values.ldap}
-            modules={values.modules}
-            onChange={(modules) => setValues((current) => ({ ...current, modules }))}
-            ldapValidated={ldapValidated}
-            disabled={isSubmitting}
           />
         ) : null}
 

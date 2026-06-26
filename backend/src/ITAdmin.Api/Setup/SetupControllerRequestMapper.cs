@@ -28,7 +28,6 @@ internal static class SetupControllerRequestMapper
         mapped = new AppModels.CompleteSetupRequest(
             request.SetupKey ?? string.Empty,
             MapLdapSettings(request.Ldap),
-            MapModules(request.Modules),
             (request.AdminUsers ?? Array.Empty<CompleteSetupAdminUserRequest>())
                 .Select(adminUser => new AppModels.CompleteSetupAdminUser(
                     adminUser.UserName ?? string.Empty,
@@ -86,34 +85,6 @@ internal static class SetupControllerRequestMapper
         return true;
     }
 
-    public static bool TryMapSearchOrganizationalUnitsRequest(
-        SearchSetupOrganizationalUnitsRequest? request,
-        out AppModels.SearchSetupOrganizationalUnitsRequest mapped,
-        out string messageKey)
-    {
-        mapped = default!;
-        messageKey = SetupApiMessageKeys.Validation.InvalidRequestBody;
-
-        if (request is null)
-        {
-            return false;
-        }
-
-        if (request.Ldap is null)
-        {
-            messageKey = SetupApiMessageKeys.Validation.InvalidLdapSettings;
-            return false;
-        }
-
-        mapped = new AppModels.SearchSetupOrganizationalUnitsRequest(
-            request.SetupKey ?? string.Empty,
-            MapLdapSettings(request.Ldap),
-            request.Search,
-            request.ParentDistinguishedName);
-
-        return true;
-    }
-
     private static AppModels.CompleteSetupLdapSettings MapLdapSettings(CompleteSetupLdapSettingsRequest ldap) =>
         new(
             ldap.Name ?? string.Empty,
@@ -133,18 +104,4 @@ internal static class SetupControllerRequestMapper
             request.BindUserName ?? string.Empty,
             request.BindUserDomain,
             request.BindPassword ?? string.Empty);
-
-    private static AppModels.CompleteSetupModulesSettings MapModules(CompleteSetupModulesRequest? modules) =>
-        new(modules?.AdManagement is null
-            ? null
-            : new AppModels.CompleteSetupAdManagementModuleSettings(
-                modules.AdManagement.IsEnabled,
-                modules.AdManagement.UsersSearchBase,
-                modules.AdManagement.GroupsSearchBase,
-                modules.AdManagement.ComputersSearchBase,
-                modules.AdManagement.DisabledUsersOu,
-                modules.AdManagement.DefaultUserOu,
-                modules.AdManagement.DefaultGroupOu,
-                modules.AdManagement.DefaultComputerOu,
-                modules.AdManagement.DeletedObjectsEnabled));
 }

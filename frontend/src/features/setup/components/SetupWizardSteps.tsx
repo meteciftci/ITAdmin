@@ -9,21 +9,17 @@ import { SectionCard } from "@/components/common/SectionCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import type { SetupPreflightResponse } from "@/features/setup/api";
 import {
   searchSetupAdminUsers,
   validateSetupLdap,
 } from "@/features/setup/api";
-import { SetupOuPicker } from "@/features/setup/components/SetupOuPicker";
 import {
   buildCompleteSetupLdapPayload,
   canAddAdminUser,
   shouldFetchAdminUserSearchResults,
   type SetupAdminUserSelection,
-  type SetupAdManagementFormValues,
   type SetupLdapFormValues,
-  type SetupModulesFormValues,
   type SetupWizardFormValues,
 } from "@/features/setup/setup-form";
 import { resolvePreflightMessageKey } from "@/features/setup/setup-wizard-state";
@@ -282,145 +278,6 @@ export function LdapConnectionStep({
   );
 }
 
-type ModulesStepProps = {
-  setupKey: string;
-  ldap: SetupLdapFormValues;
-  modules: SetupModulesFormValues;
-  onChange: (modules: SetupModulesFormValues) => void;
-  ldapValidated: boolean;
-  disabled?: boolean;
-};
-
-function updateAdManagement(
-  current: SetupAdManagementFormValues,
-  patch: Partial<SetupAdManagementFormValues>,
-): SetupAdManagementFormValues {
-  return { ...current, ...patch };
-}
-
-export function ModulesStep({
-  setupKey,
-  ldap,
-  modules,
-  onChange,
-  ldapValidated,
-  disabled,
-}: ModulesStepProps) {
-  const { t } = useTranslation(["setup"]);
-  const adManagement = modules.adManagement;
-  const pickerDisabled = disabled || !ldapValidated;
-
-  const setAdManagement = (next: SetupAdManagementFormValues) => {
-    onChange({ adManagement: next });
-  };
-
-  return (
-    <SectionCard title={t("setup:steps.modules.title")} description={t("setup:steps.modules.description")}>
-      {!ldapValidated ? <FieldHint>{t("setup:steps.modules.ldapRequired")}</FieldHint> : null}
-
-      <div className="flex items-center justify-between rounded-lg border px-3 py-3">
-        <div>
-          <p className="text-sm font-medium">{t("setup:modules.adManagement.enable")}</p>
-          <p className="text-xs text-muted-foreground">{t("setup:modules.adManagement.enableDescription")}</p>
-        </div>
-        <Switch
-          checked={adManagement.isEnabled}
-          onCheckedChange={(checked) =>
-            setAdManagement(updateAdManagement(adManagement, { isEnabled: checked }))
-          }
-          disabled={disabled}
-        />
-      </div>
-
-      {adManagement.isEnabled ? (
-        <div className="mt-4 grid gap-4">
-          <SetupOuPicker
-            id="usersSearchBase"
-            label={t("setup:modules.adManagement.usersSearchBase")}
-            value={adManagement.usersSearchBase}
-            onChange={(value) => setAdManagement(updateAdManagement(adManagement, { usersSearchBase: value }))}
-            setupKey={setupKey}
-            ldap={ldap}
-            disabled={pickerDisabled}
-            required
-          />
-          <SetupOuPicker
-            id="groupsSearchBase"
-            label={t("setup:modules.adManagement.groupsSearchBase")}
-            value={adManagement.groupsSearchBase}
-            onChange={(value) => setAdManagement(updateAdManagement(adManagement, { groupsSearchBase: value }))}
-            setupKey={setupKey}
-            ldap={ldap}
-            disabled={pickerDisabled}
-            required
-          />
-          <SetupOuPicker
-            id="computersSearchBase"
-            label={t("setup:modules.adManagement.computersSearchBase")}
-            value={adManagement.computersSearchBase}
-            onChange={(value) => setAdManagement(updateAdManagement(adManagement, { computersSearchBase: value }))}
-            setupKey={setupKey}
-            ldap={ldap}
-            disabled={pickerDisabled}
-            required
-          />
-          <div className="space-y-2">
-            <SetupOuPicker
-              id="disabledUsersOu"
-              label={t("setup:modules.adManagement.disabledUsersOu")}
-              value={adManagement.disabledUsersOu}
-              onChange={(value) => setAdManagement(updateAdManagement(adManagement, { disabledUsersOu: value }))}
-              setupKey={setupKey}
-              ldap={ldap}
-              disabled={pickerDisabled}
-            />
-            <FieldHint>{t("setup:modules.adManagement.disabledUsersOuHelper")}</FieldHint>
-          </div>
-          <SetupOuPicker
-            id="defaultUserOu"
-            label={t("setup:modules.adManagement.defaultUserOu")}
-            value={adManagement.defaultUserOu}
-            onChange={(value) => setAdManagement(updateAdManagement(adManagement, { defaultUserOu: value }))}
-            setupKey={setupKey}
-            ldap={ldap}
-            disabled={pickerDisabled}
-          />
-          <SetupOuPicker
-            id="defaultGroupOu"
-            label={t("setup:modules.adManagement.defaultGroupOu")}
-            value={adManagement.defaultGroupOu}
-            onChange={(value) => setAdManagement(updateAdManagement(adManagement, { defaultGroupOu: value }))}
-            setupKey={setupKey}
-            ldap={ldap}
-            disabled={pickerDisabled}
-          />
-          <SetupOuPicker
-            id="defaultComputerOu"
-            label={t("setup:modules.adManagement.defaultComputerOu")}
-            value={adManagement.defaultComputerOu}
-            onChange={(value) => setAdManagement(updateAdManagement(adManagement, { defaultComputerOu: value }))}
-            setupKey={setupKey}
-            ldap={ldap}
-            disabled={pickerDisabled}
-          />
-          <div className="flex items-center justify-between rounded-lg border px-3 py-3">
-            <div>
-              <p className="text-sm font-medium">{t("setup:modules.adManagement.deletedObjectsEnabled")}</p>
-            </div>
-            <Switch
-              checked={adManagement.deletedObjectsEnabled}
-              onCheckedChange={(checked) =>
-                setAdManagement(updateAdManagement(adManagement, { deletedObjectsEnabled: checked }))
-              }
-              disabled={disabled}
-            />
-          </div>
-        </div>
-      ) : null}
-    </SectionCard>
-  );
-}
-
 type AdminUsersStepProps = {
   setupKey: string;
   ldap: SetupLdapFormValues;
@@ -593,7 +450,6 @@ type SummaryStepProps = {
 
 export function SummaryStep({ values, preflight }: SummaryStepProps) {
   const { t } = useTranslation(["setup", "common"]);
-  const adManagement = values.modules.adManagement;
 
   return (
     <SectionCard title={t("setup:steps.summary.title")} description={t("setup:steps.summary.description")}>
@@ -606,34 +462,6 @@ export function SummaryStep({ values, preflight }: SummaryStepProps) {
             <li>{t("setup:fields.bindUserName")}: {values.ldap.bindUserName}</li>
             <li>{t("setup:fields.bindUserDomain")}: {values.ldap.bindUserDomain || t("common:notAvailable")}</li>
           </ul>
-        </div>
-
-        <div>
-          <p className="font-medium">{t("setup:steps.summary.adManagementTitle")}</p>
-          <p className="text-muted-foreground">
-            {adManagement.isEnabled ? t("common:status.active") : t("common:status.passive")}
-          </p>
-          {adManagement.isEnabled ? (
-            <ul className="mt-2 space-y-1 text-muted-foreground">
-              <li>{t("setup:modules.adManagement.usersSearchBase")}: {adManagement.usersSearchBase?.label ?? "-"}</li>
-              <li>{t("setup:modules.adManagement.groupsSearchBase")}: {adManagement.groupsSearchBase?.label ?? "-"}</li>
-              <li>{t("setup:modules.adManagement.computersSearchBase")}: {adManagement.computersSearchBase?.label ?? "-"}</li>
-              <li>
-                {t("setup:modules.adManagement.disabledUsersOu")}:{" "}
-                {adManagement.disabledUsersOu ? (
-                  <span title={adManagement.disabledUsersOu.distinguishedName}>
-                    {adManagement.disabledUsersOu.label}
-                    <span className="font-mono text-xs"> ({adManagement.disabledUsersOu.distinguishedName})</span>
-                  </span>
-                ) : (
-                  t("setup:steps.summary.notSelected")
-                )}
-              </li>
-              {adManagement.defaultUserOu ? <li>{t("setup:modules.adManagement.defaultUserOu")}: {adManagement.defaultUserOu.label}</li> : null}
-              {adManagement.defaultGroupOu ? <li>{t("setup:modules.adManagement.defaultGroupOu")}: {adManagement.defaultGroupOu.label}</li> : null}
-              {adManagement.defaultComputerOu ? <li>{t("setup:modules.adManagement.defaultComputerOu")}: {adManagement.defaultComputerOu.label}</li> : null}
-            </ul>
-          ) : null}
         </div>
 
         <div>

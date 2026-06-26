@@ -10,6 +10,13 @@ public sealed record LdapOrganizationalUnitSearchRequest(
     string? ParentDistinguishedName,
     int MaxResults);
 
+public sealed record LdapOrganizationalUnitListItem(
+    string DistinguishedName,
+    string? Name,
+    string? DisplayName,
+    string? Ou,
+    string Label);
+
 public sealed record LdapOrganizationalUnitSearchResult(
-    IReadOnlyList<SetupOrganizationalUnitListItem> Items,
+    IReadOnlyList<LdapOrganizationalUnitListItem> Items,
     bool HasMore);

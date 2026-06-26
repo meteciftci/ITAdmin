@@ -3,18 +3,21 @@ import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
 const COMBOBOX_COMPONENTS = [
-  "AdOuSearchCombobox.tsx",
   "AdGroupSearchCombobox.tsx",
   "AdGroupMultiSearchCombobox.tsx",
   "AdComputerGroupMultiSearchCombobox.tsx",
   "AdUserSearchCombobox.tsx",
 ] as const;
 
-function readComboboxSource(filename: (typeof COMBOBOX_COMPONENTS)[number]): string {
+function readComponentSource(filename: string): string {
   return readFileSync(
     new URL(`./components/${filename}`, import.meta.url),
     "utf8",
   );
+}
+
+function readComboboxSource(filename: (typeof COMBOBOX_COMPONENTS)[number]): string {
+  return readComponentSource(filename);
 }
 
 describe("ad combobox popover standard", () => {
@@ -45,28 +48,27 @@ describe("ad combobox popover standard", () => {
     });
   }
 
-  it("AdOuSearchCombobox truncates OU DN in list items", () => {
-    const source = readComboboxSource("AdOuSearchCombobox.tsx");
+  it("AdOuPickerField truncates OU DN in list items", () => {
+    const source = readComponentSource("AdOuPickerField.tsx");
 
     assert.match(source, /searchContext = "users"/);
     assert.match(source, /truncate font-mono text-xs text-muted-foreground/);
     assert.match(source, /min-w-0/);
   });
 
-  it("AdOuSearchCombobox requires minimum search length before querying", () => {
-    const source = readComboboxSource("AdOuSearchCombobox.tsx");
+  it("AdOuPickerField requires minimum search length before querying", () => {
+    const source = readComponentSource("AdOuPickerField.tsx");
 
     assert.match(source, /MIN_SEARCH_LENGTH = 2/);
     assert.match(source, /normalizedSearch = debouncedSearch\.trim\(\)/);
     assert.match(source, /canSearch = normalizedSearch\.length >= MIN_SEARCH_LENGTH/);
     assert.match(source, /enabled: open && canSearch && !disabled/);
-    assert.match(source, /organizationalUnits\.empty\.searchRequired/);
+    assert.match(source, /settings:adManagement\.ouPicker\.minSearchLength/);
     assert.doesNotMatch(source, /enabled: open && !disabled/);
-    assert.doesNotMatch(source, /search: debouncedSearch\.trim\(\) \|\| undefined/);
   });
 
-  it("AdOuSearchCombobox preserves selected label via selectedItem state", () => {
-    const source = readComboboxSource("AdOuSearchCombobox.tsx");
+  it("AdOuPickerField preserves selected label via selectedItem state", () => {
+    const source = readComponentSource("AdOuPickerField.tsx");
 
     assert.match(source, /selectedItem\?\.distinguishedName === value/);
     assert.match(source, /return selectedItem\.label/);

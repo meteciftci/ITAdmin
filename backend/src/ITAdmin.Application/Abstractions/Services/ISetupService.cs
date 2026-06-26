@@ -14,10 +14,6 @@ public interface ISetupService
         SearchSetupAdminUsersRequest request,
         CancellationToken cancellationToken = default);
 
-    Task<SearchSetupOrganizationalUnitsResult> SearchOrganizationalUnitsAsync(
-        SearchSetupOrganizationalUnitsRequest request,
-        CancellationToken cancellationToken = default);
-
     Task<CompleteSetupResult> CompleteSetupAsync(
         CompleteSetupRequest request,
         CancellationToken cancellationToken = default);

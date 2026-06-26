@@ -94,7 +94,7 @@ public sealed class FakeLdapService : ILdapService
     public int SearchOrganizationalUnitsCallCount { get; private set; }
     public LdapOrganizationalUnitSearchRequest? LastSearchOrganizationalUnitsRequest { get; private set; }
     public LdapOrganizationalUnitSearchResult SearchOrganizationalUnitsResult { get; set; } =
-        new(Array.Empty<SetupOrganizationalUnitListItem>(), false);
+        new(Array.Empty<LdapOrganizationalUnitListItem>(), false);
 
     public Task<LdapOrganizationalUnitSearchResult> SearchOrganizationalUnitsAsync(
         LdapOrganizationalUnitSearchRequest request,

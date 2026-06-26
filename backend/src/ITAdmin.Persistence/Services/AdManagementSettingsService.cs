@@ -86,8 +86,6 @@ public sealed class AdManagementSettingsService(
                 string.IsNullOrWhiteSpace(netbios) ||
                 string.IsNullOrWhiteSpace(defaultNc) ||
                 string.IsNullOrWhiteSpace(baseDn) ||
-                string.IsNullOrWhiteSpace(usersRootOu) ||
-                string.IsNullOrWhiteSpace(disabledUsersOu) ||
                 string.IsNullOrWhiteSpace(serviceAccountUserName))
             {
                 return new UpdateAdManagementSettingsResult(

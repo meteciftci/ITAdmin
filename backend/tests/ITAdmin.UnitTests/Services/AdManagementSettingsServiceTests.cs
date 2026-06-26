@@ -176,17 +176,15 @@ public sealed class AdManagementSettingsServiceTests
     }
 
     [Theory]
-    [InlineData(null, "CORP", "DC=corp,DC=example,DC=com", "DC=corp,DC=example,DC=com", "OU=Users,DC=corp,DC=example,DC=com", "OU=Disabled,DC=corp,DC=example,DC=com")]
-    [InlineData("corp.example.com", null, "DC=corp,DC=example,DC=com", "DC=corp,DC=example,DC=com", "OU=Users,DC=corp,DC=example,DC=com", "OU=Disabled,DC=corp,DC=example,DC=com")]
-    [InlineData("corp.example.com", "CORP", null, "DC=corp,DC=example,DC=com", "OU=Users,DC=corp,DC=example,DC=com", "OU=Disabled,DC=corp,DC=example,DC=com")]
-    [InlineData("corp.example.com", "CORP", "DC=corp,DC=example,DC=com", "DC=corp,DC=example,DC=com", "OU=Users,DC=corp,DC=example,DC=com", null)]
+    [InlineData(null, "CORP", "DC=corp,DC=example,DC=com", "DC=corp,DC=example,DC=com")]
+    [InlineData("corp.example.com", null, "DC=corp,DC=example,DC=com", "DC=corp,DC=example,DC=com")]
+    [InlineData("corp.example.com", "CORP", null, "DC=corp,DC=example,DC=com")]
+    [InlineData("corp.example.com", "CORP", "DC=corp,DC=example,DC=com", null)]
     public async Task UpdateSettingsAsync_WhenEnabled_RequiresAllMandatoryConnectionFields(
         string? domainFqdn,
         string? netbiosDomainName,
         string? defaultNamingContext,
-        string? baseDn,
-        string? usersRootOu,
-        string? disabledUsersOu)
+        string? baseDn)
     {
         await using var dbContext = CreateDbContext();
         var service = CreateService(dbContext);
@@ -197,8 +195,8 @@ public sealed class AdManagementSettingsServiceTests
             netbiosDomainName: netbiosDomainName,
             defaultNamingContext: defaultNamingContext,
             baseDn: baseDn,
-            usersRootOu: usersRootOu,
-            disabledUsersOu: disabledUsersOu,
+            usersRootOu: null,
+            disabledUsersOu: null,
             serviceAccountPassword: "secret");
 
         var result = await service.UpdateSettingsAsync(request);
@@ -207,6 +205,29 @@ public sealed class AdManagementSettingsServiceTests
         Assert.Equal(AdManagementApiMessageKeys.Settings.MissingRequiredFields, result.MessageKey);
         Assert.Empty(dbContext.AdManagementSettings);
         Assert.Equal(0, dbContext.AdOperationLogs.Count(x => x.OperationType == "SettingsValidated"));
+    }
+
+    [Fact]
+    public async Task UpdateSettingsAsync_WhenEnabled_AllowsMissingOuScopeFields()
+    {
+        await using var dbContext = CreateDbContext();
+        var validator = new FakeAdManagementValidationService();
+        var service = CreateService(dbContext, validator);
+
+        var request = CreateRequest(
+            isEnabled: true,
+            usersRootOu: null,
+            disabledUsersOu: null,
+            serviceAccountPassword: "secret");
+
+        var result = await service.UpdateSettingsAsync(request);
+
+        Assert.True(result.IsSuccess);
+        var entity = await dbContext.AdManagementSettings.SingleAsync();
+        Assert.Null(entity.UsersRootOu);
+        Assert.Null(entity.DisabledUsersOu);
+        Assert.Null(entity.GroupsSearchBase);
+        Assert.Null(entity.ComputersSearchBase);
     }
 
     [Fact]
@@ -229,6 +250,34 @@ public sealed class AdManagementSettingsServiceTests
 
         Assert.True(result.IsSuccess);
         Assert.Single(dbContext.AdManagementSettings);
+    }
+
+    [Fact]
+    public async Task UpdateSettingsAsync_WhenEnabled_InvalidUsersRootOu_DoesNotPersist()
+    {
+        await using var dbContext = CreateDbContext();
+        var validator = new FakeAdManagementValidationService
+        {
+            NextResult = new AdManagementValidationResult(
+                false,
+                AdManagementApiMessageKeys.SettingsValidation.UsersRootOuNotResolved,
+                DateTimeOffset.UtcNow,
+                new List<AdManagementValidationDetail>()),
+        };
+        var service = CreateService(dbContext, validator);
+
+        var request = CreateRequest(
+            isEnabled: true,
+            usersRootOu: "OU=Invalid,DC=corp,DC=example,DC=com",
+            serviceAccountPassword: "secret");
+
+        var result = await service.UpdateSettingsAsync(request);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(
+            AdManagementApiMessageKeys.SettingsValidation.UsersRootOuNotResolved,
+            result.MessageKey);
+        Assert.Empty(dbContext.AdManagementSettings);
     }
 
     [Fact]

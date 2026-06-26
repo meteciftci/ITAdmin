@@ -3,7 +3,6 @@ namespace ITAdmin.Application.Common.Models;
 public sealed record CompleteSetupRequest(
     string SetupKey,
     CompleteSetupLdapSettings Ldap,
-    CompleteSetupModulesSettings? Modules,
     IReadOnlyList<CompleteSetupAdminUser> AdminUsers);
 
 public sealed record CompleteSetupLdapSettings(
@@ -14,20 +13,6 @@ public sealed record CompleteSetupLdapSettings(
     string BindUserName,
     string? BindUserDomain,
     string BindPassword);
-
-public sealed record CompleteSetupModulesSettings(
-    CompleteSetupAdManagementModuleSettings? AdManagement);
-
-public sealed record CompleteSetupAdManagementModuleSettings(
-    bool IsEnabled,
-    string? UsersSearchBase,
-    string? GroupsSearchBase,
-    string? ComputersSearchBase,
-    string? DisabledUsersOu,
-    string? DefaultUserOu,
-    string? DefaultGroupOu,
-    string? DefaultComputerOu,
-    bool DeletedObjectsEnabled);
 
 public sealed record CompleteSetupAdminUser(
     string UserName,
@@ -56,27 +41,6 @@ public sealed record SetupAdminUserSearchResult(
 
 public sealed record SearchSetupAdminUsersResult(
     IReadOnlyList<SetupAdminUserSearchResult> Users,
-    string? ErrorMessage = null)
-{
-    public bool IsSuccess => ErrorMessage is null;
-}
-
-public sealed record SearchSetupOrganizationalUnitsRequest(
-    string SetupKey,
-    CompleteSetupLdapSettings Ldap,
-    string? Search,
-    string? ParentDistinguishedName);
-
-public sealed record SetupOrganizationalUnitListItem(
-    string DistinguishedName,
-    string? Name,
-    string? DisplayName,
-    string? Ou,
-    string Label);
-
-public sealed record SearchSetupOrganizationalUnitsResult(
-    IReadOnlyList<SetupOrganizationalUnitListItem> Items,
-    bool HasMore,
     string? ErrorMessage = null)
 {
     public bool IsSuccess => ErrorMessage is null;

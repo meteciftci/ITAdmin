@@ -58,7 +58,6 @@ public sealed class SetupServiceTests
         var request = new CompleteSetupRequest(
             "setup-secret",
             CreateMinimalLdapSettings(),
-            new CompleteSetupModulesSettings(null),
             [
                 new CompleteSetupAdminUser("user1", null, "11111111-1111-1111-1111-111111111111"),
                 new CompleteSetupAdminUser("user2", null, "11111111-1111-1111-1111-111111111111"),
@@ -134,178 +133,19 @@ public sealed class SetupServiceTests
     }
 
     [Fact]
-    public async Task CompleteSetupAsync_WhenAdManagementDisabled_PersistsDisabledSettings()
+    public async Task CompleteSetupAsync_DoesNotPersistAdManagementSettings()
     {
         await using var context = CreateDbContext();
         var ldap = CreateSuccessfulLdapFake();
         ldap.ResolveUserProfile = _ => new LdapUserProfile("obj-5", "plain", "Plain User", null);
 
         var service = CreateSetupService(context, ldap, "setup-secret");
-        var request = CreateMinimalCompleteRequest("setup-secret", ["plain"]) with
-        {
-            Modules = new CompleteSetupModulesSettings(
-                new CompleteSetupAdManagementModuleSettings(
-                    IsEnabled: false,
-                    UsersSearchBase: null,
-                    GroupsSearchBase: null,
-                    ComputersSearchBase: null,
-                    DisabledUsersOu: null,
-                    DefaultUserOu: null,
-                    DefaultGroupOu: null,
-                    DefaultComputerOu: null,
-                    DeletedObjectsEnabled: false))
-        };
+        var request = CreateMinimalCompleteRequest("setup-secret", ["plain"]);
 
         var result = await service.CompleteSetupAsync(request);
 
         Assert.True(result.IsCompleted);
-        var settings = await context.AdManagementSettings.SingleAsync();
-        Assert.False(settings.IsEnabled);
-    }
-
-    [Fact]
-    public async Task CompleteSetupAsync_WhenAdManagementEnabledWithoutRequiredFields_FailsValidation()
-    {
-        await using var context = CreateDbContext();
-        var ldap = CreateSuccessfulLdapFake();
-        var service = CreateSetupService(context, ldap, "setup-secret");
-        var request = CreateMinimalCompleteRequest("setup-secret", ["plain"]) with
-        {
-            Modules = new CompleteSetupModulesSettings(
-                new CompleteSetupAdManagementModuleSettings(
-                    IsEnabled: true,
-                    UsersSearchBase: null,
-                    GroupsSearchBase: "OU=Groups,DC=test,DC=local",
-                    ComputersSearchBase: "OU=Computers,DC=test,DC=local",
-                    DisabledUsersOu: null,
-                    DefaultUserOu: null,
-                    DefaultGroupOu: null,
-                    DefaultComputerOu: null,
-                    DeletedObjectsEnabled: true))
-        };
-
-        var result = await service.CompleteSetupAsync(request);
-
-        Assert.False(result.IsCompleted);
-        Assert.Equal("AD Management module is missing required fields.", result.Message);
-    }
-
-    [Fact]
-    public async Task CompleteSetupAsync_WhenAdManagementEnabled_PersistsSettings()
-    {
-        await using var context = CreateDbContext();
-        var ldap = CreateSuccessfulLdapFake();
-        ldap.ResolveUserProfile = _ => new LdapUserProfile("obj-6", "plain", "Plain User", null);
-
-        var service = CreateSetupService(context, ldap, "setup-secret");
-        var request = CreateMinimalCompleteRequest("setup-secret", ["plain"]) with
-        {
-            Modules = new CompleteSetupModulesSettings(
-                new CompleteSetupAdManagementModuleSettings(
-                    IsEnabled: true,
-                    UsersSearchBase: "OU=Users,DC=test,DC=local",
-                    GroupsSearchBase: "OU=Groups,DC=test,DC=local",
-                    ComputersSearchBase: "OU=Computers,DC=test,DC=local",
-                    DisabledUsersOu: "OU=Disabled,DC=test,DC=local",
-                    DefaultUserOu: "OU=NewUsers,DC=test,DC=local",
-                    DefaultGroupOu: null,
-                    DefaultComputerOu: null,
-                    DeletedObjectsEnabled: true))
-        };
-
-        var result = await service.CompleteSetupAsync(request);
-
-        Assert.True(result.IsCompleted);
-        var settings = await context.AdManagementSettings.SingleAsync();
-        Assert.True(settings.IsEnabled);
-        Assert.Equal("OU=Users,DC=test,DC=local", settings.UsersRootOu);
-        Assert.Equal("OU=Groups,DC=test,DC=local", settings.GroupsSearchBase);
-        Assert.Equal("OU=Computers,DC=test,DC=local", settings.ComputersSearchBase);
-        Assert.Equal("OU=Disabled,DC=test,DC=local", settings.DisabledUsersOu);
-        Assert.Equal("OU=NewUsers,DC=test,DC=local", settings.DefaultUserOu);
-        Assert.True(settings.DeletedObjectsEnabled);
-    }
-
-    [Fact]
-    public async Task CompleteSetupAsync_WhenAdManagementEnabledWithoutDisabledUsersOu_Succeeds()
-    {
-        await using var context = CreateDbContext();
-        var ldap = CreateSuccessfulLdapFake();
-        ldap.ResolveUserProfile = _ => new LdapUserProfile("obj-7", "plain", "Plain User", null);
-
-        var service = CreateSetupService(context, ldap, "setup-secret");
-        var request = CreateMinimalCompleteRequest("setup-secret", ["plain"]) with
-        {
-            Modules = new CompleteSetupModulesSettings(
-                new CompleteSetupAdManagementModuleSettings(
-                    IsEnabled: true,
-                    UsersSearchBase: "OU=Users,DC=test,DC=local",
-                    GroupsSearchBase: "OU=Groups,DC=test,DC=local",
-                    ComputersSearchBase: "OU=Computers,DC=test,DC=local",
-                    DisabledUsersOu: null,
-                    DefaultUserOu: null,
-                    DefaultGroupOu: null,
-                    DefaultComputerOu: null,
-                    DeletedObjectsEnabled: false))
-        };
-
-        var result = await service.CompleteSetupAsync(request);
-
-        Assert.True(result.IsCompleted);
-        var settings = await context.AdManagementSettings.SingleAsync();
-        Assert.Null(settings.DisabledUsersOu);
-    }
-
-    [Fact]
-    public async Task CompleteSetupAsync_WhenAdManagementDisabled_DoesNotPersistServiceAccountPassword()
-    {
-        await using var context = CreateDbContext();
-        var ldap = CreateSuccessfulLdapFake();
-        ldap.ResolveUserProfile = _ => new LdapUserProfile("obj-8", "plain", "Plain User", null);
-
-        var service = CreateSetupService(context, ldap, "setup-secret");
-        var request = CreateMinimalCompleteRequest("setup-secret", ["plain"]) with
-        {
-            Modules = new CompleteSetupModulesSettings(
-                new CompleteSetupAdManagementModuleSettings(
-                    IsEnabled: false,
-                    UsersSearchBase: null,
-                    GroupsSearchBase: null,
-                    ComputersSearchBase: null,
-                    DisabledUsersOu: null,
-                    DefaultUserOu: null,
-                    DefaultGroupOu: null,
-                    DefaultComputerOu: null,
-                    DeletedObjectsEnabled: false))
-        };
-
-        var result = await service.CompleteSetupAsync(request);
-
-        Assert.True(result.IsCompleted);
-        var settings = await context.AdManagementSettings.SingleAsync();
-        Assert.False(settings.IsEnabled);
-        Assert.Null(settings.EncryptedServiceAccountPassword);
-    }
-
-    [Fact]
-    public async Task CompleteSetupAsync_WithNullModules_TreatsAdManagementAsDisabled()
-    {
-        await using var context = CreateDbContext();
-        var ldap = CreateSuccessfulLdapFake();
-        ldap.ResolveUserProfile = _ => new LdapUserProfile("obj-9", "plain", "Plain User", null);
-
-        var service = CreateSetupService(context, ldap, "setup-secret");
-        var request = new CompleteSetupRequest(
-            "setup-secret",
-            CreateMinimalLdapSettings(),
-            null,
-            [new CompleteSetupAdminUser("plain", null, null)]);
-
-        var result = await service.CompleteSetupAsync(request);
-
-        Assert.True(result.IsCompleted);
-        var settings = await context.AdManagementSettings.SingleAsync();
-        Assert.False(settings.IsEnabled);
+        Assert.False(await context.AdManagementSettings.AnyAsync());
     }
 
     [Fact]
@@ -408,190 +248,6 @@ public sealed class SetupServiceTests
         Assert.NotEqual(ldapSetting.BaseDn, ldapSetting.UserSearchBase);
     }
 
-    [Fact]
-    public async Task SearchOrganizationalUnitsAsync_ReturnsEmptyList_WhenSearchShorterThanMinimum()
-    {
-        await using var context = CreateDbContext();
-        var ldap = CreateSuccessfulLdapFake();
-        var service = CreateSetupService(context, ldap, "setup-secret");
-
-        var result = await service.SearchOrganizationalUnitsAsync(
-            new SearchSetupOrganizationalUnitsRequest(
-                "setup-secret",
-                CreateMinimalLdapSettings(),
-                "a",
-                null),
-            CancellationToken.None);
-
-        Assert.True(result.IsSuccess);
-        Assert.Empty(result.Items);
-        Assert.Equal(0, ldap.SearchOrganizationalUnitsCallCount);
-    }
-
-    [Fact]
-    public async Task SearchOrganizationalUnitsAsync_ReturnsFailure_WhenSetupKeyInvalid()
-    {
-        await using var context = CreateDbContext();
-        var ldap = CreateSuccessfulLdapFake();
-        var service = CreateSetupService(context, ldap, "setup-secret");
-
-        var result = await service.SearchOrganizationalUnitsAsync(
-            new SearchSetupOrganizationalUnitsRequest(
-                "wrong-key",
-                CreateMinimalLdapSettings(),
-                null,
-                null),
-            CancellationToken.None);
-
-        Assert.False(result.IsSuccess);
-        Assert.Equal("Invalid setup key.", result.ErrorMessage);
-        Assert.Equal(0, ldap.SearchOrganizationalUnitsCallCount);
-    }
-
-    [Fact]
-    public async Task SearchOrganizationalUnitsAsync_ReturnsFailure_WhenLdapSettingsInvalid()
-    {
-        await using var context = CreateDbContext();
-        var ldap = CreateSuccessfulLdapFake();
-        var service = CreateSetupService(context, ldap, "setup-secret");
-
-        var invalidLdap = CreateMinimalLdapSettings() with { BindPassword = string.Empty };
-        var result = await service.SearchOrganizationalUnitsAsync(
-            new SearchSetupOrganizationalUnitsRequest(
-                "setup-secret",
-                invalidLdap,
-                null,
-                null),
-            CancellationToken.None);
-
-        Assert.False(result.IsSuccess);
-        Assert.Equal("Invalid LDAP settings.", result.ErrorMessage);
-        Assert.Equal(0, ldap.SearchOrganizationalUnitsCallCount);
-    }
-
-    [Fact]
-    public async Task SearchOrganizationalUnitsAsync_WithEmptySearch_DelegatesToLdapService()
-    {
-        await using var context = CreateDbContext();
-        var ldap = CreateSuccessfulLdapFake();
-        ldap.SearchOrganizationalUnitsResult = new LdapOrganizationalUnitSearchResult(
-        [
-            new SetupOrganizationalUnitListItem(
-                "OU=Users,DC=test,DC=local",
-                "Users",
-                "Users",
-                "Users",
-                "Users"),
-        ],
-        false);
-
-        var service = CreateSetupService(context, ldap, "setup-secret");
-        var result = await service.SearchOrganizationalUnitsAsync(
-            new SearchSetupOrganizationalUnitsRequest(
-                "setup-secret",
-                CreateMinimalLdapSettings(),
-                null,
-                null),
-            CancellationToken.None);
-
-        Assert.True(result.IsSuccess);
-        Assert.Single(result.Items);
-        Assert.Equal(1, ldap.SearchOrganizationalUnitsCallCount);
-        Assert.Null(ldap.LastSearchOrganizationalUnitsRequest!.Search);
-    }
-
-    [Fact]
-    public async Task SearchOrganizationalUnitsAsync_DoesNotReturnSecrets()
-    {
-        await using var context = CreateDbContext();
-        var ldap = CreateSuccessfulLdapFake();
-        ldap.SearchOrganizationalUnitsResult = new LdapOrganizationalUnitSearchResult(
-        [
-            new SetupOrganizationalUnitListItem(
-                "OU=Users,DC=test,DC=local",
-                "Users",
-                "Users",
-                "Users",
-                "Users"),
-        ],
-        false);
-
-        var service = CreateSetupService(context, ldap, "setup-secret");
-        var result = await service.SearchOrganizationalUnitsAsync(
-            new SearchSetupOrganizationalUnitsRequest(
-                "setup-secret",
-                CreateMinimalLdapSettings(),
-                "user",
-                null),
-            CancellationToken.None);
-
-        Assert.True(result.IsSuccess);
-        var item = Assert.Single(result.Items);
-        var serialized = System.Text.Json.JsonSerializer.Serialize(item);
-        Assert.DoesNotContain("bindpw", serialized, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("setup-secret", serialized, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public async Task SearchOrganizationalUnitsAsync_ReturnsFailure_WhenParentDnOutsideBaseDn()
-    {
-        await using var context = CreateDbContext();
-        var ldap = CreateSuccessfulLdapFake();
-        var service = CreateSetupService(context, ldap, "setup-secret");
-
-        var result = await service.SearchOrganizationalUnitsAsync(
-            new SearchSetupOrganizationalUnitsRequest(
-                "setup-secret",
-                CreateMinimalLdapSettings(),
-                null,
-                "OU=External,DC=other,DC=local"),
-            CancellationToken.None);
-
-        Assert.False(result.IsSuccess);
-        Assert.Equal(SetupService.ParentOrganizationalUnitOutsideBaseDnMessage, result.ErrorMessage);
-        Assert.Equal(0, ldap.SearchOrganizationalUnitsCallCount);
-    }
-
-    [Fact]
-    public async Task SearchOrganizationalUnitsAsync_DelegatesToLdapService_WhenParentDnUnderBaseDn()
-    {
-        await using var context = CreateDbContext();
-        var ldap = CreateSuccessfulLdapFake();
-        ldap.SearchOrganizationalUnitsResult = new LdapOrganizationalUnitSearchResult([], false);
-
-        var service = CreateSetupService(context, ldap, "setup-secret");
-        var result = await service.SearchOrganizationalUnitsAsync(
-            new SearchSetupOrganizationalUnitsRequest(
-                "setup-secret",
-                CreateMinimalLdapSettings(),
-                null,
-                "OU=Users,DC=test,DC=local"),
-            CancellationToken.None);
-
-        Assert.True(result.IsSuccess);
-        Assert.Equal(1, ldap.SearchOrganizationalUnitsCallCount);
-        Assert.Equal("OU=Users,DC=test,DC=local", ldap.LastSearchOrganizationalUnitsRequest!.ParentDistinguishedName);
-    }
-
-    [Fact]
-    public async Task SearchOrganizationalUnitsAsync_DelegatesToLdapService_WhenParentDnEqualsBaseDn()
-    {
-        await using var context = CreateDbContext();
-        var ldap = CreateSuccessfulLdapFake();
-        ldap.SearchOrganizationalUnitsResult = new LdapOrganizationalUnitSearchResult([], false);
-
-        var service = CreateSetupService(context, ldap, "setup-secret");
-        var result = await service.SearchOrganizationalUnitsAsync(
-            new SearchSetupOrganizationalUnitsRequest(
-                "setup-secret",
-                CreateMinimalLdapSettings(),
-                null,
-                "DC=test,DC=local"),
-            CancellationToken.None);
-
-        Assert.True(result.IsSuccess);
-        Assert.Equal(1, ldap.SearchOrganizationalUnitsCallCount);
-    }
 
     private static FakeLdapService CreateSuccessfulLdapFake()
     {
@@ -660,7 +316,6 @@ public sealed class SetupServiceTests
         return new CompleteSetupRequest(
             setupKey,
             CreateMinimalLdapSettings(),
-            new CompleteSetupModulesSettings(null),
             adminUserNames
                 .Select(name => new CompleteSetupAdminUser(name, null, null))
                 .ToList());

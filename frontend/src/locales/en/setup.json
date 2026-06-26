@@ -7,7 +7,6 @@
       "setupKey": "Setup key",
       "serverCheck": "Server check",
       "ldapConnection": "LDAP connection",
-      "modules": "Modules",
       "adminUsers": "Admin users",
       "summary": "Summary"
     },
@@ -31,11 +30,6 @@
         "validateRequired": "Validate the LDAP connection before continuing.",
         "validateFailed": "LDAP validation failed."
       },
-      "modules": {
-        "title": "Modules",
-        "description": "Configure modules that will be enabled during setup.",
-        "ldapRequired": "Validate the LDAP connection before selecting OUs."
-      },
       "adminUsers": {
         "title": "Administrator users",
         "description": "Select portal SuperAdmin users from LDAP.",
@@ -52,7 +46,6 @@
         "title": "Setup summary",
         "description": "Review selected settings before completing setup.",
         "ldapTitle": "LDAP",
-        "adManagementTitle": "AD Management",
         "adminUsersTitle": "Administrator users",
         "preflightTitle": "Server check",
         "preflightReady": "Server checks passed.",
@@ -77,36 +70,6 @@
       "bindUserDomain": "Optional. Enter if bind user domain is stored separately.",
       "userSearchFilter": "{0} is replaced with the user name.",
       "ldapsHelp": "Connections are established over LDAPS (SSL/TLS) on port 636."
-    },
-    "modules": {
-      "adManagement": {
-        "enable": "Enable AD Management",
-        "enableDescription": "Enables the Active Directory management module after setup.",
-        "usersSearchBase": "Users search base",
-        "groupsSearchBase": "Groups search base",
-        "computersSearchBase": "Computers search base",
-        "disabledUsersOu": "Disabled Users OU",
-        "disabledUsersOuHelper": "OU where disabled users will be moved.",
-        "defaultUserOu": "Default user OU",
-        "defaultGroupOu": "Default group OU",
-        "defaultComputerOu": "Default computer OU",
-        "deletedObjectsEnabled": "Deleted objects enabled"
-      }
-    },
-    "ouPicker": {
-      "title": "Select organizational unit",
-      "description": "Search and select an OU from LDAP.",
-      "noSelection": "No OU selected yet.",
-      "searchPlaceholder": "Search by OU name or DN",
-      "minSearchLength": "Search must be at least 2 characters. Empty search lists first-level OUs.",
-      "loading": "Loading OUs...",
-      "emptyTitle": "No OUs found",
-      "emptyDescription": "No OUs matched your search criteria.",
-      "hasMore": "More results are available. Narrow your search.",
-      "errors": {
-        "title": "OU search failed",
-        "searchFailed": "OU search could not be completed."
-      }
     },
     "actions": {
       "back": "Back",

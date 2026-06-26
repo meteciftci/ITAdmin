@@ -139,10 +139,52 @@
     },
     "adManagement": {
       "pageTabs": {
-        "connection": "Bağlantı ve Yetkili Hesap",
+        "connection": "Bağlantı",
+        "scopes": "OU Kapsamları",
         "attributeMapping": "Attribute Eşleştirme",
         "creationDefaults": "Oluşturma Varsayılanları",
         "notifications": "Bildirimler"
+      },
+      "tabsDisabledHint": "Diğer sekmeler, bağlantı ayarları başarıyla doğrulanıp kaydedildikten sonra kullanılabilir.",
+      "ouPicker": {
+        "title": "Organizational Unit seç",
+        "description": "Arama yaparak OU seçin. Uzun DN değerleri seçim sonrası okunabilir şekilde gösterilir.",
+        "minSearchLength": "Aramak için en az 2 karakter girin.",
+        "actions": {
+          "select": "OU seç",
+          "change": "OU değiştir"
+        }
+      },
+      "scopes": {
+        "title": "OU ve arama kapsamları",
+        "description": "Kullanıcı, grup ve bilgisayar yönetimi için kök OU ve arama base değerlerini yapılandırın.",
+        "fields": {
+          "usersRootOu": "Kullanıcılar root OU",
+          "usersRootOuHelp": "Kullanıcı yönetimi operasyonlarında kullanılacak kök OU.",
+          "usersRootOuPlaceholder": "Kullanıcılar root OU seçin",
+          "usersRootOuSearch": "Kullanıcı OU ara",
+          "disabledUsersOu": "Pasif kullanıcılar OU",
+          "disabledUsersOuHelp": "Pasife alınan kullanıcıların taşınacağı OU.",
+          "disabledUsersOuPlaceholder": "Pasif kullanıcılar OU seçin",
+          "disabledUsersOuSearch": "Pasif kullanıcı OU ara",
+          "groupsSearchBase": "Gruplar arama base",
+          "groupsSearchBaseHelp": "Grup arama ve oluşturma kapsamı için base OU.",
+          "groupsSearchBasePlaceholder": "Grup arama base seçin",
+          "groupsSearchBaseSearch": "Grup OU ara",
+          "computersSearchBase": "Bilgisayarlar arama base",
+          "computersSearchBaseHelp": "Bilgisayar arama ve oluşturma kapsamı için base OU.",
+          "computersSearchBasePlaceholder": "Bilgisayar arama base seçin",
+          "computersSearchBaseSearch": "Bilgisayar OU ara"
+        },
+        "empty": {
+          "ouNotFound": "OU bulunamadı."
+        },
+        "errors": {
+          "ouLoadFailed": "OU listesi yüklenemedi."
+        },
+        "messages": {
+          "saveSuccess": "OU kapsamları kaydedildi."
+        }
       },
       "notifications": {
         "rulesTitle": "Bildirim Kuralları",
@@ -252,7 +294,25 @@
       },
       "readOnlyNotice": "AD Yönetim ayarlarını görüntüleyebilirsiniz. Güncelleme yapmak için ek yetki gerekir.",
       "connection": {
-        "description": "Active Directory yönetim modülünün kullanacağı domain, OU ve servis hesabı bilgilerini yapılandırın.",
+        "description": "Active Directory yönetim modülünün domain bağlantısı ve yetkili hesap bilgilerini yapılandırın. Kaydet, bağlantı doğrulamasını tetikler.",
+        "sections": {
+          "basic": {
+            "title": "Temel Bağlantı",
+            "description": "Domain kimliği ve temel LDAP bağlamı."
+          },
+          "serviceAccount": {
+            "title": "Yetkili Hesap",
+            "description": "AD işlemleri için kullanılacak servis hesabı."
+          },
+          "domainControllers": {
+            "title": "Domain Controller Tercihleri",
+            "description": "İsteğe bağlı olarak tercih edilen DC listesi."
+          },
+          "powerShell": {
+            "title": "PowerShell / Sağlık Kontrolü",
+            "description": "İleride kullanılacak sağlık kontrolü ayarları."
+          }
+        },
         "fields": {
           "isEnabled": "AD Yönetim modülü aktif",
           "isEnabledHelp": "Modül pasifken operasyon menüleri gizlenir; ayarlar erişilebilir kalır.",
@@ -280,7 +340,8 @@
         "actions": {
           "save": "AD ayarlarını kaydet"
         },
-        "lastValidation": "Son doğrulama: {{status}} - {{message}}",
+        "lastValidationTitle": "Son bağlantı doğrulaması",
+        "lastValidation": "Durum: {{status}} — {{message}}",
         "lastValidationUnknown": "Doğrulama detayı gösterilemiyor.",
         "messages": {
           "saveSuccess": "AD yönetim ayarları kaydedildi.",

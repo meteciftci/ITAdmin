@@ -1,7 +1,6 @@
 import type {
   CompleteSetupAdminUserRequest,
   CompleteSetupLdapRequest,
-  CompleteSetupModulesRequest,
   CompleteSetupRequest,
 } from "@/features/setup/api";
 
@@ -21,27 +20,6 @@ export type SetupLdapFormValues = {
   bindPassword: string;
 };
 
-export type SetupOuSelection = {
-  distinguishedName: string;
-  label: string;
-};
-
-export type SetupAdManagementFormValues = {
-  isEnabled: boolean;
-  usersSearchBase: SetupOuSelection | null;
-  groupsSearchBase: SetupOuSelection | null;
-  computersSearchBase: SetupOuSelection | null;
-  disabledUsersOu: SetupOuSelection | null;
-  defaultUserOu: SetupOuSelection | null;
-  defaultGroupOu: SetupOuSelection | null;
-  defaultComputerOu: SetupOuSelection | null;
-  deletedObjectsEnabled: boolean;
-};
-
-export type SetupModulesFormValues = {
-  adManagement: SetupAdManagementFormValues;
-};
-
 export type SetupAdminUserSelection = {
   userName: string;
   displayName: string;
@@ -53,23 +31,8 @@ export type SetupAdminUserSelection = {
 export type SetupWizardFormValues = {
   setupKey: string;
   ldap: SetupLdapFormValues;
-  modules: SetupModulesFormValues;
   adminUsers: SetupAdminUserSelection[];
 };
-
-export function createDefaultAdManagementFormValues(): SetupAdManagementFormValues {
-  return {
-    isEnabled: false,
-    usersSearchBase: null,
-    groupsSearchBase: null,
-    computersSearchBase: null,
-    disabledUsersOu: null,
-    defaultUserOu: null,
-    defaultGroupOu: null,
-    defaultComputerOu: null,
-    deletedObjectsEnabled: false,
-  };
-}
 
 export function createDefaultSetupFormValues(defaultConnectionName: string): SetupWizardFormValues {
   return {
@@ -83,9 +46,6 @@ export function createDefaultSetupFormValues(defaultConnectionName: string): Set
       bindUserDomain: "",
       bindPassword: "",
     },
-    modules: {
-      adManagement: createDefaultAdManagementFormValues(),
-    },
     adminUsers: [],
   };
 }
@@ -93,15 +53,6 @@ export function createDefaultSetupFormValues(defaultConnectionName: string): Set
 function emptyToNull(value: string): string | null {
   const trimmed = value.trim();
   return trimmed.length === 0 ? null : trimmed;
-}
-
-function ouToPayload(selection: SetupOuSelection | null): string | null {
-  if (!selection) {
-    return null;
-  }
-
-  const dn = selection.distinguishedName.trim();
-  return dn.length === 0 ? null : dn;
 }
 
 export function buildCompleteSetupLdapPayload(ldap: SetupLdapFormValues): CompleteSetupLdapRequest {
@@ -113,25 +64,6 @@ export function buildCompleteSetupLdapPayload(ldap: SetupLdapFormValues): Comple
     bindUserName: ldap.bindUserName.trim(),
     bindUserDomain: emptyToNull(ldap.bindUserDomain),
     bindPassword: ldap.bindPassword,
-  };
-}
-
-export function buildCompleteSetupModulesPayload(
-  modules: SetupModulesFormValues,
-): CompleteSetupModulesRequest {
-  const adManagement = modules.adManagement;
-  return {
-    adManagement: {
-      isEnabled: adManagement.isEnabled,
-      usersSearchBase: adManagement.isEnabled ? ouToPayload(adManagement.usersSearchBase) : null,
-      groupsSearchBase: adManagement.isEnabled ? ouToPayload(adManagement.groupsSearchBase) : null,
-      computersSearchBase: adManagement.isEnabled ? ouToPayload(adManagement.computersSearchBase) : null,
-      disabledUsersOu: adManagement.isEnabled ? ouToPayload(adManagement.disabledUsersOu) : null,
-      defaultUserOu: adManagement.isEnabled ? ouToPayload(adManagement.defaultUserOu) : null,
-      defaultGroupOu: adManagement.isEnabled ? ouToPayload(adManagement.defaultGroupOu) : null,
-      defaultComputerOu: adManagement.isEnabled ? ouToPayload(adManagement.defaultComputerOu) : null,
-      deletedObjectsEnabled: adManagement.deletedObjectsEnabled,
-    },
   };
 }
 
@@ -149,7 +81,6 @@ export function buildCompleteSetupRequest(values: SetupWizardFormValues): Comple
   return {
     setupKey: values.setupKey,
     ldap: buildCompleteSetupLdapPayload(values.ldap),
-    modules: buildCompleteSetupModulesPayload(values.modules),
     adminUsers: buildAdminUsersPayload(values.adminUsers),
   };
 }
@@ -164,35 +95,7 @@ export function isLdapFormComplete(ldap: SetupLdapFormValues): boolean {
   );
 }
 
-export function isAdManagementModuleValid(modules: SetupModulesFormValues): boolean {
-  const adManagement = modules.adManagement;
-  if (!adManagement.isEnabled) {
-    return true;
-  }
-
-  return (
-    adManagement.usersSearchBase !== null &&
-    adManagement.groupsSearchBase !== null &&
-    adManagement.computersSearchBase !== null
-  );
-}
-
-export const MIN_OU_SEARCH_LENGTH = 2;
 export const MIN_ADMIN_USER_SEARCH_LENGTH = 2;
-
-export function isOuSearchBelowMinLength(search: string): boolean {
-  const trimmed = search.trim();
-  return trimmed.length > 0 && trimmed.length < MIN_OU_SEARCH_LENGTH;
-}
-
-export function shouldFetchOuSearchResults(open: boolean, search: string): boolean {
-  if (!open) {
-    return false;
-  }
-
-  const trimmed = search.trim();
-  return trimmed.length === 0 || trimmed.length >= MIN_OU_SEARCH_LENGTH;
-}
 
 export function shouldFetchAdminUserSearchResults(ldapValidated: boolean, search: string): boolean {
   if (!ldapValidated) {
@@ -202,23 +105,6 @@ export function shouldFetchAdminUserSearchResults(ldapValidated: boolean, search
   return search.trim().length >= MIN_ADMIN_USER_SEARCH_LENGTH;
 }
 
-export function clearAdManagementOuSelections(
-  modules: SetupModulesFormValues,
-): SetupModulesFormValues {
-  return {
-    adManagement: {
-      ...modules.adManagement,
-      usersSearchBase: null,
-      groupsSearchBase: null,
-      computersSearchBase: null,
-      disabledUsersOu: null,
-      defaultUserOu: null,
-      defaultGroupOu: null,
-      defaultComputerOu: null,
-    },
-  };
-}
-
 export function applyLdapConfigChange(
   current: SetupWizardFormValues,
   ldap: SetupLdapFormValues,
@@ -226,7 +112,6 @@ export function applyLdapConfigChange(
   return {
     ...current,
     ldap,
-    modules: clearAdManagementOuSelections(current.modules),
     adminUsers: [],
   };
 }

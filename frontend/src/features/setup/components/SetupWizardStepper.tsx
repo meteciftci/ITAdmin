@@ -12,7 +12,7 @@ export function SetupWizardStepper({ currentStep, stepLabels }: SetupWizardStepp
   const currentIndex = SETUP_WIZARD_STEPS.indexOf(currentStep);
 
   return (
-    <ol className="grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
+    <ol className="grid gap-2 sm:grid-cols-3 lg:grid-cols-5">
       {SETUP_WIZARD_STEPS.map((step, index) => {
         const isActive = step === currentStep;
         const isComplete = index < currentIndex;

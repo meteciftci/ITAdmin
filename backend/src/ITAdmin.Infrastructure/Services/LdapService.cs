@@ -657,7 +657,7 @@ public sealed class LdapService(ILogger<LdapService> logger) : ILdapService
             string.IsNullOrWhiteSpace(request.BindPassword))
         {
             return Task.FromResult(new LdapOrganizationalUnitSearchResult(
-                Array.Empty<SetupOrganizationalUnitListItem>(),
+                Array.Empty<LdapOrganizationalUnitListItem>(),
                 false));
         }
 
@@ -665,7 +665,7 @@ public sealed class LdapService(ILogger<LdapService> logger) : ILdapService
         if (!string.IsNullOrWhiteSpace(search) && search.Length < SetupConstants.MinOuSearchLength)
         {
             return Task.FromResult(new LdapOrganizationalUnitSearchResult(
-                Array.Empty<SetupOrganizationalUnitListItem>(),
+                Array.Empty<LdapOrganizationalUnitListItem>(),
                 false));
         }
 
@@ -675,7 +675,7 @@ public sealed class LdapService(ILogger<LdapService> logger) : ILdapService
             if (string.IsNullOrWhiteSpace(bindIdentity))
             {
                 return Task.FromResult(new LdapOrganizationalUnitSearchResult(
-                    Array.Empty<SetupOrganizationalUnitListItem>(),
+                    Array.Empty<LdapOrganizationalUnitListItem>(),
                     false));
             }
 
@@ -687,7 +687,7 @@ public sealed class LdapService(ILogger<LdapService> logger) : ILdapService
             catch (LdapException)
             {
                 return Task.FromResult(new LdapOrganizationalUnitSearchResult(
-                    Array.Empty<SetupOrganizationalUnitListItem>(),
+                    Array.Empty<LdapOrganizationalUnitListItem>(),
                     false));
             }
 
@@ -699,7 +699,7 @@ public sealed class LdapService(ILogger<LdapService> logger) : ILdapService
             if (!baseResult.IsValid)
             {
                 return Task.FromResult(new LdapOrganizationalUnitSearchResult(
-                    Array.Empty<SetupOrganizationalUnitListItem>(),
+                    Array.Empty<LdapOrganizationalUnitListItem>(),
                     false));
             }
 
@@ -729,11 +729,11 @@ public sealed class LdapService(ILogger<LdapService> logger) : ILdapService
             catch (LdapException)
             {
                 return Task.FromResult(new LdapOrganizationalUnitSearchResult(
-                    Array.Empty<SetupOrganizationalUnitListItem>(),
+                    Array.Empty<LdapOrganizationalUnitListItem>(),
                     false));
             }
 
-            var collected = new List<SetupOrganizationalUnitListItem>(maxResults);
+            var collected = new List<LdapOrganizationalUnitListItem>(maxResults);
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (SearchResultEntry entry in searchResponse.Entries)
@@ -762,14 +762,14 @@ public sealed class LdapService(ILogger<LdapService> logger) : ILdapService
         catch (Exception exception) when (IsLikelyLdapNetworkTimeout(exception))
         {
             return Task.FromResult(new LdapOrganizationalUnitSearchResult(
-                Array.Empty<SetupOrganizationalUnitListItem>(),
+                Array.Empty<LdapOrganizationalUnitListItem>(),
                 false));
         }
         catch (Exception ex)
         {
             LogUnexpectedLdapFailure(ex);
             return Task.FromResult(new LdapOrganizationalUnitSearchResult(
-                Array.Empty<SetupOrganizationalUnitListItem>(),
+                Array.Empty<LdapOrganizationalUnitListItem>(),
                 false));
         }
     }
@@ -788,7 +788,7 @@ public sealed class LdapService(ILogger<LdapService> logger) : ILdapService
 
     private static bool TryMapOrganizationalUnit(
         SearchResultEntry entry,
-        out SetupOrganizationalUnitListItem item)
+        out LdapOrganizationalUnitListItem item)
     {
         item = null!;
         var distinguishedName = GetFirstString(TryGetDirectoryAttribute(entry, "distinguishedName"));
@@ -805,7 +805,7 @@ public sealed class LdapService(ILogger<LdapService> logger) : ILdapService
         var displayName = GetFirstString(TryGetDirectoryAttribute(entry, "displayName"));
         var name = GetFirstString(TryGetDirectoryAttribute(entry, "name"));
         var ou = GetFirstString(TryGetDirectoryAttribute(entry, "ou"));
-        item = new SetupOrganizationalUnitListItem(
+        item = new LdapOrganizationalUnitListItem(
             distinguishedName,
             name,
             displayName,

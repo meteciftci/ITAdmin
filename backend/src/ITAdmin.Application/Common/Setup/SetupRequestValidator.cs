@@ -42,11 +42,6 @@ public static class SetupRequestValidator
             return false;
         }
 
-        if (!TryValidateModules(request.Modules, out message, out messageKey))
-        {
-            return false;
-        }
-
         return true;
     }
 
@@ -113,32 +108,6 @@ public static class SetupRequestValidator
                 messageKey = SetupApiMessageKeys.Validation.DuplicateAdminUser;
                 return false;
             }
-        }
-
-        return true;
-    }
-
-    public static bool TryValidateModules(
-        CompleteSetupModulesSettings? modules,
-        out string message,
-        out string? messageKey)
-    {
-        message = string.Empty;
-        messageKey = null;
-
-        var adManagement = modules?.AdManagement;
-        if (adManagement is null || !adManagement.IsEnabled)
-        {
-            return true;
-        }
-
-        if (string.IsNullOrWhiteSpace(adManagement.UsersSearchBase) ||
-            string.IsNullOrWhiteSpace(adManagement.GroupsSearchBase) ||
-            string.IsNullOrWhiteSpace(adManagement.ComputersSearchBase))
-        {
-            message = "AD Management module is missing required fields.";
-            messageKey = SetupApiMessageKeys.Validation.AdManagementModuleMissingRequiredFields;
-            return false;
         }
 
         return true;

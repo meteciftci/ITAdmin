@@ -24,16 +24,15 @@ public sealed class AdManagementValidationServiceTests
     }
 
     [Fact]
-    public async Task ValidateConnectionAsync_WhenDisabledUsersOuMissing_ReturnsFailed()
+    public async Task ValidateConnectionAsync_WhenScopeOusMissing_DoesNotReturnMissingRequiredSettings()
     {
-        var connection = CreateConnection(disabledUsersOu: null);
+        var connection = CreateConnection(usersRootOu: null, disabledUsersOu: null);
 
         var result = await _service.ValidateConnectionAsync(
             connection,
             new AdManagementValidationRequest(null, "tester", null, null));
 
-        Assert.False(result.IsValid);
-        Assert.Equal(
+        Assert.NotEqual(
             AdManagementApiMessageKeys.SettingsValidation.MissingRequiredSettings,
             result.MessageKey);
     }

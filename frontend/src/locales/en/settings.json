@@ -139,10 +139,52 @@
     },
     "adManagement": {
       "pageTabs": {
-        "connection": "Connection and Service Account",
+        "connection": "Connection",
+        "scopes": "OU Scopes",
         "attributeMapping": "Attribute Mapping",
         "creationDefaults": "Creation Defaults",
         "notifications": "Notifications"
+      },
+      "tabsDisabledHint": "Other tabs become available after connection settings are validated and saved successfully.",
+      "ouPicker": {
+        "title": "Select organizational unit",
+        "description": "Search and select an OU. Long DN values are shown in a readable layout after selection.",
+        "minSearchLength": "Enter at least 2 characters to search.",
+        "actions": {
+          "select": "Select OU",
+          "change": "Change OU"
+        }
+      },
+      "scopes": {
+        "title": "OU and search scopes",
+        "description": "Configure root OUs and search bases for user, group, and computer management.",
+        "fields": {
+          "usersRootOu": "Users root OU",
+          "usersRootOuHelp": "Root OU used for user management operations.",
+          "usersRootOuPlaceholder": "Select users root OU",
+          "usersRootOuSearch": "Search user OU",
+          "disabledUsersOu": "Disabled users OU",
+          "disabledUsersOuHelp": "OU where disabled users are moved.",
+          "disabledUsersOuPlaceholder": "Select disabled users OU",
+          "disabledUsersOuSearch": "Search disabled users OU",
+          "groupsSearchBase": "Groups search base",
+          "groupsSearchBaseHelp": "Base OU for group search and creation scope.",
+          "groupsSearchBasePlaceholder": "Select groups search base",
+          "groupsSearchBaseSearch": "Search group OU",
+          "computersSearchBase": "Computers search base",
+          "computersSearchBaseHelp": "Base OU for computer search and creation scope.",
+          "computersSearchBasePlaceholder": "Select computers search base",
+          "computersSearchBaseSearch": "Search computer OU"
+        },
+        "empty": {
+          "ouNotFound": "No OU found."
+        },
+        "errors": {
+          "ouLoadFailed": "Failed to load OU list."
+        },
+        "messages": {
+          "saveSuccess": "OU scopes saved."
+        }
       },
       "notifications": {
         "rulesTitle": "Notification Rules",
@@ -252,7 +294,25 @@
       },
       "readOnlyNotice": "You can view AD management settings. Additional permission is required to update them.",
       "connection": {
-        "description": "Configure the domain, OUs, and service account that the AD Management module uses.",
+        "description": "Configure the AD Management module domain connection and service account. Save triggers connection validation.",
+        "sections": {
+          "basic": {
+            "title": "Basic Connection",
+            "description": "Domain identity and base LDAP context."
+          },
+          "serviceAccount": {
+            "title": "Service Account",
+            "description": "Service account used for AD operations."
+          },
+          "domainControllers": {
+            "title": "Domain Controller Preferences",
+            "description": "Optional preferred DC list."
+          },
+          "powerShell": {
+            "title": "PowerShell / Health Checks",
+            "description": "Health check settings for future use."
+          }
+        },
         "fields": {
           "isEnabled": "AD Management module enabled",
           "isEnabledHelp": "When disabled, operation menus are hidden; settings remain accessible.",
@@ -280,7 +340,8 @@
         "actions": {
           "save": "Save AD settings"
         },
-        "lastValidation": "Last validation: {{status}} - {{message}}",
+        "lastValidationTitle": "Last connection validation",
+        "lastValidation": "Status: {{status}} — {{message}}",
         "lastValidationUnknown": "Validation details are unavailable.",
         "messages": {
           "saveSuccess": "AD management settings saved.",

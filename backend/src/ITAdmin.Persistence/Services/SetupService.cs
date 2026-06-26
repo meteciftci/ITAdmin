@@ -135,63 +135,6 @@ public sealed partial class SetupService(
         return new SearchSetupAdminUsersResult(users);
     }
 
-    public async Task<SearchSetupOrganizationalUnitsResult> SearchOrganizationalUnitsAsync(
-        SearchSetupOrganizationalUnitsRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        var setupKeyValidation = SetupRequestValidator.ValidateSetupKey(
-            setupKeyValidator,
-            configuration,
-            request.SetupKey);
-        if (!SetupRequestValidator.TryMapSetupKeyValidationFailure(setupKeyValidation, out var setupKeyMessage, out _))
-        {
-            return new SearchSetupOrganizationalUnitsResult(Array.Empty<SetupOrganizationalUnitListItem>(), false, setupKeyMessage);
-        }
-
-        if (!await IsSetupRequiredAsync(cancellationToken))
-        {
-            return new SearchSetupOrganizationalUnitsResult(
-                Array.Empty<SetupOrganizationalUnitListItem>(),
-                false,
-                "Setup has already been completed.");
-        }
-
-        if (!SetupRequestValidator.TryValidateLdapSettings(request.Ldap, out var ldapMessage, out _))
-        {
-            return new SearchSetupOrganizationalUnitsResult(Array.Empty<SetupOrganizationalUnitListItem>(), false, ldapMessage);
-        }
-
-        var search = request.Search?.Trim();
-        if (!string.IsNullOrWhiteSpace(search) && search.Length < SetupConstants.MinOuSearchLength)
-        {
-            return new SearchSetupOrganizationalUnitsResult(Array.Empty<SetupOrganizationalUnitListItem>(), false);
-        }
-
-        var parentDistinguishedName = request.ParentDistinguishedName?.Trim();
-        if (!string.IsNullOrWhiteSpace(parentDistinguishedName) &&
-            !AdLdapDnHelper.IsEqualOrDescendantOf(parentDistinguishedName, request.Ldap.BaseDn))
-        {
-            return new SearchSetupOrganizationalUnitsResult(
-                Array.Empty<SetupOrganizationalUnitListItem>(),
-                false,
-                ParentOrganizationalUnitOutsideBaseDnMessage);
-        }
-
-        var ldapResult = await ldapService.SearchOrganizationalUnitsAsync(
-            new LdapOrganizationalUnitSearchRequest(
-                Host: request.Ldap.Host,
-                BaseDn: request.Ldap.BaseDn,
-                BindUserName: request.Ldap.BindUserName,
-                BindUserDomain: request.Ldap.BindUserDomain,
-                BindPassword: request.Ldap.BindPassword,
-                Search: search,
-                ParentDistinguishedName: request.ParentDistinguishedName,
-                MaxResults: SetupConstants.MaxOuSearchResults),
-            cancellationToken);
-
-        return new SearchSetupOrganizationalUnitsResult(ldapResult.Items, ldapResult.HasMore);
-    }
-
     public async Task<CompleteSetupResult> CompleteSetupAsync(
         CompleteSetupRequest request,
         CancellationToken cancellationToken = default)
@@ -245,7 +188,6 @@ public sealed partial class SetupService(
 
             await PersistLdapSettingsAsync(request.Ldap, now, cancellationToken);
             var superAdminRole = await EnsureDefaultRolesAndPermissionsAsync(now, cancellationToken);
-            await PersistAdManagementModuleSettingsAsync(request.Ldap, request.Modules ?? new CompleteSetupModulesSettings(null), now, cancellationToken);
 
             var primaryAdminUser = await PersistAdminUsersAsync(resolvedProfiles, superAdminRole, now, cancellationToken);
             await MarkSetupCompletedAsync(now, cancellationToken);
@@ -408,77 +350,6 @@ public sealed partial class SetupService(
         activeLdapSetting.EncryptedBindPassword = secretProtector.Protect(ldap.BindPassword);
         activeLdapSetting.UpdatedAt = now;
         activeLdapSetting.UpdatedBy = SetupActor;
-    }
-
-    private async Task PersistAdManagementModuleSettingsAsync(
-        CompleteSetupLdapSettings ldap,
-        CompleteSetupModulesSettings modules,
-        DateTime now,
-        CancellationToken cancellationToken)
-    {
-        var entity = await context.AdManagementSettings
-            .OrderByDescending(x => x.UpdatedAt ?? x.CreatedAt)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        var adManagement = modules?.AdManagement;
-        if (adManagement is null || !adManagement.IsEnabled)
-        {
-            if (entity is null)
-            {
-                entity = new AdManagementSettings
-                {
-                    IsEnabled = false,
-                    PowerShellHealthEnabled = false,
-                    PowerShellTimeoutSeconds = 30,
-                    CreatedAt = now,
-                    CreatedBy = SetupActor
-                };
-                await context.AdManagementSettings.AddAsync(entity, cancellationToken);
-            }
-            else
-            {
-                entity.IsEnabled = false;
-                entity.EncryptedServiceAccountPassword = null;
-                entity.UpdatedAt = now;
-                entity.UpdatedBy = SetupActor;
-            }
-
-            return;
-        }
-
-        entity ??= new AdManagementSettings
-        {
-            PowerShellHealthEnabled = false,
-            PowerShellTimeoutSeconds = 30,
-            CreatedAt = now,
-            CreatedBy = SetupActor
-        };
-
-        var isNewEntity = !context.AdManagementSettings.Local.Any(x => x.Id == entity.Id) &&
-                          !await context.AdManagementSettings.AnyAsync(x => x.Id == entity.Id, cancellationToken);
-
-        entity.IsEnabled = true;
-        entity.BaseDn = ldap.BaseDn.Trim();
-        entity.DefaultNamingContext = ldap.BaseDn.Trim();
-        entity.DomainFqdn = DeriveDomainFqdn(ldap.BaseDn, ldap.Host);
-        entity.NetbiosDomainName = ldap.BindUserDomain?.Trim();
-        entity.UsersRootOu = adManagement.UsersSearchBase!.Trim();
-        entity.GroupsSearchBase = adManagement.GroupsSearchBase!.Trim();
-        entity.ComputersSearchBase = adManagement.ComputersSearchBase!.Trim();
-        entity.DisabledUsersOu = NormalizeOptionalOu(adManagement.DisabledUsersOu);
-        entity.DefaultUserOu = NormalizeOptionalOu(adManagement.DefaultUserOu);
-        entity.DefaultGroupOu = NormalizeOptionalOu(adManagement.DefaultGroupOu);
-        entity.DefaultComputerOu = NormalizeOptionalOu(adManagement.DefaultComputerOu);
-        entity.DeletedObjectsEnabled = adManagement.DeletedObjectsEnabled;
-        entity.ServiceAccountUserName = ldap.BindUserName.Trim();
-        entity.EncryptedServiceAccountPassword = secretProtector.Protect(ldap.BindPassword);
-        entity.UpdatedAt = now;
-        entity.UpdatedBy = SetupActor;
-
-        if (isNewEntity)
-        {
-            await context.AdManagementSettings.AddAsync(entity, cancellationToken);
-        }
     }
 
     private async Task<PortalUser> PersistAdminUsersAsync(

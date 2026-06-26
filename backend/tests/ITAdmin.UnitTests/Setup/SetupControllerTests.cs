@@ -137,7 +137,6 @@ public sealed class SetupControllerTests
             new ApiCompleteSetupRequest(
                 "setup-secret",
                 null!,
-                new CompleteSetupModulesRequest(null),
                 [new CompleteSetupAdminUserRequest("admin", null, null)]),
             CancellationToken.None);
 

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -24,10 +24,6 @@ export type AdManagementConnectionFormValues = {
   netbiosDomainName: string;
   defaultNamingContext: string;
   baseDn: string;
-  usersRootOu: string;
-  disabledUsersOu: string;
-  groupsSearchBase: string;
-  computersSearchBase: string;
   preferredDomainControllers: string;
   serviceAccountUserName: string;
   serviceAccountPassword: string;
@@ -52,10 +48,6 @@ function buildInitialValues(
     netbiosDomainName: settings?.netbiosDomainName ?? "",
     defaultNamingContext: settings?.defaultNamingContext ?? "",
     baseDn: settings?.baseDn ?? "",
-    usersRootOu: settings?.usersRootOu ?? "",
-    disabledUsersOu: settings?.disabledUsersOu ?? "",
-    groupsSearchBase: settings?.groupsSearchBase ?? "",
-    computersSearchBase: settings?.computersSearchBase ?? "",
     preferredDomainControllers:
       settings?.preferredDomainControllers?.join("\n") ?? "",
     serviceAccountUserName: settings?.serviceAccountUserName ?? "",
@@ -104,6 +96,28 @@ function resolveLastValidationMessage(
   );
 }
 
+function FormSection({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="space-y-4 rounded-lg border bg-card p-4">
+      <div>
+        <h3 className="text-sm font-semibold">{title}</h3>
+        {description ? (
+          <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+        ) : null}
+      </div>
+      {children}
+    </section>
+  );
+}
+
 export function AdManagementConnectionForm({
   settings,
   readOnly,
@@ -132,8 +146,6 @@ export function AdManagementConnectionForm({
       values.netbiosDomainName,
       values.defaultNamingContext,
       values.baseDn,
-      values.usersRootOu,
-      values.disabledUsersOu,
       values.serviceAccountUserName,
     ];
     if (requiredFields.some((field) => field.trim().length === 0)) {
@@ -152,14 +164,12 @@ export function AdManagementConnectionForm({
     hasPassword,
     values.baseDn,
     values.defaultNamingContext,
-    values.disabledUsersOu,
     values.domainFqdn,
     values.isEnabled,
     values.netbiosDomainName,
     values.powerShellTimeoutSeconds,
     values.serviceAccountPassword,
     values.serviceAccountUserName,
-    values.usersRootOu,
     values.clearServiceAccountPassword,
   ]);
 
@@ -213,10 +223,6 @@ export function AdManagementConnectionForm({
         netbiosDomainName: emptyToNull(values.netbiosDomainName),
         defaultNamingContext: emptyToNull(values.defaultNamingContext),
         baseDn: emptyToNull(values.baseDn),
-        usersRootOu: emptyToNull(values.usersRootOu),
-        disabledUsersOu: emptyToNull(values.disabledUsersOu),
-        groupsSearchBase: emptyToNull(values.groupsSearchBase),
-        computersSearchBase: emptyToNull(values.computersSearchBase),
         preferredDomainControllers: parsePreferredDcs(values.preferredDomainControllers),
         serviceAccountUserName: emptyToNull(values.serviceAccountUserName),
         serviceAccountPassword: values.serviceAccountPassword.trim().length === 0
@@ -231,85 +237,131 @@ export function AdManagementConnectionForm({
 
   return (
     <div className="space-y-4">
-      <div className="space-y-1.5">
-        <div className="flex items-center gap-3">
-          <Switch
-            id="ad-mgmt-is-enabled"
-            checked={values.isEnabled}
-            onCheckedChange={(checked) => update("isEnabled", checked)}
-            disabled={readOnly}
-          />
-          <label htmlFor="ad-mgmt-is-enabled" className="cursor-pointer text-sm font-medium">
-            {t("settings:adManagement.connection.fields.isEnabled")}
-          </label>
+      <FormSection
+        title={t("settings:adManagement.connection.sections.basic.title")}
+        description={t("settings:adManagement.connection.sections.basic.description")}
+      >
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-3">
+            <Switch
+              id="ad-mgmt-is-enabled"
+              checked={values.isEnabled}
+              onCheckedChange={(checked) => update("isEnabled", checked)}
+              disabled={readOnly}
+            />
+            <label htmlFor="ad-mgmt-is-enabled" className="cursor-pointer text-sm font-medium">
+              {t("settings:adManagement.connection.fields.isEnabled")}
+            </label>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {t("settings:adManagement.connection.fields.isEnabledHelp")}
+          </p>
         </div>
-        <p className="text-xs text-muted-foreground">
-          {t("settings:adManagement.connection.fields.isEnabledHelp")}
-        </p>
-      </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <FieldText
-          id="ad-mgmt-domain-fqdn"
-          label={t("settings:adManagement.connection.fields.domainFqdn")}
-          value={values.domainFqdn}
-          onChange={(value) => update("domainFqdn", value)}
-          readOnly={readOnly}
-          placeholder="corp.example.com"
-        />
-        <FieldText
-          id="ad-mgmt-netbios"
-          label={t("settings:adManagement.connection.fields.netbiosDomainName")}
-          value={values.netbiosDomainName}
-          onChange={(value) => update("netbiosDomainName", value)}
-          readOnly={readOnly}
-          placeholder="CORP"
-        />
-        <FieldText
-          id="ad-mgmt-base-dn"
-          label={t("settings:adManagement.connection.fields.baseDn")}
-          value={values.baseDn}
-          onChange={(value) => update("baseDn", value)}
-          readOnly={readOnly}
-          placeholder="DC=corp,DC=example,DC=com"
-        />
-        <FieldText
-          id="ad-mgmt-default-nc"
-          label={t("settings:adManagement.connection.fields.defaultNamingContext")}
-          value={values.defaultNamingContext}
-          onChange={(value) => update("defaultNamingContext", value)}
-          readOnly={readOnly}
-        />
-        <FieldText
-          id="ad-mgmt-users-root-ou"
-          label={t("settings:adManagement.connection.fields.usersRootOu")}
-          value={values.usersRootOu}
-          onChange={(value) => update("usersRootOu", value)}
-          readOnly={readOnly}
-          placeholder="OU=Users,DC=corp,DC=example,DC=com"
-        />
-        <FieldText
-          id="ad-mgmt-disabled-users-ou"
-          label={t("settings:adManagement.connection.fields.disabledUsersOu")}
-          value={values.disabledUsersOu}
-          onChange={(value) => update("disabledUsersOu", value)}
-          readOnly={readOnly}
-        />
-        <FieldText
-          id="ad-mgmt-groups-search-base"
-          label={t("settings:adManagement.connection.fields.groupsSearchBase")}
-          value={values.groupsSearchBase}
-          onChange={(value) => update("groupsSearchBase", value)}
-          readOnly={readOnly}
-        />
-        <FieldText
-          id="ad-mgmt-computers-search-base"
-          label={t("settings:adManagement.connection.fields.computersSearchBase")}
-          value={values.computersSearchBase}
-          onChange={(value) => update("computersSearchBase", value)}
-          readOnly={readOnly}
-        />
-        <div className="space-y-1.5 md:col-span-2">
+        <div className="grid gap-4 md:grid-cols-2">
+          <FieldText
+            id="ad-mgmt-domain-fqdn"
+            label={t("settings:adManagement.connection.fields.domainFqdn")}
+            value={values.domainFqdn}
+            onChange={(value) => update("domainFqdn", value)}
+            readOnly={readOnly}
+            placeholder="corp.example.com"
+          />
+          <FieldText
+            id="ad-mgmt-netbios"
+            label={t("settings:adManagement.connection.fields.netbiosDomainName")}
+            value={values.netbiosDomainName}
+            onChange={(value) => update("netbiosDomainName", value)}
+            readOnly={readOnly}
+            placeholder="CORP"
+          />
+          <FieldText
+            id="ad-mgmt-default-nc"
+            label={t("settings:adManagement.connection.fields.defaultNamingContext")}
+            value={values.defaultNamingContext}
+            onChange={(value) => update("defaultNamingContext", value)}
+            readOnly={readOnly}
+          />
+          <FieldText
+            id="ad-mgmt-base-dn"
+            label={t("settings:adManagement.connection.fields.baseDn")}
+            value={values.baseDn}
+            onChange={(value) => update("baseDn", value)}
+            readOnly={readOnly}
+            placeholder="DC=corp,DC=example,DC=com"
+          />
+        </div>
+      </FormSection>
+
+      <FormSection
+        title={t("settings:adManagement.connection.sections.serviceAccount.title")}
+        description={t("settings:adManagement.connection.sections.serviceAccount.description")}
+      >
+        <p className="text-xs text-muted-foreground">
+          {t("settings:adManagement.connection.fields.ldapsHelp")}
+        </p>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="ad-mgmt-service-account">
+              {t("settings:adManagement.connection.fields.serviceAccountUserName")}
+            </Label>
+            <Input
+              id="ad-mgmt-service-account"
+              value={values.serviceAccountUserName}
+              onChange={(event) => update("serviceAccountUserName", event.target.value)}
+              readOnly={readOnly}
+              placeholder="svc_ad_mgmt"
+            />
+            <p className="text-xs text-muted-foreground">
+              {t("settings:adManagement.connection.fields.serviceAccountUserNameHelp")}
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="ad-mgmt-service-password">
+              {t("settings:adManagement.connection.fields.serviceAccountPassword")}
+            </Label>
+            <Input
+              id="ad-mgmt-service-password"
+              type="password"
+              value={values.serviceAccountPassword}
+              onChange={(event) => update("serviceAccountPassword", event.target.value)}
+              readOnly={readOnly || values.clearServiceAccountPassword}
+              autoComplete="new-password"
+            />
+            <div className="space-y-1 text-xs text-muted-foreground">
+              {hasPassword ? (
+                <span>{t("settings:adManagement.connection.passwordStored")}</span>
+              ) : null}
+              <span>{t("settings:adManagement.connection.passwordKeepHint")}</span>
+            </div>
+            {!readOnly ? (
+              <div className="flex items-center gap-2 pt-1">
+                <Checkbox
+                  id="ad-mgmt-clear-password"
+                  checked={values.clearServiceAccountPassword}
+                  onChange={(event) => {
+                    const next = event.target.checked;
+                    update("clearServiceAccountPassword", next);
+                    if (next) {
+                      update("serviceAccountPassword", "");
+                    }
+                  }}
+                />
+                <label htmlFor="ad-mgmt-clear-password" className="cursor-pointer text-xs">
+                  {t("settings:adManagement.connection.clearPassword")}
+                </label>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </FormSection>
+
+      <FormSection
+        title={t("settings:adManagement.connection.sections.domainControllers.title")}
+        description={t("settings:adManagement.connection.sections.domainControllers.description")}
+      >
+        <div className="space-y-1.5">
           <Label htmlFor="ad-mgmt-preferred-dcs">
             {t("settings:adManagement.connection.fields.preferredDomainControllers")}
           </Label>
@@ -325,116 +377,68 @@ export function AdManagementConnectionForm({
             {t("settings:adManagement.connection.fields.preferredDomainControllersHelp")}
           </p>
         </div>
+      </FormSection>
 
-        <div className="space-y-1.5 md:col-span-2">
-          <p className="text-sm text-muted-foreground">
-            {t("settings:adManagement.connection.fields.ldapsHelp")}
-          </p>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="ad-mgmt-service-account">
-            {t("settings:adManagement.connection.fields.serviceAccountUserName")}
-          </Label>
-          <Input
-            id="ad-mgmt-service-account"
-            value={values.serviceAccountUserName}
-            onChange={(event) => update("serviceAccountUserName", event.target.value)}
-            readOnly={readOnly}
-            placeholder="svc_ad_mgmt"
-          />
-          <p className="text-xs text-muted-foreground">
-            {t("settings:adManagement.connection.fields.serviceAccountUserNameHelp")}
-          </p>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="ad-mgmt-service-password">
-            {t("settings:adManagement.connection.fields.serviceAccountPassword")}
-          </Label>
-          <Input
-            id="ad-mgmt-service-password"
-            type="password"
-            value={values.serviceAccountPassword}
-            onChange={(event) => update("serviceAccountPassword", event.target.value)}
-            readOnly={readOnly || values.clearServiceAccountPassword}
-            autoComplete="new-password"
-          />
-          <div className="space-y-1 text-xs text-muted-foreground">
-            {hasPassword ? (
-              <span>{t("settings:adManagement.connection.passwordStored")}</span>
-            ) : null}
-            <span>{t("settings:adManagement.connection.passwordKeepHint")}</span>
-          </div>
-          {!readOnly ? (
-            <div className="flex items-center gap-2 pt-1">
+      <FormSection
+        title={t("settings:adManagement.connection.sections.powerShell.title")}
+        description={t("settings:adManagement.connection.sections.powerShell.description")}
+      >
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="ad-mgmt-ps-enabled">
+              {t("settings:adManagement.connection.fields.powerShellHealthEnabled")}
+            </Label>
+            <div className="flex h-9 items-center gap-2">
               <Checkbox
-                id="ad-mgmt-clear-password"
-                checked={values.clearServiceAccountPassword}
-                onChange={(event) => {
-                  const next = event.target.checked;
-                  update("clearServiceAccountPassword", next);
-                  if (next) {
-                    update("serviceAccountPassword", "");
-                  }
-                }}
+                id="ad-mgmt-ps-enabled"
+                checked={values.powerShellHealthEnabled}
+                onChange={(event) => update("powerShellHealthEnabled", event.target.checked)}
+                disabled={readOnly}
               />
-              <label htmlFor="ad-mgmt-clear-password" className="cursor-pointer text-xs">
-                {t("settings:adManagement.connection.clearPassword")}
+              <label
+                htmlFor="ad-mgmt-ps-enabled"
+                className="cursor-pointer text-sm text-muted-foreground"
+              >
+                {t("settings:adManagement.connection.fields.powerShellHealthEnabledHelp")}
               </label>
             </div>
-          ) : null}
-        </div>
+          </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="ad-mgmt-ps-enabled">
-            {t("settings:adManagement.connection.fields.powerShellHealthEnabled")}
-          </Label>
-          <div className="flex h-9 items-center gap-2">
-            <Checkbox
-              id="ad-mgmt-ps-enabled"
-              checked={values.powerShellHealthEnabled}
-              onChange={(event) => update("powerShellHealthEnabled", event.target.checked)}
-              disabled={readOnly}
+          <div className="space-y-1.5">
+            <Label htmlFor="ad-mgmt-ps-timeout">
+              {t("settings:adManagement.connection.fields.powerShellTimeoutSeconds")}
+            </Label>
+            <Input
+              id="ad-mgmt-ps-timeout"
+              type="number"
+              min={5}
+              max={300}
+              value={values.powerShellTimeoutSeconds}
+              onChange={(event) => update("powerShellTimeoutSeconds", event.target.value)}
+              readOnly={readOnly}
             />
-            <label
-              htmlFor="ad-mgmt-ps-enabled"
-              className="cursor-pointer text-sm text-muted-foreground"
-            >
-              {t("settings:adManagement.connection.fields.powerShellHealthEnabledHelp")}
-            </label>
           </div>
         </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="ad-mgmt-ps-timeout">
-            {t("settings:adManagement.connection.fields.powerShellTimeoutSeconds")}
-          </Label>
-          <Input
-            id="ad-mgmt-ps-timeout"
-            type="number"
-            min={5}
-            max={300}
-            value={values.powerShellTimeoutSeconds}
-            onChange={(event) => update("powerShellTimeoutSeconds", event.target.value)}
-            readOnly={readOnly}
-          />
-        </div>
-      </div>
+      </FormSection>
 
       {settings?.lastValidationStatus ? (
-        <p className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-          {t("settings:adManagement.connection.lastValidation", {
-            status: settings.lastValidationStatus,
-            message: resolveLastValidationMessage(t, settings.lastValidationMessage),
-          })}
-        </p>
+        <div className="rounded-md border border-dashed px-3 py-2 text-sm">
+          <p className="font-medium">
+            {t("settings:adManagement.connection.lastValidationTitle")}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {t("settings:adManagement.connection.lastValidation", {
+              status: settings.lastValidationStatus,
+              message: resolveLastValidationMessage(t, settings.lastValidationMessage),
+            })}
+          </p>
+        </div>
       ) : null}
 
       {!readOnly ? (
         <div className="flex flex-wrap justify-end gap-2">
           <Button onClick={handleSave} disabled={!canSubmit || isSaving}>
-            {t("settings:adManagement.connection.actions.save")}
+            {t("common:actions.save")}
           </Button>
         </div>
       ) : null}
