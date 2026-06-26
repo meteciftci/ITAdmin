@@ -10,7 +10,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   buildUpdateAdManagementSettingsPayload,
-  defaultAdManagementNotificationSettings,
 } from "@/features/ad-management/ad-management-settings-payload";
 import { resolveAdManagementApiMessage } from "@/features/ad-management/ad-management-api-message";
 import type {
@@ -181,6 +180,10 @@ export function AdManagementConnectionForm({
   }
 
   function handleSave() {
+    if (!settings) {
+      return;
+    }
+
     if (!canSubmit) {
       if (values.isEnabled) {
         toast.error(t("settings:adManagement.connection.messages.requiredFieldsMissing"));
@@ -190,34 +193,8 @@ export function AdManagementConnectionForm({
 
     const timeout = Number.parseInt(values.powerShellTimeoutSeconds, 10);
 
-    const baseSettings: AdManagementSettings = settings ?? {
-      isConfigured: false,
-      isEnabled: false,
-      domainFqdn: null,
-      defaultUserCreationUpnSuffix: null,
-      defaultUserOu: null,
-      defaultGroupOu: null,
-      defaultComputerOu: null,
-      netbiosDomainName: null,
-      defaultNamingContext: null,
-      baseDn: null,
-      usersRootOu: null,
-      disabledUsersOu: null,
-      groupsSearchBase: null,
-      computersSearchBase: null,
-      preferredDomainControllers: [],
-      serviceAccountUserName: null,
-      hasServiceAccountPassword: false,
-      powerShellHealthEnabled: false,
-      powerShellTimeoutSeconds: 30,
-      lastValidatedAt: null,
-      lastValidationStatus: null,
-      lastValidationMessage: null,
-      notificationSettings: defaultAdManagementNotificationSettings(),
-    };
-
     onSave(
-      buildUpdateAdManagementSettingsPayload(baseSettings, {
+      buildUpdateAdManagementSettingsPayload(settings, {
         isEnabled: values.isEnabled,
         domainFqdn: emptyToNull(values.domainFqdn),
         netbiosDomainName: emptyToNull(values.netbiosDomainName),
@@ -437,7 +414,7 @@ export function AdManagementConnectionForm({
 
       {!readOnly ? (
         <div className="flex flex-wrap justify-end gap-2">
-          <Button onClick={handleSave} disabled={!canSubmit || isSaving}>
+          <Button onClick={handleSave} disabled={!settings || !canSubmit || isSaving}>
             {t("common:actions.save")}
           </Button>
         </div>

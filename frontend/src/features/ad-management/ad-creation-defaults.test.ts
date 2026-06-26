@@ -151,4 +151,11 @@ describe("ad creation defaults integration", () => {
     assert.doesNotMatch(source, /ad-mgmt-computers-search-base/);
     assert.doesNotMatch(source, /connection\.fields\.usersRootOu/);
   });
+
+  it("connection form does not save before settings are loaded", () => {
+    const source = readSource("components/AdManagementConnectionForm.tsx");
+    assert.match(source, /if \(!settings\)/);
+    assert.match(source, /disabled=\{!settings \|\| !canSubmit \|\| isSaving\}/);
+    assert.doesNotMatch(source, /settings \?\? \{/);
+  });
 });
