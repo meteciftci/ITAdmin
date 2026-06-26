@@ -149,7 +149,10 @@
       "ouPicker": {
         "title": "Select organizational unit",
         "description": "Search and select an OU. Long DN values are shown in a readable layout after selection.",
+        "searchPlaceholder": "Search OU name or DN",
         "minSearchLength": "Enter at least 2 characters to search.",
+        "empty": "No OU found.",
+        "loadFailed": "Failed to load OU list.",
         "actions": {
           "select": "Select OU",
           "change": "Change OU"
@@ -162,25 +165,15 @@
           "usersRootOu": "Users root OU",
           "usersRootOuHelp": "Root OU used for user management operations.",
           "usersRootOuPlaceholder": "Select users root OU",
-          "usersRootOuSearch": "Search user OU",
           "disabledUsersOu": "Disabled users OU",
           "disabledUsersOuHelp": "OU where disabled users are moved.",
           "disabledUsersOuPlaceholder": "Select disabled users OU",
-          "disabledUsersOuSearch": "Search disabled users OU",
           "groupsSearchBase": "Groups search base",
           "groupsSearchBaseHelp": "Base OU for group search and creation scope.",
           "groupsSearchBasePlaceholder": "Select groups search base",
-          "groupsSearchBaseSearch": "Search group OU",
           "computersSearchBase": "Computers search base",
           "computersSearchBaseHelp": "Base OU for computer search and creation scope.",
-          "computersSearchBasePlaceholder": "Select computers search base",
-          "computersSearchBaseSearch": "Search computer OU"
-        },
-        "empty": {
-          "ouNotFound": "No OU found."
-        },
-        "errors": {
-          "ouLoadFailed": "Failed to load OU list."
+          "computersSearchBasePlaceholder": "Select computers search base"
         },
         "messages": {
           "saveSuccess": "OU scopes saved."
@@ -261,21 +254,15 @@
           "defaultUserOu": "Default user OU",
           "defaultUserOuHelp": "Default OU selected on the user creation page.",
           "defaultUserOuPlaceholder": "Select default user OU",
-          "defaultUserOuSearch": "Search user OUs",
           "defaultGroupOu": "Default group OU",
           "defaultGroupOuHelp": "Default OU selected on the group creation page.",
           "defaultGroupOuPlaceholder": "Select default group OU",
-          "defaultGroupOuSearch": "Search group OUs",
           "defaultComputerOu": "Default computer OU",
           "defaultComputerOuHelp": "Default OU used by computer creation flows.",
           "defaultComputerOuPlaceholder": "Select default computer OU",
-          "defaultComputerOuSearch": "Search computer OUs",
           "defaultUpnSuffix": "Default UPN suffix",
           "defaultUpnSuffixHelp": "UPN suffix selected by default on the user creation page.",
           "none": "Not selected"
-        },
-        "empty": {
-          "ouNotFound": "No OU found."
         },
         "actions": {
           "save": "Save defaults"
@@ -285,8 +272,7 @@
           "savedSuffixMissingFromAd": "The saved default suffix was not returned by AD."
         },
         "errors": {
-          "suffixListLoadFailed": "UPN suffix list could not be loaded.",
-          "ouLoadFailed": "OU list could not be loaded."
+          "suffixListLoadFailed": "UPN suffix list could not be loaded."
         },
         "messages": {
           "saveSuccess": "Creation defaults saved."

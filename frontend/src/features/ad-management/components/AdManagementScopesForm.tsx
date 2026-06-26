@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { buildUpdateAdManagementSettingsPayload } from "@/features/ad-management/ad-management-settings-payload";
-import { AdOuPickerField } from "@/features/ad-management/components/AdOuPickerField";
+import { AdSettingsOuPickerField } from "@/features/ad-management/components/AdSettingsOuPickerField";
 import type {
   AdManagementSettings,
   UpdateAdManagementSettingsRequest,
@@ -30,6 +30,8 @@ export function AdManagementScopesForm({
     settings?.computersSearchBase ?? null,
   );
 
+  const disabled = readOnly || isSaving;
+
   function handleSave() {
     if (!settings || readOnly) {
       return;
@@ -46,7 +48,7 @@ export function AdManagementScopesForm({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div>
         <h3 className="text-sm font-semibold">
           {t("settings:adManagement.scopes.title")}
@@ -56,80 +58,47 @@ export function AdManagementScopesForm({
         </p>
       </div>
 
-      <div className="grid max-w-2xl gap-4">
-        <AdOuPickerField
+      <div className="grid gap-4 xl:grid-cols-2">
+        <AdSettingsOuPickerField
           value={usersRootOu}
           onChange={setUsersRootOu}
-          searchContext="users"
-          allowClear
-          required={false}
-          disabled={readOnly || isSaving}
-          fieldLabelKey="settings:adManagement.scopes.fields.usersRootOu"
+          disabled={disabled}
+          labelKey="settings:adManagement.scopes.fields.usersRootOu"
+          descriptionKey="settings:adManagement.scopes.fields.usersRootOuHelp"
           placeholderKey="settings:adManagement.scopes.fields.usersRootOuPlaceholder"
-          searchKey="settings:adManagement.scopes.fields.usersRootOuSearch"
-          emptyKey="settings:adManagement.scopes.empty.ouNotFound"
-          errorKey="settings:adManagement.scopes.errors.ouLoadFailed"
         />
-        <p className="-mt-2 text-xs text-muted-foreground">
-          {t("settings:adManagement.scopes.fields.usersRootOuHelp")}
-        </p>
-
-        <AdOuPickerField
+        <AdSettingsOuPickerField
           value={disabledUsersOu}
           onChange={setDisabledUsersOu}
-          searchContext="users"
-          allowClear
-          required={false}
-          disabled={readOnly || isSaving}
-          fieldLabelKey="settings:adManagement.scopes.fields.disabledUsersOu"
+          disabled={disabled}
+          labelKey="settings:adManagement.scopes.fields.disabledUsersOu"
+          descriptionKey="settings:adManagement.scopes.fields.disabledUsersOuHelp"
           placeholderKey="settings:adManagement.scopes.fields.disabledUsersOuPlaceholder"
-          searchKey="settings:adManagement.scopes.fields.disabledUsersOuSearch"
-          emptyKey="settings:adManagement.scopes.empty.ouNotFound"
-          errorKey="settings:adManagement.scopes.errors.ouLoadFailed"
         />
-        <p className="-mt-2 text-xs text-muted-foreground">
-          {t("settings:adManagement.scopes.fields.disabledUsersOuHelp")}
-        </p>
-
-        <AdOuPickerField
+        <AdSettingsOuPickerField
           value={groupsSearchBase}
           onChange={setGroupsSearchBase}
-          searchContext="groups"
-          allowClear
-          required={false}
-          disabled={readOnly || isSaving}
-          fieldLabelKey="settings:adManagement.scopes.fields.groupsSearchBase"
+          disabled={disabled}
+          labelKey="settings:adManagement.scopes.fields.groupsSearchBase"
+          descriptionKey="settings:adManagement.scopes.fields.groupsSearchBaseHelp"
           placeholderKey="settings:adManagement.scopes.fields.groupsSearchBasePlaceholder"
-          searchKey="settings:adManagement.scopes.fields.groupsSearchBaseSearch"
-          emptyKey="settings:adManagement.scopes.empty.ouNotFound"
-          errorKey="settings:adManagement.scopes.errors.ouLoadFailed"
         />
-        <p className="-mt-2 text-xs text-muted-foreground">
-          {t("settings:adManagement.scopes.fields.groupsSearchBaseHelp")}
-        </p>
-
-        <AdOuPickerField
+        <AdSettingsOuPickerField
           value={computersSearchBase}
           onChange={setComputersSearchBase}
-          searchContext="computers"
-          allowClear
-          required={false}
-          disabled={readOnly || isSaving}
-          fieldLabelKey="settings:adManagement.scopes.fields.computersSearchBase"
+          disabled={disabled}
+          labelKey="settings:adManagement.scopes.fields.computersSearchBase"
+          descriptionKey="settings:adManagement.scopes.fields.computersSearchBaseHelp"
           placeholderKey="settings:adManagement.scopes.fields.computersSearchBasePlaceholder"
-          searchKey="settings:adManagement.scopes.fields.computersSearchBaseSearch"
-          emptyKey="settings:adManagement.scopes.empty.ouNotFound"
-          errorKey="settings:adManagement.scopes.errors.ouLoadFailed"
         />
-        <p className="-mt-2 text-xs text-muted-foreground">
-          {t("settings:adManagement.scopes.fields.computersSearchBaseHelp")}
-        </p>
       </div>
 
       {!readOnly ? (
-        <Button type="button" onClick={handleSave} disabled={!settings || isSaving}>
-          {t("common:actions.save")}
-        </Button>
+        <div className="flex justify-end border-t pt-4">
+          <Button type="button" onClick={handleSave} disabled={!settings || isSaving}>
+            {t("common:actions.save")}
+          </Button>
+        </div>
       ) : null}
     </div>
   );

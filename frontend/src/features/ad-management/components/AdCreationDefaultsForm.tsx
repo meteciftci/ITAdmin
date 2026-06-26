@@ -10,7 +10,7 @@ import {
   AD_UPN_SUFFIXES_QUERY_KEY,
   getAdUpnSuffixes,
 } from "@/features/ad-management/api";
-import { AdOuPickerField } from "@/features/ad-management/components/AdOuPickerField";
+import { AdSettingsOuPickerField } from "@/features/ad-management/components/AdSettingsOuPickerField";
 import { isAdManagementConnectionReady } from "@/features/ad-management/is-ad-management-connection-ready";
 import { isSavedDefaultMissingFromAdList } from "@/features/ad-management/resolve-default-upn-suffix";
 import type {
@@ -40,6 +40,7 @@ export function AdCreationDefaultsForm({
   );
 
   const connectionReady = isAdManagementConnectionReady(settings);
+  const disabled = readOnly || isSaving;
 
   const upnSuffixesQuery = useQuery({
     queryKey: AD_UPN_SUFFIXES_QUERY_KEY,
@@ -93,7 +94,7 @@ export function AdCreationDefaultsForm({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div>
         <h3 className="text-sm font-semibold">
           {t("settings:adManagement.creationDefaults.title")}
@@ -112,62 +113,36 @@ export function AdCreationDefaultsForm({
       ) : null}
 
       {connectionReady ? (
-        <div className="grid max-w-2xl gap-4">
-          <AdOuPickerField
+        <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+          <AdSettingsOuPickerField
             value={defaultUserOu}
             onChange={setDefaultUserOu}
-            searchContext="users"
-            allowClear
-            required={false}
-            disabled={readOnly || isSaving}
-            fieldLabelKey="settings:adManagement.creationDefaults.fields.defaultUserOu"
+            disabled={disabled}
+            labelKey="settings:adManagement.creationDefaults.fields.defaultUserOu"
+            descriptionKey="settings:adManagement.creationDefaults.fields.defaultUserOuHelp"
             placeholderKey="settings:adManagement.creationDefaults.fields.defaultUserOuPlaceholder"
-            searchKey="settings:adManagement.creationDefaults.fields.defaultUserOuSearch"
-            emptyKey="settings:adManagement.creationDefaults.empty.ouNotFound"
-            errorKey="settings:adManagement.creationDefaults.errors.ouLoadFailed"
           />
-          <p className="-mt-2 text-xs text-muted-foreground">
-            {t("settings:adManagement.creationDefaults.fields.defaultUserOuHelp")}
-          </p>
-
-          <AdOuPickerField
+          <AdSettingsOuPickerField
             value={defaultGroupOu}
             onChange={setDefaultGroupOu}
-            searchContext="groups"
-            allowClear
-            required={false}
-            disabled={readOnly || isSaving}
-            fieldLabelKey="settings:adManagement.creationDefaults.fields.defaultGroupOu"
+            disabled={disabled}
+            labelKey="settings:adManagement.creationDefaults.fields.defaultGroupOu"
+            descriptionKey="settings:adManagement.creationDefaults.fields.defaultGroupOuHelp"
             placeholderKey="settings:adManagement.creationDefaults.fields.defaultGroupOuPlaceholder"
-            searchKey="settings:adManagement.creationDefaults.fields.defaultGroupOuSearch"
-            emptyKey="settings:adManagement.creationDefaults.empty.ouNotFound"
-            errorKey="settings:adManagement.creationDefaults.errors.ouLoadFailed"
           />
-          <p className="-mt-2 text-xs text-muted-foreground">
-            {t("settings:adManagement.creationDefaults.fields.defaultGroupOuHelp")}
-          </p>
-
-          <AdOuPickerField
+          <AdSettingsOuPickerField
             value={defaultComputerOu}
             onChange={setDefaultComputerOu}
-            searchContext="computers"
-            allowClear
-            required={false}
-            disabled={readOnly || isSaving}
-            fieldLabelKey="settings:adManagement.creationDefaults.fields.defaultComputerOu"
+            disabled={disabled}
+            labelKey="settings:adManagement.creationDefaults.fields.defaultComputerOu"
+            descriptionKey="settings:adManagement.creationDefaults.fields.defaultComputerOuHelp"
             placeholderKey="settings:adManagement.creationDefaults.fields.defaultComputerOuPlaceholder"
-            searchKey="settings:adManagement.creationDefaults.fields.defaultComputerOuSearch"
-            emptyKey="settings:adManagement.creationDefaults.empty.ouNotFound"
-            errorKey="settings:adManagement.creationDefaults.errors.ouLoadFailed"
           />
-          <p className="-mt-2 text-xs text-muted-foreground">
-            {t("settings:adManagement.creationDefaults.fields.defaultComputerOuHelp")}
-          </p>
         </div>
       ) : null}
 
       {connectionReady && !listBlocking ? (
-        <div className="max-w-md space-y-1.5">
+        <section className="max-w-md space-y-1.5 rounded-lg border bg-card p-4">
           <Label htmlFor="ad-default-user-creation-upn-suffix">
             {t("settings:adManagement.creationDefaults.fields.defaultUpnSuffix")}
           </Label>
@@ -175,7 +150,7 @@ export function AdCreationDefaultsForm({
             id="ad-default-user-creation-upn-suffix"
             value={effectiveValue}
             onChange={(event) => setSelectedSuffix(event.target.value)}
-            disabled={readOnly || isSaving}
+            disabled={disabled}
             className="h-10"
           >
             <option value="">
@@ -200,19 +175,21 @@ export function AdCreationDefaultsForm({
               {t("settings:adManagement.creationDefaults.warnings.savedSuffixMissingFromAd")}
             </p>
           ) : null}
-        </div>
+        </section>
       ) : null}
 
       {!readOnly ? (
-        <Button
-          type="button"
-          onClick={handleSave}
-          disabled={!settings || isSaving || !connectionReady || listBlocking}
-        >
-          {isSaving
-            ? t("common:actions.save")
-            : t("settings:adManagement.creationDefaults.actions.save")}
-        </Button>
+        <div className="flex justify-end border-t pt-4">
+          <Button
+            type="button"
+            onClick={handleSave}
+            disabled={!settings || isSaving || !connectionReady || listBlocking}
+          >
+            {isSaving
+              ? t("common:actions.save")
+              : t("settings:adManagement.creationDefaults.actions.save")}
+          </Button>
+        </div>
       ) : null}
     </div>
   );

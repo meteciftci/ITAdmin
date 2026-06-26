@@ -76,6 +76,12 @@ import type {
   DeleteAdOrganizationalUnitResponse,
 } from "@/features/ad-management/types";
 
+export const AD_MANAGEMENT_SETTINGS_ORGANIZATIONAL_UNITS_QUERY_KEY = [
+  "ad-management",
+  "settings",
+  "organizational-units",
+] as const;
+
 export const AD_MANAGEMENT_SETTINGS_QUERY_KEY = [
   "ad-management",
   "settings",
@@ -170,6 +176,16 @@ export const getAdManagementSettings = async (): Promise<AdManagementSettings> =
     notificationSettings:
       data.notificationSettings ?? defaultAdManagementNotificationSettings(),
   };
+};
+
+export const getAdManagementSettingsOrganizationalUnits = async (
+  params: GetAdOrganizationalUnitsParams,
+): Promise<AdOrganizationalUnitManageListResponse> => {
+  const { data } = await apiClient.get<AdOrganizationalUnitManageListResponse>(
+    "/ad-management/settings/organizational-units",
+    { params },
+  );
+  return data;
 };
 
 export const updateAdManagementSettings = async (

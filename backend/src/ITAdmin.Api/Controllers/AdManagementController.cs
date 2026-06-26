@@ -43,6 +43,30 @@ public sealed class AdManagementController(
         return Ok(MapSettings(settings));
     }
 
+    [HttpGet("settings/organizational-units")]
+    [RequirePermission(AdManagementPermissions.SettingsView)]
+    public async Task<ActionResult<AdOrganizationalUnitManageListResponse>> ListSettingsOrganizationalUnits(
+        [FromQuery] string? search,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 50,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await adOrganizationalUnitDirectoryService.SearchManageOrganizationalUnitsAsync(
+            new AppModels.AdOrganizationalUnitManageListQuery(search, pageNumber, pageSize),
+            cancellationToken);
+
+        if (!result.IsSuccess || result.Page is null)
+        {
+            return MapDirectoryFailure(result.MessageKey, result.FailureKind, result.MessageParams);
+        }
+
+        return Ok(new AdOrganizationalUnitManageListResponse(
+            result.Page.Items.Select(MapOrganizationalUnitManageListItem).ToList(),
+            result.Page.PageNumber,
+            result.Page.PageSize,
+            result.Page.HasNextPage));
+    }
+
     [HttpPut("settings")]
     [RequirePermission(AdManagementPermissions.SettingsUpdate)]
     public async Task<ActionResult<AdManagementSettingsResponse>> UpdateSettings(

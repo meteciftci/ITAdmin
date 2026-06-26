@@ -13,56 +13,51 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
-  searchComputerOrganizationalUnits,
-  searchGroupOrganizationalUnits,
-  getAdOrganizationalUnits,
-  searchOrganizationalUnits,
+  AD_MANAGEMENT_SETTINGS_ORGANIZATIONAL_UNITS_QUERY_KEY,
+  getAdManagementSettingsOrganizationalUnits,
 } from "@/features/ad-management/api";
 import type { AdOrganizationalUnitListItem } from "@/features/ad-management/types";
-import { isInvalidOrganizationalUnitMoveTarget } from "@/features/ad-management/ad-ldap-dn";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { cn } from "@/lib/utils";
 
 const MIN_SEARCH_LENGTH = 2;
-
-type OuSearchContext = "users" | "groups" | "computers" | "manage";
+const PAGE_SIZE = 50;
 
 type Props = {
   value: string | null;
   onChange: (distinguishedName: string | null) => void;
   disabled?: boolean;
-  className?: string;
-  showFieldLabel?: boolean;
-  searchContext?: OuSearchContext;
   allowClear?: boolean;
-  required?: boolean;
-  fieldLabelKey?: string;
-  placeholderKey?: string;
-  searchKey?: string;
-  emptyKey?: string;
-  errorKey?: string;
-  excludeDistinguishedName?: string | null;
+  labelKey: string;
+  descriptionKey: string;
+  placeholderKey: string;
+  className?: string;
 };
 
-export function AdOuPickerField({
+function mapSettingsOuItems(
+  items: Awaited<ReturnType<typeof getAdManagementSettingsOrganizationalUnits>>["items"],
+): AdOrganizationalUnitListItem[] {
+  return items.map((item) => ({
+    distinguishedName: item.distinguishedName,
+    name: item.name,
+    displayName: item.name,
+    ou: item.ou,
+    label: item.name?.trim() || item.ou?.trim() || item.canonicalName,
+  }));
+}
+
+export function AdSettingsOuPickerField({
   value,
   onChange,
   disabled,
+  allowClear = true,
+  labelKey,
+  descriptionKey,
+  placeholderKey,
   className,
-  showFieldLabel = true,
-  searchContext = "users",
-  allowClear = false,
-  required = true,
-  fieldLabelKey = "adManagement:users.create.fields.ou",
-  placeholderKey = "adManagement:users.create.fields.ouPlaceholder",
-  searchKey = "adManagement:users.create.fields.ouSearch",
-  emptyKey = "adManagement:users.create.empty.ouNotFound",
-  errorKey = "adManagement:users.create.errors.ouLoadFailed",
-  excludeDistinguishedName = null,
 }: Props) {
-  const { t } = useTranslation(["adManagement", "common", "settings"]);
+  const { t } = useTranslation(["settings", "common"]);
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedItem, setSelectedItem] = useState<AdOrganizationalUnitListItem | null>(null);
@@ -71,56 +66,25 @@ export function AdOuPickerField({
   const canSearch = normalizedSearch.length >= MIN_SEARCH_LENGTH;
 
   const ouQuery = useQuery({
-    queryKey: ["ad-management", "organizational-units", searchContext, normalizedSearch],
+    queryKey: [
+      ...AD_MANAGEMENT_SETTINGS_ORGANIZATIONAL_UNITS_QUERY_KEY,
+      normalizedSearch,
+    ],
     queryFn: async () => {
-      const params = {
+      const response = await getAdManagementSettingsOrganizationalUnits({
         search: normalizedSearch,
-        pageSize: 50,
+        pageNumber: 1,
+        pageSize: PAGE_SIZE,
+      });
+      return {
+        items: mapSettingsOuItems(response.items),
+        hasMore: response.hasNextPage,
       };
-
-      if (searchContext === "groups") {
-        return searchGroupOrganizationalUnits(params);
-      }
-
-      if (searchContext === "computers") {
-        return searchComputerOrganizationalUnits(params.search, params.pageSize);
-      }
-
-      if (searchContext === "manage") {
-        const response = await getAdOrganizationalUnits({
-          search: params.search,
-          pageNumber: 1,
-          pageSize: params.pageSize,
-        });
-        return {
-          items: response.items.map(
-            (item): AdOrganizationalUnitListItem => ({
-              distinguishedName: item.distinguishedName,
-              name: item.name,
-              displayName: item.name,
-              ou: item.ou,
-              label: item.name?.trim() || item.ou?.trim() || item.canonicalName,
-            }),
-          ),
-          hasMore: response.hasNextPage,
-        };
-      }
-
-      return searchOrganizationalUnits(params);
     },
     enabled: open && canSearch && !disabled,
   });
 
-  const items = useMemo(() => {
-    const rawItems = ouQuery.data?.items ?? [];
-    if (!excludeDistinguishedName?.trim()) {
-      return rawItems;
-    }
-
-    return rawItems.filter(
-      (item) => !isInvalidOrganizationalUnitMoveTarget(excludeDistinguishedName, item.distinguishedName),
-    );
-  }, [excludeDistinguishedName, ouQuery.data]);
+  const items = ouQuery.data?.items ?? [];
 
   const displayLabel = useMemo(() => {
     if (!value) {
@@ -147,32 +111,35 @@ export function AdOuPickerField({
   }
 
   return (
-    <div className={cn("w-full min-w-0 space-y-1.5", className)}>
-      {showFieldLabel ? (
-        <Label>
-          {t(fieldLabelKey)}
-          {required ? " *" : ""}
-        </Label>
-      ) : null}
-
-      <div className="rounded-lg border bg-muted/10 p-3">
-        {value ? (
-          <div className="min-w-0 space-y-1">
-            <p className="truncate text-sm font-medium" title={displayLabel}>
-              {displayLabel}
-            </p>
-            <p
-              className="truncate font-mono text-xs text-muted-foreground"
-              title={value}
-            >
-              {value}
-            </p>
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">{t(placeholderKey)}</p>
+    <>
+      <div
+        className={cn(
+          "flex flex-col gap-3 rounded-lg border bg-card p-4 sm:flex-row sm:items-start sm:justify-between",
+          disabled && "opacity-60",
+          className,
         )}
+      >
+        <div className="min-w-0 flex-1 space-y-1">
+          <p className="text-sm font-medium">{t(labelKey)}</p>
+          <p className="text-xs text-muted-foreground">{t(descriptionKey)}</p>
+          {value ? (
+            <div className="min-w-0 space-y-1 pt-1">
+              <p className="truncate text-sm" title={displayLabel}>
+                {displayLabel}
+              </p>
+              <p
+                className="truncate font-mono text-xs text-muted-foreground"
+                title={value}
+              >
+                {value}
+              </p>
+            </div>
+          ) : (
+            <p className="pt-1 text-sm text-muted-foreground">{t(placeholderKey)}</p>
+          )}
+        </div>
 
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">
           <Button
             type="button"
             variant="outline"
@@ -202,7 +169,7 @@ export function AdOuPickerField({
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder={t(searchKey)}
+              placeholder={t("settings:adManagement.ouPicker.searchPlaceholder")}
               disabled={disabled}
               autoFocus
             />
@@ -216,10 +183,14 @@ export function AdOuPickerField({
                 <p className="px-3 py-4 text-sm text-muted-foreground">{t("common:loading")}</p>
               ) : null}
               {canSearch && ouQuery.isError ? (
-                <p className="px-3 py-4 text-sm text-destructive">{t(errorKey)}</p>
+                <p className="px-3 py-4 text-sm text-destructive">
+                  {t("settings:adManagement.ouPicker.loadFailed")}
+                </p>
               ) : null}
               {canSearch && ouQuery.isSuccess && !items.length ? (
-                <p className="px-3 py-4 text-sm text-muted-foreground">{t(emptyKey)}</p>
+                <p className="px-3 py-4 text-sm text-muted-foreground">
+                  {t("settings:adManagement.ouPicker.empty")}
+                </p>
               ) : null}
               {canSearch && items.length > 0 ? (
                 <ul className="divide-y">
@@ -248,7 +219,7 @@ export function AdOuPickerField({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }
 

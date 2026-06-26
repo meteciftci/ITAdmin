@@ -137,6 +137,7 @@ describe("ad creation defaults integration", () => {
     assert.match(tabSource, /AdCreationDefaultsForm/);
     assert.match(tabSource, /creationDefaults/);
     assert.match(tabSource, /AdManagementScopesForm/);
+    assert.match(tabSource, /AdSettingsOuPickerField|AdManagementScopesForm/);
     assert.match(tabSource, /scopes/);
     assert.doesNotMatch(formSource, /disabledUsersOu/i);
     assert.doesNotMatch(formSource, /disabledUsers/i);

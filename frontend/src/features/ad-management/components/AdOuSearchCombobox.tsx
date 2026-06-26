@@ -1,1 +1,246 @@
-export { AdOuPickerField as AdOuSearchCombobox } from "@/features/ad-management/components/AdOuPickerField";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { ChevronDown, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
+
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  searchComputerOrganizationalUnits,
+  searchGroupOrganizationalUnits,
+  getAdOrganizationalUnits,
+  searchOrganizationalUnits,
+} from "@/features/ad-management/api";
+import type { AdOrganizationalUnitListItem } from "@/features/ad-management/types";
+import {
+  AD_COMBOBOX_POPOVER_CONTENT_PROPS,
+  AD_COMBOBOX_TRIGGER_BUTTON_CLASSNAME,
+  AD_COMBOBOX_TRIGGER_LABEL_CLASSNAME,
+  AD_COMBOBOX_TRIGGER_WRAPPER_CLASSNAME,
+} from "@/features/ad-management/ad-combobox-styles";
+import { isInvalidOrganizationalUnitMoveTarget } from "@/features/ad-management/ad-ldap-dn";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { cn } from "@/lib/utils";
+
+const MIN_SEARCH_LENGTH = 2;
+
+type OuSearchContext = "users" | "groups" | "computers" | "manage";
+
+type Props = {
+  value: string | null;
+  onChange: (distinguishedName: string | null) => void;
+  disabled?: boolean;
+  className?: string;
+  showFieldLabel?: boolean;
+  searchContext?: OuSearchContext;
+  allowClear?: boolean;
+  required?: boolean;
+  fieldLabelKey?: string;
+  placeholderKey?: string;
+  searchKey?: string;
+  emptyKey?: string;
+  errorKey?: string;
+  excludeDistinguishedName?: string | null;
+};
+
+export function AdOuSearchCombobox({
+  value,
+  onChange,
+  disabled,
+  className,
+  showFieldLabel = true,
+  searchContext = "users",
+  allowClear = false,
+  required = true,
+  fieldLabelKey = "adManagement:users.create.fields.ou",
+  placeholderKey = "adManagement:users.create.fields.ouPlaceholder",
+  searchKey = "adManagement:users.create.fields.ouSearch",
+  emptyKey = "adManagement:users.create.empty.ouNotFound",
+  errorKey = "adManagement:users.create.errors.ouLoadFailed",
+  excludeDistinguishedName = null,
+}: Props) {
+  const { t } = useTranslation(["adManagement", "common"]);
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [selectedItem, setSelectedItem] = useState<AdOrganizationalUnitListItem | null>(null);
+  const debouncedSearch = useDebouncedValue(search, 350);
+  const normalizedSearch = debouncedSearch.trim();
+  const canSearch = normalizedSearch.length >= MIN_SEARCH_LENGTH;
+
+  const ouQuery = useQuery({
+    queryKey: ["ad-management", "organizational-units", searchContext, normalizedSearch],
+    queryFn: async () => {
+      const params = {
+        search: normalizedSearch,
+        pageSize: 50,
+      };
+
+      if (searchContext === "groups") {
+        return searchGroupOrganizationalUnits(params);
+      }
+
+      if (searchContext === "computers") {
+        return searchComputerOrganizationalUnits(params.search, params.pageSize);
+      }
+
+      if (searchContext === "manage") {
+        const response = await getAdOrganizationalUnits({
+          search: params.search,
+          pageNumber: 1,
+          pageSize: params.pageSize,
+        });
+        return {
+          items: response.items.map(
+            (item): AdOrganizationalUnitListItem => ({
+              distinguishedName: item.distinguishedName,
+              name: item.name,
+              displayName: item.name,
+              ou: item.ou,
+              label: item.name?.trim() || item.ou?.trim() || item.canonicalName,
+            }),
+          ),
+          hasMore: response.hasNextPage,
+        };
+      }
+
+      return searchOrganizationalUnits(params);
+    },
+    enabled: open && canSearch && !disabled,
+  });
+
+  const items = useMemo(() => {
+    const rawItems = ouQuery.data?.items ?? [];
+    if (!excludeDistinguishedName?.trim()) {
+      return rawItems;
+    }
+
+    return rawItems.filter(
+      (item) => !isInvalidOrganizationalUnitMoveTarget(excludeDistinguishedName, item.distinguishedName),
+    );
+  }, [excludeDistinguishedName, ouQuery.data]);
+
+  const triggerLabel = useMemo(() => {
+    if (!value) {
+      return "";
+    }
+
+    if (selectedItem?.distinguishedName === value) {
+      return selectedItem.label;
+    }
+
+    const match = items.find((item) => item.distinguishedName === value);
+    return match?.label ?? value;
+  }, [items, selectedItem, value]);
+
+  function handleSelect(item: AdOrganizationalUnitListItem) {
+    setSelectedItem(item);
+    onChange(item.distinguishedName);
+    setOpen(false);
+    setSearch("");
+  }
+
+  function handleClear() {
+    setSelectedItem(null);
+    onChange(null);
+    setSearch("");
+  }
+
+  return (
+    <div className={cn("w-full min-w-0 space-y-1.5", className)}>
+      {showFieldLabel ? (
+        <Label>
+          {t(fieldLabelKey)}
+          {required ? " *" : ""}
+        </Label>
+      ) : null}
+      <Popover open={open} onOpenChange={setOpen}>
+        <div className={cn(AD_COMBOBOX_TRIGGER_WRAPPER_CLASSNAME, "flex items-center gap-1")}>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              disabled={disabled}
+              className={cn(AD_COMBOBOX_TRIGGER_BUTTON_CLASSNAME, "min-w-0 flex-1")}
+            >
+              <span className={cn(AD_COMBOBOX_TRIGGER_LABEL_CLASSNAME, !triggerLabel && "text-muted-foreground")}>
+                {triggerLabel || t(placeholderKey)}
+              </span>
+              <ChevronDown className="ml-2 size-4 shrink-0 opacity-60" />
+            </button>
+          </PopoverTrigger>
+          {allowClear && value && !disabled ? (
+            <button
+              type="button"
+              className="inline-flex size-9 shrink-0 items-center justify-center rounded-md border border-input text-muted-foreground hover:bg-muted"
+              onClick={handleClear}
+              aria-label={t("common:actions.clear")}
+            >
+              <X className="size-4" />
+            </button>
+          ) : null}
+        </div>
+        <PopoverContent {...AD_COMBOBOX_POPOVER_CONTENT_PROPS}>
+          <Input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder={t(searchKey)}
+            disabled={disabled}
+            autoFocus
+          />
+          <div className="mt-2 max-h-56 overflow-y-auto">
+            {!canSearch ? (
+              <p className="px-2 py-3 text-sm text-muted-foreground">
+                {t("adManagement:organizationalUnits.empty.searchRequired")}
+              </p>
+            ) : null}
+            {canSearch && ouQuery.isLoading ? (
+              <p className="px-2 py-3 text-sm text-muted-foreground">{t("common:loading")}</p>
+            ) : null}
+            {canSearch && ouQuery.isError ? (
+              <p className="px-2 py-3 text-sm text-destructive">
+                {t(errorKey)}
+              </p>
+            ) : null}
+            {canSearch && ouQuery.isSuccess && !items.length ? (
+              <p className="px-2 py-3 text-sm text-muted-foreground">
+                {t(emptyKey)}
+              </p>
+            ) : null}
+            {canSearch && items.length > 0 ? (
+              <ul className="space-y-1">
+                {items.map((item) => (
+                  <li key={item.distinguishedName}>
+                    <button
+                      type="button"
+                      className={cn(
+                        "w-full min-w-0 rounded-md px-2 py-2 text-left text-sm hover:bg-muted",
+                        value === item.distinguishedName && "bg-muted",
+                      )}
+                      onClick={() => handleSelect(item)}
+                    >
+                      <OuListItem item={item} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
+function OuListItem({ item }: { item: AdOrganizationalUnitListItem }) {
+  return (
+    <div className="min-w-0 space-y-0.5">
+      <div className="truncate font-medium">{item.label}</div>
+      <div
+        className="truncate font-mono text-xs text-muted-foreground"
+        title={item.distinguishedName}
+      >
+        {item.distinguishedName}
+      </div>
+    </div>
+  );
+}

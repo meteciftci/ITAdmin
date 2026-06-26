@@ -45,6 +45,7 @@ public sealed class AdOrganizationalUnitTests
 
     [Theory]
     [InlineData(nameof(AdManagementController.ListManageOrganizationalUnits), AdManagementPermissions.OrganizationalUnitsView)]
+    [InlineData(nameof(AdManagementController.ListSettingsOrganizationalUnits), AdManagementPermissions.SettingsView)]
     [InlineData(nameof(AdManagementController.GetOrganizationalUnitById), AdManagementPermissions.OrganizationalUnitsView)]
     [InlineData(nameof(AdManagementController.CreateOrganizationalUnit), AdManagementPermissions.OrganizationalUnitsCreate)]
     [InlineData(nameof(AdManagementController.RenameOrganizationalUnit), AdManagementPermissions.OrganizationalUnitsUpdate)]

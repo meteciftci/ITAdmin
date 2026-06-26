@@ -149,7 +149,10 @@
       "ouPicker": {
         "title": "Organizational Unit seç",
         "description": "Arama yaparak OU seçin. Uzun DN değerleri seçim sonrası okunabilir şekilde gösterilir.",
+        "searchPlaceholder": "OU adı veya DN ara",
         "minSearchLength": "Aramak için en az 2 karakter girin.",
+        "empty": "OU bulunamadı.",
+        "loadFailed": "OU listesi yüklenemedi.",
         "actions": {
           "select": "OU seç",
           "change": "OU değiştir"
@@ -162,25 +165,15 @@
           "usersRootOu": "Kullanıcılar root OU",
           "usersRootOuHelp": "Kullanıcı yönetimi operasyonlarında kullanılacak kök OU.",
           "usersRootOuPlaceholder": "Kullanıcılar root OU seçin",
-          "usersRootOuSearch": "Kullanıcı OU ara",
           "disabledUsersOu": "Pasif kullanıcılar OU",
           "disabledUsersOuHelp": "Pasife alınan kullanıcıların taşınacağı OU.",
           "disabledUsersOuPlaceholder": "Pasif kullanıcılar OU seçin",
-          "disabledUsersOuSearch": "Pasif kullanıcı OU ara",
           "groupsSearchBase": "Gruplar arama base",
           "groupsSearchBaseHelp": "Grup arama ve oluşturma kapsamı için base OU.",
           "groupsSearchBasePlaceholder": "Grup arama base seçin",
-          "groupsSearchBaseSearch": "Grup OU ara",
           "computersSearchBase": "Bilgisayarlar arama base",
           "computersSearchBaseHelp": "Bilgisayar arama ve oluşturma kapsamı için base OU.",
-          "computersSearchBasePlaceholder": "Bilgisayar arama base seçin",
-          "computersSearchBaseSearch": "Bilgisayar OU ara"
-        },
-        "empty": {
-          "ouNotFound": "OU bulunamadı."
-        },
-        "errors": {
-          "ouLoadFailed": "OU listesi yüklenemedi."
+          "computersSearchBasePlaceholder": "Bilgisayar arama base seçin"
         },
         "messages": {
           "saveSuccess": "OU kapsamları kaydedildi."
@@ -261,21 +254,15 @@
           "defaultUserOu": "Varsayılan kullanıcı OU",
           "defaultUserOuHelp": "Kullanıcı oluşturma ekranında varsayılan seçili gelecek OU.",
           "defaultUserOuPlaceholder": "Varsayılan kullanıcı OU seçin",
-          "defaultUserOuSearch": "Kullanıcı OU ara",
           "defaultGroupOu": "Varsayılan grup OU",
           "defaultGroupOuHelp": "Grup oluşturma ekranında varsayılan seçili gelecek OU.",
           "defaultGroupOuPlaceholder": "Varsayılan grup OU seçin",
-          "defaultGroupOuSearch": "Grup OU ara",
           "defaultComputerOu": "Varsayılan bilgisayar OU",
           "defaultComputerOuHelp": "Bilgisayar oluşturma akışında kullanılacak varsayılan OU.",
           "defaultComputerOuPlaceholder": "Varsayılan bilgisayar OU seçin",
-          "defaultComputerOuSearch": "Bilgisayar OU ara",
           "defaultUpnSuffix": "Varsayılan UPN suffix",
           "defaultUpnSuffixHelp": "UPN suffix kullanıcı oluşturma ekranında varsayılan seçili gelir.",
           "none": "Seçilmedi"
-        },
-        "empty": {
-          "ouNotFound": "OU bulunamadı."
         },
         "actions": {
           "save": "Varsayılanları kaydet"
@@ -285,8 +272,7 @@
           "savedSuffixMissingFromAd": "Kayıtlı varsayılan suffix AD listesinden gelmedi."
         },
         "errors": {
-          "suffixListLoadFailed": "UPN suffix listesi yüklenemedi.",
-          "ouLoadFailed": "OU listesi yüklenemedi."
+          "suffixListLoadFailed": "UPN suffix listesi yüklenemedi."
         },
         "messages": {
           "saveSuccess": "Oluşturma varsayılanları kaydedildi."
