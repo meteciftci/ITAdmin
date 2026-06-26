@@ -26,6 +26,7 @@ describe("AdManagementNotificationsForm provider readiness", () => {
 
     assert.match(source, /if \(providerReadinessLoading\)/);
     assert.match(source, /BlockingStateCard/);
+    assert.match(source, /width="full"/);
     assert.match(source, /providerReadiness\.title/);
     assert.match(source, /providerReadiness\.description/);
     assert.doesNotMatch(
@@ -38,6 +39,7 @@ describe("AdManagementNotificationsForm provider readiness", () => {
     const source = readSource("components/AdManagementNotificationsForm.tsx");
 
     assert.match(source, /if \(showProviderWarning\)/);
+    assert.match(source, /width="full"/);
     assert.match(source, /providerMissing\.title/);
     assert.match(source, /providerMissing\.accessNote/);
     assert.match(source, /providerMissing\.hint/);

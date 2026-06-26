@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 
 type BlockingStateCardVariant = "warning" | "danger" | "info";
 type BlockingStateCardSize = "default" | "compact";
+type BlockingStateCardWidth = "contained" | "full";
 
 type BlockingStateCardProps = {
   icon?: ReactNode;
@@ -21,6 +22,7 @@ type BlockingStateCardProps = {
   actions?: ReactNode;
   variant?: BlockingStateCardVariant;
   size?: BlockingStateCardSize;
+  width?: BlockingStateCardWidth;
   centered?: boolean;
   className?: string;
 };
@@ -54,6 +56,7 @@ export function BlockingStateCard({
   actions,
   variant = "warning",
   size = "default",
+  width = "contained",
   centered = false,
   className,
 }: BlockingStateCardProps) {
@@ -63,12 +66,15 @@ export function BlockingStateCard({
     <DefaultIcon className="size-5 shrink-0" aria-hidden />
   );
 
+  const isFullWidth = width === "full";
+
   return (
     <div
       role="alert"
       aria-live={variant === "danger" ? "assertive" : "polite"}
       className={cn(
-        "flex w-full justify-center",
+        "flex w-full",
+        !isFullWidth && "justify-center",
         centered
           && (size === "compact"
             ? "min-h-[140px] py-6"
@@ -81,7 +87,11 @@ export function BlockingStateCard({
         className={cn(
           "border-border/80 bg-card shadow-md",
           styles.ring,
-          size === "compact" ? "w-full max-w-lg" : "w-full max-w-2xl",
+          isFullWidth
+            ? "w-full max-w-none"
+            : size === "compact"
+              ? "w-full max-w-lg"
+              : "w-full max-w-2xl",
         )}
       >
         <CardHeader className={cn("space-y-2", size === "compact" && "pb-3")}>
@@ -94,7 +104,12 @@ export function BlockingStateCard({
             >
               {resolvedIcon}
             </div>
-            <div className="min-w-0 space-y-1">
+            <div
+              className={cn(
+                "min-w-0 space-y-1",
+                isFullWidth && "max-w-4xl",
+              )}
+            >
               <CardTitle
                 className={cn(
                   "text-pretty leading-tight",
@@ -125,7 +140,12 @@ export function BlockingStateCard({
             )}
           >
             {details ? (
-              <div className="space-y-2 text-sm text-muted-foreground md:text-[15px]">
+              <div
+                className={cn(
+                  "space-y-2 text-sm text-muted-foreground md:text-[15px]",
+                  isFullWidth && "max-w-4xl",
+                )}
+              >
                 {details}
               </div>
             ) : null}

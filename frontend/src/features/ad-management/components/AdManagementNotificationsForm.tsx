@@ -425,6 +425,7 @@ export function AdManagementNotificationsForm({
       <BlockingStateCard
         variant="info"
         size="compact"
+        width="full"
         title={t("settings:adManagement.notifications.providerReadiness.title")}
         description={t("settings:adManagement.notifications.providerReadiness.description")}
       />
@@ -436,6 +437,7 @@ export function AdManagementNotificationsForm({
       <BlockingStateCard
         variant="warning"
         size="compact"
+        width="full"
         title={t("settings:adManagement.notifications.providerMissing.title")}
         description={
           providerSettingsUnavailable

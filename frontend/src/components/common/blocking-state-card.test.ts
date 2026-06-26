@@ -11,15 +11,35 @@ function readSource(relativePath: string): string {
 }
 
 describe("BlockingStateCard", () => {
-  it("exposes variant, size, centered and accessibility props", () => {
+  it("exposes variant, size, width, centered and accessibility props", () => {
     const source = readSource("BlockingStateCard.tsx");
 
     assert.match(source, /BlockingStateCardVariant/);
     assert.match(source, /BlockingStateCardSize/);
+    assert.match(source, /BlockingStateCardWidth/);
+    assert.match(source, /width = "contained"/);
     assert.match(source, /centered\?: boolean/);
     assert.match(source, /role="alert"/);
     assert.match(source, /aria-live/);
     assert.match(source, /border-border\/80 bg-card shadow-md/);
+  });
+
+  it("keeps contained max width classes for default width", () => {
+    const source = readSource("BlockingStateCard.tsx");
+
+    assert.match(source, /max-w-lg/);
+    assert.match(source, /max-w-2xl/);
+    assert.match(source, /!isFullWidth && "justify-center"/);
+  });
+
+  it("uses full panel width when width is full", () => {
+    const source = readSource("BlockingStateCard.tsx");
+
+    assert.match(source, /isFullWidth[\s\S]*max-w-none/);
+    assert.doesNotMatch(
+      source.slice(source.indexOf('width === "full"'), source.indexOf("return (")),
+      /max-w-lg/,
+    );
   });
 });
 
