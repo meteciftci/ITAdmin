@@ -130,6 +130,28 @@ describe("ad creation defaults integration", () => {
     assert.equal(payload.computersSearchBase, settings.computersSearchBase);
   });
 
+  it("creation defaults save payload clears OU fields when explicit null is passed", () => {
+    const existingOu = "OU=Existing,DC=corp,DC=example,DC=com";
+    const settings = createSettings({
+      defaultUserOu: existingOu,
+      defaultGroupOu: existingOu,
+      defaultComputerOu: existingOu,
+      defaultUserCreationUpnSuffix: "corp.example.com",
+    });
+    const payload = buildUpdateAdManagementSettingsPayload(settings, {
+      defaultUserOu: null,
+      defaultGroupOu: null,
+      defaultComputerOu: null,
+      defaultUserCreationUpnSuffix: null,
+    });
+
+    assert.equal(payload.defaultUserOu, null);
+    assert.equal(payload.defaultGroupOu, null);
+    assert.equal(payload.defaultComputerOu, null);
+    assert.equal(payload.defaultUserCreationUpnSuffix, null);
+    assert.equal(payload.usersRootOu, settings.usersRootOu);
+  });
+
   it("creation defaults tab does not render disabled users OU field", () => {
     const formSource = readSource("components/AdCreationDefaultsForm.tsx");
     const tabSource = readSource("AdManagementSettingsTab.tsx");

@@ -74,6 +74,16 @@ describe("settings OU forms", () => {
     assert.match(source, /onChange\(null\)/);
     assert.match(source, /allowClear/);
   });
+
+  it("scopes form passes explicit null OU values into payload builder", () => {
+    const scopesSource = readSource("components/AdManagementScopesForm.tsx");
+    const payloadSource = readSource("ad-management-settings-payload.ts");
+
+    assert.match(scopesSource, /usersRootOu/);
+    assert.match(scopesSource, /disabledUsersOu/);
+    assert.match(payloadSource, /resolveNullableOverride/);
+    assert.match(payloadSource, /usersRootOu: resolveNullableOverride/);
+  });
 });
 
 describe("AdOuSearchCombobox operational usage", () => {

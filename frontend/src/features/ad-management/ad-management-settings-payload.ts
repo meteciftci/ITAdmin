@@ -8,6 +8,24 @@ export const defaultAdManagementNotificationSettings = (): AdManagementNotificat
   rules: [],
 });
 
+export function resolveNullableOverride(
+  override: string | null | undefined,
+  current: string | null,
+): string | null {
+  return override === undefined ? current : override;
+}
+
+export const NULLABLE_OU_SETTINGS_FIELDS = [
+  "defaultUserCreationUpnSuffix",
+  "defaultUserOu",
+  "defaultGroupOu",
+  "defaultComputerOu",
+  "usersRootOu",
+  "disabledUsersOu",
+  "groupsSearchBase",
+  "computersSearchBase",
+] as const satisfies ReadonlyArray<keyof UpdateAdManagementSettingsRequest>;
+
 export function buildUpdateAdManagementSettingsPayload(
   settings: AdManagementSettings,
   overrides: Partial<UpdateAdManagementSettingsRequest> = {},
@@ -15,18 +33,41 @@ export function buildUpdateAdManagementSettingsPayload(
   return {
     isEnabled: overrides.isEnabled ?? settings.isEnabled,
     domainFqdn: overrides.domainFqdn ?? settings.domainFqdn,
-    defaultUserCreationUpnSuffix:
-      overrides.defaultUserCreationUpnSuffix ?? settings.defaultUserCreationUpnSuffix ?? null,
-    defaultUserOu: overrides.defaultUserOu ?? settings.defaultUserOu ?? null,
-    defaultGroupOu: overrides.defaultGroupOu ?? settings.defaultGroupOu ?? null,
-    defaultComputerOu: overrides.defaultComputerOu ?? settings.defaultComputerOu ?? null,
+    defaultUserCreationUpnSuffix: resolveNullableOverride(
+      overrides.defaultUserCreationUpnSuffix,
+      settings.defaultUserCreationUpnSuffix,
+    ),
+    defaultUserOu: resolveNullableOverride(
+      overrides.defaultUserOu,
+      settings.defaultUserOu,
+    ),
+    defaultGroupOu: resolveNullableOverride(
+      overrides.defaultGroupOu,
+      settings.defaultGroupOu,
+    ),
+    defaultComputerOu: resolveNullableOverride(
+      overrides.defaultComputerOu,
+      settings.defaultComputerOu,
+    ),
     netbiosDomainName: overrides.netbiosDomainName ?? settings.netbiosDomainName,
     defaultNamingContext: overrides.defaultNamingContext ?? settings.defaultNamingContext,
     baseDn: overrides.baseDn ?? settings.baseDn,
-    usersRootOu: overrides.usersRootOu ?? settings.usersRootOu,
-    disabledUsersOu: overrides.disabledUsersOu ?? settings.disabledUsersOu,
-    groupsSearchBase: overrides.groupsSearchBase ?? settings.groupsSearchBase,
-    computersSearchBase: overrides.computersSearchBase ?? settings.computersSearchBase,
+    usersRootOu: resolveNullableOverride(
+      overrides.usersRootOu,
+      settings.usersRootOu,
+    ),
+    disabledUsersOu: resolveNullableOverride(
+      overrides.disabledUsersOu,
+      settings.disabledUsersOu,
+    ),
+    groupsSearchBase: resolveNullableOverride(
+      overrides.groupsSearchBase,
+      settings.groupsSearchBase,
+    ),
+    computersSearchBase: resolveNullableOverride(
+      overrides.computersSearchBase,
+      settings.computersSearchBase,
+    ),
     preferredDomainControllers:
       overrides.preferredDomainControllers ?? settings.preferredDomainControllers,
     serviceAccountUserName:
