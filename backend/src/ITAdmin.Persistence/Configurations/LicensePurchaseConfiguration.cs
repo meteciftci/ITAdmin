@@ -5,17 +5,17 @@ using ITAdmin.Domain.Enums;
 
 namespace ITAdmin.Persistence.Configurations;
 
-public sealed class LicenseAcquisitionConfiguration : IEntityTypeConfiguration<LicenseAcquisition>
+public sealed class LicensePurchaseConfiguration : IEntityTypeConfiguration<LicensePurchase>
 {
-    public void Configure(EntityTypeBuilder<LicenseAcquisition> builder)
+    public void Configure(EntityTypeBuilder<LicensePurchase> builder)
     {
-        builder.ToTable("license_acquisitions");
+        builder.ToTable("license_purchases");
 
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).HasColumnName("id");
 
-        builder.Property(x => x.AcquisitionType)
-            .HasColumnName("acquisition_type")
+        builder.Property(x => x.PurchaseType)
+            .HasColumnName("purchase_type")
             .HasConversion<string>()
             .HasMaxLength(50)
             .IsRequired();
@@ -26,7 +26,7 @@ public sealed class LicenseAcquisitionConfiguration : IEntityTypeConfiguration<L
             .IsRequired();
 
         builder.Property(x => x.Description).HasColumnName("description").HasMaxLength(4000);
-        builder.Property(x => x.AcquisitionDate).HasColumnName("acquisition_date");
+        builder.Property(x => x.PurchaseDate).HasColumnName("purchase_date");
         builder.Property(x => x.TenderNumber).HasColumnName("tender_number").HasMaxLength(100);
         builder.Property(x => x.TenderDate).HasColumnName("tender_date");
         builder.Property(x => x.DirectPurchaseNumber).HasColumnName("direct_purchase_number").HasMaxLength(100);
@@ -62,16 +62,16 @@ public sealed class LicenseAcquisitionConfiguration : IEntityTypeConfiguration<L
         builder.Property(x => x.UpdatedBy).HasColumnName("updated_by").HasMaxLength(200);
 
         builder.HasOne(x => x.SupplierCompany)
-            .WithMany(x => x.SupplierAcquisitions)
+            .WithMany(x => x.SupplierPurchases)
             .HasForeignKey(x => x.SupplierCompanyId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(x => x.SupportCompany)
-            .WithMany(x => x.SupportAcquisitions)
+            .WithMany(x => x.SupportPurchases)
             .HasForeignKey(x => x.SupportCompanyId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasIndex(x => x.AcquisitionType);
+        builder.HasIndex(x => x.PurchaseType);
         builder.HasIndex(x => x.Status);
         builder.HasIndex(x => x.SupplierCompanyId);
         builder.HasIndex(x => x.SupportCompanyId);

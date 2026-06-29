@@ -5,7 +5,7 @@ namespace ITAdmin.Domain.Entities;
 
 public class LicensePackage : AuditableEntity
 {
-    public Guid AcquisitionId { get; set; }
+    public Guid PurchaseId { get; set; }
     public Guid ProductId { get; set; }
     public LicenseType LicenseType { get; set; }
     public int Quantity { get; set; }
@@ -22,6 +22,6 @@ public class LicensePackage : AuditableEntity
     public bool IsActive { get; set; } = true;
     public LicensePackageStatus Status { get; set; } = LicensePackageStatus.Active;
 
-    public LicenseAcquisition Acquisition { get; set; } = null!;
+    public LicensePurchase Purchase { get; set; } = null!;
     public LicensedProduct Product { get; set; } = null!;
 }

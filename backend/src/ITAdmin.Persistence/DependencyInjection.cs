@@ -46,8 +46,9 @@ public static class DependencyInjection
         services.AddScoped<ILicenseManagementOverviewService, LicenseManagementOverviewService>();
         services.AddScoped<ILicenseCompanyService, LicenseCompanyService>();
         services.AddScoped<ILicensedProductService, LicensedProductService>();
-        services.AddScoped<ILicenseAcquisitionService, LicenseAcquisitionService>();
+        services.AddScoped<ILicensePurchaseService, LicensePurchaseService>();
         services.AddScoped<ILicensePackageService, LicensePackageService>();
+        services.AddScoped<ILicenseManagementSettingsService, LicenseManagementSettingsService>();
         services.Configure<NotificationOutboxOptions>(configuration.GetSection(NotificationOutboxOptions.SectionName));
 
         return services;

@@ -5,9 +5,27 @@ namespace ITAdmin.Api.Contracts.LicenseManagement;
 public sealed record LicenseManagementOverviewResponse(
     int CompanyCount,
     int ActiveProductCount,
-    int AcquisitionCount,
+    int PurchaseCount,
     int PackageCount,
     int TotalLicenseQuantity);
+
+public sealed record LicenseManagementSettingsResponse(
+    string DefaultCurrency,
+    bool DefaultVatIncluded,
+    int DefaultRenewalReminderDays,
+    string? DefaultRenewalRecipients,
+    string? DefaultRenewalCcRecipients,
+    string? Notes,
+    DateTime? UpdatedAt,
+    string? UpdatedBy);
+
+public sealed record UpdateLicenseManagementSettingsRequest(
+    string DefaultCurrency,
+    bool DefaultVatIncluded,
+    int DefaultRenewalReminderDays,
+    string? DefaultRenewalRecipients,
+    string? DefaultRenewalCcRecipients,
+    string? Notes);
 
 public sealed record LicenseCompanyListItemResponse(
     Guid Id,
@@ -113,22 +131,22 @@ public sealed record UpdateLicensedProductRequest(
 
 public sealed record UpdateLicensedProductStatusRequest(bool IsActive);
 
-public sealed record LicenseAcquisitionListItemResponse(
+public sealed record LicensePurchaseListItemResponse(
     Guid Id,
     string Title,
-    LicenseAcquisitionType AcquisitionType,
-    DateOnly? AcquisitionDate,
+    LicensePurchaseType PurchaseType,
+    DateOnly? PurchaseDate,
     string? SupplierCompanyName,
     string? SupportCompanyName,
     string? ContractNumber,
-    LicenseAcquisitionStatus Status);
+    LicensePurchaseStatus Status);
 
-public sealed record LicenseAcquisitionDetailResponse(
+public sealed record LicensePurchaseDetailResponse(
     Guid Id,
-    LicenseAcquisitionType AcquisitionType,
+    LicensePurchaseType PurchaseType,
     string Title,
     string? Description,
-    DateOnly? AcquisitionDate,
+    DateOnly? PurchaseDate,
     string? TenderNumber,
     DateOnly? TenderDate,
     string? DirectPurchaseNumber,
@@ -148,17 +166,17 @@ public sealed record LicenseAcquisitionDetailResponse(
     string? Currency,
     bool? VatIncluded,
     string? Notes,
-    LicenseAcquisitionStatus Status,
+    LicensePurchaseStatus Status,
     DateTime CreatedAt,
     string? CreatedBy,
     DateTime? UpdatedAt,
     string? UpdatedBy);
 
-public sealed record CreateLicenseAcquisitionRequest(
-    LicenseAcquisitionType AcquisitionType,
+public sealed record CreateLicensePurchaseRequest(
+    LicensePurchaseType PurchaseType,
     string Title,
     string? Description,
-    DateOnly? AcquisitionDate,
+    DateOnly? PurchaseDate,
     string? TenderNumber,
     DateOnly? TenderDate,
     string? DirectPurchaseNumber,
@@ -176,13 +194,13 @@ public sealed record CreateLicenseAcquisitionRequest(
     string? Currency,
     bool? VatIncluded,
     string? Notes,
-    LicenseAcquisitionStatus Status);
+    LicensePurchaseStatus Status);
 
-public sealed record UpdateLicenseAcquisitionRequest(
-    LicenseAcquisitionType AcquisitionType,
+public sealed record UpdateLicensePurchaseRequest(
+    LicensePurchaseType PurchaseType,
     string Title,
     string? Description,
-    DateOnly? AcquisitionDate,
+    DateOnly? PurchaseDate,
     string? TenderNumber,
     DateOnly? TenderDate,
     string? DirectPurchaseNumber,
@@ -201,12 +219,12 @@ public sealed record UpdateLicenseAcquisitionRequest(
     bool? VatIncluded,
     string? Notes);
 
-public sealed record UpdateLicenseAcquisitionStatusRequest(LicenseAcquisitionStatus Status);
+public sealed record UpdateLicensePurchaseStatusRequest(LicensePurchaseStatus Status);
 
 public sealed record LicensePackageListItemResponse(
     Guid Id,
     string ProductName,
-    string AcquisitionTitle,
+    string PurchaseTitle,
     LicenseType LicenseType,
     int Quantity,
     int UsedQuantity,
@@ -220,8 +238,8 @@ public sealed record LicensePackageListItemResponse(
 
 public sealed record LicensePackageDetailResponse(
     Guid Id,
-    Guid AcquisitionId,
-    string AcquisitionTitle,
+    Guid PurchaseId,
+    string PurchaseTitle,
     Guid ProductId,
     string ProductName,
     LicenseType LicenseType,
@@ -246,7 +264,7 @@ public sealed record LicensePackageDetailResponse(
     string? UpdatedBy);
 
 public sealed record CreateLicensePackageRequest(
-    Guid AcquisitionId,
+    Guid PurchaseId,
     Guid ProductId,
     LicenseType LicenseType,
     int Quantity,
@@ -264,7 +282,7 @@ public sealed record CreateLicensePackageRequest(
     LicensePackageStatus Status);
 
 public sealed record UpdateLicensePackageRequest(
-    Guid AcquisitionId,
+    Guid PurchaseId,
     Guid ProductId,
     LicenseType LicenseType,
     int Quantity,

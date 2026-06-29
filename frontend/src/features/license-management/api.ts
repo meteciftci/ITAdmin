@@ -1,11 +1,6 @@
 import { apiClient } from "@/lib/api-client";
 
 import type {
-  LicenseAcquisitionDetail,
-  LicenseAcquisitionFormRequest,
-  LicenseAcquisitionListItem,
-  LicenseAcquisitionStatus,
-  LicenseAcquisitionType,
   LicenseCompanyDetail,
   LicenseCompanyFormRequest,
   LicenseCompanyListItem,
@@ -13,17 +8,38 @@ import type {
   LicensedProductFormRequest,
   LicensedProductListItem,
   LicenseManagementOverview,
+  LicenseManagementSettings,
   LicensePackageDetail,
   LicensePackageFormRequest,
   LicensePackageListItem,
   LicensePackageStatus,
+  LicensePurchaseDetail,
+  LicensePurchaseFormRequest,
+  LicensePurchaseListItem,
+  LicensePurchaseStatus,
+  LicensePurchaseType,
   PagedResponse,
+  UpdateLicenseManagementSettingsRequest,
 } from "@/features/license-management/types";
 
 const basePath = "/license-management";
 
+export const LICENSE_MANAGEMENT_SETTINGS_QUERY_KEY = ["license-management", "settings"] as const;
+
 export const getLicenseManagementOverview = async (): Promise<LicenseManagementOverview> => {
   const { data } = await apiClient.get<LicenseManagementOverview>(`${basePath}/overview`);
+  return data;
+};
+
+export const getLicenseManagementSettings = async (): Promise<LicenseManagementSettings> => {
+  const { data } = await apiClient.get<LicenseManagementSettings>(`${basePath}/settings`);
+  return data;
+};
+
+export const updateLicenseManagementSettings = async (
+  request: UpdateLicenseManagementSettingsRequest,
+): Promise<LicenseManagementSettings> => {
+  const { data } = await apiClient.put<LicenseManagementSettings>(`${basePath}/settings`, request);
   return data;
 };
 
@@ -108,57 +124,53 @@ export const updateLicensedProductStatus = async (
   await apiClient.patch(`${basePath}/products/${id}/status`, { isActive });
 };
 
-type AcquisitionListParams = {
+type PurchaseListParams = {
   search?: string;
-  acquisitionType?: LicenseAcquisitionType;
-  status?: LicenseAcquisitionStatus;
+  purchaseType?: LicensePurchaseType;
+  status?: LicensePurchaseStatus;
   supplierCompanyId?: string;
   pageNumber?: number;
   pageSize?: number;
 };
 
-export const getLicenseAcquisitions = async (
-  params: AcquisitionListParams,
-): Promise<PagedResponse<LicenseAcquisitionListItem>> => {
-  const { data } = await apiClient.get<PagedResponse<LicenseAcquisitionListItem>>(
-    `${basePath}/acquisitions`,
+export const getLicensePurchases = async (
+  params: PurchaseListParams,
+): Promise<PagedResponse<LicensePurchaseListItem>> => {
+  const { data } = await apiClient.get<PagedResponse<LicensePurchaseListItem>>(
+    `${basePath}/purchases`,
     { params },
   );
   return data;
 };
 
-export const getLicenseAcquisitionById = async (
-  id: string,
-): Promise<LicenseAcquisitionDetail> => {
-  const { data } = await apiClient.get<LicenseAcquisitionDetail>(
-    `${basePath}/acquisitions/${id}`,
-  );
+export const getLicensePurchaseById = async (id: string): Promise<LicensePurchaseDetail> => {
+  const { data } = await apiClient.get<LicensePurchaseDetail>(`${basePath}/purchases/${id}`);
   return data;
 };
 
-export const createLicenseAcquisition = async (
-  request: LicenseAcquisitionFormRequest & { status: LicenseAcquisitionStatus },
+export const createLicensePurchase = async (
+  request: LicensePurchaseFormRequest & { status: LicensePurchaseStatus },
 ): Promise<void> => {
-  await apiClient.post(`${basePath}/acquisitions`, request);
+  await apiClient.post(`${basePath}/purchases`, request);
 };
 
-export const updateLicenseAcquisition = async (
+export const updateLicensePurchase = async (
   id: string,
-  request: LicenseAcquisitionFormRequest,
+  request: LicensePurchaseFormRequest,
 ): Promise<void> => {
-  await apiClient.put(`${basePath}/acquisitions/${id}`, request);
+  await apiClient.put(`${basePath}/purchases/${id}`, request);
 };
 
-export const updateLicenseAcquisitionStatus = async (
+export const updateLicensePurchaseStatus = async (
   id: string,
-  status: LicenseAcquisitionStatus,
+  status: LicensePurchaseStatus,
 ): Promise<void> => {
-  await apiClient.patch(`${basePath}/acquisitions/${id}/status`, { status });
+  await apiClient.patch(`${basePath}/purchases/${id}/status`, { status });
 };
 
 type PackageListParams = {
   search?: string;
-  acquisitionId?: string;
+  purchaseId?: string;
   productId?: string;
   status?: LicensePackageStatus;
   isActive?: boolean;
@@ -217,9 +229,9 @@ export const getAllLicensedProducts = async (): Promise<LicensedProductListItem[
   return data.items;
 };
 
-export const getAllLicenseAcquisitions = async (): Promise<LicenseAcquisitionListItem[]> => {
-  const { data } = await apiClient.get<PagedResponse<LicenseAcquisitionListItem>>(
-    `${basePath}/acquisitions`,
+export const getAllLicensePurchases = async (): Promise<LicensePurchaseListItem[]> => {
+  const { data } = await apiClient.get<PagedResponse<LicensePurchaseListItem>>(
+    `${basePath}/purchases`,
     { params: { pageNumber: 1, pageSize: 100 } },
   );
   return data.items;

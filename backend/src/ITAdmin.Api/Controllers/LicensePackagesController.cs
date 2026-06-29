@@ -19,7 +19,7 @@ public sealed class LicensePackagesController(ILicensePackageService packageServ
     [RequirePermission(LicenseManagementPermissions.View)]
     public async Task<ActionResult<PagedResponse<LicensePackageListItemResponse>>> GetPackages(
         [FromQuery] string? search,
-        [FromQuery] Guid? acquisitionId,
+        [FromQuery] Guid? purchaseId,
         [FromQuery] Guid? productId,
         [FromQuery] LicensePackageStatus? status,
         [FromQuery] bool? isActive,
@@ -29,14 +29,14 @@ public sealed class LicensePackagesController(ILicensePackageService packageServ
     {
         var result = await packageService.GetListAsync(
             new AppModels.LicensePackageListQuery(
-                search, acquisitionId, productId, status, isActive, pageNumber, pageSize),
+                search, purchaseId, productId, status, isActive, pageNumber, pageSize),
             cancellationToken);
 
         return Ok(new PagedResponse<LicensePackageListItemResponse>(
             result.Items.Select(x => new LicensePackageListItemResponse(
                 x.Id,
                 x.ProductName,
-                x.AcquisitionTitle,
+                x.PurchaseTitle,
                 x.LicenseType,
                 x.Quantity,
                 x.UsedQuantity,
@@ -76,7 +76,7 @@ public sealed class LicensePackagesController(ILicensePackageService packageServ
     {
         var result = await packageService.CreateAsync(
             new AppModels.CreateLicensePackageRequest(
-                request.AcquisitionId,
+                request.PurchaseId,
                 request.ProductId,
                 request.LicenseType,
                 request.Quantity,
@@ -116,7 +116,7 @@ public sealed class LicensePackagesController(ILicensePackageService packageServ
         var result = await packageService.UpdateAsync(
             new AppModels.UpdateLicensePackageRequest(
                 id,
-                request.AcquisitionId,
+                request.PurchaseId,
                 request.ProductId,
                 request.LicenseType,
                 request.Quantity,
@@ -173,8 +173,8 @@ public sealed class LicensePackagesController(ILicensePackageService packageServ
     private static LicensePackageDetailResponse MapDetail(AppModels.LicensePackageDetail package) =>
         new(
             package.Id,
-            package.AcquisitionId,
-            package.AcquisitionTitle,
+            package.PurchaseId,
+            package.PurchaseTitle,
             package.ProductId,
             package.ProductName,
             package.LicenseType,

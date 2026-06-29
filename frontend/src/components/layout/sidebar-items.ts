@@ -249,8 +249,8 @@ export const getSidebarGroups = (
             visible: isLicenseManagementSectionVisible(user),
           },
           {
-            titleKey: "items.licenseManagementAcquisitions",
-            to: "/license-management/acquisitions",
+            titleKey: "items.licenseManagementPurchases",
+            to: "/license-management/purchases",
             icon: ClipboardList,
             visible: isLicenseManagementSectionVisible(user),
           },
@@ -339,6 +339,7 @@ export const getSidebarGroups = (
           PermissionCodes.NotificationProviders.View,
           PermissionCodes.NotificationTemplates.View,
           PermissionCodes.AdManagement.Settings.View,
+          PermissionCodes.LicenseManagement.ManageSettings,
         ]),
         children: [
           {
@@ -360,7 +361,10 @@ export const getSidebarGroups = (
             titleKey: "items.moduleSettings",
             to: "/settings/modules",
             icon: Boxes,
-            visible: canAccess(user, PermissionCodes.AdManagement.Settings.View),
+            visible: canAccessAny(user, [
+              PermissionCodes.AdManagement.Settings.View,
+              PermissionCodes.LicenseManagement.ManageSettings,
+            ]),
           },
         ],
       },

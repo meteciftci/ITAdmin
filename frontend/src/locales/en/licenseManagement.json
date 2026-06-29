@@ -7,7 +7,7 @@
       "description": "License management summary.",
       "companyCount": "Company count",
       "activeProductCount": "Active product count",
-      "acquisitionCount": "Acquisition count",
+      "purchaseCount": "Purchase count",
       "packageCount": "License package count",
       "totalLicenseQuantity": "Total license quantity"
     },
@@ -25,27 +25,105 @@
       "empty": "No product records yet.",
       "searchPlaceholder": "Search product name, category or vendor..."
     },
-    "acquisitions": {
-      "title": "Acquisitions",
-      "description": "Manage purchase and acquisition records.",
-      "listTitle": "Acquisition list",
-      "empty": "No acquisition records yet.",
+    "purchases": {
+      "title": "Purchases",
+      "description": "Manage purchase records.",
+      "listTitle": "Purchase list",
+      "empty": "No purchase records yet.",
       "searchPlaceholder": "Search title, contract no or supplier..."
     },
     "packages": {
       "title": "License Packages",
-      "description": "Manage license packages under acquisitions.",
+      "description": "Manage license packages under purchases.",
       "listTitle": "License package list",
       "empty": "No license packages yet.",
-      "searchPlaceholder": "Search product, acquisition or serial no..."
+      "searchPlaceholder": "Search product, purchase or serial no..."
+    },
+    "pages": {
+      "detail": {
+        "createdAt": "Created at",
+        "createdBy": "Created by",
+        "updatedAt": "Updated at",
+        "updatedBy": "Updated by"
+      },
+      "companies": {
+        "create": {
+          "title": "Create company",
+          "description": "Add a new company record.",
+          "formTitle": "Company details"
+        },
+        "edit": {
+          "title": "Edit company",
+          "formTitle": "Company details"
+        },
+        "detail": {
+          "title": "Company detail",
+          "description": "Details of the company record.",
+          "summaryTitle": "Summary",
+          "notFound": "Company not found."
+        }
+      },
+      "products": {
+        "create": {
+          "title": "Create product",
+          "description": "Add a new licensed product record.",
+          "formTitle": "Product details"
+        },
+        "edit": {
+          "title": "Edit product",
+          "formTitle": "Product details"
+        },
+        "detail": {
+          "title": "Product detail",
+          "description": "Details of the product record.",
+          "summaryTitle": "Summary",
+          "notFound": "Product not found."
+        }
+      },
+      "purchases": {
+        "create": {
+          "title": "Create purchase",
+          "description": "Add a new purchase record.",
+          "formTitle": "Purchase details"
+        },
+        "edit": {
+          "title": "Edit purchase",
+          "formTitle": "Purchase details"
+        },
+        "detail": {
+          "title": "Purchase detail",
+          "description": "Details of the purchase record.",
+          "summaryTitle": "Summary",
+          "notFound": "Purchase not found."
+        }
+      },
+      "packages": {
+        "create": {
+          "title": "Create license package",
+          "description": "Add a new license package.",
+          "formTitle": "License package details"
+        },
+        "edit": {
+          "title": "Edit license package",
+          "formTitle": "License package details"
+        },
+        "detail": {
+          "title": "License package detail",
+          "description": "Details of the license package record.",
+          "summaryTitle": "Summary",
+          "notFound": "License package not found.",
+          "showLicenseKey": "Show key",
+          "hideLicenseKey": "Hide key"
+        }
+      }
     },
     "actions": {
       "addCompany": "Create company",
       "editCompany": "Edit company",
       "addProduct": "Create product",
       "editProduct": "Edit product",
-      "addAcquisition": "Create acquisition",
-      "editAcquisition": "Edit acquisition",
+      "addPurchase": "Create purchase",
+      "editPurchase": "Edit purchase",
       "addPackage": "Create license package",
       "editPackage": "Edit license package",
       "activateCompany": "Activate company",
@@ -64,14 +142,14 @@
       "vendor": "Vendor",
       "category": "Category",
       "defaultLicenseType": "Default license type",
-      "acquisitionTitle": "Title",
-      "acquisitionType": "Acquisition type",
-      "acquisitionDate": "Acquisition date",
+      "purchaseTitle": "Title",
+      "purchaseType": "Purchase type",
+      "purchaseDate": "Purchase date",
       "supplierCompany": "Supplier company",
       "supportCompany": "Support company",
       "contractNumber": "Contract no",
       "product": "Product",
-      "acquisition": "Acquisition",
+      "purchase": "Purchase",
       "licenseType": "License type",
       "quantity": "Quantity",
       "usedQuantity": "Used",
@@ -95,9 +173,9 @@
       "productName": "Product name",
       "vendorCompany": "Vendor company",
       "description": "Description",
-      "acquisitionType": "Acquisition type",
+      "purchaseType": "Purchase type",
       "title": "Title",
-      "acquisitionDate": "Acquisition date",
+      "purchaseDate": "Purchase date",
       "tenderNumber": "Tender no",
       "tenderDate": "Tender date",
       "directPurchaseNumber": "Direct purchase no",
@@ -115,7 +193,7 @@
       "currency": "Currency",
       "vatIncluded": "VAT included",
       "status": "Status",
-      "acquisition": "Acquisition",
+      "purchase": "Purchase",
       "product": "Product",
       "licenseType": "License type",
       "quantity": "Quantity",
@@ -131,15 +209,15 @@
       "licenseNotes": "License notes",
       "selectCompany": "Select company",
       "selectProduct": "Select product",
-      "selectAcquisition": "Select acquisition",
+      "selectPurchase": "Select purchase",
       "noVendor": "No vendor specified"
     },
     "filters": {
       "status": "Status",
-      "acquisitionType": "Acquisition type",
+      "purchaseType": "Purchase type",
       "vendor": "Vendor",
       "product": "Product",
-      "acquisition": "Acquisition",
+      "purchase": "Purchase",
       "packageStatus": "Package status"
     },
     "messages": {
@@ -149,9 +227,9 @@
       "productCreated": "Product created.",
       "productUpdated": "Product updated.",
       "productStatusUpdated": "Product status updated.",
-      "acquisitionCreated": "Acquisition created.",
-      "acquisitionUpdated": "Acquisition updated.",
-      "acquisitionStatusUpdated": "Acquisition status updated.",
+      "purchaseCreated": "Purchase created.",
+      "purchaseUpdated": "Purchase updated.",
+      "purchaseStatusUpdated": "Purchase status updated.",
       "packageCreated": "License package created.",
       "packageUpdated": "License package updated.",
       "packageStatusUpdated": "License package status updated.",
@@ -159,7 +237,7 @@
       "nameRequired": "Name is required.",
       "titleRequired": "Title is required.",
       "quantityMin": "Quantity must be at least 1.",
-      "acquisitionRequired": "Acquisition is required.",
+      "purchaseRequired": "Purchase is required.",
       "productRequired": "Product is required.",
       "invalidEmail": "Enter a valid email.",
       "invalidUrl": "Enter a valid URL.",
@@ -180,7 +258,7 @@
       "no": "No"
     },
     "enums": {
-      "acquisitionType": {
+      "purchaseType": {
         "LegacyPerpetual": "Legacy perpetual / former municipality",
         "Tender": "Tender",
         "DirectPurchase": "Direct purchase",
@@ -189,7 +267,7 @@
         "CorporateSubscription": "Corporate subscription",
         "Other": "Other"
       },
-      "acquisitionStatus": {
+      "purchaseStatus": {
         "Draft": "Draft",
         "Active": "Active",
         "Cancelled": "Cancelled",

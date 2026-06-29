@@ -11,32 +11,33 @@ using AppModels = ITAdmin.Application.Common.Models.LicenseManagement;
 namespace ITAdmin.Api.Controllers;
 
 [ApiController]
+[Route("api/license-management/purchases")]
 [Route("api/license-management/acquisitions")]
 [Authorize]
-public sealed class LicenseAcquisitionsController(ILicenseAcquisitionService acquisitionService) : ControllerBase
+public sealed class LicensePurchasesController(ILicensePurchaseService purchaseService) : ControllerBase
 {
     [HttpGet]
     [RequirePermission(LicenseManagementPermissions.View)]
-    public async Task<ActionResult<PagedResponse<LicenseAcquisitionListItemResponse>>> GetAcquisitions(
+    public async Task<ActionResult<PagedResponse<LicensePurchaseListItemResponse>>> GetPurchases(
         [FromQuery] string? search,
-        [FromQuery] LicenseAcquisitionType? acquisitionType,
-        [FromQuery] LicenseAcquisitionStatus? status,
+        [FromQuery] LicensePurchaseType? purchaseType,
+        [FromQuery] LicensePurchaseStatus? status,
         [FromQuery] Guid? supplierCompanyId,
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        var result = await acquisitionService.GetListAsync(
-            new AppModels.LicenseAcquisitionListQuery(
-                search, acquisitionType, status, supplierCompanyId, pageNumber, pageSize),
+        var result = await purchaseService.GetListAsync(
+            new AppModels.LicensePurchaseListQuery(
+                search, purchaseType, status, supplierCompanyId, pageNumber, pageSize),
             cancellationToken);
 
-        return Ok(new PagedResponse<LicenseAcquisitionListItemResponse>(
-            result.Items.Select(x => new LicenseAcquisitionListItemResponse(
+        return Ok(new PagedResponse<LicensePurchaseListItemResponse>(
+            result.Items.Select(x => new LicensePurchaseListItemResponse(
                 x.Id,
                 x.Title,
-                x.AcquisitionType,
-                x.AcquisitionDate,
+                x.PurchaseType,
+                x.PurchaseDate,
                 x.SupplierCompanyName,
                 x.SupportCompanyName,
                 x.ContractNumber,
@@ -49,31 +50,31 @@ public sealed class LicenseAcquisitionsController(ILicenseAcquisitionService acq
 
     [HttpGet("{id:guid}")]
     [RequirePermission(LicenseManagementPermissions.View)]
-    public async Task<ActionResult<LicenseAcquisitionDetailResponse>> GetAcquisitionById(
+    public async Task<ActionResult<LicensePurchaseDetailResponse>> GetPurchaseById(
         Guid id,
         CancellationToken cancellationToken)
     {
-        var acquisition = await acquisitionService.GetByIdAsync(id, cancellationToken);
-        if (acquisition is null)
+        var purchase = await purchaseService.GetByIdAsync(id, cancellationToken);
+        if (purchase is null)
         {
-            return NotFound(new { message = "License acquisition was not found." });
+            return NotFound(new { message = "License purchase was not found." });
         }
 
-        return Ok(MapDetail(acquisition));
+        return Ok(MapDetail(purchase));
     }
 
     [HttpPost]
     [RequirePermission(LicenseManagementPermissions.ManageAcquisitions)]
-    public async Task<ActionResult<LicenseAcquisitionDetailResponse>> CreateAcquisition(
-        [FromBody] CreateLicenseAcquisitionRequest request,
+    public async Task<ActionResult<LicensePurchaseDetailResponse>> CreatePurchase(
+        [FromBody] CreateLicensePurchaseRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await acquisitionService.CreateAsync(
-            new AppModels.CreateLicenseAcquisitionRequest(
-                request.AcquisitionType,
+        var result = await purchaseService.CreateAsync(
+            new AppModels.CreateLicensePurchaseRequest(
+                request.PurchaseType,
                 request.Title,
                 request.Description,
-                request.AcquisitionDate,
+                request.PurchaseDate,
                 request.TenderNumber,
                 request.TenderDate,
                 request.DirectPurchaseNumber,
@@ -98,31 +99,31 @@ public sealed class LicenseAcquisitionsController(ILicenseAcquisitionService acq
                 LicenseManagementActorResolver.ResolveUserAgent(this)),
             cancellationToken);
 
-        if (!result.IsSuccess || result.Acquisition is null)
+        if (!result.IsSuccess || result.Purchase is null)
         {
             return BadRequest(new { message = result.Message });
         }
 
         return CreatedAtAction(
-            nameof(GetAcquisitionById),
-            new { id = result.Acquisition.Id },
-            MapDetail(result.Acquisition));
+            nameof(GetPurchaseById),
+            new { id = result.Purchase.Id },
+            MapDetail(result.Purchase));
     }
 
     [HttpPut("{id:guid}")]
     [RequirePermission(LicenseManagementPermissions.ManageAcquisitions)]
-    public async Task<ActionResult<LicenseAcquisitionDetailResponse>> UpdateAcquisition(
+    public async Task<ActionResult<LicensePurchaseDetailResponse>> UpdatePurchase(
         Guid id,
-        [FromBody] UpdateLicenseAcquisitionRequest request,
+        [FromBody] UpdateLicensePurchaseRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await acquisitionService.UpdateAsync(
-            new AppModels.UpdateLicenseAcquisitionRequest(
+        var result = await purchaseService.UpdateAsync(
+            new AppModels.UpdateLicensePurchaseRequest(
                 id,
-                request.AcquisitionType,
+                request.PurchaseType,
                 request.Title,
                 request.Description,
-                request.AcquisitionDate,
+                request.PurchaseDate,
                 request.TenderNumber,
                 request.TenderDate,
                 request.DirectPurchaseNumber,
@@ -146,23 +147,23 @@ public sealed class LicenseAcquisitionsController(ILicenseAcquisitionService acq
                 LicenseManagementActorResolver.ResolveUserAgent(this)),
             cancellationToken);
 
-        if (!result.IsSuccess || result.Acquisition is null)
+        if (!result.IsSuccess || result.Purchase is null)
         {
             return BadRequest(new { message = result.Message });
         }
 
-        return Ok(MapDetail(result.Acquisition));
+        return Ok(MapDetail(result.Purchase));
     }
 
     [HttpPatch("{id:guid}/status")]
     [RequirePermission(LicenseManagementPermissions.ManageAcquisitions)]
-    public async Task<ActionResult<LicenseAcquisitionDetailResponse>> UpdateAcquisitionStatus(
+    public async Task<ActionResult<LicensePurchaseDetailResponse>> UpdatePurchaseStatus(
         Guid id,
-        [FromBody] UpdateLicenseAcquisitionStatusRequest request,
+        [FromBody] UpdateLicensePurchaseStatusRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await acquisitionService.UpdateStatusAsync(
-            new AppModels.UpdateLicenseAcquisitionStatusRequest(
+        var result = await purchaseService.UpdateStatusAsync(
+            new AppModels.UpdateLicensePurchaseStatusRequest(
                 id,
                 request.Status,
                 LicenseManagementActorResolver.ResolveActorUserId(User),
@@ -171,43 +172,43 @@ public sealed class LicenseAcquisitionsController(ILicenseAcquisitionService acq
                 LicenseManagementActorResolver.ResolveUserAgent(this)),
             cancellationToken);
 
-        if (!result.IsSuccess || result.Acquisition is null)
+        if (!result.IsSuccess || result.Purchase is null)
         {
             return BadRequest(new { message = result.Message });
         }
 
-        return Ok(MapDetail(result.Acquisition));
+        return Ok(MapDetail(result.Purchase));
     }
 
-    private static LicenseAcquisitionDetailResponse MapDetail(AppModels.LicenseAcquisitionDetail acquisition) =>
+    private static LicensePurchaseDetailResponse MapDetail(AppModels.LicensePurchaseDetail purchase) =>
         new(
-            acquisition.Id,
-            acquisition.AcquisitionType,
-            acquisition.Title,
-            acquisition.Description,
-            acquisition.AcquisitionDate,
-            acquisition.TenderNumber,
-            acquisition.TenderDate,
-            acquisition.DirectPurchaseNumber,
-            acquisition.DmoOrderNumber,
-            acquisition.EbysNumber,
-            acquisition.EbysDate,
-            acquisition.InvoiceNumber,
-            acquisition.InvoiceDate,
-            acquisition.ContractNumber,
-            acquisition.ContractStartDate,
-            acquisition.ContractEndDate,
-            acquisition.SupplierCompanyId,
-            acquisition.SupplierCompanyName,
-            acquisition.SupportCompanyId,
-            acquisition.SupportCompanyName,
-            acquisition.ActualTotalCost,
-            acquisition.Currency,
-            acquisition.VatIncluded,
-            acquisition.Notes,
-            acquisition.Status,
-            acquisition.CreatedAt,
-            acquisition.CreatedBy,
-            acquisition.UpdatedAt,
-            acquisition.UpdatedBy);
+            purchase.Id,
+            purchase.PurchaseType,
+            purchase.Title,
+            purchase.Description,
+            purchase.PurchaseDate,
+            purchase.TenderNumber,
+            purchase.TenderDate,
+            purchase.DirectPurchaseNumber,
+            purchase.DmoOrderNumber,
+            purchase.EbysNumber,
+            purchase.EbysDate,
+            purchase.InvoiceNumber,
+            purchase.InvoiceDate,
+            purchase.ContractNumber,
+            purchase.ContractStartDate,
+            purchase.ContractEndDate,
+            purchase.SupplierCompanyId,
+            purchase.SupplierCompanyName,
+            purchase.SupportCompanyId,
+            purchase.SupportCompanyName,
+            purchase.ActualTotalCost,
+            purchase.Currency,
+            purchase.VatIncluded,
+            purchase.Notes,
+            purchase.Status,
+            purchase.CreatedAt,
+            purchase.CreatedBy,
+            purchase.UpdatedAt,
+            purchase.UpdatedBy);
 }

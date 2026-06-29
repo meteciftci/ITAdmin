@@ -35,16 +35,16 @@ export function validateProductForm(name: string) {
   return null;
 }
 
-export function validateAcquisitionForm(title: string) {
+export function validatePurchaseForm(title: string) {
   if (!title.trim()) {
     return "titleRequired";
   }
   return null;
 }
 
-export function validatePackageForm(acquisitionId: string, productId: string, quantity: number) {
-  if (!acquisitionId) {
-    return "acquisitionRequired";
+export function validatePackageForm(purchaseId: string, productId: string, quantity: number) {
+  if (!purchaseId) {
+    return "purchaseRequired";
   }
   if (!productId) {
     return "productRequired";

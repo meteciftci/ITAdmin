@@ -55,6 +55,10 @@ export function ModuleSettingsPage() {
   const { t } = useTranslation(["settings", "common"]);
   const user = useAuthStore((state) => state.user);
   const canViewAdManagementSettings = canAccess(user, PermissionCodes.AdManagement.Settings.View);
+  const canViewLicenseManagementSettings = canAccess(
+    user,
+    PermissionCodes.LicenseManagement.ManageSettings,
+  );
 
   const adManagementSettingsQuery = useQuery({
     queryKey: AD_MANAGEMENT_SETTINGS_QUERY_KEY,
@@ -113,10 +117,31 @@ export function ModuleSettingsPage() {
           </CardFooter>
         </Card>
       ) : null}
+      {canViewLicenseManagementSettings ? (
+        <Card className="flex flex-col">
+          <CardHeader>
+            <CardTitle className="text-lg">
+              {t("settings:modulesHub.licenseManagement.title")}
+            </CardTitle>
+            <CardDescription>
+              {t("settings:modulesHub.licenseManagement.description")}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex-1" />
+          <CardFooter>
+            <Link
+              to="/settings/modules/license-management"
+              className={cn(buttonVariants({ variant: "default" }), "w-full sm:w-auto")}
+            >
+              {t("settings:modulesHub.licenseManagement.openSettings")}
+            </Link>
+          </CardFooter>
+        </Card>
+      ) : null}
     </>
   );
 
-  const hasAnyCard = canViewAdManagementSettings;
+  const hasAnyCard = canViewAdManagementSettings || canViewLicenseManagementSettings;
 
   return (
     <section className="space-y-6">

@@ -22,7 +22,7 @@ public sealed class LicenseManagementOverviewController(
         return Ok(new LicenseManagementOverviewResponse(
             summary.CompanyCount,
             summary.ActiveProductCount,
-            summary.AcquisitionCount,
+            summary.PurchaseCount,
             summary.PackageCount,
             summary.TotalLicenseQuantity));
     }

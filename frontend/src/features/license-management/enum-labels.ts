@@ -1,13 +1,13 @@
 import type { TFunction } from "i18next";
 
 import type {
-  LicenseAcquisitionStatus,
-  LicenseAcquisitionType,
   LicensePackageStatus,
+  LicensePurchaseStatus,
+  LicensePurchaseType,
   LicenseType,
 } from "@/features/license-management/types";
 
-export const ACQUISITION_TYPES: LicenseAcquisitionType[] = [
+export const PURCHASE_TYPES: LicensePurchaseType[] = [
   "LegacyPerpetual",
   "Tender",
   "DirectPurchase",
@@ -17,7 +17,7 @@ export const ACQUISITION_TYPES: LicenseAcquisitionType[] = [
   "Other",
 ];
 
-export const ACQUISITION_STATUSES: LicenseAcquisitionStatus[] = [
+export const PURCHASE_STATUSES: LicensePurchaseStatus[] = [
   "Draft",
   "Active",
   "Cancelled",
@@ -45,18 +45,18 @@ export const PACKAGE_STATUSES: LicensePackageStatus[] = [
   "Archived",
 ];
 
-export function getAcquisitionTypeLabel(
+export function getPurchaseTypeLabel(
   t: TFunction<["licenseManagement", "common"]>,
-  value: LicenseAcquisitionType,
+  value: LicensePurchaseType,
 ): string {
-  return t(`licenseManagement:enums.acquisitionType.${value}`);
+  return t(`licenseManagement:enums.purchaseType.${value}`);
 }
 
-export function getAcquisitionStatusLabel(
+export function getPurchaseStatusLabel(
   t: TFunction<["licenseManagement", "common"]>,
-  value: LicenseAcquisitionStatus,
+  value: LicensePurchaseStatus,
 ): string {
-  return t(`licenseManagement:enums.acquisitionStatus.${value}`);
+  return t(`licenseManagement:enums.purchaseStatus.${value}`);
 }
 
 export function getLicenseTypeLabel(

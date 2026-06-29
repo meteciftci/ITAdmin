@@ -9,9 +9,29 @@ export type PagedResponse<T> = {
 export type LicenseManagementOverview = {
   companyCount: number;
   activeProductCount: number;
-  acquisitionCount: number;
+  purchaseCount: number;
   packageCount: number;
   totalLicenseQuantity: number;
+};
+
+export type LicenseManagementSettings = {
+  defaultCurrency: string;
+  defaultVatIncluded: boolean;
+  defaultRenewalReminderDays: number;
+  defaultRenewalRecipients: string | null;
+  defaultRenewalCcRecipients: string | null;
+  notes: string | null;
+  updatedAt: string | null;
+  updatedBy: string | null;
+};
+
+export type UpdateLicenseManagementSettingsRequest = {
+  defaultCurrency: string;
+  defaultVatIncluded: boolean;
+  defaultRenewalReminderDays: number;
+  defaultRenewalRecipients?: string | null;
+  defaultRenewalCcRecipients?: string | null;
+  notes?: string | null;
 };
 
 export type LicenseCompanyListItem = {
@@ -83,7 +103,7 @@ export type LicensedProductFormRequest = {
   notes?: string | null;
 };
 
-export type LicenseAcquisitionType =
+export type LicensePurchaseType =
   | "LegacyPerpetual"
   | "Tender"
   | "DirectPurchase"
@@ -92,7 +112,7 @@ export type LicenseAcquisitionType =
   | "CorporateSubscription"
   | "Other";
 
-export type LicenseAcquisitionStatus = "Draft" | "Active" | "Cancelled" | "Archived";
+export type LicensePurchaseStatus = "Draft" | "Active" | "Cancelled" | "Archived";
 
 export type LicenseType =
   | "NamedUser"
@@ -113,23 +133,23 @@ export type LicensePackageStatus =
   | "Suspended"
   | "Archived";
 
-export type LicenseAcquisitionListItem = {
+export type LicensePurchaseListItem = {
   id: string;
   title: string;
-  acquisitionType: LicenseAcquisitionType;
-  acquisitionDate: string | null;
+  purchaseType: LicensePurchaseType;
+  purchaseDate: string | null;
   supplierCompanyName: string | null;
   supportCompanyName: string | null;
   contractNumber: string | null;
-  status: LicenseAcquisitionStatus;
+  status: LicensePurchaseStatus;
 };
 
-export type LicenseAcquisitionDetail = {
+export type LicensePurchaseDetail = {
   id: string;
-  acquisitionType: LicenseAcquisitionType;
+  purchaseType: LicensePurchaseType;
   title: string;
   description: string | null;
-  acquisitionDate: string | null;
+  purchaseDate: string | null;
   tenderNumber: string | null;
   tenderDate: string | null;
   directPurchaseNumber: string | null;
@@ -149,18 +169,18 @@ export type LicenseAcquisitionDetail = {
   currency: string | null;
   vatIncluded: boolean | null;
   notes: string | null;
-  status: LicenseAcquisitionStatus;
+  status: LicensePurchaseStatus;
   createdAt: string;
   createdBy: string | null;
   updatedAt: string | null;
   updatedBy: string | null;
 };
 
-export type LicenseAcquisitionFormRequest = {
-  acquisitionType: LicenseAcquisitionType;
+export type LicensePurchaseFormRequest = {
+  purchaseType: LicensePurchaseType;
   title: string;
   description?: string | null;
-  acquisitionDate?: string | null;
+  purchaseDate?: string | null;
   tenderNumber?: string | null;
   tenderDate?: string | null;
   directPurchaseNumber?: string | null;
@@ -178,13 +198,13 @@ export type LicenseAcquisitionFormRequest = {
   currency?: string | null;
   vatIncluded?: boolean | null;
   notes?: string | null;
-  status?: LicenseAcquisitionStatus;
+  status?: LicensePurchaseStatus;
 };
 
 export type LicensePackageListItem = {
   id: string;
   productName: string;
-  acquisitionTitle: string;
+  purchaseTitle: string;
   licenseType: LicenseType;
   quantity: number;
   usedQuantity: number;
@@ -198,7 +218,7 @@ export type LicensePackageListItem = {
 };
 
 export type LicensePackageDetail = LicensePackageListItem & {
-  acquisitionId: string;
+  purchaseId: string;
   productId: string;
   renewalDate: string | null;
   serialNumber: string | null;
@@ -213,7 +233,7 @@ export type LicensePackageDetail = LicensePackageListItem & {
 };
 
 export type LicensePackageFormRequest = {
-  acquisitionId: string;
+  purchaseId: string;
   productId: string;
   licenseType: LicenseType;
   quantity: number;

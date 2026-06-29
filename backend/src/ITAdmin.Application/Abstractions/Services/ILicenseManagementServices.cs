@@ -8,6 +8,15 @@ public interface ILicenseManagementOverviewService
     Task<LicenseManagementOverviewSummary> GetSummaryAsync(CancellationToken cancellationToken = default);
 }
 
+public interface ILicenseManagementSettingsService
+{
+    Task<LicenseManagementSettingsModel> GetSettingsAsync(CancellationToken cancellationToken = default);
+
+    Task<UpdateLicenseManagementSettingsResult> UpdateSettingsAsync(
+        UpdateLicenseManagementSettingsRequest request,
+        CancellationToken cancellationToken = default);
+}
+
 public interface ILicenseCompanyService
 {
     Task<PagedResult<LicenseCompanyListItem>> GetListAsync(
@@ -50,24 +59,24 @@ public interface ILicensedProductService
         CancellationToken cancellationToken = default);
 }
 
-public interface ILicenseAcquisitionService
+public interface ILicensePurchaseService
 {
-    Task<PagedResult<LicenseAcquisitionListItem>> GetListAsync(
-        LicenseAcquisitionListQuery query,
+    Task<PagedResult<LicensePurchaseListItem>> GetListAsync(
+        LicensePurchaseListQuery query,
         CancellationToken cancellationToken = default);
 
-    Task<LicenseAcquisitionDetail?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<LicensePurchaseDetail?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
-    Task<LicenseAcquisitionOperationResult> CreateAsync(
-        CreateLicenseAcquisitionRequest request,
+    Task<LicensePurchaseOperationResult> CreateAsync(
+        CreateLicensePurchaseRequest request,
         CancellationToken cancellationToken = default);
 
-    Task<LicenseAcquisitionOperationResult> UpdateAsync(
-        UpdateLicenseAcquisitionRequest request,
+    Task<LicensePurchaseOperationResult> UpdateAsync(
+        UpdateLicensePurchaseRequest request,
         CancellationToken cancellationToken = default);
 
-    Task<LicenseAcquisitionOperationResult> UpdateStatusAsync(
-        UpdateLicenseAcquisitionStatusRequest request,
+    Task<LicensePurchaseOperationResult> UpdateStatusAsync(
+        UpdateLicensePurchaseStatusRequest request,
         CancellationToken cancellationToken = default);
 }
 

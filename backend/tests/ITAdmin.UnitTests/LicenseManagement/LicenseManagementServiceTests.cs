@@ -105,18 +105,18 @@ public sealed class LicenseManagementServiceTests
     }
 
     [Fact]
-    public async Task CreateAcquisitionAsync_WithoutTitle_ReturnsValidationFailure()
+    public async Task CreatePurchaseAsync_WithoutTitle_ReturnsValidationFailure()
     {
         await using var context = CreateDbContext();
-        var service = new LicenseAcquisitionService(context);
+        var service = new LicensePurchaseService(context);
 
         var result = await service.CreateAsync(
-            new CreateLicenseAcquisitionRequest(
-                LicenseAcquisitionType.Tender,
+            new CreateLicensePurchaseRequest(
+                LicensePurchaseType.Tender,
                 "",
                 null, null, null, null, null, null, null, null, null, null, null, null, null,
                 null, null, null, null, null, null,
-                LicenseAcquisitionStatus.Draft,
+                LicensePurchaseStatus.Draft,
                 null, "tester", null, null),
             CancellationToken.None);
 
@@ -125,20 +125,20 @@ public sealed class LicenseManagementServiceTests
     }
 
     [Fact]
-    public async Task CreateAcquisitionAsync_InvalidContractDateRange_ReturnsValidationFailure()
+    public async Task CreatePurchaseAsync_InvalidContractDateRange_ReturnsValidationFailure()
     {
         await using var context = CreateDbContext();
-        var service = new LicenseAcquisitionService(context);
+        var service = new LicensePurchaseService(context);
 
         var result = await service.CreateAsync(
-            new CreateLicenseAcquisitionRequest(
-                LicenseAcquisitionType.DirectPurchase,
+            new CreateLicensePurchaseRequest(
+                LicensePurchaseType.DirectPurchase,
                 "Office License Purchase",
                 null, null, null, null, null, null, null, null, null, null, null,
                 new DateOnly(2026, 12, 31),
                 new DateOnly(2026, 1, 1),
                 null, null, null, null, null, null,
-                LicenseAcquisitionStatus.Draft,
+                LicensePurchaseStatus.Draft,
                 null, "tester", null, null),
             CancellationToken.None);
 
@@ -150,13 +150,13 @@ public sealed class LicenseManagementServiceTests
     public async Task CreatePackageAsync_InvalidQuantity_ReturnsValidationFailure()
     {
         await using var context = CreateDbContext();
-        var acquisitionId = await SeedAcquisitionAsync(context);
+        var purchaseId = await SeedPurchaseAsync(context);
         var productId = await SeedProductAsync(context);
 
         var service = new LicensePackageService(context);
         var result = await service.CreateAsync(
             new CreateLicensePackageRequest(
-                acquisitionId,
+                purchaseId,
                 productId,
                 LicenseType.NamedUser,
                 0,
@@ -170,7 +170,7 @@ public sealed class LicenseManagementServiceTests
     }
 
     [Fact]
-    public async Task CreatePackageAsync_InvalidAcquisition_ReturnsValidationFailure()
+    public async Task CreatePackageAsync_InvalidPurchase_ReturnsValidationFailure()
     {
         await using var context = CreateDbContext();
         var productId = await SeedProductAsync(context);
@@ -188,19 +188,19 @@ public sealed class LicenseManagementServiceTests
             CancellationToken.None);
 
         Assert.False(result.IsSuccess);
-        Assert.Contains("acquisition", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("purchase", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
     public async Task CreatePackageAsync_InvalidProduct_ReturnsValidationFailure()
     {
         await using var context = CreateDbContext();
-        var acquisitionId = await SeedAcquisitionAsync(context);
+        var purchaseId = await SeedPurchaseAsync(context);
 
         var service = new LicensePackageService(context);
         var result = await service.CreateAsync(
             new CreateLicensePackageRequest(
-                acquisitionId,
+                purchaseId,
                 Guid.NewGuid(),
                 LicenseType.NamedUser,
                 5,
@@ -211,6 +211,45 @@ public sealed class LicenseManagementServiceTests
 
         Assert.False(result.IsSuccess);
         Assert.Contains("product", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task GetSettingsAsync_WhenNoRowExists_ReturnsDefaults()
+    {
+        await using var context = CreateDbContext();
+        var service = new LicenseManagementSettingsService(context);
+
+        var settings = await service.GetSettingsAsync(CancellationToken.None);
+
+        Assert.Equal("TRY", settings.DefaultCurrency);
+        Assert.False(settings.DefaultVatIncluded);
+        Assert.Equal(60, settings.DefaultRenewalReminderDays);
+        Assert.Null(settings.DefaultRenewalRecipients);
+        Assert.Null(settings.DefaultRenewalCcRecipients);
+    }
+
+    [Fact]
+    public async Task UpdateSettingsAsync_WithInvalidRenewalReminderDays_ReturnsValidationFailure()
+    {
+        await using var context = CreateDbContext();
+        var service = new LicenseManagementSettingsService(context);
+
+        var result = await service.UpdateSettingsAsync(
+            new UpdateLicenseManagementSettingsRequest(
+                "TRY",
+                false,
+                0,
+                null,
+                null,
+                null,
+                null,
+                "tester",
+                null,
+                null),
+            CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("renewal reminder", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -238,20 +277,20 @@ public sealed class LicenseManagementServiceTests
             CreatedAt = DateTime.UtcNow,
             CreatedBy = "seed"
         });
-        var acquisition = new Domain.Entities.LicenseAcquisition
+        var purchase = new Domain.Entities.LicensePurchase
         {
-            AcquisitionType = LicenseAcquisitionType.Tender,
-            Title = "Acquisition 1",
-            Status = LicenseAcquisitionStatus.Active,
+            PurchaseType = LicensePurchaseType.Tender,
+            Title = "Purchase 1",
+            Status = LicensePurchaseStatus.Active,
             CreatedAt = DateTime.UtcNow,
             CreatedBy = "seed"
         };
-        context.LicenseAcquisitions.Add(acquisition);
+        context.LicensePurchases.Add(purchase);
         await context.SaveChangesAsync();
 
         context.LicensePackages.Add(new Domain.Entities.LicensePackage
         {
-            AcquisitionId = acquisition.Id,
+            PurchaseId = purchase.Id,
             ProductId = context.LicensedProducts.First().Id,
             LicenseType = LicenseType.NamedUser,
             Quantity = 10,
@@ -261,7 +300,7 @@ public sealed class LicenseManagementServiceTests
         });
         context.LicensePackages.Add(new Domain.Entities.LicensePackage
         {
-            AcquisitionId = acquisition.Id,
+            PurchaseId = purchase.Id,
             ProductId = context.LicensedProducts.First().Id,
             LicenseType = LicenseType.Concurrent,
             Quantity = 5,
@@ -276,24 +315,24 @@ public sealed class LicenseManagementServiceTests
 
         Assert.Equal(1, summary.CompanyCount);
         Assert.Equal(1, summary.ActiveProductCount);
-        Assert.Equal(1, summary.AcquisitionCount);
+        Assert.Equal(1, summary.PurchaseCount);
         Assert.Equal(2, summary.PackageCount);
         Assert.Equal(15, summary.TotalLicenseQuantity);
     }
 
-    private static async Task<Guid> SeedAcquisitionAsync(AppDbContext context)
+    private static async Task<Guid> SeedPurchaseAsync(AppDbContext context)
     {
-        var acquisition = new Domain.Entities.LicenseAcquisition
+        var purchase = new Domain.Entities.LicensePurchase
         {
-            AcquisitionType = LicenseAcquisitionType.DirectPurchase,
-            Title = "Test Acquisition",
-            Status = LicenseAcquisitionStatus.Active,
+            PurchaseType = LicensePurchaseType.DirectPurchase,
+            Title = "Test Purchase",
+            Status = LicensePurchaseStatus.Active,
             CreatedAt = DateTime.UtcNow,
             CreatedBy = "seed"
         };
-        context.LicenseAcquisitions.Add(acquisition);
+        context.LicensePurchases.Add(purchase);
         await context.SaveChangesAsync();
-        return acquisition.Id;
+        return purchase.Id;
     }
 
     private static async Task<Guid> SeedProductAsync(AppDbContext context)

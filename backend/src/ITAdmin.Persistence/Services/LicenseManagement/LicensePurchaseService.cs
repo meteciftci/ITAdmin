@@ -10,14 +10,14 @@ using static ITAdmin.Persistence.Services.LicenseManagement.LicenseManagementSer
 
 namespace ITAdmin.Persistence.Services.LicenseManagement;
 
-public sealed class LicenseAcquisitionService(AppDbContext context) : ILicenseAcquisitionService
+public sealed class LicensePurchaseService(AppDbContext context) : ILicensePurchaseService
 {
-    public async Task<PagedResult<LicenseAcquisitionListItem>> GetListAsync(
-        LicenseAcquisitionListQuery query,
+    public async Task<PagedResult<LicensePurchaseListItem>> GetListAsync(
+        LicensePurchaseListQuery query,
         CancellationToken cancellationToken = default)
     {
         var (pageNumber, pageSize) = NormalizePaging(query.PageNumber, query.PageSize);
-        var itemsQuery = context.LicenseAcquisitions
+        var itemsQuery = context.LicensePurchases
             .AsNoTracking()
             .Include(x => x.SupplierCompany)
             .Include(x => x.SupportCompany)
@@ -32,9 +32,9 @@ public sealed class LicenseAcquisitionService(AppDbContext context) : ILicenseAc
                 || (x.SupplierCompany != null && EF.Functions.ILike(x.SupplierCompany.Name, pattern)));
         }
 
-        if (query.AcquisitionType is { } acquisitionType)
+        if (query.PurchaseType is { } purchaseType)
         {
-            itemsQuery = itemsQuery.Where(x => x.AcquisitionType == acquisitionType);
+            itemsQuery = itemsQuery.Where(x => x.PurchaseType == purchaseType);
         }
 
         if (query.Status is { } status)
@@ -51,27 +51,27 @@ public sealed class LicenseAcquisitionService(AppDbContext context) : ILicenseAc
         var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
 
         var items = await itemsQuery
-            .OrderByDescending(x => x.AcquisitionDate)
+            .OrderByDescending(x => x.PurchaseDate)
             .ThenByDescending(x => x.CreatedAt)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
-            .Select(x => new LicenseAcquisitionListItem(
+            .Select(x => new LicensePurchaseListItem(
                 x.Id,
                 x.Title,
-                x.AcquisitionType,
-                x.AcquisitionDate,
+                x.PurchaseType,
+                x.PurchaseDate,
                 x.SupplierCompany != null ? x.SupplierCompany.Name : null,
                 x.SupportCompany != null ? x.SupportCompany.Name : null,
                 x.ContractNumber,
                 x.Status))
             .ToListAsync(cancellationToken);
 
-        return new PagedResult<LicenseAcquisitionListItem>(items, pageNumber, pageSize, totalCount, totalPages);
+        return new PagedResult<LicensePurchaseListItem>(items, pageNumber, pageSize, totalCount, totalPages);
     }
 
-    public async Task<LicenseAcquisitionDetail?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<LicensePurchaseDetail?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var entity = await context.LicenseAcquisitions
+        var entity = await context.LicensePurchases
             .AsNoTracking()
             .Include(x => x.SupplierCompany)
             .Include(x => x.SupportCompany)
@@ -80,29 +80,29 @@ public sealed class LicenseAcquisitionService(AppDbContext context) : ILicenseAc
         return entity is null ? null : Map(entity);
     }
 
-    public async Task<LicenseAcquisitionOperationResult> CreateAsync(
-        CreateLicenseAcquisitionRequest request,
+    public async Task<LicensePurchaseOperationResult> CreateAsync(
+        CreateLicensePurchaseRequest request,
         CancellationToken cancellationToken = default)
     {
-        var validationError = await ValidateAcquisitionAsync(request, cancellationToken);
+        var validationError = await ValidatePurchaseAsync(request, cancellationToken);
         if (validationError is not null)
         {
-            return new LicenseAcquisitionOperationResult(false, validationError);
+            return new LicensePurchaseOperationResult(false, validationError);
         }
 
         var now = DateTime.UtcNow;
-        var entity = MapToEntity(new LicenseAcquisition(), request);
+        var entity = MapToEntity(new LicensePurchase(), request);
         entity.Status = request.Status;
         entity.CreatedAt = now;
         entity.CreatedBy = request.ActorUserName;
 
-        await context.LicenseAcquisitions.AddAsync(entity, cancellationToken);
+        await context.LicensePurchases.AddAsync(entity, cancellationToken);
         await WriteAuditAsync(
             context,
             "Create",
-            "LicenseAcquisition",
+            "LicensePurchase",
             entity.Id,
-            $"License acquisition created: {entity.Title}.",
+            $"License purchase created: {entity.Title}.",
             request.ActorUserId,
             request.ActorUserName,
             request.ActorIpAddress,
@@ -110,27 +110,27 @@ public sealed class LicenseAcquisitionService(AppDbContext context) : ILicenseAc
             cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
 
-        return new LicenseAcquisitionOperationResult(true, "License acquisition created.", Map(entity));
+        return new LicensePurchaseOperationResult(true, "License purchase created.", Map(entity));
     }
 
-    public async Task<LicenseAcquisitionOperationResult> UpdateAsync(
-        UpdateLicenseAcquisitionRequest request,
+    public async Task<LicensePurchaseOperationResult> UpdateAsync(
+        UpdateLicensePurchaseRequest request,
         CancellationToken cancellationToken = default)
     {
-        var entity = await context.LicenseAcquisitions
+        var entity = await context.LicensePurchases
             .Include(x => x.SupplierCompany)
             .Include(x => x.SupportCompany)
             .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken);
 
         if (entity is null)
         {
-            return new LicenseAcquisitionOperationResult(false, "License acquisition was not found.");
+            return new LicensePurchaseOperationResult(false, "License purchase was not found.");
         }
 
-        var validationError = await ValidateAcquisitionAsync(request, cancellationToken);
+        var validationError = await ValidatePurchaseAsync(request, cancellationToken);
         if (validationError is not null)
         {
-            return new LicenseAcquisitionOperationResult(false, validationError);
+            return new LicensePurchaseOperationResult(false, validationError);
         }
 
         var now = DateTime.UtcNow;
@@ -141,9 +141,9 @@ public sealed class LicenseAcquisitionService(AppDbContext context) : ILicenseAc
         await WriteAuditAsync(
             context,
             "Update",
-            "LicenseAcquisition",
+            "LicensePurchase",
             entity.Id,
-            $"License acquisition updated: {entity.Title}.",
+            $"License purchase updated: {entity.Title}.",
             request.ActorUserId,
             request.ActorUserName,
             request.ActorIpAddress,
@@ -151,26 +151,26 @@ public sealed class LicenseAcquisitionService(AppDbContext context) : ILicenseAc
             cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
 
-        return new LicenseAcquisitionOperationResult(true, "License acquisition updated.", Map(entity));
+        return new LicensePurchaseOperationResult(true, "License purchase updated.", Map(entity));
     }
 
-    public async Task<LicenseAcquisitionOperationResult> UpdateStatusAsync(
-        UpdateLicenseAcquisitionStatusRequest request,
+    public async Task<LicensePurchaseOperationResult> UpdateStatusAsync(
+        UpdateLicensePurchaseStatusRequest request,
         CancellationToken cancellationToken = default)
     {
-        var entity = await context.LicenseAcquisitions
+        var entity = await context.LicensePurchases
             .Include(x => x.SupplierCompany)
             .Include(x => x.SupportCompany)
             .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken);
 
         if (entity is null)
         {
-            return new LicenseAcquisitionOperationResult(false, "License acquisition was not found.");
+            return new LicensePurchaseOperationResult(false, "License purchase was not found.");
         }
 
         if (entity.Status == request.Status)
         {
-            return new LicenseAcquisitionOperationResult(true, "License acquisition status is unchanged.", Map(entity));
+            return new LicensePurchaseOperationResult(true, "License purchase status is unchanged.", Map(entity));
         }
 
         var now = DateTime.UtcNow;
@@ -181,9 +181,9 @@ public sealed class LicenseAcquisitionService(AppDbContext context) : ILicenseAc
         await WriteAuditAsync(
             context,
             "Update",
-            "LicenseAcquisition",
+            "LicensePurchase",
             entity.Id,
-            $"License acquisition status changed to {request.Status}: {entity.Title}.",
+            $"License purchase status changed to {request.Status}: {entity.Title}.",
             request.ActorUserId,
             request.ActorUserName,
             request.ActorIpAddress,
@@ -191,31 +191,31 @@ public sealed class LicenseAcquisitionService(AppDbContext context) : ILicenseAc
             cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
 
-        return new LicenseAcquisitionOperationResult(true, "License acquisition status updated.", Map(entity));
+        return new LicensePurchaseOperationResult(true, "License purchase status updated.", Map(entity));
     }
 
-    private async Task<string?> ValidateAcquisitionAsync(
-        CreateLicenseAcquisitionRequest request,
+    private async Task<string?> ValidatePurchaseAsync(
+        CreateLicensePurchaseRequest request,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.Title))
         {
-            return "Acquisition title is required.";
+            return "Purchase title is required.";
         }
 
         if (request.Title.Trim().Length > 300)
         {
-            return "Acquisition title length is invalid.";
+            return "Purchase title length is invalid.";
         }
 
-        if (!Enum.IsDefined(request.AcquisitionType))
+        if (!Enum.IsDefined(request.PurchaseType))
         {
-            return "Acquisition type is invalid.";
+            return "Purchase type is invalid.";
         }
 
         if (!Enum.IsDefined(request.Status))
         {
-            return "Acquisition status is invalid.";
+            return "Purchase status is invalid.";
         }
 
         if (!LicenseManagementValidation.IsValidDateRange(request.ContractStartDate, request.ContractEndDate, out _))
@@ -236,18 +236,18 @@ public sealed class LicenseAcquisitionService(AppDbContext context) : ILicenseAc
         return await ValidateCompanyReferencesAsync(request.SupplierCompanyId, request.SupportCompanyId, cancellationToken);
     }
 
-    private async Task<string?> ValidateAcquisitionAsync(
-        UpdateLicenseAcquisitionRequest request,
+    private async Task<string?> ValidatePurchaseAsync(
+        UpdateLicensePurchaseRequest request,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.Title))
         {
-            return "Acquisition title is required.";
+            return "Purchase title is required.";
         }
 
-        if (!Enum.IsDefined(request.AcquisitionType))
+        if (!Enum.IsDefined(request.PurchaseType))
         {
-            return "Acquisition type is invalid.";
+            return "Purchase type is invalid.";
         }
 
         if (!LicenseManagementValidation.IsValidDateRange(request.ContractStartDate, request.ContractEndDate, out _))
@@ -294,12 +294,12 @@ public sealed class LicenseAcquisitionService(AppDbContext context) : ILicenseAc
         return null;
     }
 
-    private static LicenseAcquisition MapToEntity(LicenseAcquisition entity, CreateLicenseAcquisitionRequest request)
+    private static LicensePurchase MapToEntity(LicensePurchase entity, CreateLicensePurchaseRequest request)
     {
-        entity.AcquisitionType = request.AcquisitionType;
+        entity.PurchaseType = request.PurchaseType;
         entity.Title = request.Title.Trim();
         entity.Description = LicenseManagementValidation.TrimOrNull(request.Description);
-        entity.AcquisitionDate = request.AcquisitionDate;
+        entity.PurchaseDate = request.PurchaseDate;
         entity.TenderNumber = LicenseManagementValidation.TrimOrNull(request.TenderNumber);
         entity.TenderDate = request.TenderDate;
         entity.DirectPurchaseNumber = LicenseManagementValidation.TrimOrNull(request.DirectPurchaseNumber);
@@ -320,12 +320,12 @@ public sealed class LicenseAcquisitionService(AppDbContext context) : ILicenseAc
         return entity;
     }
 
-    private static LicenseAcquisition MapToEntity(LicenseAcquisition entity, UpdateLicenseAcquisitionRequest request)
+    private static LicensePurchase MapToEntity(LicensePurchase entity, UpdateLicensePurchaseRequest request)
     {
-        entity.AcquisitionType = request.AcquisitionType;
+        entity.PurchaseType = request.PurchaseType;
         entity.Title = request.Title.Trim();
         entity.Description = LicenseManagementValidation.TrimOrNull(request.Description);
-        entity.AcquisitionDate = request.AcquisitionDate;
+        entity.PurchaseDate = request.PurchaseDate;
         entity.TenderNumber = LicenseManagementValidation.TrimOrNull(request.TenderNumber);
         entity.TenderDate = request.TenderDate;
         entity.DirectPurchaseNumber = LicenseManagementValidation.TrimOrNull(request.DirectPurchaseNumber);
@@ -346,13 +346,13 @@ public sealed class LicenseAcquisitionService(AppDbContext context) : ILicenseAc
         return entity;
     }
 
-    private static LicenseAcquisitionDetail Map(LicenseAcquisition entity) =>
+    private static LicensePurchaseDetail Map(LicensePurchase entity) =>
         new(
             entity.Id,
-            entity.AcquisitionType,
+            entity.PurchaseType,
             entity.Title,
             entity.Description,
-            entity.AcquisitionDate,
+            entity.PurchaseDate,
             entity.TenderNumber,
             entity.TenderDate,
             entity.DirectPurchaseNumber,

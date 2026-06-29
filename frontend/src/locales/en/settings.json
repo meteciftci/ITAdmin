@@ -13,6 +13,10 @@
       "adManagement": {
         "title": "AD Management Settings",
         "description": "Connection, service account, and attribute mapping settings for the AD Management module."
+      },
+      "licenseManagement": {
+        "title": "License Management Settings",
+        "description": "Default currency and renewal notification settings for the License Management module."
       }
     },
     "modulesHub": {
@@ -42,7 +46,28 @@
           }
         }
       },
-      "emptyTitle": "There are no module settings you can view."
+      "emptyTitle": "There are no module settings you can view.",
+      "licenseManagement": {
+        "title": "License Management",
+        "openSettings": "Open settings",
+        "description": "Default currency, VAT, and renewal notification settings."
+      }
+    },
+    "licenseManagement": {
+      "formTitle": "Module settings",
+      "renewalInfo": "Renewal notifications will be enabled in a later phase. Recipient lists are stored for now.",
+      "fields": {
+        "defaultCurrency": "Default currency",
+        "defaultVatIncluded": "Default VAT included",
+        "defaultRenewalReminderDays": "Default renewal reminder days",
+        "defaultRenewalRecipients": "Default renewal recipients",
+        "defaultRenewalCcRecipients": "Default renewal CC recipients",
+        "notes": "Notes"
+      },
+      "messages": {
+        "saveSuccess": "License management settings saved.",
+        "saveFailed": "License management settings could not be saved."
+      }
     },
     "tabs": {
       "ldap": "LDAP Settings",

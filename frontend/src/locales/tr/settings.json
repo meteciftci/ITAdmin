@@ -13,6 +13,10 @@
       "adManagement": {
         "title": "AD Yönetim Ayarları",
         "description": "AD Yönetim modülü bağlantı, yetkili hesap ve attribute mapping ayarları."
+      },
+      "licenseManagement": {
+        "title": "Lisans Yönetimi Ayarları",
+        "description": "Lisans yönetimi modülü varsayılan para birimi ve yenileme bildirim ayarları."
       }
     },
     "modulesHub": {
@@ -42,7 +46,28 @@
           }
         }
       },
-      "emptyTitle": "Görüntüleyebileceğiniz modül ayarı bulunmuyor."
+      "emptyTitle": "Görüntüleyebileceğiniz modül ayarı bulunmuyor.",
+      "licenseManagement": {
+        "title": "Lisans Yönetimi",
+        "openSettings": "Ayarları Aç",
+        "description": "Varsayılan para birimi, KDV ve yenileme bildirim ayarları."
+      }
+    },
+    "licenseManagement": {
+      "formTitle": "Modül ayarları",
+      "renewalInfo": "Yenileme bildirimleri sonraki fazda devreye alınacaktır. Alıcı listeleri şimdilik kayıt amaçlıdır.",
+      "fields": {
+        "defaultCurrency": "Varsayılan para birimi",
+        "defaultVatIncluded": "Varsayılan KDV dahil",
+        "defaultRenewalReminderDays": "Varsayılan yenileme hatırlatma günü",
+        "defaultRenewalRecipients": "Varsayılan yenileme alıcıları",
+        "defaultRenewalCcRecipients": "Varsayılan yenileme CC alıcıları",
+        "notes": "Notlar"
+      },
+      "messages": {
+        "saveSuccess": "Lisans yönetimi ayarları kaydedildi.",
+        "saveFailed": "Lisans yönetimi ayarları kaydedilemedi."
+      }
     },
     "tabs": {
       "ldap": "LDAP Ayarları",

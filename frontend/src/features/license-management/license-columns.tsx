@@ -11,10 +11,10 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import type {
-  LicenseAcquisitionListItem,
   LicenseCompanyListItem,
   LicensedProductListItem,
   LicensePackageListItem,
+  LicensePurchaseListItem,
 } from "@/features/license-management/types";
 
 type StatusToggleOptions<T> = {
@@ -179,35 +179,35 @@ export function createLicenseProductColumns({
   ];
 }
 
-export function createLicenseAcquisitionColumns({
+export function createLicensePurchaseColumns({
   t,
   canManage,
   onDetail,
   onEdit,
-  getAcquisitionTypeLabel,
-  getAcquisitionStatusLabel,
-}: BaseOptions<LicenseAcquisitionListItem> & {
-  getAcquisitionTypeLabel: (value: string) => string;
-  getAcquisitionStatusLabel: (value: string) => string;
-}): ColumnDef<LicenseAcquisitionListItem, unknown>[] {
+  getPurchaseTypeLabel,
+  getPurchaseStatusLabel,
+}: BaseOptions<LicensePurchaseListItem> & {
+  getPurchaseTypeLabel: (value: string) => string;
+  getPurchaseStatusLabel: (value: string) => string;
+}): ColumnDef<LicensePurchaseListItem, unknown>[] {
   return [
     {
       accessorKey: "title",
-      header: () => t("licenseManagement:table.acquisitionTitle"),
+      header: () => t("licenseManagement:table.purchaseTitle"),
       meta: { truncate: true } satisfies DataTableColumnMeta,
     },
     {
-      id: "acquisitionType",
-      header: () => t("licenseManagement:table.acquisitionType"),
-      cell: ({ row }) => getAcquisitionTypeLabel(row.original.acquisitionType),
+      id: "purchaseType",
+      header: () => t("licenseManagement:table.purchaseType"),
+      cell: ({ row }) => getPurchaseTypeLabel(row.original.purchaseType),
     },
     {
-      id: "acquisitionDate",
-      header: () => t("licenseManagement:table.acquisitionDate"),
+      id: "purchaseDate",
+      header: () => t("licenseManagement:table.purchaseDate"),
       cell: ({ row }) =>
-        row.original.acquisitionDate ? (
+        row.original.purchaseDate ? (
           <DateTimeText
-            value={row.original.acquisitionDate}
+            value={row.original.purchaseDate}
             options={{ year: "numeric", month: "2-digit", day: "2-digit" }}
           />
         ) : (
@@ -234,7 +234,7 @@ export function createLicenseAcquisitionColumns({
     {
       id: "status",
       header: () => t("common:fields.status"),
-      cell: ({ row }) => getAcquisitionStatusLabel(row.original.status),
+      cell: ({ row }) => getPurchaseStatusLabel(row.original.status),
     },
     {
       id: "actions",
@@ -274,8 +274,8 @@ export function createLicensePackageColumns({
       meta: { truncate: true } satisfies DataTableColumnMeta,
     },
     {
-      accessorKey: "acquisitionTitle",
-      header: () => t("licenseManagement:table.acquisition"),
+      accessorKey: "purchaseTitle",
+      header: () => t("licenseManagement:table.purchase"),
       meta: { truncate: true } satisfies DataTableColumnMeta,
     },
     {

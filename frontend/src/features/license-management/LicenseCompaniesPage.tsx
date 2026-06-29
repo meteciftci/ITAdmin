@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Navigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
@@ -16,21 +16,18 @@ import { LoadingState } from "@/components/common/LoadingState";
 import { PageHeader } from "@/components/common/PageHeader";
 import { SectionCard } from "@/components/common/SectionCard";
 import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { Select } from "@/components/ui/select";
 import {
-  Dialog,
-  DialogBody,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { CompanyFormDialog } from "@/features/license-management/components/CompanyFormDialog";
-import {
   getLicenseCompanies,
-  getLicenseCompanyById,
   updateLicenseCompanyStatus,
 } from "@/features/license-management/api";
 import { createLicenseCompanyColumns } from "@/features/license-management/license-columns";
+import {
+  buildLicenseCompanyDetailPath,
+  buildLicenseCompanyEditPath,
+  LICENSE_COMPANY_CREATE_PATH,
+} from "@/features/license-management/license-company-detail-path";
 import type { LicenseCompanyListItem } from "@/features/license-management/types";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useAuthStore } from "@/features/auth/auth-store";
@@ -38,11 +35,13 @@ import { getApiErrorMessage } from "@/lib/api-error";
 import { canAccess } from "@/lib/permissions";
 import { PermissionCodes } from "@/lib/permission-codes";
 import { createApiErrorRouteState, getErrorRoutePath } from "@/lib/route-error";
+import { cn } from "@/lib/utils";
 
 type StatusFilter = "active" | "passive" | "all";
 
 export function LicenseCompaniesPage() {
   const { t } = useTranslation(["licenseManagement", "common"]);
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const user = useAuthStore((state) => state.user);
   const canManage = canAccess(user, PermissionCodes.LicenseManagement.ManageCatalog);
@@ -51,9 +50,6 @@ export function LicenseCompaniesPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [showCreate, setShowCreate] = useState(false);
-  const [selectedEdit, setSelectedEdit] = useState<LicenseCompanyListItem | null>(null);
-  const [selectedDetail, setSelectedDetail] = useState<LicenseCompanyListItem | null>(null);
   const [confirmTarget, setConfirmTarget] = useState<LicenseCompanyListItem | null>(null);
 
   const debouncedSearch = useDebouncedValue(search, 400);
@@ -69,18 +65,6 @@ export function LicenseCompaniesPage() {
         pageNumber,
         pageSize,
       }),
-  });
-
-  const detailQuery = useQuery({
-    queryKey: ["license-management", "companies", "detail", selectedDetail?.id],
-    queryFn: () => getLicenseCompanyById(selectedDetail!.id),
-    enabled: Boolean(selectedDetail?.id),
-  });
-
-  const editDetailQuery = useQuery({
-    queryKey: ["license-management", "companies", "edit", selectedEdit?.id],
-    queryFn: () => getLicenseCompanyById(selectedEdit!.id),
-    enabled: Boolean(selectedEdit?.id),
   });
 
   const statusMutation = useMutation({
@@ -103,11 +87,11 @@ export function LicenseCompaniesPage() {
         t,
         canManage,
         isStatusPending: statusMutation.isPending,
-        onDetail: setSelectedDetail,
-        onEdit: setSelectedEdit,
+        onDetail: (item) => navigate(buildLicenseCompanyDetailPath(item.id)),
+        onEdit: (item) => navigate(buildLicenseCompanyEditPath(item.id)),
         onToggleStatus: setConfirmTarget,
       }),
-    [t, canManage, statusMutation.isPending],
+    [t, canManage, statusMutation.isPending, navigate],
   );
 
   const items = listQuery.data?.items ?? [];
@@ -118,18 +102,6 @@ export function LicenseCompaniesPage() {
     pageIndex: pageNumber - 1,
     pageSize,
   });
-
-  const handleSaved = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ["license-management", "companies"] });
-    queryClient.invalidateQueries({ queryKey: ["license-management", "overview"] });
-    toast.success(
-      selectedEdit
-        ? t("licenseManagement:messages.companyUpdated")
-        : t("licenseManagement:messages.companyCreated"),
-    );
-    setSelectedEdit(null);
-    setShowCreate(false);
-  }, [queryClient, selectedEdit, t]);
 
   if (listQuery.isError) {
     const routeState = createApiErrorRouteState(listQuery.error, {
@@ -185,7 +157,9 @@ export function LicenseCompaniesPage() {
                   {t("common:actions.refresh")}
                 </Button>
                 {canManage ? (
-                  <Button onClick={() => setShowCreate(true)}>{t("licenseManagement:actions.addCompany")}</Button>
+                  <Link to={LICENSE_COMPANY_CREATE_PATH} className={cn(buttonVariants())}>
+                    {t("licenseManagement:actions.addCompany")}
+                  </Link>
                 ) : null}
               </>
             }
@@ -217,34 +191,6 @@ export function LicenseCompaniesPage() {
           ) : null}
         </div>
       </SectionCard>
-
-      <CompanyFormDialog open={showCreate} mode="create" onClose={() => setShowCreate(false)} onSaved={handleSaved} />
-      <CompanyFormDialog
-        open={Boolean(selectedEdit)}
-        mode="edit"
-        company={editDetailQuery.data ?? null}
-        onClose={() => setSelectedEdit(null)}
-        onSaved={handleSaved}
-      />
-
-      <Dialog open={Boolean(selectedDetail)}>
-        <DialogContent onOpenChange={(open) => !open && setSelectedDetail(null)}>
-          <DialogHeader>
-            <DialogTitle>{detailQuery.data?.name ?? selectedDetail?.name}</DialogTitle>
-          </DialogHeader>
-          <DialogBody className="space-y-2 text-sm">
-            {detailQuery.isLoading ? <LoadingState /> : null}
-            {detailQuery.data ? (
-              <>
-                <p><span className="font-medium">{t("licenseManagement:table.email")}:</span> {detailQuery.data.email ?? "-"}</p>
-                <p><span className="font-medium">{t("licenseManagement:table.phone")}:</span> {detailQuery.data.phone ?? "-"}</p>
-                <p><span className="font-medium">{t("licenseManagement:form.website")}:</span> {detailQuery.data.website ?? "-"}</p>
-                <p><span className="font-medium">{t("licenseManagement:form.notes")}:</span> {detailQuery.data.notes ?? "-"}</p>
-              </>
-            ) : null}
-          </DialogBody>
-        </DialogContent>
-      </Dialog>
 
       <ConfirmDialog
         open={Boolean(confirmTarget)}

@@ -40,7 +40,7 @@ export function LicenseManagementOverviewPage() {
           {[
             { label: t("licenseManagement:overview.companyCount"), value: summary.companyCount },
             { label: t("licenseManagement:overview.activeProductCount"), value: summary.activeProductCount },
-            { label: t("licenseManagement:overview.acquisitionCount"), value: summary.acquisitionCount },
+            { label: t("licenseManagement:overview.purchaseCount"), value: summary.purchaseCount },
             { label: t("licenseManagement:overview.packageCount"), value: summary.packageCount },
             { label: t("licenseManagement:overview.totalLicenseQuantity"), value: summary.totalLicenseQuantity },
           ].map((card) => (

@@ -1,6 +1,6 @@
 namespace ITAdmin.Domain.Enums;
 
-public enum LicenseAcquisitionType
+public enum LicensePurchaseType
 {
     LegacyPerpetual = 1,
     Tender = 2,

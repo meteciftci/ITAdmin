@@ -7,7 +7,7 @@
       "description": "Lisans yönetimi özet bilgileri.",
       "companyCount": "Firma sayısı",
       "activeProductCount": "Aktif ürün sayısı",
-      "acquisitionCount": "Edinim sayısı",
+      "purchaseCount": "Satın alma sayısı",
       "packageCount": "Lisans paketi sayısı",
       "totalLicenseQuantity": "Toplam lisans adedi"
     },
@@ -25,27 +25,105 @@
       "empty": "Henüz ürün kaydı bulunmuyor.",
       "searchPlaceholder": "Ürün adı, kategori veya vendor ara..."
     },
-    "acquisitions": {
-      "title": "Edinimler",
-      "description": "Satın alma ve edinim kayıtlarını yönetin.",
-      "listTitle": "Edinim listesi",
-      "empty": "Henüz edinim kaydı bulunmuyor.",
+    "purchases": {
+      "title": "Satın Alımlar",
+      "description": "Satın alma kayıtlarını yönetin.",
+      "listTitle": "Satın alma listesi",
+      "empty": "Henüz satın alma kaydı bulunmuyor.",
       "searchPlaceholder": "Başlık, sözleşme no veya tedarikçi ara..."
     },
     "packages": {
       "title": "Lisans Paketleri",
-      "description": "Edinim altındaki lisans paketlerini yönetin.",
+      "description": "Satın alma altındaki lisans paketlerini yönetin.",
       "listTitle": "Lisans paketi listesi",
       "empty": "Henüz lisans paketi bulunmuyor.",
-      "searchPlaceholder": "Ürün, edinim veya seri no ara..."
+      "searchPlaceholder": "Ürün, satın alma veya seri no ara..."
+    },
+    "pages": {
+      "detail": {
+        "createdAt": "Oluşturulma",
+        "createdBy": "Oluşturan",
+        "updatedAt": "Güncellenme",
+        "updatedBy": "Güncelleyen"
+      },
+      "companies": {
+        "create": {
+          "title": "Firma oluştur",
+          "description": "Yeni firma kaydı ekleyin.",
+          "formTitle": "Firma bilgileri"
+        },
+        "edit": {
+          "title": "Firma düzenle",
+          "formTitle": "Firma bilgileri"
+        },
+        "detail": {
+          "title": "Firma detayı",
+          "description": "Firma kaydının ayrıntıları.",
+          "summaryTitle": "Özet",
+          "notFound": "Firma bulunamadı."
+        }
+      },
+      "products": {
+        "create": {
+          "title": "Ürün oluştur",
+          "description": "Yeni lisanslı ürün kaydı ekleyin.",
+          "formTitle": "Ürün bilgileri"
+        },
+        "edit": {
+          "title": "Ürün düzenle",
+          "formTitle": "Ürün bilgileri"
+        },
+        "detail": {
+          "title": "Ürün detayı",
+          "description": "Ürün kaydının ayrıntıları.",
+          "summaryTitle": "Özet",
+          "notFound": "Ürün bulunamadı."
+        }
+      },
+      "purchases": {
+        "create": {
+          "title": "Satın alma oluştur",
+          "description": "Yeni satın alma kaydı ekleyin.",
+          "formTitle": "Satın alma bilgileri"
+        },
+        "edit": {
+          "title": "Satın alma düzenle",
+          "formTitle": "Satın alma bilgileri"
+        },
+        "detail": {
+          "title": "Satın alma detayı",
+          "description": "Satın alma kaydının ayrıntıları.",
+          "summaryTitle": "Özet",
+          "notFound": "Satın alma bulunamadı."
+        }
+      },
+      "packages": {
+        "create": {
+          "title": "Lisans paketi oluştur",
+          "description": "Yeni lisans paketi ekleyin.",
+          "formTitle": "Lisans paketi bilgileri"
+        },
+        "edit": {
+          "title": "Lisans paketi düzenle",
+          "formTitle": "Lisans paketi bilgileri"
+        },
+        "detail": {
+          "title": "Lisans paketi detayı",
+          "description": "Lisans paketi kaydının ayrıntıları.",
+          "summaryTitle": "Özet",
+          "notFound": "Lisans paketi bulunamadı.",
+          "showLicenseKey": "Anahtarı göster",
+          "hideLicenseKey": "Anahtarı gizle"
+        }
+      }
     },
     "actions": {
       "addCompany": "Firma oluştur",
       "editCompany": "Firma düzenle",
       "addProduct": "Ürün oluştur",
       "editProduct": "Ürün düzenle",
-      "addAcquisition": "Edinim oluştur",
-      "editAcquisition": "Edinim düzenle",
+      "addPurchase": "Satın alma oluştur",
+      "editPurchase": "Satın alma düzenle",
       "addPackage": "Lisans paketi oluştur",
       "editPackage": "Lisans paketi düzenle",
       "activateCompany": "Firmayı aktifleştir",
@@ -64,14 +142,14 @@
       "vendor": "Vendor",
       "category": "Kategori",
       "defaultLicenseType": "Varsayılan lisans tipi",
-      "acquisitionTitle": "Başlık",
-      "acquisitionType": "Edinim tipi",
-      "acquisitionDate": "Edinim tarihi",
+      "purchaseTitle": "Başlık",
+      "purchaseType": "Satın alma tipi",
+      "purchaseDate": "Satın alma tarihi",
       "supplierCompany": "Tedarikçi firma",
       "supportCompany": "Destek firması",
       "contractNumber": "Sözleşme no",
       "product": "Ürün",
-      "acquisition": "Edinim",
+      "purchase": "Satın alma",
       "licenseType": "Lisans tipi",
       "quantity": "Adet",
       "usedQuantity": "Kullanılan",
@@ -95,9 +173,9 @@
       "productName": "Ürün adı",
       "vendorCompany": "Vendor firma",
       "description": "Açıklama",
-      "acquisitionType": "Edinim türü",
+      "purchaseType": "Satın alma türü",
       "title": "Başlık",
-      "acquisitionDate": "Edinim tarihi",
+      "purchaseDate": "Satın alma tarihi",
       "tenderNumber": "İhale no",
       "tenderDate": "İhale tarihi",
       "directPurchaseNumber": "Doğrudan temin no",
@@ -115,7 +193,7 @@
       "currency": "Para birimi",
       "vatIncluded": "KDV dahil",
       "status": "Durum",
-      "acquisition": "Edinim",
+      "purchase": "Satın alma",
       "product": "Ürün",
       "licenseType": "Lisans tipi",
       "quantity": "Adet",
@@ -131,15 +209,15 @@
       "licenseNotes": "Lisanslama notu",
       "selectCompany": "Firma seçin",
       "selectProduct": "Ürün seçin",
-      "selectAcquisition": "Edinim seçin",
+      "selectPurchase": "Satın alma seçin",
       "noVendor": "Vendor belirtilmedi"
     },
     "filters": {
       "status": "Durum",
-      "acquisitionType": "Edinim tipi",
+      "purchaseType": "Satın alma tipi",
       "vendor": "Vendor",
       "product": "Ürün",
-      "acquisition": "Edinim",
+      "purchase": "Satın alma",
       "packageStatus": "Paket durumu"
     },
     "messages": {
@@ -149,9 +227,9 @@
       "productCreated": "Ürün oluşturuldu.",
       "productUpdated": "Ürün güncellendi.",
       "productStatusUpdated": "Ürün durumu güncellendi.",
-      "acquisitionCreated": "Edinim oluşturuldu.",
-      "acquisitionUpdated": "Edinim güncellendi.",
-      "acquisitionStatusUpdated": "Edinim durumu güncellendi.",
+      "purchaseCreated": "Satın alma oluşturuldu.",
+      "purchaseUpdated": "Satın alma güncellendi.",
+      "purchaseStatusUpdated": "Satın alma durumu güncellendi.",
       "packageCreated": "Lisans paketi oluşturuldu.",
       "packageUpdated": "Lisans paketi güncellendi.",
       "packageStatusUpdated": "Lisans paketi durumu güncellendi.",
@@ -159,7 +237,7 @@
       "nameRequired": "Ad zorunludur.",
       "titleRequired": "Başlık zorunludur.",
       "quantityMin": "Adet en az 1 olmalıdır.",
-      "acquisitionRequired": "Edinim seçimi zorunludur.",
+      "purchaseRequired": "Satın alma seçimi zorunludur.",
       "productRequired": "Ürün seçimi zorunludur.",
       "invalidEmail": "Geçerli bir e-posta girin.",
       "invalidUrl": "Geçerli bir URL girin.",
@@ -180,7 +258,7 @@
       "no": "Hayır"
     },
     "enums": {
-      "acquisitionType": {
+      "purchaseType": {
         "LegacyPerpetual": "Eski kalıcı lisans / mülga belediye",
         "Tender": "İhale",
         "DirectPurchase": "Doğrudan temin",
@@ -189,7 +267,7 @@
         "CorporateSubscription": "Kurumsal abonelik",
         "Other": "Diğer"
       },
-      "acquisitionStatus": {
+      "purchaseStatus": {
         "Draft": "Taslak",
         "Active": "Aktif",
         "Cancelled": "İptal edildi",

@@ -3,12 +3,12 @@ using ITAdmin.Domain.Enums;
 
 namespace ITAdmin.Domain.Entities;
 
-public class LicenseAcquisition : AuditableEntity
+public class LicensePurchase : AuditableEntity
 {
-    public LicenseAcquisitionType AcquisitionType { get; set; }
+    public LicensePurchaseType PurchaseType { get; set; }
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
-    public DateOnly? AcquisitionDate { get; set; }
+    public DateOnly? PurchaseDate { get; set; }
     public string? TenderNumber { get; set; }
     public DateOnly? TenderDate { get; set; }
     public string? DirectPurchaseNumber { get; set; }
@@ -26,7 +26,7 @@ public class LicenseAcquisition : AuditableEntity
     public string? Currency { get; set; }
     public bool? VatIncluded { get; set; }
     public string? Notes { get; set; }
-    public LicenseAcquisitionStatus Status { get; set; } = LicenseAcquisitionStatus.Draft;
+    public LicensePurchaseStatus Status { get; set; } = LicensePurchaseStatus.Draft;
 
     public LicenseCompany? SupplierCompany { get; set; }
     public LicenseCompany? SupportCompany { get; set; }

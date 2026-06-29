@@ -5,9 +5,36 @@ namespace ITAdmin.Application.Common.Models.LicenseManagement;
 public sealed record LicenseManagementOverviewSummary(
     int CompanyCount,
     int ActiveProductCount,
-    int AcquisitionCount,
+    int PurchaseCount,
     int PackageCount,
     int TotalLicenseQuantity);
+
+public sealed record LicenseManagementSettingsModel(
+    string DefaultCurrency,
+    bool DefaultVatIncluded,
+    int DefaultRenewalReminderDays,
+    string? DefaultRenewalRecipients,
+    string? DefaultRenewalCcRecipients,
+    string? Notes,
+    DateTime? UpdatedAt,
+    string? UpdatedBy);
+
+public sealed record UpdateLicenseManagementSettingsRequest(
+    string DefaultCurrency,
+    bool DefaultVatIncluded,
+    int DefaultRenewalReminderDays,
+    string? DefaultRenewalRecipients,
+    string? DefaultRenewalCcRecipients,
+    string? Notes,
+    Guid? ActorUserId,
+    string? ActorUserName,
+    string? ActorIpAddress,
+    string? ActorUserAgent);
+
+public sealed record UpdateLicenseManagementSettingsResult(
+    bool IsSuccess,
+    string Message,
+    LicenseManagementSettingsModel? Settings = null);
 
 public sealed record LicenseCompanyListQuery(
     string? Search,
@@ -172,30 +199,30 @@ public sealed record LicensedProductOperationResult(
     string Message,
     LicensedProductDetail? Product = null);
 
-public sealed record LicenseAcquisitionListQuery(
+public sealed record LicensePurchaseListQuery(
     string? Search,
-    LicenseAcquisitionType? AcquisitionType,
-    LicenseAcquisitionStatus? Status,
+    LicensePurchaseType? PurchaseType,
+    LicensePurchaseStatus? Status,
     Guid? SupplierCompanyId,
     int PageNumber,
     int PageSize);
 
-public sealed record LicenseAcquisitionListItem(
+public sealed record LicensePurchaseListItem(
     Guid Id,
     string Title,
-    LicenseAcquisitionType AcquisitionType,
-    DateOnly? AcquisitionDate,
+    LicensePurchaseType PurchaseType,
+    DateOnly? PurchaseDate,
     string? SupplierCompanyName,
     string? SupportCompanyName,
     string? ContractNumber,
-    LicenseAcquisitionStatus Status);
+    LicensePurchaseStatus Status);
 
-public sealed record LicenseAcquisitionDetail(
+public sealed record LicensePurchaseDetail(
     Guid Id,
-    LicenseAcquisitionType AcquisitionType,
+    LicensePurchaseType PurchaseType,
     string Title,
     string? Description,
-    DateOnly? AcquisitionDate,
+    DateOnly? PurchaseDate,
     string? TenderNumber,
     DateOnly? TenderDate,
     string? DirectPurchaseNumber,
@@ -215,17 +242,17 @@ public sealed record LicenseAcquisitionDetail(
     string? Currency,
     bool? VatIncluded,
     string? Notes,
-    LicenseAcquisitionStatus Status,
+    LicensePurchaseStatus Status,
     DateTime CreatedAt,
     string? CreatedBy,
     DateTime? UpdatedAt,
     string? UpdatedBy);
 
-public sealed record CreateLicenseAcquisitionRequest(
-    LicenseAcquisitionType AcquisitionType,
+public sealed record CreateLicensePurchaseRequest(
+    LicensePurchaseType PurchaseType,
     string Title,
     string? Description,
-    DateOnly? AcquisitionDate,
+    DateOnly? PurchaseDate,
     string? TenderNumber,
     DateOnly? TenderDate,
     string? DirectPurchaseNumber,
@@ -243,18 +270,18 @@ public sealed record CreateLicenseAcquisitionRequest(
     string? Currency,
     bool? VatIncluded,
     string? Notes,
-    LicenseAcquisitionStatus Status,
+    LicensePurchaseStatus Status,
     Guid? ActorUserId,
     string? ActorUserName,
     string? ActorIpAddress,
     string? ActorUserAgent);
 
-public sealed record UpdateLicenseAcquisitionRequest(
+public sealed record UpdateLicensePurchaseRequest(
     Guid Id,
-    LicenseAcquisitionType AcquisitionType,
+    LicensePurchaseType PurchaseType,
     string Title,
     string? Description,
-    DateOnly? AcquisitionDate,
+    DateOnly? PurchaseDate,
     string? TenderNumber,
     DateOnly? TenderDate,
     string? DirectPurchaseNumber,
@@ -277,22 +304,22 @@ public sealed record UpdateLicenseAcquisitionRequest(
     string? ActorIpAddress,
     string? ActorUserAgent);
 
-public sealed record UpdateLicenseAcquisitionStatusRequest(
+public sealed record UpdateLicensePurchaseStatusRequest(
     Guid Id,
-    LicenseAcquisitionStatus Status,
+    LicensePurchaseStatus Status,
     Guid? ActorUserId,
     string? ActorUserName,
     string? ActorIpAddress,
     string? ActorUserAgent);
 
-public sealed record LicenseAcquisitionOperationResult(
+public sealed record LicensePurchaseOperationResult(
     bool IsSuccess,
     string Message,
-    LicenseAcquisitionDetail? Acquisition = null);
+    LicensePurchaseDetail? Purchase = null);
 
 public sealed record LicensePackageListQuery(
     string? Search,
-    Guid? AcquisitionId,
+    Guid? PurchaseId,
     Guid? ProductId,
     LicensePackageStatus? Status,
     bool? IsActive,
@@ -302,7 +329,7 @@ public sealed record LicensePackageListQuery(
 public sealed record LicensePackageListItem(
     Guid Id,
     string ProductName,
-    string AcquisitionTitle,
+    string PurchaseTitle,
     LicenseType LicenseType,
     int Quantity,
     int UsedQuantity,
@@ -316,8 +343,8 @@ public sealed record LicensePackageListItem(
 
 public sealed record LicensePackageDetail(
     Guid Id,
-    Guid AcquisitionId,
-    string AcquisitionTitle,
+    Guid PurchaseId,
+    string PurchaseTitle,
     Guid ProductId,
     string ProductName,
     LicenseType LicenseType,
@@ -342,7 +369,7 @@ public sealed record LicensePackageDetail(
     string? UpdatedBy);
 
 public sealed record CreateLicensePackageRequest(
-    Guid AcquisitionId,
+    Guid PurchaseId,
     Guid ProductId,
     LicenseType LicenseType,
     int Quantity,
@@ -365,7 +392,7 @@ public sealed record CreateLicensePackageRequest(
 
 public sealed record UpdateLicensePackageRequest(
     Guid Id,
-    Guid AcquisitionId,
+    Guid PurchaseId,
     Guid ProductId,
     LicenseType LicenseType,
     int Quantity,

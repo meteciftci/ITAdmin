@@ -224,9 +224,74 @@ const LicenseProductsPage = lazy(() =>
     default: module.LicenseProductsPage,
   })),
 );
-const LicenseAcquisitionsPage = lazy(() =>
-  import("@/features/license-management/LicenseAcquisitionsPage").then((module) => ({
-    default: module.LicenseAcquisitionsPage,
+const LicensePurchasesPage = lazy(() =>
+  import("@/features/license-management/LicensePurchasesPage").then((module) => ({
+    default: module.LicensePurchasesPage,
+  })),
+);
+const LicenseCompanyCreatePage = lazy(() =>
+  import("@/features/license-management/LicenseCompanyCreatePage").then((module) => ({
+    default: module.LicenseCompanyCreatePage,
+  })),
+);
+const LicenseCompanyEditPage = lazy(() =>
+  import("@/features/license-management/LicenseCompanyEditPage").then((module) => ({
+    default: module.LicenseCompanyEditPage,
+  })),
+);
+const LicenseCompanyDetailPage = lazy(() =>
+  import("@/features/license-management/LicenseCompanyDetailPage").then((module) => ({
+    default: module.LicenseCompanyDetailPage,
+  })),
+);
+const LicenseProductCreatePage = lazy(() =>
+  import("@/features/license-management/LicenseProductCreatePage").then((module) => ({
+    default: module.LicenseProductCreatePage,
+  })),
+);
+const LicenseProductEditPage = lazy(() =>
+  import("@/features/license-management/LicenseProductEditPage").then((module) => ({
+    default: module.LicenseProductEditPage,
+  })),
+);
+const LicenseProductDetailPage = lazy(() =>
+  import("@/features/license-management/LicenseProductDetailPage").then((module) => ({
+    default: module.LicenseProductDetailPage,
+  })),
+);
+const LicensePurchaseCreatePage = lazy(() =>
+  import("@/features/license-management/LicensePurchaseCreatePage").then((module) => ({
+    default: module.LicensePurchaseCreatePage,
+  })),
+);
+const LicensePurchaseEditPage = lazy(() =>
+  import("@/features/license-management/LicensePurchaseEditPage").then((module) => ({
+    default: module.LicensePurchaseEditPage,
+  })),
+);
+const LicensePurchaseDetailPage = lazy(() =>
+  import("@/features/license-management/LicensePurchaseDetailPage").then((module) => ({
+    default: module.LicensePurchaseDetailPage,
+  })),
+);
+const LicensePackageCreatePage = lazy(() =>
+  import("@/features/license-management/LicensePackageCreatePage").then((module) => ({
+    default: module.LicensePackageCreatePage,
+  })),
+);
+const LicensePackageEditPage = lazy(() =>
+  import("@/features/license-management/LicensePackageEditPage").then((module) => ({
+    default: module.LicensePackageEditPage,
+  })),
+);
+const LicensePackageDetailPage = lazy(() =>
+  import("@/features/license-management/LicensePackageDetailPage").then((module) => ({
+    default: module.LicensePackageDetailPage,
+  })),
+);
+const LicenseManagementSettingsPage = lazy(() =>
+  import("@/features/settings/LicenseManagementSettingsPage").then((module) => ({
+    default: module.LicenseManagementSettingsPage,
   })),
 );
 const LicensePackagesPage = lazy(() =>
@@ -515,7 +580,10 @@ export const router = createBrowserRouter([
     path: "/settings/modules",
     element: (
       <RequireAuth>
-        <RequireAnyPermission permissions={[PermissionCodes.AdManagement.Settings.View]}>
+        <RequireAnyPermission permissions={[
+          PermissionCodes.AdManagement.Settings.View,
+          PermissionCodes.LicenseManagement.ManageSettings,
+        ]}>
           <AppLayout>
             <LazyRoute>
               <ModuleSettingsPage />
@@ -533,6 +601,20 @@ export const router = createBrowserRouter([
           <AppLayout>
             <LazyRoute>
               <AdManagementSettingsPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/settings/modules/license-management",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission={PermissionCodes.LicenseManagement.ManageSettings}>
+          <AppLayout>
+            <LazyRoute>
+              <LicenseManagementSettingsPage />
             </LazyRoute>
           </AppLayout>
         </RequirePermission>
@@ -918,13 +1000,185 @@ export const router = createBrowserRouter([
     ),
   },
   {
-    path: "/license-management/acquisitions",
+    path: "/license-management/companies/create",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission={PermissionCodes.LicenseManagement.ManageCatalog}>
+          <AppLayout>
+            <LazyRoute>
+              <LicenseCompanyCreatePage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/license-management/companies/:id/edit",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission={PermissionCodes.LicenseManagement.ManageCatalog}>
+          <AppLayout>
+            <LazyRoute>
+              <LicenseCompanyEditPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/license-management/companies/:id",
     element: (
       <RequireAuth>
         <RequirePermission permission={PermissionCodes.LicenseManagement.View}>
           <AppLayout>
             <LazyRoute>
-              <LicenseAcquisitionsPage />
+              <LicenseCompanyDetailPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/license-management/products/create",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission={PermissionCodes.LicenseManagement.ManageCatalog}>
+          <AppLayout>
+            <LazyRoute>
+              <LicenseProductCreatePage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/license-management/products/:id/edit",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission={PermissionCodes.LicenseManagement.ManageCatalog}>
+          <AppLayout>
+            <LazyRoute>
+              <LicenseProductEditPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/license-management/products/:id",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission={PermissionCodes.LicenseManagement.View}>
+          <AppLayout>
+            <LazyRoute>
+              <LicenseProductDetailPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/license-management/purchases/create",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission={PermissionCodes.LicenseManagement.ManageAcquisitions}>
+          <AppLayout>
+            <LazyRoute>
+              <LicensePurchaseCreatePage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/license-management/purchases/:id/edit",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission={PermissionCodes.LicenseManagement.ManageAcquisitions}>
+          <AppLayout>
+            <LazyRoute>
+              <LicensePurchaseEditPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/license-management/purchases/:id",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission={PermissionCodes.LicenseManagement.View}>
+          <AppLayout>
+            <LazyRoute>
+              <LicensePurchaseDetailPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/license-management/packages/create",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission={PermissionCodes.LicenseManagement.ManageAcquisitions}>
+          <AppLayout>
+            <LazyRoute>
+              <LicensePackageCreatePage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/license-management/packages/:id/edit",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission={PermissionCodes.LicenseManagement.ManageAcquisitions}>
+          <AppLayout>
+            <LazyRoute>
+              <LicensePackageEditPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/license-management/packages/:id",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission={PermissionCodes.LicenseManagement.View}>
+          <AppLayout>
+            <LazyRoute>
+              <LicensePackageDetailPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/license-management/acquisitions",
+    element: <Navigate to="/license-management/purchases" replace />,
+  },
+  {
+    path: "/license-management/purchases",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission={PermissionCodes.LicenseManagement.View}>
+          <AppLayout>
+            <LazyRoute>
+              <LicensePurchasesPage />
             </LazyRoute>
           </AppLayout>
         </RequirePermission>

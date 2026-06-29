@@ -15,14 +15,14 @@ public sealed class LicenseManagementOverviewService(AppDbContext context) : ILi
     {
         var companyCount = await context.LicenseCompanies.CountAsync(cancellationToken);
         var activeProductCount = await context.LicensedProducts.CountAsync(x => x.IsActive, cancellationToken);
-        var acquisitionCount = await context.LicenseAcquisitions.CountAsync(cancellationToken);
+        var purchaseCount = await context.LicensePurchases.CountAsync(cancellationToken);
         var packageCount = await context.LicensePackages.CountAsync(cancellationToken);
         var totalLicenseQuantity = await context.LicensePackages.SumAsync(x => (int?)x.Quantity, cancellationToken) ?? 0;
 
         return new LicenseManagementOverviewSummary(
             companyCount,
             activeProductCount,
-            acquisitionCount,
+            purchaseCount,
             packageCount,
             totalLicenseQuantity);
     }

@@ -618,148 +618,6 @@ namespace ITAdmin.Persistence.Migrations
                     b.ToTable("ldap_settings", (string)null);
                 });
 
-            modelBuilder.Entity("ITAdmin.Domain.Entities.LicenseAcquisition", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateOnly?>("AcquisitionDate")
-                        .HasColumnType("date")
-                        .HasColumnName("acquisition_date");
-
-                    b.Property<string>("AcquisitionType")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("acquisition_type");
-
-                    b.Property<decimal?>("ActualTotalCost")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)")
-                        .HasColumnName("actual_total_cost");
-
-                    b.Property<DateOnly?>("ContractEndDate")
-                        .HasColumnType("date")
-                        .HasColumnName("contract_end_date");
-
-                    b.Property<string>("ContractNumber")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("contract_number");
-
-                    b.Property<DateOnly?>("ContractStartDate")
-                        .HasColumnType("date")
-                        .HasColumnName("contract_start_date");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<string>("CreatedBy")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("created_by");
-
-                    b.Property<string>("Currency")
-                        .HasMaxLength(10)
-                        .HasColumnType("character varying(10)")
-                        .HasColumnName("currency");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(4000)
-                        .HasColumnType("character varying(4000)")
-                        .HasColumnName("description");
-
-                    b.Property<string>("DirectPurchaseNumber")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("direct_purchase_number");
-
-                    b.Property<string>("DmoOrderNumber")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("dmo_order_number");
-
-                    b.Property<DateOnly?>("EbysDate")
-                        .HasColumnType("date")
-                        .HasColumnName("ebys_date");
-
-                    b.Property<string>("EbysNumber")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("ebys_number");
-
-                    b.Property<DateOnly?>("InvoiceDate")
-                        .HasColumnType("date")
-                        .HasColumnName("invoice_date");
-
-                    b.Property<string>("InvoiceNumber")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("invoice_number");
-
-                    b.Property<string>("Notes")
-                        .HasMaxLength(4000)
-                        .HasColumnType("character varying(4000)")
-                        .HasColumnName("notes");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("status");
-
-                    b.Property<Guid?>("SupplierCompanyId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("supplier_company_id");
-
-                    b.Property<Guid?>("SupportCompanyId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("support_company_id");
-
-                    b.Property<DateOnly?>("TenderDate")
-                        .HasColumnType("date")
-                        .HasColumnName("tender_date");
-
-                    b.Property<string>("TenderNumber")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("tender_number");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)")
-                        .HasColumnName("title");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("updated_by");
-
-                    b.Property<bool?>("VatIncluded")
-                        .HasColumnType("boolean")
-                        .HasColumnName("vat_included");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AcquisitionType");
-
-                    b.HasIndex("Status");
-
-                    b.HasIndex("SupplierCompanyId");
-
-                    b.HasIndex("SupportCompanyId");
-
-                    b.ToTable("license_acquisitions", (string)null);
-                });
-
             modelBuilder.Entity("ITAdmin.Domain.Entities.LicenseCompany", b =>
                 {
                     b.Property<Guid>("Id")
@@ -861,16 +719,77 @@ namespace ITAdmin.Persistence.Migrations
                     b.ToTable("license_companies", (string)null);
                 });
 
-            modelBuilder.Entity("ITAdmin.Domain.Entities.LicensePackage", b =>
+            modelBuilder.Entity("ITAdmin.Domain.Entities.LicenseManagementSettings", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
-                    b.Property<Guid>("AcquisitionId")
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("DefaultCurrency")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("TRY")
+                        .HasColumnName("default_currency");
+
+                    b.Property<string>("DefaultRenewalCcRecipients")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("default_renewal_cc_recipients");
+
+                    b.Property<string>("DefaultRenewalRecipients")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("default_renewal_recipients");
+
+                    b.Property<int>("DefaultRenewalReminderDays")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(60)
+                        .HasColumnName("default_renewal_reminder_days");
+
+                    b.Property<bool>("DefaultVatIncluded")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("default_vat_included");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("notes");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("license_management_settings", (string)null);
+                });
+
+            modelBuilder.Entity("ITAdmin.Domain.Entities.LicensePackage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
-                        .HasColumnName("acquisition_id");
+                        .HasColumnName("id");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -927,6 +846,10 @@ namespace ITAdmin.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("product_id");
 
+                    b.Property<Guid>("PurchaseId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("purchase_id");
+
                     b.Property<int>("Quantity")
                         .HasColumnType("integer")
                         .HasColumnName("quantity");
@@ -967,15 +890,157 @@ namespace ITAdmin.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AcquisitionId");
-
                     b.HasIndex("IsActive");
 
                     b.HasIndex("ProductId");
 
+                    b.HasIndex("PurchaseId");
+
                     b.HasIndex("Status");
 
                     b.ToTable("license_packages", (string)null);
+                });
+
+            modelBuilder.Entity("ITAdmin.Domain.Entities.LicensePurchase", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal?>("ActualTotalCost")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("actual_total_cost");
+
+                    b.Property<DateOnly?>("ContractEndDate")
+                        .HasColumnType("date")
+                        .HasColumnName("contract_end_date");
+
+                    b.Property<string>("ContractNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("contract_number");
+
+                    b.Property<DateOnly?>("ContractStartDate")
+                        .HasColumnType("date")
+                        .HasColumnName("contract_start_date");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("Currency")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("currency");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("DirectPurchaseNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("direct_purchase_number");
+
+                    b.Property<string>("DmoOrderNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("dmo_order_number");
+
+                    b.Property<DateOnly?>("EbysDate")
+                        .HasColumnType("date")
+                        .HasColumnName("ebys_date");
+
+                    b.Property<string>("EbysNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("ebys_number");
+
+                    b.Property<DateOnly?>("InvoiceDate")
+                        .HasColumnType("date")
+                        .HasColumnName("invoice_date");
+
+                    b.Property<string>("InvoiceNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("invoice_number");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("notes");
+
+                    b.Property<DateOnly?>("PurchaseDate")
+                        .HasColumnType("date")
+                        .HasColumnName("purchase_date");
+
+                    b.Property<string>("PurchaseType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("purchase_type");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid?>("SupplierCompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("supplier_company_id");
+
+                    b.Property<Guid?>("SupportCompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("support_company_id");
+
+                    b.Property<DateOnly?>("TenderDate")
+                        .HasColumnType("date")
+                        .HasColumnName("tender_date");
+
+                    b.Property<string>("TenderNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("tender_number");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("title");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("updated_by");
+
+                    b.Property<bool?>("VatIncluded")
+                        .HasColumnType("boolean")
+                        .HasColumnName("vat_included");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PurchaseType");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("SupplierCompanyId");
+
+                    b.HasIndex("SupportCompanyId");
+
+                    b.ToTable("license_purchases", (string)null);
                 });
 
             modelBuilder.Entity("ITAdmin.Domain.Entities.LicensedProduct", b =>
@@ -1797,40 +1862,40 @@ namespace ITAdmin.Persistence.Migrations
                     b.ToTable("security_logs", (string)null);
                 });
 
-            modelBuilder.Entity("ITAdmin.Domain.Entities.LicenseAcquisition", b =>
-                {
-                    b.HasOne("ITAdmin.Domain.Entities.LicenseCompany", "SupplierCompany")
-                        .WithMany("SupplierAcquisitions")
-                        .HasForeignKey("SupplierCompanyId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("ITAdmin.Domain.Entities.LicenseCompany", "SupportCompany")
-                        .WithMany("SupportAcquisitions")
-                        .HasForeignKey("SupportCompanyId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("SupplierCompany");
-
-                    b.Navigation("SupportCompany");
-                });
-
             modelBuilder.Entity("ITAdmin.Domain.Entities.LicensePackage", b =>
                 {
-                    b.HasOne("ITAdmin.Domain.Entities.LicenseAcquisition", "Acquisition")
-                        .WithMany("LicensePackages")
-                        .HasForeignKey("AcquisitionId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("ITAdmin.Domain.Entities.LicensedProduct", "Product")
                         .WithMany("LicensePackages")
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("Acquisition");
+                    b.HasOne("ITAdmin.Domain.Entities.LicensePurchase", "Purchase")
+                        .WithMany("LicensePackages")
+                        .HasForeignKey("PurchaseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("Product");
+
+                    b.Navigation("Purchase");
+                });
+
+            modelBuilder.Entity("ITAdmin.Domain.Entities.LicensePurchase", b =>
+                {
+                    b.HasOne("ITAdmin.Domain.Entities.LicenseCompany", "SupplierCompany")
+                        .WithMany("SupplierPurchases")
+                        .HasForeignKey("SupplierCompanyId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ITAdmin.Domain.Entities.LicenseCompany", "SupportCompany")
+                        .WithMany("SupportPurchases")
+                        .HasForeignKey("SupportCompanyId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("SupplierCompany");
+
+                    b.Navigation("SupportCompany");
                 });
 
             modelBuilder.Entity("ITAdmin.Domain.Entities.LicensedProduct", b =>
@@ -1892,18 +1957,18 @@ namespace ITAdmin.Persistence.Migrations
                     b.Navigation("PortalUser");
                 });
 
-            modelBuilder.Entity("ITAdmin.Domain.Entities.LicenseAcquisition", b =>
-                {
-                    b.Navigation("LicensePackages");
-                });
-
             modelBuilder.Entity("ITAdmin.Domain.Entities.LicenseCompany", b =>
                 {
-                    b.Navigation("SupplierAcquisitions");
+                    b.Navigation("SupplierPurchases");
 
-                    b.Navigation("SupportAcquisitions");
+                    b.Navigation("SupportPurchases");
 
                     b.Navigation("VendorProducts");
+                });
+
+            modelBuilder.Entity("ITAdmin.Domain.Entities.LicensePurchase", b =>
+                {
+                    b.Navigation("LicensePackages");
                 });
 
             modelBuilder.Entity("ITAdmin.Domain.Entities.LicensedProduct", b =>

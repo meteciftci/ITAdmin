@@ -1,6 +1,6 @@
 namespace ITAdmin.Domain.Enums;
 
-public enum LicenseAcquisitionStatus
+public enum LicensePurchaseStatus
 {
     Draft = 1,
     Active = 2,

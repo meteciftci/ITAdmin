@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Navigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
@@ -16,22 +16,19 @@ import { LoadingState } from "@/components/common/LoadingState";
 import { PageHeader } from "@/components/common/PageHeader";
 import { SectionCard } from "@/components/common/SectionCard";
 import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { Select } from "@/components/ui/select";
 import {
-  Dialog,
-  DialogBody,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { ProductFormDialog } from "@/features/license-management/components/ProductFormDialog";
-import {
-  getLicensedProductById,
   getLicensedProducts,
   updateLicensedProductStatus,
 } from "@/features/license-management/api";
 import { getLicenseTypeLabel } from "@/features/license-management/enum-labels";
 import { createLicenseProductColumns } from "@/features/license-management/license-columns";
+import {
+  buildLicenseProductDetailPath,
+  buildLicenseProductEditPath,
+  LICENSE_PRODUCT_CREATE_PATH,
+} from "@/features/license-management/license-product-detail-path";
 import type { LicensedProductListItem, LicenseType } from "@/features/license-management/types";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useAuthStore } from "@/features/auth/auth-store";
@@ -39,11 +36,13 @@ import { getApiErrorMessage } from "@/lib/api-error";
 import { canAccess } from "@/lib/permissions";
 import { PermissionCodes } from "@/lib/permission-codes";
 import { createApiErrorRouteState, getErrorRoutePath } from "@/lib/route-error";
+import { cn } from "@/lib/utils";
 
 type StatusFilter = "active" | "passive" | "all";
 
 export function LicenseProductsPage() {
   const { t } = useTranslation(["licenseManagement", "common"]);
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const user = useAuthStore((state) => state.user);
   const canManage = canAccess(user, PermissionCodes.LicenseManagement.ManageCatalog);
@@ -52,9 +51,6 @@ export function LicenseProductsPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [showCreate, setShowCreate] = useState(false);
-  const [selectedEdit, setSelectedEdit] = useState<LicensedProductListItem | null>(null);
-  const [selectedDetail, setSelectedDetail] = useState<LicensedProductListItem | null>(null);
   const [confirmTarget, setConfirmTarget] = useState<LicensedProductListItem | null>(null);
 
   const debouncedSearch = useDebouncedValue(search, 400);
@@ -70,18 +66,6 @@ export function LicenseProductsPage() {
         pageNumber,
         pageSize,
       }),
-  });
-
-  const detailQuery = useQuery({
-    queryKey: ["license-management", "products", "detail", selectedDetail?.id],
-    queryFn: () => getLicensedProductById(selectedDetail!.id),
-    enabled: Boolean(selectedDetail?.id),
-  });
-
-  const editDetailQuery = useQuery({
-    queryKey: ["license-management", "products", "edit", selectedEdit?.id],
-    queryFn: () => getLicensedProductById(selectedEdit!.id),
-    enabled: Boolean(selectedEdit?.id),
   });
 
   const statusMutation = useMutation({
@@ -110,12 +94,12 @@ export function LicenseProductsPage() {
         t,
         canManage,
         isStatusPending: statusMutation.isPending,
-        onDetail: setSelectedDetail,
-        onEdit: setSelectedEdit,
+        onDetail: (item) => navigate(buildLicenseProductDetailPath(item.id)),
+        onEdit: (item) => navigate(buildLicenseProductEditPath(item.id)),
         onToggleStatus: setConfirmTarget,
         getLicenseTypeLabel: resolveLicenseTypeLabel,
       }),
-    [t, canManage, statusMutation.isPending, resolveLicenseTypeLabel],
+    [t, canManage, statusMutation.isPending, resolveLicenseTypeLabel, navigate],
   );
 
   const items = listQuery.data?.items ?? [];
@@ -126,18 +110,6 @@ export function LicenseProductsPage() {
     pageIndex: pageNumber - 1,
     pageSize,
   });
-
-  const handleSaved = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ["license-management", "products"] });
-    queryClient.invalidateQueries({ queryKey: ["license-management", "overview"] });
-    toast.success(
-      selectedEdit
-        ? t("licenseManagement:messages.productUpdated")
-        : t("licenseManagement:messages.productCreated"),
-    );
-    setSelectedEdit(null);
-    setShowCreate(false);
-  }, [queryClient, selectedEdit, t]);
 
   if (listQuery.isError) {
     const routeState = createApiErrorRouteState(listQuery.error, {
@@ -193,7 +165,9 @@ export function LicenseProductsPage() {
                   {t("common:actions.refresh")}
                 </Button>
                 {canManage ? (
-                  <Button onClick={() => setShowCreate(true)}>{t("licenseManagement:actions.addProduct")}</Button>
+                  <Link to={LICENSE_PRODUCT_CREATE_PATH} className={cn(buttonVariants())}>
+                    {t("licenseManagement:actions.addProduct")}
+                  </Link>
                 ) : null}
               </>
             }
@@ -225,52 +199,6 @@ export function LicenseProductsPage() {
           ) : null}
         </div>
       </SectionCard>
-
-      <ProductFormDialog open={showCreate} mode="create" onClose={() => setShowCreate(false)} onSaved={handleSaved} />
-      <ProductFormDialog
-        open={Boolean(selectedEdit)}
-        mode="edit"
-        product={editDetailQuery.data ?? null}
-        onClose={() => setSelectedEdit(null)}
-        onSaved={handleSaved}
-      />
-
-      <Dialog open={Boolean(selectedDetail)}>
-        <DialogContent onOpenChange={(open) => !open && setSelectedDetail(null)}>
-          <DialogHeader>
-            <DialogTitle>{detailQuery.data?.name ?? selectedDetail?.name}</DialogTitle>
-          </DialogHeader>
-          <DialogBody className="space-y-2 text-sm">
-            {detailQuery.isLoading ? <LoadingState /> : null}
-            {detailQuery.data ? (
-              <>
-                <p>
-                  <span className="font-medium">{t("licenseManagement:table.vendor")}:</span>{" "}
-                  {detailQuery.data.vendorCompanyName ?? t("licenseManagement:form.noVendor")}
-                </p>
-                <p>
-                  <span className="font-medium">{t("licenseManagement:table.category")}:</span>{" "}
-                  {detailQuery.data.category ?? "-"}
-                </p>
-                <p>
-                  <span className="font-medium">{t("licenseManagement:table.defaultLicenseType")}:</span>{" "}
-                  {detailQuery.data.defaultLicenseType
-                    ? getLicenseTypeLabel(t, detailQuery.data.defaultLicenseType)
-                    : "-"}
-                </p>
-                <p>
-                  <span className="font-medium">{t("licenseManagement:form.description")}:</span>{" "}
-                  {detailQuery.data.description ?? "-"}
-                </p>
-                <p>
-                  <span className="font-medium">{t("licenseManagement:form.notes")}:</span>{" "}
-                  {detailQuery.data.notes ?? "-"}
-                </p>
-              </>
-            ) : null}
-          </DialogBody>
-        </DialogContent>
-      </Dialog>
 
       <ConfirmDialog
         open={Boolean(confirmTarget)}

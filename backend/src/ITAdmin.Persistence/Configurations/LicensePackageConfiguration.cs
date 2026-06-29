@@ -14,7 +14,7 @@ public sealed class LicensePackageConfiguration : IEntityTypeConfiguration<Licen
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).HasColumnName("id");
 
-        builder.Property(x => x.AcquisitionId).HasColumnName("acquisition_id").IsRequired();
+        builder.Property(x => x.PurchaseId).HasColumnName("purchase_id").IsRequired();
         builder.Property(x => x.ProductId).HasColumnName("product_id").IsRequired();
 
         builder.Property(x => x.LicenseType)
@@ -52,9 +52,9 @@ public sealed class LicensePackageConfiguration : IEntityTypeConfiguration<Licen
         builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
         builder.Property(x => x.UpdatedBy).HasColumnName("updated_by").HasMaxLength(200);
 
-        builder.HasOne(x => x.Acquisition)
+        builder.HasOne(x => x.Purchase)
             .WithMany(x => x.LicensePackages)
-            .HasForeignKey(x => x.AcquisitionId)
+            .HasForeignKey(x => x.PurchaseId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(x => x.Product)
@@ -62,7 +62,7 @@ public sealed class LicensePackageConfiguration : IEntityTypeConfiguration<Licen
             .HasForeignKey(x => x.ProductId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasIndex(x => x.AcquisitionId);
+        builder.HasIndex(x => x.PurchaseId);
         builder.HasIndex(x => x.ProductId);
         builder.HasIndex(x => x.Status);
         builder.HasIndex(x => x.IsActive);

@@ -19,6 +19,6 @@ public class LicenseCompany : AuditableEntity
     public bool IsActive { get; set; } = true;
 
     public ICollection<LicensedProduct> VendorProducts { get; set; } = new List<LicensedProduct>();
-    public ICollection<LicenseAcquisition> SupplierAcquisitions { get; set; } = new List<LicenseAcquisition>();
-    public ICollection<LicenseAcquisition> SupportAcquisitions { get; set; } = new List<LicenseAcquisition>();
+    public ICollection<LicensePurchase> SupplierPurchases { get; set; } = new List<LicensePurchase>();
+    public ICollection<LicensePurchase> SupportPurchases { get; set; } = new List<LicensePurchase>();
 }

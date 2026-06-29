@@ -22,7 +22,7 @@ public sealed class LicensePackageService(AppDbContext context) : ILicensePackag
         var itemsQuery = context.LicensePackages
             .AsNoTracking()
             .Include(x => x.Product)
-            .Include(x => x.Acquisition)
+            .Include(x => x.Purchase)
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(query.Search))
@@ -30,13 +30,13 @@ public sealed class LicensePackageService(AppDbContext context) : ILicensePackag
             var pattern = BuildILikeContainsPattern(query.Search);
             itemsQuery = itemsQuery.Where(x =>
                 EF.Functions.ILike(x.Product.Name, pattern)
-                || EF.Functions.ILike(x.Acquisition.Title, pattern)
+                || EF.Functions.ILike(x.Purchase.Title, pattern)
                 || (x.SerialNumber != null && EF.Functions.ILike(x.SerialNumber, pattern)));
         }
 
-        if (query.AcquisitionId is { } acquisitionId)
+        if (query.PurchaseId is { } purchaseId)
         {
-            itemsQuery = itemsQuery.Where(x => x.AcquisitionId == acquisitionId);
+            itemsQuery = itemsQuery.Where(x => x.PurchaseId == purchaseId);
         }
 
         if (query.ProductId is { } productId)
@@ -64,7 +64,7 @@ public sealed class LicensePackageService(AppDbContext context) : ILicensePackag
             .Select(x => new LicensePackageListItem(
                 x.Id,
                 x.Product.Name,
-                x.Acquisition.Title,
+                x.Purchase.Title,
                 x.LicenseType,
                 x.Quantity,
                 UsedQuantity,
@@ -85,7 +85,7 @@ public sealed class LicensePackageService(AppDbContext context) : ILicensePackag
         var entity = await context.LicensePackages
             .AsNoTracking()
             .Include(x => x.Product)
-            .Include(x => x.Acquisition)
+            .Include(x => x.Purchase)
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 
         return entity is null ? null : Map(entity);
@@ -96,7 +96,7 @@ public sealed class LicensePackageService(AppDbContext context) : ILicensePackag
         CancellationToken cancellationToken = default)
     {
         var validationError = await ValidatePackageAsync(
-            request.AcquisitionId,
+            request.PurchaseId,
             request.ProductId,
             request.LicenseType,
             request.Quantity,
@@ -118,7 +118,7 @@ public sealed class LicensePackageService(AppDbContext context) : ILicensePackag
         var now = DateTime.UtcNow;
         var entity = new LicensePackage
         {
-            AcquisitionId = request.AcquisitionId,
+            PurchaseId = request.PurchaseId,
             ProductId = request.ProductId,
             LicenseType = request.LicenseType,
             Quantity = request.Quantity,
@@ -144,7 +144,7 @@ public sealed class LicensePackageService(AppDbContext context) : ILicensePackag
             "Create",
             "LicensePackage",
             entity.Id,
-            $"License package created for product {request.ProductId} under acquisition {request.AcquisitionId}.",
+            $"License package created for product {request.ProductId} under purchase {request.PurchaseId}.",
             request.ActorUserId,
             request.ActorUserName,
             request.ActorIpAddress,
@@ -153,7 +153,7 @@ public sealed class LicensePackageService(AppDbContext context) : ILicensePackag
         await context.SaveChangesAsync(cancellationToken);
 
         await context.Entry(entity).Reference(x => x.Product).LoadAsync(cancellationToken);
-        await context.Entry(entity).Reference(x => x.Acquisition).LoadAsync(cancellationToken);
+        await context.Entry(entity).Reference(x => x.Purchase).LoadAsync(cancellationToken);
 
         return new LicensePackageOperationResult(true, "License package created.", Map(entity));
     }
@@ -164,7 +164,7 @@ public sealed class LicensePackageService(AppDbContext context) : ILicensePackag
     {
         var entity = await context.LicensePackages
             .Include(x => x.Product)
-            .Include(x => x.Acquisition)
+            .Include(x => x.Purchase)
             .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken);
 
         if (entity is null)
@@ -173,7 +173,7 @@ public sealed class LicensePackageService(AppDbContext context) : ILicensePackag
         }
 
         var validationError = await ValidatePackageAsync(
-            request.AcquisitionId,
+            request.PurchaseId,
             request.ProductId,
             request.LicenseType,
             request.Quantity,
@@ -188,7 +188,7 @@ public sealed class LicensePackageService(AppDbContext context) : ILicensePackag
         }
 
         var now = DateTime.UtcNow;
-        entity.AcquisitionId = request.AcquisitionId;
+        entity.PurchaseId = request.PurchaseId;
         entity.ProductId = request.ProductId;
         entity.LicenseType = request.LicenseType;
         entity.Quantity = request.Quantity;
@@ -228,7 +228,7 @@ public sealed class LicensePackageService(AppDbContext context) : ILicensePackag
     {
         var entity = await context.LicensePackages
             .Include(x => x.Product)
-            .Include(x => x.Acquisition)
+            .Include(x => x.Purchase)
             .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken);
 
         if (entity is null)
@@ -268,7 +268,7 @@ public sealed class LicensePackageService(AppDbContext context) : ILicensePackag
     }
 
     private async Task<string?> ValidatePackageAsync(
-        Guid acquisitionId,
+        Guid purchaseId,
         Guid productId,
         LicenseType licenseType,
         int quantity,
@@ -288,10 +288,10 @@ public sealed class LicensePackageService(AppDbContext context) : ILicensePackag
             return "License quantity must be at least 1.";
         }
 
-        var acquisitionExists = await context.LicenseAcquisitions.AnyAsync(x => x.Id == acquisitionId, cancellationToken);
-        if (!acquisitionExists)
+        var purchaseExists = await context.LicensePurchases.AnyAsync(x => x.Id == purchaseId, cancellationToken);
+        if (!purchaseExists)
         {
-            return "Acquisition was not found.";
+            return "Purchase was not found.";
         }
 
         var productExists = await context.LicensedProducts.AnyAsync(x => x.Id == productId, cancellationToken);
@@ -321,8 +321,8 @@ public sealed class LicensePackageService(AppDbContext context) : ILicensePackag
     private static LicensePackageDetail Map(LicensePackage entity) =>
         new(
             entity.Id,
-            entity.AcquisitionId,
-            entity.Acquisition.Title,
+            entity.PurchaseId,
+            entity.Purchase.Title,
             entity.ProductId,
             entity.Product.Name,
             entity.LicenseType,

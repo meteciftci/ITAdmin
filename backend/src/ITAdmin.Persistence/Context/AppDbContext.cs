@@ -28,8 +28,9 @@ public class AppDbContext : DbContext
     public DbSet<NotificationOutbox> NotificationOutboxItems => Set<NotificationOutbox>();
     public DbSet<LicenseCompany> LicenseCompanies => Set<LicenseCompany>();
     public DbSet<LicensedProduct> LicensedProducts => Set<LicensedProduct>();
-    public DbSet<LicenseAcquisition> LicenseAcquisitions => Set<LicenseAcquisition>();
+    public DbSet<LicensePurchase> LicensePurchases => Set<LicensePurchase>();
     public DbSet<LicensePackage> LicensePackages => Set<LicensePackage>();
+    public DbSet<LicenseManagementSettings> LicenseManagementSettings => Set<LicenseManagementSettings>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
