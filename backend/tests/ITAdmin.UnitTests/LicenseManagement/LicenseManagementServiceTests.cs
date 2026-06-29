@@ -16,7 +16,7 @@ public sealed class LicenseManagementServiceTests
         {
             PermissionCodes.LicenseManagement.View,
             PermissionCodes.LicenseManagement.ManageCatalog,
-            PermissionCodes.LicenseManagement.ManageAcquisitions,
+            PermissionCodes.LicenseManagement.ManagePurchases,
             PermissionCodes.LicenseManagement.ManageRequests,
             PermissionCodes.LicenseManagement.ViewReports,
             PermissionCodes.LicenseManagement.ManageSettings
@@ -38,7 +38,7 @@ public sealed class LicenseManagementServiceTests
         var result = await service.CreateAsync(
             new CreateLicenseCompanyRequest(
                 "",
-                null, null, null, null, null, null, null, null, null, null, null, true,
+                null, null, null, null, null, null, null, true,
                 null, "tester", null, null),
             CancellationToken.None);
 
@@ -55,7 +55,7 @@ public sealed class LicenseManagementServiceTests
         var result = await service.CreateAsync(
             new CreateLicenseCompanyRequest(
                 "Acme Corp",
-                null, null, "not-an-email", null, null, null, null, null, null, null, null, true,
+                null, "not-an-email", null, null, null, null, null, true,
                 null, "tester", null, null),
             CancellationToken.None);
 
@@ -67,12 +67,13 @@ public sealed class LicenseManagementServiceTests
     public async Task CreateProductAsync_WithoutName_ReturnsValidationFailure()
     {
         await using var context = CreateDbContext();
+        var categoryId = await SeedCategoryAsync(context);
         var service = new LicensedProductService(context);
 
         var result = await service.CreateAsync(
             new CreateLicensedProductRequest(
                 "",
-                null, null, null, null, true, null,
+                null, categoryId, null, true,
                 null, "tester", null, null),
             CancellationToken.None);
 
@@ -84,9 +85,11 @@ public sealed class LicenseManagementServiceTests
     public async Task CreateProductAsync_DuplicateActiveName_ReturnsValidationFailure()
     {
         await using var context = CreateDbContext();
+        var categoryId = await SeedCategoryAsync(context);
         context.LicensedProducts.Add(new Domain.Entities.LicensedProduct
         {
             Name = "Microsoft Office",
+            CategoryId = categoryId,
             IsActive = true,
             CreatedAt = DateTime.UtcNow,
             CreatedBy = "seed"
@@ -97,7 +100,7 @@ public sealed class LicenseManagementServiceTests
         var result = await service.CreateAsync(
             new CreateLicensedProductRequest(
                 "microsoft office",
-                null, null, null, null, true, null,
+                null, categoryId, null, true,
                 null, "tester", null, null),
             CancellationToken.None);
 
@@ -106,39 +109,63 @@ public sealed class LicenseManagementServiceTests
     }
 
     [Fact]
-    public async Task CreateProductAsync_WithNullDefaultLicenseType_Succeeds()
+    public async Task CreateProductAsync_WithBrandAndCategory_Succeeds()
     {
         await using var context = CreateDbContext();
+        var categoryId = await SeedCategoryAsync(context, "Grafik Tasarım");
         var service = new LicensedProductService(context);
 
         var result = await service.CreateAsync(
             new CreateLicensedProductRequest(
                 "Photoshop",
-                null, null, null, null, true, null,
+                "Adobe", categoryId, "Design suite", true,
                 null, "tester", null, null),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Product);
-        Assert.Null(result.Product.DefaultLicenseType);
+        Assert.Equal("Adobe", result.Product.Brand);
+        Assert.Equal("Grafik Tasarım", result.Product.CategoryName);
     }
 
     [Fact]
-    public async Task CreateProductAsync_WithNamedUserDefaultLicenseType_Succeeds()
+    public async Task CreateProductAsync_WithPassiveCategory_ReturnsValidationFailure()
     {
         await using var context = CreateDbContext();
+        var categoryId = await SeedCategoryAsync(context, "Legacy", isActive: false);
         var service = new LicensedProductService(context);
 
         var result = await service.CreateAsync(
             new CreateLicensedProductRequest(
                 "Photoshop",
-                null, "Grafik", LicenseType.NamedUser, null, true, null,
+                null, categoryId, null, true,
                 null, "tester", null, null),
             CancellationToken.None);
 
-        Assert.True(result.IsSuccess);
-        Assert.NotNull(result.Product);
-        Assert.Equal(LicenseType.NamedUser, result.Product.DefaultLicenseType);
+        Assert.False(result.IsSuccess);
+        Assert.Contains("Passive", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task CreateCategoryAsync_DuplicateActiveName_ReturnsValidationFailure()
+    {
+        await using var context = CreateDbContext();
+        await SeedCategoryAsync(context, "Grafik Tasarım");
+        var service = new LicenseProductCategoryService(context);
+
+        var result = await service.CreateAsync(
+            new CreateLicenseProductCategoryRequest(
+                "grafik tasarım",
+                null,
+                true,
+                null,
+                "tester",
+                null,
+                null),
+            CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("same name", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -383,6 +410,7 @@ public sealed class LicenseManagementServiceTests
     public async Task GetSummaryAsync_ReturnsCorrectCounts()
     {
         await using var context = CreateDbContext();
+        var categoryId = await SeedCategoryAsync(context);
         context.LicenseCompanies.Add(new Domain.Entities.LicenseCompany
         {
             Name = "Vendor A",
@@ -393,6 +421,7 @@ public sealed class LicenseManagementServiceTests
         context.LicensedProducts.Add(new Domain.Entities.LicensedProduct
         {
             Name = "Product A",
+            CategoryId = categoryId,
             IsActive = true,
             CreatedAt = DateTime.UtcNow,
             CreatedBy = "seed"
@@ -400,6 +429,7 @@ public sealed class LicenseManagementServiceTests
         context.LicensedProducts.Add(new Domain.Entities.LicensedProduct
         {
             Name = "Product B",
+            CategoryId = categoryId,
             IsActive = false,
             CreatedAt = DateTime.UtcNow,
             CreatedBy = "seed"
@@ -462,11 +492,30 @@ public sealed class LicenseManagementServiceTests
         return purchase.Id;
     }
 
+    private static async Task<Guid> SeedCategoryAsync(
+        AppDbContext context,
+        string name = "Genel",
+        bool isActive = true)
+    {
+        var category = new Domain.Entities.LicenseProductCategory
+        {
+            Name = name,
+            IsActive = isActive,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "seed"
+        };
+        context.LicenseProductCategories.Add(category);
+        await context.SaveChangesAsync();
+        return category.Id;
+    }
+
     private static async Task<Guid> SeedProductAsync(AppDbContext context)
     {
+        var categoryId = await SeedCategoryAsync(context);
         var product = new Domain.Entities.LicensedProduct
         {
             Name = "Test Product",
+            CategoryId = categoryId,
             IsActive = true,
             CreatedAt = DateTime.UtcNow,
             CreatedBy = "seed"

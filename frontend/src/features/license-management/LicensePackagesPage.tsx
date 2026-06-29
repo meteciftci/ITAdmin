@@ -26,6 +26,7 @@ import {
   getPackageStatusLabel,
   PACKAGE_STATUSES,
 } from "@/features/license-management/enum-labels";
+import { formatLicensedProductLabel } from "@/features/license-management/product-labels";
 import { createLicensePackageColumns } from "@/features/license-management/license-columns";
 import {
   buildLicensePackageDetailPath,
@@ -50,7 +51,7 @@ export function LicensePackagesPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const user = useAuthStore((state) => state.user);
-  const canManage = canAccess(user, PermissionCodes.LicenseManagement.ManageAcquisitions);
+  const canManage = canAccess(user, PermissionCodes.LicenseManagement.ManagePurchases);
 
   const purchaseIdFromQuery = searchParams.get("purchaseId") ?? "";
   const purchaseIdFilter = purchaseIdFromQuery;
@@ -196,7 +197,7 @@ export function LicensePackagesPage() {
                     <option value="">{t("common:status.all")}</option>
                     {(productsQuery.data ?? []).map((product) => (
                       <option key={product.id} value={product.id}>
-                        {product.name}
+                        {formatLicensedProductLabel(product)}
                       </option>
                     ))}
                   </Select>

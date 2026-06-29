@@ -47,7 +47,7 @@ export function LicensePurchasesPage() {
   const { t } = useTranslation(["licenseManagement", "common"]);
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
-  const canManage = canAccess(user, PermissionCodes.LicenseManagement.ManageAcquisitions);
+  const canManage = canAccess(user, PermissionCodes.LicenseManagement.ManagePurchases);
 
   const [search, setSearch] = useState("");
   const [purchaseTypeFilter, setPurchaseTypeFilter] = useState<PurchaseTypeFilter>("all");

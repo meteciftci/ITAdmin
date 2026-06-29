@@ -29,7 +29,7 @@ public sealed class LicenseCompaniesController(ILicenseCompanyService companySer
 
         return Ok(new PagedResponse<LicenseCompanyListItemResponse>(
             result.Items.Select(x => new LicenseCompanyListItemResponse(
-                x.Id, x.Name, x.Email, x.Phone, x.SupportEmail, x.ContactPersonName, x.IsActive)).ToList(),
+                x.Id, x.Name, x.Email, x.Phone, x.ContactPersonName, x.ContactPersonPhone, x.IsActive)).ToList(),
             result.PageNumber,
             result.PageSize,
             result.TotalCount,
@@ -60,13 +60,9 @@ public sealed class LicenseCompaniesController(ILicenseCompanyService companySer
         var result = await companyService.CreateAsync(
             new AppModels.CreateLicenseCompanyRequest(
                 request.Name,
-                request.TaxNumber,
                 request.Phone,
                 request.Email,
                 request.Website,
-                request.Address,
-                request.SupportPhone,
-                request.SupportEmail,
                 request.ContactPersonName,
                 request.ContactPersonPhone,
                 request.ContactPersonEmail,
@@ -97,13 +93,9 @@ public sealed class LicenseCompaniesController(ILicenseCompanyService companySer
             new AppModels.UpdateLicenseCompanyRequest(
                 id,
                 request.Name,
-                request.TaxNumber,
                 request.Phone,
                 request.Email,
                 request.Website,
-                request.Address,
-                request.SupportPhone,
-                request.SupportEmail,
                 request.ContactPersonName,
                 request.ContactPersonPhone,
                 request.ContactPersonEmail,
@@ -152,13 +144,9 @@ public sealed class LicenseCompaniesController(ILicenseCompanyService companySer
         new(
             company.Id,
             company.Name,
-            company.TaxNumber,
             company.Phone,
             company.Email,
             company.Website,
-            company.Address,
-            company.SupportPhone,
-            company.SupportEmail,
             company.ContactPersonName,
             company.ContactPersonPhone,
             company.ContactPersonEmail,

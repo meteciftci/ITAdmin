@@ -366,9 +366,21 @@ public sealed class LicenseRequestServiceTests
         string name = "Photoshop",
         bool isActive = true)
     {
+        var category = new Domain.Entities.LicenseProductCategory
+        {
+            Name = "Grafik Tasarım",
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "seed",
+        };
+        context.LicenseProductCategories.Add(category);
+        await context.SaveChangesAsync();
+
         var product = new Domain.Entities.LicensedProduct
         {
             Name = name,
+            Brand = "Adobe",
+            CategoryId = category.Id,
             IsActive = isActive,
             CreatedAt = DateTime.UtcNow,
             CreatedBy = "seed",

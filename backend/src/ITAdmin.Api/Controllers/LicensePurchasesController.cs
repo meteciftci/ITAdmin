@@ -64,7 +64,7 @@ public sealed class LicensePurchasesController(ILicensePurchaseService purchaseS
     }
 
     [HttpPost]
-    [RequirePermission(LicenseManagementPermissions.ManageAcquisitions)]
+    [RequirePermission(LicenseManagementPermissions.ManagePurchases)]
     public async Task<ActionResult<LicensePurchaseDetailResponse>> CreatePurchase(
         [FromBody] CreateLicensePurchaseRequest request,
         CancellationToken cancellationToken)
@@ -111,7 +111,7 @@ public sealed class LicensePurchasesController(ILicensePurchaseService purchaseS
     }
 
     [HttpPut("{id:guid}")]
-    [RequirePermission(LicenseManagementPermissions.ManageAcquisitions)]
+    [RequirePermission(LicenseManagementPermissions.ManagePurchases)]
     public async Task<ActionResult<LicensePurchaseDetailResponse>> UpdatePurchase(
         Guid id,
         [FromBody] UpdateLicensePurchaseRequest request,
@@ -156,7 +156,7 @@ public sealed class LicensePurchasesController(ILicensePurchaseService purchaseS
     }
 
     [HttpPatch("{id:guid}/status")]
-    [RequirePermission(LicenseManagementPermissions.ManageAcquisitions)]
+    [RequirePermission(LicenseManagementPermissions.ManagePurchases)]
     public async Task<ActionResult<LicensePurchaseDetailResponse>> UpdatePurchaseStatus(
         Guid id,
         [FromBody] UpdateLicensePurchaseStatusRequest request,

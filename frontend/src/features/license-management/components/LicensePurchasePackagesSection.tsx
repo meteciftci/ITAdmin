@@ -34,7 +34,7 @@ export function LicensePurchasePackagesSection({ purchaseId }: Props) {
   const { t } = useTranslation(["licenseManagement", "common"]);
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
-  const canManage = canAccess(user, PermissionCodes.LicenseManagement.ManageAcquisitions);
+  const canManage = canAccess(user, PermissionCodes.LicenseManagement.ManagePurchases);
 
   const packagesQuery = useQuery({
     queryKey: ["license-management", "packages", "purchase-detail", purchaseId],

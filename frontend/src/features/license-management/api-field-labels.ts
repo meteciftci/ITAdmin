@@ -1,13 +1,13 @@
 import type { TFunction } from "i18next";
 
 const LICENSE_FIELD_LABEL_KEYS: Record<string, string> = {
-  defaultLicenseType: "licenseManagement:form.licenseType",
+  categoryId: "licenseManagement:table.category",
   purchaseType: "licenseManagement:form.purchaseType",
   licenseType: "licenseManagement:form.licenseType",
   status: "licenseManagement:form.status",
   name: "licenseManagement:form.productName",
   title: "licenseManagement:form.title",
-  vendorCompanyId: "licenseManagement:form.vendorCompany",
+  brand: "licenseManagement:form.brand",
   supplierCompanyId: "licenseManagement:form.supplierCompany",
   supportCompanyId: "licenseManagement:form.supportCompany",
   productId: "licenseManagement:form.product",

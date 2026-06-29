@@ -1,7 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using ITAdmin.Api.Contracts.LicenseManagement;
-using ITAdmin.Domain.Enums;
 
 namespace ITAdmin.UnitTests.LicenseManagement;
 
@@ -14,17 +13,15 @@ public sealed class LicenseManagementApiJsonBindingTests
     };
 
     [Fact]
-    public void Deserialize_CreateLicensedProductRequest_AcceptsNamedUserStringEnum()
+    public void Deserialize_CreateLicensedProductRequest_AcceptsBrandAndCategoryId()
     {
         const string json = """
             {
               "name": "Photoshop",
-              "vendorCompanyId": null,
-              "category": "Grafik",
-              "defaultLicenseType": "NamedUser",
-              "description": null,
-              "isActive": true,
-              "notes": null
+              "brand": "Adobe",
+              "categoryId": "00000000-0000-0000-0000-000000000001",
+              "description": "Design suite",
+              "isActive": true
             }
             """;
 
@@ -32,28 +29,8 @@ public sealed class LicenseManagementApiJsonBindingTests
 
         Assert.NotNull(request);
         Assert.Equal("Photoshop", request.Name);
-        Assert.Equal(LicenseType.NamedUser, request.DefaultLicenseType);
-    }
-
-    [Fact]
-    public void Deserialize_CreateLicensedProductRequest_AcceptsNullDefaultLicenseType()
-    {
-        const string json = """
-            {
-              "name": "Photoshop",
-              "vendorCompanyId": null,
-              "category": null,
-              "defaultLicenseType": null,
-              "description": null,
-              "isActive": true,
-              "notes": null
-            }
-            """;
-
-        var request = JsonSerializer.Deserialize<CreateLicensedProductRequest>(json, ApiJsonOptions);
-
-        Assert.NotNull(request);
-        Assert.Null(request.DefaultLicenseType);
+        Assert.Equal("Adobe", request.Brand);
+        Assert.Equal(Guid.Parse("00000000-0000-0000-0000-000000000001"), request.CategoryId);
     }
 
     [Fact]
@@ -89,8 +66,8 @@ public sealed class LicenseManagementApiJsonBindingTests
         var request = JsonSerializer.Deserialize<CreateLicensePurchaseRequest>(json, ApiJsonOptions);
 
         Assert.NotNull(request);
-        Assert.Equal(LicensePurchaseType.DirectPurchase, request.PurchaseType);
-        Assert.Equal(LicensePurchaseStatus.Draft, request.Status);
+        Assert.Equal(Domain.Enums.LicensePurchaseType.DirectPurchase, request.PurchaseType);
+        Assert.Equal(Domain.Enums.LicensePurchaseStatus.Draft, request.Status);
     }
 
     [Fact]
@@ -120,22 +97,27 @@ public sealed class LicenseManagementApiJsonBindingTests
         var request = JsonSerializer.Deserialize<CreateLicensePackageRequest>(json, ApiJsonOptions);
 
         Assert.NotNull(request);
-        Assert.Equal(LicenseType.NamedUser, request.LicenseType);
-        Assert.Equal(LicensePackageStatus.Active, request.Status);
+        Assert.Equal(Domain.Enums.LicenseType.NamedUser, request.LicenseType);
+        Assert.Equal(Domain.Enums.LicensePackageStatus.Active, request.Status);
     }
 
     [Fact]
-    public void Deserialize_CreateLicensedProductRequest_RejectsInvalidEnumValue()
+    public void Deserialize_DirectoryUserLookupReadinessResponse_DoesNotExposeSettingsFields()
     {
         const string json = """
             {
-              "name": "Photoshop",
-              "defaultLicenseType": "NotARealType",
-              "isActive": true
+              "isReady": false,
+              "reason": "AdManagementNotConfigured",
+              "message": "AD kullanıcı arama için AD Yönetim bağlantısı yapılandırılmalıdır."
             }
             """;
 
-        Assert.Throws<JsonException>(() =>
-            JsonSerializer.Deserialize<CreateLicensedProductRequest>(json, ApiJsonOptions));
+        var response = JsonSerializer.Deserialize<DirectoryUserLookupReadinessResponse>(json, ApiJsonOptions);
+
+        Assert.NotNull(response);
+        Assert.False(response.IsReady);
+        Assert.Equal("AdManagementNotConfigured", response.Reason);
+        Assert.DoesNotContain("baseDn", json, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("serviceAccount", json, StringComparison.OrdinalIgnoreCase);
     }
 }

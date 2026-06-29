@@ -625,11 +625,6 @@ namespace ITAdmin.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
-                    b.Property<string>("Address")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)")
-                        .HasColumnName("address");
-
                     b.Property<string>("ContactPersonEmail")
                         .HasMaxLength(250)
                         .HasColumnType("character varying(250)")
@@ -680,21 +675,6 @@ namespace ITAdmin.Persistence.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
                         .HasColumnName("phone");
-
-                    b.Property<string>("SupportEmail")
-                        .HasMaxLength(250)
-                        .HasColumnType("character varying(250)")
-                        .HasColumnName("support_email");
-
-                    b.Property<string>("SupportPhone")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("support_phone");
-
-                    b.Property<string>("TaxNumber")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("tax_number");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -899,6 +879,57 @@ namespace ITAdmin.Persistence.Migrations
                     b.HasIndex("Status");
 
                     b.ToTable("license_packages", (string)null);
+                });
+
+            modelBuilder.Entity("ITAdmin.Domain.Entities.LicenseProductCategory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("Name");
+
+                    b.ToTable("license_product_categories", (string)null);
                 });
 
             modelBuilder.Entity("ITAdmin.Domain.Entities.LicensePurchase", b =>
@@ -1384,10 +1415,14 @@ namespace ITAdmin.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
-                    b.Property<string>("Category")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("category");
+                    b.Property<string>("Brand")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("brand");
+
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("category_id");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -1397,11 +1432,6 @@ namespace ITAdmin.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
                         .HasColumnName("created_by");
-
-                    b.Property<string>("DefaultLicenseType")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("default_license_type");
 
                     b.Property<string>("Description")
                         .HasMaxLength(2000)
@@ -1420,11 +1450,6 @@ namespace ITAdmin.Persistence.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("name");
 
-                    b.Property<string>("Notes")
-                        .HasMaxLength(4000)
-                        .HasColumnType("character varying(4000)")
-                        .HasColumnName("notes");
-
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
@@ -1434,17 +1459,13 @@ namespace ITAdmin.Persistence.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("updated_by");
 
-                    b.Property<Guid?>("VendorCompanyId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("vendor_company_id");
-
                     b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
 
                     b.HasIndex("IsActive");
 
                     b.HasIndex("Name");
-
-                    b.HasIndex("VendorCompanyId");
 
                     b.ToTable("licensed_products", (string)null);
                 });
@@ -2264,12 +2285,13 @@ namespace ITAdmin.Persistence.Migrations
 
             modelBuilder.Entity("ITAdmin.Domain.Entities.LicensedProduct", b =>
                 {
-                    b.HasOne("ITAdmin.Domain.Entities.LicenseCompany", "VendorCompany")
-                        .WithMany("VendorProducts")
-                        .HasForeignKey("VendorCompanyId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                    b.HasOne("ITAdmin.Domain.Entities.LicenseProductCategory", "Category")
+                        .WithMany("Products")
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
-                    b.Navigation("VendorCompany");
+                    b.Navigation("Category");
                 });
 
             modelBuilder.Entity("ITAdmin.Domain.Entities.PortalRolePermission", b =>
@@ -2326,8 +2348,11 @@ namespace ITAdmin.Persistence.Migrations
                     b.Navigation("SupplierPurchases");
 
                     b.Navigation("SupportPurchases");
+                });
 
-                    b.Navigation("VendorProducts");
+            modelBuilder.Entity("ITAdmin.Domain.Entities.LicenseProductCategory", b =>
+                {
+                    b.Navigation("Products");
                 });
 
             modelBuilder.Entity("ITAdmin.Domain.Entities.LicensePurchase", b =>

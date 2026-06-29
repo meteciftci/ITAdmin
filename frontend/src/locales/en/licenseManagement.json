@@ -13,7 +13,7 @@
     },
     "companies": {
       "title": "Companies",
-      "description": "Manage vendor, supplier and support companies.",
+      "description": "Manage supplier and support companies.",
       "listTitle": "Company list",
       "empty": "No company records yet.",
       "searchPlaceholder": "Search company name, email or contact person..."
@@ -23,7 +23,14 @@
       "description": "Manage licensed products and applications.",
       "listTitle": "Product list",
       "empty": "No product records yet.",
-      "searchPlaceholder": "Search product name, category or vendor..."
+      "searchPlaceholder": "Search product name, brand or category..."
+    },
+    "categories": {
+      "title": "Categories",
+      "description": "Manage product categories.",
+      "listTitle": "Category list",
+      "empty": "No categories yet.",
+      "searchPlaceholder": "Search category name or description..."
     },
     "purchases": {
       "title": "Purchases",
@@ -152,6 +159,23 @@
           "notFound": "Product not found."
         }
       },
+      "categories": {
+        "create": {
+          "title": "Create category",
+          "description": "Add a new product category.",
+          "formTitle": "Category details"
+        },
+        "edit": {
+          "title": "Edit category",
+          "formTitle": "Category details"
+        },
+        "detail": {
+          "title": "Category detail",
+          "description": "Details of the category record.",
+          "summaryTitle": "Summary",
+          "notFound": "Category not found."
+        }
+      },
       "purchases": {
         "create": {
           "title": "Create purchase",
@@ -216,6 +240,8 @@
       "editCompany": "Edit company",
       "addProduct": "Create product",
       "editProduct": "Edit product",
+      "addCategory": "Create category",
+      "editCategory": "Edit category",
       "addPurchase": "Create purchase",
       "editPurchase": "Edit purchase",
       "addPackage": "Create license package",
@@ -224,18 +250,20 @@
       "deactivateCompany": "Deactivate company",
       "activateProduct": "Activate product",
       "deactivateProduct": "Deactivate product",
+      "activateCategory": "Activate category",
+      "deactivateCategory": "Deactivate category",
       "updateStatus": "Update status"
     },
     "table": {
       "companyName": "Company name",
       "email": "Email",
       "phone": "Phone",
-      "supportEmail": "Support email",
       "contactPerson": "Contact person",
+      "contactPersonPhone": "Contact phone",
       "productName": "Product name",
-      "vendor": "Vendor",
+      "brand": "Brand",
       "category": "Category",
-      "defaultLicenseType": "Default license type",
+      "categoryName": "Category name",
       "purchaseTitle": "Title",
       "purchaseType": "Purchase type",
       "purchaseDate": "Purchase date",
@@ -255,17 +283,14 @@
     },
     "form": {
       "companyName": "Company name",
-      "taxNumber": "Tax number",
       "website": "Website",
-      "address": "Address",
-      "supportPhone": "Support phone",
-      "supportEmail": "Support email",
       "contactPersonName": "Contact person",
       "contactPersonPhone": "Contact phone",
       "contactPersonEmail": "Contact email",
       "notes": "Notes",
       "productName": "Product name",
-      "vendorCompany": "Vendor company",
+      "brand": "Brand",
+      "categoryName": "Category name",
       "description": "Description",
       "purchaseType": "Purchase type",
       "title": "Title",
@@ -303,21 +328,19 @@
       "licenseNotes": "License notes",
       "selectCompany": "Select company",
       "selectProduct": "Select product",
+      "selectCategory": "Select category",
       "selectPurchase": "Select purchase",
-      "noVendor": "No vendor specified",
       "purchaseTypeFieldHint": "Fields are shown based on the selected purchase type.",
       "sections": {
-        "basic": "Basic Information",
-        "purchaseInfo": "Purchase Information",
-        "officialDocuments": "Official Documents / References",
+        "generalInfo": "General Information",
+        "officialProcess": "Official Process Information",
         "companyAndCost": "Company and Cost",
-        "notes": "Notes"
+        "other": "Other"
       }
     },
     "filters": {
       "status": "Status",
       "purchaseType": "Purchase type",
-      "vendor": "Vendor",
       "product": "Product",
       "purchase": "Purchase",
       "packageStatus": "Package status"
@@ -329,6 +352,9 @@
       "productCreated": "Product created.",
       "productUpdated": "Product updated.",
       "productStatusUpdated": "Product status updated.",
+      "categoryCreated": "Category created.",
+      "categoryUpdated": "Category updated.",
+      "categoryStatusUpdated": "Category status updated.",
       "purchaseCreated": "Purchase created.",
       "purchaseUpdated": "Purchase updated.",
       "purchaseStatusUpdated": "Purchase status updated.",
@@ -344,6 +370,7 @@
       "quantityMin": "Quantity must be at least 1.",
       "purchaseRequired": "Purchase is required.",
       "productRequired": "Product is required.",
+      "categoryRequired": "Category selection is required.",
       "invalidEmail": "Enter a valid email.",
       "invalidUrl": "Enter a valid URL.",
       "endDateWarning": "End date is not set."
@@ -356,7 +383,11 @@
       "deactivateProductTitle": "Deactivate product",
       "deactivateProductDescription": "Are you sure you want to deactivate this product?",
       "activateProductTitle": "Activate product",
-      "activateProductDescription": "Are you sure you want to activate this product?"
+      "activateProductDescription": "Are you sure you want to activate this product?",
+      "deactivateCategoryTitle": "Deactivate category",
+      "deactivateCategoryDescription": "Are you sure you want to deactivate this category?",
+      "activateCategoryTitle": "Activate category",
+      "activateCategoryDescription": "Are you sure you want to activate this category?"
     },
     "boolean": {
       "yes": "Yes",

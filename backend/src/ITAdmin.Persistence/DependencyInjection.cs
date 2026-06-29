@@ -45,6 +45,7 @@ public static class DependencyInjection
         services.AddScoped<INotificationOutboxBatchProcessor, NotificationOutboxBatchProcessor>();
         services.AddScoped<ILicenseManagementOverviewService, LicenseManagementOverviewService>();
         services.AddScoped<ILicenseCompanyService, LicenseCompanyService>();
+        services.AddScoped<ILicenseProductCategoryService, LicenseProductCategoryService>();
         services.AddScoped<ILicensedProductService, LicensedProductService>();
         services.AddScoped<ILicensePurchaseService, LicensePurchaseService>();
         services.AddScoped<ILicensePackageService, LicensePackageService>();

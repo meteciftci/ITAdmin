@@ -39,17 +39,13 @@ export type LicenseCompanyListItem = {
   name: string;
   email: string | null;
   phone: string | null;
-  supportEmail: string | null;
   contactPersonName: string | null;
+  contactPersonPhone: string | null;
   isActive: boolean;
 };
 
 export type LicenseCompanyDetail = LicenseCompanyListItem & {
-  taxNumber: string | null;
   website: string | null;
-  address: string | null;
-  supportPhone: string | null;
-  contactPersonPhone: string | null;
   contactPersonEmail: string | null;
   notes: string | null;
   createdAt: string;
@@ -60,13 +56,9 @@ export type LicenseCompanyDetail = LicenseCompanyListItem & {
 
 export type LicenseCompanyFormRequest = {
   name: string;
-  taxNumber?: string | null;
   phone?: string | null;
   email?: string | null;
   website?: string | null;
-  address?: string | null;
-  supportPhone?: string | null;
-  supportEmail?: string | null;
   contactPersonName?: string | null;
   contactPersonPhone?: string | null;
   contactPersonEmail?: string | null;
@@ -74,19 +66,37 @@ export type LicenseCompanyFormRequest = {
   isActive: boolean;
 };
 
+export type LicenseProductCategoryListItem = {
+  id: string;
+  name: string;
+  description: string | null;
+  isActive: boolean;
+};
+
+export type LicenseProductCategoryDetail = LicenseProductCategoryListItem & {
+  createdAt: string;
+  createdBy: string | null;
+  updatedAt: string | null;
+  updatedBy: string | null;
+};
+
+export type LicenseProductCategoryFormRequest = {
+  name: string;
+  description?: string | null;
+  isActive: boolean;
+};
+
 export type LicensedProductListItem = {
   id: string;
   name: string;
-  vendorCompanyName: string | null;
-  category: string | null;
-  defaultLicenseType: LicenseType | null;
+  brand: string | null;
+  categoryId: string;
+  categoryName: string;
   isActive: boolean;
 };
 
 export type LicensedProductDetail = LicensedProductListItem & {
-  vendorCompanyId: string | null;
   description: string | null;
-  notes: string | null;
   createdAt: string;
   createdBy: string | null;
   updatedAt: string | null;
@@ -95,12 +105,16 @@ export type LicensedProductDetail = LicensedProductListItem & {
 
 export type LicensedProductFormRequest = {
   name: string;
-  vendorCompanyId?: string | null;
-  category?: string | null;
-  defaultLicenseType?: LicenseType | null;
+  brand?: string | null;
+  categoryId: string;
   description?: string | null;
   isActive: boolean;
-  notes?: string | null;
+};
+
+export type DirectoryUserLookupReadiness = {
+  isReady: boolean;
+  reason: string;
+  message: string | null;
 };
 
 export type LicensePurchaseType =

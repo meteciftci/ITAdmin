@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -22,14 +22,13 @@ import {
   getLicensedProducts,
   updateLicensedProductStatus,
 } from "@/features/license-management/api";
-import { getLicenseTypeLabel } from "@/features/license-management/enum-labels";
 import { createLicenseProductColumns } from "@/features/license-management/license-columns";
 import {
   buildLicenseProductDetailPath,
   buildLicenseProductEditPath,
   LICENSE_PRODUCT_CREATE_PATH,
 } from "@/features/license-management/license-product-detail-path";
-import type { LicensedProductListItem, LicenseType } from "@/features/license-management/types";
+import type { LicensedProductListItem } from "@/features/license-management/types";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useAuthStore } from "@/features/auth/auth-store";
 import { getApiErrorMessage } from "@/lib/api-error";
@@ -82,12 +81,6 @@ export function LicenseProductsPage() {
     },
   });
 
-  const resolveLicenseTypeLabel = useCallback(
-    (value: string | null) =>
-      value ? getLicenseTypeLabel(t, value as LicenseType) : "-",
-    [t],
-  );
-
   const columns = useMemo(
     () =>
       createLicenseProductColumns({
@@ -97,9 +90,8 @@ export function LicenseProductsPage() {
         onDetail: (item) => navigate(buildLicenseProductDetailPath(item.id)),
         onEdit: (item) => navigate(buildLicenseProductEditPath(item.id)),
         onToggleStatus: setConfirmTarget,
-        getLicenseTypeLabel: resolveLicenseTypeLabel,
       }),
-    [t, canManage, statusMutation.isPending, resolveLicenseTypeLabel, navigate],
+    [t, canManage, statusMutation.isPending, navigate],
   );
 
   const items = listQuery.data?.items ?? [];

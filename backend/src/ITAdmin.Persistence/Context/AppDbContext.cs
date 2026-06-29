@@ -27,6 +27,7 @@ public class AppDbContext : DbContext
     public DbSet<NotificationTemplate> NotificationTemplates => Set<NotificationTemplate>();
     public DbSet<NotificationOutbox> NotificationOutboxItems => Set<NotificationOutbox>();
     public DbSet<LicenseCompany> LicenseCompanies => Set<LicenseCompany>();
+    public DbSet<LicenseProductCategory> LicenseProductCategories => Set<LicenseProductCategory>();
     public DbSet<LicensedProduct> LicensedProducts => Set<LicensedProduct>();
     public DbSet<LicensePurchase> LicensePurchases => Set<LicensePurchase>();
     public DbSet<LicensePackage> LicensePackages => Set<LicensePackage>();

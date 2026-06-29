@@ -15,7 +15,6 @@ import { buttonVariants } from "@/components/ui/button-variants";
 import { useAuthStore } from "@/features/auth/auth-store";
 import { getLicensedProductById } from "@/features/license-management/api";
 import { LicenseDetailField } from "@/features/license-management/components/LicenseDetailField";
-import { getLicenseTypeLabel } from "@/features/license-management/enum-labels";
 import { LICENSE_PRODUCTS_LIST_PATH } from "@/features/license-management/license-products-list-path";
 import { buildLicenseProductEditPath } from "@/features/license-management/license-product-detail-path";
 import { getApiErrorMessage } from "@/lib/api-error";
@@ -88,14 +87,9 @@ export function LicenseProductDetailPage() {
             <LicenseDetailField label={t("common:fields.status")}>
               <StatusBadge isActive={product.isActive} />
             </LicenseDetailField>
-            <LicenseDetailField label={t("licenseManagement:table.vendor")} value={product.vendorCompanyName ?? t("licenseManagement:form.noVendor")} />
-            <LicenseDetailField label={t("licenseManagement:table.category")} value={product.category} />
-            <LicenseDetailField
-              label={t("licenseManagement:table.defaultLicenseType")}
-              value={product.defaultLicenseType ? getLicenseTypeLabel(t, product.defaultLicenseType) : "-"}
-            />
+            <LicenseDetailField label={t("licenseManagement:form.brand")} value={product.brand} />
+            <LicenseDetailField label={t("licenseManagement:table.category")} value={product.categoryName} />
             <LicenseDetailField label={t("licenseManagement:form.description")} value={product.description} valueClassName="whitespace-pre-wrap md:col-span-2" />
-            <LicenseDetailField label={t("licenseManagement:form.notes")} value={product.notes} valueClassName="whitespace-pre-wrap md:col-span-2" />
             <LicenseDetailField label={t("licenseManagement:pages.detail.createdAt")}>
               <DateTimeText value={product.createdAt} />
             </LicenseDetailField>

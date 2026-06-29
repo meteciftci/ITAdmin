@@ -22,6 +22,7 @@ import {
   LICENSE_TYPES,
   PACKAGE_STATUSES,
 } from "@/features/license-management/enum-labels";
+import { formatLicensedProductLabel } from "@/features/license-management/product-labels";
 import { validatePackageForm } from "@/features/license-management/form-validation";
 import type { LicensePackageDetail, LicensePackageStatus, LicenseType } from "@/features/license-management/types";
 import { getLicenseManagementApiErrorMessage } from "@/features/license-management/license-api-error";
@@ -165,7 +166,7 @@ export function LicensePackageForm({ mode, packageItem, initialPurchaseId, onCan
           <Select value={productId} onChange={(e) => setProductId(e.target.value)}>
             <option value="">{t("licenseManagement:form.selectProduct")}</option>
             {(productsQuery.data ?? []).map((item) => (
-              <option key={item.id} value={item.id}>{item.name}</option>
+              <option key={item.id} value={item.id}>{formatLicensedProductLabel(item)}</option>
             ))}
           </Select>
         </div>

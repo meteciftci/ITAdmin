@@ -18,13 +18,9 @@ public sealed class LicenseCompanyConfiguration : IEntityTypeConfiguration<Licen
             .HasMaxLength(200)
             .IsRequired();
 
-        builder.Property(x => x.TaxNumber).HasColumnName("tax_number").HasMaxLength(50);
         builder.Property(x => x.Phone).HasColumnName("phone").HasMaxLength(50);
         builder.Property(x => x.Email).HasColumnName("email").HasMaxLength(250);
         builder.Property(x => x.Website).HasColumnName("website").HasMaxLength(1000);
-        builder.Property(x => x.Address).HasColumnName("address").HasMaxLength(2000);
-        builder.Property(x => x.SupportPhone).HasColumnName("support_phone").HasMaxLength(50);
-        builder.Property(x => x.SupportEmail).HasColumnName("support_email").HasMaxLength(250);
         builder.Property(x => x.ContactPersonName).HasColumnName("contact_person_name").HasMaxLength(200);
         builder.Property(x => x.ContactPersonPhone).HasColumnName("contact_person_phone").HasMaxLength(50);
         builder.Property(x => x.ContactPersonEmail).HasColumnName("contact_person_email").HasMaxLength(250);

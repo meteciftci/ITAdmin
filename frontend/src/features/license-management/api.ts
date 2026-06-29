@@ -1,6 +1,7 @@
 import { apiClient } from "@/lib/api-client";
 
 import type {
+  DirectoryUserLookupReadiness,
   LicenseCompanyDetail,
   LicenseCompanyFormRequest,
   LicenseCompanyListItem,
@@ -13,6 +14,9 @@ import type {
   LicensePackageFormRequest,
   LicensePackageListItem,
   LicensePackageStatus,
+  LicenseProductCategoryDetail,
+  LicenseProductCategoryFormRequest,
+  LicenseProductCategoryListItem,
   LicensePurchaseDetail,
   LicensePurchaseFormRequest,
   LicensePurchaseListItem,
@@ -88,10 +92,62 @@ export const updateLicenseCompanyStatus = async (
   await apiClient.patch(`${basePath}/companies/${id}/status`, { isActive });
 };
 
+type CategoryListParams = {
+  search?: string;
+  isActive?: boolean;
+  pageNumber?: number;
+  pageSize?: number;
+};
+
+export const getLicenseProductCategories = async (
+  params: CategoryListParams,
+): Promise<PagedResponse<LicenseProductCategoryListItem>> => {
+  const { data } = await apiClient.get<PagedResponse<LicenseProductCategoryListItem>>(
+    `${basePath}/product-categories`,
+    { params },
+  );
+  return data;
+};
+
+export const getLicenseProductCategoryById = async (
+  id: string,
+): Promise<LicenseProductCategoryDetail> => {
+  const { data } = await apiClient.get<LicenseProductCategoryDetail>(
+    `${basePath}/product-categories/${id}`,
+  );
+  return data;
+};
+
+export const createLicenseProductCategory = async (
+  request: LicenseProductCategoryFormRequest,
+): Promise<void> => {
+  await apiClient.post(`${basePath}/product-categories`, request);
+};
+
+export const updateLicenseProductCategory = async (
+  id: string,
+  request: LicenseProductCategoryFormRequest,
+): Promise<void> => {
+  await apiClient.put(`${basePath}/product-categories/${id}`, request);
+};
+
+export const updateLicenseProductCategoryStatus = async (
+  id: string,
+  isActive: boolean,
+): Promise<void> => {
+  await apiClient.patch(`${basePath}/product-categories/${id}/status`, { isActive });
+};
+
+export const getAllLicenseProductCategories = async (): Promise<LicenseProductCategoryListItem[]> => {
+  const { data } = await apiClient.get<LicenseProductCategoryListItem[]>(
+    `${basePath}/product-categories/all`,
+  );
+  return data;
+};
+
 type ProductListParams = {
   search?: string;
   isActive?: boolean;
-  vendorCompanyId?: string;
   pageNumber?: number;
   pageSize?: number;
 };
@@ -291,5 +347,12 @@ export const updateLicenseRequestStatus = async (
   const { data } = await apiClient.patch<LicenseRequestDetail>(`${basePath}/requests/${id}/status`, {
     status,
   });
+  return data;
+};
+
+export const getDirectoryUserLookupReadiness = async (): Promise<DirectoryUserLookupReadiness> => {
+  const { data } = await apiClient.get<DirectoryUserLookupReadiness>(
+    `${basePath}/directory-user-lookup/readiness`,
+  );
   return data;
 };

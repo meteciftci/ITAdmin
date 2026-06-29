@@ -8,6 +8,7 @@ import {
   validatePurchaseForm,
 } from "./form-validation.ts";
 import { buildLicensedProductPayload } from "./product-form-payload.ts";
+import { formatLicensedProductLabel } from "./product-labels.ts";
 import {
   buildPurchasePayloadByType,
   isPurchaseFieldVisible,
@@ -15,11 +16,13 @@ import {
 } from "./purchase-form-fields.ts";
 
 test("validateCompanyForm requires name", () => {
-  assert.equal(validateCompanyForm("", "", "", "", ""), "nameRequired");
+  assert.equal(validateCompanyForm("", "", "", ""), "nameRequired");
 });
 
-test("validateProductForm requires name", () => {
-  assert.equal(validateProductForm(""), "nameRequired");
+test("validateProductForm requires name and category", () => {
+  assert.equal(validateProductForm("", ""), "nameRequired");
+  assert.equal(validateProductForm("Photoshop", ""), "categoryRequired");
+  assert.equal(validateProductForm("Photoshop", "category-id"), null);
 });
 
 test("validatePurchaseForm requires title", () => {
@@ -34,34 +37,53 @@ test("validatePackageForm enforces quantity minimum", () => {
 });
 
 describe("buildLicensedProductPayload", () => {
-  it("sends null when default license type is empty", () => {
+  it("sends brand and categoryId", () => {
     const payload = buildLicensedProductPayload({
       name: "Photoshop",
-      vendorCompanyId: "",
-      category: "",
-      defaultLicenseType: "",
+      brand: "Adobe",
+      categoryId: "category-id",
       description: "",
-      notes: "",
       isActive: true,
     });
 
-    assert.equal(payload.defaultLicenseType, null);
-    assert.equal(payload.vendorCompanyId, null);
+    assert.equal(payload.brand, "Adobe");
+    assert.equal(payload.categoryId, "category-id");
+    assert.equal(payload.description, null);
   });
 
-  it("sends NamedUser when default license type is selected", () => {
+  it("sends null brand when empty", () => {
     const payload = buildLicensedProductPayload({
       name: "Photoshop",
-      vendorCompanyId: "",
-      category: "Grafik",
-      defaultLicenseType: "NamedUser",
-      description: "",
-      notes: "",
+      brand: "",
+      categoryId: "category-id",
+      description: "Design tool",
       isActive: true,
     });
 
-    assert.equal(payload.defaultLicenseType, "NamedUser");
-    assert.equal(payload.category, "Grafik");
+    assert.equal(payload.brand, null);
+    assert.equal(payload.description, "Design tool");
+  });
+});
+
+describe("formatLicensedProductLabel", () => {
+  it("joins name, brand and category with em dash", () => {
+    const label = formatLicensedProductLabel({
+      name: "Photoshop",
+      brand: "Adobe",
+      categoryName: "Design",
+    });
+
+    assert.equal(label, "Photoshop — Adobe — Design");
+  });
+
+  it("omits empty brand and category parts", () => {
+    const label = formatLicensedProductLabel({
+      name: "Photoshop",
+      brand: null,
+      categoryName: "Design",
+    });
+
+    assert.equal(label, "Photoshop — Design");
   });
 });
 

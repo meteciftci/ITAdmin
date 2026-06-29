@@ -26,13 +26,9 @@ type Props = {
 export function LicenseCompanyForm({ mode, company, onCancel, onSaved }: Props) {
   const { t } = useTranslation(["licenseManagement", "common"]);
   const [name, setName] = useState("");
-  const [taxNumber, setTaxNumber] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [website, setWebsite] = useState("");
-  const [address, setAddress] = useState("");
-  const [supportPhone, setSupportPhone] = useState("");
-  const [supportEmail, setSupportEmail] = useState("");
   const [contactPersonName, setContactPersonName] = useState("");
   const [contactPersonPhone, setContactPersonPhone] = useState("");
   const [contactPersonEmail, setContactPersonEmail] = useState("");
@@ -43,13 +39,9 @@ export function LicenseCompanyForm({ mode, company, onCancel, onSaved }: Props) 
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect -- hydrate fields when edit data loads */
     setName(company?.name ?? "");
-    setTaxNumber(company?.taxNumber ?? "");
     setPhone(company?.phone ?? "");
     setEmail(company?.email ?? "");
     setWebsite(company?.website ?? "");
-    setAddress(company?.address ?? "");
-    setSupportPhone(company?.supportPhone ?? "");
-    setSupportEmail(company?.supportEmail ?? "");
     setContactPersonName(company?.contactPersonName ?? "");
     setContactPersonPhone(company?.contactPersonPhone ?? "");
     setContactPersonEmail(company?.contactPersonEmail ?? "");
@@ -60,21 +52,17 @@ export function LicenseCompanyForm({ mode, company, onCancel, onSaved }: Props) 
   }, [company]);
 
   const validationKey = useMemo(
-    () => validateCompanyForm(name, email, supportEmail, contactPersonEmail, website),
-    [name, email, supportEmail, contactPersonEmail, website],
+    () => validateCompanyForm(name, email, contactPersonEmail, website),
+    [name, email, contactPersonEmail, website],
   );
 
   const mutation = useMutation({
     mutationFn: async () => {
       const payload = {
         name: name.trim(),
-        taxNumber: taxNumber || null,
         phone: phone || null,
         email: email || null,
         website: website || null,
-        address: address || null,
-        supportPhone: supportPhone || null,
-        supportEmail: supportEmail || null,
         contactPersonName: contactPersonName || null,
         contactPersonPhone: contactPersonPhone || null,
         contactPersonEmail: contactPersonEmail || null,
@@ -121,24 +109,8 @@ export function LicenseCompanyForm({ mode, company, onCancel, onSaved }: Props) 
           <Input id="company-phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="company-tax">{t("licenseManagement:form.taxNumber")}</Label>
-          <Input id="company-tax" value={taxNumber} onChange={(e) => setTaxNumber(e.target.value)} />
-        </div>
-        <div className="space-y-2">
           <Label htmlFor="company-website">{t("licenseManagement:form.website")}</Label>
           <Input id="company-website" value={website} onChange={(e) => setWebsite(e.target.value)} />
-        </div>
-        <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="company-address">{t("licenseManagement:form.address")}</Label>
-          <Textarea id="company-address" value={address} onChange={(e) => setAddress(e.target.value)} />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="company-support-email">{t("licenseManagement:form.supportEmail")}</Label>
-          <Input id="company-support-email" value={supportEmail} onChange={(e) => setSupportEmail(e.target.value)} />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="company-support-phone">{t("licenseManagement:form.supportPhone")}</Label>
-          <Input id="company-support-phone" value={supportPhone} onChange={(e) => setSupportPhone(e.target.value)} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="company-contact-name">{t("licenseManagement:form.contactPersonName")}</Label>

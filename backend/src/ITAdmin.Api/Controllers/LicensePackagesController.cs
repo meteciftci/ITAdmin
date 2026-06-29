@@ -69,7 +69,7 @@ public sealed class LicensePackagesController(ILicensePackageService packageServ
     }
 
     [HttpPost]
-    [RequirePermission(LicenseManagementPermissions.ManageAcquisitions)]
+    [RequirePermission(LicenseManagementPermissions.ManagePurchases)]
     public async Task<ActionResult<LicensePackageDetailResponse>> CreatePackage(
         [FromBody] CreateLicensePackageRequest request,
         CancellationToken cancellationToken)
@@ -107,7 +107,7 @@ public sealed class LicensePackagesController(ILicensePackageService packageServ
     }
 
     [HttpPut("{id:guid}")]
-    [RequirePermission(LicenseManagementPermissions.ManageAcquisitions)]
+    [RequirePermission(LicenseManagementPermissions.ManagePurchases)]
     public async Task<ActionResult<LicensePackageDetailResponse>> UpdatePackage(
         Guid id,
         [FromBody] UpdateLicensePackageRequest request,
@@ -146,7 +146,7 @@ public sealed class LicensePackagesController(ILicensePackageService packageServ
     }
 
     [HttpPatch("{id:guid}/status")]
-    [RequirePermission(LicenseManagementPermissions.ManageAcquisitions)]
+    [RequirePermission(LicenseManagementPermissions.ManagePurchases)]
     public async Task<ActionResult<LicensePackageDetailResponse>> UpdatePackageStatus(
         Guid id,
         [FromBody] UpdateLicensePackageStatusRequest request,

@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using ITAdmin.Domain.Entities;
-using ITAdmin.Domain.Enums;
 
 namespace ITAdmin.Persistence.Configurations;
 
@@ -19,16 +18,15 @@ public sealed class LicensedProductConfiguration : IEntityTypeConfiguration<Lice
             .HasMaxLength(200)
             .IsRequired();
 
-        builder.Property(x => x.VendorCompanyId).HasColumnName("vendor_company_id");
-        builder.Property(x => x.Category).HasColumnName("category").HasMaxLength(100);
+        builder.Property(x => x.Brand)
+            .HasColumnName("brand")
+            .HasMaxLength(200);
 
-        builder.Property(x => x.DefaultLicenseType)
-            .HasColumnName("default_license_type")
-            .HasConversion<string>()
-            .HasMaxLength(50);
+        builder.Property(x => x.CategoryId)
+            .HasColumnName("category_id")
+            .IsRequired();
 
         builder.Property(x => x.Description).HasColumnName("description").HasMaxLength(2000);
-        builder.Property(x => x.Notes).HasColumnName("notes").HasMaxLength(4000);
 
         builder.Property(x => x.IsActive)
             .HasColumnName("is_active")
@@ -39,13 +37,13 @@ public sealed class LicensedProductConfiguration : IEntityTypeConfiguration<Lice
         builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
         builder.Property(x => x.UpdatedBy).HasColumnName("updated_by").HasMaxLength(200);
 
-        builder.HasOne(x => x.VendorCompany)
-            .WithMany(x => x.VendorProducts)
-            .HasForeignKey(x => x.VendorCompanyId)
+        builder.HasOne(x => x.Category)
+            .WithMany(x => x.Products)
+            .HasForeignKey(x => x.CategoryId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(x => x.Name);
         builder.HasIndex(x => x.IsActive);
-        builder.HasIndex(x => x.VendorCompanyId);
+        builder.HasIndex(x => x.CategoryId);
     }
 }

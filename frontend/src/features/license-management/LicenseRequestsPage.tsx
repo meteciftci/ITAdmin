@@ -27,6 +27,7 @@ import {
   REQUEST_STATUSES,
 } from "@/features/license-management/enum-labels";
 import { createLicenseRequestColumns } from "@/features/license-management/license-columns";
+import { formatLicensedProductLabel } from "@/features/license-management/product-labels";
 import {
   buildLicenseRequestDetailPath,
   buildLicenseRequestEditPath,
@@ -217,7 +218,7 @@ export function LicenseRequestsPage() {
                     <option value="all">{t("common:status.all")}</option>
                     {(productsQuery.data ?? []).map((product) => (
                       <option key={product.id} value={product.id}>
-                        {product.name}
+                        {formatLicensedProductLabel(product)}
                       </option>
                     ))}
                   </Select>

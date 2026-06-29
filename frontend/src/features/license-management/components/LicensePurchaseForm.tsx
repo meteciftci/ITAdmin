@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
@@ -49,8 +49,13 @@ function toDateOnly(value: string | null | undefined): string | null {
   return value.slice(0, 10);
 }
 
-function SectionTitle({ children }: { children: string }) {
-  return <h3 className="text-sm font-semibold text-foreground">{children}</h3>;
+function FormSectionPanel({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="space-y-4 rounded-lg border p-4">
+      <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
+      {children}
+    </section>
+  );
 }
 
 export function LicensePurchaseForm({ mode, purchase, onCancel, onSaved }: Props) {
@@ -203,8 +208,7 @@ export function LicensePurchaseForm({ mode, purchase, onCancel, onSaved }: Props
       </p>
 
       {isPurchaseSectionVisible("basic", purchaseType) ? (
-        <section className="space-y-4">
-          <SectionTitle>{t("licenseManagement:form.sections.basic")}</SectionTitle>
+        <FormSectionPanel title={t("licenseManagement:form.sections.generalInfo")}>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label>{t("licenseManagement:form.purchaseType")}</Label>
@@ -237,31 +241,24 @@ export function LicensePurchaseForm({ mode, purchase, onCancel, onSaved }: Props
               <Label>{t("licenseManagement:form.description")}</Label>
               <Textarea value={description} onChange={(e) => setDescription(e.target.value)} />
             </div>
+            {isPurchaseSectionVisible("purchaseInfo", purchaseType) ? (
+              <div className="space-y-2">
+                <Label>{t("licenseManagement:form.purchaseDate")}</Label>
+                <DatePicker
+                  value={purchaseDate}
+                  onChange={setPurchaseDate}
+                  placeholder={t("licenseManagement:form.purchaseDate")}
+                  clearLabel={t("common:actions.clear")}
+                  locale={dateLocale}
+                />
+              </div>
+            ) : null}
           </div>
-        </section>
-      ) : null}
-
-      {isPurchaseSectionVisible("purchaseInfo", purchaseType) ? (
-        <section className="space-y-4">
-          <SectionTitle>{t("licenseManagement:form.sections.purchaseInfo")}</SectionTitle>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label>{t("licenseManagement:form.purchaseDate")}</Label>
-              <DatePicker
-                value={purchaseDate}
-                onChange={setPurchaseDate}
-                placeholder={t("licenseManagement:form.purchaseDate")}
-                clearLabel={t("common:actions.clear")}
-                locale={dateLocale}
-              />
-            </div>
-          </div>
-        </section>
+        </FormSectionPanel>
       ) : null}
 
       {isPurchaseSectionVisible("officialDocuments", purchaseType) ? (
-        <section className="space-y-4">
-          <SectionTitle>{t("licenseManagement:form.sections.officialDocuments")}</SectionTitle>
+        <FormSectionPanel title={t("licenseManagement:form.sections.officialProcess")}>
           <div className="grid gap-4 md:grid-cols-2">
             {show("tenderNumber") ? (
               <div className="space-y-2">
@@ -363,12 +360,11 @@ export function LicensePurchaseForm({ mode, purchase, onCancel, onSaved }: Props
               </div>
             ) : null}
           </div>
-        </section>
+        </FormSectionPanel>
       ) : null}
 
       {isPurchaseSectionVisible("companyAndCost", purchaseType) ? (
-        <section className="space-y-4">
-          <SectionTitle>{t("licenseManagement:form.sections.companyAndCost")}</SectionTitle>
+        <FormSectionPanel title={t("licenseManagement:form.sections.companyAndCost")}>
           <div className="grid gap-4 md:grid-cols-2">
             {show("supplierCompanyId") ? (
               <div className="space-y-2">
@@ -423,17 +419,16 @@ export function LicensePurchaseForm({ mode, purchase, onCancel, onSaved }: Props
               />
             ) : null}
           </div>
-        </section>
+        </FormSectionPanel>
       ) : null}
 
       {isPurchaseSectionVisible("notes", purchaseType) ? (
-        <section className="space-y-4">
-          <SectionTitle>{t("licenseManagement:form.sections.notes")}</SectionTitle>
+        <FormSectionPanel title={t("licenseManagement:form.sections.other")}>
           <div className="space-y-2">
             <Label>{t("licenseManagement:form.notes")}</Label>
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
-        </section>
+        </FormSectionPanel>
       ) : null}
 
       <div className="flex flex-wrap justify-end gap-2">

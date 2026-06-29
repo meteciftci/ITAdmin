@@ -259,6 +259,26 @@ const LicenseProductDetailPage = lazy(() =>
     default: module.LicenseProductDetailPage,
   })),
 );
+const LicenseProductCategoriesPage = lazy(() =>
+  import("@/features/license-management/LicenseProductCategoriesPage").then((module) => ({
+    default: module.LicenseProductCategoriesPage,
+  })),
+);
+const LicenseProductCategoryCreatePage = lazy(() =>
+  import("@/features/license-management/LicenseProductCategoryCreatePage").then((module) => ({
+    default: module.LicenseProductCategoryCreatePage,
+  })),
+);
+const LicenseProductCategoryEditPage = lazy(() =>
+  import("@/features/license-management/LicenseProductCategoryEditPage").then((module) => ({
+    default: module.LicenseProductCategoryEditPage,
+  })),
+);
+const LicenseProductCategoryDetailPage = lazy(() =>
+  import("@/features/license-management/LicenseProductCategoryDetailPage").then((module) => ({
+    default: module.LicenseProductCategoryDetailPage,
+  })),
+);
 const LicensePurchaseCreatePage = lazy(() =>
   import("@/features/license-management/LicensePurchaseCreatePage").then((module) => ({
     default: module.LicensePurchaseCreatePage,
@@ -1020,6 +1040,62 @@ export const router = createBrowserRouter([
     ),
   },
   {
+    path: "/license-management/categories",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission={PermissionCodes.LicenseManagement.View}>
+          <AppLayout>
+            <LazyRoute>
+              <LicenseProductCategoriesPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/license-management/categories/create",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission={PermissionCodes.LicenseManagement.ManageCatalog}>
+          <AppLayout>
+            <LazyRoute>
+              <LicenseProductCategoryCreatePage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/license-management/categories/:id/edit",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission={PermissionCodes.LicenseManagement.ManageCatalog}>
+          <AppLayout>
+            <LazyRoute>
+              <LicenseProductCategoryEditPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/license-management/categories/:id",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission={PermissionCodes.LicenseManagement.View}>
+          <AppLayout>
+            <LazyRoute>
+              <LicenseProductCategoryDetailPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
     path: "/license-management/companies/create",
     element: (
       <RequireAuth>
@@ -1107,7 +1183,7 @@ export const router = createBrowserRouter([
     path: "/license-management/purchases/create",
     element: (
       <RequireAuth>
-        <RequirePermission permission={PermissionCodes.LicenseManagement.ManageAcquisitions}>
+        <RequirePermission permission={PermissionCodes.LicenseManagement.ManagePurchases}>
           <AppLayout>
             <LazyRoute>
               <LicensePurchaseCreatePage />
@@ -1121,7 +1197,7 @@ export const router = createBrowserRouter([
     path: "/license-management/purchases/:id/edit",
     element: (
       <RequireAuth>
-        <RequirePermission permission={PermissionCodes.LicenseManagement.ManageAcquisitions}>
+        <RequirePermission permission={PermissionCodes.LicenseManagement.ManagePurchases}>
           <AppLayout>
             <LazyRoute>
               <LicensePurchaseEditPage />
@@ -1149,7 +1225,7 @@ export const router = createBrowserRouter([
     path: "/license-management/packages/create",
     element: (
       <RequireAuth>
-        <RequirePermission permission={PermissionCodes.LicenseManagement.ManageAcquisitions}>
+        <RequirePermission permission={PermissionCodes.LicenseManagement.ManagePurchases}>
           <AppLayout>
             <LazyRoute>
               <LicensePackageCreatePage />
@@ -1163,7 +1239,7 @@ export const router = createBrowserRouter([
     path: "/license-management/packages/:id/edit",
     element: (
       <RequireAuth>
-        <RequirePermission permission={PermissionCodes.LicenseManagement.ManageAcquisitions}>
+        <RequirePermission permission={PermissionCodes.LicenseManagement.ManagePurchases}>
           <AppLayout>
             <LazyRoute>
               <LicensePackageEditPage />

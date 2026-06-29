@@ -59,6 +59,30 @@ public interface ILicensedProductService
         CancellationToken cancellationToken = default);
 }
 
+public interface ILicenseProductCategoryService
+{
+    Task<PagedResult<LicenseProductCategoryListItem>> GetListAsync(
+        LicenseProductCategoryListQuery query,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<LicenseProductCategoryListItem>> GetAllActiveAsync(
+        CancellationToken cancellationToken = default);
+
+    Task<LicenseProductCategoryDetail?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task<LicenseProductCategoryOperationResult> CreateAsync(
+        CreateLicenseProductCategoryRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<LicenseProductCategoryOperationResult> UpdateAsync(
+        UpdateLicenseProductCategoryRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<LicenseProductCategoryOperationResult> UpdateStatusAsync(
+        UpdateLicenseProductCategoryStatusRequest request,
+        CancellationToken cancellationToken = default);
+}
+
 public interface ILicensePurchaseService
 {
     Task<PagedResult<LicensePurchaseListItem>> GetListAsync(

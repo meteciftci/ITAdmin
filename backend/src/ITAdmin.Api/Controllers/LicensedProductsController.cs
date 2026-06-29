@@ -19,18 +19,18 @@ public sealed class LicensedProductsController(ILicensedProductService productSe
     public async Task<ActionResult<PagedResponse<LicensedProductListItemResponse>>> GetProducts(
         [FromQuery] string? search,
         [FromQuery] bool? isActive,
-        [FromQuery] Guid? vendorCompanyId,
+        [FromQuery] Guid? categoryId,
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
         var result = await productService.GetListAsync(
-            new AppModels.LicensedProductListQuery(search, isActive, vendorCompanyId, pageNumber, pageSize),
+            new AppModels.LicensedProductListQuery(search, isActive, categoryId, pageNumber, pageSize),
             cancellationToken);
 
         return Ok(new PagedResponse<LicensedProductListItemResponse>(
             result.Items.Select(x => new LicensedProductListItemResponse(
-                x.Id, x.Name, x.VendorCompanyName, x.Category, x.DefaultLicenseType, x.IsActive)).ToList(),
+                x.Id, x.Name, x.Brand, x.CategoryId, x.CategoryName, x.IsActive)).ToList(),
             result.PageNumber,
             result.PageSize,
             result.TotalCount,
@@ -61,12 +61,10 @@ public sealed class LicensedProductsController(ILicensedProductService productSe
         var result = await productService.CreateAsync(
             new AppModels.CreateLicensedProductRequest(
                 request.Name,
-                request.VendorCompanyId,
-                request.Category,
-                request.DefaultLicenseType,
+                request.Brand,
+                request.CategoryId,
                 request.Description,
                 request.IsActive,
-                request.Notes,
                 LicenseManagementActorResolver.ResolveActorUserId(User),
                 LicenseManagementActorResolver.ResolveActorUserName(User),
                 LicenseManagementActorResolver.ResolveIpAddress(this),
@@ -92,12 +90,10 @@ public sealed class LicensedProductsController(ILicensedProductService productSe
             new AppModels.UpdateLicensedProductRequest(
                 id,
                 request.Name,
-                request.VendorCompanyId,
-                request.Category,
-                request.DefaultLicenseType,
+                request.Brand,
+                request.CategoryId,
                 request.Description,
                 request.IsActive,
-                request.Notes,
                 LicenseManagementActorResolver.ResolveActorUserId(User),
                 LicenseManagementActorResolver.ResolveActorUserName(User),
                 LicenseManagementActorResolver.ResolveIpAddress(this),
@@ -141,13 +137,11 @@ public sealed class LicensedProductsController(ILicensedProductService productSe
         new(
             product.Id,
             product.Name,
-            product.VendorCompanyId,
-            product.VendorCompanyName,
-            product.Category,
-            product.DefaultLicenseType,
+            product.Brand,
+            product.CategoryId,
+            product.CategoryName,
             product.Description,
             product.IsActive,
-            product.Notes,
             product.CreatedAt,
             product.CreatedBy,
             product.UpdatedAt,

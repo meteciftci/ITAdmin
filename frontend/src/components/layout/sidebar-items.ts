@@ -14,6 +14,7 @@ import {
   Shield,
   ShieldAlert,
   SlidersHorizontal,
+  Tags,
   Users,
   FolderTree,
   FileKey,
@@ -246,6 +247,12 @@ export const getSidebarGroups = (
             titleKey: "items.licenseManagementProducts",
             to: "/license-management/products",
             icon: Boxes,
+            visible: isLicenseManagementSectionVisible(user),
+          },
+          {
+            titleKey: "items.licenseManagementCategories",
+            to: "/license-management/categories",
+            icon: Tags,
             visible: isLicenseManagementSectionVisible(user),
           },
           {

@@ -64,8 +64,8 @@ public sealed class LicenseCompanyService(AppDbContext context) : ILicenseCompan
                 x.Name,
                 x.Email,
                 x.Phone,
-                x.SupportEmail,
                 x.ContactPersonName,
+                x.ContactPersonPhone,
                 x.IsActive))
             .ToListAsync(cancellationToken);
 
@@ -85,7 +85,6 @@ public sealed class LicenseCompanyService(AppDbContext context) : ILicenseCompan
         var validationError = ValidateCompanyFields(
             request.Name,
             request.Email,
-            request.SupportEmail,
             request.ContactPersonEmail,
             request.Website);
         if (validationError is not null)
@@ -97,13 +96,9 @@ public sealed class LicenseCompanyService(AppDbContext context) : ILicenseCompan
         var entity = new LicenseCompany
         {
             Name = request.Name.Trim(),
-            TaxNumber = LicenseManagementValidation.TrimOrNull(request.TaxNumber),
             Phone = LicenseManagementValidation.TrimOrNull(request.Phone),
             Email = LicenseManagementValidation.TrimOrNull(request.Email),
             Website = LicenseManagementValidation.TrimOrNull(request.Website),
-            Address = LicenseManagementValidation.TrimOrNull(request.Address),
-            SupportPhone = LicenseManagementValidation.TrimOrNull(request.SupportPhone),
-            SupportEmail = LicenseManagementValidation.TrimOrNull(request.SupportEmail),
             ContactPersonName = LicenseManagementValidation.TrimOrNull(request.ContactPersonName),
             ContactPersonPhone = LicenseManagementValidation.TrimOrNull(request.ContactPersonPhone),
             ContactPersonEmail = LicenseManagementValidation.TrimOrNull(request.ContactPersonEmail),
@@ -143,7 +138,6 @@ public sealed class LicenseCompanyService(AppDbContext context) : ILicenseCompan
         var validationError = ValidateCompanyFields(
             request.Name,
             request.Email,
-            request.SupportEmail,
             request.ContactPersonEmail,
             request.Website);
         if (validationError is not null)
@@ -153,13 +147,9 @@ public sealed class LicenseCompanyService(AppDbContext context) : ILicenseCompan
 
         var now = DateTime.UtcNow;
         entity.Name = request.Name.Trim();
-        entity.TaxNumber = LicenseManagementValidation.TrimOrNull(request.TaxNumber);
         entity.Phone = LicenseManagementValidation.TrimOrNull(request.Phone);
         entity.Email = LicenseManagementValidation.TrimOrNull(request.Email);
         entity.Website = LicenseManagementValidation.TrimOrNull(request.Website);
-        entity.Address = LicenseManagementValidation.TrimOrNull(request.Address);
-        entity.SupportPhone = LicenseManagementValidation.TrimOrNull(request.SupportPhone);
-        entity.SupportEmail = LicenseManagementValidation.TrimOrNull(request.SupportEmail);
         entity.ContactPersonName = LicenseManagementValidation.TrimOrNull(request.ContactPersonName);
         entity.ContactPersonPhone = LicenseManagementValidation.TrimOrNull(request.ContactPersonPhone);
         entity.ContactPersonEmail = LicenseManagementValidation.TrimOrNull(request.ContactPersonEmail);
@@ -224,7 +214,6 @@ public sealed class LicenseCompanyService(AppDbContext context) : ILicenseCompan
     private static string? ValidateCompanyFields(
         string name,
         string? email,
-        string? supportEmail,
         string? contactPersonEmail,
         string? website)
     {
@@ -241,11 +230,6 @@ public sealed class LicenseCompanyService(AppDbContext context) : ILicenseCompan
         if (!LicenseManagementValidation.IsValidEmail(email))
         {
             return "Email format is invalid.";
-        }
-
-        if (!LicenseManagementValidation.IsValidEmail(supportEmail))
-        {
-            return "Support email format is invalid.";
         }
 
         if (!LicenseManagementValidation.IsValidEmail(contactPersonEmail))
@@ -265,13 +249,9 @@ public sealed class LicenseCompanyService(AppDbContext context) : ILicenseCompan
         new(
             entity.Id,
             entity.Name,
-            entity.TaxNumber,
             entity.Phone,
             entity.Email,
             entity.Website,
-            entity.Address,
-            entity.SupportPhone,
-            entity.SupportEmail,
             entity.ContactPersonName,
             entity.ContactPersonPhone,
             entity.ContactPersonEmail,

@@ -18,6 +18,10 @@ test("router includes license management routes", () => {
     "/license-management/products/create",
     "/license-management/products/:id",
     "/license-management/products/:id/edit",
+    "/license-management/categories",
+    "/license-management/categories/create",
+    "/license-management/categories/:id",
+    "/license-management/categories/:id/edit",
     "/license-management/purchases",
     "/license-management/purchases/create",
     "/license-management/purchases/:id",
@@ -45,6 +49,7 @@ test("sidebar includes license management purchases menu", () => {
   assert.match(sidebarSource, /routePrefix: "\/license-management"/);
   assert.match(sidebarSource, /items\.licenseManagementOverview/);
   assert.match(sidebarSource, /items\.licenseManagementCompanies/);
+  assert.match(sidebarSource, /items\.licenseManagementCategories/);
   assert.match(sidebarSource, /items\.licenseManagementPurchases/);
   assert.match(sidebarSource, /items\.licenseManagementRequests/);
   assert.match(sidebarSource, /\/license-management\/purchases/);
@@ -210,7 +215,8 @@ test("purchase form uses type-based field visibility and payload normalization",
   );
   assert.match(purchaseForm, /isPurchaseFieldVisible/);
   assert.match(purchaseForm, /buildPurchasePayloadByType/);
-  assert.match(purchaseForm, /form\.sections\.basic/);
+  assert.match(purchaseForm, /form\.sections\.generalInfo/);
+  assert.match(purchaseForm, /FormSectionPanel/);
   assert.doesNotMatch(purchaseForm, /AcquisitionFormDialog/);
 });
 
@@ -261,6 +267,10 @@ test("license request pages use page routes and DatePicker", () => {
     join(root, "features/license-management/components/LicenseRequestForm.tsx"),
     "utf8",
   );
+  const requestItemCard = readFileSync(
+    join(root, "features/license-management/components/LicenseRequestItemCard.tsx"),
+    "utf8",
+  );
   const adGuard = readFileSync(
     join(root, "features/license-management/components/LicenseRequestAdAccessGuard.tsx"),
     "utf8",
@@ -270,9 +280,13 @@ test("license request pages use page routes and DatePicker", () => {
   assert.match(createPage, /LicenseRequestAdAccessGuard/);
   assert.doesNotMatch(createPage, /FormDialog/);
   assert.match(requestForm, /DatePicker/);
+  assert.match(requestItemCard, /formatLicensedProductLabel/);
   assert.doesNotMatch(requestForm, /type="date"/);
   assert.match(adGuard, /BlockingStateCard/);
   assert.match(adGuard, /Directory\.Users\.Lookup/);
+  assert.match(adGuard, /getDirectoryUserLookupReadiness/);
+  assert.match(adGuard, /AdManagement\.Settings\.View/);
+  assert.doesNotMatch(adGuard, /useAdManagementModuleStatus/);
 });
 
 test("license request payload helpers enforce duplicate rules", () => {

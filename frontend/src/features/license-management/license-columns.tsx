@@ -14,6 +14,7 @@ import type {
   LicenseCompanyListItem,
   LicensedProductListItem,
   LicensePackageListItem,
+  LicenseProductCategoryListItem,
   LicensePurchaseListItem,
   LicenseRequestListItem,
 } from "@/features/license-management/types";
@@ -60,16 +61,15 @@ export function createLicenseCompanyColumns({
       cell: ({ row }) => row.original.phone ?? "-",
     },
     {
-      accessorKey: "supportEmail",
-      header: () => t("licenseManagement:table.supportEmail"),
-      cell: ({ row }) => row.original.supportEmail ?? "-",
-      meta: { truncate: true } satisfies DataTableColumnMeta,
-    },
-    {
       accessorKey: "contactPersonName",
       header: () => t("licenseManagement:table.contactPerson"),
       cell: ({ row }) => row.original.contactPersonName ?? "-",
       meta: { truncate: true } satisfies DataTableColumnMeta,
+    },
+    {
+      accessorKey: "contactPersonPhone",
+      header: () => t("licenseManagement:table.contactPersonPhone"),
+      cell: ({ row }) => row.original.contactPersonPhone ?? "-",
     },
     {
       id: "status",
@@ -115,10 +115,7 @@ export function createLicenseProductColumns({
   onDetail,
   onEdit,
   onToggleStatus,
-  getLicenseTypeLabel,
-}: StatusToggleOptions<LicensedProductListItem> & {
-  getLicenseTypeLabel: (value: string | null) => string;
-}): ColumnDef<LicensedProductListItem, unknown>[] {
+}: StatusToggleOptions<LicensedProductListItem>): ColumnDef<LicensedProductListItem, unknown>[] {
   return [
     {
       accessorKey: "name",
@@ -126,23 +123,16 @@ export function createLicenseProductColumns({
       meta: { truncate: true } satisfies DataTableColumnMeta,
     },
     {
-      accessorKey: "vendorCompanyName",
-      header: () => t("licenseManagement:table.vendor"),
-      cell: ({ row }) => row.original.vendorCompanyName ?? t("licenseManagement:form.noVendor"),
+      accessorKey: "brand",
+      header: () => t("licenseManagement:table.brand"),
+      cell: ({ row }) => row.original.brand ?? "-",
       meta: { truncate: true } satisfies DataTableColumnMeta,
     },
     {
-      accessorKey: "category",
+      accessorKey: "categoryName",
       header: () => t("licenseManagement:table.category"),
-      cell: ({ row }) => row.original.category ?? "-",
-    },
-    {
-      id: "defaultLicenseType",
-      header: () => t("licenseManagement:table.defaultLicenseType"),
-      cell: ({ row }) =>
-        row.original.defaultLicenseType
-          ? getLicenseTypeLabel(row.original.defaultLicenseType)
-          : "-",
+      cell: ({ row }) => row.original.categoryName ?? "-",
+      meta: { truncate: true } satisfies DataTableColumnMeta,
     },
     {
       id: "status",
@@ -171,6 +161,66 @@ export function createLicenseProductColumns({
                 {row.original.isActive
                   ? t("licenseManagement:actions.deactivateProduct")
                   : t("licenseManagement:actions.activateProduct")}
+              </DropdownMenuItem>
+            </>
+          ) : null}
+        </RowActions>
+      ),
+    },
+  ];
+}
+
+export function createLicenseProductCategoryColumns({
+  t,
+  canManage,
+  isStatusPending,
+  onDetail,
+  onEdit,
+  onToggleStatus,
+}: StatusToggleOptions<LicenseProductCategoryListItem>): ColumnDef<
+  LicenseProductCategoryListItem,
+  unknown
+>[] {
+  return [
+    {
+      accessorKey: "name",
+      header: () => t("licenseManagement:table.categoryName"),
+      meta: { truncate: true } satisfies DataTableColumnMeta,
+    },
+    {
+      accessorKey: "description",
+      header: () => t("licenseManagement:form.description"),
+      cell: ({ row }) => row.original.description ?? "-",
+      meta: { truncate: true } satisfies DataTableColumnMeta,
+    },
+    {
+      id: "status",
+      header: () => t("common:fields.status"),
+      cell: ({ row }) => <StatusBadge isActive={row.original.isActive} />,
+    },
+    {
+      id: "actions",
+      header: () => t("common:fields.actions"),
+      meta: { isAction: true } satisfies DataTableColumnMeta,
+      cell: ({ row }) => (
+        <RowActions>
+          <DropdownMenuLabel>{t("common:actions.detail")}</DropdownMenuLabel>
+          <DropdownMenuItem onClick={() => onDetail(row.original)}>
+            {t("common:actions.detail")}
+          </DropdownMenuItem>
+          {canManage ? (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => onEdit(row.original)}>
+                {t("common:actions.edit")}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={isStatusPending}
+                onClick={() => onToggleStatus(row.original)}
+              >
+                {row.original.isActive
+                  ? t("licenseManagement:actions.deactivateCategory")
+                  : t("licenseManagement:actions.activateCategory")}
               </DropdownMenuItem>
             </>
           ) : null}

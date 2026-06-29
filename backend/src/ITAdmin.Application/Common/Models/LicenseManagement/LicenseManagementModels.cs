@@ -47,20 +47,16 @@ public sealed record LicenseCompanyListItem(
     string Name,
     string? Email,
     string? Phone,
-    string? SupportEmail,
     string? ContactPersonName,
+    string? ContactPersonPhone,
     bool IsActive);
 
 public sealed record LicenseCompanyDetail(
     Guid Id,
     string Name,
-    string? TaxNumber,
     string? Phone,
     string? Email,
     string? Website,
-    string? Address,
-    string? SupportPhone,
-    string? SupportEmail,
     string? ContactPersonName,
     string? ContactPersonPhone,
     string? ContactPersonEmail,
@@ -79,13 +75,9 @@ public sealed record LicenseCompanyActorRequest(
 
 public sealed record CreateLicenseCompanyRequest(
     string Name,
-    string? TaxNumber,
     string? Phone,
     string? Email,
     string? Website,
-    string? Address,
-    string? SupportPhone,
-    string? SupportEmail,
     string? ContactPersonName,
     string? ContactPersonPhone,
     string? ContactPersonEmail,
@@ -99,13 +91,9 @@ public sealed record CreateLicenseCompanyRequest(
 public sealed record UpdateLicenseCompanyRequest(
     Guid Id,
     string Name,
-    string? TaxNumber,
     string? Phone,
     string? Email,
     string? Website,
-    string? Address,
-    string? SupportPhone,
-    string? SupportEmail,
     string? ContactPersonName,
     string? ContactPersonPhone,
     string? ContactPersonEmail,
@@ -132,28 +120,26 @@ public sealed record LicenseCompanyOperationResult(
 public sealed record LicensedProductListQuery(
     string? Search,
     bool? IsActive,
-    Guid? VendorCompanyId,
+    Guid? CategoryId,
     int PageNumber,
     int PageSize);
 
 public sealed record LicensedProductListItem(
     Guid Id,
     string Name,
-    string? VendorCompanyName,
-    string? Category,
-    LicenseType? DefaultLicenseType,
+    string? Brand,
+    Guid CategoryId,
+    string CategoryName,
     bool IsActive);
 
 public sealed record LicensedProductDetail(
     Guid Id,
     string Name,
-    Guid? VendorCompanyId,
-    string? VendorCompanyName,
-    string? Category,
-    LicenseType? DefaultLicenseType,
+    string? Brand,
+    Guid CategoryId,
+    string CategoryName,
     string? Description,
     bool IsActive,
-    string? Notes,
     DateTime CreatedAt,
     string? CreatedBy,
     DateTime? UpdatedAt,
@@ -161,12 +147,10 @@ public sealed record LicensedProductDetail(
 
 public sealed record CreateLicensedProductRequest(
     string Name,
-    Guid? VendorCompanyId,
-    string? Category,
-    LicenseType? DefaultLicenseType,
+    string? Brand,
+    Guid CategoryId,
     string? Description,
     bool IsActive,
-    string? Notes,
     Guid? ActorUserId,
     string? ActorUserName,
     string? ActorIpAddress,
@@ -175,12 +159,10 @@ public sealed record CreateLicensedProductRequest(
 public sealed record UpdateLicensedProductRequest(
     Guid Id,
     string Name,
-    Guid? VendorCompanyId,
-    string? Category,
-    LicenseType? DefaultLicenseType,
+    string? Brand,
+    Guid CategoryId,
     string? Description,
     bool IsActive,
-    string? Notes,
     Guid? ActorUserId,
     string? ActorUserName,
     string? ActorIpAddress,
@@ -198,6 +180,60 @@ public sealed record LicensedProductOperationResult(
     bool IsSuccess,
     string Message,
     LicensedProductDetail? Product = null);
+
+public sealed record LicenseProductCategoryListQuery(
+    string? Search,
+    bool? IsActive,
+    int PageNumber,
+    int PageSize);
+
+public sealed record LicenseProductCategoryListItem(
+    Guid Id,
+    string Name,
+    string? Description,
+    bool IsActive);
+
+public sealed record LicenseProductCategoryDetail(
+    Guid Id,
+    string Name,
+    string? Description,
+    bool IsActive,
+    DateTime CreatedAt,
+    string? CreatedBy,
+    DateTime? UpdatedAt,
+    string? UpdatedBy);
+
+public sealed record CreateLicenseProductCategoryRequest(
+    string Name,
+    string? Description,
+    bool IsActive,
+    Guid? ActorUserId,
+    string? ActorUserName,
+    string? ActorIpAddress,
+    string? ActorUserAgent);
+
+public sealed record UpdateLicenseProductCategoryRequest(
+    Guid Id,
+    string Name,
+    string? Description,
+    bool IsActive,
+    Guid? ActorUserId,
+    string? ActorUserName,
+    string? ActorIpAddress,
+    string? ActorUserAgent);
+
+public sealed record UpdateLicenseProductCategoryStatusRequest(
+    Guid Id,
+    bool IsActive,
+    Guid? ActorUserId,
+    string? ActorUserName,
+    string? ActorIpAddress,
+    string? ActorUserAgent);
+
+public sealed record LicenseProductCategoryOperationResult(
+    bool IsSuccess,
+    string Message,
+    LicenseProductCategoryDetail? Category = null);
 
 public sealed record LicensePurchaseListQuery(
     string? Search,

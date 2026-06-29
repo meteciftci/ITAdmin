@@ -4,7 +4,6 @@ using ITAdmin.Application.Common.LicenseManagement;
 using ITAdmin.Application.Common.Models;
 using ITAdmin.Application.Common.Models.LicenseManagement;
 using ITAdmin.Domain.Entities;
-using ITAdmin.Domain.Enums;
 using ITAdmin.Persistence.Context;
 using static ITAdmin.Persistence.Services.LicenseManagement.LicenseManagementServiceHelpers;
 
@@ -19,7 +18,7 @@ public sealed class LicensedProductService(AppDbContext context) : ILicensedProd
         var (pageNumber, pageSize) = NormalizePaging(query.PageNumber, query.PageSize);
         var itemsQuery = context.LicensedProducts
             .AsNoTracking()
-            .Include(x => x.VendorCompany)
+            .Include(x => x.Category)
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(query.Search))
@@ -27,8 +26,8 @@ public sealed class LicensedProductService(AppDbContext context) : ILicensedProd
             var pattern = BuildILikeContainsPattern(query.Search);
             itemsQuery = itemsQuery.Where(x =>
                 EF.Functions.ILike(x.Name, pattern)
-                || (x.Category != null && EF.Functions.ILike(x.Category, pattern))
-                || (x.VendorCompany != null && EF.Functions.ILike(x.VendorCompany.Name, pattern)));
+                || (x.Brand != null && EF.Functions.ILike(x.Brand, pattern))
+                || EF.Functions.ILike(x.Category.Name, pattern));
         }
 
         if (query.IsActive is { } isActive)
@@ -36,9 +35,9 @@ public sealed class LicensedProductService(AppDbContext context) : ILicensedProd
             itemsQuery = itemsQuery.Where(x => x.IsActive == isActive);
         }
 
-        if (query.VendorCompanyId is { } vendorCompanyId)
+        if (query.CategoryId is { } categoryId)
         {
-            itemsQuery = itemsQuery.Where(x => x.VendorCompanyId == vendorCompanyId);
+            itemsQuery = itemsQuery.Where(x => x.CategoryId == categoryId);
         }
 
         var totalCount = await itemsQuery.CountAsync(cancellationToken);
@@ -51,9 +50,9 @@ public sealed class LicensedProductService(AppDbContext context) : ILicensedProd
             .Select(x => new LicensedProductListItem(
                 x.Id,
                 x.Name,
-                x.VendorCompany != null ? x.VendorCompany.Name : null,
-                x.Category,
-                x.DefaultLicenseType,
+                x.Brand,
+                x.CategoryId,
+                x.Category.Name,
                 x.IsActive))
             .ToListAsync(cancellationToken);
 
@@ -64,7 +63,7 @@ public sealed class LicensedProductService(AppDbContext context) : ILicensedProd
     {
         var entity = await context.LicensedProducts
             .AsNoTracking()
-            .Include(x => x.VendorCompany)
+            .Include(x => x.Category)
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 
         return entity is null ? null : Map(entity);
@@ -74,7 +73,12 @@ public sealed class LicensedProductService(AppDbContext context) : ILicensedProd
         CreateLicensedProductRequest request,
         CancellationToken cancellationToken = default)
     {
-        var validationError = await ValidateProductAsync(request.Name, request.VendorCompanyId, null, cancellationToken);
+        var validationError = await ValidateProductAsync(
+            request.Name,
+            request.Brand,
+            request.CategoryId,
+            null,
+            cancellationToken);
         if (validationError is not null)
         {
             return new LicensedProductOperationResult(false, validationError);
@@ -84,12 +88,10 @@ public sealed class LicensedProductService(AppDbContext context) : ILicensedProd
         var entity = new LicensedProduct
         {
             Name = request.Name.Trim(),
-            VendorCompanyId = request.VendorCompanyId,
-            Category = LicenseManagementValidation.TrimOrNull(request.Category),
-            DefaultLicenseType = request.DefaultLicenseType,
+            Brand = LicenseManagementValidation.TrimOrNull(request.Brand),
+            CategoryId = request.CategoryId,
             Description = LicenseManagementValidation.TrimOrNull(request.Description),
             IsActive = request.IsActive,
-            Notes = LicenseManagementValidation.TrimOrNull(request.Notes),
             CreatedAt = now,
             CreatedBy = request.ActorUserName
         };
@@ -108,6 +110,7 @@ public sealed class LicensedProductService(AppDbContext context) : ILicensedProd
             cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
 
+        await context.Entry(entity).Reference(x => x.Category).LoadAsync(cancellationToken);
         return new LicensedProductOperationResult(true, "Licensed product created.", Map(entity));
     }
 
@@ -116,7 +119,7 @@ public sealed class LicensedProductService(AppDbContext context) : ILicensedProd
         CancellationToken cancellationToken = default)
     {
         var entity = await context.LicensedProducts
-            .Include(x => x.VendorCompany)
+            .Include(x => x.Category)
             .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken);
 
         if (entity is null)
@@ -124,7 +127,12 @@ public sealed class LicensedProductService(AppDbContext context) : ILicensedProd
             return new LicensedProductOperationResult(false, "Licensed product was not found.");
         }
 
-        var validationError = await ValidateProductAsync(request.Name, request.VendorCompanyId, entity.Id, cancellationToken);
+        var validationError = await ValidateProductAsync(
+            request.Name,
+            request.Brand,
+            request.CategoryId,
+            entity.Id,
+            cancellationToken);
         if (validationError is not null)
         {
             return new LicensedProductOperationResult(false, validationError);
@@ -132,12 +140,10 @@ public sealed class LicensedProductService(AppDbContext context) : ILicensedProd
 
         var now = DateTime.UtcNow;
         entity.Name = request.Name.Trim();
-        entity.VendorCompanyId = request.VendorCompanyId;
-        entity.Category = LicenseManagementValidation.TrimOrNull(request.Category);
-        entity.DefaultLicenseType = request.DefaultLicenseType;
+        entity.Brand = LicenseManagementValidation.TrimOrNull(request.Brand);
+        entity.CategoryId = request.CategoryId;
         entity.Description = LicenseManagementValidation.TrimOrNull(request.Description);
         entity.IsActive = request.IsActive;
-        entity.Notes = LicenseManagementValidation.TrimOrNull(request.Notes);
         entity.UpdatedAt = now;
         entity.UpdatedBy = request.ActorUserName;
 
@@ -154,6 +160,7 @@ public sealed class LicensedProductService(AppDbContext context) : ILicensedProd
             cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
 
+        await context.Entry(entity).Reference(x => x.Category).LoadAsync(cancellationToken);
         return new LicensedProductOperationResult(true, "Licensed product updated.", Map(entity));
     }
 
@@ -162,7 +169,7 @@ public sealed class LicensedProductService(AppDbContext context) : ILicensedProd
         CancellationToken cancellationToken = default)
     {
         var entity = await context.LicensedProducts
-            .Include(x => x.VendorCompany)
+            .Include(x => x.Category)
             .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken);
 
         if (entity is null)
@@ -210,7 +217,8 @@ public sealed class LicensedProductService(AppDbContext context) : ILicensedProd
 
     private async Task<string?> ValidateProductAsync(
         string name,
-        Guid? vendorCompanyId,
+        string? brand,
+        Guid categoryId,
         Guid? currentId,
         CancellationToken cancellationToken)
     {
@@ -224,6 +232,11 @@ public sealed class LicensedProductService(AppDbContext context) : ILicensedProd
             return "Product name length is invalid.";
         }
 
+        if (brand is { Length: > 200 })
+        {
+            return "Brand length is invalid.";
+        }
+
         var normalizedName = name.Trim();
         var duplicate = await context.LicensedProducts.AnyAsync(
             x => x.IsActive
@@ -235,13 +248,17 @@ public sealed class LicensedProductService(AppDbContext context) : ILicensedProd
             return "An active product with the same name already exists.";
         }
 
-        if (vendorCompanyId is { } companyId)
+        var category = await context.LicenseProductCategories
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == categoryId, cancellationToken);
+        if (category is null)
         {
-            var companyExists = await context.LicenseCompanies.AnyAsync(x => x.Id == companyId, cancellationToken);
-            if (!companyExists)
-            {
-                return "Vendor company was not found.";
-            }
+            return "Product category was not found.";
+        }
+
+        if (!category.IsActive)
+        {
+            return "Passive product categories cannot be used.";
         }
 
         return null;
@@ -251,13 +268,11 @@ public sealed class LicensedProductService(AppDbContext context) : ILicensedProd
         new(
             entity.Id,
             entity.Name,
-            entity.VendorCompanyId,
-            entity.VendorCompany?.Name,
-            entity.Category,
-            entity.DefaultLicenseType,
+            entity.Brand,
+            entity.CategoryId,
+            entity.Category.Name,
             entity.Description,
             entity.IsActive,
-            entity.Notes,
             entity.CreatedAt,
             entity.CreatedBy,
             entity.UpdatedAt,

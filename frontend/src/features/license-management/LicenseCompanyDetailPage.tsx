@@ -89,11 +89,7 @@ export function LicenseCompanyDetailPage() {
             </LicenseDetailField>
             <LicenseDetailField label={t("licenseManagement:table.email")} value={company.email} />
             <LicenseDetailField label={t("licenseManagement:table.phone")} value={company.phone} />
-            <LicenseDetailField label={t("licenseManagement:form.taxNumber")} value={company.taxNumber} />
             <LicenseDetailField label={t("licenseManagement:form.website")} value={company.website} />
-            <LicenseDetailField label={t("licenseManagement:form.address")} value={company.address} valueClassName="whitespace-pre-wrap" />
-            <LicenseDetailField label={t("licenseManagement:form.supportEmail")} value={company.supportEmail} />
-            <LicenseDetailField label={t("licenseManagement:form.supportPhone")} value={company.supportPhone} />
             <LicenseDetailField label={t("licenseManagement:form.contactPersonName")} value={company.contactPersonName} />
             <LicenseDetailField label={t("licenseManagement:form.contactPersonPhone")} value={company.contactPersonPhone} />
             <LicenseDetailField label={t("licenseManagement:form.contactPersonEmail")} value={company.contactPersonEmail} />

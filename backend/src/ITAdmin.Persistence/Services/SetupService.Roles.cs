@@ -71,7 +71,7 @@ public sealed partial class SetupService
         ("NotificationTemplates", PermissionCodes.NotificationTemplates.Update, "Update notification templates."),
         ("LicenseManagement", PermissionCodes.LicenseManagement.View, "View license management."),
         ("LicenseManagement", PermissionCodes.LicenseManagement.ManageCatalog, "Manage license catalog (companies and products)."),
-        ("LicenseManagement", PermissionCodes.LicenseManagement.ManageAcquisitions, "Manage license acquisitions and packages."),
+        ("LicenseManagement", PermissionCodes.LicenseManagement.ManagePurchases, "Manage license purchases and packages."),
         ("LicenseManagement", PermissionCodes.LicenseManagement.ViewReports, "View license management reports."),
         ("LicenseManagement", PermissionCodes.LicenseManagement.ManageSettings, "Manage license management settings."),
         ("Setup", PermissionCodes.Setup.Manage, "Manage setup.")

@@ -32,20 +32,16 @@ public sealed record LicenseCompanyListItemResponse(
     string Name,
     string? Email,
     string? Phone,
-    string? SupportEmail,
     string? ContactPersonName,
+    string? ContactPersonPhone,
     bool IsActive);
 
 public sealed record LicenseCompanyDetailResponse(
     Guid Id,
     string Name,
-    string? TaxNumber,
     string? Phone,
     string? Email,
     string? Website,
-    string? Address,
-    string? SupportPhone,
-    string? SupportEmail,
     string? ContactPersonName,
     string? ContactPersonPhone,
     string? ContactPersonEmail,
@@ -58,13 +54,9 @@ public sealed record LicenseCompanyDetailResponse(
 
 public sealed record CreateLicenseCompanyRequest(
     string Name,
-    string? TaxNumber,
     string? Phone,
     string? Email,
     string? Website,
-    string? Address,
-    string? SupportPhone,
-    string? SupportEmail,
     string? ContactPersonName,
     string? ContactPersonPhone,
     string? ContactPersonEmail,
@@ -73,13 +65,9 @@ public sealed record CreateLicenseCompanyRequest(
 
 public sealed record UpdateLicenseCompanyRequest(
     string Name,
-    string? TaxNumber,
     string? Phone,
     string? Email,
     string? Website,
-    string? Address,
-    string? SupportPhone,
-    string? SupportEmail,
     string? ContactPersonName,
     string? ContactPersonPhone,
     string? ContactPersonEmail,
@@ -91,21 +79,19 @@ public sealed record UpdateLicenseCompanyStatusRequest(bool IsActive);
 public sealed record LicensedProductListItemResponse(
     Guid Id,
     string Name,
-    string? VendorCompanyName,
-    string? Category,
-    LicenseType? DefaultLicenseType,
+    string? Brand,
+    Guid CategoryId,
+    string CategoryName,
     bool IsActive);
 
 public sealed record LicensedProductDetailResponse(
     Guid Id,
     string Name,
-    Guid? VendorCompanyId,
-    string? VendorCompanyName,
-    string? Category,
-    LicenseType? DefaultLicenseType,
+    string? Brand,
+    Guid CategoryId,
+    string CategoryName,
     string? Description,
     bool IsActive,
-    string? Notes,
     DateTime CreatedAt,
     string? CreatedBy,
     DateTime? UpdatedAt,
@@ -113,23 +99,52 @@ public sealed record LicensedProductDetailResponse(
 
 public sealed record CreateLicensedProductRequest(
     string Name,
-    Guid? VendorCompanyId,
-    string? Category,
-    LicenseType? DefaultLicenseType,
+    string? Brand,
+    Guid CategoryId,
     string? Description,
-    bool IsActive,
-    string? Notes);
+    bool IsActive);
 
 public sealed record UpdateLicensedProductRequest(
     string Name,
-    Guid? VendorCompanyId,
-    string? Category,
-    LicenseType? DefaultLicenseType,
+    string? Brand,
+    Guid CategoryId,
     string? Description,
-    bool IsActive,
-    string? Notes);
+    bool IsActive);
 
 public sealed record UpdateLicensedProductStatusRequest(bool IsActive);
+
+public sealed record DirectoryUserLookupReadinessResponse(
+    bool IsReady,
+    string Reason,
+    string? Message);
+
+public sealed record LicenseProductCategoryListItemResponse(
+    Guid Id,
+    string Name,
+    string? Description,
+    bool IsActive);
+
+public sealed record LicenseProductCategoryDetailResponse(
+    Guid Id,
+    string Name,
+    string? Description,
+    bool IsActive,
+    DateTime CreatedAt,
+    string? CreatedBy,
+    DateTime? UpdatedAt,
+    string? UpdatedBy);
+
+public sealed record CreateLicenseProductCategoryRequest(
+    string Name,
+    string? Description,
+    bool IsActive);
+
+public sealed record UpdateLicenseProductCategoryRequest(
+    string Name,
+    string? Description,
+    bool IsActive);
+
+public sealed record UpdateLicenseProductCategoryStatusRequest(bool IsActive);
 
 public sealed record LicensePurchaseListItemResponse(
     Guid Id,

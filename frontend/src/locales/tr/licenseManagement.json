@@ -13,7 +13,7 @@
     },
     "companies": {
       "title": "Firmalar",
-      "description": "Vendor, tedarikçi ve destek firmalarını yönetin.",
+      "description": "Tedarikçi ve destek firmalarını yönetin.",
       "listTitle": "Firma listesi",
       "empty": "Henüz firma kaydı bulunmuyor.",
       "searchPlaceholder": "Firma adı, e-posta veya yetkili kişi ara..."
@@ -23,7 +23,14 @@
       "description": "Lisanslı ürün ve uygulama kayıtlarını yönetin.",
       "listTitle": "Ürün listesi",
       "empty": "Henüz ürün kaydı bulunmuyor.",
-      "searchPlaceholder": "Ürün adı, kategori veya vendor ara..."
+      "searchPlaceholder": "Ürün adı, marka veya kategori ara..."
+    },
+    "categories": {
+      "title": "Kategoriler",
+      "description": "Ürün kategorilerini yönetin.",
+      "listTitle": "Kategori listesi",
+      "empty": "Henüz kategori kaydı bulunmuyor.",
+      "searchPlaceholder": "Kategori adı veya açıklama ara..."
     },
     "purchases": {
       "title": "Satın Alımlar",
@@ -152,6 +159,23 @@
           "notFound": "Ürün bulunamadı."
         }
       },
+      "categories": {
+        "create": {
+          "title": "Kategori oluştur",
+          "description": "Yeni ürün kategorisi ekleyin.",
+          "formTitle": "Kategori bilgileri"
+        },
+        "edit": {
+          "title": "Kategori düzenle",
+          "formTitle": "Kategori bilgileri"
+        },
+        "detail": {
+          "title": "Kategori detayı",
+          "description": "Kategori kaydının ayrıntıları.",
+          "summaryTitle": "Özet",
+          "notFound": "Kategori bulunamadı."
+        }
+      },
       "purchases": {
         "create": {
           "title": "Satın alma oluştur",
@@ -216,6 +240,8 @@
       "editCompany": "Firma düzenle",
       "addProduct": "Ürün oluştur",
       "editProduct": "Ürün düzenle",
+      "addCategory": "Kategori oluştur",
+      "editCategory": "Kategori düzenle",
       "addPurchase": "Satın alma oluştur",
       "editPurchase": "Satın alma düzenle",
       "addPackage": "Lisans paketi oluştur",
@@ -224,18 +250,20 @@
       "deactivateCompany": "Firmayı pasifleştir",
       "activateProduct": "Ürünü aktifleştir",
       "deactivateProduct": "Ürünü pasifleştir",
+      "activateCategory": "Kategoriyi aktifleştir",
+      "deactivateCategory": "Kategoriyi pasifleştir",
       "updateStatus": "Durumu güncelle"
     },
     "table": {
       "companyName": "Firma adı",
       "email": "E-posta",
       "phone": "Telefon",
-      "supportEmail": "Destek e-posta",
       "contactPerson": "Yetkili kişi",
+      "contactPersonPhone": "Yetkili telefon",
       "productName": "Ürün adı",
-      "vendor": "Vendor",
+      "brand": "Marka",
       "category": "Kategori",
-      "defaultLicenseType": "Varsayılan lisans tipi",
+      "categoryName": "Kategori adı",
       "purchaseTitle": "Başlık",
       "purchaseType": "Satın alma tipi",
       "purchaseDate": "Satın alma tarihi",
@@ -255,17 +283,14 @@
     },
     "form": {
       "companyName": "Firma adı",
-      "taxNumber": "Vergi no",
       "website": "Web sitesi",
-      "address": "Adres",
-      "supportPhone": "Destek telefonu",
-      "supportEmail": "Destek e-posta",
       "contactPersonName": "Yetkili kişi",
       "contactPersonPhone": "Yetkili telefon",
       "contactPersonEmail": "Yetkili e-posta",
       "notes": "Notlar",
       "productName": "Ürün adı",
-      "vendorCompany": "Vendor firma",
+      "brand": "Marka",
+      "categoryName": "Kategori adı",
       "description": "Açıklama",
       "purchaseType": "Satın alma türü",
       "title": "Başlık",
@@ -303,21 +328,19 @@
       "licenseNotes": "Lisanslama notu",
       "selectCompany": "Firma seçin",
       "selectProduct": "Ürün seçin",
+      "selectCategory": "Kategori seçin",
       "selectPurchase": "Satın alma seçin",
-      "noVendor": "Vendor belirtilmedi",
       "purchaseTypeFieldHint": "Seçilen satın alma türüne göre ilgili alanlar gösterilir.",
       "sections": {
-        "basic": "Temel Bilgiler",
-        "purchaseInfo": "Satın Alma Bilgileri",
-        "officialDocuments": "Resmi Evrak / Referans Bilgileri",
+        "generalInfo": "Genel Bilgiler",
+        "officialProcess": "Resmi Süreç Bilgileri",
         "companyAndCost": "Firma ve Maliyet",
-        "notes": "Notlar"
+        "other": "Diğer"
       }
     },
     "filters": {
       "status": "Durum",
       "purchaseType": "Satın alma tipi",
-      "vendor": "Vendor",
       "product": "Ürün",
       "purchase": "Satın alma",
       "packageStatus": "Paket durumu"
@@ -329,6 +352,9 @@
       "productCreated": "Ürün oluşturuldu.",
       "productUpdated": "Ürün güncellendi.",
       "productStatusUpdated": "Ürün durumu güncellendi.",
+      "categoryCreated": "Kategori oluşturuldu.",
+      "categoryUpdated": "Kategori güncellendi.",
+      "categoryStatusUpdated": "Kategori durumu güncellendi.",
       "purchaseCreated": "Satın alma oluşturuldu.",
       "purchaseUpdated": "Satın alma güncellendi.",
       "purchaseStatusUpdated": "Satın alma durumu güncellendi.",
@@ -344,6 +370,7 @@
       "quantityMin": "Adet en az 1 olmalıdır.",
       "purchaseRequired": "Satın alma seçimi zorunludur.",
       "productRequired": "Ürün seçimi zorunludur.",
+      "categoryRequired": "Kategori seçimi zorunludur.",
       "invalidEmail": "Geçerli bir e-posta girin.",
       "invalidUrl": "Geçerli bir URL girin.",
       "endDateWarning": "Bitiş tarihi girilmedi."
@@ -356,7 +383,11 @@
       "deactivateProductTitle": "Ürünü pasifleştir",
       "deactivateProductDescription": "Bu ürünü pasifleştirmek istediğinize emin misiniz?",
       "activateProductTitle": "Ürünü aktifleştir",
-      "activateProductDescription": "Bu ürünü aktifleştirmek istediğinize emin misiniz?"
+      "activateProductDescription": "Bu ürünü aktifleştirmek istediğinize emin misiniz?",
+      "deactivateCategoryTitle": "Kategoriyi pasifleştir",
+      "deactivateCategoryDescription": "Bu kategoriyi pasifleştirmek istediğinize emin misiniz?",
+      "activateCategoryTitle": "Kategoriyi aktifleştir",
+      "activateCategoryDescription": "Bu kategoriyi aktifleştirmek istediğinize emin misiniz?"
     },
     "boolean": {
       "yes": "Evet",

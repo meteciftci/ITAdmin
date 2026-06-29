@@ -40,7 +40,7 @@ export function LicensePackageDetailPage() {
   const { t } = useTranslation(["licenseManagement", "common", "errors"]);
   const { id } = useParams<{ id: string }>();
   const user = useAuthStore((state) => state.user);
-  const canManage = canAccess(user, PermissionCodes.LicenseManagement.ManageAcquisitions);
+  const canManage = canAccess(user, PermissionCodes.LicenseManagement.ManagePurchases);
   const [showLicenseKey, setShowLicenseKey] = useState(false);
 
   const detailQuery = useQuery({

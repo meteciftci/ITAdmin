@@ -104,7 +104,7 @@ export const PermissionCodes = {
   LicenseManagement: {
     View: "LicenseManagement.View",
     ManageCatalog: "LicenseManagement.ManageCatalog",
-    ManageAcquisitions: "LicenseManagement.ManageAcquisitions",
+    ManagePurchases: "LicenseManagement.ManagePurchases",
     ManageRequests: "LicenseManagement.ManageRequests",
     ViewReports: "LicenseManagement.ViewReports",
     ManageSettings: "LicenseManagement.ManageSettings",

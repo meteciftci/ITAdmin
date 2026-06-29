@@ -11,6 +11,7 @@ import {
   getRequestItemStatusLabel,
 } from "@/features/license-management/enum-labels";
 import { MANUAL_REQUEST_ITEM_STATUSES } from "@/features/license-management/enum-labels";
+import { formatLicensedProductLabel } from "@/features/license-management/product-labels";
 import type { LicenseRequestItemDraft } from "@/features/license-management/license-request-payload";
 import type { LicensedProductListItem } from "@/features/license-management/types";
 
@@ -68,7 +69,7 @@ export function LicenseRequestItemCard({
             <option value="">{t("common:select.noOptions")}</option>
             {productOptions.map((product) => (
               <option key={product.id} value={product.id}>
-                {product.name}
+                {formatLicensedProductLabel(product)}
               </option>
             ))}
           </Select>

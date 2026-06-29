@@ -9,7 +9,7 @@ namespace ITAdmin.Persistence.Migrations
     {
         private const string PermView = "LicenseManagement.View";
         private const string PermManageCatalog = "LicenseManagement.ManageCatalog";
-        private const string PermManageAcquisitions = "LicenseManagement.ManageAcquisitions";
+        private const string PermManagePurchases = "LicenseManagement.ManagePurchases";
         private const string PermViewReports = "LicenseManagement.ViewReports";
         private const string PermManageSettings = "LicenseManagement.ManageSettings";
 
@@ -20,13 +20,13 @@ namespace ITAdmin.Persistence.Migrations
 
             UpsertPermission(migrationBuilder, "LicenseManagement", PermView, "View license management.");
             UpsertPermission(migrationBuilder, "LicenseManagement", PermManageCatalog, "Manage license catalog (companies and products).");
-            UpsertPermission(migrationBuilder, "LicenseManagement", PermManageAcquisitions, "Manage license acquisitions and packages.");
+            UpsertPermission(migrationBuilder, "LicenseManagement", PermManagePurchases, "Manage license purchases and packages.");
             UpsertPermission(migrationBuilder, "LicenseManagement", PermViewReports, "View license management reports.");
             UpsertPermission(migrationBuilder, "LicenseManagement", PermManageSettings, "Manage license management settings.");
 
             GrantToAdministratorRole(migrationBuilder, PermView);
             GrantToAdministratorRole(migrationBuilder, PermManageCatalog);
-            GrantToAdministratorRole(migrationBuilder, PermManageAcquisitions);
+            GrantToAdministratorRole(migrationBuilder, PermManagePurchases);
             GrantToAdministratorRole(migrationBuilder, PermViewReports);
             GrantToAdministratorRole(migrationBuilder, PermManageSettings);
         }
@@ -38,13 +38,13 @@ namespace ITAdmin.Persistence.Migrations
 DELETE FROM portal_role_permissions
 WHERE portal_permission_id IN (
     SELECT id FROM portal_permissions
-    WHERE code IN ('{PermView}', '{PermManageCatalog}', '{PermManageAcquisitions}', '{PermViewReports}', '{PermManageSettings}')
+    WHERE code IN ('{PermView}', '{PermManageCatalog}', '{PermManagePurchases}', '{PermViewReports}', '{PermManageSettings}')
 );
 ");
 
             migrationBuilder.Sql($@"
 DELETE FROM portal_permissions
-WHERE code IN ('{PermView}', '{PermManageCatalog}', '{PermManageAcquisitions}', '{PermViewReports}', '{PermManageSettings}');
+WHERE code IN ('{PermView}', '{PermManageCatalog}', '{PermManagePurchases}', '{PermViewReports}', '{PermManageSettings}');
 ");
         }
 

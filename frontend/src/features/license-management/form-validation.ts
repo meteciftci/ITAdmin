@@ -15,11 +15,11 @@ export function isValidUrl(value: string): boolean {
   return urlPattern.test(value.trim());
 }
 
-export function validateCompanyForm(name: string, email: string, supportEmail: string, contactEmail: string, website: string) {
+export function validateCompanyForm(name: string, email: string, contactEmail: string, website: string) {
   if (!name.trim()) {
     return "nameRequired";
   }
-  if (!isValidEmail(email) || !isValidEmail(supportEmail) || !isValidEmail(contactEmail)) {
+  if (!isValidEmail(email) || !isValidEmail(contactEmail)) {
     return "invalidEmail";
   }
   if (!isValidUrl(website)) {
@@ -28,7 +28,17 @@ export function validateCompanyForm(name: string, email: string, supportEmail: s
   return null;
 }
 
-export function validateProductForm(name: string) {
+export function validateProductForm(name: string, categoryId: string) {
+  if (!name.trim()) {
+    return "nameRequired";
+  }
+  if (!categoryId) {
+    return "categoryRequired";
+  }
+  return null;
+}
+
+export function validateCategoryForm(name: string) {
   if (!name.trim()) {
     return "nameRequired";
   }
