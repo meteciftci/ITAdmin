@@ -299,6 +299,26 @@ const LicensePackagesPage = lazy(() =>
     default: module.LicensePackagesPage,
   })),
 );
+const LicenseRequestsPage = lazy(() =>
+  import("@/features/license-management/LicenseRequestsPage").then((module) => ({
+    default: module.LicenseRequestsPage,
+  })),
+);
+const LicenseRequestCreatePage = lazy(() =>
+  import("@/features/license-management/LicenseRequestCreatePage").then((module) => ({
+    default: module.LicenseRequestCreatePage,
+  })),
+);
+const LicenseRequestEditPage = lazy(() =>
+  import("@/features/license-management/LicenseRequestEditPage").then((module) => ({
+    default: module.LicenseRequestEditPage,
+  })),
+);
+const LicenseRequestDetailPage = lazy(() =>
+  import("@/features/license-management/LicenseRequestDetailPage").then((module) => ({
+    default: module.LicenseRequestDetailPage,
+  })),
+);
 const ErrorPage = lazy(() =>
   import("@/pages/ErrorPage").then((module) => ({ default: module.ErrorPage })),
 );
@@ -1179,6 +1199,62 @@ export const router = createBrowserRouter([
           <AppLayout>
             <LazyRoute>
               <LicensePurchasesPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/license-management/requests/create",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission={PermissionCodes.LicenseManagement.ManageRequests}>
+          <AppLayout>
+            <LazyRoute>
+              <LicenseRequestCreatePage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/license-management/requests/:id/edit",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission={PermissionCodes.LicenseManagement.ManageRequests}>
+          <AppLayout>
+            <LazyRoute>
+              <LicenseRequestEditPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/license-management/requests/:id",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission={PermissionCodes.LicenseManagement.View}>
+          <AppLayout>
+            <LazyRoute>
+              <LicenseRequestDetailPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/license-management/requests",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission={PermissionCodes.LicenseManagement.View}>
+          <AppLayout>
+            <LazyRoute>
+              <LicenseRequestsPage />
             </LazyRoute>
           </AppLayout>
         </RequirePermission>

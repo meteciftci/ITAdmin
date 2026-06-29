@@ -255,6 +255,12 @@ export const getSidebarGroups = (
             visible: isLicenseManagementSectionVisible(user),
           },
           {
+            titleKey: "items.licenseManagementRequests",
+            to: "/license-management/requests",
+            icon: ListTree,
+            visible: isLicenseManagementSectionVisible(user),
+          },
+          {
             titleKey: "items.licenseManagementPackages",
             to: "/license-management/packages",
             icon: KeyRound,

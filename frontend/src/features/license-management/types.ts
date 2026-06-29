@@ -250,3 +250,147 @@ export type LicensePackageFormRequest = {
   isActive: boolean;
   status?: LicensePackageStatus;
 };
+
+export type LicenseRequestSource =
+  | "OfficialLetter"
+  | "CorporateRequestSystem"
+  | "Email"
+  | "VerbalInstruction"
+  | "Other";
+
+export type LicenseRequestStatus =
+  | "Draft"
+  | "Pending"
+  | "InReview"
+  | "PartiallyFulfilled"
+  | "Fulfilled"
+  | "Rejected"
+  | "Cancelled"
+  | "Archived";
+
+export type LicenseRequestItemStatus =
+  | "Pending"
+  | "InReview"
+  | "Approved"
+  | "Rejected"
+  | "PartiallyFulfilled"
+  | "Fulfilled"
+  | "Cancelled";
+
+export type LicenseRequestItemUserStatus =
+  | "Pending"
+  | "Approved"
+  | "Rejected"
+  | "Fulfilled"
+  | "Cancelled";
+
+export type LicenseRequestAdUserSnapshot = {
+  adObjectId: string;
+  samAccountName?: string | null;
+  userPrincipalName?: string | null;
+  displayName?: string | null;
+  department?: string | null;
+  title?: string | null;
+  mail?: string | null;
+  phone?: string | null;
+};
+
+export type LicenseRequestItemUserInput = LicenseRequestAdUserSnapshot & {
+  status: LicenseRequestItemUserStatus;
+};
+
+export type LicenseRequestItemInput = {
+  productId: string;
+  estimatedUnitCost?: number | null;
+  currency?: string | null;
+  vatIncluded?: boolean | null;
+  justification?: string | null;
+  status: LicenseRequestItemStatus;
+  users: LicenseRequestItemUserInput[];
+};
+
+export type LicenseRequestListItem = {
+  id: string;
+  requestNumber: string;
+  requestSource: LicenseRequestSource;
+  requestDate: string;
+  requestedByDisplayName: string | null;
+  requesterUnit: string | null;
+  productCount: number;
+  userCount: number;
+  estimatedTotalCost: number | null;
+  currency: string | null;
+  status: LicenseRequestStatus;
+};
+
+export type LicenseRequestItemUserDetail = LicenseRequestAdUserSnapshot & {
+  id: string;
+  status: LicenseRequestItemUserStatus;
+};
+
+export type LicenseRequestItemDetail = {
+  id: string;
+  productId: string;
+  productName: string;
+  requestedQuantity: number;
+  approvedQuantity: number | null;
+  fulfilledQuantity: number;
+  estimatedUnitCost: number | null;
+  estimatedTotalCost: number | null;
+  currency: string | null;
+  vatIncluded: boolean | null;
+  justification: string | null;
+  status: LicenseRequestItemStatus;
+  users: LicenseRequestItemUserDetail[];
+};
+
+export type LicenseRequestDetail = {
+  id: string;
+  requestNumber: string;
+  requestSource: LicenseRequestSource;
+  requestDate: string;
+  externalRequestNumber: string | null;
+  ebysNumber: string | null;
+  ebysDate: string | null;
+  requestedByAdObjectId: string;
+  requestedBySamAccountName: string | null;
+  requestedByUserPrincipalName: string | null;
+  requestedByDisplayName: string | null;
+  requestedByDepartment: string | null;
+  requestedByTitle: string | null;
+  requestedByMail: string | null;
+  requestedByPhone: string | null;
+  requestedByManagerName: string | null;
+  requesterUnit: string | null;
+  description: string | null;
+  status: LicenseRequestStatus;
+  estimatedTotalCost: number | null;
+  currency: string | null;
+  vatIncluded: boolean | null;
+  costNote: string | null;
+  isActive: boolean;
+  items: LicenseRequestItemDetail[];
+  createdAt: string;
+  createdBy: string | null;
+  updatedAt: string | null;
+  updatedBy: string | null;
+};
+
+export type LicenseRequestFormRequest = {
+  requestNumber: string;
+  requestSource: LicenseRequestSource;
+  requestDate: string;
+  externalRequestNumber?: string | null;
+  ebysNumber?: string | null;
+  ebysDate?: string | null;
+  requestedBy: LicenseRequestAdUserSnapshot;
+  requestedByManagerName?: string | null;
+  requesterUnit?: string | null;
+  description?: string | null;
+  status: LicenseRequestStatus;
+  estimatedTotalCost?: number | null;
+  currency?: string | null;
+  vatIncluded?: boolean | null;
+  costNote?: string | null;
+  items: LicenseRequestItemInput[];
+};

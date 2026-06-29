@@ -39,12 +39,84 @@
       "empty": "No license packages yet.",
       "searchPlaceholder": "Search product, purchase or serial no..."
     },
+    "requests": {
+      "title": "Requests",
+      "description": "Manage internal license requests.",
+      "listTitle": "License requests",
+      "empty": "No license requests yet.",
+      "searchPlaceholder": "Search request no, requester or unit...",
+      "sections": {
+        "basicInfo": "Basic information",
+        "requester": "Requester",
+        "items": "Products and users",
+        "cost": "Cost and notes"
+      },
+      "fields": {
+        "requestNumber": "Request no",
+        "requestSource": "Request source",
+        "requestDate": "Request date",
+        "externalRequestNumber": "External request no",
+        "ebysNumber": "EBYS no",
+        "ebysDate": "EBYS date",
+        "requestedBy": "Requested by",
+        "requesterUnit": "Requester unit",
+        "requestedByManagerName": "Requester's manager",
+        "product": "Product",
+        "productCount": "Product count",
+        "userCount": "User count",
+        "justification": "Justification",
+        "estimatedUnitCost": "Estimated unit cost",
+        "estimatedTotalCost": "Estimated total cost",
+        "currency": "Currency",
+        "vatIncluded": "VAT included",
+        "costNote": "Cost note",
+        "selectedUsers": "Selected users",
+        "requestedUserCount": "Requested user count: {{count}}",
+        "itemTitle": "Product item {{index}}",
+        "displayName": "Display name",
+        "samAccountName": "Username",
+        "userPrincipalName": "UPN",
+        "department": "Department",
+        "title": "Title",
+        "mail": "Email",
+        "phone": "Phone",
+        "snapshotTitle": "Title",
+        "calculatedTotal": "Calculated total: {{value}}"
+      },
+      "actions": {
+        "create": "Create request",
+        "addItem": "Add product item",
+        "addUser": "Add user"
+      },
+      "placeholders": {
+        "searchAdUser": "Search AD user..."
+      },
+      "blocking": {
+        "adConnectionTitle": "AD connection required",
+        "adConnectionDescription": "License requests require AD user selection. Configure the AD Management connection to continue.",
+        "missingLookupPermissionTitle": "Permission required",
+        "missingLookupPermissionDescription": "Directory.Users.Lookup permission is required for AD user selection.",
+        "goToAdSettings": "Go to AD settings"
+      },
+      "validation": {
+        "requestNumberRequired": "Request number is required.",
+        "requestDateRequired": "Request date is required.",
+        "requestedByRequired": "Requester is required.",
+        "itemsRequired": "At least one product item is required.",
+        "productRequired": "Product selection is required.",
+        "usersRequired": "Each product item must include at least one user.",
+        "duplicateProduct": "The same product cannot be added to a request more than once.",
+        "duplicateUser": "The same user cannot be added to the same product item more than once.",
+        "negativeCost": "Cost fields cannot be negative."
+      }
+    },
     "pages": {
       "detail": {
         "createdAt": "Created at",
         "createdBy": "Created by",
         "updatedAt": "Updated at",
-        "updatedBy": "Updated by"
+        "updatedBy": "Updated by",
+        "auditTitle": "Audit information"
       },
       "companies": {
         "create": {
@@ -118,6 +190,24 @@
           "notFound": "License package not found.",
           "showLicenseKey": "Show key",
           "hideLicenseKey": "Hide key"
+        }
+      },
+      "requests": {
+        "create": {
+          "title": "Create request",
+          "description": "Add a new license request record.",
+          "formTitle": "Request details"
+        },
+        "edit": {
+          "title": "Edit request",
+          "description": "Update the license request record.",
+          "formTitle": "Request details"
+        },
+        "detail": {
+          "title": "Request detail",
+          "description": "Details of the license request record.",
+          "summaryTitle": "Request summary",
+          "notFound": "License request not found."
         }
       }
     },
@@ -245,6 +335,9 @@
       "packageCreated": "License package created.",
       "packageUpdated": "License package updated.",
       "packageStatusUpdated": "License package status updated.",
+      "requestCreated": "License request created.",
+      "requestUpdated": "License request updated.",
+      "requestStatusUpdated": "License request status updated.",
       "operationFailed": "Operation failed.",
       "nameRequired": "Name is required.",
       "titleRequired": "Title is required.",
@@ -303,6 +396,39 @@
         "Cancelled": "Cancelled",
         "Suspended": "Suspended",
         "Archived": "Archived"
+      },
+      "requestSource": {
+        "OfficialLetter": "Official letter",
+        "CorporateRequestSystem": "Corporate request system",
+        "Email": "Email",
+        "VerbalInstruction": "Verbal / urgent instruction",
+        "Other": "Other"
+      },
+      "requestStatus": {
+        "Draft": "Draft",
+        "Pending": "Pending",
+        "InReview": "In review",
+        "PartiallyFulfilled": "Partially fulfilled",
+        "Fulfilled": "Fulfilled",
+        "Rejected": "Rejected",
+        "Cancelled": "Cancelled",
+        "Archived": "Archived"
+      },
+      "requestItemStatus": {
+        "Pending": "Pending",
+        "InReview": "In review",
+        "Approved": "Approved",
+        "Rejected": "Rejected",
+        "PartiallyFulfilled": "Partially fulfilled",
+        "Fulfilled": "Fulfilled",
+        "Cancelled": "Cancelled"
+      },
+      "requestItemUserStatus": {
+        "Pending": "Pending",
+        "Approved": "Approved",
+        "Rejected": "Rejected",
+        "Fulfilled": "Fulfilled",
+        "Cancelled": "Cancelled"
       }
     }
   }

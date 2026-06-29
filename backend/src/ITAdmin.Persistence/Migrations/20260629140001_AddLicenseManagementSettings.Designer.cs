@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ITAdmin.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260629140001")]
+    [Migration("20260629140001_AddLicenseManagementSettings")]
     partial class AddLicenseManagementSettings
     {
         /// <inheritdoc />

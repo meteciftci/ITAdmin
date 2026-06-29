@@ -39,12 +39,84 @@
       "empty": "Henüz lisans paketi bulunmuyor.",
       "searchPlaceholder": "Ürün, satın alma veya seri no ara..."
     },
+    "requests": {
+      "title": "Talepler",
+      "description": "Kurum içi lisans taleplerini yönetin.",
+      "listTitle": "Lisans talepleri",
+      "empty": "Henüz lisans talebi bulunmuyor.",
+      "searchPlaceholder": "Talep no, talep eden veya birim ara...",
+      "sections": {
+        "basicInfo": "Temel bilgiler",
+        "requester": "Talep eden",
+        "items": "Ürün ve kullanıcılar",
+        "cost": "Maliyet ve notlar"
+      },
+      "fields": {
+        "requestNumber": "Talep no",
+        "requestSource": "Talep kaynağı",
+        "requestDate": "Talep tarihi",
+        "externalRequestNumber": "Harici talep no",
+        "ebysNumber": "EBYS no",
+        "ebysDate": "EBYS tarihi",
+        "requestedBy": "Talep eden",
+        "requesterUnit": "Talep eden birim",
+        "requestedByManagerName": "Talep eden kişinin yöneticisi",
+        "product": "Ürün",
+        "productCount": "Ürün sayısı",
+        "userCount": "Kullanıcı sayısı",
+        "justification": "Gerekçe",
+        "estimatedUnitCost": "Tahmini birim maliyet",
+        "estimatedTotalCost": "Tahmini toplam maliyet",
+        "currency": "Para birimi",
+        "vatIncluded": "KDV dahil",
+        "costNote": "Maliyet notu",
+        "selectedUsers": "Seçilen kullanıcılar",
+        "requestedUserCount": "Talep edilen kullanıcı sayısı: {{count}}",
+        "itemTitle": "Ürün kalemi {{index}}",
+        "displayName": "Ad soyad",
+        "samAccountName": "Kullanıcı adı",
+        "userPrincipalName": "UPN",
+        "department": "Departman",
+        "title": "Ünvan",
+        "mail": "E-posta",
+        "phone": "Telefon",
+        "snapshotTitle": "Başlık",
+        "calculatedTotal": "Hesaplanan toplam: {{value}}"
+      },
+      "actions": {
+        "create": "Yeni talep oluştur",
+        "addItem": "Ürün kalemi ekle",
+        "addUser": "Kullanıcı ekle"
+      },
+      "placeholders": {
+        "searchAdUser": "AD kullanıcısı ara..."
+      },
+      "blocking": {
+        "adConnectionTitle": "AD bağlantısı gerekli",
+        "adConnectionDescription": "Lisans talebi için AD kullanıcı seçimi gerekir. Devam etmek için AD Yönetim bağlantısı yapılandırılmalıdır.",
+        "missingLookupPermissionTitle": "Yetki gerekli",
+        "missingLookupPermissionDescription": "AD kullanıcı seçimi için Directory.Users.Lookup yetkisi gerekir.",
+        "goToAdSettings": "AD ayarlarına git"
+      },
+      "validation": {
+        "requestNumberRequired": "Talep no zorunludur.",
+        "requestDateRequired": "Talep tarihi zorunludur.",
+        "requestedByRequired": "Talep eden kişi zorunludur.",
+        "itemsRequired": "En az bir ürün kalemi eklenmelidir.",
+        "productRequired": "Ürün seçimi zorunludur.",
+        "usersRequired": "Her ürün kalemi için en az bir kullanıcı seçilmelidir.",
+        "duplicateProduct": "Aynı ürün talebe birden fazla kez eklenemez.",
+        "duplicateUser": "Aynı kullanıcı aynı ürün kalemine birden fazla kez eklenemez.",
+        "negativeCost": "Maliyet alanları negatif olamaz."
+      }
+    },
     "pages": {
       "detail": {
         "createdAt": "Oluşturulma",
         "createdBy": "Oluşturan",
         "updatedAt": "Güncellenme",
-        "updatedBy": "Güncelleyen"
+        "updatedBy": "Güncelleyen",
+        "auditTitle": "Denetim bilgileri"
       },
       "companies": {
         "create": {
@@ -118,6 +190,24 @@
           "notFound": "Lisans paketi bulunamadı.",
           "showLicenseKey": "Anahtarı göster",
           "hideLicenseKey": "Anahtarı gizle"
+        }
+      },
+      "requests": {
+        "create": {
+          "title": "Talep oluştur",
+          "description": "Yeni lisans talebi kaydı ekleyin.",
+          "formTitle": "Talep bilgileri"
+        },
+        "edit": {
+          "title": "Talep düzenle",
+          "description": "Lisans talebi kaydını güncelleyin.",
+          "formTitle": "Talep bilgileri"
+        },
+        "detail": {
+          "title": "Talep detayı",
+          "description": "Lisans talebi kaydının ayrıntıları.",
+          "summaryTitle": "Talep özeti",
+          "notFound": "Lisans talebi bulunamadı."
         }
       }
     },
@@ -245,6 +335,9 @@
       "packageCreated": "Lisans paketi oluşturuldu.",
       "packageUpdated": "Lisans paketi güncellendi.",
       "packageStatusUpdated": "Lisans paketi durumu güncellendi.",
+      "requestCreated": "Lisans talebi oluşturuldu.",
+      "requestUpdated": "Lisans talebi güncellendi.",
+      "requestStatusUpdated": "Lisans talebi durumu güncellendi.",
       "operationFailed": "İşlem başarısız oldu.",
       "nameRequired": "Ad zorunludur.",
       "titleRequired": "Başlık zorunludur.",
@@ -303,6 +396,39 @@
         "Cancelled": "İptal edildi",
         "Suspended": "Askıda",
         "Archived": "Arşivlendi"
+      },
+      "requestSource": {
+        "OfficialLetter": "Resmi yazı",
+        "CorporateRequestSystem": "Kurumsal talep uygulaması",
+        "Email": "E-posta",
+        "VerbalInstruction": "Şifahi / ivedi talep",
+        "Other": "Diğer"
+      },
+      "requestStatus": {
+        "Draft": "Taslak",
+        "Pending": "Bekliyor",
+        "InReview": "Değerlendiriliyor",
+        "PartiallyFulfilled": "Kısmen karşılandı",
+        "Fulfilled": "Karşılandı",
+        "Rejected": "Reddedildi",
+        "Cancelled": "İptal edildi",
+        "Archived": "Arşivlendi"
+      },
+      "requestItemStatus": {
+        "Pending": "Bekliyor",
+        "InReview": "Değerlendiriliyor",
+        "Approved": "Onaylandı",
+        "Rejected": "Reddedildi",
+        "PartiallyFulfilled": "Kısmen karşılandı",
+        "Fulfilled": "Karşılandı",
+        "Cancelled": "İptal edildi"
+      },
+      "requestItemUserStatus": {
+        "Pending": "Bekliyor",
+        "Approved": "Onaylandı",
+        "Rejected": "Reddedildi",
+        "Fulfilled": "Karşılandı",
+        "Cancelled": "İptal edildi"
       }
     }
   }

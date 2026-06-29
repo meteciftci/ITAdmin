@@ -31,6 +31,9 @@ public class AppDbContext : DbContext
     public DbSet<LicensePurchase> LicensePurchases => Set<LicensePurchase>();
     public DbSet<LicensePackage> LicensePackages => Set<LicensePackage>();
     public DbSet<LicenseManagementSettings> LicenseManagementSettings => Set<LicenseManagementSettings>();
+    public DbSet<LicenseRequest> LicenseRequests => Set<LicenseRequest>();
+    public DbSet<LicenseRequestItem> LicenseRequestItems => Set<LicenseRequestItem>();
+    public DbSet<LicenseRequestItemUser> LicenseRequestItemUsers => Set<LicenseRequestItemUser>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

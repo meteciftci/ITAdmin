@@ -18,6 +18,11 @@ import type {
   LicensePurchaseListItem,
   LicensePurchaseStatus,
   LicensePurchaseType,
+  LicenseRequestDetail,
+  LicenseRequestFormRequest,
+  LicenseRequestListItem,
+  LicenseRequestSource,
+  LicenseRequestStatus,
   PagedResponse,
   UpdateLicenseManagementSettingsRequest,
 } from "@/features/license-management/types";
@@ -235,4 +240,56 @@ export const getAllLicensePurchases = async (): Promise<LicensePurchaseListItem[
     { params: { pageNumber: 1, pageSize: 100 } },
   );
   return data.items;
+};
+
+type RequestListParams = {
+  search?: string;
+  status?: LicenseRequestStatus;
+  requestSource?: LicenseRequestSource;
+  requestDateFrom?: string;
+  requestDateTo?: string;
+  requestedByAdObjectId?: string;
+  productId?: string;
+  pageNumber?: number;
+  pageSize?: number;
+};
+
+export const getLicenseRequests = async (
+  params: RequestListParams,
+): Promise<PagedResponse<LicenseRequestListItem>> => {
+  const { data } = await apiClient.get<PagedResponse<LicenseRequestListItem>>(
+    `${basePath}/requests`,
+    { params },
+  );
+  return data;
+};
+
+export const getLicenseRequestById = async (id: string): Promise<LicenseRequestDetail> => {
+  const { data } = await apiClient.get<LicenseRequestDetail>(`${basePath}/requests/${id}`);
+  return data;
+};
+
+export const createLicenseRequest = async (
+  request: LicenseRequestFormRequest,
+): Promise<LicenseRequestDetail> => {
+  const { data } = await apiClient.post<LicenseRequestDetail>(`${basePath}/requests`, request);
+  return data;
+};
+
+export const updateLicenseRequest = async (
+  id: string,
+  request: LicenseRequestFormRequest,
+): Promise<LicenseRequestDetail> => {
+  const { data } = await apiClient.put<LicenseRequestDetail>(`${basePath}/requests/${id}`, request);
+  return data;
+};
+
+export const updateLicenseRequestStatus = async (
+  id: string,
+  status: LicenseRequestStatus,
+): Promise<LicenseRequestDetail> => {
+  const { data } = await apiClient.patch<LicenseRequestDetail>(`${basePath}/requests/${id}/status`, {
+    status,
+  });
+  return data;
 };

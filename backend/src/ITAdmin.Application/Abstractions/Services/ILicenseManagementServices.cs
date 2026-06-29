@@ -100,3 +100,24 @@ public interface ILicensePackageService
         UpdateLicensePackageStatusRequest request,
         CancellationToken cancellationToken = default);
 }
+
+public interface ILicenseRequestService
+{
+    Task<PagedResult<LicenseRequestListItem>> GetListAsync(
+        LicenseRequestListQuery query,
+        CancellationToken cancellationToken = default);
+
+    Task<LicenseRequestDetail?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task<LicenseRequestOperationResult> CreateAsync(
+        CreateLicenseRequestRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<LicenseRequestOperationResult> UpdateAsync(
+        UpdateLicenseRequestRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<LicenseRequestOperationResult> UpdateStatusAsync(
+        UpdateLicenseRequestStatusRequest request,
+        CancellationToken cancellationToken = default);
+}

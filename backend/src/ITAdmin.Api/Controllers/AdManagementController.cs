@@ -6,6 +6,7 @@ using ITAdmin.Api.Contracts.AdManagement;
 using ITAdmin.Application.Abstractions.Services;
 using ITAdmin.Application.Common.AdManagement;
 using ITAdmin.Application.Common.Constants;
+using ITAdmin.Application.Common.Security;
 using AppModels = ITAdmin.Application.Common.Models;
 
 namespace ITAdmin.Api.Controllers;
@@ -193,7 +194,7 @@ public sealed class AdManagementController(
     }
 
     [HttpGet("users")]
-    [RequirePermission(AdManagementPermissions.UsersView)]
+    [RequireAnyPermission(AdManagementPermissions.UsersView, PermissionCodes.Directory.Users.Lookup)]
     public async Task<ActionResult<AdUserSearchResponse>> SearchUsers(
         [FromQuery] string? search,
         [FromQuery] string? status,

@@ -15,6 +15,7 @@ import type {
   LicensedProductListItem,
   LicensePackageListItem,
   LicensePurchaseListItem,
+  LicenseRequestListItem,
 } from "@/features/license-management/types";
 
 type StatusToggleOptions<T> = {
@@ -366,4 +367,93 @@ export function createLicensePackageColumns({
   );
 
   return columns;
+}
+
+export function createLicenseRequestColumns({
+  t,
+  canManage,
+  onDetail,
+  onEdit,
+  getRequestSourceLabel,
+  getRequestStatusLabel,
+}: BaseOptions<LicenseRequestListItem> & {
+  getRequestSourceLabel: (value: string) => string;
+  getRequestStatusLabel: (value: string) => string;
+}): ColumnDef<LicenseRequestListItem, unknown>[] {
+  return [
+    {
+      accessorKey: "requestNumber",
+      header: () => t("licenseManagement:requests.fields.requestNumber"),
+      meta: { truncate: true } satisfies DataTableColumnMeta,
+    },
+    {
+      id: "requestSource",
+      header: () => t("licenseManagement:requests.fields.requestSource"),
+      cell: ({ row }) => getRequestSourceLabel(row.original.requestSource),
+    },
+    {
+      id: "requestDate",
+      header: () => t("licenseManagement:requests.fields.requestDate"),
+      cell: ({ row }) => (
+        <DateTimeText
+          value={row.original.requestDate}
+          options={{ year: "numeric", month: "2-digit", day: "2-digit" }}
+        />
+      ),
+    },
+    {
+      accessorKey: "requestedByDisplayName",
+      header: () => t("licenseManagement:requests.fields.requestedBy"),
+      cell: ({ row }) => row.original.requestedByDisplayName ?? "-",
+      meta: { truncate: true } satisfies DataTableColumnMeta,
+    },
+    {
+      accessorKey: "requesterUnit",
+      header: () => t("licenseManagement:requests.fields.requesterUnit"),
+      cell: ({ row }) => row.original.requesterUnit ?? "-",
+      meta: { truncate: true } satisfies DataTableColumnMeta,
+    },
+    {
+      accessorKey: "productCount",
+      header: () => t("licenseManagement:requests.fields.productCount"),
+    },
+    {
+      accessorKey: "userCount",
+      header: () => t("licenseManagement:requests.fields.userCount"),
+    },
+    {
+      id: "estimatedTotalCost",
+      header: () => t("licenseManagement:requests.fields.estimatedTotalCost"),
+      cell: ({ row }) => {
+        if (row.original.estimatedTotalCost == null) {
+          return "-";
+        }
+
+        const currency = row.original.currency ? ` ${row.original.currency}` : "";
+        return `${row.original.estimatedTotalCost}${currency}`;
+      },
+    },
+    {
+      id: "status",
+      header: () => t("common:fields.status"),
+      cell: ({ row }) => getRequestStatusLabel(row.original.status),
+    },
+    {
+      id: "actions",
+      header: () => t("common:fields.actions"),
+      meta: { isAction: true } satisfies DataTableColumnMeta,
+      cell: ({ row }) => (
+        <RowActions>
+          <DropdownMenuItem onClick={() => onDetail(row.original)}>
+            {t("common:actions.detail")}
+          </DropdownMenuItem>
+          {canManage ? (
+            <DropdownMenuItem onClick={() => onEdit(row.original)}>
+              {t("common:actions.edit")}
+            </DropdownMenuItem>
+          ) : null}
+        </RowActions>
+      ),
+    },
+  ];
 }

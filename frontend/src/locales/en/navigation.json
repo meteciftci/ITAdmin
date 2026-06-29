@@ -39,6 +39,7 @@
       "licenseManagementCompanies": "Companies",
       "licenseManagementProducts": "Products",
       "licenseManagementPurchases": "Purchases",
+      "licenseManagementRequests": "Requests",
       "licenseManagementPackages": "License Packages",
       "error": "Error"
     }

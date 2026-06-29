@@ -4,6 +4,10 @@ import type {
   LicensePackageStatus,
   LicensePurchaseStatus,
   LicensePurchaseType,
+  LicenseRequestItemStatus,
+  LicenseRequestItemUserStatus,
+  LicenseRequestSource,
+  LicenseRequestStatus,
   LicenseType,
 } from "@/features/license-management/types";
 
@@ -45,6 +49,67 @@ export const PACKAGE_STATUSES: LicensePackageStatus[] = [
   "Archived",
 ];
 
+export const REQUEST_SOURCES: LicenseRequestSource[] = [
+  "OfficialLetter",
+  "CorporateRequestSystem",
+  "Email",
+  "VerbalInstruction",
+  "Other",
+];
+
+export const REQUEST_STATUSES: LicenseRequestStatus[] = [
+  "Draft",
+  "Pending",
+  "InReview",
+  "PartiallyFulfilled",
+  "Fulfilled",
+  "Rejected",
+  "Cancelled",
+  "Archived",
+];
+
+export const MANUAL_REQUEST_STATUSES: LicenseRequestStatus[] = [
+  "Draft",
+  "Pending",
+  "InReview",
+  "Rejected",
+  "Cancelled",
+  "Archived",
+];
+
+export const REQUEST_ITEM_STATUSES: LicenseRequestItemStatus[] = [
+  "Pending",
+  "InReview",
+  "Approved",
+  "Rejected",
+  "PartiallyFulfilled",
+  "Fulfilled",
+  "Cancelled",
+];
+
+export const MANUAL_REQUEST_ITEM_STATUSES: LicenseRequestItemStatus[] = [
+  "Pending",
+  "InReview",
+  "Approved",
+  "Rejected",
+  "Cancelled",
+];
+
+export const REQUEST_ITEM_USER_STATUSES: LicenseRequestItemUserStatus[] = [
+  "Pending",
+  "Approved",
+  "Rejected",
+  "Fulfilled",
+  "Cancelled",
+];
+
+export const MANUAL_REQUEST_ITEM_USER_STATUSES: LicenseRequestItemUserStatus[] = [
+  "Pending",
+  "Approved",
+  "Rejected",
+  "Cancelled",
+];
+
 export function getPurchaseTypeLabel(
   t: TFunction<["licenseManagement", "common"]>,
   value: LicensePurchaseType,
@@ -71,6 +136,34 @@ export function getPackageStatusLabel(
   value: LicensePackageStatus,
 ): string {
   return t(`licenseManagement:enums.packageStatus.${value}`);
+}
+
+export function getRequestSourceLabel(
+  t: TFunction<["licenseManagement", "common"]>,
+  value: LicenseRequestSource,
+): string {
+  return t(`licenseManagement:enums.requestSource.${value}`);
+}
+
+export function getRequestStatusLabel(
+  t: TFunction<["licenseManagement", "common"]>,
+  value: LicenseRequestStatus,
+): string {
+  return t(`licenseManagement:enums.requestStatus.${value}`);
+}
+
+export function getRequestItemStatusLabel(
+  t: TFunction<["licenseManagement", "common"]>,
+  value: LicenseRequestItemStatus,
+): string {
+  return t(`licenseManagement:enums.requestItemStatus.${value}`);
+}
+
+export function getRequestItemUserStatusLabel(
+  t: TFunction<["licenseManagement", "common"]>,
+  value: LicenseRequestItemUserStatus,
+): string {
+  return t(`licenseManagement:enums.requestItemUserStatus.${value}`);
 }
 
 export function maskLicenseKey(value: string | null | undefined): string {

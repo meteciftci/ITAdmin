@@ -17,6 +17,7 @@ public sealed class LicenseManagementServiceTests
             PermissionCodes.LicenseManagement.View,
             PermissionCodes.LicenseManagement.ManageCatalog,
             PermissionCodes.LicenseManagement.ManageAcquisitions,
+            PermissionCodes.LicenseManagement.ManageRequests,
             PermissionCodes.LicenseManagement.ViewReports,
             PermissionCodes.LicenseManagement.ManageSettings
         };

@@ -22,6 +22,10 @@ test("router includes license management routes", () => {
     "/license-management/purchases/create",
     "/license-management/purchases/:id",
     "/license-management/purchases/:id/edit",
+    "/license-management/requests",
+    "/license-management/requests/create",
+    "/license-management/requests/:id",
+    "/license-management/requests/:id/edit",
     "/license-management/packages",
     "/license-management/packages/create",
     "/license-management/packages/:id",
@@ -42,7 +46,9 @@ test("sidebar includes license management purchases menu", () => {
   assert.match(sidebarSource, /items\.licenseManagementOverview/);
   assert.match(sidebarSource, /items\.licenseManagementCompanies/);
   assert.match(sidebarSource, /items\.licenseManagementPurchases/);
+  assert.match(sidebarSource, /items\.licenseManagementRequests/);
   assert.match(sidebarSource, /\/license-management\/purchases/);
+  assert.match(sidebarSource, /\/license-management\/requests/);
   assert.doesNotMatch(sidebarSource, /licenseManagementAcquisitions/);
   assert.doesNotMatch(sidebarSource, /\/license-management\/settings/);
   assert.match(sidebarSource, /PermissionCodes\.LicenseManagement\.View/);
@@ -70,6 +76,12 @@ test("list pages navigate to create routes instead of dialogs", () => {
   assert.doesNotMatch(companiesPage, /FormDialog/);
   assert.match(purchasesPage, /LICENSE_PURCHASE_CREATE_PATH/);
   assert.doesNotMatch(purchasesPage, /FormDialog/);
+  const requestsPage = readFileSync(
+    join(root, "features/license-management/LicenseRequestsPage.tsx"),
+    "utf8",
+  );
+  assert.match(requestsPage, /LICENSE_REQUEST_CREATE_PATH/);
+  assert.doesNotMatch(requestsPage, /FormDialog/);
 });
 
 test("purchase and package forms use DatePicker not type=date", () => {
@@ -238,4 +250,43 @@ test("license management locale keys exist in tr and en without legacy terms", (
   const enRaw = readFileSync(join(root, "locales/en/licenseManagement.json"), "utf8");
   assert.doesNotMatch(trRaw, /Edinim/i);
   assert.doesNotMatch(enRaw, /Acquisition/i);
+});
+
+test("license request pages use page routes and DatePicker", () => {
+  const createPage = readFileSync(
+    join(root, "features/license-management/LicenseRequestCreatePage.tsx"),
+    "utf8",
+  );
+  const requestForm = readFileSync(
+    join(root, "features/license-management/components/LicenseRequestForm.tsx"),
+    "utf8",
+  );
+  const adGuard = readFileSync(
+    join(root, "features/license-management/components/LicenseRequestAdAccessGuard.tsx"),
+    "utf8",
+  );
+
+  assert.match(createPage, /LicenseRequestCreatePage/);
+  assert.match(createPage, /LicenseRequestAdAccessGuard/);
+  assert.doesNotMatch(createPage, /FormDialog/);
+  assert.match(requestForm, /DatePicker/);
+  assert.doesNotMatch(requestForm, /type="date"/);
+  assert.match(adGuard, /BlockingStateCard/);
+  assert.match(adGuard, /Directory\.Users\.Lookup/);
+});
+
+test("license request payload helpers enforce duplicate rules", () => {
+  const validation = readFileSync(
+    join(root, "features/license-management/license-request-form-validation.ts"),
+    "utf8",
+  );
+  const payload = readFileSync(
+    join(root, "features/license-management/license-request-payload.ts"),
+    "utf8",
+  );
+
+  assert.match(validation, /duplicateProduct/);
+  assert.match(validation, /duplicateUser/);
+  assert.match(payload, /mapAdUserToSnapshot/);
+  assert.match(payload, /buildLicenseRequestPayload/);
 });

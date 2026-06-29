@@ -11,26 +11,23 @@ namespace ITAdmin.Persistence.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.CreateTable(
-                name: "license_management_settings",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    default_currency = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: false, defaultValue: "TRY"),
-                    default_vat_included = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
-                    default_renewal_reminder_days = table.Column<int>(type: "integer", nullable: false, defaultValue: 60),
-                    default_renewal_recipients = table.Column<string>(type: "character varying(4000)", maxLength: 4000, nullable: true),
-                    default_renewal_cc_recipients = table.Column<string>(type: "character varying(4000)", maxLength: 4000, nullable: true),
-                    notes = table.Column<string>(type: "character varying(4000)", maxLength: 4000, nullable: true),
-                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    created_by = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
-                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    updated_by = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_license_management_settings", x => x.id);
-                });
+            migrationBuilder.Sql(
+                """
+                CREATE TABLE IF NOT EXISTS license_management_settings (
+                    id uuid NOT NULL,
+                    default_currency character varying(10) NOT NULL DEFAULT 'TRY',
+                    default_vat_included boolean NOT NULL DEFAULT FALSE,
+                    default_renewal_reminder_days integer NOT NULL DEFAULT 60,
+                    default_renewal_recipients character varying(4000),
+                    default_renewal_cc_recipients character varying(4000),
+                    notes character varying(4000),
+                    created_at timestamp with time zone NOT NULL,
+                    created_by character varying(200),
+                    updated_at timestamp with time zone,
+                    updated_by character varying(200),
+                    CONSTRAINT "PK_license_management_settings" PRIMARY KEY (id)
+                );
+                """);
         }
 
         /// <inheritdoc />

@@ -299,3 +299,142 @@ public sealed record UpdateLicensePackageRequest(
     bool IsActive);
 
 public sealed record UpdateLicensePackageStatusRequest(LicensePackageStatus Status);
+
+public sealed record LicenseRequestAdUserSnapshotRequest(
+    string AdObjectId,
+    string? SamAccountName,
+    string? UserPrincipalName,
+    string? DisplayName,
+    string? Department,
+    string? Title,
+    string? Mail,
+    string? Phone);
+
+public sealed record LicenseRequestItemUserRequest(
+    string AdObjectId,
+    string? SamAccountName,
+    string? UserPrincipalName,
+    string? DisplayName,
+    string? Department,
+    string? Title,
+    string? Mail,
+    string? Phone,
+    LicenseRequestItemUserStatus Status);
+
+public sealed record LicenseRequestItemRequest(
+    Guid ProductId,
+    decimal? EstimatedUnitCost,
+    string? Currency,
+    bool? VatIncluded,
+    string? Justification,
+    LicenseRequestItemStatus Status,
+    IReadOnlyList<LicenseRequestItemUserRequest> Users);
+
+public sealed record LicenseRequestListItemResponse(
+    Guid Id,
+    string RequestNumber,
+    LicenseRequestSource RequestSource,
+    DateOnly RequestDate,
+    string? RequestedByDisplayName,
+    string? RequesterUnit,
+    int ProductCount,
+    int UserCount,
+    decimal? EstimatedTotalCost,
+    string? Currency,
+    LicenseRequestStatus Status);
+
+public sealed record LicenseRequestItemUserResponse(
+    Guid Id,
+    string AdObjectId,
+    string? SamAccountName,
+    string? UserPrincipalName,
+    string? DisplayName,
+    string? Department,
+    string? Title,
+    string? Mail,
+    string? Phone,
+    LicenseRequestItemUserStatus Status);
+
+public sealed record LicenseRequestItemResponse(
+    Guid Id,
+    Guid ProductId,
+    string ProductName,
+    int RequestedQuantity,
+    int? ApprovedQuantity,
+    int FulfilledQuantity,
+    decimal? EstimatedUnitCost,
+    decimal? EstimatedTotalCost,
+    string? Currency,
+    bool? VatIncluded,
+    string? Justification,
+    LicenseRequestItemStatus Status,
+    IReadOnlyList<LicenseRequestItemUserResponse> Users);
+
+public sealed record LicenseRequestDetailResponse(
+    Guid Id,
+    string RequestNumber,
+    LicenseRequestSource RequestSource,
+    DateOnly RequestDate,
+    string? ExternalRequestNumber,
+    string? EbysNumber,
+    DateOnly? EbysDate,
+    string RequestedByAdObjectId,
+    string? RequestedBySamAccountName,
+    string? RequestedByUserPrincipalName,
+    string? RequestedByDisplayName,
+    string? RequestedByDepartment,
+    string? RequestedByTitle,
+    string? RequestedByMail,
+    string? RequestedByPhone,
+    string? RequestedByManagerName,
+    string? RequesterUnit,
+    string? Description,
+    LicenseRequestStatus Status,
+    decimal? EstimatedTotalCost,
+    string? Currency,
+    bool? VatIncluded,
+    string? CostNote,
+    bool IsActive,
+    IReadOnlyList<LicenseRequestItemResponse> Items,
+    DateTime CreatedAt,
+    string? CreatedBy,
+    DateTime? UpdatedAt,
+    string? UpdatedBy);
+
+public sealed record CreateLicenseRequestRequest(
+    string RequestNumber,
+    LicenseRequestSource RequestSource,
+    DateOnly RequestDate,
+    string? ExternalRequestNumber,
+    string? EbysNumber,
+    DateOnly? EbysDate,
+    LicenseRequestAdUserSnapshotRequest RequestedBy,
+    string? RequestedByManagerName,
+    string? RequesterUnit,
+    string? Description,
+    LicenseRequestStatus Status,
+    decimal? EstimatedTotalCost,
+    string? Currency,
+    bool? VatIncluded,
+    string? CostNote,
+    IReadOnlyList<LicenseRequestItemRequest> Items);
+
+public sealed record UpdateLicenseRequestRequest(
+    string RequestNumber,
+    LicenseRequestSource RequestSource,
+    DateOnly RequestDate,
+    string? ExternalRequestNumber,
+    string? EbysNumber,
+    DateOnly? EbysDate,
+    LicenseRequestAdUserSnapshotRequest RequestedBy,
+    string? RequestedByManagerName,
+    string? RequesterUnit,
+    string? Description,
+    LicenseRequestStatus Status,
+    decimal? EstimatedTotalCost,
+    string? Currency,
+    bool? VatIncluded,
+    string? CostNote,
+    IReadOnlyList<LicenseRequestItemRequest> Items);
+
+public sealed record UpdateLicenseRequestStatusRequest(LicenseRequestStatus Status);
