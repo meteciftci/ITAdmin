@@ -7,16 +7,33 @@ import { cn } from "@/lib/utils";
 
 type CalendarProps = ComponentProps<typeof DayPicker>;
 
-export function Calendar({ className, classNames, showOutsideDays = true, ...props }: CalendarProps) {
+function usesDropdownCaption(captionLayout: CalendarProps["captionLayout"]): boolean {
+  return typeof captionLayout === "string" && captionLayout.startsWith("dropdown");
+}
+
+export function Calendar({
+  className,
+  classNames,
+  showOutsideDays = true,
+  captionLayout,
+  ...props
+}: CalendarProps) {
+  const dropdownCaption = usesDropdownCaption(captionLayout);
+
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
+      captionLayout={captionLayout}
       className={cn("p-2", className)}
       classNames={{
         months: "flex flex-col gap-4 sm:flex-row sm:gap-6",
-        month: "space-y-4",
-        caption: "relative flex items-center justify-center gap-2 pt-1",
-        caption_label: "text-sm font-medium",
+        month: dropdownCaption
+          ? "grid grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[auto_auto] items-center gap-x-1 gap-y-4"
+          : "relative space-y-4",
+        caption: dropdownCaption
+          ? "flex items-center justify-center gap-2 pt-1"
+          : "relative flex items-center justify-center gap-2 pt-1",
+        caption_label: dropdownCaption ? "sr-only" : "text-sm font-medium",
         dropdowns: "flex items-center justify-center gap-2",
         dropdown_root: "relative inline-flex items-center",
         dropdown: cn(
@@ -28,13 +45,20 @@ export function Calendar({ className, classNames, showOutsideDays = true, ...pro
         nav: "flex items-center gap-1",
         button_previous: cn(
           buttonVariants({ variant: "outline", size: "icon-sm" }),
-          "absolute left-1 h-7 w-7 border-border bg-popover p-0 text-popover-foreground",
+          dropdownCaption
+            ? "col-start-1 row-start-1 h-7 w-7 shrink-0 border-border bg-popover p-0 text-popover-foreground"
+            : "absolute left-1 h-7 w-7 border-border bg-popover p-0 text-popover-foreground",
         ),
         button_next: cn(
           buttonVariants({ variant: "outline", size: "icon-sm" }),
-          "absolute right-1 h-7 w-7 border-border bg-popover p-0 text-popover-foreground",
+          dropdownCaption
+            ? "col-start-3 row-start-1 h-7 w-7 shrink-0 border-border bg-popover p-0 text-popover-foreground"
+            : "absolute right-1 h-7 w-7 border-border bg-popover p-0 text-popover-foreground",
         ),
-        month_caption: "flex items-center justify-center",
+        month_caption: dropdownCaption
+          ? "col-start-2 row-start-1 flex min-w-0 items-center justify-center gap-2"
+          : "flex items-center justify-center",
+        month_grid: dropdownCaption ? "col-span-3 row-start-2" : undefined,
         weekdays: "flex",
         weekday: "w-9 text-xs font-normal text-muted-foreground",
         week: "mt-2 flex w-full",

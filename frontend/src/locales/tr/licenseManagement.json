@@ -271,7 +271,7 @@
     },
     "enums": {
       "purchaseType": {
-        "LegacyPerpetual": "Eski kalıcı lisans / mülga belediye",
+        "LegacyPerpetual": "Eski kalıcı lisans",
         "Tender": "İhale",
         "DirectPurchase": "Doğrudan temin",
         "Dmo": "DMO",

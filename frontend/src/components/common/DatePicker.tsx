@@ -78,6 +78,7 @@ export function DatePicker({
           onSelect={(date) => onChange(toDateOnlyString(date))}
           locale={dateLocale}
           captionLayout="dropdown"
+          navLayout="around"
           startMonth={CALENDAR_START_MONTH}
           endMonth={CALENDAR_END_MONTH}
           labels={{

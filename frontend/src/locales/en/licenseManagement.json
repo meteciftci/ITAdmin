@@ -271,7 +271,7 @@
     },
     "enums": {
       "purchaseType": {
-        "LegacyPerpetual": "Legacy perpetual / former municipality",
+        "LegacyPerpetual": "Legacy perpetual",
         "Tender": "Tender",
         "DirectPurchase": "Direct purchase",
         "Dmo": "DMO",

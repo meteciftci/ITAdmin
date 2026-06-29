@@ -98,6 +98,7 @@ test("DatePicker uses fullWidth PopoverTrigger with month/year dropdowns", () =>
   const datePickerSource = readFileSync(join(root, "components/common/DatePicker.tsx"), "utf8");
   assert.match(datePickerSource, /PopoverTrigger asChild fullWidth/);
   assert.match(datePickerSource, /captionLayout="dropdown"/);
+  assert.match(datePickerSource, /navLayout="around"/);
   assert.match(datePickerSource, /startMonth=\{CALENDAR_START_MONTH\}/);
   assert.match(datePickerSource, /endMonth=\{CALENDAR_END_MONTH\}/);
   assert.match(datePickerSource, /datePicker\.today/);
