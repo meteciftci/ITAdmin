@@ -87,6 +87,35 @@ test("purchase and package forms use DatePicker not type=date", () => {
   assert.doesNotMatch(packageForm, /type="date"/);
 });
 
+test("DatePicker trigger uses full width popover wrapper", () => {
+  const popoverSource = readFileSync(join(root, "components/ui/popover.tsx"), "utf8");
+  assert.match(popoverSource, /className="flex w-full"/);
+});
+
+test("purchase form uses type-based field visibility and payload normalization", () => {
+  const purchaseForm = readFileSync(
+    join(root, "features/license-management/components/LicensePurchaseForm.tsx"),
+    "utf8",
+  );
+  assert.match(purchaseForm, /isPurchaseFieldVisible/);
+  assert.match(purchaseForm, /buildPurchasePayloadByType/);
+  assert.match(purchaseForm, /form\.sections\.basic/);
+  assert.doesNotMatch(purchaseForm, /AcquisitionFormDialog/);
+});
+
+test("license forms use license management api error helper", () => {
+  const productForm = readFileSync(
+    join(root, "features/license-management/components/LicenseProductForm.tsx"),
+    "utf8",
+  );
+  const settingsPage = readFileSync(
+    join(root, "features/settings/LicenseManagementSettingsPage.tsx"),
+    "utf8",
+  );
+  assert.match(productForm, /getLicenseManagementApiErrorMessage/);
+  assert.match(settingsPage, /getLicenseManagementApiErrorMessage/);
+});
+
 test("license management locale keys exist in tr and en without legacy terms", () => {
   const tr = JSON.parse(
     readFileSync(join(root, "locales/tr/licenseManagement.json"), "utf8"),

@@ -49,6 +49,46 @@ describe("getApiErrorMessage", () => {
 
     assert.equal(message, "fallback");
   });
+
+  it("formats ASP.NET validation errors with field labels", () => {
+    const message = getApiErrorMessage(
+      createAxiosError({
+        title: "One or more validation errors occurred.",
+        status: 400,
+        errors: {
+          "$.defaultLicenseType": [
+            "The JSON value could not be converted to ITAdmin.Domain.Enums.LicenseType.",
+          ],
+        },
+      }),
+      "fallback",
+      {
+        genericValidationMessage: "Please check the form fields.",
+        fieldLabelResolver: (field) =>
+          field === "defaultLicenseType" ? "Default license type" : null,
+      },
+    );
+
+    assert.equal(message, "Default license type: Please check the form fields.");
+    assert.doesNotMatch(message, /One or more validation errors occurred/);
+  });
+
+  it("does not return generic validation title alone when errors exist", () => {
+    const message = getApiErrorMessage(
+      createAxiosError({
+        title: "One or more validation errors occurred.",
+        errors: {
+          name: ["Name is required."],
+        },
+      }),
+      "fallback",
+      {
+        genericValidationMessage: "Please check the form fields.",
+      },
+    );
+
+    assert.equal(message, "Name is required.");
+  });
 });
 
 describe("getApiErrorInfo", () => {

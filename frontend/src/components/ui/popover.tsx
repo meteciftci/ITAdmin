@@ -86,7 +86,7 @@ export function PopoverTrigger({ asChild, children }: PopoverTriggerProps) {
   if (asChild && isValidElement(children)) {
     const child = children as ReactElement<{ onClick?: () => void }>;
     return (
-      <span ref={triggerRef} className="inline-flex">
+      <span ref={triggerRef} className="flex w-full">
         {cloneElement(child, {
           onClick: () => {
             child.props.onClick?.();

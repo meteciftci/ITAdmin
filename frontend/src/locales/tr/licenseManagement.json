@@ -210,7 +210,15 @@
       "selectCompany": "Firma seçin",
       "selectProduct": "Ürün seçin",
       "selectPurchase": "Satın alma seçin",
-      "noVendor": "Vendor belirtilmedi"
+      "noVendor": "Vendor belirtilmedi",
+      "purchaseTypeFieldHint": "Seçilen satın alma türüne göre ilgili alanlar gösterilir.",
+      "sections": {
+        "basic": "Temel Bilgiler",
+        "purchaseInfo": "Satın Alma Bilgileri",
+        "officialDocuments": "Resmi Evrak / Referans Bilgileri",
+        "companyAndCost": "Firma ve Maliyet",
+        "notes": "Notlar"
+      }
     },
     "filters": {
       "status": "Durum",

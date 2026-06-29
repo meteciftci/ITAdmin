@@ -15,6 +15,7 @@ type DatePickerProps = {
   locale: "tr" | "en";
   disabled?: boolean;
   id?: string;
+  className?: string;
 };
 
 export function DatePicker({
@@ -25,6 +26,7 @@ export function DatePicker({
   locale,
   disabled = false,
   id,
+  className,
 }: DatePickerProps) {
   const dateLocale = locale === "tr" ? tr : enUS;
   const selectedDate = parseDateOnlyValue(value);
@@ -41,6 +43,7 @@ export function DatePicker({
           className={cn(
             "w-full justify-start text-left font-normal",
             !formattedValue && "text-muted-foreground",
+            className,
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />

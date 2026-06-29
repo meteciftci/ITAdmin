@@ -11,7 +11,102 @@ type ApiErrorData = {
   MessageKey?: string;
   titleKey?: string;
   TitleKey?: string;
+  errors?: Record<string, string[]>;
+  Errors?: Record<string, string[]>;
 } | string;
+
+export type ApiErrorMessageOptions = {
+  genericValidationMessage?: string;
+  fieldLabelResolver?: (fieldPath: string) => string | null;
+};
+
+const GENERIC_VALIDATION_TITLES = new Set([
+  "one or more validation errors occurred.",
+  "istek doğrulanamadı",
+  "validation failed.",
+]);
+
+function isTechnicalValidationMessage(message: string): boolean {
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes("could not be converted")
+    || normalized.includes("json value")
+    || normalized.includes("path:")
+    || normalized.startsWith("the request field is required")
+    || normalized.includes("request field is required")
+  );
+}
+
+function pickValidationErrors(data: unknown): Record<string, string[]> | null {
+  if (!isPlainObject(data)) {
+    return null;
+  }
+
+  const errors = data.errors ?? data.Errors;
+  if (!isPlainObject(errors)) {
+    return null;
+  }
+
+  const result: Record<string, string[]> = {};
+  for (const [key, value] of Object.entries(errors)) {
+    if (!Array.isArray(value)) {
+      continue;
+    }
+
+    const messages = value
+      .filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+      .map((item) => item.trim());
+    if (messages.length > 0) {
+      result[key] = messages;
+    }
+  }
+
+  return Object.keys(result).length > 0 ? result : null;
+}
+
+function normalizeValidationFieldPath(path: string): string {
+  return path.replace(/^\$\./, "").replace(/^request\./, "").trim();
+}
+
+function formatValidationErrorMessage(
+  errors: Record<string, string[]>,
+  options?: ApiErrorMessageOptions,
+): string | null {
+  const genericMessage = options?.genericValidationMessage;
+  const formatted = new Set<string>();
+
+  for (const [rawPath, messages] of Object.entries(errors)) {
+    const fieldPath = normalizeValidationFieldPath(rawPath);
+    const fieldLabel = options?.fieldLabelResolver?.(fieldPath) ?? null;
+
+    if (rawPath === "request" || fieldPath === "request") {
+      continue;
+    }
+
+    for (const message of messages) {
+      if (isTechnicalValidationMessage(message)) {
+        if (fieldLabel && genericMessage) {
+          formatted.add(`${fieldLabel}: ${genericMessage}`);
+        } else if (genericMessage) {
+          formatted.add(genericMessage);
+        }
+        continue;
+      }
+
+      if (fieldLabel) {
+        formatted.add(`${fieldLabel}: ${message}`);
+      } else {
+        formatted.add(message);
+      }
+    }
+  }
+
+  if (formatted.size > 0) {
+    return [...formatted].join("\n");
+  }
+
+  return genericMessage ?? null;
+}
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -41,7 +136,11 @@ function pickOriginalMessageFromData(data: unknown): string | null {
   return pickStringField(data, ["message", "Message", "title", "Title", "detail", "Detail", "error"]);
 }
 
-export function getApiErrorMessage(error: unknown, fallback: string): string {
+export function getApiErrorMessage(
+  error: unknown,
+  fallback: string,
+  options?: ApiErrorMessageOptions,
+): string {
   const axiosError = error as AxiosError<ApiErrorData>;
   const data = axiosError.response?.data;
 
@@ -50,8 +149,20 @@ export function getApiErrorMessage(error: unknown, fallback: string): string {
   }
 
   if (data && typeof data === "object") {
+    const validationErrors = pickValidationErrors(data);
+    if (validationErrors) {
+      const validationMessage = formatValidationErrorMessage(validationErrors, options);
+      if (validationMessage) {
+        return validationMessage;
+      }
+    }
+
     const message = pickOriginalMessageFromData(data);
     if (message) {
+      const normalizedTitle = message.toLowerCase();
+      if (GENERIC_VALIDATION_TITLES.has(normalizedTitle) && options?.genericValidationMessage) {
+        return options.genericValidationMessage;
+      }
       return message;
     }
 

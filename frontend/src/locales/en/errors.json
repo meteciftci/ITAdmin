@@ -33,7 +33,8 @@
       },
       "validation": {
         "title": "Request validation failed",
-        "description": "The submitted information is not valid. Please check the fields and try again."
+        "description": "The submitted information is not valid. Please check the fields and try again.",
+        "fieldsCheck": "The submitted data could not be validated. Please check the form fields."
       },
       "unknown": {
         "title": "Something went wrong",

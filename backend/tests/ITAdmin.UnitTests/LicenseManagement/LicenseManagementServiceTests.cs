@@ -105,6 +105,89 @@ public sealed class LicenseManagementServiceTests
     }
 
     [Fact]
+    public async Task CreateProductAsync_WithNullDefaultLicenseType_Succeeds()
+    {
+        await using var context = CreateDbContext();
+        var service = new LicensedProductService(context);
+
+        var result = await service.CreateAsync(
+            new CreateLicensedProductRequest(
+                "Photoshop",
+                null, null, null, null, true, null,
+                null, "tester", null, null),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Product);
+        Assert.Null(result.Product.DefaultLicenseType);
+    }
+
+    [Fact]
+    public async Task CreateProductAsync_WithNamedUserDefaultLicenseType_Succeeds()
+    {
+        await using var context = CreateDbContext();
+        var service = new LicensedProductService(context);
+
+        var result = await service.CreateAsync(
+            new CreateLicensedProductRequest(
+                "Photoshop",
+                null, "Grafik", LicenseType.NamedUser, null, true, null,
+                null, "tester", null, null),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Product);
+        Assert.Equal(LicenseType.NamedUser, result.Product.DefaultLicenseType);
+    }
+
+    [Fact]
+    public async Task CreatePurchaseAsync_WithDirectPurchaseAndDraft_Succeeds()
+    {
+        await using var context = CreateDbContext();
+        var service = new LicensePurchaseService(context);
+
+        var result = await service.CreateAsync(
+            new CreateLicensePurchaseRequest(
+                LicensePurchaseType.DirectPurchase,
+                "Direct purchase record",
+                null, null, null, null, "DT-100", null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null,
+                LicensePurchaseStatus.Draft,
+                null, "tester", null, null),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Purchase);
+        Assert.Equal(LicensePurchaseType.DirectPurchase, result.Purchase.PurchaseType);
+        Assert.Equal(LicensePurchaseStatus.Draft, result.Purchase.Status);
+    }
+
+    [Fact]
+    public async Task CreatePackageAsync_WithNamedUserAndActiveStatus_Succeeds()
+    {
+        await using var context = CreateDbContext();
+        var purchaseId = await SeedPurchaseAsync(context);
+        var productId = await SeedProductAsync(context);
+        var service = new LicensePackageService(context);
+
+        var result = await service.CreateAsync(
+            new CreateLicensePackageRequest(
+                purchaseId,
+                productId,
+                LicenseType.NamedUser,
+                10,
+                null, null, false, false, null, null, null, null, null, null, true,
+                LicensePackageStatus.Active,
+                null, "tester", null, null),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Package);
+        Assert.Equal(LicenseType.NamedUser, result.Package.LicenseType);
+        Assert.Equal(LicensePackageStatus.Active, result.Package.Status);
+    }
+
+    [Fact]
     public async Task CreatePurchaseAsync_WithoutTitle_ReturnsValidationFailure()
     {
         await using var context = CreateDbContext();

@@ -33,7 +33,8 @@
       },
       "validation": {
         "title": "İstek doğrulanamadı",
-        "description": "Gönderilen bilgiler geçerli değil. Lütfen alanları kontrol edin."
+        "description": "Gönderilen bilgiler geçerli değil. Lütfen alanları kontrol edin.",
+        "fieldsCheck": "Gönderilen bilgiler doğrulanamadı. Lütfen form alanlarını kontrol edin."
       },
       "unknown": {
         "title": "Bir hata oluştu",

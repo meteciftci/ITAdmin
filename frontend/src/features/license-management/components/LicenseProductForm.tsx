@@ -19,8 +19,9 @@ import {
   LICENSE_TYPES,
 } from "@/features/license-management/enum-labels";
 import { validateProductForm } from "@/features/license-management/form-validation";
+import { buildLicensedProductPayload } from "@/features/license-management/product-form-payload";
 import type { LicensedProductDetail, LicenseType } from "@/features/license-management/types";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { getLicenseManagementApiErrorMessage } from "@/features/license-management/license-api-error";
 
 type Props = {
   mode: "create" | "edit";
@@ -62,15 +63,15 @@ export function LicenseProductForm({ mode, product, onCancel, onSaved }: Props) 
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const payload = {
-        name: name.trim(),
-        vendorCompanyId: vendorCompanyId || null,
-        category: category || null,
-        defaultLicenseType: defaultLicenseType || null,
-        description: description || null,
-        notes: notes || null,
+      const payload = buildLicensedProductPayload({
+        name,
+        vendorCompanyId,
+        category,
+        defaultLicenseType,
+        description,
+        notes,
         isActive,
-      };
+      });
       if (mode === "edit" && product) {
         await updateLicensedProduct(product.id, payload);
       } else {
@@ -81,7 +82,13 @@ export function LicenseProductForm({ mode, product, onCancel, onSaved }: Props) 
       onSaved();
     },
     onError: (error) => {
-      setErrorMessage(getApiErrorMessage(error, t("licenseManagement:messages.operationFailed")));
+      setErrorMessage(
+        getLicenseManagementApiErrorMessage(
+          error,
+          t,
+          "licenseManagement:messages.operationFailed",
+        ),
+      );
     },
   });
 

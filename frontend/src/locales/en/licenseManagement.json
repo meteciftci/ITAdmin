@@ -210,7 +210,15 @@
       "selectCompany": "Select company",
       "selectProduct": "Select product",
       "selectPurchase": "Select purchase",
-      "noVendor": "No vendor specified"
+      "noVendor": "No vendor specified",
+      "purchaseTypeFieldHint": "Fields are shown based on the selected purchase type.",
+      "sections": {
+        "basic": "Basic Information",
+        "purchaseInfo": "Purchase Information",
+        "officialDocuments": "Official Documents / References",
+        "companyAndCost": "Company and Cost",
+        "notes": "Notes"
+      }
     },
     "filters": {
       "status": "Status",

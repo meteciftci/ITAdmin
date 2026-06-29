@@ -24,7 +24,7 @@ import {
 } from "@/features/license-management/enum-labels";
 import { validatePackageForm } from "@/features/license-management/form-validation";
 import type { LicensePackageDetail, LicensePackageStatus, LicenseType } from "@/features/license-management/types";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { getLicenseManagementApiErrorMessage } from "@/features/license-management/license-api-error";
 
 type Props = {
   mode: "create" | "edit";
@@ -130,7 +130,13 @@ export function LicensePackageForm({ mode, packageItem, onCancel, onSaved }: Pro
       onSaved();
     },
     onError: (error) => {
-      setErrorMessage(getApiErrorMessage(error, t("licenseManagement:messages.operationFailed")));
+      setErrorMessage(
+        getLicenseManagementApiErrorMessage(
+          error,
+          t,
+          "licenseManagement:messages.operationFailed",
+        ),
+      );
     },
   });
 

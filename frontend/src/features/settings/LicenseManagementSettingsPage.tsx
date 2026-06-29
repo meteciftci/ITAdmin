@@ -18,7 +18,7 @@ import {
   LICENSE_MANAGEMENT_SETTINGS_QUERY_KEY,
   updateLicenseManagementSettings,
 } from "@/features/license-management/api";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { getLicenseManagementApiErrorMessage } from "@/features/license-management/license-api-error";
 import { canAccess } from "@/lib/permissions";
 import { PermissionCodes } from "@/lib/permission-codes";
 
@@ -72,7 +72,13 @@ export function LicenseManagementSettingsPage() {
       setErrorMessage(null);
     },
     onError: (error) => {
-      setErrorMessage(getApiErrorMessage(error, t("settings:licenseManagement.messages.saveFailed")));
+      setErrorMessage(
+        getLicenseManagementApiErrorMessage(
+          error,
+          t,
+          "settings:licenseManagement.messages.saveFailed",
+        ),
+      );
     },
   });
 

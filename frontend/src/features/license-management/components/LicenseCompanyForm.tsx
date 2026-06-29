@@ -14,7 +14,7 @@ import {
 } from "@/features/license-management/api";
 import { validateCompanyForm } from "@/features/license-management/form-validation";
 import type { LicenseCompanyDetail } from "@/features/license-management/types";
-import { getApiErrorMessage } from "@/lib/api-error";
+import { getLicenseManagementApiErrorMessage } from "@/features/license-management/license-api-error";
 
 type Props = {
   mode: "create" | "edit";
@@ -91,7 +91,13 @@ export function LicenseCompanyForm({ mode, company, onCancel, onSaved }: Props) 
       onSaved();
     },
     onError: (error) => {
-      setErrorMessage(getApiErrorMessage(error, t("licenseManagement:messages.operationFailed")));
+      setErrorMessage(
+        getLicenseManagementApiErrorMessage(
+          error,
+          t,
+          "licenseManagement:messages.operationFailed",
+        ),
+      );
     },
   });
 

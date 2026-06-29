@@ -15,6 +15,7 @@ using ITAdmin.Infrastructure;
 using ITAdmin.Persistence;
 using Serilog;
 using System.Text;
+using System.Text.Json.Serialization;
 
 public partial class Program
 {
@@ -36,7 +37,12 @@ public partial class Program
             loggerConfiguration.ReadFrom.Configuration(context.Configuration);
         });
 
-        builder.Services.AddControllers();
+        builder.Services
+            .AddControllers()
+            .AddJsonOptions(options =>
+            {
+                options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+            });
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddScoped<ICorrelationIdAccessor, CorrelationIdAccessor>();
 
