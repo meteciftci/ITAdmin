@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -30,7 +30,7 @@ import { createLicensePackageColumns } from "@/features/license-management/licen
 import {
   buildLicensePackageDetailPath,
   buildLicensePackageEditPath,
-  LICENSE_PACKAGE_CREATE_PATH,
+  buildLicensePackageCreatePath,
 } from "@/features/license-management/license-package-detail-path";
 import type {
   LicensePackageStatus,
@@ -48,15 +48,36 @@ type PackageStatusFilter = "all" | LicensePackageStatus;
 export function LicensePackagesPage() {
   const { t } = useTranslation(["licenseManagement", "common"]);
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const user = useAuthStore((state) => state.user);
   const canManage = canAccess(user, PermissionCodes.LicenseManagement.ManageAcquisitions);
 
+  const purchaseIdFromQuery = searchParams.get("purchaseId") ?? "";
+  const purchaseIdFilter = purchaseIdFromQuery;
+
   const [search, setSearch] = useState("");
   const [productIdFilter, setProductIdFilter] = useState("");
-  const [purchaseIdFilter, setPurchaseIdFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<PackageStatusFilter>("all");
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+
+  useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- reset pagination when purchase filter changes via URL */
+    setPageNumber(1);
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [purchaseIdFromQuery]);
+
+  const updatePurchaseIdFilter = useCallback(
+    (nextPurchaseId: string) => {
+      setPageNumber(1);
+      if (nextPurchaseId) {
+        setSearchParams({ purchaseId: nextPurchaseId });
+      } else {
+        setSearchParams({});
+      }
+    },
+    [setSearchParams],
+  );
 
   const debouncedSearch = useDebouncedValue(search, 400);
   const effectiveSearch = debouncedSearch.trim().length >= 3 ? debouncedSearch.trim() : undefined;
@@ -156,7 +177,7 @@ export function LicensePackagesPage() {
             activeFilterCount={activeFilterCount}
             onClearFilters={() => {
               setProductIdFilter("");
-              setPurchaseIdFilter("");
+              updatePurchaseIdFilter("");
               setStatusFilter("all");
               setPageNumber(1);
             }}
@@ -185,8 +206,7 @@ export function LicensePackagesPage() {
                   <Select
                     value={purchaseIdFilter}
                     onChange={(e) => {
-                      setPurchaseIdFilter(e.target.value);
-                      setPageNumber(1);
+                      updatePurchaseIdFilter(e.target.value);
                     }}
                     className="w-full"
                   >
@@ -224,7 +244,10 @@ export function LicensePackagesPage() {
                   {t("common:actions.refresh")}
                 </Button>
                 {canManage ? (
-                  <Link to={LICENSE_PACKAGE_CREATE_PATH} className={cn(buttonVariants())}>
+                  <Link
+                    to={buildLicensePackageCreatePath(purchaseIdFilter || undefined)}
+                    className={cn(buttonVariants())}
+                  >
                     {t("licenseManagement:actions.addPackage")}
                   </Link>
                 ) : null}

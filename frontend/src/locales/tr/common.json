@@ -30,6 +30,11 @@
       "placeholder": "Tarih aralığı seçin",
       "clear": "Temizle"
     },
+    "datePicker": {
+      "today": "Bugün",
+      "selectMonth": "Ay seç",
+      "selectYear": "Yıl seç"
+    },
     "select": {
       "searchOptions": "Seçeneklerde ara...",
       "clearSelection": "Seçimi temizle",

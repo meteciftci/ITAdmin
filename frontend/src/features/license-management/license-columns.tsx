@@ -263,21 +263,29 @@ export function createLicensePackageColumns({
   onEdit,
   getLicenseTypeLabel,
   getPackageStatusLabel,
+  showPurchaseColumn = true,
 }: BaseOptions<LicensePackageListItem> & {
   getLicenseTypeLabel: (value: string) => string;
   getPackageStatusLabel: (value: string) => string;
+  showPurchaseColumn?: boolean;
 }): ColumnDef<LicensePackageListItem, unknown>[] {
-  return [
+  const columns: ColumnDef<LicensePackageListItem, unknown>[] = [
     {
       accessorKey: "productName",
       header: () => t("licenseManagement:table.product"),
       meta: { truncate: true } satisfies DataTableColumnMeta,
     },
-    {
+  ];
+
+  if (showPurchaseColumn) {
+    columns.push({
       accessorKey: "purchaseTitle",
       header: () => t("licenseManagement:table.purchase"),
       meta: { truncate: true } satisfies DataTableColumnMeta,
-    },
+    });
+  }
+
+  columns.push(
     {
       id: "licenseType",
       header: () => t("licenseManagement:table.licenseType"),
@@ -355,5 +363,7 @@ export function createLicensePackageColumns({
         </RowActions>
       ),
     },
-  ];
+  );
+
+  return columns;
 }

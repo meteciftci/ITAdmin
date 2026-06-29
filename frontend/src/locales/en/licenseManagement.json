@@ -94,7 +94,11 @@
           "title": "Purchase detail",
           "description": "Details of the purchase record.",
           "summaryTitle": "Summary",
-          "notFound": "Purchase not found."
+          "notFound": "Purchase not found.",
+          "linkedPackagesTitle": "License Packages in This Purchase",
+          "addPackage": "Add License Package",
+          "viewAllPackages": "View All Packages",
+          "linkedPackagesEmpty": "No license package has been created for this purchase yet."
         }
       },
       "packages": {

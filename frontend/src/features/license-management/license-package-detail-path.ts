@@ -9,3 +9,12 @@ export function buildLicensePackageEditPath(packageId: string): string {
 }
 
 export const LICENSE_PACKAGE_CREATE_PATH = "/license-management/packages/create";
+
+export function buildLicensePackageCreatePath(purchaseId?: string): string {
+  if (!purchaseId) {
+    return LICENSE_PACKAGE_CREATE_PATH;
+  }
+
+  const params = new URLSearchParams({ purchaseId });
+  return `${LICENSE_PACKAGE_CREATE_PATH}?${params.toString()}`;
+}

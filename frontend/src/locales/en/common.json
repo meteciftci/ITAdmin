@@ -30,6 +30,11 @@
       "placeholder": "Select date range",
       "clear": "Clear"
     },
+    "datePicker": {
+      "today": "Today",
+      "selectMonth": "Select month",
+      "selectYear": "Select year"
+    },
     "select": {
       "searchOptions": "Search options...",
       "clearSelection": "Clear selection",

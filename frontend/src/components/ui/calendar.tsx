@@ -15,8 +15,16 @@ export function Calendar({ className, classNames, showOutsideDays = true, ...pro
       classNames={{
         months: "flex flex-col gap-4 sm:flex-row sm:gap-6",
         month: "space-y-4",
-        caption: "relative flex items-center justify-center pt-1",
+        caption: "relative flex items-center justify-center gap-2 pt-1",
         caption_label: "text-sm font-medium",
+        dropdowns: "flex items-center justify-center gap-2",
+        dropdown_root: "relative inline-flex items-center",
+        dropdown: cn(
+          "h-8 rounded-md border border-input bg-background px-2 text-sm shadow-xs",
+          "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
+        ),
+        months_dropdown: "h-8",
+        years_dropdown: "h-8",
         nav: "flex items-center gap-1",
         button_previous: cn(
           buttonVariants({ variant: "outline", size: "icon-sm" }),

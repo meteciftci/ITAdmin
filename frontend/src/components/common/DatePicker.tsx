@@ -1,11 +1,16 @@
+import { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { enUS, tr } from "date-fns/locale";
 import { CalendarIcon, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+
+const CALENDAR_START_MONTH = new Date(2000, 0);
+const CALENDAR_END_MONTH = new Date(2040, 11);
 
 type DatePickerProps = {
   value: string | null;
@@ -28,13 +33,27 @@ export function DatePicker({
   id,
   className,
 }: DatePickerProps) {
+  const { t } = useTranslation("common");
   const dateLocale = locale === "tr" ? tr : enUS;
   const selectedDate = parseDateOnlyValue(value);
   const formattedValue = formatDateOnlyLabel(selectedDate, locale);
+  const [month, setMonth] = useState<Date>(selectedDate ?? new Date());
+  const [prevValue, setPrevValue] = useState(value);
+
+  if (value !== prevValue) {
+    setPrevValue(value);
+    setMonth(selectedDate ?? new Date());
+  }
+
+  const handleToday = () => {
+    const today = new Date();
+    setMonth(today);
+    onChange(toDateOnlyString(today));
+  };
 
   return (
     <Popover>
-      <PopoverTrigger asChild>
+      <PopoverTrigger asChild fullWidth>
         <Button
           id={id}
           type="button"
@@ -54,11 +73,22 @@ export function DatePicker({
         <Calendar
           mode="single"
           selected={selectedDate}
+          month={month}
+          onMonthChange={setMonth}
           onSelect={(date) => onChange(toDateOnlyString(date))}
           locale={dateLocale}
-          defaultMonth={selectedDate}
+          captionLayout="dropdown"
+          startMonth={CALENDAR_START_MONTH}
+          endMonth={CALENDAR_END_MONTH}
+          labels={{
+            labelMonthDropdown: () => t("datePicker.selectMonth"),
+            labelYearDropdown: () => t("datePicker.selectYear"),
+          }}
         />
-        <div className="flex justify-end border-t border-border pt-2">
+        <div className="flex justify-end gap-2 border-t border-border pt-2">
+          <Button type="button" variant="ghost" size="sm" onClick={handleToday}>
+            {t("datePicker.today")}
+          </Button>
           <Button
             type="button"
             variant="ghost"

@@ -29,6 +29,7 @@ import { getLicenseManagementApiErrorMessage } from "@/features/license-manageme
 type Props = {
   mode: "create" | "edit";
   packageItem?: LicensePackageDetail | null;
+  initialPurchaseId?: string | null;
   onCancel: () => void;
   onSaved: () => void;
 };
@@ -40,7 +41,7 @@ function toDateOnly(value: string | null | undefined): string | null {
   return value.slice(0, 10);
 }
 
-export function LicensePackageForm({ mode, packageItem, onCancel, onSaved }: Props) {
+export function LicensePackageForm({ mode, packageItem, initialPurchaseId, onCancel, onSaved }: Props) {
   const { t, i18n } = useTranslation(["licenseManagement", "common"]);
   const dateLocale = i18n.language.startsWith("tr") ? "tr" : "en";
 
@@ -73,7 +74,7 @@ export function LicensePackageForm({ mode, packageItem, onCancel, onSaved }: Pro
 
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect -- hydrate fields when edit data loads */
-    setPurchaseId(packageItem?.purchaseId ?? "");
+    setPurchaseId(packageItem?.purchaseId ?? initialPurchaseId ?? "");
     setProductId(packageItem?.productId ?? "");
     setLicenseType(packageItem?.licenseType ?? "NamedUser");
     setQuantity(String(packageItem?.quantity ?? 1));
@@ -91,7 +92,7 @@ export function LicensePackageForm({ mode, packageItem, onCancel, onSaved }: Pro
     setStatus(packageItem?.status ?? "Active");
     setErrorMessage(null);
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, [packageItem]);
+  }, [packageItem, initialPurchaseId]);
 
   const validationKey = useMemo(
     () => validatePackageForm(purchaseId, productId, Number(quantity)),

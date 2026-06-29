@@ -77,16 +77,19 @@ export function Popover({ children, open, onOpenChange }: PopoverProps) {
 type PopoverTriggerProps = {
   asChild?: boolean;
   children: ReactNode;
+  fullWidth?: boolean;
+  className?: string;
 };
 
-export function PopoverTrigger({ asChild, children }: PopoverTriggerProps) {
+export function PopoverTrigger({ asChild, children, fullWidth = false, className }: PopoverTriggerProps) {
   const { open, setOpen, triggerRef } = usePopoverContext();
   const onClick = () => setOpen(!open);
+  const wrapperClassName = cn(fullWidth ? "flex w-full" : "inline-flex", className);
 
   if (asChild && isValidElement(children)) {
     const child = children as ReactElement<{ onClick?: () => void }>;
     return (
-      <span ref={triggerRef} className="flex w-full">
+      <span ref={triggerRef} className={wrapperClassName}>
         {cloneElement(child, {
           onClick: () => {
             child.props.onClick?.();

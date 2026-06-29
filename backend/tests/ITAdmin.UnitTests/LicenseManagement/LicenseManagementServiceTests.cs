@@ -297,6 +297,49 @@ public sealed class LicenseManagementServiceTests
     }
 
     [Fact]
+    public async Task GetPackageListAsync_FilterByPurchaseId_ReturnsOnlyMatchingPackages()
+    {
+        await using var context = CreateDbContext();
+        var purchaseId1 = await SeedPurchaseAsync(context);
+        var purchaseId2 = await SeedPurchaseAsync(context);
+        var productId = await SeedProductAsync(context);
+
+        context.LicensePackages.AddRange(
+            new Domain.Entities.LicensePackage
+            {
+                PurchaseId = purchaseId1,
+                ProductId = productId,
+                LicenseType = LicenseType.NamedUser,
+                Quantity = 5,
+                IsActive = true,
+                Status = LicensePackageStatus.Active,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = "seed",
+            },
+            new Domain.Entities.LicensePackage
+            {
+                PurchaseId = purchaseId2,
+                ProductId = productId,
+                LicenseType = LicenseType.NamedUser,
+                Quantity = 3,
+                IsActive = true,
+                Status = LicensePackageStatus.Active,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = "seed",
+            });
+        await context.SaveChangesAsync();
+
+        var service = new LicensePackageService(context);
+        var result = await service.GetListAsync(
+            new LicensePackageListQuery(null, purchaseId1, null, null, null, 1, 20),
+            CancellationToken.None);
+
+        Assert.Equal(1, result.TotalCount);
+        Assert.Single(result.Items);
+        Assert.Equal(5, result.Items.First().Quantity);
+    }
+
+    [Fact]
     public async Task GetSettingsAsync_WhenNoRowExists_ReturnsDefaults()
     {
         await using var context = CreateDbContext();

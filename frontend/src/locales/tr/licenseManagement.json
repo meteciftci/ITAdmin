@@ -94,7 +94,11 @@
           "title": "Satın alma detayı",
           "description": "Satın alma kaydının ayrıntıları.",
           "summaryTitle": "Özet",
-          "notFound": "Satın alma bulunamadı."
+          "notFound": "Satın alma bulunamadı.",
+          "linkedPackagesTitle": "Bu Satın Almaya Bağlı Lisans Paketleri",
+          "addPackage": "Lisans Paketi Ekle",
+          "viewAllPackages": "Tüm Paketleri Gör",
+          "linkedPackagesEmpty": "Bu satın alma için henüz lisans paketi oluşturulmamış."
         }
       },
       "packages": {

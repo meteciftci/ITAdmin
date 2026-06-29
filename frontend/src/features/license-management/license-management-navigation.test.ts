@@ -87,9 +87,107 @@ test("purchase and package forms use DatePicker not type=date", () => {
   assert.doesNotMatch(packageForm, /type="date"/);
 });
 
-test("DatePicker trigger uses full width popover wrapper", () => {
+test("PopoverTrigger defaults to inline width; fullWidth is opt-in", () => {
   const popoverSource = readFileSync(join(root, "components/ui/popover.tsx"), "utf8");
-  assert.match(popoverSource, /className="flex w-full"/);
+  assert.match(popoverSource, /fullWidth\?: boolean/);
+  assert.match(popoverSource, /fullWidth \? "flex w-full" : "inline-flex"/);
+  assert.match(popoverSource, /fullWidth = false/);
+});
+
+test("DatePicker uses fullWidth PopoverTrigger with month/year dropdowns", () => {
+  const datePickerSource = readFileSync(join(root, "components/common/DatePicker.tsx"), "utf8");
+  assert.match(datePickerSource, /PopoverTrigger asChild fullWidth/);
+  assert.match(datePickerSource, /captionLayout="dropdown"/);
+  assert.match(datePickerSource, /startMonth=\{CALENDAR_START_MONTH\}/);
+  assert.match(datePickerSource, /endMonth=\{CALENDAR_END_MONTH\}/);
+  assert.match(datePickerSource, /datePicker\.today/);
+  assert.match(datePickerSource, /onChange\(null\)/);
+});
+
+test("DataTable filter button does not use fullWidth PopoverTrigger", () => {
+  const dataTableSource = readFileSync(join(root, "components/common/data-table.tsx"), "utf8");
+  assert.match(dataTableSource, /PopoverTrigger asChild/);
+  assert.doesNotMatch(dataTableSource, /PopoverTrigger asChild fullWidth/);
+});
+
+test("purchase detail shows linked license packages section", () => {
+  const detailPage = readFileSync(
+    join(root, "features/license-management/LicensePurchaseDetailPage.tsx"),
+    "utf8",
+  );
+  const packagesSection = readFileSync(
+    join(root, "features/license-management/components/LicensePurchasePackagesSection.tsx"),
+    "utf8",
+  );
+  assert.match(detailPage, /LicensePurchasePackagesSection/);
+  assert.match(detailPage, /isPurchaseFieldVisible/);
+  assert.match(packagesSection, /linkedPackagesTitle/);
+  assert.match(packagesSection, /linkedPackagesEmpty/);
+  assert.match(packagesSection, /buildLicensePackageCreatePath\(purchaseId\)/);
+  assert.match(packagesSection, /buildLicensePackagesListPath\(purchaseId\)/);
+  assert.match(packagesSection, /showPurchaseColumn: false/);
+});
+
+test("package create and list pages support purchaseId query param", () => {
+  const createPage = readFileSync(
+    join(root, "features/license-management/LicensePackageCreatePage.tsx"),
+    "utf8",
+  );
+  const listPage = readFileSync(
+    join(root, "features/license-management/LicensePackagesPage.tsx"),
+    "utf8",
+  );
+  assert.match(createPage, /searchParams\.get\("purchaseId"\)/);
+  assert.match(createPage, /initialPurchaseId/);
+  assert.match(createPage, /buildLicensePurchaseDetailPath\(initialPurchaseId\)/);
+  assert.match(listPage, /useSearchParams/);
+  assert.match(listPage, /searchParams\.get\("purchaseId"\)/);
+  assert.match(listPage, /setSearchParams/);
+  assert.match(listPage, /buildLicensePackageCreatePath\(purchaseIdFilter/);
+});
+
+test("purchase detail hides type-specific fields via shared helper", () => {
+  const detailPage = readFileSync(
+    join(root, "features/license-management/LicensePurchaseDetailPage.tsx"),
+    "utf8",
+  );
+  const fieldsHelper = readFileSync(
+    join(root, "features/license-management/purchase-form-fields.ts"),
+    "utf8",
+  );
+  assert.match(detailPage, /showField\(purchase\.purchaseType, "tenderNumber"\)/);
+  assert.match(detailPage, /showField\(purchase\.purchaseType, "directPurchaseNumber"\)/);
+  assert.match(detailPage, /showField\(purchase\.purchaseType, "dmoOrderNumber"\)/);
+  assert.match(fieldsHelper, /DirectPurchase/);
+  assert.match(fieldsHelper, /Tender/);
+  assert.match(fieldsHelper, /LegacyPerpetual/);
+});
+
+test("license management locale includes linked packages and date picker keys", () => {
+  const trCommon = JSON.parse(readFileSync(join(root, "locales/tr/common.json"), "utf8")) as {
+    common: { datePicker: Record<string, string> };
+  };
+  const enCommon = JSON.parse(readFileSync(join(root, "locales/en/common.json"), "utf8")) as {
+    common: { datePicker: Record<string, string> };
+  };
+  const tr = JSON.parse(
+    readFileSync(join(root, "locales/tr/licenseManagement.json"), "utf8"),
+  ) as {
+    licenseManagement: { pages: { purchases: { detail: Record<string, string> } } };
+  };
+  const en = JSON.parse(
+    readFileSync(join(root, "locales/en/licenseManagement.json"), "utf8"),
+  ) as {
+    licenseManagement: { pages: { purchases: { detail: Record<string, string> } } };
+  };
+
+  assert.equal(trCommon.common.datePicker.today, "Bugün");
+  assert.equal(enCommon.common.datePicker.today, "Today");
+  assert.equal(tr.licenseManagement.pages.purchases.detail.linkedPackagesTitle, "Bu Satın Almaya Bağlı Lisans Paketleri");
+  assert.equal(
+    en.licenseManagement.pages.purchases.detail.linkedPackagesTitle,
+    "License Packages in This Purchase",
+  );
 });
 
 test("purchase form uses type-based field visibility and payload normalization", () => {
