@@ -160,7 +160,8 @@ export function LicenseRequestItemCard({
           onChange={(users) => onChange({ ...item, users })}
           disabled={disabled}
           label={t("licenseManagement:requests.actions.addUser")}
-          placeholder={t("licenseManagement:requests.placeholders.searchAdUser")}
+          placeholder={t("licenseManagement:requests.placeholders.selectAdUser")}
+          searchPlaceholder={t("licenseManagement:requests.placeholders.searchAdUser")}
         />
       </div>
     </div>

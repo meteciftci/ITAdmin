@@ -18,6 +18,7 @@ import type {
   LicensePurchaseListItem,
   LicenseRequestListItem,
 } from "@/features/license-management/types";
+import { formatLicenseRequestReference } from "@/features/license-management/license-request-reference";
 
 type StatusToggleOptions<T> = {
   t: TFunction;
@@ -432,8 +433,9 @@ export function createLicenseRequestColumns({
 }): ColumnDef<LicenseRequestListItem, unknown>[] {
   return [
     {
-      accessorKey: "requestNumber",
-      header: () => t("licenseManagement:requests.fields.requestNumber"),
+      id: "reference",
+      header: () => t("licenseManagement:requests.fields.reference"),
+      cell: ({ row }) => formatLicenseRequestReference(row.original, t),
       meta: { truncate: true } satisfies DataTableColumnMeta,
     },
     {

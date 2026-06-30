@@ -344,9 +344,10 @@ export type LicenseRequestItemInput = {
 
 export type LicenseRequestListItem = {
   id: string;
-  requestNumber: string;
   requestSource: LicenseRequestSource;
   requestDate: string;
+  externalRequestNumber: string | null;
+  ebysNumber: string | null;
   requesterUnitDisplayName: string;
   requesterManagerName: string | null;
   productCount: number;
@@ -379,7 +380,6 @@ export type LicenseRequestItemDetail = {
 
 export type LicenseRequestDetail = {
   id: string;
-  requestNumber: string;
   requestSource: LicenseRequestSource;
   requestDate: string;
   externalRequestNumber: string | null;
@@ -404,7 +404,6 @@ export type LicenseRequestDetail = {
 };
 
 export type LicenseRequestFormRequest = {
-  requestNumber: string;
   requestSource: LicenseRequestSource;
   requestDate: string;
   externalRequestNumber?: string | null;

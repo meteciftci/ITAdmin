@@ -106,7 +106,6 @@ public sealed class LicenseManagementApiJsonBindingTests
     {
         const string json = """
             {
-              "requestNumber": "LT-2026-001",
               "requestSource": "OfficialLetter",
               "requestDate": "2026-06-30",
               "externalRequestNumber": null,

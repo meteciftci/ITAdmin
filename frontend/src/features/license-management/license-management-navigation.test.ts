@@ -324,7 +324,6 @@ test("license request payload clears hidden source fields", async () => {
   const { buildLicenseRequestPayloadBySource } = await import("./request-source-fields.ts");
 
   const payload = buildLicenseRequestPayloadBySource({
-    requestNumber: "LT-1",
     requestSource: "Email",
     requestDate: "2026-06-30",
     externalRequestNumber: "EXT-1",
@@ -348,4 +347,123 @@ test("license request payload clears hidden source fields", async () => {
   assert.equal(payload.externalRequestNumber, null);
   assert.equal(payload.ebysNumber, null);
   assert.equal(payload.ebysDate, null);
+});
+
+test("license request form and validation no longer use requestNumber", () => {
+  const requestForm = readFileSync(
+    join(root, "features/license-management/components/LicenseRequestForm.tsx"),
+    "utf8",
+  );
+  const validation = readFileSync(
+    join(root, "features/license-management/license-request-form-validation.ts"),
+    "utf8",
+  );
+  const payload = readFileSync(
+    join(root, "features/license-management/license-request-payload.ts"),
+    "utf8",
+  );
+  const columns = readFileSync(join(root, "features/license-management/license-columns.tsx"), "utf8");
+
+  assert.doesNotMatch(requestForm, /requestNumber/);
+  assert.doesNotMatch(validation, /requestNumber/);
+  assert.doesNotMatch(payload, /requestNumber/);
+  assert.doesNotMatch(columns, /requestNumber/);
+  assert.match(columns, /formatLicenseRequestReference/);
+});
+
+test("license request reference helper formats source-based labels", async () => {
+  const { formatLicenseRequestReference } = await import("./license-request-reference.ts");
+  const t = (key: string, options?: { value?: string }) => {
+    if (key.endsWith("ebys")) {
+      return `EBYS: ${options?.value ?? ""}`;
+    }
+    if (key.endsWith("external")) {
+      return `External: ${options?.value ?? ""}`;
+    }
+    if (key.endsWith("email")) {
+      return "Email";
+    }
+    if (key.endsWith("verbalInstruction")) {
+      return "Verbal";
+    }
+    if (key.endsWith("other")) {
+      return "Other";
+    }
+    return key;
+  };
+
+  assert.equal(
+    formatLicenseRequestReference(
+      { requestSource: "OfficialLetter", ebysNumber: "123" },
+      t,
+    ),
+    "EBYS: 123",
+  );
+  assert.equal(
+    formatLicenseRequestReference(
+      { requestSource: "CorporateRequestSystem", externalRequestNumber: "EXT-9" },
+      t,
+    ),
+    "External: EXT-9",
+  );
+  assert.equal(formatLicenseRequestReference({ requestSource: "Email" }, t), "Email");
+});
+
+test("license request edit flow uses returnTo navigation state", () => {
+  const editPage = readFileSync(
+    join(root, "features/license-management/LicenseRequestEditPage.tsx"),
+    "utf8",
+  );
+  const listPage = readFileSync(
+    join(root, "features/license-management/LicenseRequestsPage.tsx"),
+    "utf8",
+  );
+  const detailPage = readFileSync(
+    join(root, "features/license-management/LicenseRequestDetailPage.tsx"),
+    "utf8",
+  );
+
+  assert.match(editPage, /resolveLicenseRequestReturnPath/);
+  assert.match(listPage, /buildLicenseRequestReturnState/);
+  assert.match(listPage, /buildLicenseRequestsListPath/);
+  assert.match(detailPage, /buildLicenseRequestReturnState/);
+});
+
+test("license request user picker uses separate search placeholder", () => {
+  const itemCard = readFileSync(
+    join(root, "features/license-management/components/LicenseRequestItemCard.tsx"),
+    "utf8",
+  );
+  const combobox = readFileSync(
+    join(root, "features/ad-management/components/AdUserSearchCombobox.tsx"),
+    "utf8",
+  );
+
+  assert.match(itemCard, /selectAdUser/);
+  assert.match(itemCard, /searchAdUser/);
+  assert.match(combobox, /searchPlaceholder/);
+});
+
+test("license OU picker uses AD combobox trigger pattern without width override", () => {
+  const ouPicker = readFileSync(
+    join(root, "features/license-management/components/LicenseOuPicker.tsx"),
+    "utf8",
+  );
+
+  assert.match(ouPicker, /AD_COMBOBOX_TRIGGER_WRAPPER_CLASSNAME/);
+  assert.match(ouPicker, /AD_COMBOBOX_POPOVER_CONTENT_PROPS/);
+  assert.doesNotMatch(ouPicker, /w-\[var\(--radix-popover-trigger-width\)\]/);
+  assert.doesNotMatch(ouPicker, /PopoverTrigger asChild>\s*<div/);
+});
+
+test("license requests list path preserves query parameters", () => {
+  const listQuery = readFileSync(
+    join(root, "features/license-management/license-request-list-query.ts"),
+    "utf8",
+  );
+
+  assert.match(listQuery, /buildLicenseRequestsListPath/);
+  assert.match(listQuery, /parseLicenseRequestsListStateFromUrl/);
+  assert.match(listQuery, /pageNumber/);
+  assert.match(listQuery, /requestSource/);
 });

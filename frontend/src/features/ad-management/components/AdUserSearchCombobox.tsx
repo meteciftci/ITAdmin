@@ -26,6 +26,7 @@ type Props = {
   disabled?: boolean;
   label?: string;
   placeholder?: string;
+  searchPlaceholder?: string;
 };
 
 function formatUserPrimaryLabel(user: AdUserListItem): string {
@@ -47,6 +48,7 @@ export function AdUserSearchCombobox({
   disabled,
   label,
   placeholder,
+  searchPlaceholder,
 }: Props) {
   const { t } = useTranslation(["adManagement", "common"]);
   const [open, setOpen] = useState(false);
@@ -119,7 +121,9 @@ export function AdUserSearchCombobox({
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder={t("adManagement:users.detail.manager.searchPlaceholder")}
+            placeholder={
+              searchPlaceholder ?? t("adManagement:users.detail.manager.searchPlaceholder")
+            }
             disabled={disabled}
             autoFocus
           />

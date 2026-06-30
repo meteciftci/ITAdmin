@@ -79,7 +79,6 @@ function parseOptionalDecimal(value: string): number | null {
 }
 
 export function buildLicenseRequestPayload(input: {
-  requestNumber: string;
   requestSource: LicenseRequestFormRequest["requestSource"];
   requestDate: string;
   externalRequestNumber: string;
@@ -121,7 +120,6 @@ export function buildLicenseRequestPayload(input: {
   const manualTotal = parseOptionalDecimal(input.estimatedTotalCost);
 
   return buildLicenseRequestPayloadBySource({
-    requestNumber: input.requestNumber.trim(),
     requestSource: input.requestSource,
     requestDate: input.requestDate,
     externalRequestNumber: input.externalRequestNumber,

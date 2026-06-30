@@ -14,11 +14,6 @@ public sealed class LicenseRequestConfiguration : IEntityTypeConfiguration<Licen
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).HasColumnName("id");
 
-        builder.Property(x => x.RequestNumber)
-            .HasColumnName("request_number")
-            .HasMaxLength(100)
-            .IsRequired();
-
         builder.Property(x => x.RequestSource)
             .HasColumnName("request_source")
             .HasConversion<string>()
@@ -68,7 +63,6 @@ public sealed class LicenseRequestConfiguration : IEntityTypeConfiguration<Licen
         builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
         builder.Property(x => x.UpdatedBy).HasColumnName("updated_by").HasMaxLength(200);
 
-        builder.HasIndex(x => x.RequestNumber);
         builder.HasIndex(x => x.Status);
         builder.HasIndex(x => x.RequestDate);
         builder.HasIndex(x => x.RequestSource);

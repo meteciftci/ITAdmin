@@ -1,4 +1,4 @@
-import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import { toast } from "sonner";
@@ -18,6 +18,7 @@ import {
   buildLicenseRequestDetailPath,
   LICENSE_REQUESTS_LIST_PATH,
 } from "@/features/license-management/license-request-paths";
+import { resolveLicenseRequestReturnPath } from "@/features/license-management/license-request-return-path";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { canAccess } from "@/lib/permissions";
 import { PermissionCodes } from "@/lib/permission-codes";
@@ -27,6 +28,7 @@ export function LicenseRequestEditPage() {
   const { t } = useTranslation(["licenseManagement", "common", "errors"]);
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const user = useAuthStore((state) => state.user);
   const canManage = canAccess(user, PermissionCodes.LicenseManagement.ManageRequests);
@@ -36,6 +38,10 @@ export function LicenseRequestEditPage() {
     queryFn: () => getLicenseRequestById(id!),
     enabled: Boolean(id) && canManage,
   });
+
+  const returnPath = id
+    ? resolveLicenseRequestReturnPath(location.state, buildLicenseRequestDetailPath(id))
+    : LICENSE_REQUESTS_LIST_PATH;
 
   if (!canManage) {
     return <Navigate to={LICENSE_REQUESTS_LIST_PATH} replace />;
@@ -60,7 +66,7 @@ export function LicenseRequestEditPage() {
         title={t("licenseManagement:pages.requests.edit.title")}
         description={t("licenseManagement:pages.requests.edit.description")}
         actions={
-          <Link to={buildLicenseRequestDetailPath(id)} className={cn(buttonVariants({ variant: "outline" }))}>
+          <Link to={returnPath} className={cn(buttonVariants({ variant: "outline" }))}>
             {t("common:actions.back")}
           </Link>
         }
@@ -79,12 +85,12 @@ export function LicenseRequestEditPage() {
             <LicenseRequestForm
               mode="edit"
               request={detailQuery.data}
-              onCancel={() => navigate(buildLicenseRequestDetailPath(id))}
+              onCancel={() => navigate(returnPath)}
               onSaved={(requestId) => {
                 queryClient.invalidateQueries({ queryKey: ["license-management", "requests"] });
                 queryClient.invalidateQueries({ queryKey: ["license-management", "requests", "detail", requestId] });
                 toast.success(t("licenseManagement:messages.requestUpdated"));
-                navigate(buildLicenseRequestDetailPath(requestId));
+                navigate(returnPath);
               }}
             />
           </LicenseRequestAdAccessGuard>

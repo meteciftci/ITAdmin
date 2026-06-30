@@ -65,7 +65,6 @@ export function LicenseRequestForm({ mode, request, onCancel, onSaved }: Props) 
   const { t, i18n } = useTranslation(["licenseManagement", "common"]);
   const dateLocale = i18n.language.startsWith("tr") ? "tr" : "en";
 
-  const [requestNumber, setRequestNumber] = useState("");
   const [requestSource, setRequestSource] = useState<LicenseRequestSource>("OfficialLetter");
   const [requestDate, setRequestDate] = useState<string | null>(null);
   const [externalRequestNumber, setExternalRequestNumber] = useState("");
@@ -94,7 +93,6 @@ export function LicenseRequestForm({ mode, request, onCancel, onSaved }: Props) 
 
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect -- hydrate fields when edit data loads */
-    setRequestNumber(request?.requestNumber ?? "");
     setRequestSource(request?.requestSource ?? "OfficialLetter");
     setRequestDate(toDateOnly(request?.requestDate));
     setExternalRequestNumber(request?.externalRequestNumber ?? "");
@@ -129,7 +127,6 @@ export function LicenseRequestForm({ mode, request, onCancel, onSaved }: Props) 
   const saveMutation = useMutation({
     mutationFn: async () => {
       const validation = validateLicenseRequestForm(t, {
-        requestNumber,
         requestDate,
         requestSource,
         requesterUnit,
@@ -148,7 +145,6 @@ export function LicenseRequestForm({ mode, request, onCancel, onSaved }: Props) 
       }
 
       const payload = buildLicenseRequestPayload({
-        requestNumber,
         requestSource,
         requestDate: requestDate!,
         externalRequestNumber,
@@ -188,14 +184,6 @@ export function LicenseRequestForm({ mode, request, onCancel, onSaved }: Props) 
       <section className="space-y-4">
         <SectionTitle>{t("licenseManagement:requests.sections.requestInfo")}</SectionTitle>
         <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="request-number">{t("licenseManagement:requests.fields.requestNumber")}</Label>
-            <Input
-              id="request-number"
-              value={requestNumber}
-              onChange={(event) => setRequestNumber(event.target.value)}
-            />
-          </div>
           <div className="space-y-2">
             <Label htmlFor="request-source">{t("licenseManagement:requests.fields.requestSource")}</Label>
             <Select

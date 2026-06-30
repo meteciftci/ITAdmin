@@ -31,7 +31,6 @@ export function isRequestSourceFieldVisible(
 }
 
 export function buildLicenseRequestPayloadBySource(input: {
-  requestNumber: string;
   requestSource: LicenseRequestSource;
   requestDate: string;
   externalRequestNumber: string;
@@ -55,7 +54,6 @@ export function buildLicenseRequestPayloadBySource(input: {
   const showEbys = isRequestSourceFieldVisible("ebysNumber", input.requestSource);
 
   return {
-    requestNumber: input.requestNumber,
     requestSource: input.requestSource,
     requestDate: input.requestDate,
     externalRequestNumber: showExternal ? input.externalRequestNumber.trim() || null : null,

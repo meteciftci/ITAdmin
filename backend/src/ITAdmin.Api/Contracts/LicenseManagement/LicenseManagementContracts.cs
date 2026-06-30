@@ -363,9 +363,10 @@ public sealed record LicenseRequestItemRequest(
 
 public sealed record LicenseRequestListItemResponse(
     Guid Id,
-    string RequestNumber,
     LicenseRequestSource RequestSource,
     DateOnly RequestDate,
+    string? ExternalRequestNumber,
+    string? EbysNumber,
     string RequesterUnitDisplayName,
     string? RequesterManagerName,
     int ProductCount,
@@ -403,7 +404,6 @@ public sealed record LicenseRequestItemResponse(
 
 public sealed record LicenseRequestDetailResponse(
     Guid Id,
-    string RequestNumber,
     LicenseRequestSource RequestSource,
     DateOnly RequestDate,
     string? ExternalRequestNumber,
@@ -427,7 +427,6 @@ public sealed record LicenseRequestDetailResponse(
     string? UpdatedBy);
 
 public sealed record CreateLicenseRequestRequest(
-    string RequestNumber,
     LicenseRequestSource RequestSource,
     DateOnly RequestDate,
     string? ExternalRequestNumber,
@@ -444,7 +443,6 @@ public sealed record CreateLicenseRequestRequest(
     IReadOnlyList<LicenseRequestItemRequest> Items);
 
 public sealed record UpdateLicenseRequestRequest(
-    string RequestNumber,
     LicenseRequestSource RequestSource,
     DateOnly RequestDate,
     string? ExternalRequestNumber,

@@ -16,7 +16,6 @@ import {
 import { searchDirectoryOrganizationalUnits } from "@/features/license-management/api";
 import type { DirectoryOrganizationalUnitLookupItem } from "@/features/license-management/types";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import { cn } from "@/lib/utils";
 
 const MIN_SEARCH_LENGTH = 2;
 
@@ -88,19 +87,19 @@ export function LicenseOuPicker({
         </div>
       ) : (
         <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger asChild>
-            <div className={AD_COMBOBOX_TRIGGER_WRAPPER_CLASSNAME}>
+          <div className={AD_COMBOBOX_TRIGGER_WRAPPER_CLASSNAME}>
+            <PopoverTrigger asChild>
               <button
                 type="button"
                 disabled={disabled}
-                className={cn(AD_COMBOBOX_TRIGGER_BUTTON_CLASSNAME, "w-full")}
+                className={AD_COMBOBOX_TRIGGER_BUTTON_CLASSNAME}
               >
                 <span className={AD_COMBOBOX_TRIGGER_LABEL_CLASSNAME}>{triggerLabel}</span>
                 <ChevronDown className="size-4 shrink-0 opacity-60" />
               </button>
-            </div>
-          </PopoverTrigger>
-          <PopoverContent {...AD_COMBOBOX_POPOVER_CONTENT_PROPS} className="w-[var(--radix-popover-trigger-width)] p-2">
+            </PopoverTrigger>
+          </div>
+          <PopoverContent {...AD_COMBOBOX_POPOVER_CONTENT_PROPS}>
             <div className="space-y-2">
               <Input
                 value={search}

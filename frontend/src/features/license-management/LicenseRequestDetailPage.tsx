@@ -19,11 +19,17 @@ import { LicenseRequestItemUserStatusBadge } from "@/features/license-management
 import { LicenseRequestStatusBadge } from "@/features/license-management/components/LicenseRequestStatusBadge";
 import { getRequestSourceLabel } from "@/features/license-management/enum-labels";
 import { formatRequestUserCountLabel } from "@/features/license-management/license-request-payload";
+import {
+  formatLicenseRequestReference,
+  shouldShowSourceDetailFieldsOnDetail,
+} from "@/features/license-management/license-request-reference";
 import { isRequestSourceFieldVisible } from "@/features/license-management/request-source-fields";
 import {
+  buildLicenseRequestDetailPath,
   buildLicenseRequestEditPath,
   LICENSE_REQUESTS_LIST_PATH,
 } from "@/features/license-management/license-request-paths";
+import { buildLicenseRequestReturnState } from "@/features/license-management/license-request-return-path";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { canAccess } from "@/lib/permissions";
 import { PermissionCodes } from "@/lib/permission-codes";
@@ -67,10 +73,20 @@ export function LicenseRequestDetailPage() {
     && detailQuery.error instanceof AxiosError
     && detailQuery.error.response?.status === 404;
 
+  const detailReturnPath = id ? buildLicenseRequestDetailPath(id) : LICENSE_REQUESTS_LIST_PATH;
+  const editPath = request ? buildLicenseRequestEditPath(request.id) : "";
+  const showSourceDetailFields = request
+    ? shouldShowSourceDetailFieldsOnDetail(request.requestSource)
+    : false;
+
   return (
     <section className="mx-auto w-full max-w-7xl space-y-4">
       <PageHeader
-        title={request?.requestNumber ?? t("licenseManagement:pages.requests.detail.title")}
+        title={
+          request
+            ? formatLicenseRequestReference(request, t)
+            : t("licenseManagement:pages.requests.detail.title")
+        }
         description={t("licenseManagement:pages.requests.detail.description")}
         actions={
           <div className="flex flex-wrap items-center gap-2">
@@ -81,7 +97,11 @@ export function LicenseRequestDetailPage() {
               {t("common:actions.refresh")}
             </Button>
             {canManage && request ? (
-              <Link to={buildLicenseRequestEditPath(request.id)} className={cn(buttonVariants())}>
+              <Link
+                to={editPath}
+                state={buildLicenseRequestReturnState(detailReturnPath)}
+                className={cn(buttonVariants())}
+              >
                 {t("common:actions.edit")}
               </Link>
             ) : null}
@@ -102,8 +122,8 @@ export function LicenseRequestDetailPage() {
         <div className="space-y-4">
           <SectionCard title={t("licenseManagement:pages.requests.detail.summaryTitle")}>
             <div className="grid gap-4 md:grid-cols-2">
-              <LicenseDetailField label={t("licenseManagement:requests.fields.requestNumber")}>
-                {request.requestNumber}
+              <LicenseDetailField label={t("licenseManagement:requests.fields.reference")}>
+                {formatLicenseRequestReference(request, t)}
               </LicenseDetailField>
               <LicenseDetailField label={t("licenseManagement:requests.fields.requestSource")}>
                 {getRequestSourceLabel(t, request.requestSource)}
@@ -112,12 +132,13 @@ export function LicenseRequestDetailPage() {
               <LicenseDetailField label={t("common:fields.status")}>
                 <LicenseRequestStatusBadge status={request.status} />
               </LicenseDetailField>
-              {isRequestSourceFieldVisible("externalRequestNumber", request.requestSource) ? (
+              {showSourceDetailFields
+              && isRequestSourceFieldVisible("externalRequestNumber", request.requestSource) ? (
                 <LicenseDetailField label={t("licenseManagement:requests.fields.externalRequestNumber")}>
                   {request.externalRequestNumber ?? "-"}
                 </LicenseDetailField>
               ) : null}
-              {isRequestSourceFieldVisible("ebysNumber", request.requestSource) ? (
+              {showSourceDetailFields && isRequestSourceFieldVisible("ebysNumber", request.requestSource) ? (
                 <>
                   <LicenseDetailField label={t("licenseManagement:requests.fields.ebysNumber")}>
                     {request.ebysNumber ?? "-"}

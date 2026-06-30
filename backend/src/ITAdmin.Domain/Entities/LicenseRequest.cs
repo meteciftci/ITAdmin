@@ -5,7 +5,6 @@ namespace ITAdmin.Domain.Entities;
 
 public class LicenseRequest : AuditableEntity
 {
-    public string RequestNumber { get; set; } = string.Empty;
     public LicenseRequestSource RequestSource { get; set; }
     public DateOnly RequestDate { get; set; }
     public string? ExternalRequestNumber { get; set; }

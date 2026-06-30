@@ -51,7 +51,7 @@
       "description": "Kurum içi lisans taleplerini yönetin.",
       "listTitle": "Lisans talepleri",
       "empty": "Henüz lisans talebi bulunmuyor.",
-      "searchPlaceholder": "Talep no, birim veya yönetici ara...",
+      "searchPlaceholder": "Referans, birim veya yönetici ara...",
       "sections": {
         "requestInfo": "Talep Bilgileri",
         "unitAndManager": "Birim ve Yönetici",
@@ -61,7 +61,7 @@
         "cost": "Maliyet"
       },
       "fields": {
-        "requestNumber": "Talep no",
+        "reference": "Referans",
         "requestSource": "Talep kaynağı",
         "requestDate": "Talep tarihi",
         "externalRequestNumber": "Harici talep no",
@@ -99,9 +99,17 @@
         "addUser": "Kullanıcı ekle"
       },
       "placeholders": {
-        "searchAdUser": "AD kullanıcısı ara...",
+        "selectAdUser": "AD kullanıcısı seç",
+        "searchAdUser": "Kullanıcı ara",
         "searchUnit": "Birim ara",
         "selectUnit": "Birim seç"
+      },
+      "reference": {
+        "ebys": "EBYS: {{value}}",
+        "external": "Harici: {{value}}",
+        "email": "E-posta",
+        "verbalInstruction": "Şifahi / ivedi talep",
+        "other": "Diğer"
       },
       "blocking": {
         "directoryConnectionTitle": "AD bağlantısı gerekli",
@@ -114,7 +122,6 @@
         "goToAdSettings": "AD ayarlarına git"
       },
       "validation": {
-        "requestNumberRequired": "Talep no zorunludur.",
         "requestDateRequired": "Talep tarihi zorunludur.",
         "requesterUnitRequired": "Talep eden birim zorunludur.",
         "externalRequestNumberRequired": "Harici talep no zorunludur.",

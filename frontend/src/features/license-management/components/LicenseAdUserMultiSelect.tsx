@@ -12,6 +12,7 @@ type Props = {
   disabled?: boolean;
   label?: string;
   placeholder?: string;
+  searchPlaceholder?: string;
 };
 
 function formatUserLabel(user: LicenseRequestAdUserSnapshot): string {
@@ -24,6 +25,7 @@ export function LicenseAdUserMultiSelect({
   disabled,
   label,
   placeholder,
+  searchPlaceholder,
 }: Props) {
   const { t } = useTranslation(["licenseManagement", "common"]);
 
@@ -43,6 +45,7 @@ export function LicenseAdUserMultiSelect({
         disabled={disabled}
         label={label}
         placeholder={placeholder}
+        searchPlaceholder={searchPlaceholder}
       />
 
       {users.length > 0 ? (

@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 import type { DateRange } from "react-day-picker";
@@ -29,10 +29,16 @@ import {
 import { createLicenseRequestColumns } from "@/features/license-management/license-columns";
 import { formatLicensedProductLabel } from "@/features/license-management/product-labels";
 import {
+  buildLicenseRequestsListPath,
+  parseLicenseRequestsListStateFromUrl,
+  type LicenseRequestsListState,
+} from "@/features/license-management/license-request-list-query";
+import {
   buildLicenseRequestDetailPath,
   buildLicenseRequestEditPath,
   LICENSE_REQUEST_CREATE_PATH,
 } from "@/features/license-management/license-request-paths";
+import { buildLicenseRequestReturnState } from "@/features/license-management/license-request-return-path";
 import type { LicenseRequestSource, LicenseRequestStatus } from "@/features/license-management/types";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useAuthStore } from "@/features/auth/auth-store";
@@ -45,22 +51,78 @@ type RequestStatusFilter = "all" | LicenseRequestStatus;
 type RequestSourceFilter = "all" | LicenseRequestSource;
 type ProductFilter = "all" | string;
 
+function toListStatePath(state: LicenseRequestsListState): string {
+  const path = buildLicenseRequestsListPath(state);
+  const queryIndex = path.indexOf("?");
+  return queryIndex >= 0 ? path.slice(queryIndex + 1) : "";
+}
+
 export function LicenseRequestsPage() {
   const { t, i18n } = useTranslation(["licenseManagement", "common"]);
-  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const user = useAuthStore((state) => state.user);
   const canManage = canAccess(user, PermissionCodes.LicenseManagement.ManageRequests);
   const dateLocale = i18n.language.startsWith("tr") ? "tr" : "en";
 
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<RequestStatusFilter>("all");
-  const [sourceFilter, setSourceFilter] = useState<RequestSourceFilter>("all");
-  const [productFilter, setProductFilter] = useState<ProductFilter>("all");
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
-  const [pageNumber, setPageNumber] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const listState = useMemo(
+    () => parseLicenseRequestsListStateFromUrl(searchParams),
+    [searchParams],
+  );
 
+  const listUrlKey = searchParams.toString();
+
+  return (
+    <LicenseRequestsListContent
+      key={listUrlKey}
+      listState={listState}
+      setSearchParams={setSearchParams}
+      canManage={canManage}
+      dateLocale={dateLocale}
+      t={t}
+    />
+  );
+}
+
+type LicenseRequestsListContentProps = {
+  listState: LicenseRequestsListState;
+  setSearchParams: ReturnType<typeof useSearchParams>[1];
+  canManage: boolean;
+  dateLocale: "tr" | "en";
+  t: ReturnType<typeof useTranslation<["licenseManagement", "common"]>>["t"];
+};
+
+function LicenseRequestsListContent({
+  listState,
+  setSearchParams,
+  canManage,
+  dateLocale,
+  t,
+}: LicenseRequestsListContentProps) {
+  const navigate = useNavigate();
+  const [search, setSearch] = useState(listState.search);
   const debouncedSearch = useDebouncedValue(search, 400);
+
+  const applyListState = useCallback((patch: Partial<LicenseRequestsListState>) => {
+    const next = { ...listState, ...patch };
+    setSearchParams(new URLSearchParams(toListStatePath(next)), { replace: true });
+  }, [listState, setSearchParams]);
+
+  useEffect(() => {
+    const trimmed = debouncedSearch.trim();
+    if (trimmed === listState.search) {
+      return;
+    }
+
+    applyListState({ search: trimmed, pageNumber: 1 });
+  }, [applyListState, debouncedSearch, listState.search]);
+
+  const statusFilter = listState.status as RequestStatusFilter;
+  const sourceFilter = listState.requestSource as RequestSourceFilter;
+  const productFilter = listState.productId as ProductFilter;
+  const dateRange = listState.dateRange;
+  const pageNumber = listState.pageNumber;
+  const pageSize = listState.pageSize;
+
   const effectiveSearch = debouncedSearch.trim().length >= 3 ? debouncedSearch.trim() : undefined;
   const requestDateFrom = dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined;
   const requestDateTo = dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined;
@@ -111,17 +173,22 @@ export function LicenseRequestsPage() {
     [t],
   );
 
+  const currentListPath = useMemo(() => buildLicenseRequestsListPath(listState), [listState]);
+
   const columns = useMemo(
     () =>
       createLicenseRequestColumns({
         t,
         canManage,
         onDetail: (item) => navigate(buildLicenseRequestDetailPath(item.id)),
-        onEdit: (item) => navigate(buildLicenseRequestEditPath(item.id)),
+        onEdit: (item) =>
+          navigate(buildLicenseRequestEditPath(item.id), {
+            state: buildLicenseRequestReturnState(currentListPath),
+          }),
         getRequestSourceLabel: resolveRequestSourceLabel,
         getRequestStatusLabel: resolveRequestStatusLabel,
       }),
-    [t, canManage, resolveRequestSourceLabel, resolveRequestStatusLabel, navigate],
+    [t, canManage, resolveRequestSourceLabel, resolveRequestStatusLabel, navigate, currentListPath],
   );
 
   const items = listQuery.data?.items ?? [];
@@ -136,7 +203,7 @@ export function LicenseRequestsPage() {
   if (listQuery.isError) {
     const routeState = createApiErrorRouteState(listQuery.error, {
       fromPath: "/license-management/requests",
-      retryPath: "/license-management/requests",
+      retryPath: currentListPath,
       sourceLabel: t("licenseManagement:requests.listTitle"),
     });
     return <Navigate to={getErrorRoutePath(routeState.code)} replace state={routeState} />;
@@ -152,18 +219,12 @@ export function LicenseRequestsPage() {
         <div className="space-y-4">
           <DataTableToolbar
             searchValue={search}
-            onSearchChange={(value) => {
-              setSearch(value);
-              setPageNumber(1);
-            }}
+            onSearchChange={setSearch}
             searchPlaceholder={t("licenseManagement:requests.searchPlaceholder")}
             activeFilterCount={activeFilterCount}
             onClearFilters={() => {
-              setStatusFilter("all");
-              setSourceFilter("all");
-              setProductFilter("all");
-              setDateRange(undefined);
-              setPageNumber(1);
+              setSearch("");
+              setSearchParams(new URLSearchParams(), { replace: true });
             }}
             filterContent={
               <div className="space-y-4">
@@ -172,8 +233,10 @@ export function LicenseRequestsPage() {
                   <Select
                     value={statusFilter}
                     onChange={(event) => {
-                      setStatusFilter(event.target.value as RequestStatusFilter);
-                      setPageNumber(1);
+                      applyListState({
+                        status: event.target.value as RequestStatusFilter,
+                        pageNumber: 1,
+                      });
                     }}
                     className="w-full"
                   >
@@ -192,8 +255,10 @@ export function LicenseRequestsPage() {
                   <Select
                     value={sourceFilter}
                     onChange={(event) => {
-                      setSourceFilter(event.target.value as RequestSourceFilter);
-                      setPageNumber(1);
+                      applyListState({
+                        requestSource: event.target.value as RequestSourceFilter,
+                        pageNumber: 1,
+                      });
                     }}
                     className="w-full"
                   >
@@ -210,8 +275,10 @@ export function LicenseRequestsPage() {
                   <Select
                     value={productFilter}
                     onChange={(event) => {
-                      setProductFilter(event.target.value as ProductFilter);
-                      setPageNumber(1);
+                      applyListState({
+                        productId: event.target.value as ProductFilter,
+                        pageNumber: 1,
+                      });
                     }}
                     className="w-full"
                   >
@@ -227,9 +294,8 @@ export function LicenseRequestsPage() {
                   <label className="text-sm font-medium">{t("licenseManagement:requests.fields.requestDate")}</label>
                   <DateRangePicker
                     value={dateRange}
-                    onChange={(value) => {
-                      setDateRange(value);
-                      setPageNumber(1);
+                    onChange={(value: DateRange | undefined) => {
+                      applyListState({ dateRange: value, pageNumber: 1 });
                     }}
                     placeholder={t("common:dateRange.placeholder")}
                     clearLabel={t("common:dateRange.clear")}
@@ -266,10 +332,9 @@ export function LicenseRequestsPage() {
                     pageSize={listQuery.data.pageSize}
                     totalCount={listQuery.data.totalCount}
                     totalPages={listQuery.data.totalPages}
-                    onPageChange={setPageNumber}
+                    onPageChange={(nextPage) => applyListState({ pageNumber: nextPage })}
                     onPageSizeChange={(size) => {
-                      setPageSize(size);
-                      setPageNumber(1);
+                      applyListState({ pageSize: size, pageNumber: 1 });
                     }}
                   />
                 ) : null

@@ -14,7 +14,6 @@ export type LicenseRequestFormValidationResult =
 export function validateLicenseRequestForm(
   t: TFunction<["licenseManagement", "common"]>,
   input: {
-    requestNumber: string;
     requestDate: string | null;
     requestSource: LicenseRequestSource;
     requesterUnit: LicenseRequestOuSnapshot | null;
@@ -24,10 +23,6 @@ export function validateLicenseRequestForm(
     items: LicenseRequestItemDraft[];
   },
 ): LicenseRequestFormValidationResult {
-  if (!input.requestNumber.trim()) {
-    return { isValid: false, message: t("licenseManagement:requests.validation.requestNumberRequired") };
-  }
-
   if (!input.requestDate) {
     return { isValid: false, message: t("licenseManagement:requests.validation.requestDateRequired") };
   }

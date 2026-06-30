@@ -51,7 +51,7 @@
       "description": "Manage internal license requests.",
       "listTitle": "License requests",
       "empty": "No license requests yet.",
-      "searchPlaceholder": "Search request no, unit or manager...",
+      "searchPlaceholder": "Search reference, unit or manager...",
       "sections": {
         "requestInfo": "Request information",
         "unitAndManager": "Unit and manager",
@@ -61,7 +61,7 @@
         "cost": "Cost"
       },
       "fields": {
-        "requestNumber": "Request no",
+        "reference": "Reference",
         "requestSource": "Request source",
         "requestDate": "Request date",
         "externalRequestNumber": "External request no",
@@ -99,9 +99,17 @@
         "addUser": "Add user"
       },
       "placeholders": {
-        "searchAdUser": "Search AD user...",
+        "selectAdUser": "Select AD user",
+        "searchAdUser": "Search user",
         "searchUnit": "Search unit",
         "selectUnit": "Select unit"
+      },
+      "reference": {
+        "ebys": "EBYS: {{value}}",
+        "external": "External: {{value}}",
+        "email": "Email",
+        "verbalInstruction": "Verbal / urgent instruction",
+        "other": "Other"
       },
       "blocking": {
         "directoryConnectionTitle": "AD connection required",
@@ -114,7 +122,6 @@
         "goToAdSettings": "Go to AD settings"
       },
       "validation": {
-        "requestNumberRequired": "Request number is required.",
         "requestDateRequired": "Request date is required.",
         "requesterUnitRequired": "Requester unit is required.",
         "externalRequestNumberRequired": "External request number is required.",

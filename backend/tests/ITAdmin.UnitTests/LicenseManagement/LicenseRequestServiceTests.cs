@@ -349,7 +349,6 @@ public sealed class LicenseRequestServiceTests
         await service.CreateAsync(
             BuildCreateRequest(productId, ("user-2", "mete")) with
             {
-                RequestNumber = "LT-2026-010",
                 Status = LicenseRequestStatus.Draft
             },
             CancellationToken.None);
@@ -435,7 +434,6 @@ public sealed class LicenseRequestServiceTests
         Guid productId,
         params (string AdObjectId, string SamAccountName)[] users) =>
         new(
-            "LT-2026-001",
             LicenseRequestSource.OfficialLetter,
             new DateOnly(2026, 6, 29),
             null, "EBYS-1", new DateOnly(2026, 6, 29),
@@ -452,7 +450,6 @@ public sealed class LicenseRequestServiceTests
         Guid productId2,
         params (string AdObjectId, string SamAccountName)[] usersPerProduct) =>
         new(
-            "LT-2026-001",
             LicenseRequestSource.OfficialLetter,
             new DateOnly(2026, 6, 29),
             null, "EBYS-1", new DateOnly(2026, 6, 29),

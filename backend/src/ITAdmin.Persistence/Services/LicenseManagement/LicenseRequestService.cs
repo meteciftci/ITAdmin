@@ -26,10 +26,10 @@ public sealed class LicenseRequestService(AppDbContext context) : ILicenseReques
         {
             var pattern = BuildILikeContainsPattern(query.Search);
             itemsQuery = itemsQuery.Where(x =>
-                EF.Functions.ILike(x.RequestNumber, pattern)
-                || EF.Functions.ILike(x.RequesterUnitDisplayName, pattern)
+                EF.Functions.ILike(x.RequesterUnitDisplayName, pattern)
                 || (x.RequesterManagerName != null && EF.Functions.ILike(x.RequesterManagerName, pattern))
-                || (x.ExternalRequestNumber != null && EF.Functions.ILike(x.ExternalRequestNumber, pattern)));
+                || (x.ExternalRequestNumber != null && EF.Functions.ILike(x.ExternalRequestNumber, pattern))
+                || (x.EbysNumber != null && EF.Functions.ILike(x.EbysNumber, pattern)));
         }
 
         if (query.Status is { } status)
@@ -73,9 +73,10 @@ public sealed class LicenseRequestService(AppDbContext context) : ILicenseReques
             .Take(pageSize)
             .Select(x => new LicenseRequestListItem(
                 x.Id,
-                x.RequestNumber,
                 x.RequestSource,
                 x.RequestDate,
+                x.ExternalRequestNumber,
+                x.EbysNumber,
                 x.RequesterUnitDisplayName,
                 x.RequesterManagerName,
                 x.Items.Count,
@@ -121,7 +122,7 @@ public sealed class LicenseRequestService(AppDbContext context) : ILicenseReques
             "Create",
             "LicenseRequest",
             entity.Id,
-            $"License request created: {entity.RequestNumber} ({entity.Items.Count} products, {userCount} users).",
+            $"License request created for {entity.RequesterUnitDisplayName} ({entity.Items.Count} products, {userCount} users).",
             request.ActorUserId,
             request.ActorUserName,
             request.ActorIpAddress,
@@ -165,7 +166,7 @@ public sealed class LicenseRequestService(AppDbContext context) : ILicenseReques
             "Update",
             "LicenseRequest",
             entity.Id,
-            $"License request updated: {entity.RequestNumber} ({entity.Items.Count} products, {userCount} users).",
+            $"License request updated for {entity.RequesterUnitDisplayName} ({entity.Items.Count} products, {userCount} users).",
             request.ActorUserId,
             request.ActorUserName,
             request.ActorIpAddress,
@@ -217,7 +218,7 @@ public sealed class LicenseRequestService(AppDbContext context) : ILicenseReques
             "Update",
             "LicenseRequest",
             entity.Id,
-            $"License request status changed to {request.Status}: {entity.RequestNumber}.",
+            $"License request status changed to {request.Status} for {entity.RequesterUnitDisplayName}.",
             request.ActorUserId,
             request.ActorUserName,
             request.ActorIpAddress,
@@ -233,11 +234,6 @@ public sealed class LicenseRequestService(AppDbContext context) : ILicenseReques
         CreateLicenseRequestRequest request,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request.RequestNumber))
-        {
-            return "Request number is required.";
-        }
-
         if (request.RequestDate == default)
         {
             return "Request date is required.";
@@ -288,7 +284,6 @@ public sealed class LicenseRequestService(AppDbContext context) : ILicenseReques
 
     private static CreateLicenseRequestRequest ToCreatePayload(UpdateLicenseRequestRequest request) =>
         new(
-            request.RequestNumber,
             request.RequestSource,
             request.RequestDate,
             request.ExternalRequestNumber,
@@ -400,7 +395,6 @@ public sealed class LicenseRequestService(AppDbContext context) : ILicenseReques
             request.EbysNumber,
             request.EbysDate);
 
-        entity.RequestNumber = request.RequestNumber.Trim();
         entity.RequestSource = request.RequestSource;
         entity.RequestDate = request.RequestDate;
         entity.ExternalRequestNumber = externalRequestNumber;
@@ -479,7 +473,6 @@ public sealed class LicenseRequestService(AppDbContext context) : ILicenseReques
     private static LicenseRequestDetail MapDetail(LicenseRequest entity) =>
         new(
             entity.Id,
-            entity.RequestNumber,
             entity.RequestSource,
             entity.RequestDate,
             entity.ExternalRequestNumber,

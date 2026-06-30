@@ -47,9 +47,10 @@ public sealed class LicenseRequestsController(ILicenseRequestService requestServ
         return Ok(new PagedResponse<LicenseRequestListItemResponse>(
             result.Items.Select(x => new LicenseRequestListItemResponse(
                 x.Id,
-                x.RequestNumber,
                 x.RequestSource,
                 x.RequestDate,
+                x.ExternalRequestNumber,
+                x.EbysNumber,
                 x.RequesterUnitDisplayName,
                 x.RequesterManagerName,
                 x.ProductCount,
@@ -164,7 +165,6 @@ public sealed class LicenseRequestsController(ILicenseRequestService requestServ
 
     private AppModels.CreateLicenseRequestRequest MapCreateRequest(CreateLicenseRequestRequest request) =>
         new(
-            request.RequestNumber,
             request.RequestSource,
             request.RequestDate,
             request.ExternalRequestNumber,
@@ -187,7 +187,6 @@ public sealed class LicenseRequestsController(ILicenseRequestService requestServ
     private AppModels.UpdateLicenseRequestRequest MapUpdateRequest(Guid id, UpdateLicenseRequestRequest request) =>
         new(
             id,
-            request.RequestNumber,
             request.RequestSource,
             request.RequestDate,
             request.ExternalRequestNumber,
@@ -235,7 +234,6 @@ public sealed class LicenseRequestsController(ILicenseRequestService requestServ
     private static LicenseRequestDetailResponse MapDetail(AppModels.LicenseRequestDetail request) =>
         new(
             request.Id,
-            request.RequestNumber,
             request.RequestSource,
             request.RequestDate,
             request.ExternalRequestNumber,
