@@ -68,7 +68,8 @@ public sealed partial class AdUserDirectoryService
                 "distinguishedName",
                 "displayName",
                 "name",
-                "ou")
+                "ou",
+                "objectGUID")
             {
                 TimeLimit = LdapOperationTimeout,
             };
@@ -402,12 +403,19 @@ public sealed partial class AdUserDirectoryService
         var displayName = GetFirstString(entry, "displayName");
         var name = GetFirstString(entry, "name");
         var ou = GetFirstString(entry, "ou");
+        string? objectGuid = null;
+        if (TryGetObjectGuid(entry, out var guid))
+        {
+            objectGuid = guid.ToString("D");
+        }
+
         item = new AdOrganizationalUnitListItem(
             distinguishedName,
             name,
             displayName,
             ou,
-            AdOrganizationalUnitLabelBuilder.Build(distinguishedName, displayName, name, ou));
+            AdOrganizationalUnitLabelBuilder.Build(distinguishedName, displayName, name, ou),
+            objectGuid);
         return true;
     }
 

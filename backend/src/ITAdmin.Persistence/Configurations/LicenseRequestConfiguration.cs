@@ -30,20 +30,22 @@ public sealed class LicenseRequestConfiguration : IEntityTypeConfiguration<Licen
         builder.Property(x => x.EbysNumber).HasColumnName("ebys_number").HasMaxLength(100);
         builder.Property(x => x.EbysDate).HasColumnName("ebys_date");
 
-        builder.Property(x => x.RequestedByAdObjectId)
-            .HasColumnName("requested_by_ad_object_id")
+        builder.Property(x => x.RequesterUnitDisplayName)
+            .HasColumnName("requester_unit_display_name")
+            .HasMaxLength(200)
+            .IsRequired();
+
+        builder.Property(x => x.RequesterUnitDistinguishedName)
+            .HasColumnName("requester_unit_distinguished_name")
+            .HasMaxLength(2000)
+            .IsRequired();
+
+        builder.Property(x => x.RequesterUnitObjectGuid)
+            .HasColumnName("requester_unit_object_guid")
             .HasMaxLength(100)
             .IsRequired();
 
-        builder.Property(x => x.RequestedBySamAccountName).HasColumnName("requested_by_sam_account_name").HasMaxLength(100);
-        builder.Property(x => x.RequestedByUserPrincipalName).HasColumnName("requested_by_user_principal_name").HasMaxLength(250);
-        builder.Property(x => x.RequestedByDisplayName).HasColumnName("requested_by_display_name").HasMaxLength(200);
-        builder.Property(x => x.RequestedByDepartment).HasColumnName("requested_by_department").HasMaxLength(200);
-        builder.Property(x => x.RequestedByTitle).HasColumnName("requested_by_title").HasMaxLength(200);
-        builder.Property(x => x.RequestedByMail).HasColumnName("requested_by_mail").HasMaxLength(250);
-        builder.Property(x => x.RequestedByPhone).HasColumnName("requested_by_phone").HasMaxLength(50);
-        builder.Property(x => x.RequestedByManagerName).HasColumnName("requested_by_manager_name").HasMaxLength(200);
-        builder.Property(x => x.RequesterUnit).HasColumnName("requester_unit").HasMaxLength(200);
+        builder.Property(x => x.RequesterManagerName).HasColumnName("requester_manager_name").HasMaxLength(200);
         builder.Property(x => x.Description).HasColumnName("description").HasMaxLength(4000);
 
         builder.Property(x => x.Status)
@@ -70,6 +72,6 @@ public sealed class LicenseRequestConfiguration : IEntityTypeConfiguration<Licen
         builder.HasIndex(x => x.Status);
         builder.HasIndex(x => x.RequestDate);
         builder.HasIndex(x => x.RequestSource);
-        builder.HasIndex(x => x.RequestedByAdObjectId);
+        builder.HasIndex(x => x.RequesterUnitObjectGuid);
     }
 }

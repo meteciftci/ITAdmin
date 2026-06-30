@@ -161,5 +161,10 @@ public static class PermissionCodes
         {
             public const string Lookup = "Directory.Users.Lookup";
         }
+
+        public static class OrganizationalUnits
+        {
+            public const string Lookup = "Directory.OrganizationalUnits.Lookup";
+        }
     }
 }

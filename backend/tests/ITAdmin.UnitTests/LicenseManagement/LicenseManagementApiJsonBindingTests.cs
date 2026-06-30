@@ -102,6 +102,41 @@ public sealed class LicenseManagementApiJsonBindingTests
     }
 
     [Fact]
+    public void Deserialize_CreateLicenseRequestRequest_AcceptsRequesterUnitSnapshot()
+    {
+        const string json = """
+            {
+              "requestNumber": "LT-2026-001",
+              "requestSource": "OfficialLetter",
+              "requestDate": "2026-06-30",
+              "externalRequestNumber": null,
+              "ebysNumber": "123456",
+              "ebysDate": "2026-06-30",
+              "requesterUnit": {
+                "objectGuid": "ou-guid",
+                "displayName": "IT Department",
+                "distinguishedName": "OU=IT,DC=example,DC=local"
+              },
+              "requesterManagerName": "Manager",
+              "description": "Need licenses",
+              "status": "Pending",
+              "estimatedTotalCost": 1000,
+              "currency": "TRY",
+              "vatIncluded": false,
+              "costNote": null,
+              "items": []
+            }
+            """;
+
+        var request = JsonSerializer.Deserialize<CreateLicenseRequestRequest>(json, ApiJsonOptions);
+
+        Assert.NotNull(request);
+        Assert.Equal("ou-guid", request.RequesterUnit.ObjectGuid);
+        Assert.Equal("IT Department", request.RequesterUnit.DisplayName);
+        Assert.DoesNotContain("requestedBy", json, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Deserialize_DirectoryUserLookupReadinessResponse_DoesNotExposeSettingsFields()
     {
         const string json = """

@@ -1,6 +1,7 @@
 import { apiClient } from "@/lib/api-client";
 
 import type {
+  DirectoryOrganizationalUnitLookupSearchResult,
   DirectoryUserLookupReadiness,
   LicenseCompanyDetail,
   LicenseCompanyFormRequest,
@@ -304,7 +305,7 @@ type RequestListParams = {
   requestSource?: LicenseRequestSource;
   requestDateFrom?: string;
   requestDateTo?: string;
-  requestedByAdObjectId?: string;
+  requesterUnitObjectGuid?: string;
   productId?: string;
   pageNumber?: number;
   pageSize?: number;
@@ -353,6 +354,23 @@ export const updateLicenseRequestStatus = async (
 export const getDirectoryUserLookupReadiness = async (): Promise<DirectoryUserLookupReadiness> => {
   const { data } = await apiClient.get<DirectoryUserLookupReadiness>(
     `${basePath}/directory-user-lookup/readiness`,
+  );
+  return data;
+};
+
+export const getDirectoryOrganizationalUnitLookupReadiness = async (): Promise<DirectoryUserLookupReadiness> => {
+  const { data } = await apiClient.get<DirectoryUserLookupReadiness>(
+    `${basePath}/directory-organizational-units/readiness`,
+  );
+  return data;
+};
+
+export const searchDirectoryOrganizationalUnits = async (
+  search: string,
+): Promise<DirectoryOrganizationalUnitLookupSearchResult> => {
+  const { data } = await apiClient.get<DirectoryOrganizationalUnitLookupSearchResult>(
+    `${basePath}/directory-organizational-units/search`,
+    { params: { search } },
   );
   return data;
 };

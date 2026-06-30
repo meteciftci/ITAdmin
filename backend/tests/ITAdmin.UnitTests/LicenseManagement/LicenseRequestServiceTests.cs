@@ -15,6 +15,7 @@ public sealed class LicenseRequestServiceTests
     {
         Assert.Equal("LicenseManagement.ManageRequests", PermissionCodes.LicenseManagement.ManageRequests);
         Assert.Equal("Directory.Users.Lookup", PermissionCodes.Directory.Users.Lookup);
+        Assert.Equal("Directory.OrganizationalUnits.Lookup", PermissionCodes.Directory.OrganizationalUnits.Lookup);
     }
 
     [Fact]
@@ -73,8 +74,8 @@ public sealed class LicenseRequestServiceTests
                 LicenseRequestSource.Email,
                 new DateOnly(2026, 6, 29),
                 null, null, null,
-                BuildRequestedBy(),
-                null, null, null,
+                BuildRequesterUnit(),
+                null, null,
                 LicenseRequestStatus.Pending,
                 null, "TRY", false, null,
                 [
@@ -101,8 +102,8 @@ public sealed class LicenseRequestServiceTests
                 LicenseRequestSource.Email,
                 new DateOnly(2026, 6, 29),
                 null, null, null,
-                BuildRequestedBy(),
-                null, null, null,
+                BuildRequesterUnit(),
+                null, null,
                 LicenseRequestStatus.Pending,
                 null, "TRY", false, null,
                 [
@@ -134,8 +135,8 @@ public sealed class LicenseRequestServiceTests
                 LicenseRequestSource.Email,
                 new DateOnly(2026, 6, 29),
                 null, null, null,
-                BuildRequestedBy(),
-                null, null, null,
+                BuildRequesterUnit(),
+                null, null,
                 LicenseRequestStatus.Pending,
                 null, "TRY", false, null,
                 [],
@@ -159,8 +160,8 @@ public sealed class LicenseRequestServiceTests
                 LicenseRequestSource.Email,
                 new DateOnly(2026, 6, 29),
                 null, null, null,
-                BuildRequestedBy(),
-                null, null, null,
+                BuildRequesterUnit(),
+                null, null,
                 LicenseRequestStatus.Pending,
                 null, "TRY", false, null,
                 [
@@ -233,6 +234,110 @@ public sealed class LicenseRequestServiceTests
     }
 
     [Fact]
+    public async Task CreateAsync_WithoutRequesterUnit_ReturnsValidationFailure()
+    {
+        await using var context = CreateDbContext();
+        var productId = await SeedProductAsync(context);
+        var service = new LicenseRequestService(context);
+
+        var request = BuildCreateRequest(productId, ("user-1", "hakan")) with
+        {
+            RequesterUnit = new LicenseRequestOuSnapshot("", "Unit", "OU=Unit,DC=test"),
+        };
+
+        var result = await service.CreateAsync(request, CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("requester unit", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task CreateAsync_OfficialLetterWithoutEbys_ReturnsValidationFailure()
+    {
+        await using var context = CreateDbContext();
+        var productId = await SeedProductAsync(context);
+        var service = new LicenseRequestService(context);
+
+        var request = BuildCreateRequest(productId, ("user-1", "hakan")) with
+        {
+            EbysNumber = null,
+            EbysDate = null,
+        };
+
+        var result = await service.CreateAsync(request, CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("EBYS", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task CreateAsync_CorporateRequestSystemWithoutExternalNumber_ReturnsValidationFailure()
+    {
+        await using var context = CreateDbContext();
+        var productId = await SeedProductAsync(context);
+        var service = new LicenseRequestService(context);
+
+        var request = BuildCreateRequest(productId, ("user-1", "hakan")) with
+        {
+            RequestSource = LicenseRequestSource.CorporateRequestSystem,
+            ExternalRequestNumber = null,
+            EbysNumber = null,
+            EbysDate = null,
+        };
+
+        var result = await service.CreateAsync(request, CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("external request", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task CreateAsync_EmailSource_DoesNotRequireEbysOrExternalNumber()
+    {
+        await using var context = CreateDbContext();
+        var productId = await SeedProductAsync(context);
+        var service = new LicenseRequestService(context);
+
+        var result = await service.CreateAsync(
+            BuildCreateRequest(productId, ("user-1", "hakan")) with
+            {
+                RequestSource = LicenseRequestSource.Email,
+                ExternalRequestNumber = null,
+                EbysNumber = null,
+                EbysDate = null,
+            },
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Null(result.Request!.ExternalRequestNumber);
+        Assert.Null(result.Request.EbysNumber);
+        Assert.Null(result.Request.EbysDate);
+    }
+
+    [Fact]
+    public async Task CreateAsync_NormalizesIrrelevantSourceFields()
+    {
+        await using var context = CreateDbContext();
+        var productId = await SeedProductAsync(context);
+        var service = new LicenseRequestService(context);
+
+        var result = await service.CreateAsync(
+            BuildCreateRequest(productId, ("user-1", "hakan")) with
+            {
+                RequestSource = LicenseRequestSource.Email,
+                ExternalRequestNumber = "EXT-1",
+                EbysNumber = "EBYS-1",
+                EbysDate = new DateOnly(2026, 6, 29),
+            },
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Null(result.Request!.ExternalRequestNumber);
+        Assert.Null(result.Request.EbysNumber);
+        Assert.Null(result.Request.EbysDate);
+    }
+
+    [Fact]
     public async Task GetListAsync_FilterByStatus_ReturnsMatchingItems()
     {
         await using var context = CreateDbContext();
@@ -258,7 +363,7 @@ public sealed class LicenseRequestServiceTests
     }
 
     [Fact]
-    public async Task GetByIdAsync_ReturnsItemAndUserSnapshots()
+    public async Task GetByIdAsync_ReturnsItemAndUserSnapshotsWithoutHeaderUser()
     {
         await using var context = CreateDbContext();
         var productId = await SeedProductAsync(context);
@@ -270,6 +375,7 @@ public sealed class LicenseRequestServiceTests
         var detail = await service.GetByIdAsync(created.Request!.Id, CancellationToken.None);
 
         Assert.NotNull(detail);
+        Assert.Equal("Bilgi İşlem", detail.RequesterUnitDisplayName);
         Assert.Single(detail.Items);
         Assert.Equal("Photoshop", detail.Items[0].ProductName);
         Assert.Single(detail.Items[0].Users);
@@ -293,6 +399,38 @@ public sealed class LicenseRequestServiceTests
         Assert.Contains("License request created", audit.Description, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(LicenseRequestSource.OfficialLetter, null, "EBYS-1", "2026-06-29", null, "EBYS-1")]
+    [InlineData(LicenseRequestSource.CorporateRequestSystem, "EXT-1", "EBYS-1", "2026-06-29", "EXT-1", null)]
+    [InlineData(LicenseRequestSource.Email, "EXT-1", "EBYS-1", "2026-06-29", null, null)]
+    public void NormalizeSourceFields_ClearsIrrelevantValues(
+        LicenseRequestSource source,
+        string? externalRequestNumber,
+        string? ebysNumber,
+        string? ebysDateText,
+        string? expectedExternal,
+        string? expectedEbys)
+    {
+        DateOnly? ebysDate = ebysDateText is null ? null : DateOnly.Parse(ebysDateText);
+
+        var normalized = LicenseRequestRules.NormalizeSourceFields(
+            source,
+            externalRequestNumber,
+            ebysNumber,
+            ebysDate);
+
+        Assert.Equal(expectedExternal, normalized.ExternalRequestNumber);
+        Assert.Equal(expectedEbys, normalized.EbysNumber);
+        if (source == LicenseRequestSource.OfficialLetter)
+        {
+            Assert.Equal(ebysDate, normalized.EbysDate);
+        }
+        else
+        {
+            Assert.Null(normalized.EbysDate);
+        }
+    }
+
     private static CreateLicenseRequestRequest BuildCreateRequest(
         Guid productId,
         params (string AdObjectId, string SamAccountName)[] users) =>
@@ -301,9 +439,8 @@ public sealed class LicenseRequestServiceTests
             LicenseRequestSource.OfficialLetter,
             new DateOnly(2026, 6, 29),
             null, "EBYS-1", new DateOnly(2026, 6, 29),
-            BuildRequestedBy(),
+            BuildRequesterUnit(),
             "Manager Name",
-            "Bilgi İşlem",
             "Test request",
             LicenseRequestStatus.Pending,
             10000, "TRY", false, "Cost note",
@@ -318,9 +455,9 @@ public sealed class LicenseRequestServiceTests
             "LT-2026-001",
             LicenseRequestSource.OfficialLetter,
             new DateOnly(2026, 6, 29),
-            null, null, null,
-            BuildRequestedBy(),
-            null, null, null,
+            null, "EBYS-1", new DateOnly(2026, 6, 29),
+            BuildRequesterUnit(),
+            null, null,
             LicenseRequestStatus.Pending,
             null, "TRY", false, null,
             [
@@ -350,16 +487,11 @@ public sealed class LicenseRequestServiceTests
             null,
             LicenseRequestItemUserStatus.Pending);
 
-    private static LicenseRequestAdUserSnapshot BuildRequestedBy() =>
+    private static LicenseRequestOuSnapshot BuildRequesterUnit() =>
         new(
-            "requester-id",
-            "mete.ciftci",
-            "mete.ciftci@example.com",
-            "Mete Çiftçi",
+            "ou-guid-1",
             "Bilgi İşlem",
-            "Admin",
-            "mete.ciftci@example.com",
-            null);
+            "OU=Bilgi Islem,DC=example,DC=local");
 
     private static async Task<Guid> SeedProductAsync(
         AppDbContext context,

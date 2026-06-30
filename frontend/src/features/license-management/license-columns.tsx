@@ -452,15 +452,15 @@ export function createLicenseRequestColumns({
       ),
     },
     {
-      accessorKey: "requestedByDisplayName",
-      header: () => t("licenseManagement:requests.fields.requestedBy"),
-      cell: ({ row }) => row.original.requestedByDisplayName ?? "-",
+      accessorKey: "requesterUnitDisplayName",
+      header: () => t("licenseManagement:requests.fields.requesterUnit"),
+      cell: ({ row }) => row.original.requesterUnitDisplayName,
       meta: { truncate: true } satisfies DataTableColumnMeta,
     },
     {
-      accessorKey: "requesterUnit",
-      header: () => t("licenseManagement:requests.fields.requesterUnit"),
-      cell: ({ row }) => row.original.requesterUnit ?? "-",
+      accessorKey: "requesterManagerName",
+      header: () => t("licenseManagement:requests.fields.requesterManagerName"),
+      cell: ({ row }) => row.original.requesterManagerName ?? "-",
       meta: { truncate: true } satisfies DataTableColumnMeta,
     },
     {

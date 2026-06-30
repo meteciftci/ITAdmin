@@ -2,15 +2,10 @@ using ITAdmin.Domain.Enums;
 
 namespace ITAdmin.Application.Common.Models.LicenseManagement;
 
-public sealed record LicenseRequestAdUserSnapshot(
-    string AdObjectId,
-    string? SamAccountName,
-    string? UserPrincipalName,
-    string? DisplayName,
-    string? Department,
-    string? Title,
-    string? Mail,
-    string? Phone);
+public sealed record LicenseRequestOuSnapshot(
+    string ObjectGuid,
+    string DisplayName,
+    string DistinguishedName);
 
 public sealed record LicenseRequestItemUserInput(
     string AdObjectId,
@@ -38,7 +33,7 @@ public sealed record LicenseRequestListQuery(
     LicenseRequestSource? RequestSource,
     DateOnly? RequestDateFrom,
     DateOnly? RequestDateTo,
-    string? RequestedByAdObjectId,
+    string? RequesterUnitObjectGuid,
     Guid? ProductId,
     int PageNumber,
     int PageSize);
@@ -48,8 +43,8 @@ public sealed record LicenseRequestListItem(
     string RequestNumber,
     LicenseRequestSource RequestSource,
     DateOnly RequestDate,
-    string? RequestedByDisplayName,
-    string? RequesterUnit,
+    string RequesterUnitDisplayName,
+    string? RequesterManagerName,
     int ProductCount,
     int UserCount,
     decimal? EstimatedTotalCost,
@@ -91,16 +86,10 @@ public sealed record LicenseRequestDetail(
     string? ExternalRequestNumber,
     string? EbysNumber,
     DateOnly? EbysDate,
-    string RequestedByAdObjectId,
-    string? RequestedBySamAccountName,
-    string? RequestedByUserPrincipalName,
-    string? RequestedByDisplayName,
-    string? RequestedByDepartment,
-    string? RequestedByTitle,
-    string? RequestedByMail,
-    string? RequestedByPhone,
-    string? RequestedByManagerName,
-    string? RequesterUnit,
+    string RequesterUnitDisplayName,
+    string RequesterUnitDistinguishedName,
+    string RequesterUnitObjectGuid,
+    string? RequesterManagerName,
     string? Description,
     LicenseRequestStatus Status,
     decimal? EstimatedTotalCost,
@@ -121,9 +110,8 @@ public sealed record CreateLicenseRequestRequest(
     string? ExternalRequestNumber,
     string? EbysNumber,
     DateOnly? EbysDate,
-    LicenseRequestAdUserSnapshot RequestedBy,
-    string? RequestedByManagerName,
-    string? RequesterUnit,
+    LicenseRequestOuSnapshot RequesterUnit,
+    string? RequesterManagerName,
     string? Description,
     LicenseRequestStatus Status,
     decimal? EstimatedTotalCost,
@@ -144,9 +132,8 @@ public sealed record UpdateLicenseRequestRequest(
     string? ExternalRequestNumber,
     string? EbysNumber,
     DateOnly? EbysDate,
-    LicenseRequestAdUserSnapshot RequestedBy,
-    string? RequestedByManagerName,
-    string? RequesterUnit,
+    LicenseRequestOuSnapshot RequesterUnit,
+    string? RequesterManagerName,
     string? Description,
     LicenseRequestStatus Status,
     decimal? EstimatedTotalCost,
@@ -171,3 +158,14 @@ public sealed record LicenseRequestOperationResult(
     bool IsSuccess,
     string Message,
     LicenseRequestDetail? Request = null);
+
+// Item-level AD user snapshots for license request items only.
+public sealed record LicenseRequestAdUserSnapshot(
+    string AdObjectId,
+    string? SamAccountName,
+    string? UserPrincipalName,
+    string? DisplayName,
+    string? Department,
+    string? Title,
+    string? Mail,
+    string? Phone);

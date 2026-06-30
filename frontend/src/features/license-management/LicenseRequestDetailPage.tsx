@@ -14,12 +14,12 @@ import { buttonVariants } from "@/components/ui/button-variants";
 import { useAuthStore } from "@/features/auth/auth-store";
 import { getLicenseRequestById } from "@/features/license-management/api";
 import { LicenseDetailField } from "@/features/license-management/components/LicenseDetailField";
+import { LicenseRequestItemStatusBadge } from "@/features/license-management/components/LicenseRequestItemStatusBadge";
+import { LicenseRequestItemUserStatusBadge } from "@/features/license-management/components/LicenseRequestItemUserStatusBadge";
 import { LicenseRequestStatusBadge } from "@/features/license-management/components/LicenseRequestStatusBadge";
-import { LicenseRequestUserSnapshot } from "@/features/license-management/components/LicenseRequestUserSnapshot";
-import {
-  getRequestItemStatusLabel,
-  getRequestSourceLabel,
-} from "@/features/license-management/enum-labels";
+import { getRequestSourceLabel } from "@/features/license-management/enum-labels";
+import { formatRequestUserCountLabel } from "@/features/license-management/license-request-payload";
+import { isRequestSourceFieldVisible } from "@/features/license-management/request-source-fields";
 import {
   buildLicenseRequestEditPath,
   LICENSE_REQUESTS_LIST_PATH,
@@ -112,18 +112,29 @@ export function LicenseRequestDetailPage() {
               <LicenseDetailField label={t("common:fields.status")}>
                 <LicenseRequestStatusBadge status={request.status} />
               </LicenseDetailField>
-              <LicenseDetailField label={t("licenseManagement:requests.fields.externalRequestNumber")}>
-                {request.externalRequestNumber ?? "-"}
-              </LicenseDetailField>
-              <LicenseDetailField label={t("licenseManagement:requests.fields.ebysNumber")}>
-                {request.ebysNumber ?? "-"}
-              </LicenseDetailField>
-              <DateOnlyField label={t("licenseManagement:requests.fields.ebysDate")} value={request.ebysDate} />
+              {isRequestSourceFieldVisible("externalRequestNumber", request.requestSource) ? (
+                <LicenseDetailField label={t("licenseManagement:requests.fields.externalRequestNumber")}>
+                  {request.externalRequestNumber ?? "-"}
+                </LicenseDetailField>
+              ) : null}
+              {isRequestSourceFieldVisible("ebysNumber", request.requestSource) ? (
+                <>
+                  <LicenseDetailField label={t("licenseManagement:requests.fields.ebysNumber")}>
+                    {request.ebysNumber ?? "-"}
+                  </LicenseDetailField>
+                  <DateOnlyField label={t("licenseManagement:requests.fields.ebysDate")} value={request.ebysDate} />
+                </>
+              ) : null}
               <LicenseDetailField label={t("licenseManagement:requests.fields.requesterUnit")}>
-                {request.requesterUnit ?? "-"}
+                <div className="space-y-1">
+                  <p>{request.requesterUnitDisplayName}</p>
+                  <p className="truncate text-xs text-muted-foreground" title={request.requesterUnitDistinguishedName}>
+                    {request.requesterUnitDistinguishedName}
+                  </p>
+                </div>
               </LicenseDetailField>
-              <LicenseDetailField label={t("licenseManagement:requests.fields.requestedByManagerName")}>
-                {request.requestedByManagerName ?? "-"}
+              <LicenseDetailField label={t("licenseManagement:requests.fields.requesterManagerName")}>
+                {request.requesterManagerName ?? "-"}
               </LicenseDetailField>
               <LicenseDetailField label={t("common:fields.description")}>
                 {request.description ?? "-"}
@@ -131,35 +142,20 @@ export function LicenseRequestDetailPage() {
             </div>
           </SectionCard>
 
-          <SectionCard title={t("licenseManagement:requests.sections.requester")}>
-            <LicenseRequestUserSnapshot
-              snapshot={{
-                adObjectId: request.requestedByAdObjectId,
-                samAccountName: request.requestedBySamAccountName,
-                userPrincipalName: request.requestedByUserPrincipalName,
-                displayName: request.requestedByDisplayName,
-                department: request.requestedByDepartment,
-                title: request.requestedByTitle,
-                mail: request.requestedByMail,
-                phone: request.requestedByPhone,
-              }}
-            />
-          </SectionCard>
-
           <SectionCard title={t("licenseManagement:requests.sections.items")}>
             <div className="space-y-4">
               {request.items.map((item) => (
                 <div key={item.id} className="space-y-3 rounded-lg border bg-card p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="text-sm font-semibold">{item.productName}</h3>
-                    <span className="text-sm text-muted-foreground">
-                      {getRequestItemStatusLabel(t, item.status)}
-                    </span>
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="space-y-1">
+                      <h3 className="text-sm font-semibold">{item.productName}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {formatRequestUserCountLabel(t, item.users.length)}
+                      </p>
+                    </div>
+                    <LicenseRequestItemStatusBadge status={item.status} />
                   </div>
                   <div className="grid gap-3 md:grid-cols-2">
-                    <LicenseDetailField label={t("licenseManagement:requests.fields.requestedUserCount", { count: item.requestedQuantity })}>
-                      {item.requestedQuantity}
-                    </LicenseDetailField>
                     <LicenseDetailField label={t("licenseManagement:requests.fields.estimatedTotalCost")}>
                       {item.estimatedTotalCost != null
                         ? `${item.estimatedTotalCost}${item.currency ? ` ${item.currency}` : ""}`
@@ -171,10 +167,13 @@ export function LicenseRequestDetailPage() {
                   </div>
                   <div className="space-y-2">
                     <p className="text-sm font-medium">{t("licenseManagement:requests.fields.selectedUsers")}</p>
-                    <ul className="space-y-1 text-sm text-muted-foreground">
+                    <ul className="space-y-2">
                       {item.users.map((userItem) => (
-                        <li key={userItem.id}>
-                          {userItem.displayName || userItem.samAccountName || userItem.userPrincipalName}
+                        <li key={userItem.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                          <span>
+                            {userItem.displayName || userItem.samAccountName || userItem.userPrincipalName}
+                          </span>
+                          <LicenseRequestItemUserStatusBadge status={userItem.status} />
                         </li>
                       ))}
                     </ul>

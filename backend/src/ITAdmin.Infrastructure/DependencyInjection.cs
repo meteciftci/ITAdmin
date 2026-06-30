@@ -60,6 +60,8 @@ public static class DependencyInjection
         services.AddScoped<IAdDeletedObjectRestoreReadinessPowerShellProbe, AdDeletedObjectRestoreReadinessPowerShellProbe>();
         services.AddScoped<IAdDeletedObjectRestoreReadinessService, AdDeletedObjectRestoreReadinessService>();
         services.AddScoped<IDirectoryUserLookupReadinessService, DirectoryUserLookupReadinessService>();
+        services.AddScoped<IDirectoryOrganizationalUnitLookupReadinessService, DirectoryOrganizationalUnitLookupReadinessService>();
+        services.AddScoped<IDirectoryOrganizationalUnitLookupService, DirectoryOrganizationalUnitLookupService>();
         services.AddScoped<IAdOrganizationalUnitDirectoryService>(sp => sp.GetRequiredService<AdUserDirectoryService>());
 
         services.AddScoped<ISmsProviderAdapter, CustomHttpSmsAdapter>();

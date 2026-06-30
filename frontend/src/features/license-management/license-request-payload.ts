@@ -5,7 +5,9 @@ import type {
   LicenseRequestFormRequest,
   LicenseRequestItemInput,
   LicenseRequestItemUserInput,
+  LicenseRequestOuSnapshot,
 } from "@/features/license-management/types";
+import { buildLicenseRequestPayloadBySource } from "@/features/license-management/request-source-fields";
 
 export type LicenseRequestItemDraft = {
   clientId: string;
@@ -83,9 +85,8 @@ export function buildLicenseRequestPayload(input: {
   externalRequestNumber: string;
   ebysNumber: string;
   ebysDate: string | null;
-  requestedBy: LicenseRequestAdUserSnapshot;
-  requestedByManagerName: string;
-  requesterUnit: string;
+  requesterUnit: LicenseRequestOuSnapshot;
+  requesterManagerName: string;
   description: string;
   status: LicenseRequestFormRequest["status"];
   estimatedTotalCost: string;
@@ -119,24 +120,23 @@ export function buildLicenseRequestPayload(input: {
 
   const manualTotal = parseOptionalDecimal(input.estimatedTotalCost);
 
-  return {
+  return buildLicenseRequestPayloadBySource({
     requestNumber: input.requestNumber.trim(),
     requestSource: input.requestSource,
     requestDate: input.requestDate,
-    externalRequestNumber: input.externalRequestNumber.trim() || null,
-    ebysNumber: input.ebysNumber.trim() || null,
+    externalRequestNumber: input.externalRequestNumber,
+    ebysNumber: input.ebysNumber,
     ebysDate: input.ebysDate,
-    requestedBy: input.requestedBy,
-    requestedByManagerName: input.requestedByManagerName.trim() || null,
-    requesterUnit: input.requesterUnit.trim() || null,
-    description: input.description.trim() || null,
+    requesterUnit: input.requesterUnit,
+    requesterManagerName: input.requesterManagerName,
+    description: input.description,
     status: input.status,
     estimatedTotalCost: manualTotal ?? (computedTotal > 0 ? computedTotal : null),
     currency: input.currency.trim() || null,
     vatIncluded: input.vatIncluded,
     costNote: input.costNote.trim() || null,
     items: itemPayloads,
-  };
+  });
 }
 
 export function calculateItemsEstimatedTotal(items: LicenseRequestItemDraft[]): number {
@@ -148,4 +148,14 @@ export function calculateItemsEstimatedTotal(items: LicenseRequestItemDraft[]): 
 
     return sum + unitCost * item.users.length;
   }, 0);
+}
+
+export function formatRequestUserCountLabel(
+  t: (key: string, options?: { count: number }) => string,
+  count: number,
+): string {
+  const key = count === 1
+    ? "licenseManagement:requests.fields.userCountSingular"
+    : "licenseManagement:requests.fields.userCountPlural";
+  return t(key, { count });
 }

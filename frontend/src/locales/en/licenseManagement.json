@@ -51,12 +51,14 @@
       "description": "Manage internal license requests.",
       "listTitle": "License requests",
       "empty": "No license requests yet.",
-      "searchPlaceholder": "Search request no, requester or unit...",
+      "searchPlaceholder": "Search request no, unit or manager...",
       "sections": {
+        "requestInfo": "Request information",
+        "unitAndManager": "Unit and manager",
         "basicInfo": "Basic information",
         "requester": "Requester",
         "items": "Products and users",
-        "cost": "Cost and notes"
+        "cost": "Cost"
       },
       "fields": {
         "requestNumber": "Request no",
@@ -65,12 +67,13 @@
         "externalRequestNumber": "External request no",
         "ebysNumber": "EBYS no",
         "ebysDate": "EBYS date",
-        "requestedBy": "Requested by",
         "requesterUnit": "Requester unit",
-        "requestedByManagerName": "Requester's manager",
+        "requesterManagerName": "Manager / instructing authority",
         "product": "Product",
         "productCount": "Product count",
         "userCount": "User count",
+        "userCountSingular": "{{count}} user",
+        "userCountPlural": "{{count}} users",
         "justification": "Justification",
         "estimatedUnitCost": "Estimated unit cost",
         "estimatedTotalCost": "Estimated total cost",
@@ -96,19 +99,27 @@
         "addUser": "Add user"
       },
       "placeholders": {
-        "searchAdUser": "Search AD user..."
+        "searchAdUser": "Search AD user...",
+        "searchUnit": "Search unit",
+        "selectUnit": "Select unit"
       },
       "blocking": {
+        "directoryConnectionTitle": "AD connection required",
+        "directoryConnectionDescription": "Configure the AD Management connection to search directory users and organizational units.",
         "adConnectionTitle": "AD connection required",
         "adConnectionDescription": "License requests require AD user selection. Configure the AD Management connection to continue.",
         "missingLookupPermissionTitle": "Permission required",
+        "missingDirectoryLookupPermissionDescription": "License requests require directory user and organizational unit lookup permissions.",
         "missingLookupPermissionDescription": "Directory.Users.Lookup permission is required for AD user selection.",
         "goToAdSettings": "Go to AD settings"
       },
       "validation": {
         "requestNumberRequired": "Request number is required.",
         "requestDateRequired": "Request date is required.",
-        "requestedByRequired": "Requester is required.",
+        "requesterUnitRequired": "Requester unit is required.",
+        "externalRequestNumberRequired": "External request number is required.",
+        "ebysNumberRequired": "EBYS number is required.",
+        "ebysDateRequired": "EBYS date is required.",
         "itemsRequired": "At least one product item is required.",
         "productRequired": "Product selection is required.",
         "usersRequired": "Each product item must include at least one user.",

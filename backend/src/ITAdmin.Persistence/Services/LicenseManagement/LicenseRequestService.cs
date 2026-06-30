@@ -27,8 +27,8 @@ public sealed class LicenseRequestService(AppDbContext context) : ILicenseReques
             var pattern = BuildILikeContainsPattern(query.Search);
             itemsQuery = itemsQuery.Where(x =>
                 EF.Functions.ILike(x.RequestNumber, pattern)
-                || (x.RequestedByDisplayName != null && EF.Functions.ILike(x.RequestedByDisplayName, pattern))
-                || (x.RequesterUnit != null && EF.Functions.ILike(x.RequesterUnit, pattern))
+                || EF.Functions.ILike(x.RequesterUnitDisplayName, pattern)
+                || (x.RequesterManagerName != null && EF.Functions.ILike(x.RequesterManagerName, pattern))
                 || (x.ExternalRequestNumber != null && EF.Functions.ILike(x.ExternalRequestNumber, pattern)));
         }
 
@@ -52,9 +52,9 @@ public sealed class LicenseRequestService(AppDbContext context) : ILicenseReques
             itemsQuery = itemsQuery.Where(x => x.RequestDate <= requestDateTo);
         }
 
-        if (!string.IsNullOrWhiteSpace(query.RequestedByAdObjectId))
+        if (!string.IsNullOrWhiteSpace(query.RequesterUnitObjectGuid))
         {
-            itemsQuery = itemsQuery.Where(x => x.RequestedByAdObjectId == query.RequestedByAdObjectId);
+            itemsQuery = itemsQuery.Where(x => x.RequesterUnitObjectGuid == query.RequesterUnitObjectGuid);
         }
 
         if (query.ProductId is { } productId)
@@ -76,8 +76,8 @@ public sealed class LicenseRequestService(AppDbContext context) : ILicenseReques
                 x.RequestNumber,
                 x.RequestSource,
                 x.RequestDate,
-                x.RequestedByDisplayName,
-                x.RequesterUnit,
+                x.RequesterUnitDisplayName,
+                x.RequesterManagerName,
                 x.Items.Count,
                 x.Items.SelectMany(i => i.Users).Count(),
                 x.EstimatedTotalCost,
@@ -243,14 +243,12 @@ public sealed class LicenseRequestService(AppDbContext context) : ILicenseReques
             return "Request date is required.";
         }
 
-        if (string.IsNullOrWhiteSpace(request.RequestedBy.AdObjectId))
+        if (request.RequesterUnit is null
+            || string.IsNullOrWhiteSpace(request.RequesterUnit.ObjectGuid)
+            || string.IsNullOrWhiteSpace(request.RequesterUnit.DisplayName)
+            || string.IsNullOrWhiteSpace(request.RequesterUnit.DistinguishedName))
         {
-            return "Requested by user is required.";
-        }
-
-        if (!LicenseManagementValidation.IsValidEmail(request.RequestedBy.Mail))
-        {
-            return "Requested by email is invalid.";
+            return "Requester unit is required.";
         }
 
         if (!LicenseRequestRules.ManualRequestStatuses.Contains(request.Status))
@@ -261,6 +259,23 @@ public sealed class LicenseRequestService(AppDbContext context) : ILicenseReques
         if (request.EstimatedTotalCost is < 0)
         {
             return "Estimated total cost cannot be negative.";
+        }
+
+        var (externalRequestNumber, ebysNumber, ebysDate) = LicenseRequestRules.NormalizeSourceFields(
+            request.RequestSource,
+            request.ExternalRequestNumber,
+            request.EbysNumber,
+            request.EbysDate);
+
+        var sourceValidationError = LicenseRequestRules.ValidateSourceFields(
+            request.RequestSource,
+            externalRequestNumber,
+            ebysNumber,
+            ebysDate);
+
+        if (sourceValidationError is not null)
+        {
+            return sourceValidationError;
         }
 
         return await ValidateItemsAsync(request.Items, cancellationToken);
@@ -279,9 +294,8 @@ public sealed class LicenseRequestService(AppDbContext context) : ILicenseReques
             request.ExternalRequestNumber,
             request.EbysNumber,
             request.EbysDate,
-            request.RequestedBy,
-            request.RequestedByManagerName,
             request.RequesterUnit,
+            request.RequesterManagerName,
             request.Description,
             request.Status,
             request.EstimatedTotalCost,
@@ -380,22 +394,22 @@ public sealed class LicenseRequestService(AppDbContext context) : ILicenseReques
         string? actorUserName,
         bool isCreate)
     {
+        var (externalRequestNumber, ebysNumber, ebysDate) = LicenseRequestRules.NormalizeSourceFields(
+            request.RequestSource,
+            request.ExternalRequestNumber,
+            request.EbysNumber,
+            request.EbysDate);
+
         entity.RequestNumber = request.RequestNumber.Trim();
         entity.RequestSource = request.RequestSource;
         entity.RequestDate = request.RequestDate;
-        entity.ExternalRequestNumber = LicenseManagementValidation.TrimOrNull(request.ExternalRequestNumber);
-        entity.EbysNumber = LicenseManagementValidation.TrimOrNull(request.EbysNumber);
-        entity.EbysDate = request.EbysDate;
-        entity.RequestedByAdObjectId = request.RequestedBy.AdObjectId.Trim();
-        entity.RequestedBySamAccountName = LicenseManagementValidation.TrimOrNull(request.RequestedBy.SamAccountName);
-        entity.RequestedByUserPrincipalName = LicenseManagementValidation.TrimOrNull(request.RequestedBy.UserPrincipalName);
-        entity.RequestedByDisplayName = LicenseManagementValidation.TrimOrNull(request.RequestedBy.DisplayName);
-        entity.RequestedByDepartment = LicenseManagementValidation.TrimOrNull(request.RequestedBy.Department);
-        entity.RequestedByTitle = LicenseManagementValidation.TrimOrNull(request.RequestedBy.Title);
-        entity.RequestedByMail = LicenseManagementValidation.TrimOrNull(request.RequestedBy.Mail);
-        entity.RequestedByPhone = LicenseManagementValidation.TrimOrNull(request.RequestedBy.Phone);
-        entity.RequestedByManagerName = LicenseManagementValidation.TrimOrNull(request.RequestedByManagerName);
-        entity.RequesterUnit = LicenseManagementValidation.TrimOrNull(request.RequesterUnit);
+        entity.ExternalRequestNumber = externalRequestNumber;
+        entity.EbysNumber = ebysNumber;
+        entity.EbysDate = ebysDate;
+        entity.RequesterUnitDisplayName = request.RequesterUnit.DisplayName.Trim();
+        entity.RequesterUnitDistinguishedName = request.RequesterUnit.DistinguishedName.Trim();
+        entity.RequesterUnitObjectGuid = request.RequesterUnit.ObjectGuid.Trim();
+        entity.RequesterManagerName = LicenseManagementValidation.TrimOrNull(request.RequesterManagerName);
         entity.Description = LicenseManagementValidation.TrimOrNull(request.Description);
         entity.Status = request.Status;
         entity.Currency = LicenseManagementValidation.TrimOrNull(request.Currency);
@@ -471,16 +485,10 @@ public sealed class LicenseRequestService(AppDbContext context) : ILicenseReques
             entity.ExternalRequestNumber,
             entity.EbysNumber,
             entity.EbysDate,
-            entity.RequestedByAdObjectId,
-            entity.RequestedBySamAccountName,
-            entity.RequestedByUserPrincipalName,
-            entity.RequestedByDisplayName,
-            entity.RequestedByDepartment,
-            entity.RequestedByTitle,
-            entity.RequestedByMail,
-            entity.RequestedByPhone,
-            entity.RequestedByManagerName,
-            entity.RequesterUnit,
+            entity.RequesterUnitDisplayName,
+            entity.RequesterUnitDistinguishedName,
+            entity.RequesterUnitObjectGuid,
+            entity.RequesterManagerName,
             entity.Description,
             entity.Status,
             entity.EstimatedTotalCost,

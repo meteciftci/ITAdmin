@@ -118,6 +118,17 @@ public sealed record DirectoryUserLookupReadinessResponse(
     string Reason,
     string? Message);
 
+public sealed record DirectoryOrganizationalUnitLookupItemResponse(
+    string ObjectGuid,
+    string DisplayName,
+    string? Name,
+    string DistinguishedName);
+
+public sealed record DirectoryOrganizationalUnitLookupSearchResponse(
+    bool IsSuccess,
+    string? Message,
+    IReadOnlyList<DirectoryOrganizationalUnitLookupItemResponse> Items);
+
 public sealed record LicenseProductCategoryListItemResponse(
     Guid Id,
     string Name,
@@ -315,6 +326,11 @@ public sealed record UpdateLicensePackageRequest(
 
 public sealed record UpdateLicensePackageStatusRequest(LicensePackageStatus Status);
 
+public sealed record LicenseRequestOuSnapshotRequest(
+    string ObjectGuid,
+    string DisplayName,
+    string DistinguishedName);
+
 public sealed record LicenseRequestAdUserSnapshotRequest(
     string AdObjectId,
     string? SamAccountName,
@@ -350,8 +366,8 @@ public sealed record LicenseRequestListItemResponse(
     string RequestNumber,
     LicenseRequestSource RequestSource,
     DateOnly RequestDate,
-    string? RequestedByDisplayName,
-    string? RequesterUnit,
+    string RequesterUnitDisplayName,
+    string? RequesterManagerName,
     int ProductCount,
     int UserCount,
     decimal? EstimatedTotalCost,
@@ -393,16 +409,10 @@ public sealed record LicenseRequestDetailResponse(
     string? ExternalRequestNumber,
     string? EbysNumber,
     DateOnly? EbysDate,
-    string RequestedByAdObjectId,
-    string? RequestedBySamAccountName,
-    string? RequestedByUserPrincipalName,
-    string? RequestedByDisplayName,
-    string? RequestedByDepartment,
-    string? RequestedByTitle,
-    string? RequestedByMail,
-    string? RequestedByPhone,
-    string? RequestedByManagerName,
-    string? RequesterUnit,
+    string RequesterUnitDisplayName,
+    string RequesterUnitDistinguishedName,
+    string RequesterUnitObjectGuid,
+    string? RequesterManagerName,
     string? Description,
     LicenseRequestStatus Status,
     decimal? EstimatedTotalCost,
@@ -423,9 +433,8 @@ public sealed record CreateLicenseRequestRequest(
     string? ExternalRequestNumber,
     string? EbysNumber,
     DateOnly? EbysDate,
-    LicenseRequestAdUserSnapshotRequest RequestedBy,
-    string? RequestedByManagerName,
-    string? RequesterUnit,
+    LicenseRequestOuSnapshotRequest RequesterUnit,
+    string? RequesterManagerName,
     string? Description,
     LicenseRequestStatus Status,
     decimal? EstimatedTotalCost,
@@ -441,9 +450,8 @@ public sealed record UpdateLicenseRequestRequest(
     string? ExternalRequestNumber,
     string? EbysNumber,
     DateOnly? EbysDate,
-    LicenseRequestAdUserSnapshotRequest RequestedBy,
-    string? RequestedByManagerName,
-    string? RequesterUnit,
+    LicenseRequestOuSnapshotRequest RequesterUnit,
+    string? RequesterManagerName,
     string? Description,
     LicenseRequestStatus Status,
     decimal? EstimatedTotalCost,

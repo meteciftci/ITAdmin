@@ -17,9 +17,8 @@ import {
   LICENSE_MANAGEMENT_SETTINGS_QUERY_KEY,
   updateLicenseRequest,
 } from "@/features/license-management/api";
-import { LicenseAdUserPicker } from "@/features/license-management/components/LicenseAdUserPicker";
+import { LicenseOuPicker } from "@/features/license-management/components/LicenseOuPicker";
 import { LicenseRequestItemsEditor } from "@/features/license-management/components/LicenseRequestItemsEditor";
-import { LicenseRequestUserSnapshot } from "@/features/license-management/components/LicenseRequestUserSnapshot";
 import {
   getRequestSourceLabel,
   getRequestStatusLabel,
@@ -35,9 +34,10 @@ import {
   mapDetailToItemDrafts,
   type LicenseRequestItemDraft,
 } from "@/features/license-management/license-request-payload";
+import { isRequestSourceFieldVisible } from "@/features/license-management/request-source-fields";
 import type {
-  LicenseRequestAdUserSnapshot,
   LicenseRequestDetail,
+  LicenseRequestOuSnapshot,
   LicenseRequestSource,
   LicenseRequestStatus,
 } from "@/features/license-management/types";
@@ -71,9 +71,8 @@ export function LicenseRequestForm({ mode, request, onCancel, onSaved }: Props) 
   const [externalRequestNumber, setExternalRequestNumber] = useState("");
   const [ebysNumber, setEbysNumber] = useState("");
   const [ebysDate, setEbysDate] = useState<string | null>(null);
-  const [requestedBy, setRequestedBy] = useState<LicenseRequestAdUserSnapshot | null>(null);
-  const [requestedByManagerName, setRequestedByManagerName] = useState("");
-  const [requesterUnit, setRequesterUnit] = useState("");
+  const [requesterUnit, setRequesterUnit] = useState<LicenseRequestOuSnapshot | null>(null);
+  const [requesterManagerName, setRequesterManagerName] = useState("");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<LicenseRequestStatus>("Pending");
   const [estimatedTotalCost, setEstimatedTotalCost] = useState("");
@@ -101,22 +100,16 @@ export function LicenseRequestForm({ mode, request, onCancel, onSaved }: Props) 
     setExternalRequestNumber(request?.externalRequestNumber ?? "");
     setEbysNumber(request?.ebysNumber ?? "");
     setEbysDate(toDateOnly(request?.ebysDate));
-    setRequestedBy(
+    setRequesterUnit(
       request
         ? {
-            adObjectId: request.requestedByAdObjectId,
-            samAccountName: request.requestedBySamAccountName,
-            userPrincipalName: request.requestedByUserPrincipalName,
-            displayName: request.requestedByDisplayName,
-            department: request.requestedByDepartment,
-            title: request.requestedByTitle,
-            mail: request.requestedByMail,
-            phone: request.requestedByPhone,
+            objectGuid: request.requesterUnitObjectGuid,
+            displayName: request.requesterUnitDisplayName,
+            distinguishedName: request.requesterUnitDistinguishedName,
           }
         : null,
     );
-    setRequestedByManagerName(request?.requestedByManagerName ?? "");
-    setRequesterUnit(request?.requesterUnit ?? "");
+    setRequesterManagerName(request?.requesterManagerName ?? "");
     setDescription(request?.description ?? "");
     setStatus(request?.status ?? "Pending");
     setEstimatedTotalCost(request?.estimatedTotalCost?.toString() ?? "");
@@ -129,13 +122,20 @@ export function LicenseRequestForm({ mode, request, onCancel, onSaved }: Props) 
   }, [currency, request, settingsQuery.data?.defaultCurrency, settingsQuery.data?.defaultVatIncluded]);
 
   const computedTotal = useMemo(() => calculateItemsEstimatedTotal(items), [items]);
+  const showExternalRequestNumber = isRequestSourceFieldVisible("externalRequestNumber", requestSource);
+  const showEbysFields = isRequestSourceFieldVisible("ebysNumber", requestSource);
+  const showDescriptionInRequestInfo = isRequestSourceFieldVisible("description", requestSource);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
       const validation = validateLicenseRequestForm(t, {
         requestNumber,
         requestDate,
-        requestedBy,
+        requestSource,
+        requesterUnit,
+        externalRequestNumber,
+        ebysNumber,
+        ebysDate,
         items,
       });
 
@@ -143,8 +143,8 @@ export function LicenseRequestForm({ mode, request, onCancel, onSaved }: Props) 
         throw new Error(validation.message);
       }
 
-      if (!requestedBy) {
-        throw new Error(t("licenseManagement:requests.validation.requestedByRequired"));
+      if (!requesterUnit) {
+        throw new Error(t("licenseManagement:requests.validation.requesterUnitRequired"));
       }
 
       const payload = buildLicenseRequestPayload({
@@ -154,9 +154,8 @@ export function LicenseRequestForm({ mode, request, onCancel, onSaved }: Props) 
         externalRequestNumber,
         ebysNumber,
         ebysDate,
-        requestedBy,
-        requestedByManagerName,
         requesterUnit,
+        requesterManagerName,
         description,
         status,
         estimatedTotalCost,
@@ -187,7 +186,7 @@ export function LicenseRequestForm({ mode, request, onCancel, onSaved }: Props) 
       {errorMessage ? <FormError message={errorMessage} /> : null}
 
       <section className="space-y-4">
-        <SectionTitle>{t("licenseManagement:requests.sections.basicInfo")}</SectionTitle>
+        <SectionTitle>{t("licenseManagement:requests.sections.requestInfo")}</SectionTitle>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="request-number">{t("licenseManagement:requests.fields.requestNumber")}</Label>
@@ -235,75 +234,75 @@ export function LicenseRequestForm({ mode, request, onCancel, onSaved }: Props) 
               ))}
             </Select>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="external-request-number">
-              {t("licenseManagement:requests.fields.externalRequestNumber")}
-            </Label>
-            <Input
-              id="external-request-number"
-              value={externalRequestNumber}
-              onChange={(event) => setExternalRequestNumber(event.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="ebys-number">{t("licenseManagement:requests.fields.ebysNumber")}</Label>
-            <Input
-              id="ebys-number"
-              value={ebysNumber}
-              onChange={(event) => setEbysNumber(event.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>{t("licenseManagement:requests.fields.ebysDate")}</Label>
-            <DatePicker
-              value={ebysDate}
-              onChange={setEbysDate}
-              placeholder={t("licenseManagement:requests.fields.ebysDate")}
-              clearLabel={t("common:actions.clear")}
-              locale={dateLocale}
-            />
-          </div>
+          {showExternalRequestNumber ? (
+            <div className="space-y-2">
+              <Label htmlFor="external-request-number">
+                {t("licenseManagement:requests.fields.externalRequestNumber")}
+              </Label>
+              <Input
+                id="external-request-number"
+                value={externalRequestNumber}
+                onChange={(event) => setExternalRequestNumber(event.target.value)}
+              />
+            </div>
+          ) : null}
+          {showEbysFields ? (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="ebys-number">{t("licenseManagement:requests.fields.ebysNumber")}</Label>
+                <Input
+                  id="ebys-number"
+                  value={ebysNumber}
+                  onChange={(event) => setEbysNumber(event.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{t("licenseManagement:requests.fields.ebysDate")}</Label>
+                <DatePicker
+                  value={ebysDate}
+                  onChange={setEbysDate}
+                  placeholder={t("licenseManagement:requests.fields.ebysDate")}
+                  clearLabel={t("common:actions.clear")}
+                  locale={dateLocale}
+                />
+              </div>
+            </>
+          ) : null}
+          {showDescriptionInRequestInfo ? (
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="request-description">{t("common:fields.description")}</Label>
+              <Textarea
+                id="request-description"
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+              />
+            </div>
+          ) : null}
         </div>
       </section>
 
       <section className="space-y-4">
-        <SectionTitle>{t("licenseManagement:requests.sections.requester")}</SectionTitle>
+        <SectionTitle>{t("licenseManagement:requests.sections.unitAndManager")}</SectionTitle>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2 md:col-span-2">
-            <LicenseAdUserPicker
-              value={requestedBy}
-              onChange={(user) => {
-                setRequestedBy(user);
-                if (user?.department && !requesterUnit.trim()) {
-                  setRequesterUnit(user.department);
-                }
-              }}
-              label={t("licenseManagement:requests.fields.requestedBy")}
-              placeholder={t("licenseManagement:requests.placeholders.searchAdUser")}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="requester-unit">{t("licenseManagement:requests.fields.requesterUnit")}</Label>
-            <Input
-              id="requester-unit"
+            <LicenseOuPicker
               value={requesterUnit}
-              onChange={(event) => setRequesterUnit(event.target.value)}
+              onChange={setRequesterUnit}
+              label={t("licenseManagement:requests.fields.requesterUnit")}
+              placeholder={t("licenseManagement:requests.placeholders.selectUnit")}
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="requested-by-manager">
-              {t("licenseManagement:requests.fields.requestedByManagerName")}
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="requester-manager-name">
+              {t("licenseManagement:requests.fields.requesterManagerName")}
             </Label>
             <Input
-              id="requested-by-manager"
-              value={requestedByManagerName}
-              onChange={(event) => setRequestedByManagerName(event.target.value)}
+              id="requester-manager-name"
+              value={requesterManagerName}
+              onChange={(event) => setRequesterManagerName(event.target.value)}
             />
           </div>
         </div>
-        {requestedBy ? (
-          <LicenseRequestUserSnapshot snapshot={requestedBy} />
-        ) : null}
       </section>
 
       <section className="space-y-4">
@@ -360,14 +359,6 @@ export function LicenseRequestForm({ mode, request, onCancel, onSaved }: Props) 
               id="cost-note"
               value={costNote}
               onChange={(event) => setCostNote(event.target.value)}
-            />
-          </div>
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="request-description">{t("common:fields.description")}</Label>
-            <Textarea
-              id="request-description"
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
             />
           </div>
         </div>

@@ -51,12 +51,14 @@
       "description": "Kurum içi lisans taleplerini yönetin.",
       "listTitle": "Lisans talepleri",
       "empty": "Henüz lisans talebi bulunmuyor.",
-      "searchPlaceholder": "Talep no, talep eden veya birim ara...",
+      "searchPlaceholder": "Talep no, birim veya yönetici ara...",
       "sections": {
+        "requestInfo": "Talep Bilgileri",
+        "unitAndManager": "Birim ve Yönetici",
         "basicInfo": "Temel bilgiler",
         "requester": "Talep eden",
-        "items": "Ürün ve kullanıcılar",
-        "cost": "Maliyet ve notlar"
+        "items": "Ürün ve Kullanıcılar",
+        "cost": "Maliyet"
       },
       "fields": {
         "requestNumber": "Talep no",
@@ -65,12 +67,13 @@
         "externalRequestNumber": "Harici talep no",
         "ebysNumber": "EBYS no",
         "ebysDate": "EBYS tarihi",
-        "requestedBy": "Talep eden",
         "requesterUnit": "Talep eden birim",
-        "requestedByManagerName": "Talep eden kişinin yöneticisi",
+        "requesterManagerName": "Yönetici / talimat veren",
         "product": "Ürün",
         "productCount": "Ürün sayısı",
         "userCount": "Kullanıcı sayısı",
+        "userCountSingular": "{{count}} kullanıcı",
+        "userCountPlural": "{{count}} kullanıcı",
         "justification": "Gerekçe",
         "estimatedUnitCost": "Tahmini birim maliyet",
         "estimatedTotalCost": "Tahmini toplam maliyet",
@@ -96,19 +99,27 @@
         "addUser": "Kullanıcı ekle"
       },
       "placeholders": {
-        "searchAdUser": "AD kullanıcısı ara..."
+        "searchAdUser": "AD kullanıcısı ara...",
+        "searchUnit": "Birim ara",
+        "selectUnit": "Birim seç"
       },
       "blocking": {
+        "directoryConnectionTitle": "AD bağlantısı gerekli",
+        "directoryConnectionDescription": "AD kullanıcı ve birim arama için AD Yönetim bağlantısı yapılandırılmalıdır.",
         "adConnectionTitle": "AD bağlantısı gerekli",
         "adConnectionDescription": "Lisans talebi için AD kullanıcı seçimi gerekir. Devam etmek için AD Yönetim bağlantısı yapılandırılmalıdır.",
         "missingLookupPermissionTitle": "Yetki gerekli",
+        "missingDirectoryLookupPermissionDescription": "Lisans talebi için AD kullanıcı ve birim arama yetkileri gerekir.",
         "missingLookupPermissionDescription": "AD kullanıcı seçimi için Directory.Users.Lookup yetkisi gerekir.",
         "goToAdSettings": "AD ayarlarına git"
       },
       "validation": {
         "requestNumberRequired": "Talep no zorunludur.",
         "requestDateRequired": "Talep tarihi zorunludur.",
-        "requestedByRequired": "Talep eden kişi zorunludur.",
+        "requesterUnitRequired": "Talep eden birim zorunludur.",
+        "externalRequestNumberRequired": "Harici talep no zorunludur.",
+        "ebysNumberRequired": "EBYS no zorunludur.",
+        "ebysDateRequired": "EBYS tarihi zorunludur.",
         "itemsRequired": "En az bir ürün kalemi eklenmelidir.",
         "productRequired": "Ürün seçimi zorunludur.",
         "usersRequired": "Her ürün kalemi için en az bir kullanıcı seçilmelidir.",

@@ -284,9 +284,14 @@ test("license request pages use page routes and DatePicker", () => {
   assert.doesNotMatch(requestForm, /type="date"/);
   assert.match(adGuard, /BlockingStateCard/);
   assert.match(adGuard, /Directory\.Users\.Lookup/);
+  assert.match(adGuard, /Directory\.OrganizationalUnits\.Lookup/);
   assert.match(adGuard, /getDirectoryUserLookupReadiness/);
+  assert.match(adGuard, /getDirectoryOrganizationalUnitLookupReadiness/);
   assert.match(adGuard, /AdManagement\.Settings\.View/);
   assert.doesNotMatch(adGuard, /useAdManagementModuleStatus/);
+  assert.doesNotMatch(requestForm, /LicenseAdUserPicker/);
+  assert.doesNotMatch(requestForm, /LicenseRequestUserSnapshot/);
+  assert.match(requestForm, /LicenseOuPicker/);
 });
 
 test("license request payload helpers enforce duplicate rules", () => {
@@ -303,4 +308,44 @@ test("license request payload helpers enforce duplicate rules", () => {
   assert.match(validation, /duplicateUser/);
   assert.match(payload, /mapAdUserToSnapshot/);
   assert.match(payload, /buildLicenseRequestPayload/);
+  assert.match(payload, /buildLicenseRequestPayloadBySource/);
+});
+
+test("license request source field visibility shows EBYS only for OfficialLetter", async () => {
+  const { isRequestSourceFieldVisible } = await import("./request-source-fields.ts");
+
+  assert.equal(isRequestSourceFieldVisible("ebysNumber", "OfficialLetter"), true);
+  assert.equal(isRequestSourceFieldVisible("externalRequestNumber", "OfficialLetter"), false);
+  assert.equal(isRequestSourceFieldVisible("externalRequestNumber", "CorporateRequestSystem"), true);
+  assert.equal(isRequestSourceFieldVisible("ebysNumber", "Email"), false);
+});
+
+test("license request payload clears hidden source fields", async () => {
+  const { buildLicenseRequestPayloadBySource } = await import("./request-source-fields.ts");
+
+  const payload = buildLicenseRequestPayloadBySource({
+    requestNumber: "LT-1",
+    requestSource: "Email",
+    requestDate: "2026-06-30",
+    externalRequestNumber: "EXT-1",
+    ebysNumber: "EBYS-1",
+    ebysDate: "2026-06-30",
+    requesterUnit: {
+      objectGuid: "ou-1",
+      displayName: "IT",
+      distinguishedName: "OU=IT,DC=test",
+    },
+    requesterManagerName: "",
+    description: "Need licenses",
+    status: "Pending",
+    estimatedTotalCost: null,
+    currency: "TRY",
+    vatIncluded: false,
+    costNote: null,
+    items: [],
+  });
+
+  assert.equal(payload.externalRequestNumber, null);
+  assert.equal(payload.ebysNumber, null);
+  assert.equal(payload.ebysDate, null);
 });

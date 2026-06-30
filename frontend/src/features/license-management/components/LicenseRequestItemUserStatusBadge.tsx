@@ -2,25 +2,20 @@ import { useTranslation } from "react-i18next";
 
 import { Badge } from "@/components/ui/badge";
 import type { BadgeVariants } from "@/components/ui/badge-variants";
-import { getRequestStatusLabel } from "@/features/license-management/enum-labels";
-import type { LicenseRequestStatus } from "@/features/license-management/types";
+import { getRequestItemUserStatusLabel } from "@/features/license-management/enum-labels";
+import type { LicenseRequestItemUserStatus } from "@/features/license-management/types";
 import { cn } from "@/lib/utils";
 
 type Props = {
-  status: LicenseRequestStatus;
+  status: LicenseRequestItemUserStatus;
   className?: string;
 };
 
-function resolveVariant(status: LicenseRequestStatus): NonNullable<BadgeVariants["variant"]> {
+function resolveVariant(status: LicenseRequestItemUserStatus): NonNullable<BadgeVariants["variant"]> {
   switch (status) {
-    case "Draft":
-    case "Archived":
-      return "secondary";
     case "Pending":
-    case "PartiallyFulfilled":
       return "warning";
-    case "InReview":
-      return "info";
+    case "Approved":
     case "Fulfilled":
       return "success";
     case "Rejected":
@@ -32,12 +27,12 @@ function resolveVariant(status: LicenseRequestStatus): NonNullable<BadgeVariants
   }
 }
 
-export function LicenseRequestStatusBadge({ status, className }: Props) {
+export function LicenseRequestItemUserStatusBadge({ status, className }: Props) {
   const { t } = useTranslation(["licenseManagement"]);
 
   return (
     <Badge variant={resolveVariant(status)} className={cn(className)}>
-      {getRequestStatusLabel(t, status)}
+      {getRequestItemUserStatusLabel(t, status)}
     </Badge>
   );
 }

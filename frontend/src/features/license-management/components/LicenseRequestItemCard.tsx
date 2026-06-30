@@ -8,9 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { LicenseAdUserMultiSelect } from "@/features/license-management/components/LicenseAdUserMultiSelect";
 import {
+  formatRequestUserCountLabel,
+} from "@/features/license-management/license-request-payload";
+import {
   getRequestItemStatusLabel,
+  MANUAL_REQUEST_ITEM_STATUSES,
 } from "@/features/license-management/enum-labels";
-import { MANUAL_REQUEST_ITEM_STATUSES } from "@/features/license-management/enum-labels";
 import { formatLicensedProductLabel } from "@/features/license-management/product-labels";
 import type { LicenseRequestItemDraft } from "@/features/license-management/license-request-payload";
 import type { LicensedProductListItem } from "@/features/license-management/types";
@@ -150,7 +153,7 @@ export function LicenseRequestItemCard({
 
       <div className="space-y-2">
         <p className="text-sm text-muted-foreground">
-          {t("licenseManagement:requests.fields.requestedUserCount", { count: item.users.length })}
+          {formatRequestUserCountLabel(t, item.users.length)}
         </p>
         <LicenseAdUserMultiSelect
           users={item.users}

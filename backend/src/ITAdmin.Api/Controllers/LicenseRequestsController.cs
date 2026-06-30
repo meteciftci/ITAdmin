@@ -25,7 +25,7 @@ public sealed class LicenseRequestsController(ILicenseRequestService requestServ
         [FromQuery] LicenseRequestSource? requestSource,
         [FromQuery] DateOnly? requestDateFrom,
         [FromQuery] DateOnly? requestDateTo,
-        [FromQuery] string? requestedByAdObjectId,
+        [FromQuery] string? requesterUnitObjectGuid,
         [FromQuery] Guid? productId,
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20,
@@ -38,7 +38,7 @@ public sealed class LicenseRequestsController(ILicenseRequestService requestServ
                 requestSource,
                 requestDateFrom,
                 requestDateTo,
-                requestedByAdObjectId,
+                requesterUnitObjectGuid,
                 productId,
                 pageNumber,
                 pageSize),
@@ -50,8 +50,8 @@ public sealed class LicenseRequestsController(ILicenseRequestService requestServ
                 x.RequestNumber,
                 x.RequestSource,
                 x.RequestDate,
-                x.RequestedByDisplayName,
-                x.RequesterUnit,
+                x.RequesterUnitDisplayName,
+                x.RequesterManagerName,
                 x.ProductCount,
                 x.UserCount,
                 x.EstimatedTotalCost,
@@ -84,7 +84,7 @@ public sealed class LicenseRequestsController(ILicenseRequestService requestServ
         [FromBody] CreateLicenseRequestRequest request,
         CancellationToken cancellationToken)
     {
-        if (!HasDirectoryLookupPermission())
+        if (!HasDirectoryLookupPermissions())
         {
             return Forbid();
         }
@@ -111,7 +111,7 @@ public sealed class LicenseRequestsController(ILicenseRequestService requestServ
         [FromBody] UpdateLicenseRequestRequest request,
         CancellationToken cancellationToken)
     {
-        if (!HasDirectoryLookupPermission())
+        if (!HasDirectoryLookupPermissions())
         {
             return Forbid();
         }
@@ -157,8 +157,9 @@ public sealed class LicenseRequestsController(ILicenseRequestService requestServ
         return Ok(MapDetail(result.Request));
     }
 
-    private bool HasDirectoryLookupPermission() =>
-        User.HasClaim(CustomClaimTypes.Permission, PermissionCodes.Directory.Users.Lookup)
+    private bool HasDirectoryLookupPermissions() =>
+        (User.HasClaim(CustomClaimTypes.Permission, PermissionCodes.Directory.Users.Lookup)
+         && User.HasClaim(CustomClaimTypes.Permission, PermissionCodes.Directory.OrganizationalUnits.Lookup))
         || User.IsInRole(SystemRoles.SuperAdmin);
 
     private AppModels.CreateLicenseRequestRequest MapCreateRequest(CreateLicenseRequestRequest request) =>
@@ -169,9 +170,8 @@ public sealed class LicenseRequestsController(ILicenseRequestService requestServ
             request.ExternalRequestNumber,
             request.EbysNumber,
             request.EbysDate,
-            MapRequestedBy(request.RequestedBy),
-            request.RequestedByManagerName,
-            request.RequesterUnit,
+            MapRequesterUnit(request.RequesterUnit),
+            request.RequesterManagerName,
             request.Description,
             request.Status,
             request.EstimatedTotalCost,
@@ -193,9 +193,8 @@ public sealed class LicenseRequestsController(ILicenseRequestService requestServ
             request.ExternalRequestNumber,
             request.EbysNumber,
             request.EbysDate,
-            MapRequestedBy(request.RequestedBy),
-            request.RequestedByManagerName,
-            request.RequesterUnit,
+            MapRequesterUnit(request.RequesterUnit),
+            request.RequesterManagerName,
             request.Description,
             request.Status,
             request.EstimatedTotalCost,
@@ -208,16 +207,11 @@ public sealed class LicenseRequestsController(ILicenseRequestService requestServ
             LicenseManagementActorResolver.ResolveIpAddress(this),
             LicenseManagementActorResolver.ResolveUserAgent(this));
 
-    private static AppModels.LicenseRequestAdUserSnapshot MapRequestedBy(LicenseRequestAdUserSnapshotRequest requestedBy) =>
+    private static AppModels.LicenseRequestOuSnapshot MapRequesterUnit(LicenseRequestOuSnapshotRequest requesterUnit) =>
         new(
-            requestedBy.AdObjectId,
-            requestedBy.SamAccountName,
-            requestedBy.UserPrincipalName,
-            requestedBy.DisplayName,
-            requestedBy.Department,
-            requestedBy.Title,
-            requestedBy.Mail,
-            requestedBy.Phone);
+            requesterUnit.ObjectGuid,
+            requesterUnit.DisplayName,
+            requesterUnit.DistinguishedName);
 
     private static AppModels.LicenseRequestItemInput MapItem(LicenseRequestItemRequest item) =>
         new(
@@ -247,16 +241,10 @@ public sealed class LicenseRequestsController(ILicenseRequestService requestServ
             request.ExternalRequestNumber,
             request.EbysNumber,
             request.EbysDate,
-            request.RequestedByAdObjectId,
-            request.RequestedBySamAccountName,
-            request.RequestedByUserPrincipalName,
-            request.RequestedByDisplayName,
-            request.RequestedByDepartment,
-            request.RequestedByTitle,
-            request.RequestedByMail,
-            request.RequestedByPhone,
-            request.RequestedByManagerName,
-            request.RequesterUnit,
+            request.RequesterUnitDisplayName,
+            request.RequesterUnitDistinguishedName,
+            request.RequesterUnitObjectGuid,
+            request.RequesterManagerName,
             request.Description,
             request.Status,
             request.EstimatedTotalCost,

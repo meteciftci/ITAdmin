@@ -117,6 +117,25 @@ export type DirectoryUserLookupReadiness = {
   message: string | null;
 };
 
+export type DirectoryOrganizationalUnitLookupItem = {
+  objectGuid: string;
+  displayName: string;
+  name: string | null;
+  distinguishedName: string;
+};
+
+export type DirectoryOrganizationalUnitLookupSearchResult = {
+  isSuccess: boolean;
+  message: string | null;
+  items: DirectoryOrganizationalUnitLookupItem[];
+};
+
+export type LicenseRequestOuSnapshot = {
+  objectGuid: string;
+  displayName: string;
+  distinguishedName: string;
+};
+
 export type LicensePurchaseType =
   | "LegacyPerpetual"
   | "Tender"
@@ -328,8 +347,8 @@ export type LicenseRequestListItem = {
   requestNumber: string;
   requestSource: LicenseRequestSource;
   requestDate: string;
-  requestedByDisplayName: string | null;
-  requesterUnit: string | null;
+  requesterUnitDisplayName: string;
+  requesterManagerName: string | null;
   productCount: number;
   userCount: number;
   estimatedTotalCost: number | null;
@@ -366,16 +385,10 @@ export type LicenseRequestDetail = {
   externalRequestNumber: string | null;
   ebysNumber: string | null;
   ebysDate: string | null;
-  requestedByAdObjectId: string;
-  requestedBySamAccountName: string | null;
-  requestedByUserPrincipalName: string | null;
-  requestedByDisplayName: string | null;
-  requestedByDepartment: string | null;
-  requestedByTitle: string | null;
-  requestedByMail: string | null;
-  requestedByPhone: string | null;
-  requestedByManagerName: string | null;
-  requesterUnit: string | null;
+  requesterUnitDisplayName: string;
+  requesterUnitDistinguishedName: string;
+  requesterUnitObjectGuid: string;
+  requesterManagerName: string | null;
   description: string | null;
   status: LicenseRequestStatus;
   estimatedTotalCost: number | null;
@@ -397,9 +410,8 @@ export type LicenseRequestFormRequest = {
   externalRequestNumber?: string | null;
   ebysNumber?: string | null;
   ebysDate?: string | null;
-  requestedBy: LicenseRequestAdUserSnapshot;
-  requestedByManagerName?: string | null;
-  requesterUnit?: string | null;
+  requesterUnit: LicenseRequestOuSnapshot;
+  requesterManagerName?: string | null;
   description?: string | null;
   status: LicenseRequestStatus;
   estimatedTotalCost?: number | null;

@@ -113,6 +113,9 @@ export const PermissionCodes = {
     Users: {
       Lookup: "Directory.Users.Lookup",
     },
+    OrganizationalUnits: {
+      Lookup: "Directory.OrganizationalUnits.Lookup",
+    },
   },
 } as const;
 

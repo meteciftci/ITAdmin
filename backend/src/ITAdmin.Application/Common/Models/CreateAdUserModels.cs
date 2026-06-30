@@ -50,7 +50,8 @@ public sealed record AdOrganizationalUnitListItem(
     string? Name,
     string? DisplayName,
     string? Ou,
-    string Label);
+    string Label,
+    string? ObjectGuid = null);
 
 public sealed record AdOrganizationalUnitSearchResult(
     bool IsSuccess,

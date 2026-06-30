@@ -1,7 +1,11 @@
 import type { TFunction } from "i18next";
 
 import type { LicenseRequestItemDraft } from "@/features/license-management/license-request-payload";
-import type { LicenseRequestAdUserSnapshot } from "@/features/license-management/types";
+import type {
+  LicenseRequestOuSnapshot,
+  LicenseRequestSource,
+} from "@/features/license-management/types";
+import { isRequestSourceFieldVisible } from "@/features/license-management/request-source-fields";
 
 export type LicenseRequestFormValidationResult =
   | { isValid: true }
@@ -12,7 +16,11 @@ export function validateLicenseRequestForm(
   input: {
     requestNumber: string;
     requestDate: string | null;
-    requestedBy: LicenseRequestAdUserSnapshot | null;
+    requestSource: LicenseRequestSource;
+    requesterUnit: LicenseRequestOuSnapshot | null;
+    externalRequestNumber: string;
+    ebysNumber: string;
+    ebysDate: string | null;
     items: LicenseRequestItemDraft[];
   },
 ): LicenseRequestFormValidationResult {
@@ -24,8 +32,20 @@ export function validateLicenseRequestForm(
     return { isValid: false, message: t("licenseManagement:requests.validation.requestDateRequired") };
   }
 
-  if (!input.requestedBy?.adObjectId) {
-    return { isValid: false, message: t("licenseManagement:requests.validation.requestedByRequired") };
+  if (!input.requesterUnit?.objectGuid || !input.requesterUnit.displayName || !input.requesterUnit.distinguishedName) {
+    return { isValid: false, message: t("licenseManagement:requests.validation.requesterUnitRequired") };
+  }
+
+  if (isRequestSourceFieldVisible("externalRequestNumber", input.requestSource) && !input.externalRequestNumber.trim()) {
+    return { isValid: false, message: t("licenseManagement:requests.validation.externalRequestNumberRequired") };
+  }
+
+  if (isRequestSourceFieldVisible("ebysNumber", input.requestSource) && !input.ebysNumber.trim()) {
+    return { isValid: false, message: t("licenseManagement:requests.validation.ebysNumberRequired") };
+  }
+
+  if (isRequestSourceFieldVisible("ebysDate", input.requestSource) && !input.ebysDate) {
+    return { isValid: false, message: t("licenseManagement:requests.validation.ebysDateRequired") };
   }
 
   if (input.items.length === 0) {
