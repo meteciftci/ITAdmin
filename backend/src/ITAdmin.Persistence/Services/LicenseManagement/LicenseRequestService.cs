@@ -139,8 +139,6 @@ public sealed class LicenseRequestService(AppDbContext context) : ILicenseReques
         CancellationToken cancellationToken = default)
     {
         var entity = await context.LicenseRequests
-            .Include(x => x.Items)
-            .ThenInclude(x => x.Users)
             .FirstOrDefaultAsync(x => x.Id == request.Id && x.IsActive, cancellationToken);
 
         if (entity is null)
@@ -155,10 +153,32 @@ public sealed class LicenseRequestService(AppDbContext context) : ILicenseReques
         }
 
         var now = DateTime.UtcNow;
-        context.LicenseRequestItems.RemoveRange(entity.Items);
-        entity.Items.Clear();
+        // Delete the existing items (their users cascade at the database level) with a set-based
+        // delete that bypasses the change tracker, then reload the request on a clean tracker
+        // before mapping the replacement set. Mutating the originally tracked graph and adding new
+        // children in a single SaveChanges makes EF re-point the removed users' foreign key instead
+        // of deleting them, producing an UPDATE that affects zero rows (DbUpdateConcurrencyException).
+        await context.LicenseRequestItems
+            .Where(item => item.RequestId == entity.Id)
+            .ExecuteDeleteAsync(cancellationToken);
+
+        context.ChangeTracker.Clear();
+        entity = await context.LicenseRequests
+            .FirstAsync(x => x.Id == request.Id, cancellationToken);
 
         MapRequestEntity(entity, ToCreatePayload(request), now, request.ActorUserName, isCreate: false);
+
+        // Force the freshly built child graph to Added. Attaching new items/users to an
+        // already-tracked (Unchanged) request lets EF's graph walk mis-classify some children as
+        // Modified, emitting an UPDATE against rows that were just deleted (0 rows affected).
+        foreach (var item in entity.Items)
+        {
+            context.Entry(item).State = EntityState.Added;
+            foreach (var user in item.Users)
+            {
+                context.Entry(user).State = EntityState.Added;
+            }
+        }
 
         var userCount = entity.Items.Sum(x => x.Users.Count);
         await WriteAuditAsync(

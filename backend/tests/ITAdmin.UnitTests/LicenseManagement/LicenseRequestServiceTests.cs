@@ -5,6 +5,7 @@ using ITAdmin.Application.Common.Security;
 using ITAdmin.Domain.Enums;
 using ITAdmin.Persistence.Context;
 using ITAdmin.Persistence.Services.LicenseManagement;
+using ITAdmin.UnitTests.TestInfrastructure;
 
 namespace ITAdmin.UnitTests.LicenseManagement;
 
@@ -70,7 +71,6 @@ public sealed class LicenseRequestServiceTests
 
         var result = await service.CreateAsync(
             new CreateLicenseRequestRequest(
-                "LT-2026-001",
                 LicenseRequestSource.Email,
                 new DateOnly(2026, 6, 29),
                 null, null, null,
@@ -98,7 +98,6 @@ public sealed class LicenseRequestServiceTests
 
         var result = await service.CreateAsync(
             new CreateLicenseRequestRequest(
-                "LT-2026-002",
                 LicenseRequestSource.Email,
                 new DateOnly(2026, 6, 29),
                 null, null, null,
@@ -131,7 +130,6 @@ public sealed class LicenseRequestServiceTests
 
         var result = await service.CreateAsync(
             new CreateLicenseRequestRequest(
-                "LT-2026-003",
                 LicenseRequestSource.Email,
                 new DateOnly(2026, 6, 29),
                 null, null, null,
@@ -156,7 +154,6 @@ public sealed class LicenseRequestServiceTests
 
         var result = await service.CreateAsync(
             new CreateLicenseRequestRequest(
-                "LT-2026-004",
                 LicenseRequestSource.Email,
                 new DateOnly(2026, 6, 29),
                 null, null, null,
@@ -430,6 +427,172 @@ public sealed class LicenseRequestServiceTests
         }
     }
 
+    [Fact]
+    public async Task UpdateAsync_NonExistentRequest_ReturnsFailure()
+    {
+        await using var context = CreateDbContext();
+        var service = new LicenseRequestService(context);
+
+        var result = await service.UpdateAsync(
+            BuildUpdateRequest(Guid.NewGuid(), Guid.NewGuid(), ("user-1", "hakan")),
+            CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("not found", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ChangesUsers_UpdatesQuantitiesAndWritesAudit()
+    {
+        await using var context = CreateDbContext();
+        var productId = await SeedProductAsync(context);
+        var service = new LicenseRequestService(context);
+        var created = await service.CreateAsync(
+            BuildCreateRequest(productId, ("user-1", "hakan")),
+            CancellationToken.None);
+
+        var result = await service.UpdateAsync(
+            BuildUpdateRequest(
+                created.Request!.Id,
+                productId,
+                ("user-1", "hakan"),
+                ("user-2", "mete")),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        var item = result.Request!.Items.Single();
+        Assert.Equal(2, item.Users.Count);
+        Assert.Equal(2, item.RequestedQuantity);
+
+        var updateAudit = await context.AuditLogs.SingleAsync(x => x.Action == "Update");
+        Assert.Equal("LicenseRequest", updateAudit.EntityName);
+        Assert.Contains("License request updated", updateAudit.Description, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_DuplicateProduct_ReturnsValidationFailure()
+    {
+        await using var context = CreateDbContext();
+        var productId = await SeedProductAsync(context);
+        var service = new LicenseRequestService(context);
+        var created = await service.CreateAsync(
+            BuildCreateRequest(productId, ("user-1", "hakan")),
+            CancellationToken.None);
+
+        var request = BuildUpdateRequest(created.Request!.Id, productId, ("user-1", "hakan")) with
+        {
+            Items =
+            [
+                BuildItem(productId, ("user-1", "hakan")),
+                BuildItem(productId, ("user-2", "mete")),
+            ],
+        };
+
+        var result = await service.UpdateAsync(request, CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(LicenseRequestRules.DuplicateProductMessage, result.Message);
+    }
+
+    [Fact]
+    public async Task UpdateStatusAsync_NonExistentRequest_ReturnsFailure()
+    {
+        await using var context = CreateDbContext();
+        var service = new LicenseRequestService(context);
+
+        var result = await service.UpdateStatusAsync(
+            new UpdateLicenseRequestStatusRequest(
+                Guid.NewGuid(),
+                LicenseRequestStatus.Cancelled,
+                null, "tester", null, null),
+            CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("not found", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task UpdateStatusAsync_NonManualStatus_ReturnsFailure()
+    {
+        await using var context = CreateDbContext();
+        var productId = await SeedProductAsync(context);
+        var service = new LicenseRequestService(context);
+        var created = await service.CreateAsync(
+            BuildCreateRequest(productId, ("user-1", "hakan")),
+            CancellationToken.None);
+
+        var result = await service.UpdateStatusAsync(
+            new UpdateLicenseRequestStatusRequest(
+                created.Request!.Id,
+                LicenseRequestStatus.Fulfilled,
+                null, "tester", null, null),
+            CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+    }
+
+    [Fact]
+    public async Task UpdateStatusAsync_SameStatus_ReturnsUnchanged()
+    {
+        await using var context = CreateDbContext();
+        var productId = await SeedProductAsync(context);
+        var service = new LicenseRequestService(context);
+        var created = await service.CreateAsync(
+            BuildCreateRequest(productId, ("user-1", "hakan")),
+            CancellationToken.None);
+
+        var result = await service.UpdateStatusAsync(
+            new UpdateLicenseRequestStatusRequest(
+                created.Request!.Id,
+                LicenseRequestStatus.Pending,
+                null, "tester", null, null),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains("unchanged", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task UpdateStatusAsync_ValidManualTransition_UpdatesAndWritesAudit()
+    {
+        await using var context = CreateDbContext();
+        var productId = await SeedProductAsync(context);
+        var service = new LicenseRequestService(context);
+        var created = await service.CreateAsync(
+            BuildCreateRequest(productId, ("user-1", "hakan")),
+            CancellationToken.None);
+
+        var result = await service.UpdateStatusAsync(
+            new UpdateLicenseRequestStatusRequest(
+                created.Request!.Id,
+                LicenseRequestStatus.Cancelled,
+                null, "tester", null, null),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(LicenseRequestStatus.Cancelled, result.Request!.Status);
+
+        var updateAudit = await context.AuditLogs.SingleAsync(x => x.Action == "Update");
+        Assert.Contains("status changed to Cancelled", updateAudit.Description, StringComparison.Ordinal);
+    }
+
+    private static UpdateLicenseRequestRequest BuildUpdateRequest(
+        Guid requestId,
+        Guid productId,
+        params (string AdObjectId, string SamAccountName)[] users) =>
+        new(
+            requestId,
+            LicenseRequestSource.OfficialLetter,
+            new DateOnly(2026, 6, 29),
+            null, "EBYS-1", new DateOnly(2026, 6, 29),
+            BuildRequesterUnit(),
+            "Manager Name",
+            "Updated request",
+            LicenseRequestStatus.Pending,
+            10000, "TRY", false, "Cost note",
+            [BuildItem(productId, users)],
+            null, "tester", null, null);
+
     private static CreateLicenseRequestRequest BuildCreateRequest(
         Guid productId,
         params (string AdObjectId, string SamAccountName)[] users) =>
@@ -521,12 +684,10 @@ public sealed class LicenseRequestServiceTests
 
     private static AppDbContext CreateDbContext()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .Options;
-
-        var context = new AppDbContext(options);
-        context.Database.EnsureCreated();
+        // Relational SQLite (not the EF in-memory provider) so cascade deletes and the item
+        // replacement performed by UpdateAsync behave like production PostgreSQL. The in-memory
+        // provider cannot model the delete-and-reinsert of request items.
+        var (_, context) = SqliteTestDbContextFactory.CreateAsync().GetAwaiter().GetResult();
         return context;
     }
 }
