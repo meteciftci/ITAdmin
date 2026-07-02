@@ -355,8 +355,8 @@ public sealed class AdDeletedObjectRestoreReadinessServiceTests
     [Fact]
     public void RestoreReadinessEndpoint_RequiresDeletedObjectsRestorePermission()
     {
-        var method = typeof(ITAdmin.Api.Controllers.AdManagementController)
-            .GetMethod(nameof(ITAdmin.Api.Controllers.AdManagementController.GetDeletedObjectRestoreReadiness));
+        var method = typeof(ITAdmin.Api.Controllers.AdDeletedObjectsController)
+            .GetMethod(nameof(ITAdmin.Api.Controllers.AdDeletedObjectsController.GetDeletedObjectRestoreReadiness));
         Assert.NotNull(method);
 
         var permissionAttribute = method.GetCustomAttribute<ITAdmin.Api.Authorization.RequirePermissionAttribute>();

@@ -15,8 +15,8 @@ public sealed class AdDeletedObjectRestoreTests
     [Fact]
     public void RestoreReadinessEndpoint_RequiresDeletedObjectsRestorePermission()
     {
-        var method = typeof(AdManagementController).GetMethod(
-            nameof(AdManagementController.GetDeletedObjectRestoreReadiness));
+        var method = typeof(AdDeletedObjectsController).GetMethod(
+            nameof(AdDeletedObjectsController.GetDeletedObjectRestoreReadiness));
         Assert.NotNull(method);
 
         var permissionAttribute = method.GetCustomAttribute<RequirePermissionAttribute>();
@@ -85,7 +85,7 @@ public sealed class AdDeletedObjectRestoreTests
     [Fact]
     public void RestoreDeletedObjectEndpoint_RequiresDeletedObjectsRestorePermission()
     {
-        var method = typeof(AdManagementController).GetMethod(nameof(AdManagementController.RestoreDeletedObject));
+        var method = typeof(AdDeletedObjectsController).GetMethod(nameof(AdDeletedObjectsController.RestoreDeletedObject));
         Assert.NotNull(method);
 
         var permissionAttribute = method.GetCustomAttribute<RequirePermissionAttribute>();
@@ -100,7 +100,7 @@ public sealed class AdDeletedObjectRestoreTests
         var source = File.ReadAllText(
             Path.Combine(
                 FindRepositoryRoot(),
-                "backend/src/ITAdmin.Api/Controllers/AdManagementController.cs"));
+                "backend/src/ITAdmin.Api/Controllers/AdManagement/AdDeletedObjectsController.cs"));
 
         Assert.Contains("RestoreDeletedObject", source, StringComparison.Ordinal);
         Assert.Contains("AdManagementApiMessageKeys.DeletedObjects.NotFound", source, StringComparison.Ordinal);
@@ -112,7 +112,7 @@ public sealed class AdDeletedObjectRestoreTests
         var source = File.ReadAllText(
             Path.Combine(
                 FindRepositoryRoot(),
-                "backend/src/ITAdmin.Api/Controllers/AdManagementController.cs"));
+                "backend/src/ITAdmin.Api/Controllers/AdManagement/AdDeletedObjectsController.cs"));
 
         Assert.Contains("AdDeletedObjectRestoreRequest", source, StringComparison.Ordinal);
         Assert.Contains("ResolveActorUserId(User)", source, StringComparison.Ordinal);
@@ -296,16 +296,20 @@ public sealed class AdDeletedObjectRestoreTests
     [Fact]
     public void DeletedObjectRestoreEndpoint_MapsDirectoryFailureKinds()
     {
+        var controllerDirectory = Path.Combine(
+            FindRepositoryRoot(),
+            "backend/src/ITAdmin.Api/Controllers/AdManagement");
         var source = File.ReadAllText(
-            Path.Combine(
-                FindRepositoryRoot(),
-                "backend/src/ITAdmin.Api/Controllers/AdManagementController.cs"));
+            Path.Combine(controllerDirectory, "AdDeletedObjectsController.cs"));
+        // The shared failure-kind → HTTP status mapping lives in the base controller.
+        var baseSource = File.ReadAllText(
+            Path.Combine(controllerDirectory, "AdManagementControllerBase.cs"));
 
         Assert.Contains("RestoreDeletedObject", source, StringComparison.Ordinal);
         Assert.Contains("MapDirectoryFailure(result.MessageKey, result.FailureKind, result.MessageParams)", source, StringComparison.Ordinal);
-        Assert.Contains("AdDirectoryFailureKind.ConnectionFailed => StatusCode(", source, StringComparison.Ordinal);
-        Assert.Contains("AdDirectoryFailureKind.InvalidRequest => BadRequest", source, StringComparison.Ordinal);
-        Assert.Contains("AdDirectoryFailureKind.NotFound => NotFound", source, StringComparison.Ordinal);
+        Assert.Contains("AdDirectoryFailureKind.ConnectionFailed => StatusCode(", baseSource, StringComparison.Ordinal);
+        Assert.Contains("AdDirectoryFailureKind.InvalidRequest => BadRequest", baseSource, StringComparison.Ordinal);
+        Assert.Contains("AdDirectoryFailureKind.NotFound => NotFound", baseSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -371,7 +375,7 @@ public sealed class AdDeletedObjectRestoreTests
         var controllerSource = File.ReadAllText(
             Path.Combine(
                 FindRepositoryRoot(),
-                "backend/src/ITAdmin.Api/Controllers/AdManagementController.cs"));
+                "backend/src/ITAdmin.Api/Controllers/AdManagement/AdDeletedObjectsController.cs"));
         var contractSource = File.ReadAllText(
             Path.Combine(
                 FindRepositoryRoot(),

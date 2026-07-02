@@ -26,7 +26,7 @@ public sealed class AdManagementControllerUserMutationGuardTests
     [Fact]
     public void UserMutationEndpoints_HaveRequirePermissionMatchingConstants()
     {
-        var controllerType = typeof(AdManagementController);
+        var controllerType = typeof(AdUsersController);
         var templatePrefix = "api/ad-management/";
 
         foreach (var (routeKey, expectedPermission) in ExpectedUserMutationPermissions)

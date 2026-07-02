@@ -35,7 +35,7 @@ public sealed class AdGroupDirectoryTests
     [Fact]
     public void ListGroupsEndpoint_RequiresGroupsViewPermission()
     {
-        var method = typeof(AdManagementController).GetMethod(nameof(AdManagementController.ListGroups));
+        var method = typeof(AdGroupsController).GetMethod(nameof(AdGroupsController.ListGroups));
         Assert.NotNull(method);
 
         var permissionAttribute = method.GetCustomAttribute<RequirePermissionAttribute>();
@@ -47,7 +47,7 @@ public sealed class AdGroupDirectoryTests
     [Fact]
     public void GetGroupByIdEndpoint_RequiresGroupsViewPermission()
     {
-        var method = typeof(AdManagementController).GetMethod(nameof(AdManagementController.GetGroupById));
+        var method = typeof(AdGroupsController).GetMethod(nameof(AdGroupsController.GetGroupById));
         Assert.NotNull(method);
 
         var permissionAttribute = method.GetCustomAttribute<RequirePermissionAttribute>();
@@ -157,7 +157,7 @@ public sealed class AdGroupDirectoryTests
     [Fact]
     public void CreateGroupEndpoint_RequiresGroupsCreatePermission()
     {
-        var method = typeof(AdManagementController).GetMethod(nameof(AdManagementController.CreateGroup));
+        var method = typeof(AdGroupsController).GetMethod(nameof(AdGroupsController.CreateGroup));
         Assert.NotNull(method);
 
         var permissionAttribute = method.GetCustomAttribute<RequirePermissionAttribute>();
@@ -169,7 +169,7 @@ public sealed class AdGroupDirectoryTests
     [Fact]
     public void UpdateGroupEndpoint_RequiresGroupsUpdatePermission()
     {
-        var method = typeof(AdManagementController).GetMethod(nameof(AdManagementController.UpdateGroup));
+        var method = typeof(AdGroupsController).GetMethod(nameof(AdGroupsController.UpdateGroup));
         Assert.NotNull(method);
 
         var permissionAttribute = method.GetCustomAttribute<RequirePermissionAttribute>();
@@ -196,7 +196,7 @@ public sealed class AdGroupDirectoryTests
     [Fact]
     public void DeleteGroupEndpoint_RequiresGroupsDeletePermission()
     {
-        var method = typeof(AdManagementController).GetMethod(nameof(AdManagementController.DeleteGroup));
+        var method = typeof(AdGroupsController).GetMethod(nameof(AdGroupsController.DeleteGroup));
         Assert.NotNull(method);
 
         var permissionAttribute = method.GetCustomAttribute<RequirePermissionAttribute>();

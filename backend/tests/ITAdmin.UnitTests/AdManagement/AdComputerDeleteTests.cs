@@ -48,7 +48,7 @@ public sealed class AdComputerDeleteTests
     [Fact]
     public void DeleteComputerEndpoint_RequiresComputersDeletePermission()
     {
-        var method = typeof(AdManagementController).GetMethod(nameof(AdManagementController.DeleteComputer));
+        var method = typeof(AdComputersController).GetMethod(nameof(AdComputersController.DeleteComputer));
         Assert.NotNull(method);
 
         var permissionAttribute = method.GetCustomAttribute<RequirePermissionAttribute>();
@@ -63,7 +63,7 @@ public sealed class AdComputerDeleteTests
         var source = File.ReadAllText(
             Path.Combine(
                 FindRepositoryRoot(),
-                "backend/src/ITAdmin.Api/Controllers/AdManagementController.cs"));
+                "backend/src/ITAdmin.Api/Controllers/AdManagement/AdComputersController.cs"));
 
         Assert.Contains("DeleteComputer", source, StringComparison.Ordinal);
         Assert.Contains("AdManagementApiMessageKeys.Computers.InvalidComputerId", source, StringComparison.Ordinal);
@@ -116,7 +116,7 @@ public sealed class AdComputerDeleteTests
         var source = File.ReadAllText(
             Path.Combine(
                 FindRepositoryRoot(),
-                "backend/src/ITAdmin.Api/Controllers/AdManagementController.cs"));
+                "backend/src/ITAdmin.Api/Controllers/AdManagement/AdComputersController.cs"));
 
         Assert.Contains("MapDirectoryFailure(result.MessageKey, result.FailureKind, result.MessageParams)", source, StringComparison.Ordinal);
         Assert.Contains("AdDirectoryFailureKind.NotFound => NotFound", source, StringComparison.Ordinal);

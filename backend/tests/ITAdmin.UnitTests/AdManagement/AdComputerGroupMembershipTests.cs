@@ -70,7 +70,7 @@ public sealed class AdComputerGroupMembershipTests
     [Fact]
     public void GetComputerGroupsEndpoint_RequiresComputersGroupsViewPermission()
     {
-        var method = typeof(AdManagementController).GetMethod(nameof(AdManagementController.GetComputerGroups));
+        var method = typeof(AdComputersController).GetMethod(nameof(AdComputersController.GetComputerGroups));
         Assert.NotNull(method);
 
         var permissionAttribute = method.GetCustomAttribute<RequirePermissionAttribute>();
@@ -82,7 +82,7 @@ public sealed class AdComputerGroupMembershipTests
     [Fact]
     public void SearchComputerGroupCandidatesEndpoint_RequiresComputersGroupsAddPermission()
     {
-        var method = typeof(AdManagementController).GetMethod(nameof(AdManagementController.SearchComputerGroupCandidates));
+        var method = typeof(AdComputersController).GetMethod(nameof(AdComputersController.SearchComputerGroupCandidates));
         Assert.NotNull(method);
 
         var permissionAttribute = method.GetCustomAttribute<RequirePermissionAttribute>();
@@ -94,7 +94,7 @@ public sealed class AdComputerGroupMembershipTests
     [Fact]
     public void AddComputerToGroupEndpoint_RequiresComputersGroupsAddPermission()
     {
-        var method = typeof(AdManagementController).GetMethod(nameof(AdManagementController.AddComputerToGroup));
+        var method = typeof(AdComputersController).GetMethod(nameof(AdComputersController.AddComputerToGroup));
         Assert.NotNull(method);
 
         var permissionAttribute = method.GetCustomAttribute<RequirePermissionAttribute>();
@@ -106,7 +106,7 @@ public sealed class AdComputerGroupMembershipTests
     [Fact]
     public void RemoveComputerFromGroupEndpoint_RequiresComputersGroupsRemovePermission()
     {
-        var method = typeof(AdManagementController).GetMethod(nameof(AdManagementController.RemoveComputerFromGroup));
+        var method = typeof(AdComputersController).GetMethod(nameof(AdComputersController.RemoveComputerFromGroup));
         Assert.NotNull(method);
 
         var permissionAttribute = method.GetCustomAttribute<RequirePermissionAttribute>();

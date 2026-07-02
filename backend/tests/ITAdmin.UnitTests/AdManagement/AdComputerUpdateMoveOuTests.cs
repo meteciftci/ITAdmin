@@ -58,7 +58,7 @@ public sealed class AdComputerUpdateMoveOuTests
     [Fact]
     public void UpdateComputerEndpoint_RequiresComputersUpdatePermission()
     {
-        var method = typeof(AdManagementController).GetMethod(nameof(AdManagementController.UpdateComputer));
+        var method = typeof(AdComputersController).GetMethod(nameof(AdComputersController.UpdateComputer));
         Assert.NotNull(method);
 
         var permissionAttribute = method.GetCustomAttribute<RequirePermissionAttribute>();
@@ -70,7 +70,7 @@ public sealed class AdComputerUpdateMoveOuTests
     [Fact]
     public void MoveComputerOuEndpoint_RequiresComputersMoveOuPermission()
     {
-        var method = typeof(AdManagementController).GetMethod(nameof(AdManagementController.MoveComputerOu));
+        var method = typeof(AdComputersController).GetMethod(nameof(AdComputersController.MoveComputerOu));
         Assert.NotNull(method);
 
         var permissionAttribute = method.GetCustomAttribute<RequirePermissionAttribute>();
@@ -85,7 +85,7 @@ public sealed class AdComputerUpdateMoveOuTests
         var source = File.ReadAllText(
             Path.Combine(
                 FindRepositoryRoot(),
-                "backend/src/ITAdmin.Api/Controllers/AdManagementController.cs"));
+                "backend/src/ITAdmin.Api/Controllers/AdManagement/AdComputersController.cs"));
 
         Assert.Contains("UpdateComputer", source, StringComparison.Ordinal);
         Assert.Contains("MoveComputerOu", source, StringComparison.Ordinal);
@@ -182,7 +182,7 @@ public sealed class AdComputerUpdateMoveOuTests
         var source = File.ReadAllText(
             Path.Combine(
                 FindRepositoryRoot(),
-                "backend/src/ITAdmin.Api/Controllers/AdManagementController.cs"));
+                "backend/src/ITAdmin.Api/Controllers/AdManagement/AdComputersController.cs"));
 
         Assert.Contains("MapComputerOperationActionResult", source, StringComparison.Ordinal);
         Assert.Contains("AdDirectoryFailureKind.NotFound => NotFound", source, StringComparison.Ordinal);

@@ -44,16 +44,16 @@ public sealed class AdOrganizationalUnitTests
     }
 
     [Theory]
-    [InlineData(nameof(AdManagementController.ListManageOrganizationalUnits), AdManagementPermissions.OrganizationalUnitsView)]
-    [InlineData(nameof(AdManagementController.ListSettingsOrganizationalUnits), AdManagementPermissions.SettingsView)]
-    [InlineData(nameof(AdManagementController.GetOrganizationalUnitById), AdManagementPermissions.OrganizationalUnitsView)]
-    [InlineData(nameof(AdManagementController.CreateOrganizationalUnit), AdManagementPermissions.OrganizationalUnitsCreate)]
-    [InlineData(nameof(AdManagementController.RenameOrganizationalUnit), AdManagementPermissions.OrganizationalUnitsUpdate)]
-    [InlineData(nameof(AdManagementController.MoveOrganizationalUnit), AdManagementPermissions.OrganizationalUnitsMove)]
-    [InlineData(nameof(AdManagementController.DeleteOrganizationalUnit), AdManagementPermissions.OrganizationalUnitsDelete)]
+    [InlineData(nameof(AdOrganizationalUnitsController.ListManageOrganizationalUnits), AdManagementPermissions.OrganizationalUnitsView)]
+    [InlineData(nameof(AdOrganizationalUnitsController.ListSettingsOrganizationalUnits), AdManagementPermissions.SettingsView)]
+    [InlineData(nameof(AdOrganizationalUnitsController.GetOrganizationalUnitById), AdManagementPermissions.OrganizationalUnitsView)]
+    [InlineData(nameof(AdOrganizationalUnitsController.CreateOrganizationalUnit), AdManagementPermissions.OrganizationalUnitsCreate)]
+    [InlineData(nameof(AdOrganizationalUnitsController.RenameOrganizationalUnit), AdManagementPermissions.OrganizationalUnitsUpdate)]
+    [InlineData(nameof(AdOrganizationalUnitsController.MoveOrganizationalUnit), AdManagementPermissions.OrganizationalUnitsMove)]
+    [InlineData(nameof(AdOrganizationalUnitsController.DeleteOrganizationalUnit), AdManagementPermissions.OrganizationalUnitsDelete)]
     public void OrganizationalUnitEndpoints_RequireExpectedPermissions(string methodName, string permission)
     {
-        var method = typeof(AdManagementController).GetMethod(methodName);
+        var method = typeof(AdOrganizationalUnitsController).GetMethod(methodName);
         Assert.NotNull(method);
 
         var permissionAttribute = method.GetCustomAttribute<RequirePermissionAttribute>();

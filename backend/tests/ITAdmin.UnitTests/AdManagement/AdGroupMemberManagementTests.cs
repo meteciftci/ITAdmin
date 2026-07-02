@@ -44,7 +44,7 @@ public sealed class AdGroupMemberManagementTests
     [Fact]
     public void GetGroupMembersEndpoint_RequiresGroupsViewPermission()
     {
-        var method = typeof(AdManagementController).GetMethod(nameof(AdManagementController.GetGroupMembers));
+        var method = typeof(AdGroupsController).GetMethod(nameof(AdGroupsController.GetGroupMembers));
         Assert.NotNull(method);
 
         var permissionAttribute = method.GetCustomAttribute<RequirePermissionAttribute>();
@@ -56,7 +56,7 @@ public sealed class AdGroupMemberManagementTests
     [Fact]
     public void SearchGroupMemberCandidatesEndpoint_RequiresGroupsManageMembersPermission()
     {
-        var method = typeof(AdManagementController).GetMethod(nameof(AdManagementController.SearchGroupMemberCandidates));
+        var method = typeof(AdGroupsController).GetMethod(nameof(AdGroupsController.SearchGroupMemberCandidates));
         Assert.NotNull(method);
 
         var permissionAttribute = method.GetCustomAttribute<RequirePermissionAttribute>();
@@ -68,7 +68,7 @@ public sealed class AdGroupMemberManagementTests
     [Fact]
     public void AddGroupMemberEndpoint_RequiresGroupsManageMembersPermission()
     {
-        var method = typeof(AdManagementController).GetMethod(nameof(AdManagementController.AddGroupMember));
+        var method = typeof(AdGroupsController).GetMethod(nameof(AdGroupsController.AddGroupMember));
         Assert.NotNull(method);
 
         var permissionAttribute = method.GetCustomAttribute<RequirePermissionAttribute>();
@@ -80,7 +80,7 @@ public sealed class AdGroupMemberManagementTests
     [Fact]
     public void RemoveGroupMemberEndpoint_RequiresGroupsManageMembersPermission()
     {
-        var method = typeof(AdManagementController).GetMethod(nameof(AdManagementController.RemoveGroupMember));
+        var method = typeof(AdGroupsController).GetMethod(nameof(AdGroupsController.RemoveGroupMember));
         Assert.NotNull(method);
 
         var permissionAttribute = method.GetCustomAttribute<RequirePermissionAttribute>();

@@ -57,7 +57,7 @@ public sealed class AdDeletedObjectDirectoryTests
     [Fact]
     public void ListDeletedObjectsEndpoint_RequiresDeletedObjectsViewPermission()
     {
-        var method = typeof(AdManagementController).GetMethod(nameof(AdManagementController.ListDeletedObjects));
+        var method = typeof(AdDeletedObjectsController).GetMethod(nameof(AdDeletedObjectsController.ListDeletedObjects));
         Assert.NotNull(method);
 
         var permissionAttribute = method.GetCustomAttribute<RequirePermissionAttribute>();
@@ -69,7 +69,7 @@ public sealed class AdDeletedObjectDirectoryTests
     [Fact]
     public void GetDeletedObjectByIdEndpoint_RequiresDeletedObjectsViewPermission()
     {
-        var method = typeof(AdManagementController).GetMethod(nameof(AdManagementController.GetDeletedObjectById));
+        var method = typeof(AdDeletedObjectsController).GetMethod(nameof(AdDeletedObjectsController.GetDeletedObjectById));
         Assert.NotNull(method);
 
         var permissionAttribute = method.GetCustomAttribute<RequirePermissionAttribute>();
@@ -85,7 +85,7 @@ public sealed class AdDeletedObjectDirectoryTests
     [InlineData("computer", AdDeletedObjectTypeFilter.Computer)]
     public void ParseDeletedObjectTypeFilter_SupportsKnownValues(string rawType, AdDeletedObjectTypeFilter expected)
     {
-        var method = typeof(AdManagementController).GetMethod(
+        var method = typeof(AdDeletedObjectsController).GetMethod(
             "ParseDeletedObjectTypeFilter",
             BindingFlags.Static | BindingFlags.NonPublic);
         Assert.NotNull(method);
@@ -200,7 +200,7 @@ public sealed class AdDeletedObjectDirectoryTests
     [Fact]
     public void ListDeletedObjectsEndpoint_MapsIncludeAllQueryParameter()
     {
-        var method = typeof(AdManagementController).GetMethod(nameof(AdManagementController.ListDeletedObjects));
+        var method = typeof(AdDeletedObjectsController).GetMethod(nameof(AdDeletedObjectsController.ListDeletedObjects));
         Assert.NotNull(method);
 
         var includeAllParameter = method.GetParameters()

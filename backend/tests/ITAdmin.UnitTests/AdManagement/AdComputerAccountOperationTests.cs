@@ -44,7 +44,7 @@ public sealed class AdComputerAccountOperationTests
     [Fact]
     public void EnableComputerEndpoint_RequiresComputersEnablePermission()
     {
-        var method = typeof(AdManagementController).GetMethod(nameof(AdManagementController.EnableComputer));
+        var method = typeof(AdComputersController).GetMethod(nameof(AdComputersController.EnableComputer));
         Assert.NotNull(method);
 
         var permissionAttribute = method.GetCustomAttribute<RequirePermissionAttribute>();
@@ -56,7 +56,7 @@ public sealed class AdComputerAccountOperationTests
     [Fact]
     public void DisableComputerEndpoint_RequiresComputersDisablePermission()
     {
-        var method = typeof(AdManagementController).GetMethod(nameof(AdManagementController.DisableComputer));
+        var method = typeof(AdComputersController).GetMethod(nameof(AdComputersController.DisableComputer));
         Assert.NotNull(method);
 
         var permissionAttribute = method.GetCustomAttribute<RequirePermissionAttribute>();
@@ -71,7 +71,7 @@ public sealed class AdComputerAccountOperationTests
         var source = File.ReadAllText(
             Path.Combine(
                 FindRepositoryRoot(),
-                "backend/src/ITAdmin.Api/Controllers/AdManagementController.cs"));
+                "backend/src/ITAdmin.Api/Controllers/AdManagement/AdComputersController.cs"));
 
         Assert.Contains("ExecuteComputerAccountOperationAsync", source, StringComparison.Ordinal);
         Assert.Contains("AdManagementApiMessageKeys.Computers.InvalidComputerId", source, StringComparison.Ordinal);
@@ -168,7 +168,7 @@ public sealed class AdComputerAccountOperationTests
         var source = File.ReadAllText(
             Path.Combine(
                 FindRepositoryRoot(),
-                "backend/src/ITAdmin.Api/Controllers/AdManagementController.cs"));
+                "backend/src/ITAdmin.Api/Controllers/AdManagement/AdComputersController.cs"));
 
         Assert.Contains("ExecuteComputerAccountOperationAsync", source, StringComparison.Ordinal);
         Assert.Contains("AdDirectoryFailureKind.NotFound => NotFound", source, StringComparison.Ordinal);

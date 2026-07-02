@@ -12,9 +12,9 @@ public sealed class AdManagementControllerEffectiveGroupsTests
     [Fact]
     public void GetUserEffectiveGroups_UsesUsersGroupsViewPermission()
     {
-        var method = typeof(AdManagementController)
+        var method = typeof(AdUsersController)
             .GetMethod(
-                nameof(AdManagementController.GetUserEffectiveGroups),
+                nameof(AdUsersController.GetUserEffectiveGroups),
                 BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
 
         Assert.NotNull(method);

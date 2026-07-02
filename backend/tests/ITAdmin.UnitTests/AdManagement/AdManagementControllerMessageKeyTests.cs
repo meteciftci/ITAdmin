@@ -4,28 +4,39 @@ namespace ITAdmin.UnitTests.AdManagement;
 
 public sealed class AdManagementControllerMessageKeyTests
 {
-    private static readonly string ControllerSourcePath = Path.Combine(
-        FindRepositoryRoot(),
-        "backend/src/ITAdmin.Api/Controllers/AdManagementController.cs");
+    private static readonly string ControllerSource = ReadControllerSource();
+
+    private static string ReadControllerSource()
+    {
+        var controllerDirectory = Path.Combine(
+            FindRepositoryRoot(),
+            "backend/src/ITAdmin.Api/Controllers/AdManagement");
+
+        // AD management endpoints are split across domain controllers; scan them all.
+        return string.Concat(
+            Directory.EnumerateFiles(controllerDirectory, "*.cs")
+                .OrderBy(path => path, StringComparer.Ordinal)
+                .Select(File.ReadAllText));
+    }
 
     [Fact]
     public void Controller_DoesNotReferenceLegacyMessages()
     {
-        var source = File.ReadAllText(ControllerSourcePath);
+        var source = ControllerSource;
         Assert.DoesNotContain("AdManagementApiMessages.Legacy", source, StringComparison.Ordinal);
     }
 
     [Fact]
     public void Controller_DoesNotReturnUserFacingMessageField()
     {
-        var source = File.ReadAllText(ControllerSourcePath);
+        var source = ControllerSource;
         Assert.DoesNotContain("message =", source, StringComparison.Ordinal);
     }
 
     [Fact]
     public void UpdateComputer_InvalidIdBranch_SetsInvalidComputerIdMessageKey()
     {
-        var source = File.ReadAllText(ControllerSourcePath);
+        var source = ControllerSource;
 
         Assert.Contains(
             "AdManagementApiMessageKeys.Computers.InvalidComputerId,",
@@ -40,7 +51,7 @@ public sealed class AdManagementControllerMessageKeyTests
     [Fact]
     public void MoveComputerOu_InvalidIdBranch_SetsInvalidComputerIdMessageKey()
     {
-        var source = File.ReadAllText(ControllerSourcePath);
+        var source = ControllerSource;
         var moveComputerOuStart = source.IndexOf(
             "public async Task<ActionResult<AdComputerAccountOperationResponse>> MoveComputerOu(",
             StringComparison.Ordinal);
@@ -56,7 +67,7 @@ public sealed class AdManagementControllerMessageKeyTests
     [Fact]
     public void MoveComputerOu_MissingTargetOuBranch_UsesComputersTargetOuRequiredMessageKey()
     {
-        var source = File.ReadAllText(ControllerSourcePath);
+        var source = ControllerSource;
         var moveComputerOuStart = source.IndexOf(
             "public async Task<ActionResult<AdComputerAccountOperationResponse>> MoveComputerOu(",
             StringComparison.Ordinal);
@@ -81,7 +92,7 @@ public sealed class AdManagementControllerMessageKeyTests
     [Fact]
     public void MoveGroupOu_MissingTargetOuBranch_UsesGroupsTargetOuRequiredMessageKey()
     {
-        var source = File.ReadAllText(ControllerSourcePath);
+        var source = ControllerSource;
         var moveGroupOuStart = source.IndexOf(
             "public async Task<ActionResult<MoveAdGroupOuResponse>> MoveGroupOu(",
             StringComparison.Ordinal);

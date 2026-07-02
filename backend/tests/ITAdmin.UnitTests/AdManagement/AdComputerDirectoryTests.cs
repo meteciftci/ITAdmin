@@ -34,7 +34,7 @@ public sealed class AdComputerDirectoryTests
     [Fact]
     public void ListComputersEndpoint_RequiresComputersViewPermission()
     {
-        var method = typeof(AdManagementController).GetMethod(nameof(AdManagementController.ListComputers));
+        var method = typeof(AdComputersController).GetMethod(nameof(AdComputersController.ListComputers));
         Assert.NotNull(method);
 
         var permissionAttribute = method.GetCustomAttribute<RequirePermissionAttribute>();
@@ -46,7 +46,7 @@ public sealed class AdComputerDirectoryTests
     [Fact]
     public void GetComputerByIdEndpoint_RequiresComputersViewPermission()
     {
-        var method = typeof(AdManagementController).GetMethod(nameof(AdManagementController.GetComputerById));
+        var method = typeof(AdComputersController).GetMethod(nameof(AdComputersController.GetComputerById));
         Assert.NotNull(method);
 
         var permissionAttribute = method.GetCustomAttribute<RequirePermissionAttribute>();
@@ -58,8 +58,8 @@ public sealed class AdComputerDirectoryTests
     [Fact]
     public void SearchComputerOrganizationalUnitsEndpoint_RequiresComputersViewPermission()
     {
-        var method = typeof(AdManagementController)
-            .GetMethod(nameof(AdManagementController.SearchComputerOrganizationalUnits));
+        var method = typeof(AdComputersController)
+            .GetMethod(nameof(AdComputersController.SearchComputerOrganizationalUnits));
         Assert.NotNull(method);
 
         var permissionAttribute = method.GetCustomAttribute<RequirePermissionAttribute>();
@@ -228,8 +228,8 @@ public sealed class AdComputerDirectoryTests
     [Fact]
     public void GetComputerOperatingSystemsEndpoint_RequiresComputersViewPermission()
     {
-        var method = typeof(AdManagementController)
-            .GetMethod(nameof(AdManagementController.GetComputerOperatingSystems));
+        var method = typeof(AdComputersController)
+            .GetMethod(nameof(AdComputersController.GetComputerOperatingSystems));
         Assert.NotNull(method);
 
         var permissionAttribute = method.GetCustomAttribute<RequirePermissionAttribute>();

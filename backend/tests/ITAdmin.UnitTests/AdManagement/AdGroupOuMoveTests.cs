@@ -36,7 +36,7 @@ public sealed class AdGroupOuMoveTests
     [Fact]
     public void MoveGroupOuEndpoint_RequiresGroupsMoveOuPermission()
     {
-        var method = typeof(AdManagementController).GetMethod(nameof(AdManagementController.MoveGroupOu));
+        var method = typeof(AdGroupsController).GetMethod(nameof(AdGroupsController.MoveGroupOu));
         Assert.NotNull(method);
 
         var permissionAttribute = method.GetCustomAttribute<RequirePermissionAttribute>();
