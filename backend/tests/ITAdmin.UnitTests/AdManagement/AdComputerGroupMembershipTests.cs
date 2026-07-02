@@ -46,21 +46,6 @@ public sealed class AdComputerGroupMembershipTests
     }
 
     [Fact]
-    public void SeedAdManagementComputerGroupPermissionsMigration_ContainsIdempotentPermissionSql()
-    {
-        var migrationSource = File.ReadAllText(
-            Path.Combine(
-                FindRepositoryRoot(),
-                "backend/src/ITAdmin.Persistence/Migrations/20260612150000_SeedAdManagementComputerGroupPermissions.cs"));
-
-        Assert.Contains("AdManagement.Computers.Groups.View", migrationSource, StringComparison.Ordinal);
-        Assert.Contains("AdManagement.Computers.Groups.Add", migrationSource, StringComparison.Ordinal);
-        Assert.Contains("AdManagement.Computers.Groups.Remove", migrationSource, StringComparison.Ordinal);
-        Assert.Contains("WHERE NOT EXISTS", migrationSource, StringComparison.Ordinal);
-        Assert.Contains("r.code = 'Administrator'", migrationSource, StringComparison.Ordinal);
-    }
-
-    [Fact]
     public void ComputerGroupOperationTypes_AreDefined()
     {
         Assert.Equal("ComputerGroupAdd", AdManagementOperationTypes.ComputerGroupAdd);

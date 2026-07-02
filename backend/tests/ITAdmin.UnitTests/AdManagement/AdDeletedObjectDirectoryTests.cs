@@ -32,29 +32,6 @@ public sealed class AdDeletedObjectDirectoryTests
     }
 
     [Fact]
-    public void SeedDeletedObjectsViewMigration_ContainsPermissionAndAdministratorGrant()
-    {
-        var migrationPath = Path.GetFullPath(Path.Combine(
-            AppContext.BaseDirectory,
-            "..",
-            "..",
-            "..",
-            "..",
-            "..",
-            "src",
-            "ITAdmin.Persistence",
-            "Migrations",
-            "20260615120000_SeedAdManagementDeletedObjectsViewPermission.cs"));
-        var migrationSource = File.ReadAllText(migrationPath);
-
-        Assert.Contains(AdManagementPermissions.DeletedObjectsView, migrationSource, StringComparison.Ordinal);
-        Assert.Contains("portal_permissions", migrationSource, StringComparison.Ordinal);
-        Assert.Contains("portal_role_permissions", migrationSource, StringComparison.Ordinal);
-        Assert.Contains("WHERE NOT EXISTS", migrationSource, StringComparison.Ordinal);
-        Assert.Contains("Administrator", migrationSource, StringComparison.Ordinal);
-    }
-
-    [Fact]
     public void ListDeletedObjectsEndpoint_RequiresDeletedObjectsViewPermission()
     {
         var method = typeof(AdDeletedObjectsController).GetMethod(nameof(AdDeletedObjectsController.ListDeletedObjects));

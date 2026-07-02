@@ -42,20 +42,6 @@ public sealed class AdComputerUpdateMoveOuTests
     }
 
     [Fact]
-    public void ExistingDeploymentMigration_SeedsComputerUpdateAndMoveOuPermissionsIdempotently()
-    {
-        var migrationSource = File.ReadAllText(
-            Path.Combine(
-                FindRepositoryRoot(),
-                "backend/src/ITAdmin.Persistence/Migrations/20260612130000_SeedAdManagementComputersUpdateMoveOuPermissions.cs"));
-
-        Assert.Contains("AdManagement.Computers.Update", migrationSource, StringComparison.Ordinal);
-        Assert.Contains("AdManagement.Computers.MoveOu", migrationSource, StringComparison.Ordinal);
-        Assert.Contains("WHERE NOT EXISTS", migrationSource, StringComparison.Ordinal);
-        Assert.Contains("r.code = 'Administrator'", migrationSource, StringComparison.Ordinal);
-    }
-
-    [Fact]
     public void UpdateComputerEndpoint_RequiresComputersUpdatePermission()
     {
         var method = typeof(AdComputersController).GetMethod(nameof(AdComputersController.UpdateComputer));

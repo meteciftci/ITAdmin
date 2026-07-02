@@ -3,7 +3,6 @@ using ITAdmin.Api.Authorization;
 using ITAdmin.Api.Controllers;
 using ITAdmin.Application.Common.AdManagement;
 using ITAdmin.Application.Common.Constants;
-using ITAdmin.Persistence.Migrations;
 using ITAdmin.Persistence.Services;
 
 namespace ITAdmin.UnitTests.AdManagement;
@@ -29,20 +28,6 @@ public sealed class AdComputerDeleteTests
             var tuple = (ValueTuple<string, string, string>)item!;
             return string.Equals(tuple.Item2, AdManagementPermissions.ComputersDelete, StringComparison.Ordinal);
         });
-    }
-
-    [Fact]
-    public void ExistingDeploymentMigration_SeedsComputersDeletePermissionIdempotently()
-    {
-        var source = File.ReadAllText(
-            Path.Combine(
-                FindRepositoryRoot(),
-                "backend/src/ITAdmin.Persistence/Migrations/20260612140000_SeedAdManagementComputersDeletePermission.cs"));
-
-        Assert.Contains("AdManagement.Computers.Delete", source, StringComparison.Ordinal);
-        Assert.Contains("WHERE NOT EXISTS", source, StringComparison.Ordinal);
-        Assert.Contains("Administrator", source, StringComparison.Ordinal);
-        Assert.Contains(nameof(SeedAdManagementComputersDeletePermission), source, StringComparison.Ordinal);
     }
 
     [Fact]

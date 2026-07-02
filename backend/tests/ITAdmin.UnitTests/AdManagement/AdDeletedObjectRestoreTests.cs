@@ -60,29 +60,6 @@ public sealed class AdDeletedObjectRestoreTests
     }
 
     [Fact]
-    public void SeedDeletedObjectsRestoreMigration_ContainsPermissionAndAdministratorGrant()
-    {
-        var migrationPath = Path.GetFullPath(Path.Combine(
-            AppContext.BaseDirectory,
-            "..",
-            "..",
-            "..",
-            "..",
-            "..",
-            "src",
-            "ITAdmin.Persistence",
-            "Migrations",
-            "20260615130000_SeedAdManagementDeletedObjectsRestorePermission.cs"));
-        var migrationSource = File.ReadAllText(migrationPath);
-
-        Assert.Contains(AdManagementPermissions.DeletedObjectsRestore, migrationSource, StringComparison.Ordinal);
-        Assert.Contains("portal_permissions", migrationSource, StringComparison.Ordinal);
-        Assert.Contains("portal_role_permissions", migrationSource, StringComparison.Ordinal);
-        Assert.Contains("WHERE NOT EXISTS", migrationSource, StringComparison.Ordinal);
-        Assert.Contains("Administrator", migrationSource, StringComparison.Ordinal);
-    }
-
-    [Fact]
     public void RestoreDeletedObjectEndpoint_RequiresDeletedObjectsRestorePermission()
     {
         var method = typeof(AdDeletedObjectsController).GetMethod(nameof(AdDeletedObjectsController.RestoreDeletedObject));
