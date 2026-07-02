@@ -7,7 +7,23 @@ using ITAdmin.Application.Common.Models;
 
 namespace ITAdmin.Infrastructure.Services;
 
-public sealed partial class AdUserDirectoryService : IAdComputerDirectoryService
+public sealed partial class AdComputersDirectoryService(
+    IAdManagementSettingsService settingsServiceDependency,
+    IAdAttributeMappingService attributeMappingServiceDependency,
+    IAdOperationLogService adOperationLogServiceDependency,
+    IAuditLogWriter auditLogWriterDependency,
+    IAdManagementNotificationEnqueueService notificationEnqueueServiceDependency,
+    IAdDeletedObjectRestoreCommandRunner deletedObjectRestoreCommandRunnerDependency,
+    ILogger<AdComputersDirectoryService> loggerDependency)
+    : AdDirectoryServiceBase(
+        settingsServiceDependency,
+        attributeMappingServiceDependency,
+        adOperationLogServiceDependency,
+        auditLogWriterDependency,
+        notificationEnqueueServiceDependency,
+        deletedObjectRestoreCommandRunnerDependency,
+        loggerDependency),
+        IAdComputerDirectoryService
 {
     private const int ComputerOuSearchDefaultPageSize = 50;
     private const int ComputerOuSearchMaxPageSize = 200;

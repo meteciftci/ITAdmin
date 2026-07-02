@@ -7,7 +7,7 @@ using ITAdmin.Application.Common.Models;
 
 namespace ITAdmin.Infrastructure.Services;
 
-public sealed partial class AdUserDirectoryService : IAdComputerUpdateService
+public sealed partial class AdComputersDirectoryService : IAdComputerUpdateService
 {
     private const int ComputerDescriptionMaxLength = 1024;
     private const string ComputerUpdateSuccessLoggingFailedMessage =

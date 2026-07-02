@@ -139,7 +139,7 @@ public sealed class AdUserDirectoryServiceGroupMembershipLoggingTests
     Assert.Equal(UserObjectGuid.ToString("D"), recordingAuditWriter.LastRequest!.EntityId);
   }
 
-  private static AdUserDirectoryService CreateService(
+  private static AdUsersDirectoryService CreateService(
     IAuditLogWriter auditLogWriter,
     IAdOperationLogService adOperationLogService) =>
     new(
@@ -149,15 +149,15 @@ public sealed class AdUserDirectoryServiceGroupMembershipLoggingTests
       auditLogWriter,
       new StubAdManagementNotificationEnqueueService(),
       new StubAdDeletedObjectRestoreCommandRunner(),
-      NullLogger<AdUserDirectoryService>.Instance);
+      NullLogger<AdUsersDirectoryService>.Instance);
 
   private static async Task<AdUserGroupOperationResult> InvokeCompleteGroupOperationAsync(
-    AdUserDirectoryService service,
+    AdUsersDirectoryService service,
     object request,
     object userContext,
     object groupInfo)
   {
-    var method = typeof(AdUserDirectoryService).GetMethod(
+    var method = typeof(AdUsersDirectoryService).GetMethod(
       "CompleteGroupOperationAsync",
       BindingFlags.Instance | BindingFlags.NonPublic)
       ?? throw new InvalidOperationException("CompleteGroupOperationAsync not found.");
@@ -194,13 +194,13 @@ public sealed class AdUserDirectoryServiceGroupMembershipLoggingTests
   }
 
   private static async Task<AdUserGroupOperationResult> InvokeFailGroupOperationAsync(
-    AdUserDirectoryService service,
+    AdUsersDirectoryService service,
     object request,
     object? userContext,
     object? groupInfo,
     string message)
   {
-    var method = typeof(AdUserDirectoryService).GetMethod(
+    var method = typeof(AdUsersDirectoryService).GetMethod(
       "FailGroupOperationAsync",
       BindingFlags.Instance | BindingFlags.NonPublic)
       ?? throw new InvalidOperationException("FailGroupOperationAsync not found.");
@@ -237,7 +237,7 @@ public sealed class AdUserDirectoryServiceGroupMembershipLoggingTests
 
   private static object CreateChangeRequest()
   {
-    var type = typeof(AdUserDirectoryService).GetNestedType(
+    var type = typeof(AdUsersDirectoryService).GetNestedType(
       "GroupMembershipChangeRequest",
       BindingFlags.NonPublic)
       ?? throw new InvalidOperationException("GroupMembershipChangeRequest not found.");
@@ -254,7 +254,7 @@ public sealed class AdUserDirectoryServiceGroupMembershipLoggingTests
 
   private static object CreateUserContext(string userId, string distinguishedName)
   {
-    var type = typeof(AdUserDirectoryService).GetNestedType(
+    var type = typeof(AdUsersDirectoryService).GetNestedType(
       "AdUserGroupContext",
       BindingFlags.NonPublic)
       ?? throw new InvalidOperationException("AdUserGroupContext not found.");
@@ -271,7 +271,7 @@ public sealed class AdUserDirectoryServiceGroupMembershipLoggingTests
 
   private static object CreateGroupInfo(string distinguishedName, string name)
   {
-    var type = typeof(AdUserDirectoryService).GetNestedType(
+    var type = typeof(AdDirectoryServiceBase).GetNestedType(
       "AdGroupDirectoryInfo",
       BindingFlags.NonPublic)
       ?? throw new InvalidOperationException("AdGroupDirectoryInfo not found.");

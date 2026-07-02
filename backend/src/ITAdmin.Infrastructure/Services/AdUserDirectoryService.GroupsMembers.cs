@@ -7,7 +7,7 @@ using ITAdmin.Application.Common.Models;
 
 namespace ITAdmin.Infrastructure.Services;
 
-public sealed partial class AdUserDirectoryService
+public sealed partial class AdGroupsDirectoryService
 {
     private const string GroupMemberSuccessLoggingFailedMessage =
         "AD group member operation succeeded but logging failed.";

@@ -5,7 +5,7 @@ using ITAdmin.Application.Common.Models;
 
 namespace ITAdmin.Infrastructure.Services;
 
-public sealed partial class AdUserDirectoryService
+public sealed partial class AdGroupsDirectoryService
 {
     private static class AdGroupUpdateSteps
     {

@@ -7,7 +7,7 @@ using ITAdmin.Application.Common.Models;
 
 namespace ITAdmin.Infrastructure.Services;
 
-public sealed partial class AdUserDirectoryService : IAdComputerAccountOperationService
+public sealed partial class AdComputersDirectoryService : IAdComputerAccountOperationService
 {
     private const string ComputerLoadStep = "LoadComputer";
     private const string ComputerModifyStep = "ModifyAccountControl";

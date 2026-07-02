@@ -7,7 +7,7 @@ using ITAdmin.Application.Common.Models;
 
 namespace ITAdmin.Infrastructure.Services;
 
-public sealed partial class AdUserDirectoryService : IAdUserManagerUpdateService
+public sealed partial class AdUsersDirectoryService : IAdUserManagerUpdateService
 {
     private const string ManagerUpdateSuccessLoggingFailedMessage =
         "AD user manager update succeeded but logging failed.";

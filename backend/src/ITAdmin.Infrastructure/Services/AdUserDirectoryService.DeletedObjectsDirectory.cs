@@ -8,7 +8,23 @@ using ITAdmin.Application.Common.Models;
 
 namespace ITAdmin.Infrastructure.Services;
 
-public sealed partial class AdUserDirectoryService : IAdDeletedObjectDirectoryService
+public sealed partial class AdDeletedObjectsDirectoryService(
+    IAdManagementSettingsService settingsServiceDependency,
+    IAdAttributeMappingService attributeMappingServiceDependency,
+    IAdOperationLogService adOperationLogServiceDependency,
+    IAuditLogWriter auditLogWriterDependency,
+    IAdManagementNotificationEnqueueService notificationEnqueueServiceDependency,
+    IAdDeletedObjectRestoreCommandRunner deletedObjectRestoreCommandRunnerDependency,
+    ILogger<AdDeletedObjectsDirectoryService> loggerDependency)
+    : AdDirectoryServiceBase(
+        settingsServiceDependency,
+        attributeMappingServiceDependency,
+        adOperationLogServiceDependency,
+        auditLogWriterDependency,
+        notificationEnqueueServiceDependency,
+        deletedObjectRestoreCommandRunnerDependency,
+        loggerDependency),
+        IAdDeletedObjectDirectoryService
 {
     private const int DeletedObjectMemberOfLimit = 25;
 

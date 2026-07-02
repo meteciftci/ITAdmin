@@ -4,7 +4,7 @@ using ITAdmin.Application.Common.Models;
 
 namespace ITAdmin.Infrastructure.Services;
 
-public sealed partial class AdUserDirectoryService
+public sealed partial class AdUsersDirectoryService
 {
     private static string BuildUserObjectGuidFilter(Guid objectGuid) =>
         $"(&(objectCategory=person)(objectClass=user)(!(isDeleted=TRUE))(objectGUID={AdLdapFilterHelper.FormatObjectGuidFilter(objectGuid)}))";

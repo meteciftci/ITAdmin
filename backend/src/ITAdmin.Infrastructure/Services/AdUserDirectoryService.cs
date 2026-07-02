@@ -1,6 +1,4 @@
-using System.Collections;
 using System.DirectoryServices.Protocols;
-using System.Net;
 using Microsoft.Extensions.Logging;
 using ITAdmin.Application.Abstractions.Services;
 using ITAdmin.Application.Common.AdManagement;
@@ -9,17 +7,29 @@ using ITAdmin.Application.Common.Models;
 
 namespace ITAdmin.Infrastructure.Services;
 
-public sealed partial class AdUserDirectoryService(
-    IAdManagementSettingsService settingsService,
-    IAdAttributeMappingService attributeMappingService,
-    IAdOperationLogService adOperationLogService,
-    IAuditLogWriter auditLogWriter,
-    IAdManagementNotificationEnqueueService notificationEnqueueService,
-    IAdDeletedObjectRestoreCommandRunner deletedObjectRestoreCommandRunner,
-    ILogger<AdUserDirectoryService> logger) : IAdUserDirectoryService
+public sealed partial class AdUsersDirectoryService(
+    IAdManagementSettingsService settingsServiceDependency,
+    IAdAttributeMappingService attributeMappingServiceDependency,
+    IAdOperationLogService adOperationLogServiceDependency,
+    IAuditLogWriter auditLogWriterDependency,
+    IAdManagementNotificationEnqueueService notificationEnqueueServiceDependency,
+    IAdDeletedObjectRestoreCommandRunner deletedObjectRestoreCommandRunnerDependency,
+    ILogger<AdUsersDirectoryService> loggerDependency)
+    : AdDirectoryServiceBase(
+        settingsServiceDependency,
+        attributeMappingServiceDependency,
+        adOperationLogServiceDependency,
+        auditLogWriterDependency,
+        notificationEnqueueServiceDependency,
+        deletedObjectRestoreCommandRunnerDependency,
+        loggerDependency),
+        IAdUserDirectoryService,
+        IAdUserAccountOperationService,
+        IAdUserGroupMembershipService,
+        IAdUserOuMoveService,
+        IAdUserManagerUpdateService,
+        IAdUserAccountExpirationUpdateService
 {
-    private static readonly TimeSpan LdapOperationTimeout = TimeSpan.FromSeconds(30);
-
     public async Task<AdUserDirectorySearchResult> SearchUsersAsync(
         AdUserSearchQuery query,
         CancellationToken cancellationToken = default)
@@ -215,67 +225,6 @@ public sealed partial class AdUserDirectoryService(
         }
     }
 
-    private async Task<ConnectionResolveResult> ResolveConnectionAsync(CancellationToken cancellationToken)
-    {
-        var settings = await settingsService.GetSettingsAsync(cancellationToken);
-        if (!settings.IsEnabled)
-        {
-            return ConnectionResolveResult.Failed(
-                AdManagementApiMessageKeys.Common.ModuleDisabled,
-                AdDirectoryFailureKind.Disabled);
-        }
-
-        var connection = await settingsService.GetConnectionParametersAsync(cancellationToken);
-        if (connection is null
-            || string.IsNullOrWhiteSpace(connection.ServiceAccountUserName)
-            || string.IsNullOrWhiteSpace(connection.ServiceAccountPassword))
-        {
-            var messageKey = string.IsNullOrWhiteSpace(connection?.ServiceAccountPassword)
-                ? AdManagementApiMessageKeys.Common.MissingServiceAccountPassword
-                : AdManagementApiMessageKeys.Common.NotConfigured;
-            return ConnectionResolveResult.Failed(
-                messageKey,
-                string.IsNullOrWhiteSpace(connection?.ServiceAccountPassword)
-                    ? AdDirectoryFailureKind.MissingPassword
-                    : AdDirectoryFailureKind.NotConfigured);
-        }
-
-        return ConnectionResolveResult.Success(new DirectoryConnectionContext(connection));
-    }
-
-    private static LdapConnection CreateBoundConnection(DirectoryConnectionContext context)
-    {
-        var host = ResolvePrimaryHost(context.Connection);
-        var bindIdentity = AdServiceAccountBindIdentity.Build(
-            context.Connection.ServiceAccountUserName,
-            context.Connection.NetbiosDomainName);
-
-        var identifier = new LdapDirectoryIdentifier(host, LdapConnectionDefaults.StandardLdapsPort);
-        var ldapConnection = new LdapConnection(identifier)
-        {
-            AuthType = AuthType.Basic,
-            Credential = new NetworkCredential(bindIdentity, context.Connection.ServiceAccountPassword),
-        };
-
-        ldapConnection.SessionOptions.ProtocolVersion = 3;
-        ldapConnection.Timeout = LdapOperationTimeout;
-        ldapConnection.SessionOptions.SecureSocketLayer = true;
-
-        ldapConnection.Bind();
-        return ldapConnection;
-    }
-
-    private static string ResolvePrimaryHost(AdManagementConnectionParameters connection)
-    {
-        if (connection.PreferredDomainControllers.Count > 0
-            && !string.IsNullOrWhiteSpace(connection.PreferredDomainControllers[0]))
-        {
-            return connection.PreferredDomainControllers[0];
-        }
-
-        return connection.DomainFqdn ?? string.Empty;
-    }
-
     private static string? ResolveListSearchBase(AdManagementConnectionParameters connection) =>
         string.IsNullOrWhiteSpace(connection.UsersRootOu)
             ? connection.DefaultNamingContext ?? connection.BaseDn
@@ -463,124 +412,6 @@ public sealed partial class AdUserDirectoryService(
             attributeName => GetAllStrings(entry, attributeName),
             activeMappings);
 
-    private static bool TryGetObjectGuid(SearchResultEntry entry, out Guid objectGuid)
-    {
-        objectGuid = Guid.Empty;
-        var guidBytes = GetFirstBytes(entry, "objectGUID");
-        if (guidBytes is null || guidBytes.Length != 16)
-        {
-            return false;
-        }
-
-        try
-        {
-            objectGuid = new Guid(guidBytes);
-            return true;
-        }
-        catch (Exception)
-        {
-            // Invalid objectGUID bytes are treated as missing attribute data.
-            return false;
-        }
-    }
-
-    private static string? GetFirstString(SearchResultEntry entry, string attributeName)
-    {
-        var attribute = TryGetAttribute(entry, attributeName);
-        if (attribute is null || attribute.Count == 0)
-        {
-            return null;
-        }
-
-        return NormalizeOptional(GetRawValueAsString(attribute[0]));
-    }
-
-    private static IReadOnlyList<string> GetAllStrings(SearchResultEntry entry, string attributeName)
-    {
-        var attribute = TryGetAttribute(entry, attributeName);
-        if (attribute is null)
-        {
-            return Array.Empty<string>();
-        }
-
-        var values = new List<string>();
-        foreach (var raw in attribute)
-        {
-            var text = NormalizeOptional(GetRawValueAsString(raw));
-            if (!string.IsNullOrWhiteSpace(text))
-            {
-                values.Add(text);
-            }
-        }
-
-        return values;
-    }
-
-    private static int? GetFirstInt(SearchResultEntry entry, string attributeName)
-    {
-        var text = GetFirstString(entry, attributeName);
-        return int.TryParse(text, out var value) ? value : null;
-    }
-
-    private static long? GetFirstLong(SearchResultEntry entry, string attributeName)
-    {
-        var text = GetFirstString(entry, attributeName);
-        return long.TryParse(text, out var value) ? value : null;
-    }
-
-    private static byte[]? GetFirstBytes(SearchResultEntry entry, string attributeName)
-    {
-        var attribute = TryGetAttribute(entry, attributeName);
-        if (attribute is null || attribute.Count == 0)
-        {
-            return null;
-        }
-
-        return attribute[0] as byte[];
-    }
-
-    private static DirectoryAttribute? TryGetAttribute(SearchResultEntry entry, string attributeName)
-    {
-        foreach (DictionaryEntry kv in entry.Attributes)
-        {
-            if (string.Equals(kv.Key.ToString(), attributeName, StringComparison.OrdinalIgnoreCase))
-            {
-                return kv.Value as DirectoryAttribute;
-            }
-        }
-
-        return null;
-    }
-
-    private static string? GetRawValueAsString(object raw) =>
-        raw switch
-        {
-            string text => text,
-            byte[] bytes => DecodeLdapString(bytes),
-            _ => raw.ToString(),
-        };
-
-    private static string? DecodeLdapString(byte[] bytes)
-    {
-        if (bytes.Length == 0)
-        {
-            return null;
-        }
-
-        try
-        {
-            return System.Text.Encoding.UTF8.GetString(bytes).TrimEnd('\0');
-        }
-        catch (Exception)
-        {
-            // Invalid LDAP string encoding falls back to null attribute value.
-            return null;
-        }
-    }
-
-    private static string? NormalizeOptional(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-
     private static AdUserDirectorySearchResult ConnectionFailed() =>
         new(
             false,
@@ -594,33 +425,4 @@ public sealed partial class AdUserDirectoryService(
             AdManagementApiMessageKeys.Users.QueryFailed,
             null,
             AdDirectoryFailureKind.ConnectionFailed);
-
-    private sealed class DirectoryConnectionContext(AdManagementConnectionParameters connection)
-    {
-        public AdManagementConnectionParameters Connection { get; } = connection;
-    }
-
-    private sealed class ConnectionResolveResult
-    {
-        public bool IsSuccess { get; init; }
-        public string MessageKey { get; init; } = string.Empty;
-        public DirectoryConnectionContext? Context { get; init; }
-        public AdDirectoryFailureKind? FailureKind { get; init; }
-        public IReadOnlyDictionary<string, object>? MessageParams { get; init; }
-
-        public static ConnectionResolveResult Success(DirectoryConnectionContext context) =>
-            new() { IsSuccess = true, Context = context };
-
-        public static ConnectionResolveResult Failed(
-            string messageKey,
-            AdDirectoryFailureKind kind,
-            IReadOnlyDictionary<string, object>? messageParams = null) =>
-            new()
-            {
-                IsSuccess = false,
-                MessageKey = messageKey,
-                FailureKind = kind,
-                MessageParams = messageParams,
-            };
-    }
 }

@@ -7,7 +7,7 @@ using ITAdmin.Application.Common.Models;
 
 namespace ITAdmin.Infrastructure.Services;
 
-public sealed partial class AdUserDirectoryService : IAdComputerDeleteService
+public sealed partial class AdComputersDirectoryService : IAdComputerDeleteService
 {
     private const string ComputerDeleteSuccessLoggingFailedMessage =
         "AD computer delete operation succeeded but logging failed.";

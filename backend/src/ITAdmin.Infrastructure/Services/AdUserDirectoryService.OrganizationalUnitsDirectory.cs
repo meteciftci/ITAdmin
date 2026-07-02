@@ -7,7 +7,23 @@ using ITAdmin.Application.Common.Models;
 
 namespace ITAdmin.Infrastructure.Services;
 
-public sealed partial class AdUserDirectoryService : IAdOrganizationalUnitDirectoryService
+public sealed partial class AdOrganizationalUnitsDirectoryService(
+    IAdManagementSettingsService settingsServiceDependency,
+    IAdAttributeMappingService attributeMappingServiceDependency,
+    IAdOperationLogService adOperationLogServiceDependency,
+    IAuditLogWriter auditLogWriterDependency,
+    IAdManagementNotificationEnqueueService notificationEnqueueServiceDependency,
+    IAdDeletedObjectRestoreCommandRunner deletedObjectRestoreCommandRunnerDependency,
+    ILogger<AdOrganizationalUnitsDirectoryService> loggerDependency)
+    : AdDirectoryServiceBase(
+        settingsServiceDependency,
+        attributeMappingServiceDependency,
+        adOperationLogServiceDependency,
+        auditLogWriterDependency,
+        notificationEnqueueServiceDependency,
+        deletedObjectRestoreCommandRunnerDependency,
+        loggerDependency),
+        IAdOrganizationalUnitDirectoryService
 {
     private static readonly string[] OrganizationalUnitListAttributes =
     [

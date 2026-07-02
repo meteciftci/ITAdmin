@@ -7,7 +7,7 @@ using ITAdmin.Application.Common.Models;
 
 namespace ITAdmin.Infrastructure.Services;
 
-public sealed partial class AdUserDirectoryService : IAdComputerGroupMembershipService
+public sealed partial class AdComputersDirectoryService : IAdComputerGroupMembershipService
 {
     private const int ComputerGroupSearchDefaultLimit = 50;
     private const int ComputerGroupSearchMaxLimit = 50;

@@ -470,14 +470,14 @@ public sealed class AdDeletedObjectRestoreTests
     }
 
     private static string? InvokeNormalizeDeletedObjectRestoreRdn(string? input) =>
-        typeof(AdUserDirectoryService)
+        typeof(AdDeletedObjectsDirectoryService)
             .GetMethod(
                 "NormalizeDeletedObjectRestoreRdn",
                 BindingFlags.Static | BindingFlags.NonPublic)!
             .Invoke(null, [input]) as string;
 
     private static bool InvokeIsValidDeletedObjectRestoreRdn(string restoreRdn) =>
-        (bool)typeof(AdUserDirectoryService)
+        (bool)typeof(AdDeletedObjectsDirectoryService)
             .GetMethod(
                 "IsValidDeletedObjectRestoreRdn",
                 BindingFlags.Static | BindingFlags.NonPublic)!

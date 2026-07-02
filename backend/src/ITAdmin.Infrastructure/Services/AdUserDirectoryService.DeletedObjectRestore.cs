@@ -8,7 +8,7 @@ using ITAdmin.Infrastructure.Ldap;
 
 namespace ITAdmin.Infrastructure.Services;
 
-public sealed partial class AdUserDirectoryService : IAdDeletedObjectRestoreService
+public sealed partial class AdDeletedObjectsDirectoryService : IAdDeletedObjectRestoreService
 {
     private const string DeletedObjectRestoreCommandName = "Restore-ADObject";
     private const string DeletedObjectRestoreSourceDnResolutionEntryDistinguishedName = "EntryDistinguishedName";

@@ -7,7 +7,7 @@ using ITAdmin.Application.Common.Models;
 
 namespace ITAdmin.Infrastructure.Services;
 
-public sealed partial class AdUserDirectoryService
+public sealed partial class AdUsersDirectoryService
 {
     private const int LdapNoSuchAttribute = 16;
     private const string UpdateUserSuccessLoggingFailedMessage =

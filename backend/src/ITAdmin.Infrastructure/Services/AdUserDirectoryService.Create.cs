@@ -9,7 +9,7 @@ using ITAdmin.Application.Common.Models;
 
 namespace ITAdmin.Infrastructure.Services;
 
-public sealed partial class AdUserDirectoryService
+public sealed partial class AdUsersDirectoryService
 {
     private const int OuSearchDefaultPageSize = 50;
     private const int OuSearchMaxPageSize = 100;
@@ -374,48 +374,6 @@ public sealed partial class AdUserDirectoryService
         }
 
         messageKey = string.Empty;
-        return true;
-    }
-
-    private static string BuildOrganizationalUnitSearchFilter(string? search)
-    {
-        if (string.IsNullOrWhiteSpace(search))
-        {
-            return "(objectClass=organizationalUnit)";
-        }
-
-        var escaped = AdLdapFilterHelper.EscapeFilterValue(search.Trim());
-        return
-            $"(&(objectClass=organizationalUnit)(|(displayName=*{escaped}*)(name=*{escaped}*)(ou=*{escaped}*)(distinguishedName=*{escaped}*)))";
-    }
-
-    private static bool TryMapOrganizationalUnit(
-        SearchResultEntry entry,
-        out AdOrganizationalUnitListItem item)
-    {
-        item = null!;
-        var distinguishedName = GetFirstString(entry, "distinguishedName");
-        if (string.IsNullOrWhiteSpace(distinguishedName))
-        {
-            return false;
-        }
-
-        var displayName = GetFirstString(entry, "displayName");
-        var name = GetFirstString(entry, "name");
-        var ou = GetFirstString(entry, "ou");
-        string? objectGuid = null;
-        if (TryGetObjectGuid(entry, out var guid))
-        {
-            objectGuid = guid.ToString("D");
-        }
-
-        item = new AdOrganizationalUnitListItem(
-            distinguishedName,
-            name,
-            displayName,
-            ou,
-            AdOrganizationalUnitLabelBuilder.Build(distinguishedName, displayName, name, ou),
-            objectGuid);
         return true;
     }
 

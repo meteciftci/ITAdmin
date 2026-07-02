@@ -7,7 +7,7 @@ using ITAdmin.Application.Common.Models;
 
 namespace ITAdmin.Infrastructure.Services;
 
-public sealed partial class AdUserDirectoryService : IAdUserOuMoveService
+public sealed partial class AdUsersDirectoryService : IAdUserOuMoveService
 {
     private const string OuMoveSuccessLoggingFailedMessage =
         "AD user OU move operation succeeded but logging failed.";
@@ -629,22 +629,6 @@ public sealed partial class AdUserDirectoryService : IAdUserOuMoveService
             AdLdapDnHelper.GetParentDistinguishedName(distinguishedName));
 
         return true;
-    }
-
-    private static bool TryLoadOrganizationalUnit(LdapConnection ldapConnection, string ouDistinguishedName)
-    {
-        var searchRequest = new SearchRequest(
-            ouDistinguishedName.Trim(),
-            "(objectClass=organizationalUnit)",
-            SearchScope.Base,
-            "distinguishedName")
-        {
-            SizeLimit = 1,
-            TimeLimit = LdapOperationTimeout,
-        };
-
-        var response = (SearchResponse)ldapConnection.SendRequest(searchRequest);
-        return response.ResultCode == ResultCode.Success && response.Entries.Count > 0;
     }
 
     private static string SanitizeOuMoveLdapError(LdapException exception)

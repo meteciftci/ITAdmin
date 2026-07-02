@@ -38,31 +38,45 @@ public static class DependencyInjection
         services.AddScoped<ILdapService, LdapService>();
         services.AddScoped<ITokenService, JwtTokenService>();
         services.AddScoped<IAdManagementValidationService, AdManagementValidationService>();
-        services.AddScoped<AdUserDirectoryService>();
-        services.AddScoped<IAdUserDirectoryService>(sp => sp.GetRequiredService<AdUserDirectoryService>());
-        services.AddScoped<IAdUserAccountOperationService>(sp => sp.GetRequiredService<AdUserDirectoryService>());
-        services.AddScoped<IAdUserGroupMembershipService>(sp => sp.GetRequiredService<AdUserDirectoryService>());
-        services.AddScoped<IAdUserOuMoveService>(sp => sp.GetRequiredService<AdUserDirectoryService>());
-        services.AddScoped<IAdUserManagerUpdateService>(sp => sp.GetRequiredService<AdUserDirectoryService>());
+        // AD directory operations are split into focused, domain-scoped services that share
+        // low-level LDAP plumbing via AdDirectoryServiceBase.
+        services.AddScoped<AdUsersDirectoryService>();
+        services.AddScoped<IAdUserDirectoryService>(sp => sp.GetRequiredService<AdUsersDirectoryService>());
+        services.AddScoped<IAdUserAccountOperationService>(sp => sp.GetRequiredService<AdUsersDirectoryService>());
+        services.AddScoped<IAdUserGroupMembershipService>(sp => sp.GetRequiredService<AdUsersDirectoryService>());
+        services.AddScoped<IAdUserOuMoveService>(sp => sp.GetRequiredService<AdUsersDirectoryService>());
+        services.AddScoped<IAdUserManagerUpdateService>(sp => sp.GetRequiredService<AdUsersDirectoryService>());
         services.AddScoped<IAdUserAccountExpirationUpdateService>(sp =>
-            sp.GetRequiredService<AdUserDirectoryService>());
-        services.AddScoped<IAdGroupDirectoryService>(sp => sp.GetRequiredService<AdUserDirectoryService>());
-        services.AddScoped<IAdComputerDirectoryService>(sp => sp.GetRequiredService<AdUserDirectoryService>());
-        services.AddScoped<IAdComputerAccountOperationService>(sp => sp.GetRequiredService<AdUserDirectoryService>());
-        services.AddScoped<IAdComputerUpdateService>(sp => sp.GetRequiredService<AdUserDirectoryService>());
-        services.AddScoped<IAdComputerOuMoveService>(sp => sp.GetRequiredService<AdUserDirectoryService>());
-        services.AddScoped<IAdComputerDeleteService>(sp => sp.GetRequiredService<AdUserDirectoryService>());
-        services.AddScoped<IAdComputerGroupMembershipService>(sp => sp.GetRequiredService<AdUserDirectoryService>());
-        services.AddScoped<IAdDeletedObjectDirectoryService>(sp => sp.GetRequiredService<AdUserDirectoryService>());
+            sp.GetRequiredService<AdUsersDirectoryService>());
+
+        services.AddScoped<AdGroupsDirectoryService>();
+        services.AddScoped<IAdGroupDirectoryService>(sp => sp.GetRequiredService<AdGroupsDirectoryService>());
+
+        services.AddScoped<AdComputersDirectoryService>();
+        services.AddScoped<IAdComputerDirectoryService>(sp => sp.GetRequiredService<AdComputersDirectoryService>());
+        services.AddScoped<IAdComputerAccountOperationService>(sp =>
+            sp.GetRequiredService<AdComputersDirectoryService>());
+        services.AddScoped<IAdComputerUpdateService>(sp => sp.GetRequiredService<AdComputersDirectoryService>());
+        services.AddScoped<IAdComputerOuMoveService>(sp => sp.GetRequiredService<AdComputersDirectoryService>());
+        services.AddScoped<IAdComputerDeleteService>(sp => sp.GetRequiredService<AdComputersDirectoryService>());
+        services.AddScoped<IAdComputerGroupMembershipService>(sp =>
+            sp.GetRequiredService<AdComputersDirectoryService>());
+
         services.AddScoped<IAdDeletedObjectRestoreCommandRunner, AdDeletedObjectRestorePowerShellCommandRunner>();
-        services.AddScoped<IAdDeletedObjectRestoreService>(sp => sp.GetRequiredService<AdUserDirectoryService>());
+        services.AddScoped<AdDeletedObjectsDirectoryService>();
+        services.AddScoped<IAdDeletedObjectDirectoryService>(sp =>
+            sp.GetRequiredService<AdDeletedObjectsDirectoryService>());
+        services.AddScoped<IAdDeletedObjectRestoreService>(sp =>
+            sp.GetRequiredService<AdDeletedObjectsDirectoryService>());
         services.AddScoped<IAdwsPortConnectivityChecker, AdwsPortConnectivityChecker>();
         services.AddScoped<IAdDeletedObjectRestoreReadinessPowerShellProbe, AdDeletedObjectRestoreReadinessPowerShellProbe>();
         services.AddScoped<IAdDeletedObjectRestoreReadinessService, AdDeletedObjectRestoreReadinessService>();
         services.AddScoped<IDirectoryUserLookupReadinessService, DirectoryUserLookupReadinessService>();
         services.AddScoped<IDirectoryOrganizationalUnitLookupReadinessService, DirectoryOrganizationalUnitLookupReadinessService>();
         services.AddScoped<IDirectoryOrganizationalUnitLookupService, DirectoryOrganizationalUnitLookupService>();
-        services.AddScoped<IAdOrganizationalUnitDirectoryService>(sp => sp.GetRequiredService<AdUserDirectoryService>());
+        services.AddScoped<AdOrganizationalUnitsDirectoryService>();
+        services.AddScoped<IAdOrganizationalUnitDirectoryService>(sp =>
+            sp.GetRequiredService<AdOrganizationalUnitsDirectoryService>());
 
         services.AddScoped<ISmsProviderAdapter, CustomHttpSmsAdapter>();
         services.AddScoped<IEmailProviderAdapter, SmtpEmailProviderAdapter>();

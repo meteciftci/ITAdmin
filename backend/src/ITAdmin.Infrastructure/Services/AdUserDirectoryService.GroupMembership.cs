@@ -7,7 +7,7 @@ using ITAdmin.Application.Common.Models;
 
 namespace ITAdmin.Infrastructure.Services;
 
-public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipService
+public sealed partial class AdUsersDirectoryService : IAdUserGroupMembershipService
 {
     private const int GroupSearchDefaultLimit = 50;
     private const int GroupSearchMaxLimit = 50;
@@ -905,76 +905,6 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
         return true;
     }
 
-    private static bool TryLoadGroupByDn(
-        LdapConnection ldapConnection,
-        string groupDistinguishedName,
-        out AdGroupDirectoryInfo groupInfo)
-    {
-        groupInfo = null!;
-        if (string.IsNullOrWhiteSpace(groupDistinguishedName))
-        {
-            return false;
-        }
-
-        var searchRequest = new SearchRequest(
-            groupDistinguishedName.Trim(),
-            "(objectClass=group)",
-            SearchScope.Base,
-            "distinguishedName",
-            "displayName",
-            "cn",
-            "name",
-            "sAMAccountName",
-            "description")
-        {
-            SizeLimit = 1,
-            TimeLimit = LdapOperationTimeout,
-        };
-
-        SearchResponse response;
-        try
-        {
-            response = (SearchResponse)ldapConnection.SendRequest(searchRequest);
-        }
-        catch (LdapException)
-        {
-            return false;
-        }
-
-        if (response.ResultCode != ResultCode.Success || response.Entries.Count == 0)
-        {
-            return false;
-        }
-
-        return TryMapGroupDirectoryInfo(response.Entries[0], out groupInfo);
-    }
-
-    private static bool TryMapGroupDirectoryInfo(
-        SearchResultEntry entry,
-        out AdGroupDirectoryInfo groupInfo)
-    {
-        groupInfo = null!;
-        var distinguishedName = GetFirstString(entry, "distinguishedName");
-        if (string.IsNullOrWhiteSpace(distinguishedName))
-        {
-            return false;
-        }
-
-        var name = GetFirstString(entry, "cn")
-            ?? GetFirstString(entry, "name")
-            ?? AdLdapDnHelper.ParseCommonNameFromDistinguishedName(distinguishedName)
-            ?? distinguishedName;
-
-        groupInfo = new AdGroupDirectoryInfo(
-            distinguishedName,
-            GetFirstString(entry, "displayName"),
-            name,
-            GetFirstString(entry, "sAMAccountName"),
-            GetFirstString(entry, "description"));
-
-        return true;
-    }
-
     private static bool TryMapGroupSearchItem(SearchResultEntry entry, out AdGroupSearchItem item)
     {
         item = null!;
@@ -1085,13 +1015,6 @@ public sealed partial class AdUserDirectoryService : IAdUserGroupMembershipServi
         string? UserPrincipalName,
         string? DisplayName,
         HashSet<string> MemberOfDns);
-
-    private sealed record AdGroupDirectoryInfo(
-        string DistinguishedName,
-        string? DisplayName,
-        string Name,
-        string? SamAccountName,
-        string? Description);
 
     private sealed record GroupMembershipChangeRequest(
         Guid UserId,

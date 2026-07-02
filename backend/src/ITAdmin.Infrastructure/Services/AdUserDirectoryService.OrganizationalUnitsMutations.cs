@@ -7,7 +7,7 @@ using ITAdmin.Application.Common.Models;
 
 namespace ITAdmin.Infrastructure.Services;
 
-public sealed partial class AdUserDirectoryService
+public sealed partial class AdOrganizationalUnitsDirectoryService
 {
     private const string OrganizationalUnitCreateSuccessLoggingFailedMessage =
         "AD organizational unit create operation succeeded but logging failed.";

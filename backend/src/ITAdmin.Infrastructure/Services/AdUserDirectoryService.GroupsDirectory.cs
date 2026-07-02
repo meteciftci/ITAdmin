@@ -7,7 +7,23 @@ using ITAdmin.Application.Common.Models;
 
 namespace ITAdmin.Infrastructure.Services;
 
-public sealed partial class AdUserDirectoryService : IAdGroupDirectoryService
+public sealed partial class AdGroupsDirectoryService(
+    IAdManagementSettingsService settingsServiceDependency,
+    IAdAttributeMappingService attributeMappingServiceDependency,
+    IAdOperationLogService adOperationLogServiceDependency,
+    IAuditLogWriter auditLogWriterDependency,
+    IAdManagementNotificationEnqueueService notificationEnqueueServiceDependency,
+    IAdDeletedObjectRestoreCommandRunner deletedObjectRestoreCommandRunnerDependency,
+    ILogger<AdGroupsDirectoryService> loggerDependency)
+    : AdDirectoryServiceBase(
+        settingsServiceDependency,
+        attributeMappingServiceDependency,
+        adOperationLogServiceDependency,
+        auditLogWriterDependency,
+        notificationEnqueueServiceDependency,
+        deletedObjectRestoreCommandRunnerDependency,
+        loggerDependency),
+        IAdGroupDirectoryService
 {
     private static readonly string[] GroupListAttributes =
     [
@@ -264,48 +280,6 @@ public sealed partial class AdUserDirectoryService : IAdGroupDirectoryService
                 detail.Id);
             return detail;
         }
-    }
-
-    private static bool TryResolveManagedByDisplayName(
-        LdapConnection ldapConnection,
-        string managedByDistinguishedName,
-        out string? displayName)
-    {
-        displayName = null;
-        var searchRequest = new SearchRequest(
-            managedByDistinguishedName.Trim(),
-            "(|(objectClass=user)(objectClass=group)(objectClass=contact))",
-            SearchScope.Base,
-            "displayName",
-            "cn",
-            "name",
-            "sAMAccountName")
-        {
-            SizeLimit = 1,
-            TimeLimit = LdapOperationTimeout,
-        };
-
-        SearchResponse response;
-        try
-        {
-            response = (SearchResponse)ldapConnection.SendRequest(searchRequest);
-        }
-        catch (LdapException)
-        {
-            return false;
-        }
-
-        if (response.ResultCode != ResultCode.Success || response.Entries.Count == 0)
-        {
-            return false;
-        }
-
-        var entry = response.Entries[0];
-        displayName = GetFirstString(entry, "displayName")
-            ?? GetFirstString(entry, "cn")
-            ?? GetFirstString(entry, "name")
-            ?? GetFirstString(entry, "sAMAccountName");
-        return !string.IsNullOrWhiteSpace(displayName);
     }
 
     private static bool TryMapGroupListItem(SearchResultEntry entry, out AdGroupListItem item)
@@ -622,9 +596,6 @@ public sealed partial class AdUserDirectoryService : IAdGroupDirectoryService
 
         return null;
     }
-
-    private static string? ResolveRequiredGroupsSearchBase(AdManagementConnectionParameters connection) =>
-        string.IsNullOrWhiteSpace(connection.GroupsSearchBase) ? null : connection.GroupsSearchBase.Trim();
 
     private static AdGroupDirectoryListResult GroupListConnectionFailed() =>
         new(

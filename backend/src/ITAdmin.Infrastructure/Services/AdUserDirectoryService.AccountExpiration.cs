@@ -7,7 +7,7 @@ using ITAdmin.Application.Common.Models;
 
 namespace ITAdmin.Infrastructure.Services;
 
-public sealed partial class AdUserDirectoryService : IAdUserAccountExpirationUpdateService
+public sealed partial class AdUsersDirectoryService : IAdUserAccountExpirationUpdateService
 {
     private const string AccountExpirationSuccessLoggingFailedMessage =
         "AD user account expiration update succeeded but logging failed.";

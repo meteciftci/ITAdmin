@@ -7,7 +7,7 @@ using ITAdmin.Application.Common.Models;
 
 namespace ITAdmin.Infrastructure.Services;
 
-public sealed partial class AdUserDirectoryService : IAdComputerOuMoveService
+public sealed partial class AdComputersDirectoryService : IAdComputerOuMoveService
 {
     private const string ComputerOuMoveSuccessLoggingFailedMessage =
         "AD computer OU move operation succeeded but logging failed.";

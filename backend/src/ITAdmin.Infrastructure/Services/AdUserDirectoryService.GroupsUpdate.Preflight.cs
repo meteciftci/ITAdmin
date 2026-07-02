@@ -4,7 +4,7 @@ using ITAdmin.Application.Common.Constants;
 
 namespace ITAdmin.Infrastructure.Services;
 
-public sealed partial class AdUserDirectoryService
+public sealed partial class AdGroupsDirectoryService
 {
     private sealed record AdGroupUpdatePreflightFailure(
         string AttributeName,
