@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { readAdManagementApiSource } from "./api/api-source.test-support.ts";
+import { readRouterSource } from "../../app/routes/route-source.test-support.ts";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
@@ -19,7 +21,7 @@ describe("ad computer groups navigation", () => {
 
 describe("ad computer groups source inspection", () => {
   it("registers protected groups route with permission guard", () => {
-    const routerSource = readFileSync(new URL("../../app/router.tsx", import.meta.url), "utf8");
+    const routerSource = readRouterSource();
     assert.match(routerSource, /\/ad-management\/computers\/:id\/groups/);
     assert.match(routerSource, /AdManagement\.Computers\.Groups\.View/);
     assert.match(routerSource, /AdComputerGroupsPage/);
@@ -68,7 +70,7 @@ describe("ad computer groups source inspection", () => {
   });
 
   it("api functions call expected endpoints", () => {
-    const apiSource = readFileSync(new URL("./api.ts", import.meta.url), "utf8");
+    const apiSource = readAdManagementApiSource();
     assert.match(apiSource, /`\/ad-management\/computers\/\$\{computerId\}\/groups`/);
     assert.match(apiSource, /`\/ad-management\/computers\/\$\{computerId\}\/group-candidates`/);
     assert.match(apiSource, /addAdComputerToGroup/);

@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { readAdManagementApiSource } from "./api/api-source.test-support.ts";
+import { readRouterSource } from "../../app/routes/route-source.test-support.ts";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
@@ -94,10 +96,7 @@ describe("computer list and detail move OU actions", () => {
   });
 
   it("protects move OU route with Computers.MoveOu permission", () => {
-    const routerSource = readFileSync(
-      new URL("../../app/router.tsx", import.meta.url),
-      "utf8",
-    );
+    const routerSource = readRouterSource();
 
     assert.match(routerSource, /path: "\/ad-management\/computers\/:id\/move-ou"/);
     assert.match(routerSource, /RequirePermission permission=\{PermissionCodes\.AdManagement\.Computers\.MoveOu\}/);
@@ -107,7 +106,7 @@ describe("computer list and detail move OU actions", () => {
 
 describe("computer move OU API and form", () => {
   it("posts to move-ou endpoint and searches computer OUs", () => {
-    const apiSource = readFileSync(new URL("./api.ts", import.meta.url), "utf8");
+    const apiSource = readAdManagementApiSource();
     const formSource = readFileSync(
       new URL("./components/AdComputerMoveOuForm.tsx", import.meta.url),
       "utf8",

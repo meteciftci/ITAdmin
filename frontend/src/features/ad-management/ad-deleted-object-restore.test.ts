@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { readAdManagementApiSource } from "./api/api-source.test-support.ts";
+import { readRouterSource } from "../../app/routes/route-source.test-support.ts";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
@@ -8,7 +10,7 @@ import trLogs from "../../locales/tr/adOperationLogs.json" with { type: "json" }
 import enLogs from "../../locales/en/adOperationLogs.json" with { type: "json" };
 
 describe("restoreAdDeletedObject API", () => {
-  const apiSource = readFileSync(new URL("./api.ts", import.meta.url), "utf8");
+  const apiSource = readAdManagementApiSource();
   const typesSource = readFileSync(
     new URL("./ad-deleted-object-restore-types.ts", import.meta.url),
     "utf8",
@@ -32,7 +34,7 @@ describe("restoreAdDeletedObject API", () => {
 });
 
 describe("deleted object restore routing", () => {
-  const routerSource = readFileSync(new URL("../../app/router.tsx", import.meta.url), "utf8");
+  const routerSource = readRouterSource();
   const pathSource = readFileSync(
     new URL("./ad-deleted-object-detail-path.ts", import.meta.url),
     "utf8",

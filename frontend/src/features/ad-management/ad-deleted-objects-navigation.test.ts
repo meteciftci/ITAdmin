@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { readAdManagementApiSource } from "./api/api-source.test-support.ts";
+import { readRouterSource } from "../../app/routes/route-source.test-support.ts";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
@@ -25,10 +27,7 @@ describe("ad deleted objects navigation", () => {
   });
 
   it("protects deleted objects routes with AdManagement.DeletedObjects.View permission", () => {
-    const routerSource = readFileSync(
-      new URL("../../app/router.tsx", import.meta.url),
-      "utf8",
-    );
+    const routerSource = readRouterSource();
 
     assert.match(routerSource, /path: "\/ad-management\/deleted-objects"/);
     assert.match(routerSource, /path: "\/ad-management\/deleted-objects\/:id"/);
@@ -102,7 +101,7 @@ describe("ad deleted objects navigation", () => {
   });
 
   it("uses correct API endpoints", () => {
-    const apiSource = readFileSync(new URL("./api.ts", import.meta.url), "utf8");
+    const apiSource = readAdManagementApiSource();
 
     assert.match(apiSource, /\/ad-management\/deleted-objects/);
     assert.match(apiSource, /export const getAdDeletedObjects/);
@@ -172,7 +171,7 @@ describe("ad deleted objects list all", () => {
   });
 
   it("sends includeAll through API and query key", () => {
-    const apiSource = readFileSync(new URL("./api.ts", import.meta.url), "utf8");
+    const apiSource = readAdManagementApiSource();
     const pageSource = readFileSync(
       new URL("./AdDeletedObjectsPage.tsx", import.meta.url),
       "utf8",

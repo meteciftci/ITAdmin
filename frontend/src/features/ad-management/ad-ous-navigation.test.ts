@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { readAdManagementApiSource } from "./api/api-source.test-support.ts";
+import { readRouterSource } from "../../app/routes/route-source.test-support.ts";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
@@ -53,10 +55,7 @@ describe("ad organizational units navigation", () => {
   });
 
   it("protects organizational units routes with expected permissions", () => {
-    const routerSource = readFileSync(
-      new URL("../../app/router.tsx", import.meta.url),
-      "utf8",
-    );
+    const routerSource = readRouterSource();
 
     assert.match(routerSource, /path: "\/ad-management\/organizational-units"/);
     assert.match(routerSource, /path: "\/ad-management\/organizational-units\/create"/);
@@ -205,7 +204,7 @@ describe("ad organizational units navigation", () => {
   });
 
   it("uses correct API endpoints and query keys", () => {
-    const apiSource = readFileSync(new URL("./api.ts", import.meta.url), "utf8");
+    const apiSource = readAdManagementApiSource();
 
     assert.match(apiSource, /\/ad-management\/organizational-units\/manage/);
     assert.match(apiSource, /export const getAdOrganizationalUnits/);

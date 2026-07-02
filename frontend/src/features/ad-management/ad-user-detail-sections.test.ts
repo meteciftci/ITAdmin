@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readAdManagementApiSource } from "./api/api-source.test-support.ts";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
@@ -62,7 +63,7 @@ describe("AdUserDetailPage group summary removal", () => {
 
 describe("invalidateAdUserDetailRelatedQueries", () => {
   it("invalidates detail, list and operation logs", () => {
-    const source = readFileSync(new URL("./api.ts", import.meta.url), "utf8");
+    const source = readAdManagementApiSource();
     assert.equal(source.includes("invalidateAdUserDetailRelatedQueries"), true);
     assert.match(source, /AD_MANAGEMENT_USERS_QUERY_KEY/);
     assert.match(source, /AD_OPERATION_LOGS_QUERY_KEY/);

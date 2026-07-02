@@ -4,6 +4,8 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 
+import { readAdManagementApiSource } from "./api/api-source.test-support.ts";
+
 const currentDir = dirname(fileURLToPath(import.meta.url));
 
 function readSource(relativePath: string): string {
@@ -13,7 +15,7 @@ function readSource(relativePath: string): string {
 describe("AdSettingsOuPickerField", () => {
   it("uses settings organizational units endpoint", () => {
     const pickerSource = readSource("components/AdSettingsOuPickerField.tsx");
-    const apiSource = readSource("api.ts");
+    const apiSource = readAdManagementApiSource();
 
     assert.match(pickerSource, /getAdManagementSettingsOrganizationalUnits/);
     assert.match(apiSource, /\/ad-management\/settings\/organizational-units/);

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readAdManagementApiSource } from "./api/api-source.test-support.ts";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
@@ -118,7 +119,7 @@ describe("Ad group member management UI", () => {
       new URL("./components/AdGroupMembersSection.tsx", import.meta.url),
       "utf8",
     );
-    const apiSource = readFileSync(new URL("./api.ts", import.meta.url), "utf8");
+    const apiSource = readAdManagementApiSource();
 
     assert.match(sectionSource, /getAdGroupMembers/);
     assert.match(sectionSource, /typeFilter/);

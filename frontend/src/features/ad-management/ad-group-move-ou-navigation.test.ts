@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { readAdManagementApiSource } from "./api/api-source.test-support.ts";
+import { readRouterSource } from "../../app/routes/route-source.test-support.ts";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
@@ -83,10 +85,7 @@ describe("group list and detail move OU actions", () => {
   });
 
   it("protects move OU route with Groups.MoveOu permission", () => {
-    const routerSource = readFileSync(
-      new URL("../../app/router.tsx", import.meta.url),
-      "utf8",
-    );
+    const routerSource = readRouterSource();
 
     assert.match(routerSource, /path: "\/ad-management\/groups\/:id\/move-ou"/);
     assert.match(routerSource, /RequirePermission permission=\{PermissionCodes\.AdManagement\.Groups\.MoveOu\}/);
@@ -96,7 +95,7 @@ describe("group list and detail move OU actions", () => {
 
 describe("group move OU API", () => {
   it("posts to move-ou endpoint", () => {
-    const apiSource = readFileSync(new URL("./api.ts", import.meta.url), "utf8");
+    const apiSource = readAdManagementApiSource();
 
     assert.match(apiSource, /moveAdGroupOu/);
     assert.match(apiSource, /\/ad-management\/groups\/\$\{groupId\}\/move-ou/);

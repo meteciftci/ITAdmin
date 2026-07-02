@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readAdManagementApiSource } from "./api/api-source.test-support.ts";
+import { readFileSync, readdirSync } from "node:fs";
 import { describe, it } from "node:test";
 
 import trAdManagement from "../../locales/tr/adManagement.json" with { type: "json" };
@@ -7,8 +8,13 @@ import enAdManagement from "../../locales/en/adManagement.json" with { type: "js
 import { translateReadinessText } from "./restore-readiness-i18n.ts";
 
 describe("deleted object restore readiness API", () => {
-  const apiSource = readFileSync(new URL("./api.ts", import.meta.url), "utf8");
-  const typesSource = readFileSync(new URL("./types.ts", import.meta.url), "utf8");
+  const apiSource = readAdManagementApiSource();
+  // The AD management types are split across ./types/*.ts (re-exported by types.ts).
+  const typesDir = new URL("./types/", import.meta.url);
+  const typesSource = readdirSync(typesDir)
+    .filter((file) => file.endsWith(".ts"))
+    .map((file) => readFileSync(new URL(file, typesDir), "utf8"))
+    .join("\n");
 
   it("defines readiness query key and API functions", () => {
     assert.match(apiSource, /AD_MANAGEMENT_DELETED_OBJECT_RESTORE_READINESS_QUERY_KEY/);

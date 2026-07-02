@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
+import { readAdManagementApiSource } from "./api/api-source.test-support.ts";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
 describe("ad computer delete", () => {
   it("deleteAdComputer sends DELETE to the correct endpoint", () => {
-    const apiSource = readFileSync(new URL("./api.ts", import.meta.url), "utf8");
+    const apiSource = readAdManagementApiSource();
 
     assert.match(apiSource, /export const deleteAdComputer/);
     assert.match(apiSource, /apiClient\.delete<DeleteAdComputerResponse>/);

@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
+import { readAdManagementApiSource } from "./api/api-source.test-support.ts";
+import { readRouterSource } from "../../app/routes/route-source.test-support.ts";
+
 import {
   AD_COMPUTERS_LIST_DEFAULTS,
   normalizeAdComputersListState,
@@ -87,10 +90,7 @@ describe("ad computer display labels", () => {
 
 describe("ad computers route and menu wiring", () => {
   it("protects computers routes with AdManagement.Computers.View permission", () => {
-    const routerSource = readFileSync(
-      new URL("../../app/router.tsx", import.meta.url),
-      "utf8",
-    );
+    const routerSource = readRouterSource();
 
     assert.match(routerSource, /path: "\/ad-management\/computers"/);
     assert.match(routerSource, /path: "\/ad-management\/computers\/:id\/move-ou"/);
@@ -185,10 +185,7 @@ describe("ad computers route and menu wiring", () => {
   });
 
   it("uses correct API endpoints and parameters", () => {
-    const apiSource = readFileSync(
-      new URL("./api.ts", import.meta.url),
-      "utf8",
-    );
+    const apiSource = readAdManagementApiSource();
 
     assert.match(apiSource, /\/ad-management\/computers/);
     assert.match(apiSource, /pageNumber: params\.pageNumber/);

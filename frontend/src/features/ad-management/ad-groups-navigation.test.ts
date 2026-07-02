@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readRouterSource } from "../../app/routes/route-source.test-support.ts";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
@@ -89,10 +90,7 @@ describe("ad group display labels", () => {
 
 describe("ad groups route and menu wiring", () => {
   it("protects groups routes with AdManagement.Groups.View permission", () => {
-    const routerSource = readFileSync(
-      new URL("../../app/router.tsx", import.meta.url),
-      "utf8",
-    );
+    const routerSource = readRouterSource();
 
     assert.match(routerSource, /path: "\/ad-management\/groups"/);
     assert.match(routerSource, /path: "\/ad-management\/groups\/:id"/);

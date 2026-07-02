@@ -4,10 +4,12 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 
+import { readRouterSource } from "../../app/routes/route-source.test-support.ts";
+
 const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
 
 test("router includes license management routes", () => {
-  const routerSource = readFileSync(join(root, "app/router.tsx"), "utf8");
+  const routerSource = readRouterSource();
   const paths = [
     "/license-management/overview",
     "/license-management/companies",

@@ -9,6 +9,19 @@ import {
   RawJsonDisclosure,
 } from "@/features/ad-management/ad-operation-snapshot-ui";
 import {
+  getAccountFieldLabel,
+  getComputerDeleteAccountFieldEntries,
+  getComputerFieldEntries,
+  getCoreFieldLabel,
+  getDeletedObjectFieldEntries,
+  getGroupFieldEntries,
+  getGroupFieldLabel,
+  getOrganizationalUnitFieldLabel,
+  getRestoredObjectFieldEntries,
+  getUserFieldEntries,
+} from "@/features/ad-management/components/ad-operation-log-snapshot-field-entries";
+import { GenericSnapshotBlock } from "@/features/ad-management/components/GenericSnapshotBlock";
+import {
   buildAccountExpirationComparisonRows,
   buildAccountStatusComparisonRows,
   buildComputerComparisonRows,
@@ -33,11 +46,6 @@ import {
   resolveSnapshotGroup,
   resolveSnapshotMember,
   resolveSnapshotUser,
-  type GenericSnapshotEntry,
-  type ParsedSnapshotComputer,
-  type ParsedSnapshotDeletedObject,
-  type ParsedSnapshotGroup,
-  type ParsedSnapshotRestoredObject,
   type SnapshotCoreFieldKey,
   type SnapshotComputerComparisonFieldKey,
   type SnapshotGroupComparisonFieldKey,
@@ -49,252 +57,6 @@ type AdOperationLogSnapshotDetailProps = {
   afterSnapshotJson: string | null | undefined;
   requestSummaryJson: string | null | undefined;
 };
-
-function getCoreFieldLabel(t: TFunction<"adOperationLogs">, fieldKey: string): string {
-  const translationKey = `snapshotFields.${fieldKey}` as const;
-  const translated = t(translationKey, { defaultValue: "" });
-  return translated || fieldKey;
-}
-
-function getAccountFieldLabel(t: TFunction<"adOperationLogs">, fieldKey: string): string {
-  const translationKey = `snapshotSections.fields.${fieldKey}` as const;
-  const translated = t(translationKey, { defaultValue: "" });
-  return translated || fieldKey;
-}
-
-function getGroupFieldLabel(t: TFunction<"adOperationLogs">, fieldKey: string): string {
-  const labelKey =
-    fieldKey === "displayName"
-      ? "groupDisplayName"
-      : fieldKey === "name"
-        ? "groupName"
-        : fieldKey;
-  const translationKey = `snapshotSections.fields.${labelKey}` as const;
-  const translated = t(translationKey, { defaultValue: "" });
-  return translated || fieldKey;
-}
-
-function getGroupFieldEntries(
-  t: TFunction<"adOperationLogs">,
-  group: ParsedSnapshotGroup | null,
-  formatBoolean: (value: boolean | null | undefined) => string | null,
-) {
-  if (!group) {
-    return [];
-  }
-
-  return [
-    {
-      key: "groupDisplayName",
-      label: t("snapshotSections.fields.groupDisplayName"),
-      value: group.displayName,
-    },
-    {
-      key: "groupName",
-      label: t("snapshotSections.fields.groupName"),
-      value: group.name,
-    },
-    { key: "cn", label: t("snapshotSections.fields.cn"), value: group.cn },
-    {
-      key: "samAccountName",
-      label: t("snapshotSections.fields.samAccountName"),
-      value: group.samAccountName,
-    },
-    {
-      key: "description",
-      label: t("snapshotSections.fields.description"),
-      value: group.description,
-    },
-    {
-      key: "distinguishedName",
-      label: t("snapshotSections.fields.distinguishedName"),
-      value: group.distinguishedName,
-      mono: true,
-    },
-    {
-      key: "groupScope",
-      label: t("snapshotSections.fields.groupScope"),
-      value: group.groupScope,
-    },
-    {
-      key: "securityEnabled",
-      label: t("snapshotSections.fields.securityEnabled"),
-      value: formatBoolean(group.securityEnabled),
-    },
-    {
-      key: "groupType",
-      label: t("snapshotSections.fields.groupType"),
-      value: group.groupType != null ? String(group.groupType) : null,
-    },
-    {
-      key: "memberCount",
-      label: t("snapshotSections.fields.memberCount"),
-      value: group.memberCount != null ? String(group.memberCount) : null,
-    },
-    {
-      key: "memberOfCount",
-      label: t("snapshotSections.fields.memberOfCount"),
-      value: group.memberOfCount != null ? String(group.memberOfCount) : null,
-    },
-  ];
-}
-
-function getUserFieldEntries(
-  t: TFunction<"adOperationLogs">,
-  user: {
-    id: string | null;
-    samAccountName: string | null;
-    userPrincipalName: string | null;
-    displayName?: string | null;
-    distinguishedName: string | null;
-  } | null,
-) {
-  if (!user) {
-    return [];
-  }
-
-  return [
-    { key: "id", label: t("snapshotSections.fields.userId"), value: user.id },
-    {
-      key: "samAccountName",
-      label: t("snapshotSections.fields.samAccountName"),
-      value: user.samAccountName,
-    },
-    {
-      key: "userPrincipalName",
-      label: t("snapshotSections.fields.userPrincipalName"),
-      value: user.userPrincipalName,
-    },
-    {
-      key: "displayName",
-      label: t("snapshotSections.fields.displayName"),
-      value: user.displayName ?? null,
-    },
-    {
-      key: "distinguishedName",
-      label: t("snapshotSections.fields.distinguishedName"),
-      value: user.distinguishedName,
-      mono: true,
-    },
-  ];
-}
-
-function getComputerFieldEntries(
-  t: TFunction<"adOperationLogs">,
-  computer: ParsedSnapshotComputer | null,
-) {
-  if (!computer) {
-    return [];
-  }
-
-  return [
-    {
-      key: "computerId",
-      label: t("snapshotSections.fields.computerId"),
-      value: computer.id,
-    },
-    {
-      key: "name",
-      label: t("snapshotSections.fields.name"),
-      value: computer.name,
-    },
-    {
-      key: "samAccountName",
-      label: t("snapshotSections.fields.samAccountName"),
-      value: computer.samAccountName,
-    },
-    {
-      key: "dNSHostName",
-      label: t("snapshotSections.fields.dNSHostName"),
-      value: computer.dNSHostName ?? null,
-    },
-    {
-      key: "distinguishedName",
-      label: t("snapshotSections.fields.distinguishedName"),
-      value: computer.distinguishedName,
-      mono: true,
-    },
-  ];
-}
-
-function getComputerDeleteAccountFieldEntries(
-  t: TFunction<"adOperationLogs">,
-  account: {
-    isEnabled: boolean | null;
-    userAccountControl: number | null;
-    primaryGroupId: number | null;
-  } | null,
-  formatBoolean: (value: boolean | null | undefined) => string | null,
-) {
-  if (!account) {
-    return [];
-  }
-
-  return [
-    {
-      key: "isEnabled",
-      label: t("snapshotSections.fields.isEnabled"),
-      value: formatBoolean(account.isEnabled),
-    },
-    {
-      key: "userAccountControl",
-      label: t("snapshotSections.fields.userAccountControl"),
-      value: account.userAccountControl != null ? String(account.userAccountControl) : null,
-    },
-    {
-      key: "primaryGroupId",
-      label: t("snapshotSections.fields.primaryGroupId"),
-      value: account.primaryGroupId != null ? String(account.primaryGroupId) : null,
-    },
-  ];
-}
-
-function GenericSnapshotBlock({
-  title,
-  entries,
-  noneLabel,
-}: {
-  title: string;
-  entries: GenericSnapshotEntry[];
-  noneLabel: string;
-}) {
-  if (entries.length === 0) {
-    return (
-      <div className="space-y-2">
-        <h4 className="text-sm font-medium">{title}</h4>
-        <span className="text-muted-foreground">{noneLabel}</span>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-2">
-      <h4 className="text-sm font-medium">{title}</h4>
-      <div className="space-y-3 rounded-lg border bg-card p-3">
-        {entries.map((entry) =>
-          entry.nested && entry.nested.length > 0 ? (
-            <div key={entry.key} className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">{entry.key}</p>
-              <div className="space-y-2 border-l pl-3">
-                {entry.nested.map((nestedEntry) => (
-                  <div key={nestedEntry.key} className="space-y-1">
-                    <p className="text-xs text-muted-foreground">{nestedEntry.key}</p>
-                    <p className="break-all text-sm">{nestedEntry.displayValue}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div key={entry.key} className="space-y-1">
-              <p className="text-xs text-muted-foreground">{entry.key}</p>
-              <p className="break-all text-sm">{entry.displayValue}</p>
-            </div>
-          ),
-        )}
-      </div>
-    </div>
-  );
-}
 
 function UserUpdateSnapshotSections({
   beforeSnapshotJson,
@@ -1051,114 +813,6 @@ function GroupCreateSnapshotSections({
   );
 }
 
-function getDeletedObjectFieldEntries(
-  t: TFunction<"adOperationLogs">,
-  deletedObject: ParsedSnapshotDeletedObject | null,
-) {
-  if (!deletedObject) {
-    return [];
-  }
-
-  return [
-    { key: "objectId", label: t("snapshotSections.fields.objectId"), value: deletedObject.objectId, mono: true },
-    { key: "objectType", label: t("snapshotSections.fields.objectType"), value: deletedObject.objectType },
-    { key: "name", label: t("snapshotSections.fields.name"), value: deletedObject.name },
-    {
-      key: "displayName",
-      label: t("snapshotSections.fields.displayName"),
-      value: deletedObject.displayName,
-    },
-    {
-      key: "samAccountName",
-      label: t("snapshotSections.fields.samAccountName"),
-      value: deletedObject.samAccountName,
-    },
-    {
-      key: "userPrincipalName",
-      label: t("snapshotSections.fields.userPrincipalName"),
-      value: deletedObject.userPrincipalName,
-    },
-    {
-      key: "distinguishedName",
-      label: t("snapshotSections.fields.distinguishedName"),
-      value: deletedObject.distinguishedName,
-      mono: true,
-    },
-    {
-      key: "lastKnownParent",
-      label: t("snapshotSections.fields.lastKnownParent"),
-      value: deletedObject.lastKnownParent,
-      mono: true,
-    },
-    {
-      key: "lastKnownRdn",
-      label: t("snapshotSections.fields.lastKnownRdn"),
-      value: deletedObject.lastKnownRdn,
-      mono: true,
-    },
-    {
-      key: "objectClass",
-      label: t("snapshotSections.fields.objectClass"),
-      value: deletedObject.objectClass,
-      mono: true,
-    },
-    {
-      key: "whenChanged",
-      label: t("snapshotSections.fields.whenChanged"),
-      value: deletedObject.whenChanged,
-    },
-    {
-      key: "deletedAt",
-      label: t("snapshotSections.fields.deletedAt"),
-      value: deletedObject.deletedAt,
-    },
-  ];
-}
-
-function getRestoredObjectFieldEntries(
-  t: TFunction<"adOperationLogs">,
-  restoredObject: ParsedSnapshotRestoredObject | null,
-  formatBoolean: (value: boolean | null | undefined) => string | null,
-) {
-  if (!restoredObject) {
-    return [];
-  }
-
-  return [
-    { key: "objectId", label: t("snapshotSections.fields.objectId"), value: restoredObject.objectId, mono: true },
-    { key: "objectType", label: t("snapshotSections.fields.objectType"), value: restoredObject.objectType },
-    { key: "name", label: t("snapshotSections.fields.name"), value: restoredObject.name },
-    {
-      key: "samAccountName",
-      label: t("snapshotSections.fields.samAccountName"),
-      value: restoredObject.samAccountName,
-    },
-    {
-      key: "distinguishedName",
-      label: t("snapshotSections.fields.distinguishedName"),
-      value: restoredObject.distinguishedName,
-      mono: true,
-    },
-    {
-      key: "restored",
-      label: t("snapshotSections.fields.restored"),
-      value: formatBoolean(restoredObject.restored),
-    },
-    {
-      key: "restoredParent",
-      label: t("snapshotSections.fields.restoredParent"),
-      value: restoredObject.restoredParent,
-      mono: true,
-    },
-    {
-      key: "restoredRdn",
-      label: t("snapshotSections.fields.restoredRdn"),
-      value: restoredObject.restoredRdn,
-      mono: true,
-    },
-  ];
-}
-
 function DeletedObjectRestoreSnapshotSections({
   beforeSnapshotJson,
   afterSnapshotJson,
@@ -1504,12 +1158,6 @@ function GroupUpdateSnapshotSections({
       ) : null}
     </section>
   );
-}
-
-function getOrganizationalUnitFieldLabel(t: TFunction<"adOperationLogs">, fieldKey: string): string {
-  const translationKey = `snapshotSections.fields.${fieldKey}` as const;
-  const translated = t(translationKey, { defaultValue: "" });
-  return translated || fieldKey;
 }
 
 function OrganizationalUnitSnapshotSections({
