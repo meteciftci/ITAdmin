@@ -23,6 +23,10 @@ import type {
   LicensePurchaseListItem,
   LicensePurchaseStatus,
   LicensePurchaseType,
+  ConvertLicenseRequestItemsRequest,
+  LicenseFulfillmentCandidate,
+  LicenseFulfillmentResponse,
+  TriageLicenseRequestItemRequest,
   LicenseRequestDetail,
   LicenseRequestFormRequest,
   LicenseRequestListItem,
@@ -371,6 +375,42 @@ export const searchDirectoryOrganizationalUnits = async (
   const { data } = await apiClient.get<DirectoryOrganizationalUnitLookupSearchResult>(
     `${basePath}/directory-organizational-units/search`,
     { params: { search } },
+  );
+  return data;
+};
+
+// ---- Fulfillment (request -> purchase/package conversion) ----
+
+export type FulfillmentCandidateParams = {
+  search?: string;
+  productId?: string;
+  requesterUnitObjectGuid?: string;
+  pageNumber?: number;
+  pageSize?: number;
+};
+
+export const getFulfillmentCandidates = async (
+  params: FulfillmentCandidateParams,
+): Promise<PagedResponse<LicenseFulfillmentCandidate>> => {
+  const { data } = await apiClient.get<PagedResponse<LicenseFulfillmentCandidate>>(
+    `${basePath}/fulfillment/candidates`,
+    { params },
+  );
+  return data;
+};
+
+export const triageLicenseRequestItems = async (
+  items: TriageLicenseRequestItemRequest[],
+): Promise<void> => {
+  await apiClient.post(`${basePath}/fulfillment/triage`, { items });
+};
+
+export const convertLicenseRequestItems = async (
+  request: ConvertLicenseRequestItemsRequest,
+): Promise<LicenseFulfillmentResponse> => {
+  const { data } = await apiClient.post<LicenseFulfillmentResponse>(
+    `${basePath}/fulfillment/convert`,
+    request,
   );
   return data;
 };

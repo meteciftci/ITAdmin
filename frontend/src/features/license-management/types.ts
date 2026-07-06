@@ -419,3 +419,67 @@ export type LicenseRequestFormRequest = {
   costNote?: string | null;
   items: LicenseRequestItemInput[];
 };
+
+// ---- Fulfillment (request -> purchase/package conversion) ----
+
+export type LicenseFulfillmentCandidate = {
+  requestId: string;
+  requestItemId: string;
+  requestSource: LicenseRequestSource;
+  requestDate: string;
+  requesterUnitDisplayName: string;
+  productId: string;
+  productName: string;
+  productBrand: string | null;
+  requestedQuantity: number;
+  approvedQuantity: number | null;
+  fulfilledQuantity: number;
+  remainingQuantity: number;
+  itemStatus: LicenseRequestItemStatus;
+};
+
+export type TriageLicenseRequestItemRequest = {
+  requestItemId: string;
+  status: LicenseRequestItemStatus;
+  approvedQuantity: number | null;
+};
+
+export type ConvertFulfillmentLine = {
+  requestItemId: string;
+  fulfillQuantity: number;
+};
+
+export type ConvertFulfillmentPackageDefaults = {
+  productId: string;
+  licenseType: LicenseType;
+  startDate: string | null;
+  endDate: string | null;
+  isPerpetual: boolean;
+};
+
+export type ConvertFulfillmentNewPurchase = {
+  purchaseType: LicensePurchaseType;
+  title: string;
+  description: string | null;
+  purchaseDate: string | null;
+  supplierCompanyId: string | null;
+  supportCompanyId: string | null;
+  actualTotalCost: number | null;
+  currency: string | null;
+  vatIncluded: boolean | null;
+  notes: string | null;
+};
+
+export type ConvertLicenseRequestItemsRequest = {
+  existingPurchaseId: string | null;
+  newPurchase: ConvertFulfillmentNewPurchase | null;
+  lines: ConvertFulfillmentLine[];
+  packageDefaults: ConvertFulfillmentPackageDefaults[];
+};
+
+export type LicenseFulfillmentResponse = {
+  success: boolean;
+  message: string;
+  purchaseId: string | null;
+  packageIds: string[];
+};
