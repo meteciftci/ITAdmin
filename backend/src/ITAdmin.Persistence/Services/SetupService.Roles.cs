@@ -72,6 +72,7 @@ public sealed partial class SetupService
         ("LicenseManagement", PermissionCodes.LicenseManagement.View, "View license management."),
         ("LicenseManagement", PermissionCodes.LicenseManagement.ManageCatalog, "Manage license catalog (companies and products)."),
         ("LicenseManagement", PermissionCodes.LicenseManagement.ManagePurchases, "Manage license purchases and packages."),
+        ("LicenseManagement", PermissionCodes.LicenseManagement.FulfillRequests, "Convert license requests into purchases and packages."),
         ("LicenseManagement", PermissionCodes.LicenseManagement.ViewReports, "View license management reports."),
         ("LicenseManagement", PermissionCodes.LicenseManagement.ManageSettings, "Manage license management settings."),
         ("Setup", PermissionCodes.Setup.Manage, "Manage setup.")

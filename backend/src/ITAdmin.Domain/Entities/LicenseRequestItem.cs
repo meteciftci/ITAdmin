@@ -20,4 +20,5 @@ public class LicenseRequestItem : AuditableEntity
     public LicenseRequest Request { get; set; } = null!;
     public LicensedProduct Product { get; set; } = null!;
     public ICollection<LicenseRequestItemUser> Users { get; set; } = new List<LicenseRequestItemUser>();
+    public ICollection<LicenseRequestItemFulfillment> Fulfillments { get; set; } = new List<LicenseRequestItemFulfillment>();
 }

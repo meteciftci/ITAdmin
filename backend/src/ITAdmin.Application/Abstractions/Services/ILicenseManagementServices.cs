@@ -145,3 +145,18 @@ public interface ILicenseRequestService
         UpdateLicenseRequestStatusRequest request,
         CancellationToken cancellationToken = default);
 }
+
+public interface ILicenseRequestFulfillmentService
+{
+    Task<PagedResult<LicenseFulfillmentCandidateItem>> GetCandidatesAsync(
+        LicenseFulfillmentCandidateQuery query,
+        CancellationToken cancellationToken = default);
+
+    Task<LicenseRequestOperationResult> TriageAsync(
+        TriageLicenseRequestItemsRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<LicenseFulfillmentResult> ConvertToPurchaseAsync(
+        ConvertLicenseRequestItemsRequest request,
+        CancellationToken cancellationToken = default);
+}

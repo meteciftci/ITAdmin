@@ -34,6 +34,47 @@ public static class LicenseRequestRules
             LicenseRequestItemUserStatus.Cancelled,
         };
 
+    /// <summary>
+    /// Derives an approved item's status from how much of its approved quantity has been fulfilled.
+    /// Not fulfilled yet -> Approved; fully fulfilled -> Fulfilled; otherwise -> PartiallyFulfilled.
+    /// </summary>
+    public static LicenseRequestItemStatus DeriveItemStatus(int? approvedQuantity, int fulfilledQuantity)
+    {
+        var approved = approvedQuantity ?? 0;
+        if (fulfilledQuantity <= 0)
+        {
+            return LicenseRequestItemStatus.Approved;
+        }
+
+        return fulfilledQuantity >= approved
+            ? LicenseRequestItemStatus.Fulfilled
+            : LicenseRequestItemStatus.PartiallyFulfilled;
+    }
+
+    /// <summary>
+    /// Derives a request's status from its item statuses once fulfillment has started. Returns null
+    /// (no automatic change) when no active item has any fulfillment yet, so manual statuses are kept.
+    /// Cancelled/Rejected items are ignored when deciding completeness.
+    /// </summary>
+    public static LicenseRequestStatus? DeriveRequestStatus(IEnumerable<LicenseRequestItemStatus> itemStatuses)
+    {
+        var active = itemStatuses
+            .Where(status => status is not LicenseRequestItemStatus.Cancelled
+                and not LicenseRequestItemStatus.Rejected)
+            .ToList();
+
+        if (active.Count == 0
+            || !active.Any(status => status is LicenseRequestItemStatus.Fulfilled
+                or LicenseRequestItemStatus.PartiallyFulfilled))
+        {
+            return null;
+        }
+
+        return active.All(status => status is LicenseRequestItemStatus.Fulfilled)
+            ? LicenseRequestStatus.Fulfilled
+            : LicenseRequestStatus.PartiallyFulfilled;
+    }
+
     public const string DuplicateProductMessage =
         "Aynı ürün talebe birden fazla kez eklenemez.";
 

@@ -151,6 +151,7 @@ public static class PermissionCodes
         public const string ManageCatalog = "LicenseManagement.ManageCatalog";
         public const string ManagePurchases = "LicenseManagement.ManagePurchases";
         public const string ManageRequests = "LicenseManagement.ManageRequests";
+        public const string FulfillRequests = "LicenseManagement.FulfillRequests";
         public const string ViewReports = "LicenseManagement.ViewReports";
         public const string ManageSettings = "LicenseManagement.ManageSettings";
     }
