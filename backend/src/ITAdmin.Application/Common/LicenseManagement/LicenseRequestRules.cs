@@ -4,17 +4,6 @@ namespace ITAdmin.Application.Common.LicenseManagement;
 
 public static class LicenseRequestRules
 {
-    public static readonly IReadOnlySet<LicenseRequestStatus> ManualRequestStatuses =
-        new HashSet<LicenseRequestStatus>
-        {
-            LicenseRequestStatus.Draft,
-            LicenseRequestStatus.Pending,
-            LicenseRequestStatus.InReview,
-            LicenseRequestStatus.Rejected,
-            LicenseRequestStatus.Cancelled,
-            LicenseRequestStatus.Archived,
-        };
-
     public static readonly IReadOnlySet<LicenseRequestItemStatus> ManualItemStatuses =
         new HashSet<LicenseRequestItemStatus>
         {
@@ -52,27 +41,48 @@ public static class LicenseRequestRules
     }
 
     /// <summary>
-    /// Derives a request's status from its item statuses once fulfillment has started. Returns null
-    /// (no automatic change) when no active item has any fulfillment yet, so manual statuses are kept.
-    /// Cancelled/Rejected items are ignored when deciding completeness.
+    /// Derives a request's status from its item statuses. Item status is the single source of truth;
+    /// the request status is never set manually. Cancelled/Rejected items are ignored when deciding
+    /// completeness unless every item is terminal (all rejected -> Rejected, otherwise Cancelled).
     /// </summary>
-    public static LicenseRequestStatus? DeriveRequestStatus(IEnumerable<LicenseRequestItemStatus> itemStatuses)
+    public static LicenseRequestStatus DeriveRequestStatus(IEnumerable<LicenseRequestItemStatus> itemStatuses)
     {
-        var active = itemStatuses
+        var all = itemStatuses.ToList();
+        if (all.Count == 0)
+        {
+            return LicenseRequestStatus.Pending;
+        }
+
+        var active = all
             .Where(status => status is not LicenseRequestItemStatus.Cancelled
                 and not LicenseRequestItemStatus.Rejected)
             .ToList();
 
-        if (active.Count == 0
-            || !active.Any(status => status is LicenseRequestItemStatus.Fulfilled
-                or LicenseRequestItemStatus.PartiallyFulfilled))
+        if (active.Count == 0)
         {
-            return null;
+            return all.Any(status => status is LicenseRequestItemStatus.Rejected)
+                ? LicenseRequestStatus.Rejected
+                : LicenseRequestStatus.Cancelled;
         }
 
-        return active.All(status => status is LicenseRequestItemStatus.Fulfilled)
-            ? LicenseRequestStatus.Fulfilled
-            : LicenseRequestStatus.PartiallyFulfilled;
+        if (active.All(status => status is LicenseRequestItemStatus.Fulfilled))
+        {
+            return LicenseRequestStatus.Fulfilled;
+        }
+
+        if (active.Any(status => status is LicenseRequestItemStatus.Fulfilled
+            or LicenseRequestItemStatus.PartiallyFulfilled))
+        {
+            return LicenseRequestStatus.PartiallyFulfilled;
+        }
+
+        if (active.Any(status => status is LicenseRequestItemStatus.InReview
+            or LicenseRequestItemStatus.Approved))
+        {
+            return LicenseRequestStatus.InReview;
+        }
+
+        return LicenseRequestStatus.Pending;
     }
 
     public const string DuplicateProductMessage =

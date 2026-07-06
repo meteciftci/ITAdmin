@@ -118,7 +118,6 @@ public sealed class LicenseManagementApiJsonBindingTests
               },
               "requesterManagerName": "Manager",
               "description": "Need licenses",
-              "status": "Pending",
               "estimatedTotalCost": 1000,
               "currency": "TRY",
               "vatIncluded": false,

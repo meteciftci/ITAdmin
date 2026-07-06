@@ -112,7 +112,6 @@ public sealed record CreateLicenseRequestRequest(
     LicenseRequestOuSnapshot RequesterUnit,
     string? RequesterManagerName,
     string? Description,
-    LicenseRequestStatus Status,
     decimal? EstimatedTotalCost,
     string? Currency,
     bool? VatIncluded,
@@ -133,20 +132,11 @@ public sealed record UpdateLicenseRequestRequest(
     LicenseRequestOuSnapshot RequesterUnit,
     string? RequesterManagerName,
     string? Description,
-    LicenseRequestStatus Status,
     decimal? EstimatedTotalCost,
     string? Currency,
     bool? VatIncluded,
     string? CostNote,
     IReadOnlyList<LicenseRequestItemInput> Items,
-    Guid? ActorUserId,
-    string? ActorUserName,
-    string? ActorIpAddress,
-    string? ActorUserAgent);
-
-public sealed record UpdateLicenseRequestStatusRequest(
-    Guid Id,
-    LicenseRequestStatus Status,
     Guid? ActorUserId,
     string? ActorUserName,
     string? ActorIpAddress,

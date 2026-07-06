@@ -140,10 +140,6 @@ public interface ILicenseRequestService
     Task<LicenseRequestOperationResult> UpdateAsync(
         UpdateLicenseRequestRequest request,
         CancellationToken cancellationToken = default);
-
-    Task<LicenseRequestOperationResult> UpdateStatusAsync(
-        UpdateLicenseRequestStatusRequest request,
-        CancellationToken cancellationToken = default);
 }
 
 public interface ILicenseRequestFulfillmentService

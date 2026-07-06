@@ -11,7 +11,7 @@ namespace ITAdmin.UnitTests.LicenseManagement;
 public sealed class LicenseRequestFulfillmentServiceTests
 {
     [Fact]
-    public async Task GetCandidates_ReturnsOnlyApprovedNotFullyFulfilledItems()
+    public async Task GetCandidates_IncludesOpenLinesForTriageAndFulfillment()
     {
         await using var context = CreateDbContext();
         var product = await SeedProductAsync(context, "Photoshop");
@@ -23,8 +23,32 @@ public sealed class LicenseRequestFulfillmentServiceTests
         var result = await service.GetCandidatesAsync(
             new LicenseFulfillmentCandidateQuery(null, null, null, 1, 20), CancellationToken.None);
 
-        Assert.Equal(1, result.TotalCount);
-        Assert.Equal(5, result.Items.Single().RemainingQuantity);
+        // Approved (fulfillable) + Pending (triage only) are returned; the Fulfilled item is excluded.
+        Assert.Equal(2, result.TotalCount);
+        var approved = result.Items.Single(x => x.ItemStatus == LicenseRequestItemStatus.Approved);
+        Assert.Equal(5, approved.RemainingQuantity);
+        Assert.True(approved.IsFulfillable);
+        var pending = result.Items.Single(x => x.ItemStatus == LicenseRequestItemStatus.Pending);
+        Assert.False(pending.IsFulfillable);
+    }
+
+    [Fact]
+    public async Task Triage_DerivesRequestStatusFromItems()
+    {
+        await using var context = CreateDbContext();
+        var product = await SeedProductAsync(context);
+        var item = await SeedRequestItemAsync(context, product, requested: 4, approved: null, status: LicenseRequestItemStatus.Pending);
+        var service = new LicenseRequestFulfillmentService(context);
+
+        await service.TriageAsync(
+            new TriageLicenseRequestItemsRequest(
+                [new TriageLicenseRequestItemInput(item, LicenseRequestItemStatus.Approved, 4)],
+                null, "tester", null, null),
+            CancellationToken.None);
+
+        var request = await context.LicenseRequests.AsNoTracking()
+            .FirstAsync(x => x.Items.Any(i => i.Id == item));
+        Assert.Equal(LicenseRequestStatus.InReview, request.Status);
     }
 
     [Fact]

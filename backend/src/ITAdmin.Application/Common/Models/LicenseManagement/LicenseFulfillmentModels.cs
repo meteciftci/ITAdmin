@@ -24,7 +24,8 @@ public sealed record LicenseFulfillmentCandidateItem(
     int? ApprovedQuantity,
     int FulfilledQuantity,
     int RemainingQuantity,
-    LicenseRequestItemStatus ItemStatus);
+    LicenseRequestItemStatus ItemStatus,
+    bool IsFulfillable);
 
 // ---- Triage (approve / reject / cancel / hold items) ----
 

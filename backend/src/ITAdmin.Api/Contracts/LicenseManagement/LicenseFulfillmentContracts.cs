@@ -15,7 +15,8 @@ public sealed record LicenseFulfillmentCandidateResponse(
     int? ApprovedQuantity,
     int FulfilledQuantity,
     int RemainingQuantity,
-    LicenseRequestItemStatus ItemStatus);
+    LicenseRequestItemStatus ItemStatus,
+    bool IsFulfillable);
 
 public sealed record TriageLicenseRequestItemRequest(
     Guid RequestItemId,

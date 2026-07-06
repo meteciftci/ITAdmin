@@ -435,7 +435,6 @@ public sealed record CreateLicenseRequestRequest(
     LicenseRequestOuSnapshotRequest RequesterUnit,
     string? RequesterManagerName,
     string? Description,
-    LicenseRequestStatus Status,
     decimal? EstimatedTotalCost,
     string? Currency,
     bool? VatIncluded,
@@ -451,11 +450,8 @@ public sealed record UpdateLicenseRequestRequest(
     LicenseRequestOuSnapshotRequest RequesterUnit,
     string? RequesterManagerName,
     string? Description,
-    LicenseRequestStatus Status,
     decimal? EstimatedTotalCost,
     string? Currency,
     bool? VatIncluded,
     string? CostNote,
     IReadOnlyList<LicenseRequestItemRequest> Items);
-
-public sealed record UpdateLicenseRequestStatusRequest(LicenseRequestStatus Status);

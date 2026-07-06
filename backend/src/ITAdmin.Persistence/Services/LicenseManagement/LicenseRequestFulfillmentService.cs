@@ -18,13 +18,17 @@ public sealed class LicenseRequestFulfillmentService(AppDbContext context) : ILi
     {
         var (pageNumber, pageSize) = NormalizePaging(query.PageNumber, query.PageSize);
 
-        // Open lines waiting to be (further) fulfilled: approved and not yet fully covered.
+        // Open lines that still need triage or fulfillment. Pending/InReview items are shown so they
+        // can be triaged in place; Approved/PartiallyFulfilled items with remaining quantity can be
+        // fulfilled. Terminal items (Fulfilled/Rejected/Cancelled) are excluded.
         var itemsQuery = context.LicenseRequestItems
             .AsNoTracking()
             .Where(x => x.Request.IsActive
-                && (x.Status == LicenseRequestItemStatus.Approved
-                    || x.Status == LicenseRequestItemStatus.PartiallyFulfilled)
-                && (x.ApprovedQuantity ?? 0) > x.FulfilledQuantity);
+                && (x.Status == LicenseRequestItemStatus.Pending
+                    || x.Status == LicenseRequestItemStatus.InReview
+                    || ((x.Status == LicenseRequestItemStatus.Approved
+                            || x.Status == LicenseRequestItemStatus.PartiallyFulfilled)
+                        && (x.ApprovedQuantity ?? 0) > x.FulfilledQuantity)));
 
         if (query.ProductId is { } productId)
         {
@@ -65,7 +69,10 @@ public sealed class LicenseRequestFulfillmentService(AppDbContext context) : ILi
                 x.ApprovedQuantity,
                 x.FulfilledQuantity,
                 (x.ApprovedQuantity ?? 0) - x.FulfilledQuantity,
-                x.Status))
+                x.Status,
+                (x.Status == LicenseRequestItemStatus.Approved
+                        || x.Status == LicenseRequestItemStatus.PartiallyFulfilled)
+                    && (x.ApprovedQuantity ?? 0) > x.FulfilledQuantity))
             .ToListAsync(cancellationToken);
 
         return new PagedResult<LicenseFulfillmentCandidateItem>(items, pageNumber, pageSize, totalCount, totalPages);
@@ -130,7 +137,10 @@ public sealed class LicenseRequestFulfillmentService(AppDbContext context) : ILi
             item.UpdatedBy = request.ActorUserName;
         }
 
-        foreach (var requestId in items.Select(x => x.RequestId).Distinct())
+        var affectedRequestIds = items.Select(x => x.RequestId).Distinct().ToList();
+        await DeriveAndApplyRequestStatusesAsync(affectedRequestIds, now, request.ActorUserName, cancellationToken);
+
+        foreach (var requestId in affectedRequestIds)
         {
             await WriteAuditAsync(
                 context,
@@ -372,9 +382,9 @@ public sealed class LicenseRequestFulfillmentService(AppDbContext context) : ILi
         foreach (var request in requests)
         {
             var derived = LicenseRequestRules.DeriveRequestStatus(request.Items.Select(x => x.Status));
-            if (derived is { } status && request.Status != status)
+            if (request.Status != derived)
             {
-                request.Status = status;
+                request.Status = derived;
                 request.UpdatedAt = now;
                 request.UpdatedBy = actorUserName;
             }

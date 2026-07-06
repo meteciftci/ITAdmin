@@ -76,7 +76,6 @@ public sealed class LicenseRequestServiceTests
                 null, null, null,
                 BuildRequesterUnit(),
                 null, null,
-                LicenseRequestStatus.Pending,
                 null, "TRY", false, null,
                 [
                     BuildItem(productId, ("user-1", "hakan")),
@@ -103,7 +102,6 @@ public sealed class LicenseRequestServiceTests
                 null, null, null,
                 BuildRequesterUnit(),
                 null, null,
-                LicenseRequestStatus.Pending,
                 null, "TRY", false, null,
                 [
                     new LicenseRequestItemInput(
@@ -135,7 +133,6 @@ public sealed class LicenseRequestServiceTests
                 null, null, null,
                 BuildRequesterUnit(),
                 null, null,
-                LicenseRequestStatus.Pending,
                 null, "TRY", false, null,
                 [],
                 null, "tester", null, null),
@@ -159,7 +156,6 @@ public sealed class LicenseRequestServiceTests
                 null, null, null,
                 BuildRequesterUnit(),
                 null, null,
-                LicenseRequestStatus.Pending,
                 null, "TRY", false, null,
                 [
                     new LicenseRequestItemInput(
@@ -213,21 +209,18 @@ public sealed class LicenseRequestServiceTests
     }
 
     [Fact]
-    public async Task CreateAsync_FulfilledStatus_ReturnsValidationFailure()
+    public async Task CreateAsync_DerivesPendingStatusFromNewItems()
     {
         await using var context = CreateDbContext();
         var productId = await SeedProductAsync(context);
         var service = new LicenseRequestService(context);
 
-        var request = BuildCreateRequest(productId, ("user-1", "hakan")) with
-        {
-            Status = LicenseRequestStatus.Fulfilled
-        };
+        var result = await service.CreateAsync(
+            BuildCreateRequest(productId, ("user-1", "hakan")),
+            CancellationToken.None);
 
-        var result = await service.CreateAsync(request, CancellationToken.None);
-
-        Assert.False(result.IsSuccess);
-        Assert.Contains("status", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.True(result.IsSuccess);
+        Assert.Equal(LicenseRequestStatus.Pending, result.Request!.Status);
     }
 
     [Fact]
@@ -335,27 +328,29 @@ public sealed class LicenseRequestServiceTests
     }
 
     [Fact]
-    public async Task GetListAsync_FilterByStatus_ReturnsMatchingItems()
+    public async Task GetListAsync_FilterByDerivedStatus_ReturnsMatchingItems()
     {
         await using var context = CreateDbContext();
         var productId = await SeedProductAsync(context);
         var service = new LicenseRequestService(context);
         await service.CreateAsync(
-            BuildCreateRequest(productId, ("user-1", "hakan")) with { Status = LicenseRequestStatus.Pending },
+            BuildCreateRequest(productId, ("user-1", "hakan")),
             CancellationToken.None);
         await service.CreateAsync(
-            BuildCreateRequest(productId, ("user-2", "mete")) with
-            {
-                Status = LicenseRequestStatus.Draft
-            },
+            BuildCreateRequest(productId, ("user-2", "mete")),
             CancellationToken.None);
 
-        var result = await service.GetListAsync(
-            new LicenseRequestListQuery(null, LicenseRequestStatus.Draft, null, null, null, null, null, 1, 20),
+        // Newly created requests derive to Pending (all items Pending).
+        var pending = await service.GetListAsync(
+            new LicenseRequestListQuery(null, LicenseRequestStatus.Pending, null, null, null, null, null, 1, 20),
             CancellationToken.None);
+        Assert.Equal(2, pending.TotalCount);
+        Assert.All(pending.Items, item => Assert.Equal(LicenseRequestStatus.Pending, item.Status));
 
-        Assert.Equal(1, result.TotalCount);
-        Assert.Equal(LicenseRequestStatus.Draft, result.Items.First().Status);
+        var fulfilled = await service.GetListAsync(
+            new LicenseRequestListQuery(null, LicenseRequestStatus.Fulfilled, null, null, null, null, null, 1, 20),
+            CancellationToken.None);
+        Assert.Equal(0, fulfilled.TotalCount);
     }
 
     [Fact]
@@ -494,88 +489,6 @@ public sealed class LicenseRequestServiceTests
         Assert.Equal(LicenseRequestRules.DuplicateProductMessage, result.Message);
     }
 
-    [Fact]
-    public async Task UpdateStatusAsync_NonExistentRequest_ReturnsFailure()
-    {
-        await using var context = CreateDbContext();
-        var service = new LicenseRequestService(context);
-
-        var result = await service.UpdateStatusAsync(
-            new UpdateLicenseRequestStatusRequest(
-                Guid.NewGuid(),
-                LicenseRequestStatus.Cancelled,
-                null, "tester", null, null),
-            CancellationToken.None);
-
-        Assert.False(result.IsSuccess);
-        Assert.Contains("not found", result.Message, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public async Task UpdateStatusAsync_NonManualStatus_ReturnsFailure()
-    {
-        await using var context = CreateDbContext();
-        var productId = await SeedProductAsync(context);
-        var service = new LicenseRequestService(context);
-        var created = await service.CreateAsync(
-            BuildCreateRequest(productId, ("user-1", "hakan")),
-            CancellationToken.None);
-
-        var result = await service.UpdateStatusAsync(
-            new UpdateLicenseRequestStatusRequest(
-                created.Request!.Id,
-                LicenseRequestStatus.Fulfilled,
-                null, "tester", null, null),
-            CancellationToken.None);
-
-        Assert.False(result.IsSuccess);
-    }
-
-    [Fact]
-    public async Task UpdateStatusAsync_SameStatus_ReturnsUnchanged()
-    {
-        await using var context = CreateDbContext();
-        var productId = await SeedProductAsync(context);
-        var service = new LicenseRequestService(context);
-        var created = await service.CreateAsync(
-            BuildCreateRequest(productId, ("user-1", "hakan")),
-            CancellationToken.None);
-
-        var result = await service.UpdateStatusAsync(
-            new UpdateLicenseRequestStatusRequest(
-                created.Request!.Id,
-                LicenseRequestStatus.Pending,
-                null, "tester", null, null),
-            CancellationToken.None);
-
-        Assert.True(result.IsSuccess);
-        Assert.Contains("unchanged", result.Message, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public async Task UpdateStatusAsync_ValidManualTransition_UpdatesAndWritesAudit()
-    {
-        await using var context = CreateDbContext();
-        var productId = await SeedProductAsync(context);
-        var service = new LicenseRequestService(context);
-        var created = await service.CreateAsync(
-            BuildCreateRequest(productId, ("user-1", "hakan")),
-            CancellationToken.None);
-
-        var result = await service.UpdateStatusAsync(
-            new UpdateLicenseRequestStatusRequest(
-                created.Request!.Id,
-                LicenseRequestStatus.Cancelled,
-                null, "tester", null, null),
-            CancellationToken.None);
-
-        Assert.True(result.IsSuccess);
-        Assert.Equal(LicenseRequestStatus.Cancelled, result.Request!.Status);
-
-        var updateAudit = await context.AuditLogs.SingleAsync(x => x.Action == "Update");
-        Assert.Contains("status changed to Cancelled", updateAudit.Description, StringComparison.Ordinal);
-    }
-
     private static UpdateLicenseRequestRequest BuildUpdateRequest(
         Guid requestId,
         Guid productId,
@@ -588,7 +501,6 @@ public sealed class LicenseRequestServiceTests
             BuildRequesterUnit(),
             "Manager Name",
             "Updated request",
-            LicenseRequestStatus.Pending,
             10000, "TRY", false, "Cost note",
             [BuildItem(productId, users)],
             null, "tester", null, null);
@@ -603,7 +515,6 @@ public sealed class LicenseRequestServiceTests
             BuildRequesterUnit(),
             "Manager Name",
             "Test request",
-            LicenseRequestStatus.Pending,
             10000, "TRY", false, "Cost note",
             [BuildItem(productId, users)],
             null, "tester", null, null);
@@ -618,7 +529,6 @@ public sealed class LicenseRequestServiceTests
             null, "EBYS-1", new DateOnly(2026, 6, 29),
             BuildRequesterUnit(),
             null, null,
-            LicenseRequestStatus.Pending,
             null, "TRY", false, null,
             [
                 BuildItem(productId1, usersPerProduct),

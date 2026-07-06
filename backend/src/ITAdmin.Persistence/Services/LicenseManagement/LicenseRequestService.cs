@@ -198,58 +198,6 @@ public sealed class LicenseRequestService(AppDbContext context) : ILicenseReques
         return new LicenseRequestOperationResult(true, "License request updated.", detail);
     }
 
-    public async Task<LicenseRequestOperationResult> UpdateStatusAsync(
-        UpdateLicenseRequestStatusRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        var entity = await context.LicenseRequests
-            .FirstOrDefaultAsync(x => x.Id == request.Id && x.IsActive, cancellationToken);
-
-        if (entity is null)
-        {
-            return new LicenseRequestOperationResult(false, "License request was not found.");
-        }
-
-        if (!LicenseRequestRules.ManualRequestStatuses.Contains(request.Status))
-        {
-            return new LicenseRequestOperationResult(false, "Selected request status cannot be set manually.");
-        }
-
-        if (request.Status is LicenseRequestStatus.PartiallyFulfilled or LicenseRequestStatus.Fulfilled)
-        {
-            return new LicenseRequestOperationResult(
-                false,
-                "Fulfilled statuses cannot be set manually in this phase.");
-        }
-
-        if (entity.Status == request.Status)
-        {
-            var unchanged = await GetByIdAsync(entity.Id, cancellationToken);
-            return new LicenseRequestOperationResult(true, "License request status is unchanged.", unchanged);
-        }
-
-        var now = DateTime.UtcNow;
-        entity.Status = request.Status;
-        entity.UpdatedAt = now;
-        entity.UpdatedBy = request.ActorUserName;
-
-        await WriteAuditAsync(
-            context,
-            "Update",
-            "LicenseRequest",
-            entity.Id,
-            $"License request status changed to {request.Status} for {entity.RequesterUnitDisplayName}.",
-            request.ActorUserId,
-            request.ActorUserName,
-            request.ActorIpAddress,
-            request.ActorUserAgent,
-            cancellationToken);
-        await context.SaveChangesAsync(cancellationToken);
-
-        var detail = await GetByIdAsync(entity.Id, cancellationToken);
-        return new LicenseRequestOperationResult(true, "License request status updated.", detail);
-    }
-
     private async Task<string?> ValidateRequestPayloadAsync(
         CreateLicenseRequestRequest request,
         CancellationToken cancellationToken)
@@ -265,11 +213,6 @@ public sealed class LicenseRequestService(AppDbContext context) : ILicenseReques
             || string.IsNullOrWhiteSpace(request.RequesterUnit.DistinguishedName))
         {
             return "Requester unit is required.";
-        }
-
-        if (!LicenseRequestRules.ManualRequestStatuses.Contains(request.Status))
-        {
-            return "Selected request status cannot be set manually.";
         }
 
         if (request.EstimatedTotalCost is < 0)
@@ -312,7 +255,6 @@ public sealed class LicenseRequestService(AppDbContext context) : ILicenseReques
             request.RequesterUnit,
             request.RequesterManagerName,
             request.Description,
-            request.Status,
             request.EstimatedTotalCost,
             request.Currency,
             request.VatIncluded,
@@ -425,7 +367,6 @@ public sealed class LicenseRequestService(AppDbContext context) : ILicenseReques
         entity.RequesterUnitObjectGuid = request.RequesterUnit.ObjectGuid.Trim();
         entity.RequesterManagerName = LicenseManagementValidation.TrimOrNull(request.RequesterManagerName);
         entity.Description = LicenseManagementValidation.TrimOrNull(request.Description);
-        entity.Status = request.Status;
         entity.Currency = LicenseManagementValidation.TrimOrNull(request.Currency);
         entity.VatIncluded = request.VatIncluded;
         entity.CostNote = LicenseManagementValidation.TrimOrNull(request.CostNote);
@@ -470,6 +411,9 @@ public sealed class LicenseRequestService(AppDbContext context) : ILicenseReques
 
             return item;
         }).ToList();
+
+        // Request status is always derived from item statuses; it is never set manually.
+        entity.Status = LicenseRequestRules.DeriveRequestStatus(entity.Items.Select(x => x.Status));
 
         entity.EstimatedTotalCost = request.EstimatedTotalCost
             ?? (entity.Items.All(x => x.EstimatedTotalCost.HasValue)

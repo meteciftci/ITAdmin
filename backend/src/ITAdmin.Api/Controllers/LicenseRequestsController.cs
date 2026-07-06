@@ -131,33 +131,6 @@ public sealed class LicenseRequestsController(ILicenseRequestService requestServ
         return Ok(MapDetail(result.Request));
     }
 
-    [HttpPatch("{id:guid}/status")]
-    [RequirePermission(LicenseManagementPermissions.ManageRequests)]
-    public async Task<ActionResult<LicenseRequestDetailResponse>> UpdateRequestStatus(
-        Guid id,
-        [FromBody] UpdateLicenseRequestStatusRequest request,
-        CancellationToken cancellationToken)
-    {
-        var result = await requestService.UpdateStatusAsync(
-            new AppModels.UpdateLicenseRequestStatusRequest(
-                id,
-                request.Status,
-                LicenseManagementActorResolver.ResolveActorUserId(User),
-                LicenseManagementActorResolver.ResolveActorUserName(User),
-                LicenseManagementActorResolver.ResolveIpAddress(this),
-                LicenseManagementActorResolver.ResolveUserAgent(this)),
-            cancellationToken);
-
-        if (!result.IsSuccess || result.Request is null)
-        {
-            return result.Message.Contains("not found", StringComparison.OrdinalIgnoreCase)
-                ? NotFound(new { message = result.Message })
-                : BadRequest(new { message = result.Message });
-        }
-
-        return Ok(MapDetail(result.Request));
-    }
-
     private bool HasDirectoryLookupPermissions() =>
         (User.HasClaim(CustomClaimTypes.Permission, PermissionCodes.Directory.Users.Lookup)
          && User.HasClaim(CustomClaimTypes.Permission, PermissionCodes.Directory.OrganizationalUnits.Lookup))
@@ -173,7 +146,6 @@ public sealed class LicenseRequestsController(ILicenseRequestService requestServ
             MapRequesterUnit(request.RequesterUnit),
             request.RequesterManagerName,
             request.Description,
-            request.Status,
             request.EstimatedTotalCost,
             request.Currency,
             request.VatIncluded,
@@ -195,7 +167,6 @@ public sealed class LicenseRequestsController(ILicenseRequestService requestServ
             MapRequesterUnit(request.RequesterUnit),
             request.RequesterManagerName,
             request.Description,
-            request.Status,
             request.EstimatedTotalCost,
             request.Currency,
             request.VatIncluded,
