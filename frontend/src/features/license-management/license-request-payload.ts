@@ -87,7 +87,6 @@ export function buildLicenseRequestPayload(input: {
   requesterUnit: LicenseRequestOuSnapshot;
   requesterManagerName: string;
   description: string;
-  status: LicenseRequestFormRequest["status"];
   estimatedTotalCost: string;
   currency: string;
   vatIncluded: boolean;
@@ -128,7 +127,6 @@ export function buildLicenseRequestPayload(input: {
     requesterUnit: input.requesterUnit,
     requesterManagerName: input.requesterManagerName,
     description: input.description,
-    status: input.status,
     estimatedTotalCost: manualTotal ?? (computedTotal > 0 ? computedTotal : null),
     currency: input.currency.trim() || null,
     vatIncluded: input.vatIncluded,

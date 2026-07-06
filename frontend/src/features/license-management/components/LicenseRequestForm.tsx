@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { AxiosError } from "axios";
 import { useTranslation } from "react-i18next";
 
 import { CheckboxField } from "@/components/common/CheckboxField";
@@ -21,8 +22,6 @@ import { LicenseOuPicker } from "@/features/license-management/components/Licens
 import { LicenseRequestItemsEditor } from "@/features/license-management/components/LicenseRequestItemsEditor";
 import {
   getRequestSourceLabel,
-  getRequestStatusLabel,
-  MANUAL_REQUEST_STATUSES,
   REQUEST_SOURCES,
 } from "@/features/license-management/enum-labels";
 import { validateLicenseRequestForm } from "@/features/license-management/license-request-form-validation";
@@ -39,7 +38,6 @@ import type {
   LicenseRequestDetail,
   LicenseRequestOuSnapshot,
   LicenseRequestSource,
-  LicenseRequestStatus,
 } from "@/features/license-management/types";
 
 type Props = {
@@ -73,7 +71,6 @@ export function LicenseRequestForm({ mode, request, onCancel, onSaved }: Props) 
   const [requesterUnit, setRequesterUnit] = useState<LicenseRequestOuSnapshot | null>(null);
   const [requesterManagerName, setRequesterManagerName] = useState("");
   const [description, setDescription] = useState("");
-  const [status, setStatus] = useState<LicenseRequestStatus>("Pending");
   const [estimatedTotalCost, setEstimatedTotalCost] = useState("");
   const [currency, setCurrency] = useState("TRY");
   const [vatIncluded, setVatIncluded] = useState(false);
@@ -109,7 +106,6 @@ export function LicenseRequestForm({ mode, request, onCancel, onSaved }: Props) 
     );
     setRequesterManagerName(request?.requesterManagerName ?? "");
     setDescription(request?.description ?? "");
-    setStatus(request?.status ?? "Pending");
     setEstimatedTotalCost(request?.estimatedTotalCost?.toString() ?? "");
     setCurrency(request?.currency ?? settingsQuery.data?.defaultCurrency ?? "TRY");
     setVatIncluded(request?.vatIncluded ?? settingsQuery.data?.defaultVatIncluded ?? false);
@@ -153,7 +149,6 @@ export function LicenseRequestForm({ mode, request, onCancel, onSaved }: Props) 
         requesterUnit,
         requesterManagerName,
         description,
-        status,
         estimatedTotalCost,
         currency,
         vatIncluded,
@@ -171,9 +166,15 @@ export function LicenseRequestForm({ mode, request, onCancel, onSaved }: Props) 
       onSaved(savedRequest.id);
     },
     onError: (error) => {
-      setErrorMessage(
-        getLicenseManagementApiErrorMessage(error, t, "common:messages.operationFailed"),
-      );
+      if (error instanceof AxiosError) {
+        setErrorMessage(
+          getLicenseManagementApiErrorMessage(error, t, "licenseManagement:messages.operationFailed"),
+        );
+      } else if (error instanceof Error && error.message) {
+        setErrorMessage(error.message);
+      } else {
+        setErrorMessage(t("licenseManagement:messages.operationFailed"));
+      }
     },
   });
 
@@ -207,20 +208,6 @@ export function LicenseRequestForm({ mode, request, onCancel, onSaved }: Props) 
               clearLabel={t("common:actions.clear")}
               locale={dateLocale}
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="request-status">{t("common:fields.status")}</Label>
-            <Select
-              id="request-status"
-              value={status}
-              onChange={(event) => setStatus(event.target.value as LicenseRequestStatus)}
-            >
-              {MANUAL_REQUEST_STATUSES.map((itemStatus) => (
-                <option key={itemStatus} value={itemStatus}>
-                  {getRequestStatusLabel(t, itemStatus)}
-                </option>
-              ))}
-            </Select>
           </div>
           {showExternalRequestNumber ? (
             <div className="space-y-2">

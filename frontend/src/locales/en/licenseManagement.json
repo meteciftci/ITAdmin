@@ -111,6 +111,83 @@
         "verbalInstruction": "Verbal / urgent instruction",
         "other": "Other"
       },
+      "fulfillment": {
+        "title": "Fulfill requests",
+        "description": "Triage approved request lines and convert them into a purchase and license packages.",
+        "entryAction": "Fulfill requests",
+        "backToRequests": "Back to requests",
+        "candidates": {
+          "sectionTitle": "Open request lines",
+          "empty": "No open request lines awaiting fulfillment.",
+          "searchPlaceholder": "Search unit or product...",
+          "productFilter": "Product",
+          "select": "Select",
+          "fulfillNow": "Fulfill now",
+          "columns": {
+            "requestSource": "Source",
+            "requestDate": "Request date",
+            "requesterUnit": "Requester unit",
+            "product": "Product",
+            "requested": "Requested",
+            "approved": "Approved",
+            "fulfilled": "Fulfilled",
+            "remaining": "Remaining",
+            "status": "Status"
+          }
+        },
+        "triage": {
+          "sectionTitle": "Triage",
+          "status": "New status",
+          "approvedQuantity": "Approved quantity",
+          "apply": "Apply triage",
+          "empty": "Select lines and set a status to apply triage."
+        },
+        "conversion": {
+          "sectionTitle": "Convert to purchase",
+          "target": "Target purchase",
+          "targetNew": "Create new purchase",
+          "targetExisting": "Use existing purchase",
+          "selectPurchase": "Select purchase",
+          "summaryTitle": "Packages to create",
+          "summaryProduct": "Product",
+          "summaryLineCount": "Lines",
+          "summaryQuantity": "Total quantity",
+          "convert": "Convert",
+          "converting": "Converting..."
+        },
+        "newPurchase": {
+          "purchaseType": "Purchase type",
+          "title": "Title",
+          "description": "Description",
+          "purchaseDate": "Purchase date",
+          "supplierCompany": "Supplier company",
+          "supportCompany": "Support company",
+          "actualTotalCost": "Actual total cost",
+          "currency": "Currency",
+          "vatIncluded": "VAT included",
+          "notes": "Notes",
+          "none": "None"
+        },
+        "packageDefaults": {
+          "sectionTitle": "Package defaults",
+          "perProduct": "Defaults for {{product}}",
+          "licenseType": "License type",
+          "startDate": "Start date",
+          "endDate": "End date",
+          "isPerpetual": "Perpetual"
+        },
+        "validation": {
+          "noLines": "Select at least one line to fulfill.",
+          "quantityRange": "Fulfill quantity must be between 1 and the remaining quantity.",
+          "titleRequired": "Purchase title is required.",
+          "targetRequired": "Select an existing purchase or create a new one."
+        },
+        "messages": {
+          "converted": "Request lines converted to a purchase.",
+          "triaged": "Triage applied to the selected lines.",
+          "operationFailed": "The operation could not be completed."
+        }
+      },
       "blocking": {
         "directoryConnectionTitle": "AD connection required",
         "directoryConnectionDescription": "Configure the AD Management connection to search directory users and organizational units.",

@@ -27,6 +27,7 @@ import {
   LicenseRequestDetailPage,
   LicenseRequestEditPage,
   LicenseRequestsPage,
+  LicenseFulfillmentPage,
 } from "@/app/lazy-pages";
 import { LazyRoute } from "@/app/route-helpers";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -341,6 +342,20 @@ export const licenseManagementRoutes: RouteObject[] = [
           <AppLayout>
             <LazyRoute>
               <LicenseRequestCreatePage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/license-management/requests/fulfillment",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission={PermissionCodes.LicenseManagement.FulfillRequests}>
+          <AppLayout>
+            <LazyRoute>
+              <LicenseFulfillmentPage />
             </LazyRoute>
           </AppLayout>
         </RequirePermission>

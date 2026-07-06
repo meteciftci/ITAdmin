@@ -111,6 +111,83 @@
         "verbalInstruction": "Şifahi / ivedi talep",
         "other": "Diğer"
       },
+      "fulfillment": {
+        "title": "Talepleri karşıla",
+        "description": "Onaylı talep satırlarını triyaj edip bir alıma ve lisans paketlerine dönüştürün.",
+        "entryAction": "Talepleri karşıla",
+        "backToRequests": "Taleplere dön",
+        "candidates": {
+          "sectionTitle": "Açık talep satırları",
+          "empty": "Karşılanmayı bekleyen açık talep satırı yok.",
+          "searchPlaceholder": "Birim veya ürün ara...",
+          "productFilter": "Ürün",
+          "select": "Seç",
+          "fulfillNow": "Şimdi karşıla",
+          "columns": {
+            "requestSource": "Kaynak",
+            "requestDate": "Talep tarihi",
+            "requesterUnit": "Talep eden birim",
+            "product": "Ürün",
+            "requested": "Talep edilen",
+            "approved": "Onaylanan",
+            "fulfilled": "Karşılanan",
+            "remaining": "Kalan",
+            "status": "Durum"
+          }
+        },
+        "triage": {
+          "sectionTitle": "Triyaj",
+          "status": "Yeni durum",
+          "approvedQuantity": "Onaylanan miktar",
+          "apply": "Triyajı uygula",
+          "empty": "Triyaj uygulamak için satır seçip bir durum belirleyin."
+        },
+        "conversion": {
+          "sectionTitle": "Alıma dönüştür",
+          "target": "Hedef alım",
+          "targetNew": "Yeni alım oluştur",
+          "targetExisting": "Mevcut alımı kullan",
+          "selectPurchase": "Alım seç",
+          "summaryTitle": "Oluşturulacak paketler",
+          "summaryProduct": "Ürün",
+          "summaryLineCount": "Satır",
+          "summaryQuantity": "Toplam miktar",
+          "convert": "Dönüştür",
+          "converting": "Dönüştürülüyor..."
+        },
+        "newPurchase": {
+          "purchaseType": "Alım türü",
+          "title": "Başlık",
+          "description": "Açıklama",
+          "purchaseDate": "Alım tarihi",
+          "supplierCompany": "Tedarikçi firma",
+          "supportCompany": "Destek firması",
+          "actualTotalCost": "Gerçek toplam maliyet",
+          "currency": "Para birimi",
+          "vatIncluded": "KDV dahil",
+          "notes": "Notlar",
+          "none": "Yok"
+        },
+        "packageDefaults": {
+          "sectionTitle": "Paket varsayılanları",
+          "perProduct": "{{product}} için varsayılanlar",
+          "licenseType": "Lisans türü",
+          "startDate": "Başlangıç tarihi",
+          "endDate": "Bitiş tarihi",
+          "isPerpetual": "Süresiz"
+        },
+        "validation": {
+          "noLines": "Karşılamak için en az bir satır seçin.",
+          "quantityRange": "Karşılama miktarı 1 ile kalan miktar arasında olmalıdır.",
+          "titleRequired": "Alım başlığı zorunludur.",
+          "targetRequired": "Mevcut bir alım seçin veya yeni bir alım oluşturun."
+        },
+        "messages": {
+          "converted": "Talep satırları bir alıma dönüştürüldü.",
+          "triaged": "Seçili satırlara triyaj uygulandı.",
+          "operationFailed": "İşlem tamamlanamadı."
+        }
+      },
       "blocking": {
         "directoryConnectionTitle": "AD bağlantısı gerekli",
         "directoryConnectionDescription": "AD kullanıcı ve birim arama için AD Yönetim bağlantısı yapılandırılmalıdır.",

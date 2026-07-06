@@ -43,7 +43,6 @@ export function buildLicenseRequestPayloadBySource(input: {
   };
   requesterManagerName: string;
   description: string;
-  status: import("@/features/license-management/types").LicenseRequestStatus;
   estimatedTotalCost: number | null;
   currency: string | null;
   vatIncluded: boolean;
@@ -62,7 +61,6 @@ export function buildLicenseRequestPayloadBySource(input: {
     requesterUnit: input.requesterUnit,
     requesterManagerName: input.requesterManagerName.trim() || null,
     description: input.description.trim() || null,
-    status: input.status,
     estimatedTotalCost: input.estimatedTotalCost,
     currency: input.currency,
     vatIncluded: input.vatIncluded,

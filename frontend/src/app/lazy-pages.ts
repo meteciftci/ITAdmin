@@ -310,6 +310,11 @@ export const LicenseRequestsPage = lazy(() =>
     default: module.LicenseRequestsPage,
   })),
 );
+export const LicenseFulfillmentPage = lazy(() =>
+  import("@/features/license-management/LicenseFulfillmentPage").then((module) => ({
+    default: module.LicenseFulfillmentPage,
+  })),
+);
 export const LicenseRequestCreatePage = lazy(() =>
   import("@/features/license-management/LicenseRequestCreatePage").then((module) => ({
     default: module.LicenseRequestCreatePage,

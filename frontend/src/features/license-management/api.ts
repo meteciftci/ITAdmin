@@ -345,16 +345,6 @@ export const updateLicenseRequest = async (
   return data;
 };
 
-export const updateLicenseRequestStatus = async (
-  id: string,
-  status: LicenseRequestStatus,
-): Promise<LicenseRequestDetail> => {
-  const { data } = await apiClient.patch<LicenseRequestDetail>(`${basePath}/requests/${id}/status`, {
-    status,
-  });
-  return data;
-};
-
 export const getDirectoryUserLookupReadiness = async (): Promise<DirectoryUserLookupReadiness> => {
   const { data } = await apiClient.get<DirectoryUserLookupReadiness>(
     `${basePath}/directory-user-lookup/readiness`,

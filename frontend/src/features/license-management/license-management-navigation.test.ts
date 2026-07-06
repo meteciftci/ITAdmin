@@ -30,6 +30,7 @@ test("router includes license management routes", () => {
     "/license-management/purchases/:id/edit",
     "/license-management/requests",
     "/license-management/requests/create",
+    "/license-management/requests/fulfillment",
     "/license-management/requests/:id",
     "/license-management/requests/:id/edit",
     "/license-management/packages",
@@ -44,6 +45,28 @@ test("router includes license management routes", () => {
   assert.match(routerSource, /PermissionCodes\.LicenseManagement\.View/);
   assert.match(routerSource, /Navigate to="\/license-management\/purchases"/);
   assert.doesNotMatch(routerSource, /LicenseAcquisitionsPage/);
+});
+
+test("fulfillment route is guarded by the FulfillRequests permission", () => {
+  const routerSource = readRouterSource();
+  assert.match(routerSource, /LicenseFulfillmentPage/);
+  assert.match(routerSource, /PermissionCodes\.LicenseManagement\.FulfillRequests/);
+});
+
+test("fulfillment conversion messageKeys resolve to existing i18n keys", () => {
+  const enRaw = readFileSync(join(root, "locales/en/licenseManagement.json"), "utf8");
+  const trRaw = readFileSync(join(root, "locales/tr/licenseManagement.json"), "utf8");
+  const en = JSON.parse(enRaw) as {
+    licenseManagement: { requests: { fulfillment: { validation: Record<string, string> } } };
+  };
+  const tr = JSON.parse(trRaw) as {
+    licenseManagement: { requests: { fulfillment: { validation: Record<string, string> } } };
+  };
+
+  for (const key of ["noLines", "quantityRange", "titleRequired", "targetRequired"]) {
+    assert.equal(typeof en.licenseManagement.requests.fulfillment.validation[key], "string");
+    assert.equal(typeof tr.licenseManagement.requests.fulfillment.validation[key], "string");
+  }
 });
 
 test("sidebar includes license management purchases menu", () => {

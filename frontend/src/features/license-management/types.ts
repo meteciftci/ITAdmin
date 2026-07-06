@@ -412,7 +412,6 @@ export type LicenseRequestFormRequest = {
   requesterUnit: LicenseRequestOuSnapshot;
   requesterManagerName?: string | null;
   description?: string | null;
-  status: LicenseRequestStatus;
   estimatedTotalCost?: number | null;
   currency?: string | null;
   vatIncluded?: boolean | null;
@@ -436,6 +435,7 @@ export type LicenseFulfillmentCandidate = {
   fulfilledQuantity: number;
   remainingQuantity: number;
   itemStatus: LicenseRequestItemStatus;
+  isFulfillable: boolean;
 };
 
 export type TriageLicenseRequestItemRequest = {

@@ -36,6 +36,7 @@ import {
 import {
   buildLicenseRequestDetailPath,
   buildLicenseRequestEditPath,
+  LICENSE_FULFILLMENT_PATH,
   LICENSE_REQUEST_CREATE_PATH,
 } from "@/features/license-management/license-request-paths";
 import { buildLicenseRequestReturnState } from "@/features/license-management/license-request-return-path";
@@ -62,6 +63,7 @@ export function LicenseRequestsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const user = useAuthStore((state) => state.user);
   const canManage = canAccess(user, PermissionCodes.LicenseManagement.ManageRequests);
+  const canFulfill = canAccess(user, PermissionCodes.LicenseManagement.FulfillRequests);
   const dateLocale = i18n.language.startsWith("tr") ? "tr" : "en";
 
   const listState = useMemo(
@@ -77,6 +79,7 @@ export function LicenseRequestsPage() {
       listState={listState}
       setSearchParams={setSearchParams}
       canManage={canManage}
+      canFulfill={canFulfill}
       dateLocale={dateLocale}
       t={t}
     />
@@ -87,6 +90,7 @@ type LicenseRequestsListContentProps = {
   listState: LicenseRequestsListState;
   setSearchParams: ReturnType<typeof useSearchParams>[1];
   canManage: boolean;
+  canFulfill: boolean;
   dateLocale: "tr" | "en";
   t: ReturnType<typeof useTranslation<["licenseManagement", "common"]>>["t"];
 };
@@ -95,6 +99,7 @@ function LicenseRequestsListContent({
   listState,
   setSearchParams,
   canManage,
+  canFulfill,
   dateLocale,
   t,
 }: LicenseRequestsListContentProps) {
@@ -309,6 +314,14 @@ function LicenseRequestsListContent({
                 <Button variant="outline" onClick={() => listQuery.refetch()} disabled={listQuery.isFetching}>
                   {t("common:actions.refresh")}
                 </Button>
+                {canFulfill ? (
+                  <Link
+                    to={LICENSE_FULFILLMENT_PATH}
+                    className={cn(buttonVariants({ variant: "outline" }))}
+                  >
+                    {t("licenseManagement:requests.fulfillment.entryAction")}
+                  </Link>
+                ) : null}
                 {canManage ? (
                   <Link to={LICENSE_REQUEST_CREATE_PATH} className={cn(buttonVariants())}>
                     {t("licenseManagement:requests.actions.create")}
