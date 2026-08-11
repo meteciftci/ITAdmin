@@ -141,7 +141,7 @@ public sealed partial class AdComputersDirectoryService : IAdComputerOuMoveServi
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(connectionResult.Context);
+            using var ldapConnection = CreateBoundConnection(connectionResult.Context, cancellationToken);
             if (!TryLoadComputerOuMoveContext(
                     ldapConnection,
                     computersSearchBase,
@@ -296,6 +296,10 @@ public sealed partial class AdComputersDirectoryService : IAdComputerOuMoveServi
                 beforeContext,
                 afterContext,
                 cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (LdapException ex)
         {

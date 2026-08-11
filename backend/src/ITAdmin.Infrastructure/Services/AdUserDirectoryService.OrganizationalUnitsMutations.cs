@@ -67,7 +67,7 @@ public sealed partial class AdOrganizationalUnitsDirectoryService
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(connectionResult.Context);
+            using var ldapConnection = CreateBoundConnection(connectionResult.Context, cancellationToken);
 
             if (!TryValidateParentExists(ldapConnection, parentDn))
             {
@@ -157,6 +157,10 @@ public sealed partial class AdOrganizationalUnitsDirectoryService
 
             return new CreateAdOrganizationalUnitResult(true, string.Empty, detailResult.OrganizationalUnit);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (LdapException ex)
         {
             var messageKey = AdLdapErrorNormalizer.NormalizeMessageKey(ex.ErrorCode, ex.Message);
@@ -230,7 +234,7 @@ public sealed partial class AdOrganizationalUnitsDirectoryService
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(connectionResult.Context);
+            using var ldapConnection = CreateBoundConnection(connectionResult.Context, cancellationToken);
             if (!TryLoadOrganizationalUnitDetail(
                     ldapConnection,
                     searchBase,
@@ -366,6 +370,10 @@ public sealed partial class AdOrganizationalUnitsDirectoryService
                 afterDetailResult.OrganizationalUnit,
                 distinguishedName);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (LdapException ex)
         {
             var messageKey = AdLdapErrorNormalizer.NormalizeMessageKey(ex.ErrorCode, ex.Message);
@@ -455,7 +463,7 @@ public sealed partial class AdOrganizationalUnitsDirectoryService
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(connectionResult.Context);
+            using var ldapConnection = CreateBoundConnection(connectionResult.Context, cancellationToken);
             if (!TryLoadOrganizationalUnitDetail(
                     ldapConnection,
                     searchBase,
@@ -648,6 +656,10 @@ public sealed partial class AdOrganizationalUnitsDirectoryService
                 distinguishedName,
                 targetParentDn);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (LdapException ex)
         {
             var messageKey = AdLdapErrorNormalizer.NormalizeMessageKey(ex.ErrorCode, ex.Message);
@@ -720,7 +732,7 @@ public sealed partial class AdOrganizationalUnitsDirectoryService
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(connectionResult.Context);
+            using var ldapConnection = CreateBoundConnection(connectionResult.Context, cancellationToken);
             if (!TryLoadOrganizationalUnitDetail(
                     ldapConnection,
                     searchBase,
@@ -818,6 +830,10 @@ public sealed partial class AdOrganizationalUnitsDirectoryService
                 true,
                 string.Empty,
                 beforeDetail.ObjectGuid);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (LdapException ex)
         {

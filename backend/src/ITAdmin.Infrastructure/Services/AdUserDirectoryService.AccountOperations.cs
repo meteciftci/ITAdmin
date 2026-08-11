@@ -80,7 +80,7 @@ public sealed partial class AdUsersDirectoryService : IAdUserAccountOperationSer
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(context);
+            using var ldapConnection = CreateBoundConnection(context, cancellationToken);
             if (!TryLoadUserAccountState(
                     ldapConnection,
                     searchBase,
@@ -159,6 +159,10 @@ public sealed partial class AdUsersDirectoryService : IAdUserAccountOperationSer
                 notificationEventKey,
                 cancellationToken);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (LdapException ex)
         {
             return await FailAccountOperationAsync(
@@ -231,7 +235,7 @@ public sealed partial class AdUsersDirectoryService : IAdUserAccountOperationSer
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(context);
+            using var ldapConnection = CreateBoundConnection(context, cancellationToken);
             if (!TryLoadUserAccountState(
                     ldapConnection,
                     searchBase,
@@ -298,6 +302,10 @@ public sealed partial class AdUsersDirectoryService : IAdUserAccountOperationSer
                 afterState,
                 AdManagementNotificationEventKeys.UserUnlocked,
                 cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (LdapException ex)
         {
@@ -856,7 +864,7 @@ public sealed partial class AdUsersDirectoryService : IAdUserAccountOperationSer
                 return null;
             }
 
-            using var ldapConnection = CreateBoundConnection(connectionResult.Context);
+            using var ldapConnection = CreateBoundConnection(connectionResult.Context, cancellationToken);
             if (!TryLoadUserNotificationContext(
                     ldapConnection,
                     searchBase,
@@ -872,6 +880,10 @@ public sealed partial class AdUsersDirectoryService : IAdUserAccountOperationSer
             return await notificationEnqueueService.EnqueueAccountOperationAsync(
                 new AdManagementAccountOperationNotificationRequest(eventKey, contextWithActor),
                 cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {

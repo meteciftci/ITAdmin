@@ -97,7 +97,7 @@ public sealed partial class AdOrganizationalUnitsDirectoryService(
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(connectionResult.Context);
+            using var ldapConnection = CreateBoundConnection(connectionResult.Context, cancellationToken);
             var filter = BuildOrganizationalUnitSearchFilter(query.Search);
             var items = new List<AdOrganizationalUnitManageListItem>(pageSize);
             byte[]? cookie = null;
@@ -151,6 +151,10 @@ public sealed partial class AdOrganizationalUnitsDirectoryService(
                 string.Empty,
                 new AdOrganizationalUnitManagePage(items, pageNumber, pageSize, hasNextPage));
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (LdapException)
         {
             return OrganizationalUnitListConnectionFailed();
@@ -189,7 +193,7 @@ public sealed partial class AdOrganizationalUnitsDirectoryService(
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(connectionResult.Context);
+            using var ldapConnection = CreateBoundConnection(connectionResult.Context, cancellationToken);
             if (!TryLoadOrganizationalUnitDetail(
                     ldapConnection,
                     searchBase,
@@ -204,6 +208,10 @@ public sealed partial class AdOrganizationalUnitsDirectoryService(
             }
 
             return new AdOrganizationalUnitDetailResult(true, string.Empty, detail);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (LdapException)
         {

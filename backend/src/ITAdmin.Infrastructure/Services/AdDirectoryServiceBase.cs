@@ -79,6 +79,16 @@ public abstract class AdDirectoryServiceBase
     /// Binds to the first reachable preferred domain controller. Failover semantics — which
     /// failures move on to the next controller and which stop immediately — live in
     /// <see cref="AdDirectoryFailoverPolicy"/> and are shared with connection validation.
+    ///
+    /// <para>
+    /// The <paramref name="cancellationToken"/> is checked before each controller attempt, so a
+    /// cancelled request stops immediately instead of spending the full bind timeout on every
+    /// remaining controller. Callers must let the resulting
+    /// <see cref="OperationCanceledException"/> propagate — every directory operation rethrows it
+    /// ahead of its <c>LdapException</c>/<c>Exception</c> handlers, because a cancelled request is
+    /// not a directory fault and must never surface as "domain controller unavailable" against a
+    /// perfectly healthy domain.
+    /// </para>
     /// </summary>
     private protected static LdapConnection CreateBoundConnection(
         DirectoryConnectionContext context,

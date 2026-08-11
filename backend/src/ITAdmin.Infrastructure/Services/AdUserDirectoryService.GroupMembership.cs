@@ -100,7 +100,7 @@ public sealed partial class AdUsersDirectoryService : IAdUserGroupMembershipServ
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(connectionResult.Context);
+            using var ldapConnection = CreateBoundConnection(connectionResult.Context, cancellationToken);
             if (!TryLoadUserGroupContext(
                     ldapConnection,
                     searchBase,
@@ -129,6 +129,10 @@ public sealed partial class AdUsersDirectoryService : IAdUserGroupMembershipServ
                 userContext.UserPrincipalName,
                 userContext.DistinguishedName,
                 groups);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (LdapException)
         {
@@ -173,7 +177,7 @@ public sealed partial class AdUsersDirectoryService : IAdUserGroupMembershipServ
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(connectionResult.Context);
+            using var ldapConnection = CreateBoundConnection(connectionResult.Context, cancellationToken);
             var escaped = AdLdapFilterHelper.EscapeFilterValue(request.Query!.Trim());
             var filter =
                 $"(&(objectCategory=group)(objectClass=group)(|(displayName=*{escaped}*)(cn=*{escaped}*)(name=*{escaped}*)(sAMAccountName=*{escaped}*)))";
@@ -218,6 +222,10 @@ public sealed partial class AdUsersDirectoryService : IAdUserGroupMembershipServ
                 .ToList();
 
             return new AdGroupSearchResult(true, string.Empty, sorted);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (LdapException)
         {
@@ -308,7 +316,7 @@ public sealed partial class AdUsersDirectoryService : IAdUserGroupMembershipServ
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(connectionResult.Context);
+            using var ldapConnection = CreateBoundConnection(connectionResult.Context, cancellationToken);
             if (!TryLoadUserGroupContext(
                     ldapConnection,
                     searchBase,
@@ -442,6 +450,10 @@ public sealed partial class AdUsersDirectoryService : IAdUserGroupMembershipServ
                 afterContext,
                 groupInfo,
                 cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (LdapException ex)
         {

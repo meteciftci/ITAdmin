@@ -62,7 +62,7 @@ public sealed partial class AdUsersDirectoryService
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(context);
+            using var ldapConnection = CreateBoundConnection(context, cancellationToken);
             if (!TryLoadUserForUpdate(
                     ldapConnection,
                     searchBase,
@@ -217,6 +217,10 @@ public sealed partial class AdUsersDirectoryService
                 cancellationToken);
 
             return new AdUserDirectoryDetailResult(true, string.Empty, afterDetail);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (LdapException ex)
         {

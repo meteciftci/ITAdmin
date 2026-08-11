@@ -70,7 +70,7 @@ public sealed partial class AdUsersDirectoryService(
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(context);
+            using var ldapConnection = CreateBoundConnection(context, cancellationToken);
             var searchableMappings = AdLdapAttributeCatalog.GetSearchableMappingAttributeNames(mappings);
             var filter = AdLdapAttributeCatalog.BuildUserSearchFilter(
                 query.Search!.Trim(),
@@ -129,6 +129,10 @@ public sealed partial class AdUsersDirectoryService(
                 string.Empty,
                 new AdUserSearchPage(items, pageNumber, pageSize, hasNextPage));
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (LdapException)
         {
             return ConnectionFailed();
@@ -170,7 +174,7 @@ public sealed partial class AdUsersDirectoryService(
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(context);
+            using var ldapConnection = CreateBoundConnection(context, cancellationToken);
             var guidFilter = AdLdapFilterHelper.FormatObjectGuidFilter(id);
             var filter =
                 $"(&(objectCategory=person)(objectClass=user)(!(isDeleted=TRUE))(objectGUID={guidFilter}))";
@@ -213,6 +217,10 @@ public sealed partial class AdUsersDirectoryService(
             detail = TryEnrichDetailWithResolvedManager(ldapConnection, detail);
 
             return new AdUserDirectoryDetailResult(true, string.Empty, detail);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (LdapException)
         {

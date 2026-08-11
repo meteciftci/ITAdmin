@@ -113,7 +113,7 @@ public sealed partial class AdUsersDirectoryService : IAdUserManagerUpdateServic
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(connectionResult.Context);
+            using var ldapConnection = CreateBoundConnection(connectionResult.Context, cancellationToken);
             if (!TryLoadUserManagerContext(
                     ldapConnection,
                     connection,
@@ -222,6 +222,10 @@ public sealed partial class AdUsersDirectoryService : IAdUserManagerUpdateServic
                 beforeContext,
                 afterContext,
                 cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (LdapException ex)
         {

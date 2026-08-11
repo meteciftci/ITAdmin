@@ -135,7 +135,7 @@ public sealed partial class AdUsersDirectoryService : IAdUserOuMoveService
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(connectionResult.Context);
+            using var ldapConnection = CreateBoundConnection(connectionResult.Context, cancellationToken);
             if (!TryLoadUserOuMoveContext(
                     ldapConnection,
                     searchBase,
@@ -272,6 +272,10 @@ public sealed partial class AdUsersDirectoryService : IAdUserOuMoveService
                 afterContext,
                 targetOuDn,
                 cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (LdapException ex)
         {

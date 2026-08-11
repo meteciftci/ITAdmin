@@ -64,7 +64,7 @@ public sealed partial class AdGroupsDirectoryService
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(connectionResult.Context);
+            using var ldapConnection = CreateBoundConnection(connectionResult.Context, cancellationToken);
             var domainSearchBase = connection.DefaultNamingContext ?? connection.BaseDn;
             if (string.IsNullOrWhiteSpace(domainSearchBase))
             {
@@ -167,6 +167,10 @@ public sealed partial class AdGroupsDirectoryService
 
             return new CreateAdGroupResult(true, string.Empty, detailResult.Group);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (LdapException ex)
         {
             await WriteCreateGroupFailureLogsAsync(
@@ -240,7 +244,7 @@ public sealed partial class AdGroupsDirectoryService
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(connectionResult.Context);
+            using var ldapConnection = CreateBoundConnection(connectionResult.Context, cancellationToken);
             var filter = BuildOrganizationalUnitSearchFilter(query.Search);
             var searchRequest = new SearchRequest(
                 groupsSearchBase,
@@ -288,6 +292,10 @@ public sealed partial class AdGroupsDirectoryService
                 true,
                 string.Empty,
                 new AdOrganizationalUnitSearchPage(items, hasMore));
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (LdapException)
         {

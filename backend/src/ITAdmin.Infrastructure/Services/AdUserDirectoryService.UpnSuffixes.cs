@@ -18,7 +18,7 @@ public sealed partial class AdUsersDirectoryService
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(connectionResult.Context);
+            using var ldapConnection = CreateBoundConnection(connectionResult.Context, cancellationToken);
             var connection = connectionResult.Context.Connection;
             var directoryRead = ReadUpnSuffixesFromDirectory(ldapConnection);
 
@@ -50,6 +50,10 @@ public sealed partial class AdUsersDirectoryService
             }
 
             return new AdUpnSuffixesResult(true, string.Empty, buildResult.Items, buildResult.Warning);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (LdapException)
         {

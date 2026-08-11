@@ -55,7 +55,7 @@ public sealed partial class AdGroupsDirectoryService
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(context);
+            using var ldapConnection = CreateBoundConnection(context, cancellationToken);
             if (!TryLoadGroupForUpdate(
                     ldapConnection,
                     groupsSearchBase,
@@ -199,6 +199,10 @@ public sealed partial class AdGroupsDirectoryService
                 cancellationToken);
 
             return new AdGroupDirectoryDetailResult(true, string.Empty, afterDetail);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (LdapException ex)
         {

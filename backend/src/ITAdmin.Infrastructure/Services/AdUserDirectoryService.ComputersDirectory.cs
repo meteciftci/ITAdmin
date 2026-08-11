@@ -120,7 +120,7 @@ public sealed partial class AdComputersDirectoryService(
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(connectionResult.Context);
+            using var ldapConnection = CreateBoundConnection(connectionResult.Context, cancellationToken);
             var filter = AdLdapComputerFilterHelper.BuildComputerDirectorySearchFilter(
                 query.Search!.Trim(),
                 query.Status,
@@ -177,6 +177,10 @@ public sealed partial class AdComputersDirectoryService(
                 string.Empty,
                 new AdComputerSearchPage(items, pageNumber, pageSize, hasNextPage));
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (LdapException)
         {
             return ComputerListConnectionFailed();
@@ -215,7 +219,7 @@ public sealed partial class AdComputersDirectoryService(
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(connectionResult.Context);
+            using var ldapConnection = CreateBoundConnection(connectionResult.Context, cancellationToken);
             var filter = AdLdapComputerFilterHelper.BuildComputerOperatingSystemOptionsFilter();
             var collectedValues = new List<string>();
             var seen = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -290,6 +294,10 @@ public sealed partial class AdComputersDirectoryService(
                 string.Empty,
                 new AdComputerOperatingSystemOptionsPage(items));
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (LdapException)
         {
             return ComputerOperatingSystemOptionsConnectionFailed();
@@ -329,7 +337,7 @@ public sealed partial class AdComputersDirectoryService(
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(connectionResult.Context);
+            using var ldapConnection = CreateBoundConnection(connectionResult.Context, cancellationToken);
             var filter = AdLdapComputerFilterHelper.BuildComputerObjectGuidFilter(id);
             var searchRequest = new SearchRequest(
                 computersSearchBase,
@@ -368,6 +376,10 @@ public sealed partial class AdComputersDirectoryService(
             detail = TryEnrichComputerDetailWithResolvedManagedBy(ldapConnection, detail);
 
             return new AdComputerDirectoryDetailResult(true, string.Empty, detail);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (LdapException)
         {
@@ -420,7 +432,7 @@ public sealed partial class AdComputersDirectoryService(
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(connectionResult.Context);
+            using var ldapConnection = CreateBoundConnection(connectionResult.Context, cancellationToken);
             var filter = BuildOrganizationalUnitSearchFilter(query.Search);
             var searchRequest = new SearchRequest(
                 computersSearchBase,
@@ -468,6 +480,10 @@ public sealed partial class AdComputersDirectoryService(
                 true,
                 string.Empty,
                 new AdOrganizationalUnitSearchPage(items, hasMore));
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (LdapException)
         {

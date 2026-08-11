@@ -220,6 +220,53 @@ public sealed class AdDirectoryFailoverTests
     }
 
     [Fact]
+    public void ShouldTryNextEndpoint_Cancellation_DoesNotFailOver() =>
+        // A cancelled request is not an endpoint fault, so there is nothing to fail over to.
+        Assert.False(AdDirectoryFailoverPolicy.ShouldTryNextEndpoint(new OperationCanceledException()));
+
+    [Fact]
+    public void BindWithFailover_CancellationRaisedByTheBindItself_PropagatesAndSkipsRemainingControllers()
+    {
+        // The token can trip while the first bind is already in flight; that must surface as
+        // cancellation rather than being retried against dc2 or reported as an LDAP failure.
+        using var cancellation = new CancellationTokenSource();
+        var attempted = new List<string>();
+        var created = new List<FakeConnection>();
+
+        Assert.Throws<OperationCanceledException>(() => AdDirectoryFailoverPolicy.BindWithFailover(
+            ["dc1.example.local", "dc2.example.local"],
+            host =>
+            {
+                attempted.Add(host);
+                var connection = new FakeConnection(new OperationCanceledException(cancellation.Token));
+                created.Add(connection);
+                return connection;
+            },
+            fake => fake.Bind(),
+            cancellation.Token));
+
+        Assert.Equal(["dc1.example.local"], attempted);
+        // Cancellation must not leak the half-open connection.
+        Assert.All(created, connection => Assert.True(connection.IsDisposed));
+    }
+
+    [Fact]
+    public void BindWithFailover_CancellationIsNeverRewrittenAsAnLdapFailure()
+    {
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        var exception = Record.Exception(() => AdDirectoryFailoverPolicy.BindWithFailover(
+            ["dc1.example.local", "dc2.example.local"],
+            _ => new FakeConnection(null),
+            fake => fake.Bind(),
+            cancellation.Token));
+
+        Assert.IsNotType<LdapException>(exception);
+        Assert.IsAssignableFrom<OperationCanceledException>(exception);
+    }
+
+    [Fact]
     public void BindWithFailover_NoHostsConfigured_ThrowsServerDownRatherThanNullReference()
     {
         var exception = Assert.Throws<LdapException>(() => AdDirectoryFailoverPolicy.BindWithFailover(

@@ -87,7 +87,7 @@ public sealed partial class AdComputersDirectoryService : IAdComputerAccountOper
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(context);
+            using var ldapConnection = CreateBoundConnection(context, cancellationToken);
             if (!TryLoadComputerAccountState(
                     ldapConnection,
                     computersSearchBase,
@@ -197,6 +197,10 @@ public sealed partial class AdComputersDirectoryService : IAdComputerAccountOper
                 beforeState,
                 afterState,
                 cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (LdapException ex)
         {

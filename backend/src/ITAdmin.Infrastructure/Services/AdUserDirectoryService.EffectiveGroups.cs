@@ -43,7 +43,7 @@ public sealed partial class AdUsersDirectoryService
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(connectionResult.Context);
+            using var ldapConnection = CreateBoundConnection(connectionResult.Context, cancellationToken);
             if (!TryLoadUserGroupContext(
                     ldapConnection,
                     searchBase,
@@ -133,6 +133,10 @@ public sealed partial class AdUsersDirectoryService
                 buildResult.MaxDepth,
                 buildResult.Truncated,
                 buildResult.TruncatedReason);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (LdapException)
         {

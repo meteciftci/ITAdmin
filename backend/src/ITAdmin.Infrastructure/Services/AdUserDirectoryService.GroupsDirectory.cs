@@ -113,7 +113,7 @@ public sealed partial class AdGroupsDirectoryService(
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(connectionResult.Context);
+            using var ldapConnection = CreateBoundConnection(connectionResult.Context, cancellationToken);
             var filter = AdLdapGroupFilterHelper.BuildSecurityGroupSearchFilter(query.Search!.Trim());
             var items = new List<AdGroupListItem>(pageSize);
             byte[]? cookie = null;
@@ -167,6 +167,10 @@ public sealed partial class AdGroupsDirectoryService(
                 string.Empty,
                 new AdGroupSearchPage(items, pageNumber, pageSize, hasNextPage));
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (LdapException)
         {
             return GroupListConnectionFailed();
@@ -205,7 +209,7 @@ public sealed partial class AdGroupsDirectoryService(
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(connectionResult.Context);
+            using var ldapConnection = CreateBoundConnection(connectionResult.Context, cancellationToken);
             var filter = AdLdapGroupFilterHelper.BuildSecurityGroupObjectGuidFilter(id);
             var searchRequest = new SearchRequest(
                 groupsSearchBase,
@@ -244,6 +248,10 @@ public sealed partial class AdGroupsDirectoryService(
             detail = TryEnrichDetailWithResolvedManagedBy(ldapConnection, detail);
 
             return new AdGroupDirectoryDetailResult(true, string.Empty, detail);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (LdapException)
         {

@@ -69,7 +69,7 @@ public sealed partial class AdComputersDirectoryService : IAdComputerDeleteServi
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(context);
+            using var ldapConnection = CreateBoundConnection(context, cancellationToken);
 
             if (!TryLoadComputerAccountState(
                     ldapConnection,
@@ -175,6 +175,10 @@ public sealed partial class AdComputersDirectoryService : IAdComputerDeleteServi
                 beforeState.ComputerId,
                 beforeState.Name ?? beforeState.SamAccountName,
                 beforeState.DistinguishedName);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (LdapException ex)
         {

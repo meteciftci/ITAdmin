@@ -106,7 +106,7 @@ public sealed partial class AdComputersDirectoryService : IAdComputerUpdateServi
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(context);
+            using var ldapConnection = CreateBoundConnection(context, cancellationToken);
             if (!TryLoadComputerUpdateContext(
                     ldapConnection,
                     computersSearchBase,
@@ -210,6 +210,10 @@ public sealed partial class AdComputersDirectoryService : IAdComputerUpdateServi
                 normalizedDescription,
                 requestSummaryJson: null,
                 cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (LdapException ex)
         {

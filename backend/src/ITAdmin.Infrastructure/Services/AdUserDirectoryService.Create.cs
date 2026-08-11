@@ -59,7 +59,7 @@ public sealed partial class AdUsersDirectoryService
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(connectionResult.Context);
+            using var ldapConnection = CreateBoundConnection(connectionResult.Context, cancellationToken);
             var filter = BuildOrganizationalUnitSearchFilter(query.Search);
             var searchRequest = new SearchRequest(
                 usersRootOu,
@@ -108,6 +108,10 @@ public sealed partial class AdUsersDirectoryService
                 true,
                 string.Empty,
                 new AdOrganizationalUnitSearchPage(items, hasMore));
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (LdapException)
         {
@@ -184,7 +188,7 @@ public sealed partial class AdUsersDirectoryService
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(connectionResult.Context);
+            using var ldapConnection = CreateBoundConnection(connectionResult.Context, cancellationToken);
             var searchBase = connection.DefaultNamingContext ?? connection.BaseDn;
             if (string.IsNullOrWhiteSpace(searchBase))
             {
@@ -308,6 +312,10 @@ public sealed partial class AdUsersDirectoryService
                 response,
                 null,
                 createSuccessParams);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (LdapException)
         {

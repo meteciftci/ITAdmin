@@ -99,7 +99,7 @@ public sealed partial class AdDeletedObjectsDirectoryService : IAdDeletedObjectR
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(context);
+            using var ldapConnection = CreateBoundConnection(context, cancellationToken);
 
             if (!TryLoadDeletedObjectForRestore(
                     ldapConnection,
@@ -466,6 +466,10 @@ public sealed partial class AdDeletedObjectsDirectoryService : IAdDeletedObjectR
                     restoredState.DistinguishedName,
                     restoreParentDn,
                     restoreRdn));
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (DirectoryOperationException ex)
         {

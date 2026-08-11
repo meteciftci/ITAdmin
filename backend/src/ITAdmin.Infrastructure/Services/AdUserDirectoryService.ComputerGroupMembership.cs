@@ -99,7 +99,7 @@ public sealed partial class AdComputersDirectoryService : IAdComputerGroupMember
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(connectionResult.Context);
+            using var ldapConnection = CreateBoundConnection(connectionResult.Context, cancellationToken);
             if (!TryLoadComputerGroupContext(
                     ldapConnection,
                     computersSearchBase,
@@ -128,6 +128,10 @@ public sealed partial class AdComputersDirectoryService : IAdComputerGroupMember
                 computerContext.DnsHostName,
                 computerContext.DistinguishedName,
                 groups);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (LdapException)
         {
@@ -189,7 +193,7 @@ public sealed partial class AdComputersDirectoryService : IAdComputerGroupMember
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(connectionResult.Context);
+            using var ldapConnection = CreateBoundConnection(connectionResult.Context, cancellationToken);
             HashSet<string> existingMemberDns = new(StringComparer.OrdinalIgnoreCase);
             if (TryLoadComputerGroupContext(
                     ldapConnection,
@@ -247,6 +251,10 @@ public sealed partial class AdComputersDirectoryService : IAdComputerGroupMember
                 .ToList();
 
             return new AdComputerGroupSearchResult(true, string.Empty, sorted);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (LdapException)
         {
@@ -338,7 +346,7 @@ public sealed partial class AdComputersDirectoryService : IAdComputerGroupMember
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(connectionResult.Context);
+            using var ldapConnection = CreateBoundConnection(connectionResult.Context, cancellationToken);
             if (!TryLoadComputerGroupContext(
                     ldapConnection,
                     computersSearchBase,
@@ -499,6 +507,10 @@ public sealed partial class AdComputersDirectoryService : IAdComputerGroupMember
                 afterContext,
                 groupInfo,
                 cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (LdapException ex)
         {

@@ -119,7 +119,7 @@ public sealed partial class AdUsersDirectoryService : IAdUserAccountExpirationUp
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(connectionResult.Context);
+            using var ldapConnection = CreateBoundConnection(connectionResult.Context, cancellationToken);
             if (!TryLoadUserAccountExpirationContext(
                     ldapConnection,
                     connection,
@@ -205,6 +205,10 @@ public sealed partial class AdUsersDirectoryService : IAdUserAccountExpirationUp
                 beforeContext,
                 afterContext,
                 cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (LdapException ex)
         {

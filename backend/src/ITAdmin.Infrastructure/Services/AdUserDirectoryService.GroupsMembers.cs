@@ -101,7 +101,7 @@ public sealed partial class AdGroupsDirectoryService
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(connectionResult.Context);
+            using var ldapConnection = CreateBoundConnection(connectionResult.Context, cancellationToken);
             if (!TryLoadGroupForUpdate(
                     ldapConnection,
                     groupsSearchBase,
@@ -166,6 +166,10 @@ public sealed partial class AdGroupsDirectoryService
                 string.Empty,
                 new AdGroupMembersPage(pageItems, pageNumber, pageSize, memberCount, hasNextPage));
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (LdapException)
         {
             return GroupMembersListConnectionFailed();
@@ -211,7 +215,7 @@ public sealed partial class AdGroupsDirectoryService
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(connectionResult.Context);
+            using var ldapConnection = CreateBoundConnection(connectionResult.Context, cancellationToken);
             if (!TryLoadGroupForUpdate(
                     ldapConnection,
                     groupsSearchBase,
@@ -263,6 +267,10 @@ public sealed partial class AdGroupsDirectoryService
             }
 
             return new AdGroupMemberCandidatesResult(true, string.Empty, items);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (LdapException)
         {
@@ -355,7 +363,7 @@ public sealed partial class AdGroupsDirectoryService
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(connectionResult.Context);
+            using var ldapConnection = CreateBoundConnection(connectionResult.Context, cancellationToken);
             if (!TryLoadGroupForUpdate(
                     ldapConnection,
                     groupsSearchBase,
@@ -504,6 +512,10 @@ public sealed partial class AdGroupsDirectoryService
                 memberDetail,
                 afterIsDirectMember,
                 cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (LdapException ex)
         {

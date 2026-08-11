@@ -142,7 +142,7 @@ public sealed partial class AdDeletedObjectsDirectoryService(
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(connectionResult.Context);
+            using var ldapConnection = CreateBoundConnection(connectionResult.Context, cancellationToken);
             var filter = AdLdapDeletedObjectFilterHelper.BuildDeletedObjectSearchFilter(
                 query.Search,
                 query.Type,
@@ -206,6 +206,10 @@ public sealed partial class AdDeletedObjectsDirectoryService(
                 string.Empty,
                 new AdDeletedObjectSearchPage(items, pageNumber, pageSize, hasNextPage));
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (LdapException ex)
         {
             logger.LogWarning(ex, "AD deleted objects search failed");
@@ -245,7 +249,7 @@ public sealed partial class AdDeletedObjectsDirectoryService(
 
         try
         {
-            using var ldapConnection = CreateBoundConnection(connectionResult.Context);
+            using var ldapConnection = CreateBoundConnection(connectionResult.Context, cancellationToken);
             var filter = AdLdapDeletedObjectFilterHelper.BuildDeletedObjectGuidFilter(objectGuid);
             var searchRequest = new SearchRequest(
                 searchBase,
@@ -289,6 +293,10 @@ public sealed partial class AdDeletedObjectsDirectoryService(
             }
 
             return new AdDeletedObjectDetailResult(true, string.Empty, detail);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (LdapException ex)
         {
