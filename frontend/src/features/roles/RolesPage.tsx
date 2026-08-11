@@ -5,15 +5,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Navigate } from "react-router-dom";
 
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { PageContainer } from "@/components/common/PageContainer";
+import { PageHeader } from "@/components/common/PageHeader";
 import {
   DataTable,
   DataTablePagination,
   DataTableToolbar,
 } from "@/components/common/data-table";
 import { useServerDataTable } from "@/components/common/data-table-hooks";
-import { EmptyState } from "@/components/common/EmptyState";
-import { LoadingState } from "@/components/common/LoadingState";
-import { SectionCard } from "@/components/common/SectionCard";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { createRoleColumns } from "@/features/roles/role-columns";
@@ -186,93 +185,112 @@ export function RolesPage() {
   }
 
   return (
-    <section className="space-y-4">
-      <SectionCard title={t("roles:sections.listTitle")}>
-        <div className="space-y-4">
-          <DataTableToolbar
-            searchValue={search}
-            onSearchChange={handleSearchChange}
-            searchPlaceholder={t("roles:search.placeholder")}
-            activeFilterCount={activeFilterCount}
-            onClearFilters={() => {
-              setStatusFilter("active");
-              setTypeFilter("all");
-              setPageNumber(1);
-            }}
-            filterContent={
-              <div className="space-y-3">
-                <Select
-                  value={statusFilter}
-                  onChange={(event) => {
-                    setStatusFilter(event.target.value as StatusFilter);
+    <PageContainer variant="fluid">
+      <PageHeader
+        title={t("roles:title")}
+        description={t("roles:description")}
+        actions={
+          <>
+            <Button variant="outline" onClick={handleRefresh}>
+              {t("common:actions.refresh")}
+            </Button>
+            {canCreate ? (
+              <Button onClick={() => setShowCreateDialog(true)}>
+                {t("roles:actions.addRole")}
+              </Button>
+            ) : null}
+          </>
+        }
+      />
+
+      <div className="flex min-w-0 flex-col gap-4">
+        <DataTableToolbar
+          searchValue={search}
+          onSearchChange={handleSearchChange}
+          searchPlaceholder={t("roles:search.placeholder")}
+          activeFilterCount={activeFilterCount}
+          onClearFilters={() => {
+            setStatusFilter("active");
+            setTypeFilter("all");
+            setPageNumber(1);
+          }}
+          activeFilters={[
+            ...(statusFilter !== "active"
+              ? [{
+                  id: "status",
+                  label: t("common:fields.status"),
+                  value: t(`common:status.${statusFilter}`),
+                  onRemove: () => {
+                    setStatusFilter("active");
                     setPageNumber(1);
-                  }}
-                  className="w-full"
-                >
-                  <option value="active">{t("common:status.active")}</option>
-                  <option value="passive">{t("common:status.passive")}</option>
-                  <option value="all">{t("common:status.all")}</option>
-                </Select>
-                <Select
-                  value={typeFilter}
-                  onChange={(event) => {
-                    setTypeFilter(event.target.value as TypeFilter);
+                  },
+                }]
+              : []),
+            ...(typeFilter !== "all"
+              ? [{
+                  id: "type",
+                  label: t("common:fields.type"),
+                  value: t(`roles:type.${typeFilter}`),
+                  onRemove: () => {
+                    setTypeFilter("all");
                     setPageNumber(1);
-                  }}
-                  className="w-full"
-                >
-                  <option value="all">{t("common:status.all")}</option>
-                  <option value="system">{t("roles:type.system")}</option>
-                  <option value="custom">{t("roles:type.custom")}</option>
-                </Select>
-              </div>
-            }
-            actions={
-              <>
-                <Button variant="outline" onClick={handleRefresh}>
-                  {t("common:actions.refresh")}
-                </Button>
-                {canCreate ? (
-                  <Button onClick={() => setShowCreateDialog(true)}>
-                    {t("roles:actions.addRole")}
-                  </Button>
-                ) : null}
-              </>
-            }
-          />
+                  },
+                }]
+              : []),
+          ]}
+          filterContent={
+            <div className="space-y-3">
+              <Select
+                value={statusFilter}
+                onChange={(event) => {
+                  setStatusFilter(event.target.value as StatusFilter);
+                  setPageNumber(1);
+                }}
+                aria-label={t("common:fields.status")}
+              >
+                <option value="active">{t("common:status.active")}</option>
+                <option value="passive">{t("common:status.passive")}</option>
+                <option value="all">{t("common:status.all")}</option>
+              </Select>
+              <Select
+                value={typeFilter}
+                onChange={(event) => {
+                  setTypeFilter(event.target.value as TypeFilter);
+                  setPageNumber(1);
+                }}
+                aria-label={t("common:fields.type")}
+              >
+                <option value="all">{t("common:status.all")}</option>
+                <option value="system">{t("roles:type.system")}</option>
+                <option value="custom">{t("roles:type.custom")}</option>
+              </Select>
+            </div>
+          }
+        />
 
-          {rolesQuery.isLoading ? <LoadingState /> : null}
-
-          {rolesQuery.isSuccess && !roles.length ? (
-            <EmptyState
-              title={t("roles:empty.title")}
-              description={t("roles:empty.description")}
-            />
-          ) : null}
-
-          {roles.length ? (
-            <DataTable
-              table={table}
-              footer={
-                rolesQuery.data && rolesQuery.data.totalCount > 0 ? (
-                  <DataTablePagination
-                    mode="server"
-                    pageNumber={rolesQuery.data.pageNumber}
-                    pageSize={rolesQuery.data.pageSize}
-                    totalCount={rolesQuery.data.totalCount}
-                    totalPages={rolesQuery.data.totalPages}
-                    onPageChange={setPageNumber}
-                    onPageSizeChange={(nextPageSize) => {
-                      setPageSize(nextPageSize);
-                      setPageNumber(1);
-                    }}
-                  />
-                ) : null
-              }
-            />
-          ) : null}
-        </div>
-      </SectionCard>
+        <DataTable
+          table={table}
+          isLoading={rolesQuery.isLoading}
+          emptyMessage={t("roles:empty.title")}
+          emptyDescription={t("roles:empty.description")}
+          footer={
+            rolesQuery.data && rolesQuery.data.totalCount > 0 ? (
+              <DataTablePagination
+                mode="server"
+                pageNumber={rolesQuery.data.pageNumber}
+                pageSize={rolesQuery.data.pageSize}
+                totalCount={rolesQuery.data.totalCount}
+                totalPages={rolesQuery.data.totalPages}
+                onPageChange={setPageNumber}
+                onPageSizeChange={(nextPageSize) => {
+                  setPageSize(nextPageSize);
+                  setPageNumber(1);
+                }}
+              />
+            ) : null
+          }
+        />
+      </div>
 
       <RoleDetailDialog
         open={Boolean(selectedRoleForDetail)}
@@ -329,6 +347,6 @@ export function RolesPage() {
           });
         }}
       />
-    </section>
+    </PageContainer>
   );
 }

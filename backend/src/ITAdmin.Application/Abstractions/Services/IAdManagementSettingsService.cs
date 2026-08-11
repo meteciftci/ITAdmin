@@ -10,6 +10,11 @@ public interface IAdManagementSettingsService
         UpdateAdManagementSettingsRequest request,
         CancellationToken cancellationToken = default);
 
+    Task<AdManagementValidationResult> ValidateCandidateAsync(
+        UpdateAdManagementSettingsRequest request,
+        CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
     Task<AdManagementConnectionParameters?> GetConnectionParametersAsync(
         CancellationToken cancellationToken = default);
 

@@ -8,11 +8,14 @@ export type PagedResponse<T> = {
 
 export type PermissionListItem = {
   id: string;
+  module: string;
   name: string;
   code: string;
   description: string | null;
   isActive: boolean;
-  group?: string | null;
-  module?: string | null;
-  category?: string | null;
+};
+
+export type PermissionCatalog = {
+  items: PermissionListItem[];
+  totalCount: number;
 };

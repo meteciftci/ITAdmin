@@ -15,7 +15,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { getPermissions, getRoleById, updateRolePermissions } from "@/features/roles/api";
+import { getPermissionCatalog } from "@/features/permissions/api";
+import { groupPermissionsByModule } from "@/features/permissions/permission-catalog";
+import { getRoleById, updateRolePermissions } from "@/features/roles/api";
 import type { RoleListItem } from "@/features/roles/types";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { useTranslation } from "react-i18next";
@@ -33,7 +35,7 @@ export function AssignPermissionsDialog({
   onClose,
   onSaved,
 }: AssignPermissionsDialogProps) {
-  const { t } = useTranslation(["roles", "common"]);
+  const { t } = useTranslation(["roles", "common", "permissions"]);
   const [selectedPermissionIdsOverride, setSelectedPermissionIdsOverride] = useState<string[] | null>(null);
   const [search, setSearch] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -48,7 +50,7 @@ export function AssignPermissionsDialog({
 
   const permissionsQuery = useQuery({
     queryKey: ["permissions", "active", "assign-dialog"],
-    queryFn: () => getPermissions({ isActive: true, pageSize: 100 }),
+    queryFn: () => getPermissionCatalog({ isActive: true }),
     enabled: open,
   });
 
@@ -65,10 +67,16 @@ export function AssignPermissionsDialog({
       return (
         permission.name.toLowerCase().includes(keyword) ||
         permission.code.toLowerCase().includes(keyword) ||
+        permission.module.toLowerCase().includes(keyword) ||
         (permission.description ?? "").toLowerCase().includes(keyword)
       );
     });
   }, [permissionsQuery.data, search]);
+
+  const permissionGroups = useMemo(
+    () => groupPermissionsByModule(filteredPermissions),
+    [filteredPermissions],
+  );
 
   const saveMutation = useMutation({
     mutationFn: () =>
@@ -156,30 +164,42 @@ export function AssignPermissionsDialog({
             />
           ) : null}
 
-          {filteredPermissions.length ? (
-            <div className="max-h-80 space-y-2 overflow-y-auto rounded-lg border p-2">
-              {filteredPermissions.map((permission) => (
-                <label
-                  key={permission.id}
-                  className="flex items-start gap-2 rounded-md border p-2 text-sm"
-                >
-                  <Checkbox
-                    checked={selectedPermissionIds.includes(permission.id)}
-                    onChange={(event) =>
-                      handleTogglePermission(permission.id, event.target.checked)
-                    }
-                    disabled={isSystemRole || saveMutation.isPending}
-                  />
-                  <span>
-                    <span className="block font-medium">{permission.name}</span>
-                    <span className="block text-xs text-muted-foreground">
-                      {permission.code}
+          {permissionGroups.length ? (
+            <div className="max-h-[28rem] space-y-4 overflow-y-auto rounded-lg border bg-muted/20 p-2 sm:p-3">
+              {permissionGroups.map((group) => (
+                <fieldset key={group.module} className="space-y-2">
+                  <legend className="sticky top-0 z-[1] w-full bg-background/95 px-2 py-1.5 text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground backdrop-blur">
+                    {t(`permissions:modules.${group.module}`, {
+                      defaultValue: group.module,
+                    })}
+                    <span className="ml-2 font-normal normal-case tracking-normal">
+                      {group.items.filter((item) => selectedPermissionIds.includes(item.id)).length}/{group.items.length}
                     </span>
-                    <span className="block text-xs text-muted-foreground">
-                      {permission.description || "-"}
-                    </span>
-                  </span>
-                </label>
+                  </legend>
+                  {group.items.map((permission) => (
+                    <label
+                      key={permission.id}
+                      className="flex cursor-pointer items-start gap-3 rounded-lg border bg-card p-3 text-sm transition-colors hover:bg-muted/40 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
+                    >
+                      <Checkbox
+                        checked={selectedPermissionIds.includes(permission.id)}
+                        onChange={(event) =>
+                          handleTogglePermission(permission.id, event.target.checked)
+                        }
+                        disabled={isSystemRole || saveMutation.isPending}
+                      />
+                      <span className="min-w-0">
+                        <span className="block font-medium">{permission.name}</span>
+                        <span className="block break-all font-mono text-xs text-muted-foreground">
+                          {permission.code}
+                        </span>
+                        <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                          {permission.description || t("permissions:item.noDescription")}
+                        </span>
+                      </span>
+                    </label>
+                  ))}
+                </fieldset>
               ))}
             </div>
           ) : null}

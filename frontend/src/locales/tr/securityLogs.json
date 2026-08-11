@@ -8,7 +8,21 @@
     "filters": {
       "searchPlaceholder": "Security log ara...",
       "eventTypeFilterPlaceholder": "Olay tipi seçin",
-      "severityFilterPlaceholder": "Seviye seçin"
+      "severityFilterPlaceholder": "Seviye seçin",
+      "selectedCount": "{{count}} seçili",
+      "dateRangeActive": "Tarih aralığı"
+    },
+    "severities": {
+      "info": "Bilgi",
+      "low": "Düşük",
+      "warning": "Uyarı",
+      "error": "Hata",
+      "critical": "Kritik",
+      "high": "Yüksek",
+      "success": "Başarılı"
+    },
+    "actions": {
+      "detailFor": "{{eventType}} güvenlik olayının detayını görüntüle"
     },
     "table": {
       "createdAt": "Tarih",

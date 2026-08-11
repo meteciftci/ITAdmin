@@ -75,25 +75,40 @@ public abstract class AdDirectoryServiceBase
         return ConnectionResolveResult.Success(new DirectoryConnectionContext(connection));
     }
 
-    private protected static LdapConnection CreateBoundConnection(DirectoryConnectionContext context)
+    /// <summary>
+    /// Binds to the first reachable preferred domain controller. Failover semantics — which
+    /// failures move on to the next controller and which stop immediately — live in
+    /// <see cref="AdDirectoryFailoverPolicy"/> and are shared with connection validation.
+    /// </summary>
+    private protected static LdapConnection CreateBoundConnection(
+        DirectoryConnectionContext context,
+        CancellationToken cancellationToken = default)
     {
-        var host = ResolvePrimaryHost(context.Connection);
         var bindIdentity = AdServiceAccountBindIdentity.Build(
             context.Connection.ServiceAccountUserName,
             context.Connection.NetbiosDomainName);
 
+        return AdDirectoryFailoverPolicy.BindWithFailover(
+            ResolveOrderedHosts(context.Connection),
+            host => CreateUnboundConnection(host, bindIdentity, context.Connection.ServiceAccountPassword),
+            ldapConnection => ldapConnection.Bind(),
+            cancellationToken);
+    }
+
+    internal static LdapConnection CreateUnboundConnection(
+        string host,
+        string bindIdentity,
+        string? password)
+    {
         var identifier = new LdapDirectoryIdentifier(host, LdapConnectionDefaults.StandardLdapsPort);
         var ldapConnection = new LdapConnection(identifier)
         {
             AuthType = AuthType.Basic,
-            Credential = new NetworkCredential(bindIdentity, context.Connection.ServiceAccountPassword),
+            Credential = new NetworkCredential(bindIdentity, password),
+            Timeout = LdapOperationTimeout,
         };
-
         ldapConnection.SessionOptions.ProtocolVersion = 3;
-        ldapConnection.Timeout = LdapOperationTimeout;
         ldapConnection.SessionOptions.SecureSocketLayer = true;
-
-        ldapConnection.Bind();
         return ldapConnection;
     }
 
@@ -107,6 +122,9 @@ public abstract class AdDirectoryServiceBase
 
         return connection.DomainFqdn ?? string.Empty;
     }
+
+    internal static IReadOnlyList<string> ResolveOrderedHosts(AdManagementConnectionParameters connection) =>
+        AdDirectoryFailoverPolicy.ResolveOrderedHosts(connection);
 
     private protected static bool TryGetObjectGuid(SearchResultEntry entry, out Guid objectGuid)
     {

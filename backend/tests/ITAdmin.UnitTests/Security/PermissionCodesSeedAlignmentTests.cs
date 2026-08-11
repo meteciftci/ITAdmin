@@ -21,12 +21,14 @@ public sealed class PermissionCodesSeedAlignmentTests
     }
 
     [Fact]
-    public void DefaultSetupPermissionCodes_AreDefinedInPermissionCodes()
+    public void DefaultSetupPermissionCodes_ContainEveryDefinedPermissionCode()
     {
         var defaultCodes = GetDefaultSetupPermissionCodes();
-        var constantCodes = GetPermissionCodeConstants().ToHashSet(StringComparer.Ordinal);
+        var constantCodes = GetPermissionCodeConstants()
+            .OrderBy(code => code, StringComparer.Ordinal)
+            .ToList();
 
-        Assert.Equal(defaultCodes.Count, constantCodes.Intersect(defaultCodes).Count());
+        Assert.Equal(constantCodes, defaultCodes);
     }
 
     private static IReadOnlyList<string> GetDefaultSetupPermissionCodes()

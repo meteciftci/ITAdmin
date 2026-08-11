@@ -28,6 +28,11 @@ public sealed class LdapService(ILogger<LdapService> logger) : ILdapService
     private const string BaseDnCouldNotBeResolvedMessage = "LDAP base DN could not be resolved.";
     private const string UserSearchBaseCouldNotBeResolvedMessage = "LDAP user search base could not be resolved.";
 
+    public Task<LdapConnectionDiagnosticResult> DiagnoseConnectionAsync(
+        LdapConnectionDiagnosticRequest request,
+        CancellationToken cancellationToken = default) =>
+        LdapEndpointDiagnosticProbe.RunAsync(request, cancellationToken);
+
     public Task<LdapValidationResult> ValidateBindAsync(LdapBindValidationRequest request, CancellationToken cancellationToken = default)
     {
         _ = cancellationToken;
@@ -984,6 +989,9 @@ public sealed class LdapService(ILogger<LdapService> logger) : ILdapService
             ? $"{bindUserName}@{bindUserDomain}"
             : $@"{bindUserDomain}\{bindUserName}";
     }
+
+    internal static string BuildBindIdentityForDiagnostics(string bindUserName, string? bindUserDomain) =>
+        BuildBindIdentity(bindUserName, bindUserDomain);
 
     private void LogUnexpectedLdapFailure(
         Exception ex,

@@ -1,28 +1,20 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import type { TFunction } from "i18next";
+import {
+  Eye,
+  RotateCcw,
+  XCircle,
+} from "lucide-react";
 
 import { DateTimeText } from "@/components/common/DateTimeText";
+import { RowActions } from "@/components/common/RowActions";
 import type { DataTableColumnMeta } from "@/components/common/data-table";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import {
+  NotificationChannelBadge,
+  NotificationDeliveryStatusBadge,
+} from "@/features/notification-outbox/NotificationDeliveryBadges";
 import type { NotificationOutboxListItem } from "@/features/notification-outbox/types";
-
-type StatusBadgeVariant = "default" | "secondary" | "destructive" | "outline" | "success";
-
-function getStatusVariant(status: string): StatusBadgeVariant {
-  switch (status) {
-    case "Sent":
-      return "success";
-    case "Failed":
-      return "destructive";
-    case "Processing":
-      return "outline";
-    case "Cancelled":
-      return "secondary";
-    default:
-      return "default";
-  }
-}
 
 type CreateNotificationOutboxColumnsOptions = {
   t: TFunction;
@@ -48,56 +40,64 @@ export function createNotificationOutboxColumns({
       cell: ({ row }) => <DateTimeText value={row.original.createdAt} />,
     },
     {
-      accessorKey: "channel",
-      header: () => t("notificationOutbox:columns.channel"),
-    },
-    {
-      accessorKey: "providerKey",
-      header: () => t("notificationOutbox:columns.provider"),
-    },
-    {
-      accessorKey: "recipientMasked",
-      header: () => t("notificationOutbox:columns.recipient"),
-    },
-    {
-      accessorKey: "subject",
-      header: () => t("notificationOutbox:columns.subject"),
-      meta: { truncate: true } satisfies DataTableColumnMeta,
-      cell: ({ row }) => row.original.subject ?? "-",
-    },
-    {
-      id: "status",
-      header: () => t("common:fields.status"),
+      id: "delivery",
+      header: () => t("notificationOutbox:columns.delivery"),
       cell: ({ row }) => (
-        <Badge variant={getStatusVariant(row.original.status)}>
-          {t(`notificationOutbox:statuses.${row.original.status.toLowerCase()}`, {
-            defaultValue: row.original.status,
-          })}
-        </Badge>
+        <div className="space-y-1.5">
+          <NotificationChannelBadge channel={row.original.channel} t={t} />
+          <p className="whitespace-nowrap text-xs text-muted-foreground">
+            {row.original.recipientMasked}
+          </p>
+        </div>
+      ),
+    },
+    {
+      id: "message",
+      header: () => t("notificationOutbox:columns.message"),
+      meta: { cellClassName: "min-w-52" } satisfies DataTableColumnMeta,
+      cell: ({ row }) => (
+        <div className="max-w-80 space-y-1">
+          <p className="line-clamp-2 font-medium">
+            {row.original.subject || t("notificationOutbox:columns.noSubject")}
+          </p>
+          <p className="truncate text-xs text-muted-foreground">{row.original.providerKey}</p>
+        </div>
+      ),
+    },
+    {
+      id: "deliveryState",
+      header: () => t("notificationOutbox:columns.deliveryState"),
+      meta: { cellClassName: "min-w-48" } satisfies DataTableColumnMeta,
+      cell: ({ row }) => (
+        <div className="max-w-72 space-y-1.5">
+          <NotificationDeliveryStatusBadge status={row.original.status} t={t} />
+          {row.original.status === "Failed" && row.original.lastErrorMessage ? (
+            <p className="line-clamp-2 text-xs leading-5 text-muted-foreground">
+              {row.original.lastErrorMessage}
+            </p>
+          ) : null}
+        </div>
       ),
     },
     {
       id: "attempts",
       header: () => t("notificationOutbox:columns.attempts"),
-      cell: ({ row }) => `${row.original.attemptCount}/${row.original.maxAttempts}`,
-    },
-    {
-      id: "nextAttempt",
-      header: () => t("notificationOutbox:columns.nextAttempt"),
-      cell: ({ row }) =>
-        row.original.nextAttemptAt ? (
-          <DateTimeText value={row.original.nextAttemptAt} />
-        ) : (
-          "-"
-        ),
-    },
-    {
-      id: "related",
-      header: () => t("notificationOutbox:columns.related"),
-      cell: ({ row }) =>
-        row.original.relatedModule
-          ? `${row.original.relatedModule}/${row.original.relatedEvent ?? "-"}`
-          : "-",
+      cell: ({ row }) => (
+        <div className="space-y-1">
+          <p className="whitespace-nowrap font-medium">
+            {t("notificationOutbox:columns.attemptProgress", {
+              current: row.original.attemptCount,
+              max: row.original.maxAttempts,
+            })}
+          </p>
+          {row.original.nextAttemptAt ? (
+            <p className="whitespace-nowrap text-xs text-muted-foreground">
+              {t("notificationOutbox:columns.nextAttemptShort")}: {" "}
+              <DateTimeText value={row.original.nextAttemptAt} />
+            </p>
+          ) : null}
+        </div>
+      ),
     },
     {
       id: "actions",
@@ -106,21 +106,31 @@ export function createNotificationOutboxColumns({
       cell: ({ row }) => {
         const item = row.original;
         return (
-          <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" onClick={() => onDetail(item)}>
+          <RowActions
+            ariaLabel={t("notificationOutbox:actions.actionsFor", {
+              recipient: item.recipientMasked,
+            })}
+          >
+            <DropdownMenuItem onClick={() => onDetail(item)}>
+              <Eye className="mr-2 size-4" aria-hidden />
               {t("common:actions.detail")}
-            </Button>
+            </DropdownMenuItem>
             {canRetry && item.status === "Failed" ? (
-              <Button size="sm" variant="secondary" onClick={() => onRetry(item)}>
+              <DropdownMenuItem onClick={() => onRetry(item)}>
+                <RotateCcw className="mr-2 size-4" aria-hidden />
                 {t("notificationOutbox:actions.retry")}
-              </Button>
+              </DropdownMenuItem>
             ) : null}
             {canCancel && (item.status === "Pending" || item.status === "Failed") ? (
-              <Button size="sm" variant="destructive" onClick={() => onCancel(item)}>
+              <DropdownMenuItem
+                onClick={() => onCancel(item)}
+                className="text-destructive hover:bg-destructive/10"
+              >
+                <XCircle className="mr-2 size-4" aria-hidden />
                 {t("notificationOutbox:actions.cancel")}
-              </Button>
+              </DropdownMenuItem>
             ) : null}
-          </div>
+          </RowActions>
         );
       },
     },

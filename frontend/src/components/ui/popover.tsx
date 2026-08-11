@@ -87,7 +87,11 @@ export function PopoverTrigger({ asChild, children, fullWidth = false, className
   const wrapperClassName = cn(fullWidth ? "flex w-full" : "inline-flex", className);
 
   if (asChild && isValidElement(children)) {
-    const child = children as ReactElement<{ onClick?: () => void }>;
+    const child = children as ReactElement<{
+      onClick?: () => void;
+      "aria-haspopup"?: "dialog";
+      "aria-expanded"?: boolean;
+    }>;
     return (
       <span ref={triggerRef} className={wrapperClassName}>
         {cloneElement(child, {
@@ -95,6 +99,8 @@ export function PopoverTrigger({ asChild, children, fullWidth = false, className
             child.props.onClick?.();
             onClick();
           },
+          "aria-haspopup": "dialog",
+          "aria-expanded": open,
         })}
       </span>
     );
@@ -107,6 +113,8 @@ export function PopoverTrigger({ asChild, children, fullWidth = false, className
       }}
       type="button"
       onClick={onClick}
+      aria-haspopup="dialog"
+      aria-expanded={open}
     >
       {children}
     </button>
@@ -211,7 +219,16 @@ export function PopoverContent({
 
     const onEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
+        event.preventDefault();
         setOpen(false);
+        window.setTimeout(() => {
+          const trigger = triggerRef.current;
+          if (trigger?.matches("button, [href], [tabindex]")) {
+            trigger.focus();
+            return;
+          }
+          trigger?.querySelector<HTMLElement>("button, [href], [tabindex]")?.focus();
+        }, 0);
       }
     };
 

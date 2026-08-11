@@ -79,6 +79,7 @@
       "filters": "Filtreler",
       "clearFilters": "Filtreleri temizle",
       "activeFilters": "Aktif filtreler",
+      "removeFilter": "{{label}} filtresini kaldır",
       "noFilters": "Filtre yok",
       "search": "Ara",
       "noResults": "Sonuç bulunamadı",

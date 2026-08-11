@@ -39,7 +39,12 @@ export function DateTimeText({ value, emptyText, options }: DateTimeTextProps) {
     return formatter.format(date);
   }, [value, emptyText, options, translationI18n.language, translationI18n.resolvedLanguage]);
 
-  const ariaLabel = emptyText ?? t("notAvailable");
-  return <span aria-label={ariaLabel}>{display}</span>;
+  const hasValidDate = Boolean(value) && !Number.isNaN(new Date(value ?? "").getTime());
+
+  return (
+    <span aria-label={hasValidDate ? undefined : (emptyText ?? t("notAvailable"))}>
+      {display}
+    </span>
+  );
 }
 

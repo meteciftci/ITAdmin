@@ -78,11 +78,21 @@ export type ValidateLdapSettingsRequest = {
   bindUserName: string;
   bindUserDomain: string | null;
   bindPassword?: string;
+  testUserName?: string;
+  testPassword?: string;
+};
+
+export type LdapConnectionDiagnosticDetail = {
+  key: string;
+  status: string;
+  messageKey: string;
+  messageParams?: Record<string, string | number | boolean> | null;
 };
 
 export type ValidateLdapSettingsResponse = {
   isValid: boolean;
   message: string;
+  details: LdapConnectionDiagnosticDetail[];
 };
 
 export type UpdateApplicationSettingsRequestItem = {

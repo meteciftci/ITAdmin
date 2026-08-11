@@ -79,6 +79,7 @@
       "filters": "Filters",
       "clearFilters": "Clear filters",
       "activeFilters": "Active filters",
+      "removeFilter": "Remove {{label}} filter",
       "noFilters": "No filters",
       "search": "Search",
       "noResults": "No results found",

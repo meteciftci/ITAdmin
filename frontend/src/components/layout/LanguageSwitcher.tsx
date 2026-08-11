@@ -12,7 +12,7 @@ type LanguageOption = {
   shortLabel: string;
 };
 
-export function LanguageSwitcher() {
+export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
   const { t } = useTranslation(["common"]);
   const user = useAuthStore((state) => state.user);
   const updateUser = useAuthStore((state) => state.updateUser);
@@ -55,9 +55,11 @@ export function LanguageSwitcher() {
 
   return (
     <div className="flex items-center gap-2">
-      <span className="text-xs text-muted-foreground">{t("language.label")}</span>
+      <span className={compact ? "sr-only" : "text-xs text-muted-foreground"}>
+        {t("language.label")}
+      </span>
       <Select
-        className="w-[120px]"
+        className={compact ? "w-[4.5rem]" : "w-[120px]"}
         value={currentLanguage}
         disabled={!user || isSaving}
         onChange={(event) =>

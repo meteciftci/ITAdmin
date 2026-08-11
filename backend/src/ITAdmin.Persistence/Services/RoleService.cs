@@ -89,6 +89,7 @@ public sealed class RoleService(AppDbContext context, ILogger<RoleService> logge
             .OrderBy(x => x.Code)
             .Select(x => new RolePermissionItem(
                 x.Id,
+                x.Module,
                 PermissionNameFromCode(x.Code),
                 x.Code,
                 x.Description,
@@ -655,6 +656,7 @@ public sealed class RoleService(AppDbContext context, ILogger<RoleService> logge
             .OrderBy(x => x.Code)
             .Select(x => new RolePermissionItem(
                 x.Id,
+                x.Module,
                 PermissionNameFromCode(x.Code),
                 x.Code,
                 x.Description,

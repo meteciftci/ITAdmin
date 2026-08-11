@@ -18,6 +18,7 @@ export type RoleListItem = {
 
 export type RolePermissionItem = {
   id: string;
+  module: string;
   name: string;
   code: string;
   description: string;
@@ -57,12 +58,4 @@ export type UpdateRoleStatusRequest = {
 
 export type UpdateRolePermissionsRequest = {
   permissionIds: string[];
-};
-
-export type PermissionListItem = {
-  id: string;
-  name: string;
-  code: string;
-  description: string;
-  isActive: boolean;
 };

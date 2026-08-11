@@ -1109,6 +1109,33 @@
       }
     },
     "apiMessages": {
+      "directoryDiagnostics": {
+        "dnsResolved": "{{host}} DNS üzerinden çözümlendi.",
+        "dnsResolutionFailed": "DNS {{host}} adresini çözümleyemedi.",
+        "tcpConnected": "{{host}}:636 TCP bağlantısı başarılı.",
+        "tcpConnectionFailed": "{{host}}:636 TCP bağlantısı başarısız veya zaman aşımına uğradı.",
+        "tlsSucceeded": "{{host}} ile TLS handshake başarılı.",
+        "tlsHandshakeFailed": "{{host}} ile TLS handshake başarısız.",
+        "certificateTrusted": "{{host}} LDAPS sertifikası güvenilir ve hostname ile eşleşiyor.",
+        "certificateUntrusted": "{{host}} LDAPS sertifika zincirine bu sunucu güvenmiyor.",
+        "certificateNameMismatch": "LDAPS sertifikası {{host}} hostname'iyle eşleşmiyor.",
+        "certificateExpired": "{{host}} tarafından sunulan LDAPS sertifikasının süresi dolmuş.",
+        "certificateNotYetValid": "{{host}} tarafından sunulan LDAPS sertifikası henüz geçerli değil.",
+        "certificateInvalid": "{{host}} tarafından sunulan LDAPS sertifikası yok veya geçersiz.",
+        "certificateRevocationUnknown": "{{host}} LDAPS sertifikası güvenilir, ancak iptal (revocation) durumu bu sunucudan doğrulanamadı.",
+        "bindSucceeded": "{{host}} LDAP bind başarılı.",
+        "bindCredentialsRejected": "Dizin, servis kimliğini veya şifresini reddetti.",
+        "bindFailed": "{{host}} LDAP bind başarısız.",
+        "baseDnResolved": "Base DN çözümlendi.",
+        "baseDnNotResolved": "Base DN çözümlenemedi.",
+        "userSearchBaseResolved": "Kullanıcı arama base çözümlendi.",
+        "userSearchBaseNotResolved": "Kullanıcı arama base çözümlenemedi.",
+        "directoryContextResolved": "Yapılandırılmış dizin bağlamı çözümlendi.",
+        "userSearchSucceeded": "Dizin araması başarılı.",
+        "userSearchFailed": "Dizin araması başarısız.",
+        "testUserBindSucceeded": "Test kullanıcısının credential'ı kabul edildi.",
+        "testUserBindFailed": "Test kullanıcısının credential'ı reddedildi."
+      },
       "common": {
         "notConfigured": "AD yönetim ayarları yapılandırılmamış. Lütfen önce bağlantı ayarlarını kaydedin.",
         "moduleDisabled": "AD yönetim modülü etkin değil.",

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { flexRender, type Table as TanStackTable } from "@tanstack/react-table";
-import { SlidersHorizontal, X } from "lucide-react";
+import { Inbox, LoaderCircle, Search, SlidersHorizontal, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Badge } from "@/components/ui/badge";
@@ -109,8 +109,10 @@ function getAlignClassName(align: DataTableColumnAlign | undefined) {
 
 function getHeaderClassName(meta: DataTableColumnMeta | undefined) {
   return cn(
-    "px-3 py-2 font-medium",
+    "h-11 px-4 text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground",
     meta?.isAction ? ACTION_COLUMN_WIDTH_CLASS : "whitespace-nowrap",
+    meta?.isAction &&
+      "sticky right-0 z-10 bg-muted/95 shadow-[-10px_0_14px_-14px_rgb(0_0_0/0.45)]",
     getAlignClassName(getEffectiveAlign(meta)),
     meta?.headerClassName,
   );
@@ -118,8 +120,10 @@ function getHeaderClassName(meta: DataTableColumnMeta | undefined) {
 
 function getCellClassName(meta: DataTableColumnMeta | undefined) {
   return cn(
-    "px-3 py-2",
+    "px-4 py-3 align-middle",
     meta?.isAction && ACTION_COLUMN_WIDTH_CLASS,
+    meta?.isAction &&
+      "sticky right-0 z-[1] bg-card shadow-[-10px_0_14px_-14px_rgb(0_0_0/0.45)] group-hover:bg-muted",
     getAlignClassName(getEffectiveAlign(meta)),
     meta?.truncate && "max-w-48 truncate",
     meta?.mono && "font-mono text-xs text-muted-foreground",
@@ -144,9 +148,10 @@ function getCellContentClassName(meta: DataTableColumnMeta | undefined) {
 type DataTableProps<TData> = {
   table: TanStackTable<TData>;
   scrollable?: boolean;
-  emptyMessage?: string;
+  emptyMessage?: ReactNode;
+  emptyDescription?: ReactNode;
   isLoading?: boolean;
-  loadingMessage?: string;
+  loadingMessage?: ReactNode;
   footer?: ReactNode;
 };
 
@@ -154,6 +159,7 @@ export function DataTable<TData>({
   table,
   scrollable = true,
   emptyMessage,
+  emptyDescription,
   isLoading = false,
   loadingMessage,
   footer,
@@ -162,18 +168,19 @@ export function DataTable<TData>({
   const rows = table.getRowModel().rows;
   const resolvedEmptyMessage = emptyMessage ?? t("dataTable.noResults");
   const resolvedLoadingMessage = loadingMessage ?? t("dataTable.loading");
+  const columnCount = table.getVisibleLeafColumns().length;
 
   return (
-    <div className="overflow-hidden rounded-lg border bg-card">
+    <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
       <div className={cn(scrollable && "overflow-x-auto")}>
         <table className="min-w-full text-sm">
-          <thead className="bg-muted/50 text-left">
+          <thead className="border-b bg-muted/55 text-left">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   const meta = header.column.columnDef.meta as DataTableColumnMeta | undefined;
                   return (
-                    <th key={header.id} className={getHeaderClassName(meta)}>
+                    <th key={header.id} scope="col" className={getHeaderClassName(meta)}>
                       {header.isPlaceholder
                         ? null
                         : flexRender(header.column.columnDef.header, header.getContext())}
@@ -187,26 +194,37 @@ export function DataTable<TData>({
             {isLoading ? (
               <tr>
                 <td
-                  colSpan={table.getAllColumns().length}
-                  className="px-3 py-8 text-center text-muted-foreground"
+                  colSpan={columnCount}
+                  className="h-36 px-4 text-center text-sm text-muted-foreground"
                 >
-                  {resolvedLoadingMessage}
+                  <div className="flex flex-col items-center justify-center gap-3" role="status">
+                    <LoaderCircle className="size-5 animate-spin text-primary" aria-hidden />
+                    <span>{resolvedLoadingMessage}</span>
+                  </div>
                 </td>
               </tr>
             ) : null}
             {!isLoading && rows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={table.getAllColumns().length}
-                  className="px-3 py-8 text-center text-muted-foreground"
+                  colSpan={columnCount}
+                  className="h-36 px-4 text-center text-sm text-muted-foreground"
                 >
-                  {resolvedEmptyMessage}
+                  <div className="flex flex-col items-center justify-center gap-2 py-5">
+                    <span className="mb-1 flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                      <Inbox className="size-5" aria-hidden />
+                    </span>
+                    <span className="font-medium text-foreground">{resolvedEmptyMessage}</span>
+                    {emptyDescription ? (
+                      <span className="max-w-md leading-6">{emptyDescription}</span>
+                    ) : null}
+                  </div>
                 </td>
               </tr>
             ) : null}
             {!isLoading
               ? rows.map((row) => (
-                  <tr key={row.id} className="border-t align-top hover:bg-muted/20">
+                  <tr key={row.id} className="group border-t transition-colors hover:bg-muted/35">
                     {row.getVisibleCells().map((cell) => {
                       const meta = cell.column.columnDef.meta as DataTableColumnMeta | undefined;
                       const title =
@@ -275,12 +293,13 @@ export function DataTableToolbar({
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center">
           {onSearchChange ? (
-            <div className="min-w-[240px] flex-1">
+            <div className="relative min-w-0 flex-1 sm:min-w-[240px]">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={searchValue ?? ""}
                 onChange={(event) => onSearchChange(event.target.value)}
                 placeholder={searchPlaceholder ?? t("dataTable.search")}
-                className="w-full"
+                className="w-full pl-9"
                 aria-label={t("dataTable.search")}
               />
             </div>
@@ -343,7 +362,7 @@ export function DataTableFilterPanel({
           ) : null}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-80 space-y-4 p-4">
+      <PopoverContent align="end" className="w-[min(20rem,calc(100vw-2rem))] space-y-4 p-4">
         <div className="space-y-3">{children}</div>
         <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
           {onClearFilters ? (
@@ -388,7 +407,7 @@ export function DataTableActiveFilters({ filters, onClearAll }: DataTableActiveF
             type="button"
             className="rounded-sm p-0.5 hover:bg-muted"
             onClick={filter.onRemove}
-            aria-label={t("dataTable.clearFilters")}
+            aria-label={t("dataTable.removeFilter", { label: filter.label })}
           >
             <X className="size-3" />
           </button>
@@ -412,7 +431,7 @@ export function DataTablePagination<TData>(props: DataTablePaginationProps<TData
     const summary =
       props.summaryText ?? t("pagination.pageOnly", { pageNumber: props.pageNumber });
     return (
-      <div className="flex flex-col gap-3 border-t px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 border-t bg-muted/20 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground">{summary}</p>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-2">
@@ -478,7 +497,7 @@ export function DataTablePagination<TData>(props: DataTablePaginationProps<TData
     const showSummary = props.showSummary ?? true;
 
     return (
-      <div className="flex flex-col gap-3 border-t px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 border-t bg-muted/20 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
         {showSummary ? (
           <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
             {props.summaryText ? (
@@ -567,7 +586,7 @@ export function DataTablePagination<TData>(props: DataTablePaginationProps<TData
   const showSummary = props.showSummary ?? true;
 
   return (
-    <div className="flex flex-col gap-3 border-t px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-4 border-t bg-muted/20 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
       {showSummary ? (
         <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
           {props.summaryText ? (

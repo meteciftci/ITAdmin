@@ -7,11 +7,41 @@
       "active": "Active",
       "provider": "Provider",
       "displayName": "Display name",
-      "timeoutSeconds": "Timeout (sec)"
+      "timeoutSeconds": "Timeout (sec)",
+      "optional": "Optional"
     },
     "secrets": {
-      "storedPlaceholder": "A stored secret exists. Enter a new value to change it."
+      "storedPlaceholder": "A stored secret exists. Enter a new value to change it.",
+      "storedLabel": "Stored securely",
+      "storedHint": "Leave blank to keep the current value.",
+      "show": "Show secret",
+      "hide": "Hide secret"
     },
+    "actions": { "saving": "Saving…", "testing": "Sending test…" },
+    "saveStates": {
+      "pristine": "No unsaved changes.",
+      "dirty": "You have unsaved changes.",
+      "saving": "Saving configuration…",
+      "saved": "Configuration saved.",
+      "error": "Configuration could not be saved.",
+      "failedTitle": "Save failed"
+    },
+    "unsaved": {
+      "title": "Discard unsaved changes?",
+      "description": "Changes to this provider have not been saved.",
+      "leave": "Discard changes",
+      "stay": "Keep editing"
+    },
+    "validation": {
+      "required": "This field is required.",
+      "range": "Enter a value within the allowed range.",
+      "email": "Enter a valid email address.",
+      "url": "Enter a valid HTTP or HTTPS URL.",
+      "statusCodes": "Enter comma-separated HTTP status codes between 100 and 599."
+    },
+    "testDescription": "Tests use the last saved configuration and are kept separate from editing.",
+    "testNeedsSave": { "title": "Save before testing", "description": "The test action is unavailable until your configuration changes are saved." },
+    "testResult": { "success": "Test succeeded", "failed": "Test failed" },
     "common": {
       "noEntries": "No entries yet.",
       "addEntry": "Add row",
@@ -23,9 +53,15 @@
       "sectionTitle": "SMS Provider",
       "sectionDescription": "Configure SMS delivery via Custom HTTP.",
       "providerName": "Custom HTTP",
+      "providerFixedHint": "Provider type is fixed for the SMS channel.",
       "httpSection": "HTTP Settings",
+      "httpDescription": "Define where and how ITAdmin sends the provider request.",
       "authSection": "Authentication",
+      "authDescription": "Choose one authentication method. Existing secrets are never returned to the browser.",
       "requestSection": "Request",
+      "requestDescription": "Shape the request and define how a successful provider response is recognized.",
+      "bodyTemplateHint": "Use {{phone}} and {{message}} where the provider expects recipient and content values.",
+      "successCodesHint": "Comma-separated HTTP status codes, for example 200,201.",
       "testSection": "Test SMS",
       "fields": {
         "sender": "Sender ID",
@@ -73,6 +109,11 @@
       "sectionTitle": "Email Provider",
       "sectionDescription": "Configure email delivery via SMTP.",
       "providerName": "SMTP",
+      "providerFixedHint": "Provider type is fixed for the email channel.",
+      "connectionSection": "SMTP connection",
+      "connectionDescription": "Configure the mail server connection and transport security.",
+      "identitySection": "Authentication and sender",
+      "identityDescription": "Credentials are optional when the SMTP server permits anonymous delivery.",
       "testSection": "Test Email",
       "fields": {
         "host": "SMTP host",

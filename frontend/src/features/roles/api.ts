@@ -3,7 +3,6 @@ import { apiClient } from "@/lib/api-client";
 import type {
   CreateRoleRequest,
   PagedResponse,
-  PermissionListItem,
   RoleDetail,
   RoleListItem,
   UpdateRolePermissionsRequest,
@@ -15,13 +14,6 @@ type GetRolesParams = {
   search?: string;
   isActive?: boolean;
   isSystem?: boolean;
-  pageNumber?: number;
-  pageSize?: number;
-};
-
-type GetPermissionsParams = {
-  search?: string;
-  isActive?: boolean;
   pageNumber?: number;
   pageSize?: number;
 };
@@ -63,20 +55,4 @@ export const updateRolePermissions = async (
   request: UpdateRolePermissionsRequest,
 ): Promise<void> => {
   await apiClient.put(`/roles/${id}/permissions`, request);
-};
-
-export const getPermissions = async (
-  params: GetPermissionsParams = { pageNumber: 1, pageSize: 100 },
-): Promise<PagedResponse<PermissionListItem>> => {
-  const mergedParams: GetPermissionsParams = {
-    pageNumber: 1,
-    pageSize: 100,
-    ...params,
-  };
-
-  const { data } = await apiClient.get<PagedResponse<PermissionListItem>>(
-    "/permissions",
-    { params: mergedParams },
-  );
-  return data;
 };

@@ -309,6 +309,48 @@ public sealed class AdManagementSettingsService(
             validationResult);
     }
 
+    public async Task<AdManagementValidationResult> ValidateCandidateAsync(
+        UpdateAdManagementSettingsRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var checkedAt = DateTimeOffset.UtcNow;
+        if (!ValidateUpdateRequest(request, out var validationMessageKey))
+        {
+            return new AdManagementValidationResult(
+                false,
+                validationMessageKey,
+                checkedAt,
+                [new AdManagementValidationDetail("configuration", AdManagementValidationStatuses.Failed, validationMessageKey)]);
+        }
+
+        var entity = await context.AdManagementSettings
+            .AsNoTracking()
+            .OrderByDescending(x => x.UpdatedAt ?? x.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+        var password = ResolveCandidateServiceAccountPassword(
+            NormalizeNullable(request.ServiceAccountPassword),
+            entity?.EncryptedServiceAccountPassword,
+            request.ClearServiceAccountPassword);
+        var candidate = new AdManagementConnectionParameters(
+            NormalizeNullable(request.DomainFqdn),
+            NormalizeNullable(request.NetbiosDomainName),
+            NormalizeNullable(request.DefaultNamingContext),
+            NormalizeNullable(request.BaseDn),
+            NormalizeNullable(request.UsersRootOu),
+            NormalizeNullable(request.DisabledUsersOu),
+            NormalizeNullable(request.GroupsSearchBase),
+            NormalizeNullable(request.ComputersSearchBase),
+            NormalizePreferredDomainControllers(request.PreferredDomainControllers),
+            NormalizeNullable(request.ServiceAccountUserName),
+            password);
+        var validationRequest = new AdManagementValidationRequest(
+            request.ActorUserId,
+            request.ActorUserName,
+            request.ActorIpAddress,
+            request.ActorUserAgent);
+        return await validationService.ValidateConnectionAsync(candidate, validationRequest, cancellationToken);
+    }
+
     private string? ResolveCandidateServiceAccountPassword(
         string? providedPassword,
         string? encryptedStoredPassword,

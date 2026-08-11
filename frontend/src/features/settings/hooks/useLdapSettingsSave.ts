@@ -1,13 +1,18 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
 import { toast } from "sonner";
 
-import { updateLdapSettings, validateLdapSettings } from "@/features/settings/api";
+import {
+  updateLdapSettings,
+  validateLdapSettings,
+  validateSavedLdapSettings,
+} from "@/features/settings/api";
 import { SETTINGS_QUERY_KEY } from "@/features/settings/settings-constants";
 import type {
   UpdateLdapSettingsRequest,
   ValidateLdapSettingsRequest,
+  ValidateLdapSettingsResponse,
 } from "@/features/settings/types";
 import { getApiErrorMessage } from "@/lib/api-error";
 
@@ -17,137 +22,117 @@ export type UseLdapSettingsSaveParams = {
   t: TFunction<UseLdapSettingsFormNamespaces>;
   canUpdate: boolean;
   ldapFormIsMinimumValid: boolean;
+  ldapConfigurationFingerprint: string;
   validateLdapForm: () => boolean;
   buildLdapPayload: () => UpdateLdapSettingsRequest;
   buildLdapValidatePayload: () => ValidateLdapSettingsRequest;
   clearBindPasswordAfterSave: () => void;
 };
 
-export type UseLdapSettingsSaveReturn = {
-  saveLdapSettings: () => Promise<void>;
-  canSaveLdap: boolean;
-  isSavingLdap: boolean;
-};
-
-function getLocalizedLdapValidationMessage(
-  t: TFunction<UseLdapSettingsFormNamespaces>,
-  message?: string | null,
-): string {
-  const trimmedMessage = message?.trim();
-  if (!trimmedMessage) {
-    return t("settings:ldap.validation.genericCouldNotValidate");
-  }
-
-  const messageKeyMap: Record<string, string> = {
-    "LDAP service account authentication failed.":
-      "settings:ldap.validation.backendMessages.serviceAccountAuthFailed",
-    "LDAP server connection failed.":
-      "settings:ldap.validation.backendMessages.serverConnectionFailed",
-    "LDAP validation failed.": "settings:ldap.validation.backendMessages.validationFailed",
-    "Required LDAP fields are missing.":
-      "settings:ldap.validation.backendMessages.requiredLdapFieldsMissing",
-    "Required LDAP validation fields are missing.":
-      "settings:ldap.validation.backendMessages.requiredLdapValidationFieldsMissing",
-    "Bind password is required when no active LDAP setting exists.":
-      "settings:ldap.validation.backendMessages.bindPasswordRequiredWithoutActive",
-    "LDAP validation could not be completed.":
-      "settings:ldap.validation.backendMessages.validationCouldNotComplete",
-    "Directory user could not be found.":
-      "settings:ldap.validation.backendMessages.directoryUserNotFound",
-    "Directory user authentication failed.":
-      "settings:ldap.validation.backendMessages.directoryUserAuthFailed",
-    "Directory user distinguished name could not be resolved.":
-      "settings:ldap.validation.backendMessages.directoryUserDnNotResolved",
-    "LDAP bind validation succeeded.":
-      "settings:ldap.validation.backendMessages.bindValidationSucceeded",
-    "LDAP base DN could not be resolved.":
-      "settings:ldap.validation.backendMessages.baseDnCouldNotBeResolved",
-    "LDAP user search base could not be resolved.":
-      "settings:ldap.validation.backendMessages.userSearchBaseCouldNotBeResolved",
-  };
-
-  const mappedKey = messageKeyMap[trimmedMessage];
-  if (!mappedKey) {
-    return t("settings:ldap.validation.genericCouldNotValidate");
-  }
-
-  return t(mappedKey);
-}
-
 export function useLdapSettingsSave({
   t,
   canUpdate,
   ldapFormIsMinimumValid,
+  ldapConfigurationFingerprint,
   validateLdapForm,
   buildLdapPayload,
   buildLdapValidatePayload,
   clearBindPasswordAfterSave,
-}: UseLdapSettingsSaveParams): UseLdapSettingsSaveReturn {
+}: UseLdapSettingsSaveParams) {
   const queryClient = useQueryClient();
+  const [candidateResult, setCandidateResult] = useState<ValidateLdapSettingsResponse | null>(null);
+  const [savedResult, setSavedResult] = useState<ValidateLdapSettingsResponse | null>(null);
+  const [validatedFingerprint, setValidatedFingerprint] = useState<string | null>(null);
+  const [candidateRequestFingerprint, setCandidateRequestFingerprint] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSucceeded, setSaveSucceeded] = useState(false);
 
-  const updateLdapMutation = useMutation({
+  const candidateMutation = useMutation({
+    mutationFn: validateLdapSettings,
+    onSuccess: (result, variables) => {
+      setCandidateResult(result);
+      setCandidateRequestFingerprint(JSON.stringify(variables));
+      setValidatedFingerprint(result.isValid ? ldapConfigurationFingerprint : null);
+    },
+  });
+  const savedMutation = useMutation({
+    mutationFn: validateSavedLdapSettings,
+    onSuccess: setSavedResult,
+  });
+  const updateMutation = useMutation({
     mutationFn: updateLdapSettings,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: SETTINGS_QUERY_KEY });
       clearBindPasswordAfterSave();
+      setSaveError(null);
+      setSaveSucceeded(true);
+      setValidatedFingerprint(null);
       toast.success(t("settings:ldap.messages.saveSuccess"));
     },
     onError: (error: unknown) => {
-      toast.error(getApiErrorMessage(error, t("settings:ldap.messages.saveFailed")));
+      setSaveSucceeded(false);
+      setSaveError(getApiErrorMessage(error, t("settings:ldap.messages.saveFailed")));
     },
   });
 
-  const validateLdapMutation = useMutation({
-    mutationFn: validateLdapSettings,
-    onError: (error: unknown) => {
-      toast.error(getApiErrorMessage(error, t("settings:ldap.validation.requestFailed")));
-    },
-  });
-
-  const canSaveLdap = useMemo(
-    () =>
-      canUpdate &&
-      ldapFormIsMinimumValid &&
-      !updateLdapMutation.isPending &&
-      !validateLdapMutation.isPending,
-    [canUpdate, ldapFormIsMinimumValid, updateLdapMutation.isPending, validateLdapMutation.isPending],
-  );
-
-  const saveLdapSettings = useCallback(async () => {
-    if (!canUpdate) return;
-    if (!validateLdapForm()) return;
-
-    const payload = buildLdapPayload();
-    const validatePayload = buildLdapValidatePayload();
-    let validateResult;
+  const testCandidate = useCallback(async () => {
+    if (!canUpdate || !validateLdapForm()) return;
+    setSaveError(null);
     try {
-      validateResult = await validateLdapMutation.mutateAsync(validatePayload);
-    } catch {
-      return;
+      await candidateMutation.mutateAsync(buildLdapValidatePayload());
+    } catch (error) {
+      setCandidateResult(null);
+      setCandidateRequestFingerprint(null);
+      setValidatedFingerprint(null);
+      setSaveError(getApiErrorMessage(error, t("settings:ldap.validation.requestFailed")));
     }
+  }, [buildLdapValidatePayload, canUpdate, candidateMutation, t, validateLdapForm]);
 
-    if (!validateResult.isValid) {
-      const detailMessage = getLocalizedLdapValidationMessage(t, validateResult.message);
-      toast.error(t("settings:ldap.validation.saveBlockedByValidation"), {
-        description: detailMessage,
-      });
-      return;
+  const testSaved = useCallback(async () => {
+    setSaveError(null);
+    try {
+      await savedMutation.mutateAsync();
+    } catch (error) {
+      setSavedResult(null);
+      setSaveError(getApiErrorMessage(error, t("settings:ldap.validation.requestFailed")));
     }
+  }, [savedMutation, t]);
 
-    updateLdapMutation.mutate(payload);
+  const save = useCallback(() => {
+    if (!canUpdate || !validateLdapForm()) return;
+    if (validatedFingerprint !== ldapConfigurationFingerprint) return;
+    setSaveError(null);
+    setSaveSucceeded(false);
+    updateMutation.mutate(buildLdapPayload());
   }, [
     buildLdapPayload,
-    buildLdapValidatePayload,
     canUpdate,
-    t,
-    updateLdapMutation,
+    ldapConfigurationFingerprint,
+    updateMutation,
     validateLdapForm,
-    validateLdapMutation,
+    validatedFingerprint,
   ]);
 
+  const candidateIsCurrent = validatedFingerprint === ldapConfigurationFingerprint;
+  const candidateResultIsCurrent = candidateRequestFingerprint === JSON.stringify(buildLdapValidatePayload());
+  const isBusy = candidateMutation.isPending || savedMutation.isPending || updateMutation.isPending;
+  const canSave = useMemo(
+    () => canUpdate && ldapFormIsMinimumValid && candidateIsCurrent && !isBusy,
+    [canUpdate, candidateIsCurrent, isBusy, ldapFormIsMinimumValid],
+  );
+
   return {
-    saveLdapSettings,
-    canSaveLdap,
-    isSavingLdap: updateLdapMutation.isPending,
+    saveLdapSettings: save,
+    testCandidateLdapSettings: testCandidate,
+    testSavedLdapSettings: testSaved,
+    canSaveLdap: canSave,
+    isSavingLdap: updateMutation.isPending,
+    isTestingCandidateLdap: candidateMutation.isPending,
+    isTestingSavedLdap: savedMutation.isPending,
+    candidateLdapValidation: candidateResult,
+    savedLdapValidation: savedResult,
+    candidateLdapValidationIsCurrent: candidateResultIsCurrent,
+    ldapSaveError: saveError,
+    ldapSaveSucceeded: saveSucceeded,
   };
 }

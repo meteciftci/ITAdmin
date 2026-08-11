@@ -10,9 +10,11 @@ import {
 } from "@/components/common/data-table";
 import { useClientDataTable } from "@/components/common/data-table-hooks";
 import { EmptyState } from "@/components/common/EmptyState";
+import { ErrorState } from "@/components/common/ErrorState";
 import { LoadingState } from "@/components/common/LoadingState";
 import { SectionCard } from "@/components/common/SectionCard";
 import { buttonVariants } from "@/components/ui/button-variants";
+import { Button } from "@/components/ui/button";
 import { createNotificationTemplateColumns } from "@/features/notification-templates/notification-template-columns";
 import {
   NOTIFICATION_TEMPLATES_QUERY_KEY,
@@ -105,11 +107,17 @@ export function NotificationTemplatesListTab() {
         />
 
         {listQuery.isLoading ? <LoadingState /> : null}
-        {!listQuery.isLoading && items.length === 0 ? (
+        {listQuery.isError ? (
+          <ErrorState
+            title={t("notificationSettings:templates.messages.loadFailed")}
+            retry={<Button variant="outline" size="sm" onClick={() => void listQuery.refetch()}>{t("common:retry")}</Button>}
+          />
+        ) : null}
+        {!listQuery.isLoading && !listQuery.isError && items.length === 0 ? (
           <EmptyState title={t("notificationTemplates:empty.title")} />
         ) : null}
 
-        {!listQuery.isLoading && items.length > 0 ? (
+        {!listQuery.isLoading && !listQuery.isError && items.length > 0 ? (
           <DataTable
             table={table}
             emptyMessage={t("common:dataTable.noResults")}

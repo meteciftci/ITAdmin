@@ -19,6 +19,9 @@ export type UseSessionSecuritySettingsSaveParams = {
 export type UseSessionSecuritySettingsSaveReturn = {
   saveSessionSecuritySettings: (payload: SessionSecuritySettings) => void;
   isSavingSessionSecurity: boolean;
+  sessionSecuritySaveError: string | null;
+  sessionSecuritySaveSucceeded: boolean;
+  clearSessionSecuritySaveState: () => void;
 };
 
 export function useSessionSecuritySettingsSave({
@@ -27,7 +30,7 @@ export function useSessionSecuritySettingsSave({
 }: UseSessionSecuritySettingsSaveParams): UseSessionSecuritySettingsSaveReturn {
   const queryClient = useQueryClient();
 
-  const { mutate, isPending } = useMutation({
+  const mutation = useMutation({
     mutationFn: updateSessionSecuritySettings,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: SETTINGS_QUERY_KEY });
@@ -38,21 +41,27 @@ export function useSessionSecuritySettingsSave({
       });
       toast.success(t("settings:sessionSecurity.messages.saved"));
     },
-    onError: (error: unknown) => {
-      toast.error(getApiErrorMessage(error, t("settings:sessionSecurity.messages.saveFailed")));
-    },
   });
 
   const saveSessionSecuritySettings = useCallback(
     (payload: SessionSecuritySettings) => {
       if (!canUpdate) return;
-      mutate(payload);
+      mutation.reset();
+      mutation.mutate(payload);
     },
-    [canUpdate, mutate],
+    [canUpdate, mutation],
   );
 
   return {
     saveSessionSecuritySettings,
-    isSavingSessionSecurity: isPending,
+    isSavingSessionSecurity: mutation.isPending,
+    sessionSecuritySaveError: mutation.isError
+      ? getApiErrorMessage(
+          mutation.error,
+          t("settings:sessionSecurity.messages.saveFailed"),
+        )
+      : null,
+    sessionSecuritySaveSucceeded: mutation.isSuccess,
+    clearSessionSecuritySaveState: mutation.reset,
   };
 }

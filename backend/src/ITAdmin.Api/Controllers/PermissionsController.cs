@@ -30,6 +30,7 @@ public sealed class PermissionsController(IPermissionService permissionService) 
         var response = new PagedResponse<PermissionListItemResponse>(
             result.Items.Select(x => new PermissionListItemResponse(
                 x.Id,
+                x.Module,
                 x.Name,
                 x.Code,
                 x.Description,
@@ -56,6 +57,7 @@ public sealed class PermissionsController(IPermissionService permissionService) 
 
         return Ok(new PermissionDetailResponse(
             permission.Id,
+            permission.Module,
             permission.Name,
             permission.Code,
             permission.Description,

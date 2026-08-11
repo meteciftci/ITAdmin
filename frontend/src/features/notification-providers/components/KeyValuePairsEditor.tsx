@@ -37,19 +37,25 @@ export function KeyValuePairsEditor({ label, pairs, onChange, disabled = false }
         <p className="text-sm text-muted-foreground">{t("common.noEntries")}</p>
       ) : null}
       {pairs.map((pair, index) => (
-        <div key={`${label}-${index}`} className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div key={`${label}-${index}`} className="grid gap-2 rounded-lg border bg-muted/20 p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
+          <label className="space-y-1.5 text-xs font-medium text-muted-foreground">
+            <span>{t("common.keyPlaceholder")}</span>
           <Input
             value={pair.key}
             onChange={(event) => updatePair(index, "key", event.target.value)}
-            placeholder={t("common.keyPlaceholder")}
+            aria-label={`${label} ${t("common.keyPlaceholder")} ${index + 1}`}
             disabled={disabled}
           />
+          </label>
+          <label className="space-y-1.5 text-xs font-medium text-muted-foreground">
+            <span>{t("common.valuePlaceholder")}</span>
           <Input
             value={pair.value}
             onChange={(event) => updatePair(index, "value", event.target.value)}
-            placeholder={t("common.valuePlaceholder")}
+            aria-label={`${label} ${t("common.valuePlaceholder")} ${index + 1}`}
             disabled={disabled}
           />
+          </label>
           <Button
             type="button"
             variant="outline"

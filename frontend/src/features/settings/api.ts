@@ -33,6 +33,13 @@ export const validateLdapSettings = async (
   return data;
 };
 
+export const validateSavedLdapSettings = async (): Promise<ValidateLdapSettingsResponse> => {
+  const { data } = await apiClient.post<ValidateLdapSettingsResponse>(
+    "/settings/ldap/validate-saved",
+  );
+  return data;
+};
+
 export const updateApplicationSettings = async (
   payload: UpdateApplicationSettingsRequest,
 ): Promise<void> => {

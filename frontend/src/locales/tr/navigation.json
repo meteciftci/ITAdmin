@@ -1,5 +1,8 @@
 {
   "navigation": {
+    "toggle": "Navigasyon menüsünü aç veya kapat",
+    "close": "Navigasyon menüsünü kapat",
+    "subtitle": "Yönetim platformu",
     "groups": {
       "main": "Ana",
       "modules": "Modüller",

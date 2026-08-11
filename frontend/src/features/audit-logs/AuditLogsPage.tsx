@@ -9,17 +9,16 @@ import { useTranslation } from "react-i18next";
 import { CodeBadge } from "@/components/common/CodeBadge";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
 import { DateTimeText } from "@/components/common/DateTimeText";
+import { PageContainer } from "@/components/common/PageContainer";
+import { PageHeader } from "@/components/common/PageHeader";
 import {
   DataTable,
   DataTablePagination,
   DataTableToolbar,
 } from "@/components/common/data-table";
 import { useServerDataTable } from "@/components/common/data-table-hooks";
-import { EmptyState } from "@/components/common/EmptyState";
-import { LoadingState } from "@/components/common/LoadingState";
 import { LogDetailDialog } from "@/components/common/LogDetailDialog";
 import { MultiSelectFilter } from "@/components/common/MultiSelectFilter";
-import { SectionCard } from "@/components/common/SectionCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getAuditLogFilterOptions, getAuditLogs } from "@/features/audit-logs/api";
@@ -140,7 +139,6 @@ export function AuditLogsPage() {
     setPageNumber(1);
   };
   const handleClearAllFilters = () => {
-    setSearch("");
     setSelectedActions([]);
     setSelectedEntityNames([]);
     setDateRange(undefined);
@@ -159,90 +157,111 @@ export function AuditLogsPage() {
   }
 
   return (
-    <section className="space-y-4">
-      <SectionCard title={t("auditLogs:sections.listTitle")}>
-        <div className="space-y-4">
-          <DataTableToolbar
-            searchValue={search}
-            onSearchChange={handleSearchChange}
-            searchPlaceholder={t("auditLogs:filters.searchPlaceholder")}
-            activeFilterCount={activeFilterCount}
-            onClearFilters={handleClearAllFilters}
-            filterContent={
-              <div className="space-y-3">
-                <MultiSelectFilter
-                  placeholder={t("auditLogs:filters.actionFilterPlaceholder")}
-                  options={actionOptions}
-                  selectedValues={selectedActions}
-                  onChange={handleActionFilterChange}
-                  clearLabel={t("common:select.clearSelection")}
-                  emptyLabel={t("common:select.noOptions")}
-                  searchPlaceholder={t("common:select.searchOptions")}
-                />
-                <MultiSelectFilter
-                  placeholder={t("auditLogs:filters.entityNameFilterPlaceholder")}
-                  options={entityNameOptions}
-                  selectedValues={selectedEntityNames}
-                  onChange={handleEntityNameFilterChange}
-                  clearLabel={t("common:select.clearSelection")}
-                  emptyLabel={t("common:select.noOptions")}
-                  searchPlaceholder={t("common:select.searchOptions")}
-                />
-                <DateRangePicker
-                  value={dateRange}
-                  onChange={handleDateRangeChange}
-                  placeholder={t("common:dateRange.placeholder")}
-                  clearLabel={t("common:dateRange.clear")}
-                  locale={calendarLocale}
-                />
-              </div>
-            }
-            toolbarFooter={
-              showMinSearchHint ? (
-                <p className="text-xs text-muted-foreground">
-                  {t("auditLogs:filters.minSearchLengthHint")}
-                </p>
-              ) : null
-            }
-            actions={
-              <Button variant="outline" onClick={handleRefresh}>
-                {t("common:actions.refresh")}
-              </Button>
-            }
-          />
+    <PageContainer variant="fluid">
+      <PageHeader
+        title={t("auditLogs:title")}
+        description={t("auditLogs:description")}
+        actions={
+          <Button variant="outline" onClick={handleRefresh}>
+            {t("common:actions.refresh")}
+          </Button>
+        }
+      />
 
-          {auditLogsQuery.isLoading ? <LoadingState /> : null}
+      <div className="flex min-w-0 flex-col gap-4">
+        <DataTableToolbar
+          searchValue={search}
+          onSearchChange={handleSearchChange}
+          searchPlaceholder={t("auditLogs:filters.searchPlaceholder")}
+          activeFilterCount={activeFilterCount}
+          onClearFilters={handleClearAllFilters}
+          activeFilters={[
+            ...(isActionFilterActive
+              ? [{
+                  id: "actions",
+                  label: t("auditLogs:table.action"),
+                  value: t("auditLogs:filters.selectedCount", { count: selectedActions.length }),
+                  onRemove: () => handleActionFilterChange([]),
+                }]
+              : []),
+            ...(isEntityFilterActive
+              ? [{
+                  id: "entities",
+                  label: t("auditLogs:table.entityName"),
+                  value: t("auditLogs:filters.selectedCount", { count: selectedEntityNames.length }),
+                  onRemove: () => handleEntityNameFilterChange([]),
+                }]
+              : []),
+            ...(isDateRangeActive
+              ? [{
+                  id: "date-range",
+                  label: t("auditLogs:table.createdAt"),
+                  value: t("auditLogs:filters.dateRangeActive"),
+                  onRemove: () => handleDateRangeChange(undefined),
+                }]
+              : []),
+          ]}
+          filterContent={
+            <div className="space-y-3">
+              <MultiSelectFilter
+                placeholder={t("auditLogs:filters.actionFilterPlaceholder")}
+                options={actionOptions}
+                selectedValues={selectedActions}
+                onChange={handleActionFilterChange}
+                clearLabel={t("common:select.clearSelection")}
+                emptyLabel={t("common:select.noOptions")}
+                searchPlaceholder={t("common:select.searchOptions")}
+              />
+              <MultiSelectFilter
+                placeholder={t("auditLogs:filters.entityNameFilterPlaceholder")}
+                options={entityNameOptions}
+                selectedValues={selectedEntityNames}
+                onChange={handleEntityNameFilterChange}
+                clearLabel={t("common:select.clearSelection")}
+                emptyLabel={t("common:select.noOptions")}
+                searchPlaceholder={t("common:select.searchOptions")}
+              />
+              <DateRangePicker
+                value={dateRange}
+                onChange={handleDateRangeChange}
+                placeholder={t("common:dateRange.placeholder")}
+                clearLabel={t("common:dateRange.clear")}
+                locale={calendarLocale}
+              />
+            </div>
+          }
+          toolbarFooter={
+            showMinSearchHint ? (
+              <p className="text-xs text-muted-foreground">
+                {t("auditLogs:filters.minSearchLengthHint")}
+              </p>
+            ) : null
+          }
+        />
 
-          {auditLogsQuery.isSuccess && !auditLogs.length ? (
-            <EmptyState
-              title={t("auditLogs:empty.title")}
-              description={t("auditLogs:empty.description")}
-            />
-          ) : null}
-
-          {auditLogs.length ? (
-            <DataTable
-              table={table}
-              footer={
-                auditLogsQuery.data && auditLogsQuery.data.totalCount > 0 ? (
-                  <DataTablePagination
-                    mode="server"
-                    pageNumber={auditLogsQuery.data.pageNumber}
-                    pageSize={auditLogsQuery.data.pageSize}
-                    totalCount={auditLogsQuery.data.totalCount}
-                    totalPages={auditLogsQuery.data.totalPages}
-                    onPageChange={setPageNumber}
-                    onPageSizeChange={(nextPageSize) => {
-                      setPageSize(nextPageSize);
-                      setPageNumber(1);
-                    }}
-                  />
-                ) : null
-              }
-            />
-          ) : null}
-        </div>
-      </SectionCard>
+        <DataTable
+          table={table}
+          isLoading={auditLogsQuery.isLoading}
+          emptyMessage={t("auditLogs:empty.title")}
+          emptyDescription={t("auditLogs:empty.description")}
+          footer={
+            auditLogsQuery.data && auditLogsQuery.data.totalCount > 0 ? (
+              <DataTablePagination
+                mode="server"
+                pageNumber={auditLogsQuery.data.pageNumber}
+                pageSize={auditLogsQuery.data.pageSize}
+                totalCount={auditLogsQuery.data.totalCount}
+                totalPages={auditLogsQuery.data.totalPages}
+                onPageChange={setPageNumber}
+                onPageSizeChange={(nextPageSize) => {
+                  setPageSize(nextPageSize);
+                  setPageNumber(1);
+                }}
+              />
+            ) : null
+          }
+        />
+      </div>
 
       <LogDetailDialog
         open={Boolean(selectedAuditLog)}
@@ -314,7 +333,7 @@ export function AuditLogsPage() {
         descriptionLabel={t("auditLogs:detail.description")}
         closeLabel={t("common:actions.close")}
       />
-    </section>
+    </PageContainer>
   );
 }
 

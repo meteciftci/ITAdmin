@@ -11,6 +11,8 @@
       "entityNameFilterPlaceholder": "Varlık adı seçin",
       "clearAll": "Filtreleri temizle",
       "activeCount": "Aktif filtreler: {{count}}",
+      "selectedCount": "{{count}} seçim",
+      "dateRangeActive": "Tarih aralığı seçili",
       "minSearchLengthHint": "Arama için en az 3 karakter girin."
     },
     "table": {

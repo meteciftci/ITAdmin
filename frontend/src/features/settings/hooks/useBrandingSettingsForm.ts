@@ -37,6 +37,9 @@ export type UseBrandingSettingsFormReturn = {
   footerText: string;
   forgotPasswordUrlError: string | undefined;
   brandingError: string | undefined;
+  applicationNameError: string | undefined;
+  browserTitleError: string | undefined;
+  footerTextError: string | undefined;
   hydrateFromBranding: (branding: BrandingSettings, applicationSettings?: ApplicationSetting[]) => void;
   updateApplicationName: (value: string) => void;
   updateBrowserTitle: (value: string) => void;
@@ -60,6 +63,9 @@ export function useBrandingSettingsForm({
     undefined,
   );
   const [brandingError, setBrandingError] = useState<string | undefined>(undefined);
+  const [applicationNameError, setApplicationNameError] = useState<string>();
+  const [browserTitleError, setBrowserTitleError] = useState<string>();
+  const [footerTextError, setFooterTextError] = useState<string>();
 
   const hydrateFromBranding = useCallback(
     (branding: BrandingSettings, applicationSettings?: ApplicationSetting[]) => {
@@ -72,12 +78,18 @@ export function useBrandingSettingsForm({
       setFooterText(rawFooterText?.trim() ?? "");
       setForgotPasswordUrlError(undefined);
       setBrandingError(undefined);
+      setApplicationNameError(undefined);
+      setBrowserTitleError(undefined);
+      setFooterTextError(undefined);
     },
     [],
   );
 
   const clearBrandingError = useCallback(() => {
     setBrandingError(undefined);
+    setApplicationNameError(undefined);
+    setBrowserTitleError(undefined);
+    setFooterTextError(undefined);
   }, []);
 
   const clearForgotPasswordUrlError = useCallback(() => {
@@ -85,12 +97,12 @@ export function useBrandingSettingsForm({
   }, []);
 
   const updateApplicationName = useCallback((value: string) => {
-    setBrandingError(undefined);
+    setApplicationNameError(undefined);
     setBrandingApplicationName(value);
   }, []);
 
   const updateBrowserTitle = useCallback((value: string) => {
-    setBrandingError(undefined);
+    setBrowserTitleError(undefined);
     setBrandingBrowserTitle(value);
   }, []);
 
@@ -100,27 +112,39 @@ export function useBrandingSettingsForm({
   }, []);
 
   const updateFooterText = useCallback((value: string) => {
-    setBrandingError(undefined);
+    setFooterTextError(undefined);
     setFooterText(value);
   }, []);
 
   const validateBrandingInput = useCallback((): boolean => {
+    let valid = true;
+    setApplicationNameError(undefined);
+    setBrowserTitleError(undefined);
+    setFooterTextError(undefined);
+    if (!brandingApplicationName.trim()) {
+      setApplicationNameError(t("settings:application.validation.applicationNameRequired"));
+      valid = false;
+    }
     if (brandingApplicationName.trim().length > 100) {
-      setBrandingError(t("settings:application.validation.applicationNameMax"));
-      return false;
+      setApplicationNameError(t("settings:application.validation.applicationNameMax"));
+      valid = false;
     }
 
+    if (!brandingBrowserTitle.trim()) {
+      setBrowserTitleError(t("settings:application.validation.browserTitleRequired"));
+      valid = false;
+    }
     if (brandingBrowserTitle.trim().length > 100) {
-      setBrandingError(t("settings:application.validation.browserTitleMax"));
-      return false;
+      setBrowserTitleError(t("settings:application.validation.browserTitleMax"));
+      valid = false;
     }
 
     if (footerText.trim().length > BRANDING_FOOTER_TEXT_MAX_LENGTH) {
-      setBrandingError(t("settings:application.validation.footerTextMax"));
-      return false;
+      setFooterTextError(t("settings:application.validation.footerTextMax"));
+      valid = false;
     }
 
-    return true;
+    return valid;
   }, [brandingApplicationName, brandingBrowserTitle, footerText, t]);
 
   const validateForgotPasswordUrlInput = useCallback((): boolean => {
@@ -190,6 +214,9 @@ export function useBrandingSettingsForm({
     footerText,
     forgotPasswordUrlError,
     brandingError,
+    applicationNameError,
+    browserTitleError,
+    footerTextError,
     hydrateFromBranding,
     updateApplicationName,
     updateBrowserTitle,

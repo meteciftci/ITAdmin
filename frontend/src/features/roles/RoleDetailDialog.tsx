@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+
 import { Badge } from "@/components/ui/badge";
 import { DetailDialog } from "@/components/common/DetailDialog";
 import { StatusBadge } from "@/components/common/StatusBadge";
@@ -5,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import type { RoleDetail } from "@/features/roles/types";
 import { DateTimeText } from "@/components/common/DateTimeText";
 import { useTranslation } from "react-i18next";
+import { groupPermissionsByModule } from "@/features/permissions/permission-catalog";
 
 type RoleDetailDialogProps = {
   role: RoleDetail | null;
@@ -13,7 +16,11 @@ type RoleDetailDialogProps = {
 };
 
 export function RoleDetailDialog({ role, open, onOpenChange }: RoleDetailDialogProps) {
-  const { t } = useTranslation(["roles", "common"]);
+  const { t } = useTranslation(["roles", "common", "permissions"]);
+  const permissionGroups = useMemo(
+    () => groupPermissionsByModule(role?.permissions ?? []),
+    [role?.permissions],
+  );
   return (
     <DetailDialog
       open={open}
@@ -57,15 +64,24 @@ export function RoleDetailDialog({ role, open, onOpenChange }: RoleDetailDialogP
           <Separator />
           <div className="space-y-2">
             <p className="font-medium">{t("roles:detail.permissions")}</p>
-            {role.permissions.length ? (
-              <div className="max-h-48 overflow-y-auto rounded-lg border p-2">
-                <div className="flex flex-wrap gap-1">
-                  {role.permissions.map((permission) => (
-                    <Badge key={permission.id} variant="outline">
-                      {permission.code}
-                    </Badge>
-                  ))}
-                </div>
+            {permissionGroups.length ? (
+              <div className="max-h-64 space-y-3 overflow-y-auto rounded-lg border bg-muted/20 p-3">
+                {permissionGroups.map((group) => (
+                  <section key={group.module} className="space-y-1.5">
+                    <p className="text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+                      {t(`permissions:modules.${group.module}`, {
+                        defaultValue: group.module,
+                      })}
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {group.items.map((permission) => (
+                        <Badge key={permission.id} variant="outline">
+                          {permission.code}
+                        </Badge>
+                      ))}
+                    </div>
+                  </section>
+                ))}
               </div>
             ) : (
               <p className="text-muted-foreground">{t("roles:assignPermissions.noPermissions")}</p>

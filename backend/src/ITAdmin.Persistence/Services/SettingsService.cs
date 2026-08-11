@@ -273,6 +273,19 @@ public sealed class SettingsService(
         var normalizedTestUserName = NormalizeNullable(request.TestUserName);
         var normalizedTestPassword = NormalizeNullable(request.TestPassword);
 
+        var diagnosticResult = await ldapService.DiagnoseConnectionAsync(
+            new LdapConnectionDiagnosticRequest(
+                request.Host.Trim(),
+                request.BindUserName.Trim(),
+                NormalizeNullable(request.BindUserDomain),
+                bindPassword!),
+            cancellationToken);
+        var details = diagnosticResult.Details.ToList();
+        if (!diagnosticResult.IsValid)
+        {
+            return new ValidateLdapSettingsResult(false, ResolveDiagnosticMessage(details), details);
+        }
+
         var searchBasesRequest = new LdapSearchBasesValidationRequest
         {
             Host = request.Host.Trim(),
@@ -286,12 +299,25 @@ public sealed class SettingsService(
         var basesResult = await ldapService.ValidateSearchBasesAsync(searchBasesRequest, cancellationToken);
         if (!basesResult.IsValid)
         {
-            return new ValidateLdapSettingsResult(false, basesResult.Message);
+            details.Add(ToSearchBaseDetail(basesResult.Message, request.UserSearchBase));
+            return new ValidateLdapSettingsResult(false, basesResult.Message, details);
+        }
+
+        details.Add(new LdapConnectionDiagnosticDetail(
+            "baseDn",
+            LdapConnectionDiagnosticStatuses.Ok,
+            LdapConnectionDiagnosticMessageKeys.BaseDnResolved));
+        if (!string.IsNullOrWhiteSpace(request.UserSearchBase))
+        {
+            details.Add(new LdapConnectionDiagnosticDetail(
+                "userSearchBase",
+                LdapConnectionDiagnosticStatuses.Ok,
+                LdapConnectionDiagnosticMessageKeys.UserSearchBaseResolved));
         }
 
         if (string.IsNullOrWhiteSpace(normalizedTestUserName) || string.IsNullOrWhiteSpace(normalizedTestPassword))
         {
-            return new ValidateLdapSettingsResult(true, basesResult.Message);
+            return new ValidateLdapSettingsResult(true, basesResult.Message, details);
         }
 
         var userResult = await ldapService.ValidateAsync(
@@ -309,7 +335,40 @@ public sealed class SettingsService(
             },
             cancellationToken);
 
-        return new ValidateLdapSettingsResult(userResult.IsValid, userResult.Message);
+        details.Add(ToTestUserDetail(userResult));
+        return new ValidateLdapSettingsResult(userResult.IsValid, userResult.Message, details);
+    }
+
+    public async Task<ValidateLdapSettingsResult> ValidateSavedLdapSettingsAsync(
+        ValidateLdapSettingsRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var existing = await context.LdapSettings
+            .AsNoTracking()
+            .Where(x => x.IsActive && !x.IsDeleted)
+            .OrderByDescending(x => x.UpdatedAt ?? x.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (existing is null)
+        {
+            return new ValidateLdapSettingsResult(false, "No active LDAP setting exists.");
+        }
+
+        return await ValidateLdapSettingsAsync(
+            request with
+            {
+                Name = existing.Name,
+                Host = existing.Host,
+                BaseDn = existing.BaseDn,
+                UserSearchBase = existing.UserSearchBase,
+                UserSearchFilter = existing.UserSearchFilter,
+                BindUserName = existing.BindUserName,
+                BindUserDomain = existing.BindUserDomain,
+                BindPassword = null,
+                TestUserName = null,
+                TestPassword = null,
+            },
+            cancellationToken);
     }
 
     public async Task<UpdateSettingsResult> UpdateApplicationSettingsAsync(
@@ -795,6 +854,57 @@ public sealed class SettingsService(
 
         message = string.Empty;
         return true;
+    }
+
+    private static string ResolveDiagnosticMessage(
+        IReadOnlyList<LdapConnectionDiagnosticDetail> details)
+    {
+        var failure = details.LastOrDefault(detail =>
+            string.Equals(detail.Status, LdapConnectionDiagnosticStatuses.Failed, StringComparison.Ordinal));
+        return failure?.MessageKey == LdapConnectionDiagnosticMessageKeys.BindCredentialsRejected
+            ? "LDAP service account authentication failed."
+            : "LDAP server connection failed.";
+    }
+
+    private static LdapConnectionDiagnosticDetail ToSearchBaseDetail(
+        string message,
+        string? userSearchBase)
+    {
+        var isUserSearchBase = string.Equals(
+            message,
+            "LDAP user search base could not be resolved.",
+            StringComparison.Ordinal);
+        return new LdapConnectionDiagnosticDetail(
+            isUserSearchBase ? "userSearchBase" : "baseDn",
+            LdapConnectionDiagnosticStatuses.Failed,
+            isUserSearchBase
+                ? LdapConnectionDiagnosticMessageKeys.UserSearchBaseNotResolved
+                : LdapConnectionDiagnosticMessageKeys.BaseDnNotResolved,
+            string.IsNullOrWhiteSpace(userSearchBase)
+                ? null
+                : new Dictionary<string, object> { ["searchBase"] = userSearchBase.Trim() });
+    }
+
+    private static LdapConnectionDiagnosticDetail ToTestUserDetail(LdapValidationResult result)
+    {
+        var searchFailure = string.Equals(
+            result.Message,
+            "Directory user could not be found.",
+            StringComparison.Ordinal)
+            || string.Equals(
+                result.Message,
+                "Directory user distinguished name could not be resolved.",
+                StringComparison.Ordinal);
+        return new LdapConnectionDiagnosticDetail(
+            searchFailure ? "testUserSearch" : "testUserBind",
+            result.IsValid
+                ? LdapConnectionDiagnosticStatuses.Ok
+                : LdapConnectionDiagnosticStatuses.Failed,
+            result.IsValid
+                ? LdapConnectionDiagnosticMessageKeys.TestUserBindSucceeded
+                : searchFailure
+                    ? LdapConnectionDiagnosticMessageKeys.UserSearchFailed
+                    : LdapConnectionDiagnosticMessageKeys.TestUserBindFailed);
     }
 
     private static bool IsLdapValidateRequestValid(ValidateLdapSettingsRequest request, out string message)

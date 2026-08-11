@@ -68,6 +68,13 @@ public static class AdManagementValidationStatuses
 {
     public const string Ok = "Ok";
     public const string Failed = "Failed";
+
+    /// <summary>
+    /// Non-blocking finding: the configuration still works, but something degraded was observed
+    /// (a preferred controller that failed while another served the request, a domain FQDN that
+    /// does not resolve while explicit controllers do, an uncheckable certificate revocation).
+    /// </summary>
+    public const string Warning = "Warning";
     public const string Skipped = "Skipped";
 }
 

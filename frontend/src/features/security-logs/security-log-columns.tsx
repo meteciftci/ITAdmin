@@ -1,43 +1,12 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import type { TFunction } from "i18next";
 
+import { CodeBadge } from "@/components/common/CodeBadge";
 import { DateTimeText } from "@/components/common/DateTimeText";
 import type { DataTableColumnMeta } from "@/components/common/data-table";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SecuritySeverityBadge } from "@/features/security-logs/SecuritySeverityBadge";
 import type { SecurityLogListItem } from "@/features/security-logs/types";
-
-export function getSeverityBadgeVariant(
-  severity: string,
-): "default" | "secondary" | "outline" | "info" | "success" | "warning" | "destructive" {
-  const normalizedSeverity = severity.trim().toLocaleLowerCase();
-
-  if (normalizedSeverity === "info") {
-    return "info";
-  }
-
-  if (normalizedSeverity === "low") {
-    return "secondary";
-  }
-
-  if (normalizedSeverity === "warning") {
-    return "warning";
-  }
-
-  if (
-    normalizedSeverity === "error" ||
-    normalizedSeverity === "critical" ||
-    normalizedSeverity === "high"
-  ) {
-    return "destructive";
-  }
-
-  if (normalizedSeverity === "success") {
-    return "success";
-  }
-
-  return "secondary";
-}
 
 type CreateSecurityLogColumnsOptions = {
   t: TFunction;
@@ -57,15 +26,12 @@ export function createSecurityLogColumns({
     {
       accessorKey: "eventType",
       header: () => t("securityLogs:table.eventType"),
+      cell: ({ row }) => <CodeBadge>{row.original.eventType}</CodeBadge>,
     },
     {
       id: "severity",
       header: () => t("securityLogs:table.severity"),
-      cell: ({ row }) => (
-        <Badge variant={getSeverityBadgeVariant(row.original.severity)}>
-          {row.original.severity}
-        </Badge>
-      ),
+      cell: ({ row }) => <SecuritySeverityBadge severity={row.original.severity} t={t} />,
     },
     {
       accessorKey: "userName",
@@ -89,7 +55,15 @@ export function createSecurityLogColumns({
       header: () => t("common:fields.actions"),
       meta: { isAction: true } satisfies DataTableColumnMeta,
       cell: ({ row }) => (
-        <Button type="button" variant="outline" size="sm" onClick={() => onDetail(row.original)}>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => onDetail(row.original)}
+          aria-label={t("securityLogs:actions.detailFor", {
+            eventType: row.original.eventType,
+          })}
+        >
           {t("common:actions.detail")}
         </Button>
       ),

@@ -1,5 +1,6 @@
 import { PageHeader } from "@/components/common/PageHeader";
-import { SectionCard } from "@/components/common/SectionCard";
+import { PageContainer } from "@/components/common/PageContainer";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AdManagementSettingsTab } from "@/features/ad-management/AdManagementSettingsTab";
 import { useAuthStore } from "@/features/auth/auth-store";
 import { canAccess } from "@/lib/permissions";
@@ -12,21 +13,19 @@ export function AdManagementSettingsPage() {
   const canUpdateAdManagementSettings = canAccess(user, PermissionCodes.AdManagement.Settings.Update);
 
   return (
-    <section className="space-y-4">
+    <PageContainer variant="wide">
       <PageHeader
         title={t("settings:pages.adManagement.title")}
         description={t("settings:pages.adManagement.description")}
       />
 
-      {!canUpdateAdManagementSettings ? (
-        <p className="rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground">
-          {t("settings:adManagement.readOnlyNotice")}
-        </p>
-      ) : null}
+      <Alert>
+        <AlertTitle>{t("settings:adManagement.role.title")}</AlertTitle>
+        <AlertDescription>{t("settings:adManagement.role.description")}</AlertDescription>
+      </Alert>
 
-      <SectionCard>
-        <AdManagementSettingsTab readOnly={!canUpdateAdManagementSettings} />
-      </SectionCard>
-    </section>
+      {!canUpdateAdManagementSettings ? <Alert><AlertDescription>{t("settings:adManagement.readOnlyNotice")}</AlertDescription></Alert> : null}
+      <AdManagementSettingsTab readOnly={!canUpdateAdManagementSettings} />
+    </PageContainer>
   );
 }

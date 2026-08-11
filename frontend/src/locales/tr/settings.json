@@ -1,6 +1,28 @@
 {
   "settings": {
     "readOnlyNotice": "Bu sayfayı görüntüleme yetkiniz var. Güncelleme yapmak için ek yetki gerekir.",
+    "fields": {
+      "optional": "İsteğe bağlı"
+    },
+    "actions": {
+      "saving": "Kaydediliyor…",
+      "showSecret": "Secret'ı göster",
+      "hideSecret": "Secret'ı gizle"
+    },
+    "saveStates": {
+      "pristine": "Kaydedilmemiş değişiklik yok.",
+      "dirty": "Kaydedilmemiş değişiklikleriniz var.",
+      "saving": "Ayarlar kaydediliyor…",
+      "saved": "Ayarlar kaydedildi.",
+      "error": "Ayarlar kaydedilemedi.",
+      "failedTitle": "Kaydetme başarısız"
+    },
+    "unsaved": {
+      "title": "Kaydedilmemiş değişiklikler silinsin mi?",
+      "description": "Bu ayar sekmesindeki değişiklikler henüz kaydedilmedi.",
+      "leave": "Değişiklikleri sil",
+      "stay": "Düzenlemeye devam et"
+    },
     "pages": {
       "application": {
         "title": "Uygulama Ayarları",
@@ -70,7 +92,7 @@
       }
     },
     "tabs": {
-      "ldap": "LDAP Ayarları",
+      "ldap": "Kimlik Doğrulama Dizini",
       "branding": "Uygulama Kimliği",
       "sessionSecurity": "Oturum Güvenliği"
     },
@@ -82,9 +104,87 @@
       "bindUserNameRequired": "Bind kullanıcı adı zorunludur."
     },
     "ldap": {
-      "ldapsHelp": "Bağlantı LDAPS (SSL/TLS) üzerinden 636 portu ile kurulur.",
-      "bindPasswordConfigured": "Bind şifresi yapılandırılmış.",
-      "bindPasswordKeepHint": "Şifre alanı boş bırakılırsa mevcut şifre korunur.",
+      "role": {
+        "title": "Birincil kimlik doğrulama dizini",
+        "description": "Bu bağlantı giriş, profil lookup ve uygulama readiness davranışını sağlar. AD Management, yönetim operasyonları için ayrı servis kimliği ve endpoint politikası kullanır."
+      },
+      "sections": {
+        "endpoint": {
+          "title": "Dizin endpoint'i",
+          "description": "LDAPS sertifikası kendi hostname'i için geçerli olan bir Domain Controller kullanın. Bağlantılar her zaman sertifika doğrulamalı 636 portunu kullanır."
+        },
+        "search": {
+          "title": "Login arama kapsamı",
+          "description": "ITAdmin'in giriş ve profil lookup sırasında kullanıcıyı nerede ve nasıl bulacağını belirleyin."
+        },
+        "identity": {
+          "title": "Dizin servis kimliği",
+          "description": "Bu salt-okunur kimlik, son kullanıcının credential'ı doğrulanmadan önce kullanıcının DN bilgisini bulur."
+        },
+        "loginTest": {
+          "title": "İsteğe bağlı login davranışı testi",
+          "description": "Arama filtresini ve son kullanıcı bind akışını doğrulamak için bir test kullanıcısı girin. Bu değerler yalnız testte kullanılır ve kaydedilmez."
+        }
+      },
+      "help": {
+        "name": "Bu kimlik doğrulama dizini için yöneticiye yönelik ad.",
+        "host": "dc1.example.local gibi bir DC hostname'i; web uygulamasının TLS hostname'ini kullanmayın.",
+        "description": "Gelecekteki yöneticiler için kısa operasyonel bağlam.",
+        "baseDn": "Kimlik doğrulama kullanıcılarının aranacağı dizin kökü.",
+        "userSearchBase": "İsteğe bağlı daha dar alt ağaç. Boşsa Base DN kullanılır.",
+        "userSearchFilter": "{0} içeren LDAP filtresi; girişte yazılan kullanıcı adı veya UPN bu alana yerleştirilir.",
+        "bindUserName": "Kimlik doğrulanan kullanıcının DN bilgisini bulmak için kullanılan salt-okunur dizin hesabı.",
+        "bindUserDomain": "Kullanıcı adı qualified değilse kullanılan isteğe bağlı NetBIOS veya DNS domain'i.",
+        "bindPassword": "Mevcut secret'ı korumak için boş bırakın; başarılı candidate testten sonra değiştirmek için yeni değer girin.",
+        "testUserName": "Kullanıcının Login ekranında gireceği değerle sAMAccountName veya UPN davranışını test edin.",
+        "testPassword": "Yalnız candidate bağlantı testinde kullanılır ve hiçbir zaman kaydedilmez."
+      },
+      "secret": {
+        "stored": "Secret kayıtlı",
+        "preserveHint": "Boş bırakılırsa mevcut bind şifresi korunur."
+      },
+      "actions": {
+        "testCandidate": "Kaydedilmemiş ayarları test et",
+        "testSaved": "Kayıtlı ayarları yeniden test et",
+        "testing": "Test ediliyor…"
+      },
+      "diagnostics": {
+        "candidateTitle": "Kaydedilmemiş configuration testi",
+        "candidateCurrent": "Bu sonuçlar formdaki güncel değerlerle eşleşiyor.",
+        "candidateStale": "Testten sonra form değişti. Kaydetmeden önce candidate testi yeniden çalıştırın.",
+        "savedTitle": "Kayıtlı production configuration testi",
+        "savedDescription": "Bu sonuç kayıtlı endpoint, arama kapsamı, servis kimliği ve saklanan secret'ı kullanır.",
+        "success": "Başarılı",
+        "failed": "Başarısız",
+        "warning": "Uyarı",
+        "messages": {
+          "dnsResolved": "{{host}} DNS üzerinden çözümlendi.",
+          "dnsResolutionFailed": "DNS {{host}} adresini çözümleyemedi.",
+          "tcpConnected": "{{host}}:636 TCP bağlantısı başarılı.",
+          "tcpConnectionFailed": "{{host}}:636 TCP bağlantısı başarısız veya zaman aşımına uğradı.",
+          "tlsSucceeded": "{{host}} ile TLS handshake başarılı.",
+          "tlsHandshakeFailed": "{{host}} ile TLS handshake başarısız.",
+          "certificateTrusted": "{{host}} LDAPS sertifikası güvenilir ve hostname ile eşleşiyor.",
+          "certificateUntrusted": "{{host}} LDAPS sertifika zincirine bu sunucu güvenmiyor.",
+          "certificateNameMismatch": "LDAPS sertifikası {{host}} hostname'iyle eşleşmiyor.",
+          "certificateExpired": "{{host}} tarafından sunulan LDAPS sertifikasının süresi dolmuş.",
+          "certificateNotYetValid": "{{host}} tarafından sunulan LDAPS sertifikası henüz geçerli değil.",
+          "certificateInvalid": "{{host}} tarafından sunulan LDAPS sertifikası yok veya geçersiz.",
+          "certificateRevocationUnknown": "{{host}} LDAPS sertifikası güvenilir, ancak iptal (revocation) durumu bu sunucudan doğrulanamadı.",
+          "bindSucceeded": "{{host}} LDAP bind başarılı.",
+          "bindCredentialsRejected": "Dizin, servis kimliğini veya şifresini reddetti.",
+          "bindFailed": "{{host}} LDAP bind başarısız.",
+          "baseDnResolved": "Base DN çözümlendi.",
+          "baseDnNotResolved": "Base DN çözümlenemedi.",
+          "userSearchBaseResolved": "Kullanıcı arama base çözümlendi.",
+          "userSearchBaseNotResolved": "Kullanıcı arama base çözümlenemedi.",
+          "directoryContextResolved": "Yapılandırılmış dizin bağlamı çözümlendi.",
+          "userSearchSucceeded": "Test kullanıcısı yapılandırılmış filtreyle bulundu.",
+          "userSearchFailed": "Test kullanıcısı yapılandırılmış arama kapsamında bulunamadı.",
+          "testUserBindSucceeded": "Test kullanıcısının credential'ı kabul edildi.",
+          "testUserBindFailed": "Test kullanıcısının credential'ı reddedildi."
+        }
+      },
       "messages": {
         "saveSuccess": "LDAP ayarları kaydedildi.",
         "saveFailed": "LDAP ayarları kaydedilemedi."
@@ -98,9 +198,14 @@
         "bindUserName": "Bind Kullanıcı Adı",
         "bindUserDomain": "Bind Kullanıcı Domain",
         "bindPassword": "Bind Şifresi",
-        "description": "Açıklama"
+        "description": "Açıklama",
+        "testUserName": "Test kullanıcı adı",
+        "testPassword": "Test kullanıcı şifresi"
       },
       "validation": {
+        "applicationNameRequired": "Uygulama adı zorunludur.",
+        "browserTitleRequired": "Tarayıcı başlığı zorunludur.",
+        "testCredentialsTogether": "Test kullanıcı adı ve şifresini birlikte girin veya ikisini de boş bırakın.",
         "requestFailed": "LDAP bağlantı testi başarısız. Ayarlar kaydedilmedi.",
         "saveBlockedByValidation": "LDAP bağlantı testi başarısız. Ayarlar kaydedilmedi.",
         "genericCouldNotValidate": "LDAP bağlantısı doğrulanamadı.",
@@ -122,6 +227,14 @@
       }
     },
     "application": {
+      "sections": {
+        "identity": "Uygulama kimliği",
+        "identityDescription": "Uygulama kabuğunda, giriş deneyiminde ve tarayıcıda kullanılan adlar.",
+        "assets": "Marka görselleri",
+        "assetsDescription": "Açık ve koyu temada okunabilir kalan kompakt görseller yükleyin.",
+        "loginAndFooter": "Giriş ve alt bilgi",
+        "loginAndFooterDescription": "Destek bağlantılarını ve global alt bilgi mesajını yapılandırın."
+      },
       "fields": {
         "applicationName": "Uygulama adı",
         "browserTitle": "Tarayıcı başlığı",
@@ -139,6 +252,9 @@
         "selectFaviconFile": "Favicon dosyası seç"
       },
       "help": {
+        "applicationName": "Uygulama kabuğunda ve giriş deneyiminde gösterilir.",
+        "browserTitle": "Tarayıcı sekmesinde ve yer imlerinde gösterilir.",
+        "forgotPasswordUrl": "Giriş ekranında gösterilen isteğe bağlı harici destek veya parola sıfırlama sayfası.",
         "logoFileTypes": "PNG, JPG veya JPEG",
         "faviconFileTypes": "PNG, JPG, JPEG veya ICO",
         "footerText": "Alt bilgi alanında ortalı gösterilecek metin."
@@ -163,6 +279,10 @@
       }
     },
     "adManagement": {
+      "role": {
+        "title": "Yönetim dizini bağlantısı",
+        "description": "Bu configuration AD kullanıcı, grup, bilgisayar ve OU yönetimini sağlar. ITAdmin login ve readiness için kullanılan birincil kimlik doğrulama dizininden bilinçli olarak ayrıdır."
+      },
       "pageTabs": {
         "connection": "Bağlantı",
         "scopes": "OU Kapsamları",
@@ -319,7 +439,7 @@
       },
       "readOnlyNotice": "AD Yönetim ayarlarını görüntüleyebilirsiniz. Güncelleme yapmak için ek yetki gerekir.",
       "connection": {
-        "description": "Active Directory yönetim modülünün domain bağlantısı ve yetkili hesap bilgilerini yapılandırın. Kaydet, bağlantı doğrulamasını tetikler.",
+        "description": "Active Directory yönetim modülünün domain bağlantısını ve delegated servis kimliğini yapılandırın.",
         "sections": {
           "basic": {
             "title": "Temel Bağlantı",
@@ -331,7 +451,7 @@
           },
           "domainControllers": {
             "title": "Domain Controller Tercihleri",
-            "description": "İsteğe bağlı olarak tercih edilen DC listesi."
+            "description": "Sıralı LDAPS endpoint'leri. İlk erişilebilir controller kullanılır; sonraki girdiler failover hedefidir."
           },
           "powerShell": {
             "title": "PowerShell / Sağlık Kontrolü",
@@ -342,19 +462,24 @@
           "isEnabled": "AD Yönetim modülü aktif",
           "isEnabledHelp": "Modül pasifken operasyon menüleri gizlenir; ayarlar erişilebilir kalır.",
           "domainFqdn": "Domain FQDN",
+          "domainFqdnHelp": "AD domain kimliği ve discovery adı; web uygulamasının TLS hostname'i değildir.",
           "netbiosDomainName": "NetBIOS domain adı",
+          "netbiosDomainNameHelp": "Qualified olmayan servis hesabı adını tamamlamak için kullanılır.",
           "defaultNamingContext": "Default naming context",
+          "defaultNamingContextHelp": "RootDSE tarafından döndürülen domain naming context.",
           "baseDn": "Base DN",
+          "baseDnHelp": "AD Management operasyonlarının erişebileceği LDAP alt ağacı.",
           "usersRootOu": "Kullanıcılar root OU",
           "disabledUsersOu": "Pasif kullanıcılar OU",
           "groupsSearchBase": "Gruplar arama base",
           "computersSearchBase": "Bilgisayarlar arama base",
           "preferredDomainControllers": "Tercih edilen DC'ler",
-          "preferredDomainControllersHelp": "Her satıra bir DC FQDN veya host adı girin.",
-          "ldapsHelp": "Bağlantı LDAPS (SSL/TLS) üzerinden 636 portu ile kurulur.",
+          "preferredDomainControllersHelp": "LDAPS sertifikalarıyla eşleşen DC hostname'leri kullanın. Uygulama gösterilen sırayla dener ve son discovery fallback olarak Domain FQDN'i kullanır.",
+          "ldapsHelp": "Tüm dizin yönetimi bağlantıları, işletim sistemi trust zinciri ve hostname doğrulamasıyla LDAPS/636 kullanır. Güvensiz sertifika bypass desteği yoktur.",
           "serviceAccountUserName": "Yetkili kullanıcı adı",
           "serviceAccountUserNameHelp": "DOMAIN\\kullanici, kullanici@domain.local veya sadece kullanici formatında girilebilir. Sadece kullanıcı adı girilirse NetBIOS domain adı ile tamamlanır.",
           "serviceAccountPassword": "Yetkili kullanıcı parolası",
+          "serviceAccountPasswordHelp": "Boş değer kayıtlı parolayı korur; yeni değer değiştirir; Temizle mevcut secret'ı kaldırır ve yenisi verilene kadar modülün aktifleştirilmesini engeller.",
           "powerShellHealthEnabled": "PowerShell sağlık kontrolleri",
           "powerShellHealthEnabledHelp": "İleride sağlık kontrollerinde PowerShell kullanılmasına izin ver.",
           "powerShellTimeoutSeconds": "PowerShell zaman aşımı (sn)"
@@ -362,8 +487,36 @@
         "passwordStored": "Kayıtlı parola var.",
         "passwordKeepHint": "Parola alanı boş bırakılırsa mevcut parola korunur.",
         "clearPassword": "Mevcut parolayı temizle",
+        "domainControllers": {
+          "primary": "Birincil",
+          "fallback": "Fallback {{index}}",
+          "hostname": "Domain controller {{index}} hostname",
+          "add": "Fallback controller ekle",
+          "remove": "Controller'ı kaldır",
+          "moveUp": "Controller'ı yukarı taşı",
+          "moveDown": "Controller'ı aşağı taşı"
+        },
         "actions": {
-          "save": "AD ayarlarını kaydet"
+          "save": "AD ayarlarını kaydet",
+          "testCandidate": "Kaydedilmemiş ayarları test et",
+          "testSaved": "Kayıtlı ayarları yeniden test et",
+          "testing": "Test ediliyor…"
+        },
+        "validation": {
+          "required": "AD Management aktifken bu alan zorunludur.",
+          "passwordRequired": "Kayıtlı veya yeni bir servis hesabı parolası zorunludur.",
+          "timeout": "5 ile 300 saniye arasında bir süre girin."
+        },
+        "diagnostics": {
+          "candidateTitle": "Kaydedilmemiş configuration testi",
+          "candidateCurrent": "Bu diagnostic sonuçları formdaki güncel değerlerle eşleşiyor.",
+          "candidateStale": "Testten sonra form değişti. Kaydetmeden önce yeniden test edin.",
+          "savedTitle": "Kayıtlı production configuration testi",
+          "savedDescription": "Bu test yalnız kayıtlı ayarları ve saklanan servis hesabı secret'ını kullanır.",
+          "success": "Başarılı",
+          "failed": "Başarısız",
+          "warning": "Failover uyarısı",
+          "checkedAt": "Kontrol zamanı"
         },
         "lastValidationTitle": "Son bağlantı doğrulaması",
         "lastValidation": "Durum: {{status}} — {{message}}",
@@ -371,7 +524,8 @@
         "messages": {
           "saveSuccess": "AD yönetim ayarları kaydedildi.",
           "saveFailed": "AD yönetim ayarları kaydedilemedi.",
-          "requiredFieldsMissing": "AD yönetim ayarları için zorunlu alanlar eksik."
+          "requiredFieldsMissing": "AD yönetim ayarları için zorunlu alanlar eksik.",
+          "validationFailed": "Dizin bağlantı testi tamamlanamadı."
         }
       },
       "mappings": {
@@ -464,6 +618,16 @@
       }
     },
     "sessionSecurity": {
+      "effect": {
+        "title": "Uygulama yeniden başlatılmadan uygulanır",
+        "description": "İstemci kayıttan sonra oturum politikasını yeniden yükler. Mevcut tokenlar ilk sona erme zamanını korur; yeni ve yenilenen oturumlar güncel politikayı kullanır."
+      },
+      "sections": {
+        "activeSession": "Aktif oturum politikası",
+        "activeSessionDescription": "Oturum ömrünü ve kullanıcının ne zaman sona erme uyarısı alacağını yönetin.",
+        "refreshTokens": "Oturum devamlılığı",
+        "refreshTokensDescription": "Normal ve hatırlanan oturumların refresh token sürelerini yönetin."
+      },
       "fields": {
         "sessionDurationMinutes": {
           "label": "Oturum süresi",

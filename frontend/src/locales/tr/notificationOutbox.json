@@ -19,6 +19,9 @@
     },
     "columns": {
       "createdAt": "Tarih",
+      "delivery": "Teslimat",
+      "message": "Mesaj",
+      "deliveryState": "Teslimat durumu",
       "channel": "Kanal",
       "provider": "Sağlayıcı",
       "recipient": "Alıcı",
@@ -27,11 +30,15 @@
       "attempts": "Deneme",
       "nextAttempt": "Sonraki deneme",
       "related": "İlişkili",
-      "actions": "İşlemler"
+      "actions": "İşlemler",
+      "noSubject": "Konu yok",
+      "attemptProgress": "{{current}} / {{max}} deneme",
+      "nextAttemptShort": "Sonraki"
     },
     "actions": {
       "retry": "Yeniden dene",
-      "cancel": "İptal et"
+      "cancel": "İptal et",
+      "actionsFor": "{{recipient}} alıcısına ait bildirim işlemleri"
     },
     "confirm": {
       "retryTitle": "Bildirimi yeniden kuyruğa al",
@@ -43,10 +50,17 @@
       "title": "Bildirim detayı",
       "body": "Mesaj önizlemesi",
       "lastError": "Son hata",
-      "providerSummary": "Sağlayıcı özeti"
+      "providerSummary": "Sağlayıcı özeti",
+      "lastAttempt": "Son deneme",
+      "sentAt": "Gönderim zamanı",
+      "relatedEntity": "İlişkili kayıt",
+      "correlationId": "Korelasyon kimliği",
+      "loading": "Bildirim detayı yükleniyor...",
+      "loadFailed": "Bildirim detayı yüklenemedi."
     },
     "empty": {
-      "title": "Kuyrukta kayıt bulunamadı"
+      "title": "Kuyrukta kayıt bulunamadı",
+      "description": "Mevcut arama ve filtrelere uygun bildirim kaydı yok."
     },
     "messages": {
       "retrySuccess": "Bildirim yeniden kuyruğa alındı.",

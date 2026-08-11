@@ -7,11 +7,41 @@
       "active": "Aktif",
       "provider": "Sağlayıcı",
       "displayName": "Görünen ad",
-      "timeoutSeconds": "Zaman aşımı (sn)"
+      "timeoutSeconds": "Zaman aşımı (sn)",
+      "optional": "İsteğe bağlı"
     },
     "secrets": {
-      "storedPlaceholder": "Kayıtlı secret mevcut. Değiştirmek için yeni değer girin."
+      "storedPlaceholder": "Kayıtlı secret mevcut. Değiştirmek için yeni değer girin.",
+      "storedLabel": "Güvenli biçimde kayıtlı",
+      "storedHint": "Mevcut değeri korumak için boş bırakın.",
+      "show": "Gizli değeri göster",
+      "hide": "Gizli değeri gizle"
     },
+    "actions": { "saving": "Kaydediliyor…", "testing": "Test gönderiliyor…" },
+    "saveStates": {
+      "pristine": "Kaydedilmemiş değişiklik yok.",
+      "dirty": "Kaydedilmemiş değişiklikleriniz var.",
+      "saving": "Yapılandırma kaydediliyor…",
+      "saved": "Yapılandırma kaydedildi.",
+      "error": "Yapılandırma kaydedilemedi.",
+      "failedTitle": "Kaydetme başarısız"
+    },
+    "unsaved": {
+      "title": "Kaydedilmemiş değişiklikler silinsin mi?",
+      "description": "Bu sağlayıcıdaki değişiklikler henüz kaydedilmedi.",
+      "leave": "Değişiklikleri sil",
+      "stay": "Düzenlemeye devam et"
+    },
+    "validation": {
+      "required": "Bu alan zorunludur.",
+      "range": "İzin verilen aralıkta bir değer girin.",
+      "email": "Geçerli bir e-posta adresi girin.",
+      "url": "Geçerli bir HTTP veya HTTPS URL girin.",
+      "statusCodes": "100 ile 599 arasında, virgülle ayrılmış HTTP durum kodları girin."
+    },
+    "testDescription": "Testler son kaydedilen yapılandırmayı kullanır ve düzenleme akışından ayrı tutulur.",
+    "testNeedsSave": { "title": "Testten önce kaydedin", "description": "Yapılandırma değişiklikleri kaydedilene kadar test işlemi kullanılamaz." },
+    "testResult": { "success": "Test başarılı", "failed": "Test başarısız" },
     "common": {
       "noEntries": "Henüz kayıt yok.",
       "addEntry": "Satır ekle",
@@ -23,9 +53,15 @@
       "sectionTitle": "SMS Sağlayıcısı",
       "sectionDescription": "Custom HTTP üzerinden SMS gönderimini yapılandırın.",
       "providerName": "Custom HTTP",
+      "providerFixedHint": "SMS kanalı için sağlayıcı tipi sabittir.",
       "httpSection": "HTTP Ayarları",
+      "httpDescription": "ITAdmin'in sağlayıcı isteğini nereye ve nasıl göndereceğini tanımlayın.",
       "authSection": "Kimlik Doğrulama",
+      "authDescription": "Tek bir kimlik doğrulama yöntemi seçin. Mevcut gizli değerler tarayıcıya geri gönderilmez.",
       "requestSection": "İstek",
+      "requestDescription": "İsteği şekillendirin ve başarılı sağlayıcı yanıtının nasıl tanınacağını belirleyin.",
+      "bodyTemplateHint": "Sağlayıcının alıcı ve içerik beklediği yerlerde {{phone}} ve {{message}} kullanın.",
+      "successCodesHint": "Virgülle ayrılmış HTTP durum kodları; örneğin 200,201.",
       "testSection": "Test SMS",
       "fields": {
         "sender": "Gönderici başlığı",
@@ -73,6 +109,11 @@
       "sectionTitle": "E-posta Sağlayıcısı",
       "sectionDescription": "SMTP üzerinden e-posta gönderimini yapılandırın.",
       "providerName": "SMTP",
+      "providerFixedHint": "E-posta kanalı için sağlayıcı tipi sabittir.",
+      "connectionSection": "SMTP bağlantısı",
+      "connectionDescription": "Posta sunucusu bağlantısını ve aktarım güvenliğini yapılandırın.",
+      "identitySection": "Kimlik doğrulama ve gönderici",
+      "identityDescription": "SMTP sunucusu anonim gönderime izin veriyorsa kimlik bilgileri isteğe bağlıdır.",
       "testSection": "Test E-posta",
       "fields": {
         "host": "SMTP host",

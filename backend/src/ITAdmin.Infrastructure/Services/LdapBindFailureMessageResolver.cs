@@ -39,6 +39,9 @@ internal static class LdapBindFailureMessageResolver
         return ValidationFailedMessage;
     }
 
+    internal static bool IsCredentialFailure(LdapException exception) =>
+        exception.ErrorCode is InappropriateAuthentication or InvalidCredentials;
+
     private static bool IsLikelyConnectionFailure(int code)
     {
         if (code is LdapServerDown or LdapTimeout or LdapConnectError)

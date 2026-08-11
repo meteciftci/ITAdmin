@@ -96,7 +96,33 @@ public sealed class SettingsController(
                 ResolveUserAgent()),
             cancellationToken);
 
-        return Ok(new ValidateLdapSettingsResponse(result.IsValid, result.Message));
+        return Ok(MapLdapValidation(result));
+    }
+
+    [HttpPost("ldap/validate-saved")]
+    [RequirePermission(PermissionCodes.Settings.Update)]
+    public async Task<ActionResult<ValidateLdapSettingsResponse>> ValidateSavedLdapSettings(
+        CancellationToken cancellationToken)
+    {
+        var result = await settingsService.ValidateSavedLdapSettingsAsync(
+            new AppModels.ValidateLdapSettingsRequest(
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                null,
+                null,
+                null,
+                null,
+                ResolveActorUserId(User),
+                ResolveActorUserName(User),
+                ResolveIpAddress(),
+                ResolveUserAgent()),
+            cancellationToken);
+
+        return Ok(MapLdapValidation(result));
     }
 
     [HttpPut("application")]
@@ -326,6 +352,18 @@ public sealed class SettingsController(
             ldap.HasBindPassword,
             ldap.Description,
             ldap.IsActive);
+
+    private static ValidateLdapSettingsResponse MapLdapValidation(
+        AppModels.ValidateLdapSettingsResult result) =>
+        new(
+            result.IsValid,
+            result.Message,
+            result.Details?.Select(detail => new LdapConnectionDiagnosticDetailResponse(
+                detail.Key,
+                detail.Status,
+                detail.MessageKey,
+                detail.MessageParams)).ToList()
+            ?? []);
 
     private static ApplicationSettingResponse MapApplicationSetting(AppModels.ApplicationSettingItem item) =>
         new(

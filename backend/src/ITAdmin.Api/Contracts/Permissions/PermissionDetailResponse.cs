@@ -2,6 +2,7 @@ namespace ITAdmin.Api.Contracts.Permissions;
 
 public sealed record PermissionDetailResponse(
     Guid Id,
+    string Module,
     string Name,
     string Code,
     string? Description,

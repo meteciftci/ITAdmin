@@ -1,23 +1,47 @@
 {
   "permissions": {
     "title": "Permissions",
-    "description": "View permission codes in the system.",
+    "description": "Explore the capabilities available across the product and the areas they protect.",
     "sections": {
-      "listTitle": "Permission List"
+      "catalogTitle": "Permission catalog"
     },
     "search": {
-      "placeholder": "Search permissions..."
+      "placeholder": "Search by permission, code, module, or description..."
     },
-    "table": {
-      "name": "Name",
-      "code": "Code",
-      "description": "Description",
-      "group": "Group/Module",
-      "status": "Status"
+    "summary": {
+      "permissions": "Matching permissions",
+      "modules": "Product areas"
+    },
+    "moduleNavigation": {
+      "label": "Permission modules"
+    },
+    "module": {
+      "permissionCount_one": "{{count}} permission",
+      "permissionCount_other": "{{count}} permissions"
+    },
+    "item": {
+      "noDescription": "No description is available for this permission."
+    },
+    "modules": {
+      "Dashboard": "Dashboard",
+      "Users": "Users",
+      "Roles": "Roles",
+      "Permissions": "Permissions",
+      "AuditLogs": "Audit logs",
+      "SecurityLogs": "Security logs",
+      "Settings": "Settings",
+      "AdManagement": "Active Directory management",
+      "AdOperationLogs": "AD operation logs",
+      "NotificationProviders": "Notification providers",
+      "NotificationOutbox": "Notification outbox",
+      "NotificationTemplates": "Notification templates",
+      "LicenseManagement": "License management",
+      "Directory": "Directory services",
+      "Setup": "Setup"
     },
     "empty": {
       "title": "No permissions found",
-      "description": "No permissions found for current filters."
+      "description": "Try changing the search or status filter."
     },
     "errors": {
       "loadFailed": "Permissions could not be loaded."

@@ -1,12 +1,25 @@
 using ITAdmin.Application.Common.Constants;
 using ITAdmin.Application.Common.Models;
 using ITAdmin.Infrastructure.Services;
+using ITAdmin.UnitTests.Fakes;
 
 namespace ITAdmin.UnitTests.Services;
 
 public sealed class AdManagementValidationServiceTests
 {
-    private readonly AdManagementValidationService _service = new();
+    private readonly AdManagementValidationService _service = new(new FakeLdapService
+    {
+        DiagnoseConnectionResult = new LdapConnectionDiagnosticResult(
+            false,
+            "invalid-ad-host.invalid",
+            new[]
+            {
+                new LdapConnectionDiagnosticDetail(
+                    "dns",
+                    LdapConnectionDiagnosticStatuses.Failed,
+                    LdapConnectionDiagnosticMessageKeys.DnsResolutionFailed),
+            }),
+    });
 
     [Fact]
     public async Task ValidateConnectionAsync_WhenDefaultNamingContextMissing_ReturnsFailed()

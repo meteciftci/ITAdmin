@@ -8,7 +8,21 @@
     "filters": {
       "searchPlaceholder": "Search security logs...",
       "eventTypeFilterPlaceholder": "Select event type",
-      "severityFilterPlaceholder": "Select severity"
+      "severityFilterPlaceholder": "Select severity",
+      "selectedCount": "{{count}} selected",
+      "dateRangeActive": "Date range"
+    },
+    "severities": {
+      "info": "Info",
+      "low": "Low",
+      "warning": "Warning",
+      "error": "Error",
+      "critical": "Critical",
+      "high": "High",
+      "success": "Success"
+    },
+    "actions": {
+      "detailFor": "View details for {{eventType}} security event"
     },
     "table": {
       "createdAt": "Created At",

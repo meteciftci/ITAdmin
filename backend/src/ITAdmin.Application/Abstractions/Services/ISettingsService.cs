@@ -15,6 +15,10 @@ public interface ISettingsService
         ValidateLdapSettingsRequest request,
         CancellationToken cancellationToken = default);
 
+    Task<ValidateLdapSettingsResult> ValidateSavedLdapSettingsAsync(
+        ValidateLdapSettingsRequest request,
+        CancellationToken cancellationToken = default);
+
     Task<UpdateSettingsResult> UpdateApplicationSettingsAsync(
         UpdateApplicationSettingsRequest request,
         CancellationToken cancellationToken = default);

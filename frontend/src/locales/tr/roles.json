@@ -25,6 +25,7 @@
       "type": "Tür",
       "status": "Durum",
       "permissionCount": "İzin Sayısı",
+      "actionsFor": "{{name}} rolü için işlemler",
       "actions": "İşlemler"
     },
     "type": {

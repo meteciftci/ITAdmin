@@ -15,6 +15,8 @@ import {
   getAdManagementSettings,
   updateAdAttributeMapping,
   updateAdManagementSettings,
+  validateAdManagementCandidateSettings,
+  validateAdManagementSettings,
 } from "@/features/ad-management/api";
 import { getAdManagementSaveErrorMessage } from "@/features/ad-management/ad-management-save-error";
 import { AdAttributeMappingDialog, type AdAttributeMappingDialogFormState } from "@/features/ad-management/components/AdAttributeMappingDialog";
@@ -94,6 +96,8 @@ export function AdManagementSettingsTab({ readOnly }: Props) {
   const queryClient = useQueryClient();
 
   const [activeTab, setActiveTab] = useState<AdManagementInnerTab>("connection");
+  const [connectionDirty, setConnectionDirty] = useState(false);
+  const [pendingSettingsTab, setPendingSettingsTab] = useState<AdManagementInnerTab | null>(null);
 
   const settingsQuery = useQuery({
     queryKey: AD_MANAGEMENT_SETTINGS_QUERY_KEY,
@@ -109,10 +113,14 @@ export function AdManagementSettingsTab({ readOnly }: Props) {
       if (!connectionReady && LOCKED_TABS.includes(nextTab)) {
         return;
       }
+      if (activeTab === "connection" && connectionDirty) {
+        setPendingSettingsTab(nextTab);
+        return;
+      }
 
       setActiveTab(nextTab);
     },
-    [connectionReady],
+    [activeTab, connectionDirty, connectionReady],
   );
 
   const mappingsQuery = useQuery({
@@ -138,6 +146,14 @@ export function AdManagementSettingsTab({ readOnly }: Props) {
         ),
       );
     },
+  });
+
+  const candidateValidationMutation = useMutation({
+    mutationFn: validateAdManagementCandidateSettings,
+  });
+
+  const savedValidationMutation = useMutation({
+    mutationFn: validateAdManagementSettings,
   });
 
   const saveSettings = (
@@ -332,6 +348,15 @@ export function AdManagementSettingsTab({ readOnly }: Props) {
             settings={settingsQuery.data}
             readOnly={readOnly}
             isSaving={updateSettingsMutation.isPending}
+            saveError={updateSettingsMutation.error ? getAdManagementSaveErrorMessage(updateSettingsMutation.error, t, "settings:adManagement.connection.messages.saveFailed") : null}
+            candidateValidation={candidateValidationMutation.data ?? null}
+            savedValidation={savedValidationMutation.data ?? null}
+            isTestingCandidate={candidateValidationMutation.isPending}
+            isTestingSaved={savedValidationMutation.isPending}
+            validationError={candidateValidationMutation.error || savedValidationMutation.error ? getAdManagementSaveErrorMessage(candidateValidationMutation.error ?? savedValidationMutation.error, t, "settings:adManagement.connection.messages.validationFailed") : null}
+            onDirtyChange={setConnectionDirty}
+            onTestCandidate={(payload) => candidateValidationMutation.mutateAsync(payload)}
+            onTestSaved={() => savedValidationMutation.mutateAsync()}
             onSave={(payload) =>
               saveSettings(
                 payload,
@@ -402,6 +427,20 @@ export function AdManagementSettingsTab({ readOnly }: Props) {
         errorMessage={dialog.errorMessage}
         onOpenChange={handleDialogOpenChange}
         onSubmit={handleDialogSubmit}
+      />
+
+      <ConfirmDialog
+        open={pendingSettingsTab !== null}
+        title={t("settings:unsaved.title")}
+        description={t("settings:unsaved.description")}
+        confirmText={t("settings:unsaved.leave")}
+        cancelText={t("settings:unsaved.stay")}
+        variant="danger"
+        onConfirm={() => {
+          if (pendingSettingsTab) setActiveTab(pendingSettingsTab);
+          setPendingSettingsTab(null);
+        }}
+        onOpenChange={(open) => { if (!open) setPendingSettingsTab(null); }}
       />
 
       <ConfirmDialog

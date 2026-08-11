@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { SectionCard } from "@/components/common/SectionCard";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmailProviderSettingsTab } from "@/features/notification-providers/components/EmailProviderSettingsTab";
 import { SmsProviderSettingsTab } from "@/features/notification-providers/components/SmsProviderSettingsTab";
@@ -12,6 +13,18 @@ export function NotificationProvidersTab() {
   const { t } = useTranslation(["notificationProviders", "notificationSettings", "common"]);
   const user = useAuthStore((state) => state.user);
   const canUpdate = canAccess(user, PermissionCodes.NotificationProviders.Update);
+  const [activeProvider, setActiveProvider] = useState("sms");
+  const [isDirty, setIsDirty] = useState(false);
+  const [pendingProvider, setPendingProvider] = useState<string | null>(null);
+
+  const changeProvider = (nextProvider: string) => {
+    if (nextProvider === activeProvider) return;
+    if (isDirty) {
+      setPendingProvider(nextProvider);
+      return;
+    }
+    setActiveProvider(nextProvider);
+  };
 
   return (
     <div className="space-y-4">
@@ -21,20 +34,34 @@ export function NotificationProvidersTab() {
         </p>
       ) : null}
 
-      <SectionCard>
-        <Tabs defaultValue="sms">
+      <Tabs value={activeProvider} onValueChange={changeProvider}>
           <TabsList>
             <TabsTrigger value="sms">{t("common:channels.sms")}</TabsTrigger>
             <TabsTrigger value="email">{t("common:channels.email")}</TabsTrigger>
           </TabsList>
           <TabsContent value="sms" className="mt-4">
-            <SmsProviderSettingsTab readOnly={!canUpdate} />
+            <SmsProviderSettingsTab readOnly={!canUpdate} onDirtyChange={setIsDirty} />
           </TabsContent>
           <TabsContent value="email" className="mt-4">
-            <EmailProviderSettingsTab readOnly={!canUpdate} />
+            <EmailProviderSettingsTab readOnly={!canUpdate} onDirtyChange={setIsDirty} />
           </TabsContent>
         </Tabs>
-      </SectionCard>
+
+      <ConfirmDialog
+        open={pendingProvider !== null}
+        title={t("notificationProviders:unsaved.title")}
+        description={t("notificationProviders:unsaved.description")}
+        confirmText={t("notificationProviders:unsaved.leave")}
+        cancelText={t("notificationProviders:unsaved.stay")}
+        variant="danger"
+        onConfirm={() => {
+          if (pendingProvider) setActiveProvider(pendingProvider);
+          setPendingProvider(null);
+        }}
+        onOpenChange={(open) => {
+          if (!open) setPendingProvider(null);
+        }}
+      />
     </div>
   );
 }

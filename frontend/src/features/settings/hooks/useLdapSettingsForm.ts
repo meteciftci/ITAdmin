@@ -29,6 +29,12 @@ function getLdapFormErrors(
   if (!form.bindUserName.trim()) {
     errors.bindUserName = t("settings:validation.bindUserNameRequired");
   }
+  if (form.testUserName.trim() && !form.testPassword) {
+    errors.testPassword = t("settings:ldap.validation.testCredentialsTogether");
+  }
+  if (form.testPassword && !form.testUserName.trim()) {
+    errors.testUserName = t("settings:ldap.validation.testCredentialsTogether");
+  }
   return errors;
 }
 
@@ -43,7 +49,23 @@ export type UseLdapSettingsFormReturn = {
   buildLdapValidatePayload: () => ValidateLdapSettingsRequest;
   ldapFormIsMinimumValid: boolean;
   clearBindPasswordAfterSave: () => void;
+  ldapFormIsDirty: boolean;
+  ldapConfigurationFingerprint: string;
 };
+
+function configurationFingerprint(form: LdapFormValues): string {
+  return JSON.stringify({
+    name: form.name,
+    host: form.host,
+    baseDn: form.baseDn,
+    userSearchBase: form.userSearchBase,
+    userSearchFilter: form.userSearchFilter,
+    bindUserName: form.bindUserName,
+    bindUserDomain: form.bindUserDomain,
+    bindPassword: form.bindPassword,
+    description: form.description,
+  });
+}
 
 export function useLdapSettingsForm({
   t,
@@ -53,9 +75,10 @@ export function useLdapSettingsForm({
     Partial<Record<keyof LdapFormValues, string>>
   >({});
   const [hasBindPassword, setHasBindPassword] = useState(false);
+  const [baseline, setBaseline] = useState(() => JSON.stringify(createEmptyLdapForm()));
 
   const hydrateFromSettings = useCallback((ldap: LdapSettings | null) => {
-    setLdapForm({
+    const nextForm = {
       name: ldap?.name ?? "",
       host: ldap?.host ?? "",
       baseDn: ldap?.baseDn ?? "",
@@ -65,7 +88,11 @@ export function useLdapSettingsForm({
       bindUserDomain: ldap?.bindUserDomain ?? "",
       bindPassword: "",
       description: ldap?.description ?? "",
-    });
+      testUserName: "",
+      testPassword: "",
+    };
+    setLdapForm(nextForm);
+    setBaseline(configurationFingerprint(nextForm));
     setHasBindPassword(Boolean(ldap?.hasBindPassword));
     setLdapFieldErrors({});
   }, []);
@@ -110,6 +137,8 @@ export function useLdapSettingsForm({
       userSearchFilter: ldapForm.userSearchFilter.trim(),
       bindUserName: ldapForm.bindUserName.trim(),
       bindUserDomain: ldapForm.bindUserDomain.trim() || null,
+      testUserName: ldapForm.testUserName.trim() || undefined,
+      testPassword: ldapForm.testPassword || undefined,
     };
 
     return ldapForm.bindPassword
@@ -137,5 +166,7 @@ export function useLdapSettingsForm({
     buildLdapValidatePayload,
     ldapFormIsMinimumValid,
     clearBindPasswordAfterSave,
+    ldapFormIsDirty: configurationFingerprint(ldapForm) !== baseline,
+    ldapConfigurationFingerprint: configurationFingerprint(ldapForm),
   };
 }

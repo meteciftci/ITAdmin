@@ -1,6 +1,28 @@
 {
   "settings": {
     "readOnlyNotice": "You can view this page. Additional permission is required to update settings.",
+    "fields": {
+      "optional": "Optional"
+    },
+    "actions": {
+      "saving": "Saving…",
+      "showSecret": "Show secret",
+      "hideSecret": "Hide secret"
+    },
+    "saveStates": {
+      "pristine": "No unsaved changes.",
+      "dirty": "You have unsaved changes.",
+      "saving": "Saving settings…",
+      "saved": "Settings saved.",
+      "error": "Settings could not be saved.",
+      "failedTitle": "Save failed"
+    },
+    "unsaved": {
+      "title": "Discard unsaved changes?",
+      "description": "Changes on this settings tab have not been saved.",
+      "leave": "Discard changes",
+      "stay": "Keep editing"
+    },
     "pages": {
       "application": {
         "title": "Application Settings",
@@ -70,7 +92,7 @@
       }
     },
     "tabs": {
-      "ldap": "LDAP Settings",
+      "ldap": "Authentication Directory",
       "branding": "Application Branding",
       "sessionSecurity": "Session Security"
     },
@@ -82,9 +104,87 @@
       "bindUserNameRequired": "Bind User Name is required."
     },
     "ldap": {
-      "ldapsHelp": "Connections are established over LDAPS (SSL/TLS) on port 636.",
-      "bindPasswordConfigured": "Bind password is configured.",
-      "bindPasswordKeepHint": "If the password field is left empty, the existing password will be preserved.",
+      "role": {
+        "title": "Primary authentication directory",
+        "description": "This connection powers sign-in, profile lookup, and application readiness. AD Management uses a separate service identity and endpoint policy for administrative operations."
+      },
+      "sections": {
+        "endpoint": {
+          "title": "Directory endpoint",
+          "description": "Use a Domain Controller hostname whose LDAPS certificate is valid for that hostname. Connections always use port 636 with certificate validation."
+        },
+        "search": {
+          "title": "Login search context",
+          "description": "Define where and how ITAdmin locates users during sign-in and profile lookup."
+        },
+        "identity": {
+          "title": "Directory service identity",
+          "description": "This read identity searches the directory before the end-user credential is verified."
+        },
+        "loginTest": {
+          "title": "Optional login behavior test",
+          "description": "Provide a disposable test user's credentials to verify the configured search filter and end-user bind. These values are used only for this test and are never saved."
+        }
+      },
+      "help": {
+        "name": "An administrator-facing label for this authentication directory.",
+        "host": "A DC hostname such as dc1.example.local; do not use the web application's TLS hostname.",
+        "description": "Short operational context for future administrators.",
+        "baseDn": "The directory root under which authentication users are searched.",
+        "userSearchBase": "Optional narrower subtree. When empty, Base DN is used.",
+        "userSearchFilter": "LDAP filter containing {0}, which is replaced with the entered username or UPN.",
+        "bindUserName": "Read-only directory account used to find the authenticating user's DN.",
+        "bindUserDomain": "Optional NetBIOS or DNS domain used when the username is not already qualified.",
+        "bindPassword": "Leave empty to preserve the stored secret; enter a value to replace it after a successful candidate test.",
+        "testUserName": "Test either sAMAccountName or UPN behavior using the exact value a user would enter at sign-in.",
+        "testPassword": "Used only by the candidate connection test and never persisted."
+      },
+      "secret": {
+        "stored": "Secret stored",
+        "preserveHint": "Empty means keep the current bind password."
+      },
+      "actions": {
+        "testCandidate": "Test unsaved configuration",
+        "testSaved": "Retest saved configuration",
+        "testing": "Testing…"
+      },
+      "diagnostics": {
+        "candidateTitle": "Unsaved configuration test",
+        "candidateCurrent": "These results match the values currently in the form.",
+        "candidateStale": "The form changed after this test. Run the candidate test again before saving.",
+        "savedTitle": "Saved production configuration test",
+        "savedDescription": "This result uses the currently persisted endpoint, search context, identity, and stored secret.",
+        "success": "Successful",
+        "failed": "Failed",
+        "warning": "Warning",
+        "messages": {
+          "dnsResolved": "DNS resolved {{host}}.",
+          "dnsResolutionFailed": "DNS could not resolve {{host}}.",
+          "tcpConnected": "TCP connection to {{host}}:636 succeeded.",
+          "tcpConnectionFailed": "TCP connection to {{host}}:636 failed or timed out.",
+          "tlsSucceeded": "TLS handshake with {{host}} succeeded.",
+          "tlsHandshakeFailed": "TLS handshake with {{host}} failed.",
+          "certificateTrusted": "The LDAPS certificate for {{host}} is trusted and matches the hostname.",
+          "certificateUntrusted": "The LDAPS certificate chain for {{host}} is not trusted by this server.",
+          "certificateNameMismatch": "The LDAPS certificate does not match the hostname {{host}}.",
+          "certificateExpired": "The LDAPS certificate presented by {{host}} has expired.",
+          "certificateNotYetValid": "The LDAPS certificate presented by {{host}} is not yet valid.",
+          "certificateInvalid": "The LDAPS certificate presented by {{host}} is unavailable or invalid.",
+          "certificateRevocationUnknown": "The LDAPS certificate for {{host}} is trusted, but its revocation status could not be checked from this server.",
+          "bindSucceeded": "LDAP bind to {{host}} succeeded.",
+          "bindCredentialsRejected": "The directory rejected the service identity or password.",
+          "bindFailed": "LDAP bind to {{host}} failed.",
+          "baseDnResolved": "Base DN was resolved.",
+          "baseDnNotResolved": "Base DN could not be resolved.",
+          "userSearchBaseResolved": "User search base was resolved.",
+          "userSearchBaseNotResolved": "User search base could not be resolved.",
+          "directoryContextResolved": "The configured directory context was resolved.",
+          "userSearchSucceeded": "The test user was found with the configured filter.",
+          "userSearchFailed": "The test user could not be found with the configured search context.",
+          "testUserBindSucceeded": "The test user's credentials were accepted.",
+          "testUserBindFailed": "The test user's credentials were rejected."
+        }
+      },
       "messages": {
         "saveSuccess": "LDAP settings saved.",
         "saveFailed": "LDAP settings could not be updated."
@@ -98,9 +198,14 @@
         "bindUserName": "Bind User Name",
         "bindUserDomain": "Bind User Domain",
         "bindPassword": "Bind Password",
-        "description": "Description"
+        "description": "Description",
+        "testUserName": "Test user name",
+        "testPassword": "Test user password"
       },
       "validation": {
+        "applicationNameRequired": "Application name is required.",
+        "browserTitleRequired": "Browser title is required.",
+        "testCredentialsTogether": "Enter both the test user name and password, or leave both empty.",
         "requestFailed": "LDAP connection test failed. Settings were not saved.",
         "saveBlockedByValidation": "LDAP connection test failed. Settings were not saved.",
         "genericCouldNotValidate": "LDAP connection could not be validated.",
@@ -122,6 +227,14 @@
       }
     },
     "application": {
+      "sections": {
+        "identity": "Application identity",
+        "identityDescription": "Names used in the application shell, login experience, and browser chrome.",
+        "assets": "Brand assets",
+        "assetsDescription": "Upload compact assets that remain readable in both light and dark themes.",
+        "loginAndFooter": "Login and footer",
+        "loginAndFooterDescription": "Configure supporting links and the global footer message."
+      },
       "fields": {
         "applicationName": "Application name",
         "browserTitle": "Browser title",
@@ -139,6 +252,9 @@
         "selectFaviconFile": "Select favicon file"
       },
       "help": {
+        "applicationName": "Shown in the application shell and login experience.",
+        "browserTitle": "Shown in the browser tab and bookmarks.",
+        "forgotPasswordUrl": "Optional external support or password reset page shown on the login screen.",
         "logoFileTypes": "PNG, JPG, or JPEG",
         "faviconFileTypes": "PNG, JPG, JPEG, or ICO",
         "footerText": "Text shown centered in the footer."
@@ -163,6 +279,10 @@
       }
     },
     "adManagement": {
+      "role": {
+        "title": "Administrative directory connection",
+        "description": "This configuration powers AD user, group, computer, and OU administration. It is intentionally separate from the primary authentication directory used for ITAdmin sign-in and readiness."
+      },
       "pageTabs": {
         "connection": "Connection",
         "scopes": "OU Scopes",
@@ -319,7 +439,7 @@
       },
       "readOnlyNotice": "You can view AD management settings. Additional permission is required to update them.",
       "connection": {
-        "description": "Configure the AD Management module domain connection and service account. Save triggers connection validation.",
+        "description": "Configure the AD Management module domain connection and delegated service identity.",
         "sections": {
           "basic": {
             "title": "Basic Connection",
@@ -331,7 +451,7 @@
           },
           "domainControllers": {
             "title": "Domain Controller Preferences",
-            "description": "Optional preferred DC list."
+            "description": "Ordered LDAPS endpoints. The first reachable controller is used; later entries are failover targets."
           },
           "powerShell": {
             "title": "PowerShell / Health Checks",
@@ -342,19 +462,24 @@
           "isEnabled": "AD Management module enabled",
           "isEnabledHelp": "When disabled, operation menus are hidden; settings remain accessible.",
           "domainFqdn": "Domain FQDN",
+          "domainFqdnHelp": "The AD domain identity and discovery name; this is not the web application's TLS hostname.",
           "netbiosDomainName": "NetBIOS domain name",
+          "netbiosDomainNameHelp": "Used to qualify an unqualified service account name.",
           "defaultNamingContext": "Default naming context",
+          "defaultNamingContextHelp": "The domain naming context returned by RootDSE.",
           "baseDn": "Base DN",
+          "baseDnHelp": "The LDAP subtree available to AD Management operations.",
           "usersRootOu": "Users root OU",
           "disabledUsersOu": "Disabled users OU",
           "groupsSearchBase": "Groups search base",
           "computersSearchBase": "Computers search base",
           "preferredDomainControllers": "Preferred domain controllers",
-          "preferredDomainControllersHelp": "Enter one DC FQDN or host name per line.",
-          "ldapsHelp": "Connections are established over LDAPS (SSL/TLS) on port 636.",
+          "preferredDomainControllersHelp": "Use DC hostnames that match their LDAPS certificates. The application tries them in the displayed order and then uses the Domain FQDN as a final discovery fallback.",
+          "ldapsHelp": "All directory administration connections use LDAPS on port 636 with operating-system trust and hostname validation. Insecure certificate bypass is not supported.",
           "serviceAccountUserName": "Service account user name",
           "serviceAccountUserNameHelp": "You can enter DOMAIN\\user, user@domain.local, or just user. If only the user name is entered, the NetBIOS domain name is used.",
           "serviceAccountPassword": "Service account password",
+          "serviceAccountPasswordHelp": "Empty preserves the stored password; a new value replaces it; Clear removes it and prevents enabling the module until a replacement is provided.",
           "powerShellHealthEnabled": "PowerShell health checks",
           "powerShellHealthEnabledHelp": "Allow future health checks to use PowerShell.",
           "powerShellTimeoutSeconds": "PowerShell timeout (sec)"
@@ -362,8 +487,36 @@
         "passwordStored": "A password is already stored.",
         "passwordKeepHint": "Leaving the password field empty keeps the existing password.",
         "clearPassword": "Clear stored password",
+        "domainControllers": {
+          "primary": "Primary",
+          "fallback": "Fallback {{index}}",
+          "hostname": "Domain controller {{index}} hostname",
+          "add": "Add fallback controller",
+          "remove": "Remove controller",
+          "moveUp": "Move controller up",
+          "moveDown": "Move controller down"
+        },
         "actions": {
-          "save": "Save AD settings"
+          "save": "Save AD settings",
+          "testCandidate": "Test unsaved configuration",
+          "testSaved": "Retest saved configuration",
+          "testing": "Testing…"
+        },
+        "validation": {
+          "required": "This field is required while AD Management is enabled.",
+          "passwordRequired": "A stored or replacement service password is required.",
+          "timeout": "Enter a timeout between 5 and 300 seconds."
+        },
+        "diagnostics": {
+          "candidateTitle": "Unsaved configuration test",
+          "candidateCurrent": "These diagnostics match the current form values.",
+          "candidateStale": "The form changed after this test. Test it again before saving.",
+          "savedTitle": "Saved production configuration test",
+          "savedDescription": "This test uses only persisted settings and the stored service-account secret.",
+          "success": "Successful",
+          "failed": "Failed",
+          "warning": "Failover warning",
+          "checkedAt": "Checked"
         },
         "lastValidationTitle": "Last connection validation",
         "lastValidation": "Status: {{status}} — {{message}}",
@@ -371,7 +524,8 @@
         "messages": {
           "saveSuccess": "AD management settings saved.",
           "saveFailed": "AD management settings could not be saved.",
-          "requiredFieldsMissing": "Required AD management fields are missing."
+          "requiredFieldsMissing": "Required AD management fields are missing.",
+          "validationFailed": "The directory connection test could not be completed."
         }
       },
       "mappings": {
@@ -464,6 +618,16 @@
       }
     },
     "sessionSecurity": {
+      "effect": {
+        "title": "Applies without an application restart",
+        "description": "The client reloads session policy after save. Existing tokens keep their original expiry; newly issued and refreshed sessions use the updated policy."
+      },
+      "sections": {
+        "activeSession": "Active session policy",
+        "activeSessionDescription": "Control session lifetime and when users receive an expiry warning.",
+        "refreshTokens": "Session continuity",
+        "refreshTokensDescription": "Control refresh token lifetime for regular and remembered sessions."
+      },
       "fields": {
         "sessionDurationMinutes": {
           "label": "Session duration",

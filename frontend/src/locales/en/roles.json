@@ -25,6 +25,7 @@
       "type": "Type",
       "status": "Status",
       "permissionCount": "Permission Count",
+      "actionsFor": "Actions for {{name}} role",
       "actions": "Actions"
     },
     "type": {

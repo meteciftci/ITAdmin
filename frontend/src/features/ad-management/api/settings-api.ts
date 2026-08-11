@@ -82,3 +82,13 @@ export const validateAdManagementSettings =
     );
     return data;
   };
+
+export const validateAdManagementCandidateSettings = async (
+  payload: UpdateAdManagementSettingsRequest,
+): Promise<AdManagementValidationResult> => {
+  const { data } = await apiClient.post<AdManagementValidationResult>(
+    "/ad-management/settings/validate-candidate",
+    payload,
+  );
+  return data;
+};

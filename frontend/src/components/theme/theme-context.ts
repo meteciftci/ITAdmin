@@ -16,4 +16,5 @@ const getSystemTheme = (): "light" | "dark" =>
 export const applyThemeClass = (theme: ThemeMode) => {
   const next = theme === "system" ? getSystemTheme() : theme;
   document.documentElement.classList.toggle("dark", next === "dark");
+  document.documentElement.style.colorScheme = next;
 };

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
@@ -38,12 +38,7 @@ export function AppSidebar() {
   const { t } = useTranslation(["navigation"]);
   const location = useLocation();
   const user = useAuthStore((state) => state.user);
-  const {
-    sidebarCollapsed,
-    setSidebarCollapsed,
-    mobileSidebarOpen,
-    setMobileSidebarOpen,
-  } = useLayoutShell();
+  const { sidebarCollapsed, mobileSidebarOpen, setMobileSidebarOpen } = useLayoutShell();
 
   const canViewAdManagementModule =
     canAccess(user, PermissionCodes.AdManagement.Users.View)
@@ -194,43 +189,36 @@ export function AppSidebar() {
           type="button"
           className="fixed inset-0 z-40 bg-black/40 lg:hidden"
           onClick={() => setMobileSidebarOpen(false)}
-          aria-label="close sidebar"
+          aria-label={t("navigation:close")}
         />
       ) : null}
       <aside
+        id="app-navigation"
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex h-screen flex-col border-r bg-card transition-all lg:static lg:z-auto lg:h-full lg:shrink-0",
-          sidebarCollapsed ? "w-[72px]" : "w-[260px]",
+          "fixed inset-y-0 left-0 z-50 flex h-screen w-[min(280px,calc(100vw-2rem))] flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-2xl transition-transform lg:static lg:z-auto lg:h-full lg:w-[280px] lg:shrink-0 lg:shadow-none",
+          sidebarCollapsed && "lg:hidden",
           mobileSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         )}
       >
-        <div className="flex h-16 items-center justify-between border-b px-3">
-          <div className={cn("flex min-w-0 items-center gap-2", sidebarCollapsed ? "justify-center" : "")}>
+        <div className="flex h-16 items-center border-b border-sidebar-border px-4">
+          <div className="flex min-w-0 items-center gap-3">
             {resolvedLogoUrl ? (
-              <img src={resolvedLogoUrl} alt={appName} className="size-8 rounded-md object-contain" />
+              <img src={resolvedLogoUrl} alt={appName} className="size-9 rounded-lg object-contain" />
             ) : (
-              <div className="flex size-8 items-center justify-center rounded-md bg-muted text-xs font-semibold text-muted-foreground">
+              <div className="flex size-9 items-center justify-center rounded-lg bg-sidebar-primary text-xs font-bold text-sidebar-primary-foreground shadow-sm">
                 {initials || "SP"}
               </div>
             )}
-            {!sidebarCollapsed ? (
-              <p className="truncate text-sm font-semibold tracking-wide text-muted-foreground">{appName}</p>
-            ) : null}
+            <div className="min-w-0 leading-tight">
+              <p className="truncate text-sm font-semibold text-sidebar-foreground">{appName}</p>
+              <p className="truncate text-xs text-sidebar-foreground/55">
+                {t("navigation:subtitle")}
+              </p>
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className={cn(
-              buttonVariants({ variant: "ghost", size: "icon-sm" }),
-              "hidden lg:inline-flex",
-            )}
-            aria-label="toggle sidebar"
-          >
-            {sidebarCollapsed ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}
-          </button>
         </div>
-        <Separator />
-        <nav className="flex-1 space-y-4 overflow-y-auto p-3">
+        <Separator className="bg-sidebar-border" />
+        <nav className="flex-1 space-y-5 overflow-y-auto p-3.5">
           {groups.map((group) => {
             const visibleItems = getVisibleSidebarGroupItems(group.items);
             if (!visibleItems.length) return null;
@@ -238,11 +226,9 @@ export function AppSidebar() {
 
             return (
               <div key={group.labelKey} className="space-y-1">
-                {!sidebarCollapsed ? (
-                  <p className="px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    {groupLabel}
-                  </p>
-                ) : null}
+                <p className="px-3 text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-sidebar-foreground/45">
+                  {groupLabel}
+                </p>
                 {visibleItems.map((item) =>
                   isSidebarLinkItem(item)
                     ? renderLinkItem(item)

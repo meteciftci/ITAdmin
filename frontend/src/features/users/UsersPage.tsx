@@ -5,6 +5,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Navigate } from "react-router-dom";
 
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { PageContainer } from "@/components/common/PageContainer";
+import { PageHeader } from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
 import {
   DataTable,
@@ -12,9 +14,6 @@ import {
   DataTableToolbar,
 } from "@/components/common/data-table";
 import { useServerDataTable } from "@/components/common/data-table-hooks";
-import { EmptyState } from "@/components/common/EmptyState";
-import { LoadingState } from "@/components/common/LoadingState";
-import { SectionCard } from "@/components/common/SectionCard";
 import { Select } from "@/components/ui/select";
 import { createUserColumns } from "@/features/users/user-columns";
 import { useAuthStore } from "@/features/auth/auth-store";
@@ -165,93 +164,88 @@ export function UsersPage() {
   }
 
   return (
-    <section className="space-y-4">
-      <SectionCard title={t("users:sections.listTitle")}>
-        <div className="space-y-4">
-          <DataTableToolbar
-            searchValue={search}
-            onSearchChange={handleSearchChange}
-            searchPlaceholder={t("users:search.placeholder")}
-            activeFilterCount={activeFilterCount}
-            onClearFilters={() => {
-              setStatusFilter("active");
-              setPageNumber(1);
-            }}
-            activeFilters={
-              statusFilter !== "active"
-                ? [
-                    {
-                      id: "status",
-                      label: t("common:fields.status"),
-                      value: t(`common:status.${statusFilter}`),
-                      onRemove: () => {
-                        setStatusFilter("active");
-                        setPageNumber(1);
-                      },
+    <PageContainer variant="fluid">
+      <PageHeader
+        title={t("users:title")}
+        description={t("users:description")}
+        actions={
+          <>
+            <Button variant="outline" onClick={handleRefresh}>
+              {t("common:actions.refresh")}
+            </Button>
+            {canCreate ? (
+              <Button onClick={() => setAddUserOpen(true)}>
+                {t("users:actions.addUser")}
+              </Button>
+            ) : null}
+          </>
+        }
+      />
+
+      <div className="flex min-w-0 flex-col gap-4">
+        <DataTableToolbar
+          searchValue={search}
+          onSearchChange={handleSearchChange}
+          searchPlaceholder={t("users:search.placeholder")}
+          activeFilterCount={activeFilterCount}
+          onClearFilters={() => {
+            setStatusFilter("active");
+            setPageNumber(1);
+          }}
+          activeFilters={
+            statusFilter !== "active"
+              ? [
+                  {
+                    id: "status",
+                    label: t("common:fields.status"),
+                    value: t(`common:status.${statusFilter}`),
+                    onRemove: () => {
+                      setStatusFilter("active");
+                      setPageNumber(1);
                     },
-                  ]
-                : undefined
-            }
-            filterContent={
-              <Select
-                value={statusFilter}
-                onChange={(event) => {
-                  setStatusFilter(event.target.value as StatusFilter);
+                  },
+                ]
+              : undefined
+          }
+          filterContent={
+            <Select
+              value={statusFilter}
+              onChange={(event) => {
+                setStatusFilter(event.target.value as StatusFilter);
+                setPageNumber(1);
+              }}
+              className="w-full"
+            >
+              <option value="active">{t("common:status.active")}</option>
+              <option value="passive">{t("common:status.passive")}</option>
+              <option value="all">{t("common:status.all")}</option>
+            </Select>
+          }
+        />
+
+        <DataTable
+          table={table}
+          isLoading={usersQuery.isLoading}
+          emptyMessage={t("users:empty.title")}
+          emptyDescription={t("users:empty.description")}
+          footer={
+            usersQuery.data && usersQuery.data.totalCount > 0 ? (
+              <DataTablePagination
+                mode="server"
+                pageNumber={usersQuery.data.pageNumber}
+                pageSize={usersQuery.data.pageSize}
+                totalCount={usersQuery.data.totalCount}
+                totalPages={usersQuery.data.totalPages}
+                onPageChange={setPageNumber}
+                onPageSizeChange={(nextPageSize) => {
+                  setPageSize(nextPageSize);
                   setPageNumber(1);
                 }}
-                className="w-full"
-              >
-                <option value="active">{t("common:status.active")}</option>
-                <option value="passive">{t("common:status.passive")}</option>
-                <option value="all">{t("common:status.all")}</option>
-              </Select>
-            }
-            actions={
-              <>
-                <Button variant="outline" onClick={handleRefresh}>
-                  {t("common:actions.refresh")}
-                </Button>
-                {canCreate ? (
-                  <Button onClick={() => setAddUserOpen(true)}>
-                    {t("users:actions.addUser")}
-                  </Button>
-                ) : null}
-              </>
-            }
-          />
-
-          {usersQuery.isLoading ? <LoadingState /> : null}
-
-          {usersQuery.isSuccess && !users.length ? (
-            <EmptyState
-              title={t("users:empty.title")}
-              description={t("users:empty.description")}
-            />
-          ) : null}
-
-          {users.length ? (
-            <DataTable
-              table={table}
-              footer={
-                usersQuery.data && usersQuery.data.totalCount > 0 ? (
-                  <DataTablePagination
-                    mode="server"
-                    pageNumber={usersQuery.data.pageNumber}
-                    pageSize={usersQuery.data.pageSize}
-                    totalCount={usersQuery.data.totalCount}
-                    totalPages={usersQuery.data.totalPages}
-                    onPageChange={setPageNumber}
-                    onPageSizeChange={(nextPageSize) => {
-                      setPageSize(nextPageSize);
-                      setPageNumber(1);
-                    }}
-                  />
-                ) : null
-              }
-            />
-          ) : null}
-        </div>
-      </SectionCard>
+              />
+            ) : null
+          }
+        />
+      </div>
 
       <AddUserDialog
         open={addUserOpen}
@@ -308,6 +302,6 @@ export function UsersPage() {
           });
         }}
       />
-    </section>
+    </PageContainer>
   );
 }

@@ -1,14 +1,20 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { ErrorState } from "@/components/common/ErrorState";
 import { LoadingState } from "@/components/common/LoadingState";
+import {
+  SecretInput,
+  SettingsField,
+  SettingsFormActions,
+  SettingsSection,
+  UnsavedChangesGuard,
+} from "@/components/common/settings-form";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import {
   NOTIFICATION_EMAIL_SETTINGS_QUERY_KEY,
   getEmailProviderSettings,
@@ -20,15 +26,13 @@ import type {
   TestEmailProviderRequest,
   UpdateEmailProviderSettingsRequest,
 } from "@/features/notification-providers/types";
+import { validateEmailProviderForm } from "@/features/notification-providers/provider-form-utils";
 import { useAuthStore } from "@/features/auth/auth-store";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { canAccess } from "@/lib/permissions";
 import { PermissionCodes } from "@/lib/permission-codes";
 
-type Props = {
-  readOnly: boolean;
-};
-
+type Props = { readOnly: boolean; onDirtyChange?: (dirty: boolean) => void };
 type EmailFormState = {
   isEnabled: boolean;
   displayName: string;
@@ -40,314 +44,148 @@ type EmailFormState = {
   fromAddress: string;
   fromDisplayName: string;
   timeoutSeconds: string;
-  testRecipientEmail: string;
-  testSubject: string;
-  testBody: string;
 };
 
-function mapSettingsToForm(settings: EmailProviderSettings): EmailFormState {
-  return {
-    isEnabled: settings.isEnabled,
-    displayName: settings.displayName ?? "",
-    host: settings.host ?? "",
-    port: String(settings.port || 587),
-    useSsl: settings.useSsl,
-    userName: settings.userName ?? "",
-    password: "",
-    fromAddress: settings.fromAddress ?? "",
-    fromDisplayName: settings.fromDisplayName ?? "",
-    timeoutSeconds: String(settings.timeoutSeconds || 30),
-    testRecipientEmail: "",
-    testSubject: "",
-    testBody: "",
-  };
-}
+const mapSettingsToForm = (settings: EmailProviderSettings): EmailFormState => ({
+  isEnabled: settings.isEnabled,
+  displayName: settings.displayName ?? "",
+  host: settings.host ?? "",
+  port: String(settings.port || 587),
+  useSsl: settings.useSsl,
+  userName: settings.userName ?? "",
+  password: "",
+  fromAddress: settings.fromAddress ?? "",
+  fromDisplayName: settings.fromDisplayName ?? "",
+  timeoutSeconds: String(settings.timeoutSeconds || 30),
+});
 
-function buildEmailSettingsKey(settings: EmailProviderSettings): string {
-  return [
-    settings.isEnabled,
-    settings.host,
-    settings.port,
-    settings.useSsl,
-    settings.hasPassword,
-    settings.lastValidatedAt,
-  ].join("::");
-}
+const buildUpdatePayload = (form: EmailFormState): UpdateEmailProviderSettingsRequest => ({
+  isEnabled: form.isEnabled,
+  displayName: form.displayName.trim() || null,
+  host: form.host.trim(),
+  port: Number.parseInt(form.port, 10),
+  useSsl: form.useSsl,
+  userName: form.userName.trim() || null,
+  password: form.password || null,
+  fromAddress: form.fromAddress.trim(),
+  fromDisplayName: form.fromDisplayName.trim() || null,
+  timeoutSeconds: Number.parseInt(form.timeoutSeconds, 10),
+});
 
-function buildUpdatePayload(form: EmailFormState): UpdateEmailProviderSettingsRequest {
-  return {
-    isEnabled: form.isEnabled,
-    displayName: form.displayName || null,
-    host: form.host.trim(),
-    port: Number.parseInt(form.port, 10) || 587,
-    useSsl: form.useSsl,
-    userName: form.userName || null,
-    password: form.password || null,
-    fromAddress: form.fromAddress.trim(),
-    fromDisplayName: form.fromDisplayName || null,
-    timeoutSeconds: Number.parseInt(form.timeoutSeconds, 10) || 30,
-  };
-}
-
-export function EmailProviderSettingsTab({ readOnly }: Props) {
+export function EmailProviderSettingsTab({ readOnly, onDirtyChange }: Props) {
   const { t } = useTranslation(["notificationProviders", "common"]);
-
-  const settingsQuery = useQuery({
+  const query = useQuery({
     queryKey: NOTIFICATION_EMAIL_SETTINGS_QUERY_KEY,
     queryFn: getEmailProviderSettings,
     refetchOnWindowFocus: false,
   });
-
-  if (settingsQuery.isLoading) {
-    return <LoadingState />;
+  if (query.isLoading) return <LoadingState />;
+  if (query.isError || !query.data) {
+    return <ErrorState title={t("notificationProviders:email.messages.loadFailed")} retry={<Button variant="outline" size="sm" onClick={() => void query.refetch()}>{t("common:retry")}</Button>} />;
   }
-
-  if (settingsQuery.isError || !settingsQuery.data) {
-    return (
-      <ErrorState
-        title={t("notificationProviders:email.messages.loadFailed")}
-        retry={
-          <Button type="button" variant="outline" size="sm" onClick={() => void settingsQuery.refetch()}>
-            {t("common:retry")}
-          </Button>
-        }
-      />
-    );
-  }
-
-  return (
-    <EmailProviderSettingsForm
-      key={buildEmailSettingsKey(settingsQuery.data)}
-      initialSettings={settingsQuery.data}
-      readOnly={readOnly}
-    />
-  );
+  return <EmailProviderSettingsForm key={query.data.lastValidatedAt ?? "email"} initialSettings={query.data} readOnly={readOnly} onDirtyChange={onDirtyChange} />;
 }
 
-type EmailFormProps = {
-  initialSettings: EmailProviderSettings;
-  readOnly: boolean;
-};
-
-function EmailProviderSettingsForm({ initialSettings, readOnly }: EmailFormProps) {
+function EmailProviderSettingsForm({ initialSettings, readOnly, onDirtyChange }: { initialSettings: EmailProviderSettings; readOnly: boolean; onDirtyChange?: (dirty: boolean) => void }) {
   const { t } = useTranslation(["notificationProviders", "common"]);
   const queryClient = useQueryClient();
   const user = useAuthStore((state) => state.user);
   const canUpdate = canAccess(user, PermissionCodes.NotificationProviders.Update);
   const canTest = canAccess(user, PermissionCodes.NotificationProviders.Test);
   const isReadOnly = readOnly || !canUpdate;
-
-  const [form, setForm] = useState<EmailFormState>(() => mapSettingsToForm(initialSettings));
-  const [hasSavedSettings, setHasSavedSettings] = useState(() => Boolean(initialSettings.host));
-
-  const passwordPlaceholder = useMemo(
-    () =>
-      initialSettings.hasPassword
-        ? t("notificationProviders:secrets.storedPlaceholder")
-        : undefined,
-    [initialSettings.hasPassword, t],
-  );
+  const initialForm = useMemo(() => mapSettingsToForm(initialSettings), [initialSettings]);
+  const [form, setForm] = useState(initialForm);
+  const [baseline, setBaseline] = useState(() => JSON.stringify(buildUpdatePayload(initialForm)));
+  const [errors, setErrors] = useState<ReturnType<typeof validateEmailProviderForm>>({});
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [testForm, setTestForm] = useState<TestEmailProviderRequest>({ recipientEmail: "", subject: "", body: "" });
+  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const isDirty = JSON.stringify(buildUpdatePayload(form)) !== baseline;
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+    return () => onDirtyChange?.(false);
+  }, [isDirty, onDirtyChange]);
 
   const updateMutation = useMutation({
-    mutationFn: (payload: UpdateEmailProviderSettingsRequest) =>
-      updateEmailProviderSettings(payload),
-    onSuccess: async () => {
+    mutationFn: updateEmailProviderSettings,
+    onSuccess: async (next) => {
+      const nextForm = mapSettingsToForm(next);
+      setForm(nextForm);
+      setBaseline(JSON.stringify(buildUpdatePayload(nextForm)));
+      setErrors({});
+      setSaveError(null);
+      setSaved(true);
       await queryClient.invalidateQueries({ queryKey: NOTIFICATION_EMAIL_SETTINGS_QUERY_KEY });
-      setHasSavedSettings(true);
-      setForm((current) => ({ ...current, password: "" }));
-      toast.success(t("notificationProviders:email.messages.saveSuccess"));
     },
     onError: (error: unknown) => {
-      toast.error(
-        getApiErrorMessage(error, t("notificationProviders:email.messages.saveFailed")),
-      );
+      setSaved(false);
+      setSaveError(getApiErrorMessage(error, t("notificationProviders:email.messages.saveFailed")));
     },
   });
-
   const testMutation = useMutation({
-    mutationFn: (payload: TestEmailProviderRequest) => testEmailProvider(payload),
-    onSuccess: (result) => {
-      toast.success(result.message);
-    },
-    onError: (error: unknown) => {
-      toast.error(getApiErrorMessage(error, t("notificationProviders:email.messages.testFailed")));
-    },
+    mutationFn: testEmailProvider,
+    onSuccess: (result) => setTestResult({ ok: true, message: result.message }),
+    onError: (error: unknown) => setTestResult({ ok: false, message: getApiErrorMessage(error, t("notificationProviders:email.messages.testFailed")) }),
   });
-
   const updateField = <K extends keyof EmailFormState>(field: K, value: EmailFormState[K]) => {
+    setSaved(false);
+    setSaveError(null);
     setForm((current) => ({ ...current, [field]: value }));
+    setErrors((current) => ({ ...current, [field]: undefined }));
   };
+  const fieldError = (key: keyof EmailFormState) => errors[key] ? t(`notificationProviders:validation.${errors[key]}`) : undefined;
+  const save = () => {
+    const nextErrors = validateEmailProviderForm(form);
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length === 0) updateMutation.mutate(buildUpdatePayload(form));
+  };
+  const actionState = updateMutation.isPending ? "saving" : saveError ? "error" : isDirty ? "dirty" : saved ? "saved" : "pristine";
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h3 className="text-base font-semibold">{t("notificationProviders:email.sectionTitle")}</h3>
-          <p className="text-sm text-muted-foreground">
-            {t("notificationProviders:email.sectionDescription")}
-          </p>
+      <UnsavedChangesGuard when={isDirty && !updateMutation.isPending} title={t("notificationProviders:unsaved.title")} description={t("notificationProviders:unsaved.description")} leaveText={t("notificationProviders:unsaved.leave")} stayText={t("notificationProviders:unsaved.stay")} />
+      <SettingsSection
+        title={t("notificationProviders:email.sectionTitle")}
+        description={t("notificationProviders:email.sectionDescription")}
+        actions={<label className="flex items-center gap-2 text-sm font-medium"><span>{t("notificationProviders:fields.active")}</span><Switch checked={form.isEnabled} onCheckedChange={(value) => updateField("isEnabled", value)} disabled={isReadOnly} /></label>}
+      >
+        <div className="grid gap-5 md:grid-cols-2">
+          <SettingsField id="email-provider" label={t("notificationProviders:fields.provider")} description={t("notificationProviders:email.providerFixedHint")}><Input id="email-provider" value={t("notificationProviders:email.providerName")} readOnly disabled /></SettingsField>
+          <SettingsField id="email-display-name" label={t("notificationProviders:fields.displayName")} optional optionalLabel={t("notificationProviders:fields.optional")}><Input id="email-display-name" value={form.displayName} onChange={(e) => updateField("displayName", e.target.value)} readOnly={isReadOnly} /></SettingsField>
         </div>
-        <div className="flex items-center gap-2">
-          <Label htmlFor="email-enabled">{t("notificationProviders:fields.active")}</Label>
-          <Switch
-            id="email-enabled"
-            checked={form.isEnabled}
-            onCheckedChange={(checked) => updateField("isEnabled", checked)}
-            disabled={isReadOnly}
-          />
+      </SettingsSection>
+
+      <SettingsSection title={t("notificationProviders:email.connectionSection")} description={t("notificationProviders:email.connectionDescription")}>
+        <div className="grid gap-5 md:grid-cols-2">
+          <SettingsField id="email-host" label={t("notificationProviders:email.fields.host")} error={fieldError("host")}><Input id="email-host" value={form.host} aria-invalid={Boolean(errors.host)} onChange={(e) => updateField("host", e.target.value)} readOnly={isReadOnly} /></SettingsField>
+          <SettingsField id="email-port" label={t("notificationProviders:email.fields.port")} error={fieldError("port")}><Input id="email-port" type="number" min={1} max={65535} value={form.port} aria-invalid={Boolean(errors.port)} onChange={(e) => updateField("port", e.target.value)} readOnly={isReadOnly} /></SettingsField>
+          <SettingsField id="email-timeout" label={t("notificationProviders:fields.timeoutSeconds")} error={fieldError("timeoutSeconds")}><Input id="email-timeout" type="number" min={5} max={300} value={form.timeoutSeconds} aria-invalid={Boolean(errors.timeoutSeconds)} onChange={(e) => updateField("timeoutSeconds", e.target.value)} readOnly={isReadOnly} /></SettingsField>
+          <div className="flex items-center gap-3 rounded-lg border bg-muted/25 px-4 py-3"><Switch id="email-use-ssl" checked={form.useSsl} onCheckedChange={(value) => updateField("useSsl", value)} disabled={isReadOnly} /><label htmlFor="email-use-ssl" className="text-sm font-medium">{t("notificationProviders:email.fields.useSsl")}</label></div>
         </div>
-      </div>
+      </SettingsSection>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Field label={t("notificationProviders:fields.provider")}>
-          <Input value={t("notificationProviders:email.providerName")} readOnly disabled />
-        </Field>
-        <Field label={t("notificationProviders:fields.displayName")}>
-          <Input
-            value={form.displayName}
-            onChange={(event) => updateField("displayName", event.target.value)}
-            readOnly={isReadOnly}
-          />
-        </Field>
-        <Field label={t("notificationProviders:email.fields.host")}>
-          <Input
-            value={form.host}
-            onChange={(event) => updateField("host", event.target.value)}
-            readOnly={isReadOnly}
-          />
-        </Field>
-        <Field label={t("notificationProviders:email.fields.port")}>
-          <Input
-            type="number"
-            min={1}
-            max={65535}
-            value={form.port}
-            onChange={(event) => updateField("port", event.target.value)}
-            readOnly={isReadOnly}
-          />
-        </Field>
-        <Field label={t("notificationProviders:email.fields.userName")}>
-          <Input
-            value={form.userName}
-            onChange={(event) => updateField("userName", event.target.value)}
-            readOnly={isReadOnly}
-          />
-        </Field>
-        <Field label={t("notificationProviders:email.fields.password")}>
-          <Input
-            type="password"
-            value={form.password}
-            onChange={(event) => updateField("password", event.target.value)}
-            placeholder={passwordPlaceholder}
-            readOnly={isReadOnly}
-          />
-        </Field>
-        <Field label={t("notificationProviders:email.fields.fromAddress")}>
-          <Input
-            value={form.fromAddress}
-            onChange={(event) => updateField("fromAddress", event.target.value)}
-            readOnly={isReadOnly}
-          />
-        </Field>
-        <Field label={t("notificationProviders:email.fields.fromDisplayName")}>
-          <Input
-            value={form.fromDisplayName}
-            onChange={(event) => updateField("fromDisplayName", event.target.value)}
-            readOnly={isReadOnly}
-          />
-        </Field>
-        <Field label={t("notificationProviders:fields.timeoutSeconds")}>
-          <Input
-            type="number"
-            min={5}
-            max={300}
-            value={form.timeoutSeconds}
-            onChange={(event) => updateField("timeoutSeconds", event.target.value)}
-            readOnly={isReadOnly}
-          />
-        </Field>
-        <div className="flex items-center gap-2 pt-6">
-          <Switch
-            id="email-use-ssl"
-            checked={form.useSsl}
-            onCheckedChange={(checked) => updateField("useSsl", checked)}
-            disabled={isReadOnly}
-          />
-          <Label htmlFor="email-use-ssl">{t("notificationProviders:email.fields.useSsl")}</Label>
+      <SettingsSection title={t("notificationProviders:email.identitySection")} description={t("notificationProviders:email.identityDescription")}>
+        <div className="grid gap-5 md:grid-cols-2">
+          <SettingsField id="email-username" label={t("notificationProviders:email.fields.userName")} optional optionalLabel={t("notificationProviders:fields.optional")}><Input id="email-username" value={form.userName} onChange={(e) => updateField("userName", e.target.value)} readOnly={isReadOnly} autoComplete="username" /></SettingsField>
+          <SettingsField id="email-password" label={t("notificationProviders:email.fields.password")} optional optionalLabel={t("notificationProviders:fields.optional")}><SecretInput id="email-password" value={form.password} onChange={(e) => updateField("password", e.target.value)} readOnly={isReadOnly} hasStoredValue={initialSettings.hasPassword} storedLabel={t("notificationProviders:secrets.storedLabel")} storedHint={t("notificationProviders:secrets.storedHint")} showLabel={t("notificationProviders:secrets.show")} hideLabel={t("notificationProviders:secrets.hide")} /></SettingsField>
+          <SettingsField id="email-from" label={t("notificationProviders:email.fields.fromAddress")} error={fieldError("fromAddress")}><Input id="email-from" type="email" value={form.fromAddress} aria-invalid={Boolean(errors.fromAddress)} onChange={(e) => updateField("fromAddress", e.target.value)} readOnly={isReadOnly} /></SettingsField>
+          <SettingsField id="email-from-name" label={t("notificationProviders:email.fields.fromDisplayName")} optional optionalLabel={t("notificationProviders:fields.optional")}><Input id="email-from-name" value={form.fromDisplayName} onChange={(e) => updateField("fromDisplayName", e.target.value)} readOnly={isReadOnly} /></SettingsField>
         </div>
-      </div>
+      </SettingsSection>
 
-      {canUpdate ? (
-        <Button
-          type="button"
-          onClick={() => updateMutation.mutate(buildUpdatePayload(form))}
-          disabled={isReadOnly || updateMutation.isPending}
-        >
-          {t("common:actions.save")}
-        </Button>
-      ) : null}
+      {canUpdate ? <SettingsFormActions state={actionState} stateLabel={t(`notificationProviders:saveStates.${actionState}`)} errorTitle={t("notificationProviders:saveStates.failedTitle")} errorMessage={saveError}><Button onClick={save} disabled={isReadOnly || updateMutation.isPending || !isDirty}>{updateMutation.isPending ? t("notificationProviders:actions.saving") : t("common:actions.save")}</Button></SettingsFormActions> : null}
 
-      <div className="space-y-3 rounded-md border p-4">
-        <h4 className="text-sm font-semibold">{t("notificationProviders:email.testSection")}</h4>
-        <div className="grid gap-4 md:grid-cols-2">
-          <Field label={t("notificationProviders:email.fields.testRecipientEmail")}>
-            <Input
-              value={form.testRecipientEmail}
-              onChange={(event) => updateField("testRecipientEmail", event.target.value)}
-            />
-          </Field>
-          <Field label={t("notificationProviders:email.fields.testSubject")}>
-            <Input
-              value={form.testSubject}
-              onChange={(event) => updateField("testSubject", event.target.value)}
-            />
-          </Field>
-          <Field label={t("notificationProviders:email.fields.testBody")} className="md:col-span-2">
-            <Input
-              value={form.testBody}
-              onChange={(event) => updateField("testBody", event.target.value)}
-            />
-          </Field>
+      <SettingsSection title={t("notificationProviders:email.testSection")} description={t("notificationProviders:testDescription")}>
+        {isDirty ? <Alert><AlertTitle>{t("notificationProviders:testNeedsSave.title")}</AlertTitle><AlertDescription>{t("notificationProviders:testNeedsSave.description")}</AlertDescription></Alert> : null}
+        {testResult ? <Alert variant={testResult.ok ? "default" : "destructive"}><AlertTitle>{testResult.ok ? t("notificationProviders:testResult.success") : t("notificationProviders:testResult.failed")}</AlertTitle><AlertDescription>{testResult.message}</AlertDescription></Alert> : null}
+        <div className="grid gap-5 md:grid-cols-2">
+          <SettingsField id="email-test-recipient" label={t("notificationProviders:email.fields.testRecipientEmail")}><Input id="email-test-recipient" type="email" value={testForm.recipientEmail} onChange={(e) => setTestForm((c) => ({ ...c, recipientEmail: e.target.value }))} /></SettingsField>
+          <SettingsField id="email-test-subject" label={t("notificationProviders:email.fields.testSubject")}><Input id="email-test-subject" value={testForm.subject} onChange={(e) => setTestForm((c) => ({ ...c, subject: e.target.value }))} /></SettingsField>
+          <SettingsField id="email-test-body" label={t("notificationProviders:email.fields.testBody")} className="md:col-span-2"><Input id="email-test-body" value={testForm.body} onChange={(e) => setTestForm((c) => ({ ...c, body: e.target.value }))} /></SettingsField>
         </div>
-        {canTest ? (
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={!hasSavedSettings || testMutation.isPending}
-            onClick={() => {
-              if (!hasSavedSettings) {
-                toast.error(t("notificationProviders:email.messages.saveBeforeTest"));
-                return;
-              }
-
-              testMutation.mutate({
-                recipientEmail: form.testRecipientEmail,
-                subject: form.testSubject,
-                body: form.testBody,
-              });
-            }}
-          >
-            {t("notificationProviders:email.actions.test")}
-          </Button>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-function Field({
-  label,
-  children,
-  className,
-}: {
-  label: string;
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <div className={`space-y-2 ${className ?? ""}`}>
-      <Label>{label}</Label>
-      {children}
+        {canTest ? <Button variant="secondary" disabled={isDirty || !initialSettings.host || testMutation.isPending || !testForm.recipientEmail.trim()} onClick={() => { setTestResult(null); testMutation.mutate(testForm); }}>{testMutation.isPending ? t("notificationProviders:actions.testing") : t("notificationProviders:email.actions.test")}</Button> : null}
+      </SettingsSection>
     </div>
   );
 }

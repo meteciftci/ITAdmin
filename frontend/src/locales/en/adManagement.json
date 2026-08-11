@@ -1109,6 +1109,33 @@
       }
     },
     "apiMessages": {
+      "directoryDiagnostics": {
+        "dnsResolved": "DNS resolved {{host}}.",
+        "dnsResolutionFailed": "DNS could not resolve {{host}}.",
+        "tcpConnected": "TCP connection to {{host}}:636 succeeded.",
+        "tcpConnectionFailed": "TCP connection to {{host}}:636 failed or timed out.",
+        "tlsSucceeded": "TLS handshake with {{host}} succeeded.",
+        "tlsHandshakeFailed": "TLS handshake with {{host}} failed.",
+        "certificateTrusted": "The LDAPS certificate for {{host}} is trusted and matches the hostname.",
+        "certificateUntrusted": "The LDAPS certificate chain for {{host}} is not trusted by this server.",
+        "certificateNameMismatch": "The LDAPS certificate does not match the hostname {{host}}.",
+        "certificateExpired": "The LDAPS certificate presented by {{host}} has expired.",
+        "certificateNotYetValid": "The LDAPS certificate presented by {{host}} is not yet valid.",
+        "certificateInvalid": "The LDAPS certificate presented by {{host}} is unavailable or invalid.",
+        "certificateRevocationUnknown": "The LDAPS certificate for {{host}} is trusted, but its revocation status could not be checked from this server.",
+        "bindSucceeded": "LDAP bind to {{host}} succeeded.",
+        "bindCredentialsRejected": "The directory rejected the service identity or password.",
+        "bindFailed": "LDAP bind to {{host}} failed.",
+        "baseDnResolved": "Base DN was resolved.",
+        "baseDnNotResolved": "Base DN could not be resolved.",
+        "userSearchBaseResolved": "User search base was resolved.",
+        "userSearchBaseNotResolved": "User search base could not be resolved.",
+        "directoryContextResolved": "The configured directory context was resolved.",
+        "userSearchSucceeded": "Directory search succeeded.",
+        "userSearchFailed": "Directory search failed.",
+        "testUserBindSucceeded": "Test user credentials were accepted.",
+        "testUserBindFailed": "Test user credentials were rejected."
+      },
       "common": {
         "notConfigured": "AD management settings are not configured. Please save connection settings first.",
         "moduleDisabled": "AD management module is not enabled.",

@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 
 import { PageHeader } from "@/components/common/PageHeader";
+import { PageContainer } from "@/components/common/PageContainer";
 import { NotificationProvidersTab } from "@/features/notification-settings/NotificationProvidersTab";
 import { NotificationSettingsTabs } from "@/features/notification-settings/NotificationSettingsTabs";
 import { NotificationTemplatesListTab } from "@/features/notification-settings/NotificationTemplatesListTab";
@@ -13,7 +14,7 @@ export function NotificationSettingsPage({ activeTab }: NotificationSettingsPage
   const { t } = useTranslation(["notificationSettings"]);
 
   return (
-    <section className="space-y-4">
+    <PageContainer variant={activeTab === "providers" ? "form" : "wide"}>
       <PageHeader
         title={t("notificationSettings:title")}
         description={t("notificationSettings:description")}
@@ -22,6 +23,6 @@ export function NotificationSettingsPage({ activeTab }: NotificationSettingsPage
       <NotificationSettingsTabs activeTab={activeTab} />
 
       {activeTab === "providers" ? <NotificationProvidersTab /> : <NotificationTemplatesListTab />}
-    </section>
+    </PageContainer>
   );
 }

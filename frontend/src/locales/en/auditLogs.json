@@ -11,6 +11,8 @@
       "entityNameFilterPlaceholder": "Select entity name",
       "clearAll": "Clear filters",
       "activeCount": "Active filters: {{count}}",
+      "selectedCount": "{{count}} selected",
+      "dateRangeActive": "Date range selected",
       "minSearchLengthHint": "Enter at least 3 characters to search."
     },
     "table": {

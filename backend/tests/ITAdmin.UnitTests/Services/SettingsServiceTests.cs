@@ -804,6 +804,8 @@ public sealed class SettingsServiceTests
         var result = await service.ValidateLdapSettingsAsync(request);
 
         Assert.True(result.IsValid);
+        Assert.Equal(1, ldapService.DiagnoseConnectionCallCount);
+        Assert.Equal("persisted-secret", ldapService.LastDiagnoseConnectionRequest!.BindPassword);
         Assert.Equal(1, ldapService.ValidateSearchBasesCallCount);
         Assert.Equal("persisted-secret", ldapService.LastValidateSearchBasesRequest!.BindPassword);
         Assert.Equal(0, ldapService.ValidateBindCallCount);
@@ -927,6 +929,51 @@ public sealed class SettingsServiceTests
         Assert.Equal("Directory user could not be found.", result.Message);
         Assert.Equal(1, ldapService.ValidateSearchBasesCallCount);
         Assert.Equal(1, ldapService.ValidateCallCount);
+        Assert.Contains(result.Details!, detail =>
+            detail.Key == "testUserSearch"
+            && detail.MessageKey == LdapConnectionDiagnosticMessageKeys.UserSearchFailed);
+    }
+
+    [Fact]
+    public async Task ValidateLdapSettingsAsync_WhenEndpointDiagnosticFails_StopsBeforeDirectorySearch()
+    {
+        await using var dbContext = CreateDbContext();
+        var ldapService = new FakeLdapService
+        {
+            DiagnoseConnectionResult = new LdapConnectionDiagnosticResult(
+                false,
+                "ldap.local",
+                [new LdapConnectionDiagnosticDetail(
+                    "certificate",
+                    LdapConnectionDiagnosticStatuses.Failed,
+                    LdapConnectionDiagnosticMessageKeys.CertificateNameMismatch)])
+        };
+        var service = CreateService(dbContext, ldapService);
+
+        var result = await service.ValidateLdapSettingsAsync(
+            CreateValidateRequest("plain-secret", null, null));
+
+        Assert.False(result.IsValid);
+        Assert.Equal(0, ldapService.ValidateSearchBasesCallCount);
+        Assert.Contains(result.Details!, detail =>
+            detail.MessageKey == LdapConnectionDiagnosticMessageKeys.CertificateNameMismatch);
+    }
+
+    [Fact]
+    public async Task ValidateSavedLdapSettingsAsync_UsesPersistedFieldsAndStoredSecret()
+    {
+        await using var dbContext = CreateDbContext();
+        await SeedActiveLdapAsync(dbContext, "protected:persisted-secret");
+        var ldapService = new FakeLdapService();
+        var service = CreateService(dbContext, ldapService);
+
+        var result = await service.ValidateSavedLdapSettingsAsync(
+            CreateValidateRequest(null, "should-not-be-used", "should-not-be-used"));
+
+        Assert.True(result.IsValid);
+        Assert.Equal("ldap.local", ldapService.LastDiagnoseConnectionRequest!.Host);
+        Assert.Equal("persisted-secret", ldapService.LastDiagnoseConnectionRequest.BindPassword);
+        Assert.Equal(0, ldapService.ValidateCallCount);
     }
 
     [Fact]
@@ -1163,6 +1210,93 @@ public sealed class SettingsServiceTests
         await context.LdapSettings.AddAsync(ldap);
         await context.SaveChangesAsync();
         return ldap;
+    }
+
+    [Fact]
+    public async Task ValidateLdapSettingsAsync_CandidateTestsTheFormValues_NotThePersistedEndpoint()
+    {
+        // Mirror of ValidateSavedLdapSettingsAsync_UsesPersistedFieldsAndStoredSecret: the two
+        // buttons in the UI must genuinely probe different configurations, not the same payload
+        // under different labels.
+        await using var dbContext = CreateDbContext();
+        await SeedActiveLdapAsync(dbContext, "protected:persisted-secret");
+        var ldapService = new FakeLdapService();
+        var service = CreateService(dbContext, ldapService);
+
+        var candidate = CreateValidateRequest("candidate-secret", null, null) with
+        {
+            Host = "dc2.candidate.local",
+        };
+
+        var result = await service.ValidateLdapSettingsAsync(candidate);
+
+        Assert.True(result.IsValid);
+        Assert.Equal("dc2.candidate.local", ldapService.LastDiagnoseConnectionRequest!.Host);
+        Assert.Equal("candidate-secret", ldapService.LastDiagnoseConnectionRequest.BindPassword);
+    }
+
+    [Fact]
+    public async Task ValidateLdapSettingsAsync_CandidateWithBlankPassword_FallsBackToStoredSecret()
+    {
+        // Leaving the password field untouched means "keep the stored secret", so a candidate test
+        // of an endpoint change does not force the administrator to retype the bind password.
+        await using var dbContext = CreateDbContext();
+        await SeedActiveLdapAsync(dbContext, "protected:persisted-secret");
+        var ldapService = new FakeLdapService();
+        var service = CreateService(dbContext, ldapService);
+
+        var candidate = CreateValidateRequest(null, null, null) with { Host = "dc2.candidate.local" };
+
+        var result = await service.ValidateLdapSettingsAsync(candidate);
+
+        Assert.True(result.IsValid);
+        Assert.Equal("dc2.candidate.local", ldapService.LastDiagnoseConnectionRequest!.Host);
+        Assert.Equal("persisted-secret", ldapService.LastDiagnoseConnectionRequest.BindPassword);
+    }
+
+    [Fact]
+    public async Task ValidateSavedLdapSettingsAsync_WithoutActiveConfiguration_FailsWithoutProbingTheNetwork()
+    {
+        await using var dbContext = CreateDbContext();
+        var ldapService = new FakeLdapService();
+        var service = CreateService(dbContext, ldapService);
+
+        var result = await service.ValidateSavedLdapSettingsAsync(
+            CreateValidateRequest(null, null, null));
+
+        Assert.False(result.IsValid);
+        Assert.Equal(0, ldapService.DiagnoseConnectionCallCount);
+    }
+
+    [Fact]
+    public async Task ValidateLdapSettingsAsync_DetailsNeverCarrySecretsOrRawExceptionText()
+    {
+        await using var dbContext = CreateDbContext();
+        var ldapService = new FakeLdapService
+        {
+            DiagnoseConnectionResult = new LdapConnectionDiagnosticResult(
+                false,
+                "ldap.local",
+                [new LdapConnectionDiagnosticDetail(
+                    "bind",
+                    LdapConnectionDiagnosticStatuses.Failed,
+                    LdapConnectionDiagnosticMessageKeys.BindCredentialsRejected)])
+        };
+        var service = CreateService(dbContext, ldapService);
+
+        var result = await service.ValidateLdapSettingsAsync(
+            CreateValidateRequest("super-secret-password", "test-user", "test-user-password"));
+
+        Assert.False(result.IsValid);
+        Assert.All(result.Details!, detail =>
+        {
+            Assert.StartsWith("apiMessages.directoryDiagnostics.", detail.MessageKey, StringComparison.Ordinal);
+            var rendered = detail.MessageKey + string.Join(
+                "|",
+                (detail.MessageParams ?? new Dictionary<string, object>()).Select(pair => $"{pair.Key}={pair.Value}"));
+            Assert.DoesNotContain("super-secret-password", rendered, StringComparison.Ordinal);
+            Assert.DoesNotContain("test-user-password", rendered, StringComparison.Ordinal);
+        });
     }
 
     private static ValidateLdapSettingsRequest CreateValidateRequest(

@@ -8,8 +8,11 @@
     },
     "sections": {
       "general": "Genel Bilgiler",
+      "generalDescription": "Bildirim bağlamını seçin ve şablona ayırt edilebilir bir kimlik verin.",
       "content": "Şablon İçeriği",
-      "variables": "Kullanılabilir Değişkenler"
+      "contentDescription": "Mesajı yalnız seçilen olay için kullanılabilir değişkenlerle oluşturun.",
+      "variables": "Kullanılabilir Değişkenler",
+      "preview": "Örnek önizleme"
     },
     "fields": {
       "module": "Modül",
@@ -19,7 +22,10 @@
       "isEnabled": "Şablon aktif",
       "subjectTemplate": "Konu şablonu",
       "bodyTemplate": "Gövde şablonu",
-      "description": "Açıklama"
+      "description": "Açıklama",
+      "optional": "İsteğe bağlı",
+      "templateNameHint": "Operatörlerin şablon listesinde kolayca tanıyacağı bir ad kullanın.",
+      "bodyTemplateHint": "Değişkenler {{degiskenAdi}} biçimini kullanır."
     },
     "placeholders": {
       "selectModule": "Modül seçin",
@@ -27,12 +33,22 @@
       "selectChannel": "Kanal seçin"
     },
     "actions": {
-      "cancel": "Vazgeç"
+      "cancel": "Vazgeç",
+      "saving": "Kaydediliyor…"
     },
+    "validation": { "required": "Bu alan zorunludur." },
+    "saveStates": {
+      "pristine": "Kaydedilmemiş değişiklik yok.", "dirty": "Kaydedilmemiş değişiklikleriniz var.", "saving": "Şablon kaydediliyor…", "saved": "Şablon kaydedildi.", "error": "Şablon kaydedilemedi.", "failedTitle": "Kaydetme başarısız"
+    },
+    "unsaved": { "title": "Kaydedilmemiş değişiklikler silinsin mi?", "description": "Şablon değişiklikleriniz henüz kaydedilmedi.", "leave": "Değişiklikleri sil", "stay": "Düzenlemeye devam et" },
+    "preview": { "description": "Katalog örnekleri yerel olarak yerleştirilir. Gerçek gönderim değerleri farklı olabilir.", "subject": "Konu", "body": "Gövde", "empty": "Önizleme için yazmaya başlayın." },
     "templates": {
       "createTitle": "Yeni Bildirim Şablonu",
       "editTitle": "Bildirim Şablonunu Düzenle",
       "catalogMismatch": "Bu şablonun modül/olay bilgisi katalogda bulunamadı.",
+      "catalogMismatchTitle": "Şablon kataloğu uyuşmuyor",
+      "identityLockedTitle": "Gönderim bağlamı kilitli",
+      "identityLockedDescription": "Modül, olay ve kanal şablonu tanımlar. Farklı bir bağlam için yeni bir şablon oluşturun.",
       "searchPlaceholder": "Modül, olay, kanal veya ad ara",
       "actions": {
         "add": "Yeni Şablon",
@@ -41,7 +57,8 @@
       "messages": {
         "createSuccess": "Şablon oluşturuldu.",
         "updateSuccess": "Şablon güncellendi.",
-        "saveFailed": "Şablon kaydedilemedi."
+        "saveFailed": "Şablon kaydedilemedi.",
+        "loadFailed": "Şablonlar yüklenemedi."
       }
     },
     "variables": {

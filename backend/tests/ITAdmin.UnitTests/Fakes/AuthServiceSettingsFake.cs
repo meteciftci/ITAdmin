@@ -36,6 +36,11 @@ public sealed class AuthServiceSettingsFake : ISettingsService
         CancellationToken cancellationToken = default) =>
         throw new NotSupportedException();
 
+    public Task<ValidateLdapSettingsResult> ValidateSavedLdapSettingsAsync(
+        ValidateLdapSettingsRequest request,
+        CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
     public Task<UpdateSettingsResult> UpdateApplicationSettingsAsync(
         UpdateApplicationSettingsRequest request,
         CancellationToken cancellationToken = default) =>

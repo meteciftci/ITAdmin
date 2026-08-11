@@ -8,8 +8,11 @@
     },
     "sections": {
       "general": "General Information",
+      "generalDescription": "Choose the notification context and give this template a recognizable identity.",
       "content": "Template Content",
-      "variables": "Available Variables"
+      "contentDescription": "Compose the message using only variables available for the selected event.",
+      "variables": "Available Variables",
+      "preview": "Sample preview"
     },
     "fields": {
       "module": "Module",
@@ -19,7 +22,10 @@
       "isEnabled": "Template active",
       "subjectTemplate": "Subject template",
       "bodyTemplate": "Body template",
-      "description": "Description"
+      "description": "Description",
+      "optional": "Optional",
+      "templateNameHint": "Use a name that operators can recognize in the template list.",
+      "bodyTemplateHint": "Variables use the {{variableName}} format."
     },
     "placeholders": {
       "selectModule": "Select module",
@@ -27,12 +33,22 @@
       "selectChannel": "Select channel"
     },
     "actions": {
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "saving": "Saving…"
     },
+    "validation": { "required": "This field is required." },
+    "saveStates": {
+      "pristine": "No unsaved changes.", "dirty": "You have unsaved changes.", "saving": "Saving template…", "saved": "Template saved.", "error": "Template could not be saved.", "failedTitle": "Save failed"
+    },
+    "unsaved": { "title": "Discard unsaved changes?", "description": "Your template changes have not been saved.", "leave": "Discard changes", "stay": "Keep editing" },
+    "preview": { "description": "Catalog examples are substituted locally. Actual delivery values may differ.", "subject": "Subject", "body": "Body", "empty": "Start typing to see a preview." },
     "templates": {
       "createTitle": "New Notification Template",
       "editTitle": "Edit Notification Template",
       "catalogMismatch": "This template's module/event information was not found in the catalog.",
+      "catalogMismatchTitle": "Template catalog mismatch",
+      "identityLockedTitle": "Delivery context is locked",
+      "identityLockedDescription": "Module, event and channel identify the template. Create a new template to target a different context.",
       "searchPlaceholder": "Search module, event, channel or name",
       "actions": {
         "add": "New Template",
@@ -41,7 +57,8 @@
       "messages": {
         "createSuccess": "Template created.",
         "updateSuccess": "Template updated.",
-        "saveFailed": "Could not save template."
+        "saveFailed": "Could not save template.",
+        "loadFailed": "Templates could not be loaded."
       }
     },
     "variables": {

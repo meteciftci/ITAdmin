@@ -27,6 +27,7 @@ public sealed class PermissionService(AppDbContext context) : IPermissionService
             var pattern = BuildILikeContainsPattern(query.Search);
             permissionsQuery = permissionsQuery.Where(x =>
                 EF.Functions.ILike(x.Code, pattern)
+                || EF.Functions.ILike(x.Module, pattern)
                 || (x.Description != null && EF.Functions.ILike(x.Description, pattern))
                 || EF.Functions.ILike(x.Code.Replace(".", " "), pattern));
         }
@@ -40,11 +41,13 @@ public sealed class PermissionService(AppDbContext context) : IPermissionService
         var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
 
         var items = await permissionsQuery
-            .OrderBy(x => x.Code)
+            .OrderBy(x => x.Module)
+            .ThenBy(x => x.Code)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .Select(x => new PermissionListItem(
                 x.Id,
+                x.Module,
                 PermissionNameFromCode(x.Code),
                 x.Code,
                 x.Description,
@@ -69,6 +72,7 @@ public sealed class PermissionService(AppDbContext context) : IPermissionService
 
         return new PermissionDetail(
             permission.Id,
+            permission.Module,
             PermissionNameFromCode(permission.Code),
             permission.Code,
             permission.Description,

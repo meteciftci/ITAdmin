@@ -11,6 +11,7 @@ import { SETTINGS_QUERY_KEY } from "@/features/settings/settings-constants";
 import type { UpdateApplicationSettingsRequest } from "@/features/settings/types";
 import { BRANDING_QUERY_KEY } from "@/hooks/useBrandingSettings";
 import { getApiErrorMessage } from "@/lib/api-error";
+import { useState } from "react";
 
 import type {
   BuildBrandingPayloadParams,
@@ -35,6 +36,9 @@ export type UseBrandingSettingsSaveParams = {
 export type UseBrandingSettingsSaveReturn = {
   saveBrandingSettings: () => Promise<void>;
   isSavingBranding: boolean;
+  brandingSaveError: string | null;
+  brandingSaveSucceeded: boolean;
+  clearBrandingSaveState: () => void;
 };
 
 export function useBrandingSettingsSave({
@@ -52,6 +56,13 @@ export function useBrandingSettingsSave({
   resetSelectedAssetsAfterSave,
 }: UseBrandingSettingsSaveParams): UseBrandingSettingsSaveReturn {
   const queryClient = useQueryClient();
+  const [brandingSaveError, setBrandingSaveError] = useState<string | null>(null);
+  const [brandingSaveSucceeded, setBrandingSaveSucceeded] = useState(false);
+
+  const clearBrandingSaveState = () => {
+    setBrandingSaveError(null);
+    setBrandingSaveSucceeded(false);
+  };
 
   const updateBrandingMutation = useMutation({
     mutationFn: updateApplicationSettings,
@@ -61,15 +72,21 @@ export function useBrandingSettingsSave({
       resetSelectedAssetsAfterSave();
       clearBrandingError();
       clearForgotPasswordUrlError();
+      setBrandingSaveError(null);
+      setBrandingSaveSucceeded(true);
       toast.success(t("settings:application.messages.saveSuccess"));
     },
     onError: (error: unknown) => {
-      toast.error(getApiErrorMessage(error, t("settings:application.messages.saveFailed")));
+      setBrandingSaveSucceeded(false);
+      setBrandingSaveError(
+        getApiErrorMessage(error, t("settings:application.messages.saveFailed")),
+      );
     },
   });
 
   const saveBrandingSettings = async () => {
     if (!canUpdate) return;
+    clearBrandingSaveState();
     clearBrandingError();
     if (!validateBrandingInput()) return;
     if (!validateForgotPasswordUrlInput()) return;
@@ -80,7 +97,9 @@ export function useBrandingSettingsSave({
         const uploadResult = await uploadBrandingLogo(logoFile);
         logoUrlToPersist = uploadResult.logoUrl;
       } catch (error: unknown) {
-        toast.error(getApiErrorMessage(error, t("settings:application.messages.logoUploadFailed")));
+        setBrandingSaveError(
+          getApiErrorMessage(error, t("settings:application.messages.logoUploadFailed")),
+        );
         return;
       }
     }
@@ -91,7 +110,7 @@ export function useBrandingSettingsSave({
         const uploadResult = await uploadBrandingFavicon(faviconFile);
         faviconUrlToPersist = uploadResult.faviconUrl;
       } catch (error: unknown) {
-        toast.error(
+        setBrandingSaveError(
           getApiErrorMessage(error, t("settings:application.messages.faviconUploadFailed")),
         );
         return;
@@ -106,5 +125,8 @@ export function useBrandingSettingsSave({
   return {
     saveBrandingSettings,
     isSavingBranding: updateBrandingMutation.isPending,
+    brandingSaveError,
+    brandingSaveSucceeded,
+    clearBrandingSaveState,
   };
 }

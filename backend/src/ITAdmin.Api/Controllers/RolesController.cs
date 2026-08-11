@@ -240,6 +240,7 @@ public sealed class RolesController(IRoleService roleService) : ControllerBase
             role.Permissions
                 .Select(x => new RolePermissionItemResponse(
                     x.Id,
+                    x.Module,
                     x.Name,
                     x.Code,
                     x.Description,

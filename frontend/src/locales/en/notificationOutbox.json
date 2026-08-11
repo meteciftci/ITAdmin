@@ -19,6 +19,9 @@
     },
     "columns": {
       "createdAt": "Date",
+      "delivery": "Delivery",
+      "message": "Message",
+      "deliveryState": "Delivery state",
       "channel": "Channel",
       "provider": "Provider",
       "recipient": "Recipient",
@@ -27,11 +30,15 @@
       "attempts": "Attempts",
       "nextAttempt": "Next attempt",
       "related": "Related",
-      "actions": "Actions"
+      "actions": "Actions",
+      "noSubject": "No subject",
+      "attemptProgress": "{{current}} / {{max}} attempts",
+      "nextAttemptShort": "Next"
     },
     "actions": {
       "retry": "Retry",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "actionsFor": "Actions for notification to {{recipient}}"
     },
     "confirm": {
       "retryTitle": "Requeue notification",
@@ -43,10 +50,17 @@
       "title": "Notification details",
       "body": "Message preview",
       "lastError": "Last error",
-      "providerSummary": "Provider summary"
+      "providerSummary": "Provider summary",
+      "lastAttempt": "Last attempt",
+      "sentAt": "Sent at",
+      "relatedEntity": "Related record",
+      "correlationId": "Correlation ID",
+      "loading": "Loading notification details...",
+      "loadFailed": "Notification details could not be loaded."
     },
     "empty": {
-      "title": "No queue items found"
+      "title": "No queue items found",
+      "description": "No notification records match the current search and filters."
     },
     "messages": {
       "retrySuccess": "Notification requeued.",

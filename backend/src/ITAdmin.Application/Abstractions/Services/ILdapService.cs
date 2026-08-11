@@ -4,6 +4,10 @@ namespace ITAdmin.Application.Abstractions.Services;
 
 public interface ILdapService
 {
+    Task<LdapConnectionDiagnosticResult> DiagnoseConnectionAsync(
+        LdapConnectionDiagnosticRequest request,
+        CancellationToken cancellationToken = default);
+
     Task<LdapValidationResult> ValidateBindAsync(LdapBindValidationRequest request, CancellationToken cancellationToken = default);
 
     Task<LdapValidationResult> ValidateSearchBasesAsync(

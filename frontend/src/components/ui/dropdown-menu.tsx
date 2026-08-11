@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { cloneElement, isValidElement, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 
 import { cn } from "@/lib/utils";
 
@@ -28,6 +29,7 @@ export function DropdownMenuRoot({
   content: ReactNode;
   contentProps?: DropdownMenuContentProps;
 }) {
+  const { t } = useTranslation("common");
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
@@ -36,6 +38,15 @@ export function DropdownMenuRoot({
     left: 0,
     origin: "top",
   });
+
+  const focusTrigger = useCallback(() => {
+    triggerRef.current?.querySelector<HTMLElement>("button, [href], [tabindex]")?.focus();
+  }, []);
+
+  const closeAndRestoreFocus = useCallback(() => {
+    setOpen(false);
+    window.setTimeout(focusTrigger, 0);
+  }, [focusTrigger]);
 
   const updatePosition = useCallback(() => {
     if (!triggerRef.current || !contentRef.current) return;
@@ -89,18 +100,47 @@ export function DropdownMenuRoot({
     window.addEventListener("resize", updatePosition);
     window.addEventListener("scroll", updatePosition, true);
 
+    const focusableItems = () =>
+      Array.from(
+        contentRef.current?.querySelectorAll<HTMLElement>(
+          '[role="menuitem"]:not(:disabled)',
+        ) ?? [],
+      );
+    const focusRaf = requestAnimationFrame(() => focusableItems()[0]?.focus());
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeAndRestoreFocus();
+        return;
+      }
+
+      if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+      const items = focusableItems();
+      if (!items.length) return;
+      event.preventDefault();
+      const currentIndex = items.indexOf(document.activeElement as HTMLElement);
+      const delta = event.key === "ArrowDown" ? 1 : -1;
+      const nextIndex = (currentIndex + delta + items.length) % items.length;
+      items[nextIndex]?.focus();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+
     return () => {
       cancelAnimationFrame(raf1);
       cancelAnimationFrame(raf2);
+      cancelAnimationFrame(focusRaf);
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, true);
+      document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [open, updatePosition]);
+  }, [closeAndRestoreFocus, open, updatePosition]);
 
   const triggerNode = isValidElement(trigger)
     ? cloneElement(trigger, {
         onClick: () => setOpen((prev) => !prev),
-      } as { onClick: () => void })
+        "aria-haspopup": "menu",
+        "aria-expanded": open,
+      } as { onClick: () => void; "aria-haspopup": "menu"; "aria-expanded": boolean })
     : trigger;
 
   return (
@@ -111,20 +151,28 @@ export function DropdownMenuRoot({
           <button
             type="button"
             className="fixed inset-0 z-40 cursor-default"
-            onClick={() => setOpen(false)}
-            aria-label="close"
+            onClick={closeAndRestoreFocus}
+            aria-label={t("actions.close")}
           />
           {createPortal(
             <div
               ref={contentRef}
-              className="fixed z-50 min-w-44 rounded-lg border bg-popover p-1 shadow-md"
+              role="menu"
+              className="fixed z-50 min-w-48 rounded-xl border bg-popover p-1.5 shadow-xl"
               style={{
                 top: position.top,
                 left: position.left,
                 transformOrigin: `right ${position.origin}`,
               }}
             >
-              <div onClick={() => setOpen(false)}>{content}</div>
+              <div
+                onClick={() => {
+                  setOpen(false);
+                  focusTrigger();
+                }}
+              >
+                {content}
+              </div>
             </div>,
             document.body,
           )}
@@ -138,8 +186,9 @@ export function DropdownMenuItem({ className, children, ...props }: DropdownMenu
   return (
     <button
       type="button"
+      role="menuitem"
       className={cn(
-        "flex w-full items-center rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted disabled:opacity-50",
+        "flex min-h-9 w-full items-center rounded-lg px-2.5 py-2 text-left text-sm hover:bg-muted disabled:opacity-50",
         className,
       )}
       {...props}

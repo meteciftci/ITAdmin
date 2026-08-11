@@ -5,6 +5,20 @@ namespace ITAdmin.UnitTests.Fakes;
 
 public sealed class FakeLdapService : ILdapService
 {
+    public int DiagnoseConnectionCallCount { get; private set; }
+    public LdapConnectionDiagnosticRequest? LastDiagnoseConnectionRequest { get; private set; }
+    public LdapConnectionDiagnosticResult DiagnoseConnectionResult { get; set; } =
+        new(true, "dc.test", Array.Empty<LdapConnectionDiagnosticDetail>());
+
+    public Task<LdapConnectionDiagnosticResult> DiagnoseConnectionAsync(
+        LdapConnectionDiagnosticRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        DiagnoseConnectionCallCount++;
+        LastDiagnoseConnectionRequest = request;
+        return Task.FromResult(DiagnoseConnectionResult with { Host = request.Host });
+    }
+
     public int ValidateBindCallCount { get; private set; }
     public int ValidateSearchBasesCallCount { get; private set; }
     public int ValidateCallCount { get; private set; }

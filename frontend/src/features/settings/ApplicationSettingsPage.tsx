@@ -2,14 +2,18 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Navigate } from "react-router-dom";
 
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { LoadingState } from "@/components/common/LoadingState";
+import { PageContainer } from "@/components/common/PageContainer";
 import { PageHeader } from "@/components/common/PageHeader";
-import { SectionCard } from "@/components/common/SectionCard";
+import { UnsavedChangesGuard } from "@/components/common/settings-form";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ApplicationSettingsForm,
 } from "@/features/settings/components/ApplicationSettingsForm";
+import { isBrandingFormDirty } from "@/features/settings/application-settings-model";
 import { LdapSettingsForm } from "@/features/settings/components/LdapSettingsForm";
 import { SessionSecuritySettingsForm } from "@/features/settings/components/SessionSecuritySettingsForm";
 import { getSettings } from "@/features/settings/api";
@@ -44,10 +48,8 @@ export function ApplicationSettingsPage() {
   const [activeTab, setActiveTab] = useState<ApplicationSettingsTabValue>(
     DEFAULT_APPLICATION_SETTINGS_TAB,
   );
-
-  const handleTabChange = useCallback((value: string) => {
-    setActiveTab(value as ApplicationSettingsTabValue);
-  }, []);
+  const [pendingTab, setPendingTab] = useState<ApplicationSettingsTabValue | null>(null);
+  const [sessionSecurityDirty, setSessionSecurityDirty] = useState(false);
 
   const {
     ldapForm,
@@ -60,12 +62,28 @@ export function ApplicationSettingsPage() {
     buildLdapValidatePayload,
     ldapFormIsMinimumValid,
     clearBindPasswordAfterSave,
+    ldapFormIsDirty,
+    ldapConfigurationFingerprint,
   } = useLdapSettingsForm({ t });
 
-  const { saveLdapSettings, canSaveLdap, isSavingLdap } = useLdapSettingsSave({
+  const {
+    saveLdapSettings,
+    testCandidateLdapSettings,
+    testSavedLdapSettings,
+    canSaveLdap,
+    isSavingLdap,
+    isTestingCandidateLdap,
+    isTestingSavedLdap,
+    candidateLdapValidation,
+    savedLdapValidation,
+    candidateLdapValidationIsCurrent,
+    ldapSaveError,
+    ldapSaveSucceeded,
+  } = useLdapSettingsSave({
     t,
     canUpdate: canUpdateSystemSettings,
     ldapFormIsMinimumValid,
+    ldapConfigurationFingerprint,
     validateLdapForm,
     buildLdapPayload,
     buildLdapValidatePayload,
@@ -79,6 +97,9 @@ export function ApplicationSettingsPage() {
     footerText,
     forgotPasswordUrlError,
     brandingError,
+    applicationNameError,
+    browserTitleError,
+    footerTextError,
     hydrateFromBranding,
     updateApplicationName,
     updateBrowserTitle,
@@ -106,7 +127,13 @@ export function ApplicationSettingsPage() {
     resetSelectedAssetsAfterSave,
   } = useBrandingAssetSettingsForm({ t });
 
-  const { saveBrandingSettings, isSavingBranding } = useBrandingSettingsSave({
+  const {
+    saveBrandingSettings,
+    isSavingBranding,
+    brandingSaveError,
+    brandingSaveSucceeded,
+    clearBrandingSaveState,
+  } = useBrandingSettingsSave({
     t,
     canUpdate: canUpdateSystemSettings,
     brandingLogoUrl,
@@ -121,7 +148,13 @@ export function ApplicationSettingsPage() {
     resetSelectedAssetsAfterSave,
   });
 
-  const { saveSessionSecuritySettings, isSavingSessionSecurity } =
+  const {
+    saveSessionSecuritySettings,
+    isSavingSessionSecurity,
+    sessionSecuritySaveError,
+    sessionSecuritySaveSucceeded,
+    clearSessionSecuritySaveState,
+  } =
     useSessionSecuritySettingsSave({
       t,
       canUpdate: canUpdateSystemSettings,
@@ -134,6 +167,30 @@ export function ApplicationSettingsPage() {
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
+
+  const brandingIsDirty = isBrandingFormDirty(
+    {
+      applicationName: brandingApplicationName,
+      browserTitle: brandingBrowserTitle,
+      forgotPasswordUrl,
+      footerText,
+    },
+    settingsQuery.data?.branding,
+    Boolean(logoFile || faviconFile),
+  );
+  const activeTabIsDirty =
+    activeTab === "branding" ? brandingIsDirty :
+      activeTab === "sessionSecurity" ? sessionSecurityDirty : ldapFormIsDirty;
+
+  const handleTabChange = useCallback((value: string) => {
+    const nextTab = value as ApplicationSettingsTabValue;
+    if (nextTab === activeTab) return;
+    if (activeTabIsDirty) {
+      setPendingTab(nextTab);
+      return;
+    }
+    setActiveTab(nextTab);
+  }, [activeTab, activeTabIsDirty]);
 
   useEffect(() => {
     if (!settingsQuery.data) return;
@@ -151,11 +208,11 @@ export function ApplicationSettingsPage() {
 
   const refreshAction = useMemo(
     () => (
-      <Button variant="outline" onClick={() => void settingsQuery.refetch()}>
+      <Button variant="outline" onClick={() => void settingsQuery.refetch()} disabled={activeTabIsDirty}>
         {t("common:actions.refresh")}
       </Button>
     ),
-    [settingsQuery, t],
+    [activeTabIsDirty, settingsQuery, t],
   );
 
   if (settingsQuery.isError) {
@@ -171,19 +228,26 @@ export function ApplicationSettingsPage() {
 
   if (settingsQuery.isLoading) {
     return (
-      <section className="space-y-4">
+      <PageContainer variant="form">
         <PageHeader
           title={t("settings:pages.application.title")}
           description={t("settings:pages.application.description")}
           actions={refreshAction}
         />
         <LoadingState />
-      </section>
+      </PageContainer>
     );
   }
 
   return (
-    <section className="space-y-4">
+    <PageContainer variant="form">
+      <UnsavedChangesGuard
+        when={activeTabIsDirty}
+        title={t("settings:unsaved.title")}
+        description={t("settings:unsaved.description")}
+        leaveText={t("settings:unsaved.leave")}
+        stayText={t("settings:unsaved.stay")}
+      />
       <PageHeader
         title={t("settings:pages.application.title")}
         description={t("settings:pages.application.description")}
@@ -191,9 +255,7 @@ export function ApplicationSettingsPage() {
       />
 
       {isSystemReadOnly ? (
-        <p className="rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground">
-          {t("settings:readOnlyNotice")}
-        </p>
+        <Alert><AlertDescription>{t("settings:readOnlyNotice")}</AlertDescription></Alert>
       ) : null}
 
       <Tabs value={activeTab} onValueChange={handleTabChange}>
@@ -206,7 +268,6 @@ export function ApplicationSettingsPage() {
         </TabsList>
 
         <TabsContent value="branding">
-          <SectionCard>
             <ApplicationSettingsForm
               applicationName={brandingApplicationName}
               browserTitle={brandingBrowserTitle}
@@ -220,21 +281,24 @@ export function ApplicationSettingsPage() {
               footerText={footerText}
               readOnly={isSystemReadOnly}
               isSaving={isSavingBranding}
-              errorMessage={brandingError}
+              isDirty={brandingIsDirty}
+              saveSucceeded={brandingSaveSucceeded}
+              errorMessage={brandingError ?? brandingSaveError}
               forgotPasswordUrlError={forgotPasswordUrlError}
-              onApplicationNameChange={updateApplicationName}
-              onBrowserTitleChange={updateBrowserTitle}
-              onSelectLogo={handleLogoSelect}
-              onSelectFavicon={handleFaviconSelect}
-              onForgotPasswordUrlChange={updateForgotPasswordUrl}
-              onFooterTextChange={updateFooterText}
+              applicationNameError={applicationNameError}
+              browserTitleError={browserTitleError}
+              footerTextError={footerTextError}
+              onApplicationNameChange={(value) => { clearBrandingSaveState(); updateApplicationName(value); }}
+              onBrowserTitleChange={(value) => { clearBrandingSaveState(); updateBrowserTitle(value); }}
+              onSelectLogo={(file) => { clearBrandingSaveState(); void handleLogoSelect(file); }}
+              onSelectFavicon={(file) => { clearBrandingSaveState(); void handleFaviconSelect(file); }}
+              onForgotPasswordUrlChange={(value) => { clearBrandingSaveState(); updateForgotPasswordUrl(value); }}
+              onFooterTextChange={(value) => { clearBrandingSaveState(); updateFooterText(value); }}
               onSave={() => void saveBrandingSettings()}
             />
-          </SectionCard>
         </TabsContent>
 
         <TabsContent value="sessionSecurity">
-          <SectionCard>
             {settingsQuery.data ? (
               <SessionSecuritySettingsForm
                 key={sessionSecurityFingerprint(
@@ -245,27 +309,53 @@ export function ApplicationSettingsPage() {
                 }
                 readOnly={isSystemReadOnly}
                 isSaving={isSavingSessionSecurity}
+                saveError={sessionSecuritySaveError}
+                saveSucceeded={sessionSecuritySaveSucceeded}
+                onDirtyChange={setSessionSecurityDirty}
+                onChange={clearSessionSecuritySaveState}
                 onSubmit={saveSessionSecuritySettings}
               />
             ) : null}
-          </SectionCard>
         </TabsContent>
 
         <TabsContent value="ldap">
-          <SectionCard>
             <LdapSettingsForm
               values={ldapForm}
               fieldErrors={ldapFieldErrors}
               hasBindPassword={hasBindPassword}
+              hasSavedConfiguration={Boolean(settingsQuery.data?.ldap)}
               readOnly={isSystemReadOnly}
               savePending={isSavingLdap}
+              testCandidatePending={isTestingCandidateLdap}
+              testSavedPending={isTestingSavedLdap}
               canSave={canSaveLdap}
+              isDirty={ldapFormIsDirty}
+              candidateValidationIsCurrent={candidateLdapValidationIsCurrent}
+              candidateValidation={candidateLdapValidation}
+              savedValidation={savedLdapValidation}
+              saveError={ldapSaveError}
+              saveSucceeded={ldapSaveSucceeded}
               onChange={updateField}
+              onTestCandidate={() => void testCandidateLdapSettings()}
+              onTestSaved={() => void testSavedLdapSettings()}
               onSave={saveLdapSettings}
             />
-          </SectionCard>
         </TabsContent>
       </Tabs>
-    </section>
+
+      <ConfirmDialog
+        open={pendingTab !== null}
+        title={t("settings:unsaved.title")}
+        description={t("settings:unsaved.description")}
+        confirmText={t("settings:unsaved.leave")}
+        cancelText={t("settings:unsaved.stay")}
+        variant="danger"
+        onConfirm={() => {
+          if (pendingTab) setActiveTab(pendingTab);
+          setPendingTab(null);
+        }}
+        onOpenChange={(open) => { if (!open) setPendingTab(null); }}
+      />
+    </PageContainer>
   );
 }

@@ -38,4 +38,13 @@ public sealed class LdapBindFailureMessageResolverTests
         var message = LdapBindFailureMessageResolver.ResolveForServiceAccountBind(ex);
         Assert.Equal(LdapBindFailureMessageResolver.ValidationFailedMessage, message);
     }
+
+    [Theory]
+    [InlineData(48, true)]
+    [InlineData(49, true)]
+    [InlineData(81, false)]
+    public void IsCredentialFailure_ClassifiesOnlyAuthenticationCodes(int errorCode, bool expected)
+    {
+        Assert.Equal(expected, LdapBindFailureMessageResolver.IsCredentialFailure(new LdapException(errorCode)));
+    }
 }

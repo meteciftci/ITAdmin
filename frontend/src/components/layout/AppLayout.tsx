@@ -17,7 +17,10 @@ export function AppLayout({ children }: AppLayoutProps) {
         <AppSidebar />
         <div className="flex h-screen min-w-0 flex-1 flex-col overflow-hidden">
           <Topbar />
-          <main className="min-h-0 min-w-0 flex-1 overflow-y-auto bg-muted/30 p-4 md:p-6">
+          <main
+            id="main-content"
+            className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto bg-background p-4 sm:p-6 lg:p-8"
+          >
             {children}
           </main>
           <AppFooter />

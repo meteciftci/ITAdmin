@@ -1,5 +1,8 @@
 {
   "navigation": {
+    "toggle": "Open or close navigation menu",
+    "close": "Close navigation menu",
+    "subtitle": "Administration platform",
     "groups": {
       "main": "Main",
       "modules": "Modules",

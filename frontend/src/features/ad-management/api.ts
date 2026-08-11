@@ -24,6 +24,7 @@ export {
   getAdManagementSettingsOrganizationalUnits,
   updateAdAttributeMapping,
   updateAdManagementSettings,
+  validateAdManagementCandidateSettings,
   validateAdManagementSettings,
 } from "./api/settings-api.ts";
 

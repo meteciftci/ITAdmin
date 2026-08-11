@@ -149,6 +149,36 @@ public sealed class SetupServiceTests
     }
 
     [Fact]
+    public async Task CompleteSetupAsync_RepairsAuthoritativePermissionMetadata()
+    {
+        await using var context = CreateDbContext();
+        context.PortalPermissions.Add(new PortalPermission
+        {
+            Module = "LegacyArea",
+            Code = PermissionCodes.Users.View,
+            Description = "Outdated description.",
+            IsActive = false,
+            CreatedAt = DateTime.UtcNow.AddDays(-1),
+            CreatedBy = "test",
+        });
+        await context.SaveChangesAsync();
+
+        var ldap = CreateSuccessfulLdapFake();
+        var service = CreateSetupService(context, ldap, "setup-secret");
+        var request = CreateMinimalCompleteRequest("setup-secret", ["admin"]);
+
+        var result = await service.CompleteSetupAsync(request);
+
+        Assert.True(result.IsCompleted);
+        var permission = await context.PortalPermissions.SingleAsync(
+            item => item.Code == PermissionCodes.Users.View);
+        Assert.Equal("Users", permission.Module);
+        Assert.Equal("View users.", permission.Description);
+        Assert.False(permission.IsActive);
+        Assert.Equal("setup", permission.UpdatedBy);
+    }
+
+    [Fact]
     public async Task CompleteSetupAsync_WhenProfileLookupFails_ReturnsDirectoryFailureMessage()
     {
         await using var context = CreateDbContext();

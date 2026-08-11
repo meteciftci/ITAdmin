@@ -75,7 +75,11 @@ export function createUserColumns({
       cell: ({ row }) => {
         const user = row.original;
         return (
-          <RowActions>
+          <RowActions
+            ariaLabel={t("users:table.actionsFor", {
+              name: user.displayName || user.userName,
+            })}
+          >
             <DropdownMenuLabel>{t("common:actions.actions")}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => onDetail(user)}>

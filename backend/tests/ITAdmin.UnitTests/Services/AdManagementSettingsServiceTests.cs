@@ -829,6 +829,68 @@ public sealed class AdManagementSettingsServiceTests
         Assert.False(result.IsEnabled);
     }
 
+    [Fact]
+    public async Task ValidateCandidateAsync_UsesUnsavedValuesAndPreservesStoredPasswordWithoutPersisting()
+    {
+        await using var dbContext = CreateDbContext();
+        var validator = new FakeAdManagementValidationService();
+        var service = CreateService(dbContext, validator);
+        await service.UpdateSettingsAsync(CreateRequest(
+            isEnabled: false,
+            serviceAccountPassword: "stored-secret"));
+
+        var result = await service.ValidateCandidateAsync(CreateRequest(
+            isEnabled: true,
+            domainFqdn: "candidate.example.com",
+            serviceAccountPassword: null,
+            preferredDomainControllers: ["dc2.candidate.example.com"]));
+
+        Assert.True(result.IsValid);
+        Assert.Equal("candidate.example.com", validator.LastConnection!.DomainFqdn);
+        Assert.Equal("dc2.candidate.example.com", Assert.Single(validator.LastConnection.PreferredDomainControllers));
+        Assert.Equal("stored-secret", validator.LastConnection.ServiceAccountPassword);
+        var stored = await dbContext.AdManagementSettings.SingleAsync();
+        Assert.Equal("corp.example.com", stored.DomainFqdn);
+    }
+
+    [Fact]
+    public async Task ValidateCandidateAsync_WhenClearingTheServiceSecret_DoesNotFallBackToTheStoredOne()
+    {
+        // "Clear" is a distinct intent from "leave blank to preserve": validating a cleared secret
+        // must show the administrator the resulting failure, not silently reuse the old password.
+        await using var dbContext = CreateDbContext();
+        var validator = new FakeAdManagementValidationService();
+        var service = CreateService(dbContext, validator);
+        await service.UpdateSettingsAsync(CreateRequest(
+            isEnabled: false,
+            serviceAccountPassword: "stored-secret"));
+
+        await service.ValidateCandidateAsync(CreateRequest(
+            isEnabled: true,
+            serviceAccountPassword: null,
+            clearServiceAccountPassword: true));
+
+        Assert.Null(validator.LastConnection!.ServiceAccountPassword);
+    }
+
+    [Fact]
+    public async Task ValidateCandidateAsync_KeepsPreferredDomainControllerOrderForFailover()
+    {
+        await using var dbContext = CreateDbContext();
+        var validator = new FakeAdManagementValidationService();
+        var service = CreateService(dbContext, validator);
+        await service.UpdateSettingsAsync(CreateRequest(isEnabled: false, serviceAccountPassword: "stored-secret"));
+
+        await service.ValidateCandidateAsync(CreateRequest(
+            isEnabled: true,
+            serviceAccountPassword: null,
+            preferredDomainControllers: ["dc1.corp.example.com", "dc2.corp.example.com"]));
+
+        Assert.Equal(
+            ["dc1.corp.example.com", "dc2.corp.example.com"],
+            validator.LastConnection!.PreferredDomainControllers);
+    }
+
     private static AdManagementSettingsService CreateService(
         AppDbContext context,
         FakeAdManagementValidationService? validationService = null) =>

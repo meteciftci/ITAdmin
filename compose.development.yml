@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: itadmin_dev
+      POSTGRES_USER: itadmin_dev
+      POSTGRES_PASSWORD: itadmin_dev_only
+    ports:
+      - "55432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U itadmin_dev -d itadmin_dev"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - itadmin-development-postgres:/var/lib/postgresql
+
+volumes:
+  itadmin-development-postgres:

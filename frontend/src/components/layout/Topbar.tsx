@@ -1,4 +1,4 @@
-import { LogOut, Menu } from "lucide-react";
+import { LogOut, Menu, UserRound } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { getBreadcrumbKeyByPath } from "@/components/layout/breadcrumb-items";
@@ -22,7 +22,13 @@ export function Topbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const clearAuth = useAuthStore((state) => state.clearAuth);
-  const { setMobileSidebarOpen } = useLayoutShell();
+  const user = useAuthStore((state) => state.user);
+  const {
+    sidebarCollapsed,
+    setSidebarCollapsed,
+    mobileSidebarOpen,
+    setMobileSidebarOpen,
+  } = useLayoutShell();
   const currentPageKey = getBreadcrumbKeyByPath(location.pathname);
 
   const handleLogout = async () => {
@@ -34,17 +40,31 @@ export function Topbar() {
     }
   };
 
+  const handleToggleNavigation = () => {
+    if (window.matchMedia("(min-width: 1024px)").matches) {
+      setSidebarCollapsed(!sidebarCollapsed);
+      return;
+    }
+
+    setMobileSidebarOpen(!mobileSidebarOpen);
+  };
+
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between border-b bg-card px-4 md:px-6">
-      <div className="flex min-w-0 flex-1 items-center gap-2">
+    <header className="flex h-16 shrink-0 items-center justify-between gap-3 border-b bg-card px-3 sm:px-5 lg:px-7">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
         <Button
           variant="ghost"
-          size="icon-sm"
-          className="lg:hidden"
-          onClick={() => setMobileSidebarOpen(true)}
-          title={t("common:actions.more")}
+          size="icon"
+          onClick={handleToggleNavigation}
+          aria-label={t("navigation:navigation.toggle")}
+          aria-controls="app-navigation"
+          aria-expanded={
+            window.matchMedia("(min-width: 1024px)").matches
+              ? !sidebarCollapsed
+              : mobileSidebarOpen
+          }
         >
-          <Menu className="size-4" />
+          <Menu className="size-5" />
         </Button>
         <Breadcrumb className="min-w-0">
           <BreadcrumbList>
@@ -71,12 +91,25 @@ export function Topbar() {
           </BreadcrumbList>
         </Breadcrumb>
       </div>
-      <div className="ml-3 flex shrink-0 items-center gap-2">
-        <LanguageSwitcher />
+      <div className="flex shrink-0 items-center gap-2">
+        <LanguageSwitcher compact />
         <ThemeToggle />
-        <Button variant="outline" size="sm" onClick={handleLogout}>
-          <LogOut className="mr-2 size-4" />
-          {t("common:actions.logout")}
+        <div className="hidden min-w-0 items-center gap-2 border-l pl-3 md:flex">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <UserRound className="size-4" />
+          </span>
+          <span className="hidden min-w-0 leading-tight lg:block">
+            <span className="block max-w-40 truncate text-sm font-medium">
+              {user?.displayName || user?.userName}
+            </span>
+            <span className="block max-w-40 truncate text-xs text-muted-foreground">
+              {user?.roles.join(", ")}
+            </span>
+          </span>
+        </div>
+        <Button variant="outline" size="icon-sm" onClick={handleLogout} title={t("common:actions.logout")}>
+          <LogOut className="size-4" />
+          <span className="sr-only">{t("common:actions.logout")}</span>
         </Button>
       </div>
     </header>

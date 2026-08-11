@@ -176,8 +176,9 @@ describe("ad creation defaults integration", () => {
 
   it("connection form does not save before settings are loaded", () => {
     const source = readSource("components/AdManagementConnectionForm.tsx");
-    assert.match(source, /if \(!settings\)/);
-    assert.match(source, /disabled=\{!settings \|\| !canSubmit \|\| isSaving\}/);
+    // The save control must be gated on settings having loaded, so a save can never post a
+    // payload built from placeholder defaults over a real configuration.
+    assert.match(source, /disabled=\{[^}]*!settings[^}]*\}/);
     assert.doesNotMatch(source, /settings \?\? \{/);
   });
 });

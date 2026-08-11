@@ -88,7 +88,9 @@ export function createRoleColumns({
           canAssignPermissions && canViewPermissions && !isSystemRole;
 
         return (
-          <RowActions>
+          <RowActions
+            ariaLabel={t("roles:table.actionsFor", { name: role.name })}
+          >
             <DropdownMenuLabel>{t("common:actions.actions")}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => onDetail(role)}>

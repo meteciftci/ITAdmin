@@ -113,6 +113,43 @@ public sealed class AdManagementSettingsController(
         return Ok(MapValidation(result, restoreReadiness));
     }
 
+    [HttpPost("settings/validate-candidate")]
+    [RequirePermission(AdManagementPermissions.SettingsUpdate)]
+    public async Task<ActionResult<AdManagementValidationResponse>> ValidateCandidateSettings(
+        [FromBody] AdManagementSettingsUpdateRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await settingsService.ValidateCandidateAsync(
+            new AppModels.UpdateAdManagementSettingsRequest(
+                request.IsEnabled,
+                request.DomainFqdn,
+                request.DefaultUserCreationUpnSuffix,
+                request.DefaultUserOu,
+                request.DefaultGroupOu,
+                request.DefaultComputerOu,
+                request.NetbiosDomainName,
+                request.DefaultNamingContext,
+                request.BaseDn,
+                request.UsersRootOu,
+                request.DisabledUsersOu,
+                request.GroupsSearchBase,
+                request.ComputersSearchBase,
+                request.PreferredDomainControllers,
+                request.ServiceAccountUserName,
+                request.ServiceAccountPassword,
+                request.ClearServiceAccountPassword,
+                request.PowerShellHealthEnabled,
+                request.PowerShellTimeoutSeconds,
+                MapNotificationSettingsRequest(request.NotificationSettings),
+                ResolveActorUserId(User),
+                ResolveActorUserName(User),
+                ResolveIpAddress(),
+                ResolveUserAgent()),
+            cancellationToken);
+
+        return Ok(MapValidation(result));
+    }
+
     [HttpGet("attribute-mappings")]
     [RequirePermission(AdManagementPermissions.SettingsView)]
     public async Task<ActionResult<IReadOnlyList<AdAttributeMappingResponse>>> GetMappings(

@@ -22,6 +22,7 @@
       "roles": "Roller",
       "status": "Durum",
       "lastLogin": "Son Giriş",
+      "actionsFor": "{{name}} için işlemler",
       "actions": "İşlemler"
     },
     "empty": {

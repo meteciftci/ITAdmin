@@ -72,9 +72,12 @@ public sealed partial class SetupService
         ("LicenseManagement", PermissionCodes.LicenseManagement.View, "View license management."),
         ("LicenseManagement", PermissionCodes.LicenseManagement.ManageCatalog, "Manage license catalog (companies and products)."),
         ("LicenseManagement", PermissionCodes.LicenseManagement.ManagePurchases, "Manage license purchases and packages."),
+        ("LicenseManagement", PermissionCodes.LicenseManagement.ManageRequests, "Manage license requests."),
         ("LicenseManagement", PermissionCodes.LicenseManagement.FulfillRequests, "Convert license requests into purchases and packages."),
         ("LicenseManagement", PermissionCodes.LicenseManagement.ViewReports, "View license management reports."),
         ("LicenseManagement", PermissionCodes.LicenseManagement.ManageSettings, "Manage license management settings."),
+        ("Directory", PermissionCodes.Directory.Users.Lookup, "Lookup directory users for read-only selection."),
+        ("Directory", PermissionCodes.Directory.OrganizationalUnits.Lookup, "Lookup directory organizational units for read-only selection."),
         ("Setup", PermissionCodes.Setup.Manage, "Manage setup.")
     ];
 
@@ -121,6 +124,14 @@ public sealed partial class SetupService
                     CreatedBy = SetupActor
                 };
                 await context.PortalPermissions.AddAsync(permission, cancellationToken);
+            }
+            else if (permission.Module != defaultPermission.Module ||
+                     permission.Description != defaultPermission.Description)
+            {
+                permission.Module = defaultPermission.Module;
+                permission.Description = defaultPermission.Description;
+                permission.UpdatedAt = now;
+                permission.UpdatedBy = SetupActor;
             }
 
             allPermissions.Add(permission);

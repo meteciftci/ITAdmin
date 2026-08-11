@@ -1,23 +1,46 @@
 {
   "permissions": {
     "title": "İzinler",
-    "description": "Sistemdeki izin kodlarını görüntüleyin.",
+    "description": "Üründeki yetenekleri ve korudukları alanları modül bazında inceleyin.",
     "sections": {
-      "listTitle": "İzin Listesi"
+      "catalogTitle": "İzin kataloğu"
     },
     "search": {
-      "placeholder": "İzin ara..."
+      "placeholder": "İzin, kod, modül veya açıklama ara..."
     },
-    "table": {
-      "name": "Ad",
-      "code": "Kod",
-      "description": "Açıklama",
-      "group": "Grup/Modül",
-      "status": "Durum"
+    "summary": {
+      "permissions": "Eşleşen izin",
+      "modules": "Ürün alanı"
+    },
+    "moduleNavigation": {
+      "label": "İzin modülleri"
+    },
+    "module": {
+      "permissionCount": "{{count}} izin"
+    },
+    "item": {
+      "noDescription": "Bu izin için açıklama bulunmuyor."
+    },
+    "modules": {
+      "Dashboard": "Ana sayfa",
+      "Users": "Kullanıcılar",
+      "Roles": "Roller",
+      "Permissions": "İzinler",
+      "AuditLogs": "Denetim kayıtları",
+      "SecurityLogs": "Güvenlik kayıtları",
+      "Settings": "Ayarlar",
+      "AdManagement": "Active Directory yönetimi",
+      "AdOperationLogs": "AD işlem kayıtları",
+      "NotificationProviders": "Bildirim sağlayıcıları",
+      "NotificationOutbox": "Bildirim gönderim kuyruğu",
+      "NotificationTemplates": "Bildirim şablonları",
+      "LicenseManagement": "Lisans yönetimi",
+      "Directory": "Dizin servisleri",
+      "Setup": "Kurulum"
     },
     "empty": {
       "title": "İzin bulunamadı",
-      "description": "Mevcut filtrelere uygun izin bulunamadı."
+      "description": "Arama veya durum filtresini değiştirmeyi deneyin."
     },
     "errors": {
       "loadFailed": "İzinler yüklenemedi."
