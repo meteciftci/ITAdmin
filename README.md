@@ -226,21 +226,34 @@ The package zip does **not** need to contain migration artifacts. `itadmin-migra
 ### Local development
 
 The repository includes an isolated PostgreSQL development service on port `55432`.
-The helper script starts the database, waits until it is healthy, applies EF migrations,
-and starts the API with explicit development-only configuration:
+
+**1. Create your local environment file** (once per clone):
+
+```bash
+cp .env.development.example .env.development
+```
+
+`.env.development` holds every local value — database port and credentials, API URL, and a
+development-only JWT signing key. It is gitignored, so local runtime values are never committed;
+the repository carries only the `.env.development.example` template. Edit your copy if one of the
+defaults clashes with something already running on your machine.
+
+**2. Start the database, apply migrations, and run the API:**
 
 ```bash
 ./scripts/dev/start-backend.zsh
 ```
 
-The API listens on `http://127.0.0.1:5263`.
+The script fails with an explicit message if `.env.development` is missing or incomplete, so a
+fresh clone never starts against blank credentials. The API listens on the `ITADMIN_DEV_API_URL`
+from your env file (`http://127.0.0.1:5263` by default).
 
-Using explicit `ITADMIN_*` values in the script also prevents stale machine-level
-environment variables from silently redirecting a local API to another database.
-The credentials in `compose.development.yml` are intentionally local-only and are not
-used by production packaging or IIS configuration.
+Deriving the `ITADMIN_*` settings from that one file keeps the container and the API pointed at
+the same database, and setting them explicitly prevents stale machine-level environment variables
+from silently redirecting a local API elsewhere. These values are throwaway loopback credentials;
+production secrets come from IIS App Pool environment variables and are never stored in the repo.
 
-Run the frontend in another terminal:
+**3. Run the frontend in another terminal:**
 
 ```bash
 cd frontend
@@ -250,7 +263,7 @@ npm run dev
 Stop the local database without deleting its volume:
 
 ```bash
-docker compose -f compose.development.yml stop postgres
+docker compose --env-file .env.development -f compose.development.yml stop postgres
 ```
 
 ### Production package

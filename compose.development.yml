@@ -1,14 +1,23 @@
+# Local development PostgreSQL only. Values come from `.env.development` (gitignored) — copy
+# `.env.development.example` to create it. Run via scripts/dev/start-backend.zsh, or directly:
+#
+#   docker compose --env-file .env.development -f compose.development.yml up -d --wait postgres
+#
+# The `:?` suffixes make a missing or empty variable fail immediately with the message shown,
+# rather than silently starting a container with blank credentials.
 services:
   postgres:
     image: postgres:18-alpine
     environment:
-      POSTGRES_DB: itadmin_dev
-      POSTGRES_USER: itadmin_dev
-      POSTGRES_PASSWORD: itadmin_dev_only
+      POSTGRES_DB: ${ITADMIN_DEV_POSTGRES_DB:?set it in .env.development (copy .env.development.example)}
+      POSTGRES_USER: ${ITADMIN_DEV_POSTGRES_USER:?set it in .env.development (copy .env.development.example)}
+      POSTGRES_PASSWORD: ${ITADMIN_DEV_POSTGRES_PASSWORD:?set it in .env.development (copy .env.development.example)}
     ports:
-      - "55432:5432"
+      - "${ITADMIN_DEV_POSTGRES_PORT:?set it in .env.development (copy .env.development.example)}:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U itadmin_dev -d itadmin_dev"]
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"
       interval: 2s
       timeout: 3s
       retries: 20

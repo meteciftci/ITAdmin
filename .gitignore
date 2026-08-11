@@ -6,6 +6,9 @@
 # dotenv files
 .env
 .env.*
+# ...but the local-development template is meant to be committed. It carries throwaway loopback
+# values only; the real `.env.development` a developer copies from it stays ignored above.
+!.env.development.example
 
 # Local production overrides — never commit real secrets
 **/appsettings.Production.json
@@ -496,6 +499,8 @@ node_modules/
 dist/
 .env
 .env.*
+# Keep the committed local-development template (see the dotenv section at the top of this file).
+!.env.development.example
 
 # Runtime branding uploads (keep folder structure only)
 backend/src/ITAdmin.Api/wwwroot/uploads/branding/*
