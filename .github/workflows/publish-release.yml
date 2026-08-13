@@ -1,0 +1,204 @@
+name: Publish release
+
+# Builds the prebuilt Windows payload for an annotated stable release tag and publishes it to that
+# release's Git distribution ref (refs/itadmin/dist/<version>).
+#
+# Why this runs in CI rather than on a developer machine: the payload is what every customer server
+# installs, so it must be built from exactly the tagged commit, on a clean machine, with no local
+# state. A developer's laptop cannot offer that.
+#
+# Why the trigger is a tag and not a branch: mutable `main` is bootstrap transport only. A release
+# exists when somebody deliberately creates an annotated tag for it.
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version to publish, e.g. 2.1.0"
+        required: true
+
+permissions:
+  # Writing a distribution ref is a write to this repository's ref namespace. It is the only write
+  # this workflow performs; it never modifies a branch or a tag.
+  contents: write
+
+jobs:
+  publish:
+    name: Build and publish Windows payload
+    # Windows: the payload includes web.config and the ASP.NET Core IIS hosting shim, and is what
+    # will run on IIS. Building it on the same OS family removes an entire class of "worked on the
+    # build machine" differences.
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          # Tags and their objects are needed to prove the tag is annotated and to peel it.
+          fetch-depth: 0
+
+      - name: Resolve release identity
+        id: identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            version="${{ github.event.inputs.version }}"
+          else
+            version="${GITHUB_REF_NAME#v}"
+          fi
+          tag="v${version}"
+
+          # Annotated-only. A lightweight tag has no tag object, so `cat-file -t` reports "commit".
+          tag_type="$(git cat-file -t "refs/tags/${tag}")"
+          if [ "${tag_type}" != "tag" ]; then
+            echo "::error::${tag} is a lightweight tag. Production releases must be annotated (git tag -a)."
+            exit 1
+          fi
+
+          case "${version}" in
+            *-*)
+              echo "::error::${version} is a pre-release; the stable channel publishes stable versions only."
+              exit 1
+              ;;
+          esac
+
+          commit="$(git rev-parse "refs/tags/${tag}^{commit}")"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "commit=${commit}" >> "$GITHUB_OUTPUT"
+          echo "ref=refs/itadmin/dist/${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Check out the tagged commit
+        shell: bash
+        run: git checkout --detach "${{ steps.identity.outputs.commit }}"
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Setup Node.js (LTS)
+        uses: actions/setup-node@v5
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Publish backend
+        shell: bash
+        run: |
+          dotnet publish backend/src/ITAdmin.Api/ITAdmin.Api.csproj \
+            -c Release -o artifacts/publish --no-self-contained
+          rm -f artifacts/publish/appsettings.Development.json
+
+      - name: Publish Host Agent
+        shell: bash
+        # The privileged half of the product ships in the same release as the application it
+        # manages, so an update can never leave a server running an agent from a different version.
+        run: |
+          dotnet publish backend/src/ITAdmin.HostAgent/ITAdmin.HostAgent.csproj \
+            -c Release -r win-x64 --self-contained false -o artifacts/hostagent
+
+      - name: Build frontend
+        shell: bash
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Embed frontend
+        shell: bash
+        run: |
+          mkdir -p artifacts/publish/wwwroot
+          cp -R frontend/dist/. artifacts/publish/wwwroot/
+
+      - name: Acquire pinned runtime prerequisites
+        shell: bash
+        # The network supplies bytes; scripts/install/prerequisites/hosting-bundle.requirement.json
+        # decides which bytes are acceptable, using MICROSOFT's published digest in MICROSOFT's
+        # algorithm (SHA-512). A mismatch fails the publish, so an unverified third-party installer
+        # can never enter a distribution. ITAdmin's own SHA-256 is computed only afterwards, over the
+        # bytes that passed upstream verification.
+        run: |
+          set -euo pipefail
+          dotnet run --project backend/src/ITAdmin.Deployment/ITAdmin.Deployment.csproj \
+            -c Release --no-launch-profile -- \
+            acquire-prerequisite \
+            --requirement scripts/install/prerequisites/hosting-bundle.requirement.json \
+            --output artifacts/prerequisites | tee artifacts/prerequisite.txt
+
+          upstream_hash="$(grep '^upstreamHash=' artifacts/prerequisite.txt | cut -d= -f2-)"
+          if [ -z "${upstream_hash}" ]; then
+            echo "::error::Prerequisite acquisition reported no verified upstream digest; refusing to publish."
+            exit 1
+          fi
+
+          {
+            echo "prerequisite_name=$(grep '^name=' artifacts/prerequisite.txt | cut -d= -f2-)"
+            echo "prerequisite_version=$(grep '^version=' artifacts/prerequisite.txt | cut -d= -f2-)"
+            echo "prerequisite_path=$(grep '^path=' artifacts/prerequisite.txt | cut -d= -f2-)"
+            echo "prerequisite_url=$(grep '^sourceUrl=' artifacts/prerequisite.txt | cut -d= -f2-)"
+            echo "prerequisite_alg=$(grep '^upstreamHashAlgorithm=' artifacts/prerequisite.txt | cut -d= -f2-)"
+            echo "prerequisite_hash=${upstream_hash}"
+            echo "prerequisite_hash_src=$(grep '^upstreamHashSource=' artifacts/prerequisite.txt | cut -d= -f2-)"
+          } >> "$GITHUB_ENV"
+
+      - name: Stage distribution tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          migrations="$(ls backend/src/ITAdmin.Persistence/Migrations \
+            | grep -E '^[0-9]{14}_.*\.cs$' | grep -v '\.Designer\.cs$' | sed 's/\.cs$//' | sort)"
+          count="$(printf '%s\n' "${migrations}" | grep -c . || true)"
+          latest="$(printf '%s\n' "${migrations}" | tail -n 1)"
+
+          dotnet run --project backend/src/ITAdmin.Deployment/ITAdmin.Deployment.csproj \
+            -c Release --no-launch-profile -- \
+            dist-stage \
+            --publish artifacts/publish \
+            --output artifacts/dist \
+            --host-agent artifacts/hostagent \
+            --prerequisite "${prerequisite_name}|${prerequisite_version}|${prerequisite_path}|${prerequisite_url}|${prerequisite_alg}|${prerequisite_hash}|${prerequisite_hash_src}" \
+            --version "${{ steps.identity.outputs.version }}" \
+            --tag "${{ steps.identity.outputs.tag }}" \
+            --commit "${{ steps.identity.outputs.commit }}" \
+            --latest-migration "${latest}" \
+            --migration-count "${count}"
+
+      - name: Verify the staged tree matches the requested release identity
+        shell: bash
+        run: |
+          # Fail closed before publishing: a payload whose recorded version or source commit does
+          # not match the tag must never reach a distribution ref.
+          dotnet run --project backend/src/ITAdmin.Deployment/ITAdmin.Deployment.csproj \
+            -c Release --no-launch-profile -- \
+            dist-verify \
+            --release-dir artifacts/dist \
+            --version "${{ steps.identity.outputs.version }}" \
+            --commit "${{ steps.identity.outputs.commit }}"
+
+      - name: Publish distribution ref
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Orphan commit in a scratch repository: the payload gets no parent, so it never joins
+          # source history and a normal clone never downloads it.
+          rm -rf artifacts/dist-repo
+          mkdir -p artifacts/dist-repo
+          cd artifacts/dist-repo
+          git init --quiet
+          git config user.name "ITAdmin Release"
+          git config user.email "release@itadmin.invalid"
+          cp -R ../dist/. .
+          git add --all
+          git commit --quiet \
+            -m "ITAdmin ${{ steps.identity.outputs.version }} Windows payload" \
+            -m "source-tag: ${{ steps.identity.outputs.tag }}" \
+            -m "source-commit: ${{ steps.identity.outputs.commit }}"
+          git push \
+            "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" \
+            "HEAD:${{ steps.identity.outputs.ref }}"

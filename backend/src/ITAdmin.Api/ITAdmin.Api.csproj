@@ -21,6 +21,13 @@
     <PackageReference Include="Serilog.Settings.Configuration" Version="10.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The deployment-mode runners (migrate, bootstrap-directory) expose their decision logic as
+         internal so it can be tested without a host, a database, or a directory. -->
+    <InternalsVisibleTo Include="ITAdmin.UnitTests" />
   </ItemGroup>
 
   <ItemGroup>

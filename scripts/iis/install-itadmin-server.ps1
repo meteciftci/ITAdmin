@@ -76,6 +76,24 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+# =============================================================================================
+# DEPRECATED - superseded by scripts/install/Install-ITAdmin.ps1 (Installer v2).
+#
+# This script is the legacy deployment path. It extracts a release zip directly over the live IIS
+# directory with no staging, no integrity verification, no release identity, and no installation
+# state, so a failure part-way through leaves the site destroyed and unrecoverable without a
+# rebuild. It is retained only until Installer v2 has passed acceptance on a real Windows host,
+# after which it will be removed.
+#
+# Do not use it for new installations. Set ITADMIN_USE_LEGACY_INSTALLER=1 to run it anyway.
+# =============================================================================================
+if ($env:ITADMIN_USE_LEGACY_INSTALLER -ne "1") {
+    throw "install-itadmin-server.ps1 is deprecated and superseded by scripts/install/Install-ITAdmin.ps1. " +
+          "Set ITADMIN_USE_LEGACY_INSTALLER=1 only if you deliberately need the legacy path."
+}
+
+
+
 $Script:ITAdminKnownRuntimeVariableNames = @(
     "ASPNETCORE_ENVIRONMENT",
     "ITADMIN_ConnectionStrings__DefaultConnection",

@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- The typed vocabulary spoken across the privilege boundary. Deliberately dependency-free
+         and platform-neutral so both the unprivileged web application and the privileged Windows
+         service compile against exactly the same definitions, and so the boundary can be tested
+         without Windows. -->
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>ITAdmin.HostAgent.Contracts</RootNamespace>
+  </PropertyGroup>
+
+</Project>

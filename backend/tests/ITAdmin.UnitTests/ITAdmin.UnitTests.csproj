@@ -25,7 +25,10 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\ITAdmin.Api\ITAdmin.Api.csproj" />
     <ProjectReference Include="..\..\src\ITAdmin.Application\ITAdmin.Application.csproj" />
+    <ProjectReference Include="..\..\src\ITAdmin.Deployment\ITAdmin.Deployment.csproj" />
     <ProjectReference Include="..\..\src\ITAdmin.Domain\ITAdmin.Domain.csproj" />
+    <ProjectReference Include="..\..\src\ITAdmin.HostAgent\ITAdmin.HostAgent.csproj" />
+    <ProjectReference Include="..\..\src\ITAdmin.HostAgent.Contracts\ITAdmin.HostAgent.Contracts.csproj" />
     <ProjectReference Include="..\..\src\ITAdmin.Infrastructure\ITAdmin.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\ITAdmin.Persistence\ITAdmin.Persistence.csproj" />
   </ItemGroup>

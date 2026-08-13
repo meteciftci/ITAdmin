@@ -14,6 +14,11 @@
 **/appsettings.Production.json
 **/appsettings.*.local.json
 
+# Offline ASP.NET Core Hosting Bundle redistributables (never commit Microsoft binaries)
+scripts/install/prerequisites/*.exe
+scripts/install/prerequisites/*.sha256
+!scripts/install/prerequisites/hosting-bundle.requirement.json
+
 # User-specific files
 *.rsuser
 *.suo
@@ -32,6 +37,10 @@ mono_crash.*
 [Dd]ebugPublic/
 [Rr]elease/
 [Rr]eleases/
+# ...but scripts/release/ holds the release *build tooling*, not build output. Without this the
+# generic [Rr]elease/ rule above would silently keep the release script out of the repository.
+!scripts/release/
+!scripts/release/**
 x64/
 x86/
 [Ww][Ii][Nn]32/

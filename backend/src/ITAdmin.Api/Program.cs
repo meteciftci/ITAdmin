@@ -1,9 +1,36 @@
+using ITAdmin.Api;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 
 try
 {
+    // Deployment modes run before any web host is built so the installer can migrate or inspect
+    // the schema using the application's own configuration, with no toolchain on the server.
+    if (DatabaseMigrationRunner.IsMigrateRequested(args))
+    {
+        Environment.ExitCode = await DatabaseMigrationRunner.RunAsync(args, Console.Out, Console.Error);
+        return;
+    }
+
+    if (DatabaseMigrationRunner.IsStatusRequested(args))
+    {
+        Environment.ExitCode = await DatabaseMigrationRunner.RunStatusAsync(args, Console.Out, Console.Error);
+        return;
+    }
+
+    if (DatabasePreflightRunner.IsRequested(args))
+    {
+        Environment.ExitCode = await DatabasePreflightRunner.RunAsync(args, Console.Out, Console.Error);
+        return;
+    }
+
+    if (DirectoryBootstrapRunner.IsRequested(args))
+    {
+        Environment.ExitCode = await DirectoryBootstrapRunner.RunAsync(args, Console.Out, Console.Error);
+        return;
+    }
+
     Log.Information("Starting ITAdmin API");
     Program.CreateWebApplication(args).Run();
 }

@@ -18,26 +18,48 @@
     the trust relationship, and never prints a password. Credentials are taken as PSCredential
     objects so nothing sensitive appears on the command line or in the output.
 
-.PARAMETER SkipWebHostCheck
-    Skip the HTTPS check against the application URL. Use this before the site is deployed —
-    otherwise the check correctly reports a failure simply because nothing is listening yet.
+    This script carries no organization-specific values. Domain, domain controllers, and Base DN
+    are discovered from the machine's own Active Directory membership unless you override them.
+    Everything site-specific (PostgreSQL host, application FQDN, credentials) is supplied at run
+    time by the operator.
+
+.PARAMETER DomainFqdn
+    AD DNS domain to check. Defaults to the domain this computer is joined to.
+
+.PARAMETER DomainControllers
+    Domain controllers to check. Defaults to those advertised by DC locator for -DomainFqdn.
+
+.PARAMETER BaseDn
+    Directory Base DN. Defaults to the defaultNamingContext derived from -DomainFqdn.
+
+.PARAMETER PostgreSqlHost
+    PostgreSQL host to test reachability against. Omit to skip the database check.
+
+.PARAMETER WebHost
+    Application FQDN to test HTTPS against. Omit (or use -SkipWebHostCheck) to skip - before the
+    site is deployed the check would fail simply because nothing is listening yet.
 
 .EXAMPLE
-    # Pre-deployment: network + AD + certificates only.
-    .\Test-ItAdminAdReadiness.ps1 -SkipWebHostCheck
+    # Domain-joined server, everything discovered, AD/network checks only.
+    .\Test-ItAdminAdReadiness.ps1
 
 .EXAMPLE
-    # Full check including a real service-account LDAPS bind against both DCs.
-    .\Test-ItAdminAdReadiness.ps1 -ServiceCredential (Get-Credential MUGLABB\svc_itadmin)
+    # Explicit environment, including a real service-account LDAPS bind against both DCs.
+    .\Test-ItAdminAdReadiness.ps1 `
+        -DomainFqdn corp.example.com `
+        -DomainControllers dc1.corp.example.com, dc2.corp.example.com `
+        -PostgreSqlHost db.corp.example.com `
+        -WebHost itadmin.example.com `
+        -ServiceCredential (Get-Credential CORP\svc_itadmin)
 #>
 [CmdletBinding()]
 param(
-    [string]$DomainFqdn = "muglabb.lcl",
-    [string[]]$DomainControllers = @("dc1.muglabb.lcl", "dc2.muglabb.lcl"),
-    [string]$BaseDn = "DC=muglabb,DC=lcl",
-    [string]$PostgreSqlHost = "10.5.1.245",
+    [string]$DomainFqdn,
+    [string[]]$DomainControllers,
+    [string]$BaseDn,
+    [string]$PostgreSqlHost,
     [int]$PostgreSqlPort = 5432,
-    [string]$WebHost = "itadmin.mugla.bel.tr",
+    [string]$WebHost,
     [switch]$SkipWebHostCheck,
     [PSCredential]$ServiceCredential,
     [PSCredential]$TestUserCredential
@@ -74,6 +96,60 @@ function Test-TcpPort {
         Succeeded = $succeeded
         Result    = New-CheckResult $Label $succeeded $detail
     }
+}
+
+function Get-JoinedDomainFqdn {
+    <#
+        The AD DNS domain this computer is joined to. Discovery only - never a baked-in default,
+        so the script behaves correctly in any forest without repository changes.
+    #>
+    try {
+        $computerSystem = Get-CimInstance -ClassName Win32_ComputerSystem -ErrorAction Stop
+        if ($computerSystem.PartOfDomain -and -not [string]::IsNullOrWhiteSpace($computerSystem.Domain)) {
+            return $computerSystem.Domain
+        }
+    }
+    catch {
+        Write-Verbose "Domain discovery via Win32_ComputerSystem failed: $($_.Exception.Message)"
+    }
+
+    return $null
+}
+
+function Get-LocatedDomainControllers {
+    <#
+        Domain controllers advertised by DC locator for the given domain. Returns an empty array
+        when discovery is unavailable, so the caller can ask the operator instead of guessing.
+    #>
+    param([string]$Domain)
+
+    $located = New-Object System.Collections.Generic.List[string]
+    try {
+        $records = Resolve-DnsName -Name "_ldap._tcp.dc._msdcs.$Domain" -Type SRV -ErrorAction Stop
+        foreach ($record in $records) {
+            if ($record.PSObject.Properties.Match('NameTarget').Count -gt 0 -and $record.NameTarget) {
+                if (-not $located.Contains($record.NameTarget)) {
+                    $located.Add($record.NameTarget)
+                }
+            }
+        }
+    }
+    catch {
+        Write-Verbose "SRV-record DC discovery failed: $($_.Exception.Message)"
+    }
+
+    return $located.ToArray()
+}
+
+function ConvertTo-BaseDnFromDomain {
+    <# corp.example.com -> DC=corp,DC=example,DC=com #>
+    param([string]$Domain)
+
+    if ([string]::IsNullOrWhiteSpace($Domain)) {
+        return $null
+    }
+
+    return (($Domain -split '\.' | Where-Object { $_ } | ForEach-Object { "DC=$_" }) -join ',')
 }
 
 function Initialize-LdapAssembly {
@@ -193,8 +269,35 @@ function Test-LdapsBind {
 
 $results = [System.Collections.Generic.List[object]]::new()
 
+# --- Resolve the environment: explicit parameters win, discovery fills the gaps ----------------
+if ([string]::IsNullOrWhiteSpace($DomainFqdn)) {
+    $DomainFqdn = Get-JoinedDomainFqdn
+    if ([string]::IsNullOrWhiteSpace($DomainFqdn)) {
+        throw "This computer is not domain-joined and -DomainFqdn was not supplied. " +
+              "Re-run with -DomainFqdn <your.ad.domain> (and -DomainControllers if DC locator is unavailable)."
+    }
+    Write-Verbose "Discovered domain: $DomainFqdn"
+}
+
+if ($null -eq $DomainControllers -or $DomainControllers.Count -eq 0) {
+    $DomainControllers = Get-LocatedDomainControllers -Domain $DomainFqdn
+    if ($DomainControllers.Count -eq 0) {
+        throw "No domain controllers could be discovered for '$DomainFqdn'. " +
+              "Re-run with -DomainControllers <dc1>,<dc2>."
+    }
+    Write-Verbose "Discovered domain controllers: $($DomainControllers -join ', ')"
+}
+
+if ([string]::IsNullOrWhiteSpace($BaseDn)) {
+    $BaseDn = ConvertTo-BaseDnFromDomain -Domain $DomainFqdn
+    Write-Verbose "Derived Base DN: $BaseDn"
+}
+
+Write-Host "Checking domain '$DomainFqdn' (Base DN '$BaseDn') via: $($DomainControllers -join ', ')"
+Write-Host ""
+
 # Fail fast, before any network work, when an LDAPS bind was requested but the directory types
-# cannot be loaded — otherwise the run would do every other check and only collapse at the end.
+# cannot be loaded - otherwise the run would do every other check and only collapse at the end.
 $ldapTypesAvailable = Initialize-LdapAssembly
 if (-not $ldapTypesAvailable -and ($null -ne $ServiceCredential -or $null -ne $TestUserCredential)) {
     throw "System.DirectoryServices.Protocols could not be loaded, so the credentialed LDAPS bind " +
@@ -251,11 +354,16 @@ foreach ($dc in $DomainControllers) {
     }
 }
 
-$postgres = Test-TcpPort -ComputerName $PostgreSqlHost -Port $PostgreSqlPort `
-    -Label "TCP $PostgreSqlHost`:$PostgreSqlPort (PostgreSQL)"
-$results.Add($postgres.Result)
+if (-not [string]::IsNullOrWhiteSpace($PostgreSqlHost)) {
+    $postgres = Test-TcpPort -ComputerName $PostgreSqlHost -Port $PostgreSqlPort `
+        -Label "TCP $PostgreSqlHost`:$PostgreSqlPort (PostgreSQL)"
+    $results.Add($postgres.Result)
+}
+else {
+    Write-Host "PostgreSQL check skipped (-PostgreSqlHost not supplied)."
+}
 
-if (-not $SkipWebHostCheck) {
+if (-not $SkipWebHostCheck -and -not [string]::IsNullOrWhiteSpace($WebHost)) {
     $results.Add((Test-TlsEndpoint -HostName $WebHost -Port 443))
 }
 

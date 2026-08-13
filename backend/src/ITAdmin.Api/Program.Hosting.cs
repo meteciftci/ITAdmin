@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
 using ITAdmin.Application.Abstractions.Security;
 using ITAdmin.Api.Authorization;
+using ITAdmin.Api.Configuration;
 using ITAdmin.Api.Extensions;
 using ITAdmin.Api.HostedServices;
 using ITAdmin.Api.Middlewares;
@@ -30,6 +31,10 @@ public partial class Program
 
         configureBuilder?.Invoke(builder);
 
+        // Machine secrets (DPAPI under ProgramData) load before prefixed env vars so an operator
+        // can still override a single value via ITADMIN_* for break-glass scenarios, while the
+        // durable store remains the installer's source of truth for DB password and JWT key.
+        builder.Configuration.AddITAdminMachineSecrets();
         builder.Configuration.AddITAdminPrefixedEnvironmentVariables();
 
         builder.Host.UseSerilog((context, loggerConfiguration) =>

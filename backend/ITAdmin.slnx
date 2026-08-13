@@ -2,7 +2,10 @@
   <Folder Name="/src/">
     <Project Path="src/ITAdmin.Api/ITAdmin.Api.csproj" />
     <Project Path="src/ITAdmin.Application/ITAdmin.Application.csproj" />
+    <Project Path="src/ITAdmin.Deployment/ITAdmin.Deployment.csproj" />
     <Project Path="src/ITAdmin.Domain/ITAdmin.Domain.csproj" />
+    <Project Path="src/ITAdmin.HostAgent/ITAdmin.HostAgent.csproj" />
+    <Project Path="src/ITAdmin.HostAgent.Contracts/ITAdmin.HostAgent.Contracts.csproj" />
     <Project Path="src/ITAdmin.Infrastructure/ITAdmin.Infrastructure.csproj" />
     <Project Path="src/ITAdmin.Persistence/ITAdmin.Persistence.csproj" />
   </Folder>

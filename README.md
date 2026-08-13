@@ -2,7 +2,22 @@
 
 **Enterprise IT administration portal** for directory operations, identity governance, notifications, and audit-ready platform management — built for production Windows Server deployments.
 
-ITAdmin combines a modular ASP.NET Core API with a modern React frontend. Deployment is split by role: the **build machine** produces a ready-to-ship package; the **Windows Server** runs a single install script that deploys the app, configures IIS runtime, and validates the installation — without baking secrets into the repository or publish output.
+ITAdmin combines a modular ASP.NET Core API with a modern React frontend.
+
+Installation is **repository-driven**. After a one-time preparation (install Git for Windows, create
+an SSH key, add its public half to the repository as a read-only Deploy Key), a Windows Server is
+installed with a clone and one command — no ZIP copying, no manual Hosting Bundle download, no
+SHA-256 to look up, no per-version installer to distribute.
+
+```powershell
+git clone <ITAdmin origin SSH URL> C:\ITAdmin-bootstrap
+cd C:\ITAdmin-bootstrap
+.\scripts\install\Bootstrap-ITAdmin.ps1
+```
+
+**See [docs/first-install.md](docs/first-install.md) for the exact operator steps, and
+[docs/deployment.md](docs/deployment.md) for the architecture behind them.** The sections below describe the legacy install path, which is deprecated and retained only
+until Installer v2 passes acceptance on a real Windows host.
 
 ---
 
@@ -17,12 +32,28 @@ ITAdmin is designed as a long-lived corporate management platform: permission-aw
 | **Auth** | Active Directory login + local user model, JWT + refresh tokens |
 | **Ops** | Permission-based authorization, audit & security logs, Serilog |
 
-**Deployment model**
+**Deployment model (Installer v2 — canonical)**
+
+| Role | What happens |
+| --- | --- |
+| **Release (CI)** | An annotated stable tag (`v2.1.0`) triggers a Windows build; the prebuilt payload is published to that release's Git distribution ref (`refs/itadmin/dist/2.1.0`). |
+| **Windows Server** | `scripts/install/Bootstrap-ITAdmin.ps1` resolves the latest annotated stable tag, fetches and verifies the payload with the read-only deploy key, provisions prerequisites, installs over HTTP, establishes the LDAP Primary Directory and a directory-backed first administrator, and registers the privileged ITAdmin Host Agent. |
+
+Key properties: `main` is bootstrap transport only; release authority is an annotated stable SemVer
+tag; the server needs no .NET SDK, Node, or EF tooling; internal secrets are generated and DPAPI-
+protected; initial hosting is HTTP-only with HTTPS deferred to Settings; the web application holds
+no machine-administrator privilege.
+
+**Legacy model (deprecated)**
 
 | Role | What happens |
 | --- | --- |
 | **Developer / build** | `scripts/build-itadmin-package.zsh` or `scripts/build-itadmin-package.ps1` produces `artifacts/itadmin-package.zip` and optionally `artifacts/itadmin-migrations.sql` |
 | **Windows Server** | `scripts/iis/install-itadmin-server.ps1` deploys the package zip to IIS, writes runtime configuration, runs optional SQL migration, and smoke-tests `/api/setup/status` |
+
+> The legacy server script refuses to run unless `ITADMIN_USE_LEGACY_INSTALLER=1` is set. It extracts
+> a zip over the live IIS directory with no staging, no integrity verification, no release identity,
+> and no installation state, so a failure part-way through leaves the site unrecoverable.
 
 ---
 
@@ -33,7 +64,9 @@ ITAdmin is designed as a long-lived corporate management platform: permission-aw
 - **Notification platform** — providers, templates, rules, and outbox-driven delivery
 - **Audit & security logging** — structured, searchable operational visibility
 - **Production-ready hosting model** — IIS app pool runtime config + DataProtection key ring
-- **Single-script server install** — one elevated PowerShell script for deploy, runtime config, and smoke test
+- **Repository-driven install** — clone and run one command; releases are annotated stable tags, payloads are delivered over Git with the same read-only deploy key
+- **Verified release identity** — the installed payload must match the annotated tag's version and peeled source commit, with per-file SHA-256 integrity; anything else fails closed
+- **Privilege boundary** — a separate LocalSystem Host Agent performs updates and IIS changes over an ACL'd named pipe with typed operations; the web app never gains machine-administrator rights
 - **App Pool environment variables** — primary runtime configuration source for secrets and settings
 - **Idempotent install** — safe to re-run for IIS/site/runtime alignment; existing config can be preserved or overwritten explicitly
 
@@ -54,7 +87,10 @@ ITAdmin is designed as a long-lived corporate management platform: permission-aw
 
 ---
 
-## Deployment approach
+## Deployment approach (legacy — deprecated)
+
+> The canonical path is [docs/deployment.md](docs/deployment.md). What follows is the legacy model,
+> retained only until Installer v2 passes acceptance on a real Windows host.
 
 ### Build machine
 

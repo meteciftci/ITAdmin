@@ -1,4 +1,8 @@
 #Requires -Version 5.1
+# DEPRECATED - superseded by scripts/release/build-release.zsh, which produces a versioned,
+# integrity-stamped, environment-neutral release artifact. This script emits an unversioned
+# zip with no manifest and no checksums, and is retained only until Installer v2 acceptance.
+
 
 [CmdletBinding()]
 param(
