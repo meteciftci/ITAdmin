@@ -21,6 +21,13 @@ Dependency direction: Api -> Application -> Domain. Infrastructure and Persisten
 - Frontend TypeScript strict mode and i18n requirements must remain intact; no `any`, committed `console.*`, or hardcoded user-facing text.
 - Do not opportunistically modify unrelated code.
 
+## Development workflow
+
+- This is a private, owner-operated repository. Normal development is trunk-based directly on `main`.
+- Do not create feature branches, pull requests, draft PRs, or merge workflows unless explicitly requested for a specific task.
+- Keep each commit narrowly scoped and push it to `main`; GitHub CI is the broad validation layer.
+- Before editing, ensure the working tree is clean and `main` is up to date. Never discard unrelated local changes.
+
 ## Agent efficiency
 
 - Treat one Claude Code session as one coherent development task. Use `/clear` when the task changes; use `/compact` when the same task continues and context has grown substantially.
