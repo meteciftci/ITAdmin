@@ -1,114 +1,38 @@
 # CLAUDE.md
 
-Guidance for AI agents and contributors working in this repository. These are the
-load-bearing conventions distilled from the project's original standards (previously
-under `.cursor/rules/*.mdc`, still recoverable from git history at those paths).
+Core project instructions for Claude Code. Keep this file limited to rules that apply to nearly every task; area-specific guidance lives under `.claude/rules/` and is loaded only when relevant files are opened.
 
 ## Project
 
-ITAdmin is an enterprise IT administration portal: Active Directory management,
-identity/permissions, notifications, and audit-ready operational logging. It targets
-production Windows Server / IIS deployments. See [README.md](README.md) for the
-deployment and runtime-configuration model.
+ITAdmin is an in-house enterprise IT administration portal for Active Directory management, identity/permissions, notifications, audit logging, and Windows Server / IIS deployment.
 
-## Stack & layout
+- Backend: ASP.NET Core (net10.0), EF Core, PostgreSQL, Serilog
+- Frontend: React, TypeScript, Vite, TanStack Query & Table
+- Auth: AD login + local users, JWT access/refresh tokens, permission-based authorization
 
-| Layer | Stack |
-| --- | --- |
-| Backend | ASP.NET Core (net10.0), EF Core, PostgreSQL, Serilog |
-| Frontend | React, TypeScript, Vite, TanStack Query & Table |
-| Auth | AD login + local users, JWT access + refresh tokens, permission-based authz |
+Dependency direction: Api -> Application -> Domain. Infrastructure and Persistence implement Application abstractions. Domain has no outward dependencies.
 
-```
-backend/src/ITAdmin.Api           # Controllers, middleware, hosting, auth wiring
-backend/src/ITAdmin.Application    # Use-case services, abstractions, models (Common/*)
-backend/src/ITAdmin.Domain         # Entities, enums, domain events
-backend/src/ITAdmin.Infrastructure # LDAP/AD, email/SMS, data protection, file storage
-backend/src/ITAdmin.Persistence    # DbContext, EF configurations, repositories, migrations
-backend/tests                      # ITAdmin.UnitTests, ITAdmin.IntegrationTests
-frontend/src/features/<feature>    # Feature-scoped UI, api.ts, types.ts, columns, tests
-```
+## Global invariants
 
-Dependency direction: Api → Application → Domain; Infrastructure/Persistence implement
-Application abstractions. Domain has no outward dependencies.
+- Backend validation and authorization are the source of truth; frontend checks are UX only.
+- Never log or commit passwords, JWT keys, setup keys, tokens, connection strings, or other runtime secrets.
+- New frameworks/packages require explicit approval; prefer established project patterns.
+- Preserve audit/security logging for state-changing and authentication/authorization operations.
+- Frontend TypeScript strict mode and i18n requirements must remain intact; no `any`, committed `console.*`, or hardcoded user-facing text.
+- Do not opportunistically modify unrelated code.
 
-## Build, test, run
+## Agent efficiency
 
-```bash
-# Backend
-dotnet build backend/ITAdmin.slnx -c Release
-dotnet test  backend/ITAdmin.slnx -c Release
+- Treat one Claude Code session as one coherent development task. Use `/clear` when the task changes; use `/compact` when the same task continues and context has grown substantially.
+- Default to Sonnet for routine implementation and medium effort. Raise effort/model capability only when task complexity justifies it.
+- Start with known relevant paths and expand only when evidence requires broader exploration.
+- Use the main agent for normal implementation in a small known scope. Use subagents only for bounded repository-wide discovery, verbose log/failure analysis, or independent research whose raw intermediate output is not needed in the main context.
+- Keep tasks narrow: one goal, explicit constraints/non-goals, acceptance criteria, targeted verification, then stop.
+- Prefer targeted tests/checks while iterating; run broader suites only when the change scope warrants them or before release-level validation.
+- Reference repository paths instead of pasting large source files, diffs, or logs into prompts.
+- Avoid routinely continuing sessions above ~150k context. Around 80k-120k, reassess scope; above ~120k, compact if continuing the same task or clear for a new task. These are project heuristics, not product limits.
 
-# Frontend (from frontend/)
-npm run lint
-npx tsc -b            # strict typecheck (must stay clean)
-npm run test:unit     # node --test glob over src/**/*.test.ts
-npm run build
-```
+## Scoped rules
 
-Keep the backend build **and** test projects compiling — a green `dotnet build` includes
-the test projects. Do not let refactors (e.g. DTO signature changes) leave test code
-uncompilable.
-
-## Backend conventions
-
-- **Backend validation is the source of truth** for data integrity and security.
-  Frontend validation is UX only.
-- **Never return entities as API responses.** Map to response contracts in
-  `Api/Contracts/*`; keep application models in `Application/Common/Models/*`.
-- **Permission checks live in the backend** via `[RequirePermission]` /
-  `[RequireAnyPermission]`. Frontend guards are UX only.
-- Request context (actor user id/name, IP, user agent) is resolved in controllers and
-  passed into services — services do not read `HttpContext`.
-- New frameworks/packages require explicit approval. Prefer the existing patterns.
-- Controllers stay thin: parse/validate input, call one service, map the result. A
-  controller that accumulates many unrelated endpoints should be split by domain.
-
-## Data / EF Core
-
-- PostgreSQL. All timestamps are **UTC** (`DateTime` in UTC; store audit `CreatedAt`/
-  `UpdatedAt` + `CreatedBy`/`UpdatedBy`).
-- Prefer **soft delete / passivation** (`IsActive`) over hard delete for domain data.
-- Entity configuration via `IEntityTypeConfiguration<T>` under `Persistence/Configurations`.
-- Every schema change is an **EF migration**; permission changes ship as seed migrations.
-  Keep migrations forward-only and reviewed. Avoid churn — design the schema before
-  shipping multiple rework migrations for the same feature.
-
-## Logging & audit
-
-- **Serilog** for application logs; structured properties, `CorrelationId` enriched.
-- **AuditLog** for state-changing operations (Create/Update/Delete/status changes):
-  set `Action`, `EntityName`, `Description`, and `OldValuesJson`/`NewValuesJson`.
-- **SecurityLog** for auth/authz events (login, forbidden access, token operations).
-- **Never log secrets** — passwords, JWT keys, setup keys, connection strings, tokens.
-  Error responses expose detail only in Development (see `GlobalExceptionMiddleware`).
-
-## Frontend conventions
-
-- TypeScript `strict` is on. No `any`, no `console.*` in committed code. Keep `tsc -b`
-  and `eslint .` clean.
-- Feature-scoped structure: co-locate `api.ts`, `types.ts`, columns, and `*.test.ts`
-  under `features/<feature>/`.
-- Data fetching via **TanStack Query**; tables via **TanStack Table** / shared
-  `data-table`. Reuse existing loading/empty/error state components.
-- **i18n is mandatory** — no hardcoded user-facing text. Add keys to both
-  `src/locales/en` and `src/locales/tr`. Format dates/times through the shared i18n
-  helpers. Backend error messages are surfaced via message keys, not hardcoded strings.
-
-## Security invariants
-
-- Runtime secrets come from IIS App Pool environment variables, never the repo,
-  `appsettings*.json`, or publish output (`appsettings.json` ships with empty secrets).
-- JWT signing key must be provided via env/user-secrets; startup fails if missing.
-- DataProtection key ring is infrastructure-critical (encrypted DB values depend on it).
-- HTTPS enforced in production (HSTS); CSRF protection and login rate limiting are wired
-  in `Program.Hosting.cs` — preserve that middleware ordering when editing hosting setup.
-
-## When adding a feature
-
-1. Domain entity + EF configuration + migration (schema, then seed permissions).
-2. Application service + abstraction + models; enforce validation and write audit logs.
-3. Api controller (thin) + request/response contracts; apply permission attributes.
-4. Frontend feature folder: api client, types, table/columns, forms — all i18n'd.
-5. Tests: unit tests for service rules and frontend logic; integration tests for
-   auth/permission-sensitive endpoints.
+- `.claude/rules/backend.md` loads for backend work.
+- `.claude/rules/deployment.md` loads for install/update/build/runtime deployment work.
