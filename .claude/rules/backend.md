@@ -14,5 +14,6 @@ paths:
 - Schema changes require reviewed EF migrations. Permission changes ship with seed migrations.
 - Use structured Serilog logging. State-changing operations require appropriate AuditLog; authentication/authorization events require SecurityLog.
 - Never log passwords, tokens, JWT keys, setup keys, connection strings, or other secrets.
-- Keep `dotnet build backend/ITAdmin.slnx -c Release` clean; during iteration, run the narrowest relevant tests first and broaden validation when scope warrants it.
+- Add or update focused tests for changed behavior. Do not routinely run the full backend solution build/test from Claude Code; GitHub CI is the default full-validation layer after push.
+- If local verification is useful, run only the smallest relevant project/test filter or give the operator the exact command to run outside Claude Code.
 - Preserve dependency direction: Api -> Application -> Domain; Infrastructure/Persistence implement Application abstractions.
