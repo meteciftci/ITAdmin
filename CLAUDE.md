@@ -28,11 +28,15 @@ Dependency direction: Api -> Application -> Domain. Infrastructure and Persisten
 - Start with known relevant paths and expand only when evidence requires broader exploration.
 - Use the main agent for normal implementation in a small known scope. Use subagents only for bounded repository-wide discovery, verbose log/failure analysis, or independent research whose raw intermediate output is not needed in the main context.
 - Keep tasks narrow: one goal, explicit constraints/non-goals, acceptance criteria, targeted verification, then stop.
-- Prefer targeted tests/checks while iterating; run broader suites only when the change scope warrants them or before release-level validation.
+- Write or update tests that cover changed behavior, but do not routinely execute broad build/test/lint suites from Claude Code. GitHub CI is the default full-validation layer after a push.
+- Run a local verification from Claude Code only when it is small, targeted, and materially useful before handing the change back. Otherwise provide the exact targeted command for the operator to run outside Claude Code.
+- Never run full backend and frontend validation together as a routine end-of-task step unless explicitly requested or diagnosing a CI-only failure.
+- When CI fails, inspect or report the smallest actionable failure summary rather than ingesting large logs into the main conversation.
 - Reference repository paths instead of pasting large source files, diffs, or logs into prompts.
 - Avoid routinely continuing sessions above ~150k context. Around 80k-120k, reassess scope; above ~120k, compact if continuing the same task or clear for a new task. These are project heuristics, not product limits.
 
 ## Scoped rules
 
 - `.claude/rules/backend.md` loads for backend work.
+- `.claude/rules/frontend.md` loads for frontend work.
 - `.claude/rules/deployment.md` loads for install/update/build/runtime deployment work.
