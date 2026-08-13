@@ -10,5 +10,6 @@ paths:
 - Use TanStack Query for server-state fetching/caching and TanStack Table/shared data-table patterns for tables.
 - User-facing text must be internationalized; add/update both English and Turkish locale keys and use shared date/time formatting helpers.
 - Frontend permission checks and validation are UX only; backend authorization and validation remain authoritative.
-- Prefer targeted affected unit tests and typecheck while iterating; run broader lint/build validation when the change scope warrants it.
+- Add or update focused tests for changed behavior. Do not routinely run the full frontend lint/test/build sequence from Claude Code; GitHub CI is the default full-validation layer after push.
+- If local verification is useful, run only the smallest relevant unit test/typecheck or give the operator the exact command to run outside Claude Code.
 - Do not add packages/frameworks without explicit approval.
