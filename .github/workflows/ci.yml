@@ -29,6 +29,26 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      - name: Parse installer PowerShell
+        shell: pwsh
+        run: |
+          $failed = $false
+          foreach ($file in Get-ChildItem -LiteralPath scripts/install -Filter '*.ps1' -File) {
+            $tokens = $null
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile(
+              $file.FullName,
+              [ref]$tokens,
+              [ref]$errors)
+            if ($errors.Count -gt 0) {
+              $failed = $true
+              foreach ($error in $errors) {
+                Write-Error "$($file.FullName): $($error.Message) at $($error.Extent.Text)"
+              }
+            }
+          }
+          if ($failed) { exit 1 }
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
