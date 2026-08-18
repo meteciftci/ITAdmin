@@ -23,6 +23,7 @@ public sealed class PackageInstallerContractTests
     private static string UpdateConfigSource() => Read("scripts", "install", "Configure-ITAdminUpdates.ps1");
     private static string PackageBuilderSource() => Read("scripts", "release", "New-ITAdminWindowsPackage.ps1");
     private static string PublishWorkflowSource() => Read(".github", "workflows", "publish-release.yml");
+    private static string HostAgentProgramSource() => Read("backend", "src", "ITAdmin.HostAgent", "Program.cs");
 
     [Fact]
     public void ProductionSetup_IsLocalPackageDrivenAndDoesNotInvokeGitOrSsh()
@@ -73,6 +74,20 @@ public sealed class PackageInstallerContractTests
         Assert.Contains("channel = $channel", source, StringComparison.Ordinal);
         Assert.Contains("updatesEnabled = $updatesEnabled", source, StringComparison.Ordinal);
         Assert.Contains("Preserved existing Host Agent update settings", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void HostServices_DiscoverTheProgramDataRootRegisteredByPackageSetup()
+    {
+        var setup = SetupSource();
+        var hostAgent = HostAgentProgramSource();
+        var updateConfig = UpdateConfigSource();
+
+        Assert.Contains("HKLM:\\SOFTWARE\\ITAdmin", setup, StringComparison.Ordinal);
+        Assert.Contains("ProgramDataRoot", setup, StringComparison.Ordinal);
+        Assert.Contains("Registry.GetValue", hostAgent, StringComparison.Ordinal);
+        Assert.Contains("HKEY_LOCAL_MACHINE\\SOFTWARE\\ITAdmin", hostAgent, StringComparison.Ordinal);
+        Assert.Contains("Apply-RegisteredProgramDataRoot", updateConfig, StringComparison.Ordinal);
     }
 
     [Fact]
