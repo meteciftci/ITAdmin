@@ -13,6 +13,10 @@
     the operator has already verified. This script never runs ssh-keyscan and never invents host
     trust. It copies the supplied material into the machine-owned ITAdmin key store, verifies the
     repository using exactly that persisted identity, then enables updates in hostagent.json.
+
+    Re-running this script preserves the installed Host Agent layout unless a corresponding value is
+    explicitly supplied. Disabling updates changes only the update switch and restarts the service;
+    it does not silently rewrite site names, custom roots, repository identity, or channel.
 #>
 [CmdletBinding()]
 param(
@@ -31,9 +35,59 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$Script:CallerParameters = @{}
+foreach ($key in $PSBoundParameters.Keys) {
+    $Script:CallerParameters[$key] = $PSBoundParameters[$key]
+}
 
 function Write-Detail { param([string]$Message) Write-Host "    $Message" }
 function Write-Ok { param([string]$Message) Write-Host "    OK  $Message" -ForegroundColor Green }
+
+function Read-ExistingHostAgentSettings {
+    $configRoot = Join-Path $ProgramDataRoot "config"
+    $settingsPath = Join-Path $configRoot "hostagent.json"
+    if (-not (Test-Path -LiteralPath $settingsPath -PathType Leaf)) {
+        return $null
+    }
+
+    try {
+        return Get-Content -LiteralPath $settingsPath -Raw | ConvertFrom-Json
+    }
+    catch {
+        throw "Existing Host Agent configuration is not valid JSON: $settingsPath"
+    }
+}
+
+function Apply-ExistingHostAgentDefaults {
+    param([psobject]$Existing)
+
+    if ($null -eq $Existing) { return }
+
+    if (-not $Script:CallerParameters.ContainsKey("RepositoryUrl") -and
+        -not [string]::IsNullOrWhiteSpace("$($Existing.repositoryUrl)")) {
+        $Script:RepositoryUrl = "$($Existing.repositoryUrl)"
+    }
+    if (-not $Script:CallerParameters.ContainsKey("Channel") -and
+        ("$($Existing.channel)" -eq "Preview" -or "$($Existing.channel)" -eq "1")) {
+        $Script:Channel = "preview"
+    }
+    if (-not $Script:CallerParameters.ContainsKey("ProgramFilesRoot") -and
+        -not [string]::IsNullOrWhiteSpace("$($Existing.programFilesRoot)")) {
+        $Script:ProgramFilesRoot = "$($Existing.programFilesRoot)"
+    }
+    if (-not $Script:CallerParameters.ContainsKey("ProgramDataRoot") -and
+        -not [string]::IsNullOrWhiteSpace("$($Existing.programDataRoot)")) {
+        $Script:ProgramDataRoot = "$($Existing.programDataRoot)"
+    }
+    if (-not $Script:CallerParameters.ContainsKey("SiteName") -and
+        -not [string]::IsNullOrWhiteSpace("$($Existing.siteName)")) {
+        $Script:SiteName = "$($Existing.siteName)"
+    }
+    if (-not $Script:CallerParameters.ContainsKey("AppPoolName") -and
+        -not [string]::IsNullOrWhiteSpace("$($Existing.appPoolName)")) {
+        $Script:AppPoolName = "$($Existing.appPoolName)"
+    }
+}
 
 function Set-HostAgentSettings {
     param(
@@ -88,8 +142,22 @@ Write-Host ""
 Write-Host "ITAdmin update configuration" -ForegroundColor White
 Write-Host "============================"
 
-$keyDirectory = Join-Path $ProgramDataRoot "keys"
+$existingSettings = Read-ExistingHostAgentSettings
+Apply-ExistingHostAgentDefaults -Existing $existingSettings
+
+$keyDirectory = if ($null -ne $existingSettings -and
+    -not [string]::IsNullOrWhiteSpace("$($existingSettings.deployKeyDirectory)")) {
+    "$($existingSettings.deployKeyDirectory)"
+}
+else {
+    Join-Path $ProgramDataRoot "keys"
+}
+$keyDirectory = [System.IO.Path]::GetFullPath($keyDirectory)
+
 if ($Disable.IsPresent) {
+    if ($null -eq $existingSettings) {
+        throw "Host Agent configuration was not found. Install ITAdmin before disabling in-app updates."
+    }
     Set-HostAgentSettings -Enabled $false -KeyDirectory $keyDirectory
     Restart-HostAgent
     exit 0
@@ -144,12 +212,12 @@ New-Item -ItemType Directory -Path $keyDirectory -Force | Out-Null
 Invoke-IcaclsChecked -Arguments @($keyDirectory, "/inheritance:r")
 Invoke-IcaclsChecked -Arguments @($keyDirectory, "/grant:r", "SYSTEM:(OI)(CI)F", "Administrators:(OI)(CI)F")
 
-$machineKey = Join-Path $keyDirectory "deploy_key"
+$machineKey = [System.IO.Path]::GetFullPath((Join-Path $keyDirectory "deploy_key"))
 $sourceKey = (Resolve-Path -LiteralPath $DeployKeyPath).Path
 if (-not [string]::Equals($sourceKey, $machineKey, [StringComparison]::OrdinalIgnoreCase)) {
     Copy-Item -LiteralPath $sourceKey -Destination $machineKey -Force
 }
-$machineKnownHosts = Join-Path $keyDirectory "known_hosts"
+$machineKnownHosts = [System.IO.Path]::GetFullPath((Join-Path $keyDirectory "known_hosts"))
 Set-Content -LiteralPath $machineKnownHosts -Value $entryLines -Encoding ASCII
 
 Invoke-IcaclsChecked -Arguments @($machineKey, "/inheritance:r")
