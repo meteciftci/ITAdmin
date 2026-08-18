@@ -29,11 +29,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Parse installer PowerShell
+      - name: Parse repository PowerShell
         shell: pwsh
         run: |
           $failed = $false
-          foreach ($file in Get-ChildItem -LiteralPath scripts/install -Filter '*.ps1' -File) {
+          foreach ($file in Get-ChildItem -LiteralPath scripts -Filter '*.ps1' -File -Recurse) {
             $tokens = $null
             $errors = $null
             [void][System.Management.Automation.Language.Parser]::ParseFile(
