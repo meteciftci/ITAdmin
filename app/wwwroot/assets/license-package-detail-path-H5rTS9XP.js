@@ -1,0 +1,1 @@
+var e=`/license-management/packages`;function t(t){return`${e}/${t}`}function n(t){return`${e}/${t}/edit`}var r=`/license-management/packages/create`;function i(e){return e?`${r}?${new URLSearchParams({purchaseId:e}).toString()}`:r}export{t as n,n as r,i as t};

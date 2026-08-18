@@ -1,0 +1,1 @@
+var e=`flex flex-wrap justify-end gap-2`;export{e as t};

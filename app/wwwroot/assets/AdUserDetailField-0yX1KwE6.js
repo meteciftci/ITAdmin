@@ -1,0 +1,1 @@
+import{m as e}from"./react-vendor-Dcv0Zebn.js";var t=e();function n({label:e,value:n,children:r,valueClassName:i}){return(0,t.jsxs)(`div`,{className:`space-y-1`,children:[(0,t.jsx)(`p`,{className:`text-xs text-muted-foreground`,children:e}),r??(0,t.jsx)(`p`,{className:i,children:n?.trim()?n:`-`})]})}export{n as t};

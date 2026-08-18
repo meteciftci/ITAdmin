@@ -1,0 +1,1 @@
+import{a as e}from"./ad-deleted-object-restore-eligibility-Cj2TQPBs.js";function t(e){return e.displayName?.trim()||e.name?.trim()||`-`}function n(e,t){let n=e.samAccountName?.trim();if(n&&n!==t)return n;let r=e.userPrincipalName?.trim();return r&&r!==t?r:null}function r(t){return`${e}/${t}`}function i(t){return`${e}/${t}/restore`}export{n as i,i as n,t as r,r as t};

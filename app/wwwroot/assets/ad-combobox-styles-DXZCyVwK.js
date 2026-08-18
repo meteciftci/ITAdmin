@@ -1,0 +1,1 @@
+var e=`w-full [&>span]:flex [&>span]:w-full`,t=`flex h-10 w-full min-w-0 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-left text-sm shadow-xs hover:bg-muted/30 disabled:cursor-not-allowed disabled:opacity-50`,n=`min-w-0 flex-1 truncate`,r={matchTriggerWidth:!0,className:`p-2`,align:`start`};export{e as i,t as n,n as r,r as t};

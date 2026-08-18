@@ -1,0 +1,1 @@
+var e=`/monitoring/module-logs/ad-operation-logs`;function t(t){let n=t?.trim();return n?`${e}?${new URLSearchParams({targetObjectGuid:n}).toString()}`:e}export{t};

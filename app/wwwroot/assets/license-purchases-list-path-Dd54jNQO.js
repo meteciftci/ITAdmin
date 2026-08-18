@@ -1,0 +1,1 @@
+var e=`/license-management/purchases`;export{e as t};
