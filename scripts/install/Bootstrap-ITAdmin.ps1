@@ -310,11 +310,18 @@ function Invoke-Git {
 
     $previousSsh = $env:GIT_SSH_COMMAND
     $previousPrompt = $env:GIT_TERMINAL_PROMPT
+    $previousErrorActionPreference = $ErrorActionPreference
     try {
         if (-not [string]::IsNullOrWhiteSpace($SshCommand)) {
             $env:GIT_SSH_COMMAND = $SshCommand
         }
         $env:GIT_TERMINAL_PROMPT = "0"
+
+        # Windows PowerShell 5.1 turns redirected native stderr into PowerShell error records.
+        # Git writes ordinary progress (including fetch enumeration) to stderr, so Stop would abort
+        # a successful native command before $LASTEXITCODE can classify it. Keep stderr captured for
+        # diagnosis, but let the native exit code remain the authority on success or failure.
+        $ErrorActionPreference = "Continue"
 
         if ($ShowOutput.IsPresent) {
             $lines = New-Object System.Collections.Generic.List[string]
@@ -348,6 +355,7 @@ function Invoke-Git {
         }
     }
     finally {
+        $ErrorActionPreference = $previousErrorActionPreference
         if ($null -ne $previousSsh) { $env:GIT_SSH_COMMAND = $previousSsh }
         else { Remove-Item Env:\GIT_SSH_COMMAND -ErrorAction SilentlyContinue }
         if ($null -ne $previousPrompt) { $env:GIT_TERMINAL_PROMPT = $previousPrompt }
@@ -590,6 +598,69 @@ function Install-MachineKnownHosts {
     return $destination
 }
 
+function Test-AppPoolIdentityAvailable {
+    param([Parameter(Mandatory = $true)][string]$Name)
+
+    $identity = "IIS AppPool\$Name"
+    try {
+        $account = New-Object System.Security.Principal.NTAccount($identity)
+        $null = $account.Translate([System.Security.Principal.SecurityIdentifier])
+        return $true
+    }
+    catch [System.Security.Principal.IdentityNotMappedException] {
+        return $false
+    }
+}
+
+function Set-DeploymentToolingAppPoolDenyAcl {
+    param([switch]$AllowMissingIdentity)
+
+    $toolingRoot = Join-Path $ProgramFilesRoot "tooling"
+    if (-not (Test-Path -LiteralPath $toolingRoot)) {
+        return
+    }
+
+    $identity = "IIS AppPool\$AppPoolName"
+    if (-not (Test-AppPoolIdentityAvailable -Name $AppPoolName)) {
+        if ($AllowMissingIdentity.IsPresent) {
+            Write-Detail "Application pool identity is not present yet; tooling deny ACL deferred until prerequisites are ready."
+            return
+        }
+        throw "The IIS application pool identity '$identity' could not be resolved after prerequisite provisioning."
+    }
+
+    & icacls $toolingRoot /deny "${identity}:(OI)(CI)(W)" | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to deny write access from $identity to deployment tooling (icacls exit $LASTEXITCODE)."
+    }
+}
+
+function Initialize-BootstrapAppPoolIdentity {
+    <#
+        The release staging ACL grants read+execute to the IIS virtual account. On a genuinely fresh
+        host that account does not exist until the app pool is created, so attempting the ACL while
+        persisting tooling produces ERROR_NONE_MAPPED and staging later fails for the same reason.
+
+        Prerequisites are confirmed first so the WebAdministration provider is known to be usable.
+        Then the otherwise-empty app pool is created before any application payload is downloaded,
+        and the previously deferred tooling deny ACL is applied fail-closed.
+    #>
+    Import-Module WebAdministration -ErrorAction Stop
+
+    $appPoolPath = "IIS:\AppPools\$AppPoolName"
+    if (-not (Test-Path $appPoolPath)) {
+        New-WebAppPool -Name $AppPoolName | Out-Null
+        Write-Detail "Created app pool $AppPoolName so its virtual account can receive release ACLs."
+    }
+
+    if (-not (Test-AppPoolIdentityAvailable -Name $AppPoolName)) {
+        throw "The IIS application pool '$AppPoolName' exists, but its virtual account could not be resolved."
+    }
+
+    Set-DeploymentToolingAppPoolDenyAcl
+    Write-Ok "Application pool identity ready; deployment tooling is write-protected from it"
+}
+
 function Install-DeploymentTooling {
     <#
         Persists the installer and deployment scripts from the EXACT release tag being installed,
@@ -644,10 +715,10 @@ function Install-DeploymentTooling {
 
         Copy-Item -LiteralPath (Join-Path $scratch "scripts\install") -Destination $installTooling -Recurse -Force
 
-        # Deployment tooling is administrator-owned. The application pool must never be able to
-        # modify a script that the privileged Host Agent later executes.
-        $identity = "IIS AppPool\$AppPoolName"
-        & icacls $toolingRoot /deny "${identity}:(OI)(CI)(W)" | Out-Null
+        # On a fresh host the IIS virtual account does not exist yet. Deferring this ACL is safe:
+        # there is no application pool principal to protect against until prerequisites are ready,
+        # and the full install creates that principal and applies this deny before payload download.
+        Set-DeploymentToolingAppPoolDenyAcl -AllowMissingIdentity
 
         Write-Ok "Deployment tooling for $TagName persisted to $installTooling"
         return (Join-Path $installTooling "Install-ITAdmin.ps1")
@@ -890,6 +961,8 @@ try {
         exit 0
     }
 
+    Initialize-BootstrapAppPoolIdentity
+
     Write-Step "Acquiring the prebuilt Windows payload"
     $releaseDirectory = Get-ReleasePayload -Repository $machineRepository -VersionText $release.VersionText -SshCommand $sshCommand
 
@@ -925,6 +998,6 @@ catch {
     Write-Host ""
     Write-Fail $_.Exception.Message
     Write-Host ""
-    Write-Host "No application changes were made by the bootstrap." -ForegroundColor Yellow
+    Write-Host "No release payload was staged or activated by the bootstrap." -ForegroundColor Yellow
     exit 1
 }
