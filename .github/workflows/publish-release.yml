@@ -52,6 +52,12 @@ jobs:
           fi
           tag="v${version}"
 
+          # actions/checkout checks a tag-triggered run out by fetching the event's peeled commit
+          # directly into refs/tags/<name>. That replaces the local annotated-tag object with a
+          # commit ref even though the remote tag is still annotated. Restore the authoritative
+          # tag object from origin before enforcing the annotated-only release contract.
+          git fetch --force origin "refs/tags/${tag}:refs/tags/${tag}"
+
           # Annotated-only. A lightweight tag has no tag object, so `cat-file -t` reports "commit".
           tag_type="$(git cat-file -t "refs/tags/${tag}")"
           if [ "${tag_type}" != "tag" ]; then
