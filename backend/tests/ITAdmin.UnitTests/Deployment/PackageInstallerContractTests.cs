@@ -90,17 +90,46 @@ public sealed class PackageInstallerContractTests
     }
 
     [Fact]
+    public void UpdateConfiguration_PreservesExistingHostLayoutUnlessExplicitlyOverridden()
+    {
+        var source = UpdateConfigSource();
+
+        Assert.Contains("Read-ExistingHostAgentSettings", source, StringComparison.Ordinal);
+        Assert.Contains("Apply-ExistingHostAgentDefaults", source, StringComparison.Ordinal);
+        Assert.Contains("CallerParameters.ContainsKey", source, StringComparison.Ordinal);
+        Assert.Contains("programFilesRoot", source, StringComparison.Ordinal);
+        Assert.Contains("programDataRoot", source, StringComparison.Ordinal);
+        Assert.Contains("siteName", source, StringComparison.Ordinal);
+        Assert.Contains("appPoolName", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ReleaseWorkflow_PublishesOperatorZipChecksumAndGitHubRelease()
     {
         var source = PublishWorkflowSource();
 
         Assert.Contains("ITAdmin-$version-windows.zip", source, StringComparison.Ordinal);
-        Assert.Contains("Compress-Archive", source, StringComparison.Ordinal);
+        Assert.Contains("ZipArchive", source, StringComparison.Ordinal);
         Assert.Contains(".sha256", source, StringComparison.Ordinal);
         Assert.Contains("Setup-ITAdmin.ps1", source, StringComparison.Ordinal);
         Assert.Contains("Configure-ITAdminUpdates.ps1", source, StringComparison.Ordinal);
         Assert.Contains("gh release create", source, StringComparison.Ordinal);
         Assert.Contains("gh release upload", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ReleaseWorkflow_IsDeterministicAndRefusesToMoveAPublishedRelease()
+    {
+        var source = PublishWorkflowSource();
+
+        Assert.Contains("taggerdate:iso-strict", source, StringComparison.Ordinal);
+        Assert.Contains("--timestamp", source, StringComparison.Ordinal);
+        Assert.Contains("ContinuousIntegrationBuild=true", source, StringComparison.Ordinal);
+        Assert.Contains("entry.LastWriteTime", source, StringComparison.Ordinal);
+        Assert.Contains("GIT_AUTHOR_DATE", source, StringComparison.Ordinal);
+        Assert.Contains("GIT_COMMITTER_DATE", source, StringComparison.Ordinal);
+        Assert.Contains("existing_commit", source, StringComparison.Ordinal);
+        Assert.Contains("Published release refs are immutable", source, StringComparison.Ordinal);
     }
 
     [Fact]
