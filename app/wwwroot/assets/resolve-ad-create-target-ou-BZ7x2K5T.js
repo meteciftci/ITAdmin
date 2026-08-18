@@ -1,0 +1,1 @@
+function e(e,t){return e?.trim()||t?.defaultUserOu?.trim()||t?.usersRootOu?.trim()||null}function t(e,t){return e?.trim()||t?.defaultGroupOu?.trim()||t?.groupsSearchBase?.trim()||null}export{e as n,t};

@@ -1,0 +1,1 @@
+var e=new Set([`givenName`,`sn`,`displayName`,`cn`,`name`,`sAMAccountName`,`userPrincipalName`,`mail`,`department`,`distinguishedName`,`objectGUID`,`memberOf`,`userAccountControl`,`lockoutTime`,`pwdLastSet`,`lastLogonTimestamp`,`whenCreated`,`whenChanged`,`unicodePwd`].map(e=>e.toLowerCase()));function t(t){let n=t.trim().toLowerCase();return n.length>0&&e.has(n)}export{t};

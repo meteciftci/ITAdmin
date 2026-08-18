@@ -1,0 +1,1 @@
+import{m as e}from"./react-vendor-Dcv0Zebn.js";import{wn as t}from"./index-BsgHbH8p.js";var n=e();function r({children:e,className:r}){return(0,n.jsx)(`code`,{className:t(`inline-flex items-center rounded-md border border-border bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground`,r),children:e})}export{r as t};

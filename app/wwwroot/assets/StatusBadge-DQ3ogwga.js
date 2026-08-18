@@ -1,0 +1,1 @@
+import{m as e}from"./react-vendor-Dcv0Zebn.js";import{t}from"./i18n-vendor-COSld7be.js";import{t as n}from"./badge-BTAymbGs.js";var r=e();function i({isActive:e,activeText:i,passiveText:a}){let{t:o}=t([`common`]);return(0,r.jsx)(n,{variant:e?`success`:`outline`,children:e?i??o(`common:status.active`):a??o(`common:status.passive`)})}export{i as t};

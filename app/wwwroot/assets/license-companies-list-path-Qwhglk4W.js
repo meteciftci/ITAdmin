@@ -1,0 +1,1 @@
+var e=`/license-management/companies`;export{e as t};

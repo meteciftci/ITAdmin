@@ -1,0 +1,1 @@
+var e=`/license-management/companies`;function t(t){return`${e}/${t}`}function n(t){return`${e}/${t}/edit`}var r=`/license-management/companies/create`;export{t as n,n as r,r as t};

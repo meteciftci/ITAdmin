@@ -1,0 +1,1 @@
+import{m as e}from"./react-vendor-Dcv0Zebn.js";import{t}from"./badge-BTAymbGs.js";var n=e();function r({roles:e}){return e.length?(0,n.jsx)(`div`,{className:`flex flex-wrap gap-1`,children:e.map(e=>(0,n.jsx)(t,{variant:`secondary`,children:e},e))}):(0,n.jsx)(`span`,{className:`text-muted-foreground`,children:`-`})}export{r as t};
