@@ -12,8 +12,9 @@
 
     The script verifies the release identity and the release-matched installer before executing it,
     provisions prerequisites, creates the IIS app-pool virtual account before any release ACL is
-    applied, writes a Host Agent configuration with in-app updates disabled by default, and then
-    hands the local verified release to the canonical installer.
+    applied, records the machine layout used by the LocalSystem services, writes a Host Agent
+    configuration with in-app updates disabled by default, and then hands the local verified release
+    to the canonical installer.
 
     Repository-backed in-app updates are an optional post-install capability. Enable them separately
     with Configure-ITAdminUpdates.ps1; first installation never depends on repository connectivity.
@@ -164,6 +165,22 @@ function Initialize-AppPoolIdentity {
     Write-Ok "Application pool virtual account is ready for release ACLs"
 }
 
+function Register-MachineLayout {
+    Write-Step "Registering the machine installation layout"
+
+    $registryPath = "HKLM:\SOFTWARE\ITAdmin"
+    New-Item -Path $registryPath -Force | Out-Null
+    New-ItemProperty -Path $registryPath -Name "ProgramDataRoot" -Value $ProgramDataRoot `
+        -PropertyType String -Force | Out-Null
+
+    $registered = (Get-ItemProperty -Path $registryPath -Name "ProgramDataRoot" -ErrorAction Stop).ProgramDataRoot
+    if (-not [string]::Equals("$registered", $ProgramDataRoot, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "The machine ProgramDataRoot registration could not be verified."
+    }
+
+    Write-Ok "Host services will discover ProgramData at $ProgramDataRoot"
+}
+
 function Initialize-HostAgentSettings {
     Write-Step "Preparing Host Agent configuration"
 
@@ -259,6 +276,7 @@ try {
     }
 
     Initialize-AppPoolIdentity
+    Register-MachineLayout
     Initialize-HostAgentSettings
 
     Write-Step "Installing the packaged release"
