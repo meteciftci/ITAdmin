@@ -21,6 +21,7 @@ public sealed class PackageInstallerContractTests
 
     private static string SetupSource() => Read("scripts", "install", "Setup-ITAdmin.ps1");
     private static string UpdateConfigSource() => Read("scripts", "install", "Configure-ITAdminUpdates.ps1");
+    private static string PackageBuilderSource() => Read("scripts", "release", "New-ITAdminWindowsPackage.ps1");
     private static string PublishWorkflowSource() => Read(".github", "workflows", "publish-release.yml");
 
     [Fact]
@@ -104,32 +105,46 @@ public sealed class PackageInstallerContractTests
     }
 
     [Fact]
-    public void ReleaseWorkflow_PublishesOperatorZipChecksumAndGitHubRelease()
+    public void PackageBuilder_ShipsOnlyProductionEntrypointsAndVerifiedDistribution()
     {
-        var source = PublishWorkflowSource();
+        var source = PackageBuilderSource();
 
-        Assert.Contains("ITAdmin-$version-windows.zip", source, StringComparison.Ordinal);
-        Assert.Contains("ZipArchive", source, StringComparison.Ordinal);
-        Assert.Contains(".sha256", source, StringComparison.Ordinal);
         Assert.Contains("Setup-ITAdmin.ps1", source, StringComparison.Ordinal);
         Assert.Contains("Configure-ITAdminUpdates.ps1", source, StringComparison.Ordinal);
-        Assert.Contains("gh release create", source, StringComparison.Ordinal);
-        Assert.Contains("gh release upload", source, StringComparison.Ordinal);
+        Assert.Contains("release.manifest.json", source, StringComparison.Ordinal);
+        Assert.Contains("deployment-tooling\\Install-ITAdmin.ps1", source, StringComparison.Ordinal);
+        Assert.Contains("Get-FileHash", source, StringComparison.Ordinal);
+        Assert.Contains("SHA256", source, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void ReleaseWorkflow_IsDeterministicAndRefusesToMoveAPublishedRelease()
+    public void ReleaseWorkflow_PublishesOperatorZipChecksumAndGitHubRelease()
     {
-        var source = PublishWorkflowSource();
+        var workflow = PublishWorkflowSource();
+        var builder = PackageBuilderSource();
 
-        Assert.Contains("taggerdate:iso-strict", source, StringComparison.Ordinal);
-        Assert.Contains("--timestamp", source, StringComparison.Ordinal);
-        Assert.Contains("ContinuousIntegrationBuild=true", source, StringComparison.Ordinal);
-        Assert.Contains("entry.LastWriteTime", source, StringComparison.Ordinal);
-        Assert.Contains("GIT_AUTHOR_DATE", source, StringComparison.Ordinal);
-        Assert.Contains("GIT_COMMITTER_DATE", source, StringComparison.Ordinal);
-        Assert.Contains("existing_commit", source, StringComparison.Ordinal);
-        Assert.Contains("Published release refs are immutable", source, StringComparison.Ordinal);
+        Assert.Contains("New-ITAdminWindowsPackage.ps1", workflow, StringComparison.Ordinal);
+        Assert.Contains("ITAdmin-$Version-windows.zip", builder, StringComparison.Ordinal);
+        Assert.Contains(".sha256", builder, StringComparison.Ordinal);
+        Assert.Contains("gh release create", workflow, StringComparison.Ordinal);
+        Assert.Contains("gh release upload", workflow, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ReleasePublication_IsDeterministicAndRefusesToMoveAPublishedRelease()
+    {
+        var workflow = PublishWorkflowSource();
+        var builder = PackageBuilderSource();
+
+        Assert.Contains("taggerdate:iso-strict", workflow, StringComparison.Ordinal);
+        Assert.Contains("--timestamp", workflow, StringComparison.Ordinal);
+        Assert.Contains("ContinuousIntegrationBuild=true", workflow, StringComparison.Ordinal);
+        Assert.Contains("LastWriteTime", builder, StringComparison.Ordinal);
+        Assert.Contains("Sort-Object", builder, StringComparison.Ordinal);
+        Assert.Contains("GIT_AUTHOR_DATE", workflow, StringComparison.Ordinal);
+        Assert.Contains("GIT_COMMITTER_DATE", workflow, StringComparison.Ordinal);
+        Assert.Contains("existing_commit", workflow, StringComparison.Ordinal);
+        Assert.Contains("Published release refs are immutable", workflow, StringComparison.Ordinal);
     }
 
     [Fact]
