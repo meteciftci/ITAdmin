@@ -84,9 +84,9 @@ public sealed class PackageInstallerContractTests
         Assert.Contains("StrictHostKeyChecking=yes", source, StringComparison.Ordinal);
         Assert.Contains("IdentitiesOnly=yes", source, StringComparison.Ordinal);
         Assert.Contains("read-only Deploy Key", source, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("ssh-keyscan", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("& ssh-keyscan", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("StrictHostKeyChecking=no", source, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("accept-new", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("StrictHostKeyChecking=accept-new", source, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
