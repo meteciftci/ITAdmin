@@ -222,12 +222,12 @@ jobs:
           $rootPath = (Resolve-Path -LiteralPath $packageRoot).Path
           $fileStream = [IO.File]::Open($zipPath, [IO.FileMode]::CreateNew, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
           try {
-            $archive = New-Object IO.Compression.ZipArchive($fileStream, [IO.Compression.ZipArchiveMode]::Create, $true)
+            $archive = [IO.Compression.ZipArchive]::new($fileStream, [IO.Compression.ZipArchiveMode]::Create, $true)
             try {
               $files = Get-ChildItem -LiteralPath $packageRoot -Recurse -File |
                 Sort-Object { $_.FullName.Substring($rootPath.Length) }
               foreach ($file in $files) {
-                $relative = $file.FullName.Substring($rootPath.Length).TrimStart('\', '/') -replace '\\', '/'
+                $relative = $file.FullName.Substring($rootPath.Length).TrimStart([char]'\', [char]'/') -replace '\\', '/'
                 $entry = $archive.CreateEntry($relative, [IO.Compression.CompressionLevel]::Optimal)
                 $entry.LastWriteTime = $fixedTimestamp
                 $entryStream = $entry.Open()
