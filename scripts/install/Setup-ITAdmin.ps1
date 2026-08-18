@@ -53,6 +53,10 @@ param(
 
 $ErrorActionPreference = "Stop"
 $Script:StepNumber = 0
+$Script:CallerParameters = @{}
+foreach ($key in $PSBoundParameters.Keys) {
+    $Script:CallerParameters[$key] = $PSBoundParameters[$key]
+}
 
 function Write-Step {
     param([string]$Message)
@@ -217,9 +221,9 @@ function Initialize-HostAgentSettings {
 
 function Get-ForwardedInstallerParameters {
     $forward = @{}
-    foreach ($key in $PSBoundParameters.Keys) {
+    foreach ($key in $Script:CallerParameters.Keys) {
         if ($key -in @("ReleaseDirectory", "WhatIfPreflightOnly", "PrerequisitesOnly")) { continue }
-        $forward[$key] = $PSBoundParameters[$key]
+        $forward[$key] = $Script:CallerParameters[$key]
     }
     return $forward
 }
