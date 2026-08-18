@@ -43,6 +43,22 @@ foreach ($key in $PSBoundParameters.Keys) {
 function Write-Detail { param([string]$Message) Write-Host "    $Message" }
 function Write-Ok { param([string]$Message) Write-Host "    OK  $Message" -ForegroundColor Green }
 
+function Apply-RegisteredProgramDataRoot {
+    if ($Script:CallerParameters.ContainsKey("ProgramDataRoot")) { return }
+
+    try {
+        $registered = (Get-ItemProperty -Path "HKLM:\SOFTWARE\ITAdmin" `
+            -Name "ProgramDataRoot" -ErrorAction Stop).ProgramDataRoot
+        if (-not [string]::IsNullOrWhiteSpace("$registered")) {
+            $Script:ProgramDataRoot = "$registered"
+        }
+    }
+    catch {
+        # A missing registry value is expected only before first install. The default root below
+        # will then fail to find hostagent.json with a useful installation-first diagnosis.
+    }
+}
+
 function Read-ExistingHostAgentSettings {
     $configRoot = Join-Path $ProgramDataRoot "config"
     $settingsPath = Join-Path $configRoot "hostagent.json"
@@ -142,6 +158,7 @@ Write-Host ""
 Write-Host "ITAdmin update configuration" -ForegroundColor White
 Write-Host "============================"
 
+Apply-RegisteredProgramDataRoot
 $existingSettings = Read-ExistingHostAgentSettings
 Apply-ExistingHostAgentDefaults -Existing $existingSettings
 
