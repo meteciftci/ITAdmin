@@ -186,93 +186,19 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          Add-Type -AssemblyName System.IO.Compression
-
           $version = '${{ steps.identity.outputs.version }}'
-          $fixedTimestamp = [DateTimeOffset]::Parse('${{ steps.identity.outputs.timestamp }}').ToUniversalTime()
-          $packageRoot = Join-Path $PWD 'artifacts/package-root'
-          $releaseRoot = Join-Path $packageRoot 'release'
-          $outputRoot = Join-Path $PWD 'artifacts/releases'
-          $zipName = "ITAdmin-$version-windows.zip"
-          $zipRelative = "artifacts/releases/$zipName"
+          $package = & .\scripts\release\New-ITAdminWindowsPackage.ps1 `
+            -Version $version `
+            -Timestamp '${{ steps.identity.outputs.timestamp }}' `
+            -DistributionRoot (Join-Path $PWD 'artifacts/dist') `
+            -OutputDirectory (Join-Path $PWD 'artifacts/releases')
+
+          $zipRelative = "artifacts/releases/$($package.ZipName)"
           $shaRelative = "$zipRelative.sha256"
-          $zipPath = Join-Path $PWD ($zipRelative -replace '/', [IO.Path]::DirectorySeparatorChar)
-          $shaPath = Join-Path $PWD ($shaRelative -replace '/', [IO.Path]::DirectorySeparatorChar)
-
-          Remove-Item -LiteralPath $packageRoot -Recurse -Force -ErrorAction SilentlyContinue
-          New-Item -ItemType Directory -Path $releaseRoot, $outputRoot -Force | Out-Null
-
-          Copy-Item -LiteralPath 'scripts/install/Setup-ITAdmin.ps1' -Destination (Join-Path $packageRoot 'Setup-ITAdmin.ps1')
-          Copy-Item -LiteralPath 'scripts/install/Configure-ITAdminUpdates.ps1' -Destination (Join-Path $packageRoot 'Configure-ITAdminUpdates.ps1')
-          Copy-Item -Path 'artifacts/dist/*' -Destination $releaseRoot -Recurse -Force
-
-          @(
-            "ITAdmin $version - Windows installation package",
-            "",
-            "1. Extract this ZIP to a temporary folder on Windows Server 2022/2025.",
-            "2. Open an elevated Windows PowerShell 5.1 session in that folder.",
-            "3. Run: .\Setup-ITAdmin.ps1",
-            "",
-            "First installation is local/offline. Git and GitHub access are not required.",
-            "Repository-backed in-app updates are optional and can be enabled after installation with",
-            ".\Configure-ITAdminUpdates.ps1."
-          ) | Set-Content -LiteralPath (Join-Path $packageRoot 'README.txt') -Encoding UTF8
-
-          if (Test-Path -LiteralPath $zipPath) { Remove-Item -LiteralPath $zipPath -Force }
-          $rootPath = (Resolve-Path -LiteralPath $packageRoot).Path
-          $fileStream = [IO.File]::Open($zipPath, [IO.FileMode]::CreateNew, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
-          try {
-            $archive = [IO.Compression.ZipArchive]::new($fileStream, [IO.Compression.ZipArchiveMode]::Create, $true)
-            try {
-              $files = Get-ChildItem -LiteralPath $packageRoot -Recurse -File |
-                Sort-Object { $_.FullName.Substring($rootPath.Length) }
-              foreach ($file in $files) {
-                $relative = $file.FullName.Substring($rootPath.Length).TrimStart([char]'\', [char]'/') -replace '\\', '/'
-                $entry = $archive.CreateEntry($relative, [IO.Compression.CompressionLevel]::Optimal)
-                $entry.LastWriteTime = $fixedTimestamp
-                $entryStream = $entry.Open()
-                $sourceStream = [IO.File]::OpenRead($file.FullName)
-                try {
-                  $sourceStream.CopyTo($entryStream)
-                }
-                finally {
-                  $sourceStream.Dispose()
-                  $entryStream.Dispose()
-                }
-              }
-            }
-            finally {
-              $archive.Dispose()
-            }
-          }
-          finally {
-            $fileStream.Dispose()
-          }
-
-          $hash = (Get-FileHash -LiteralPath $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$hash  $zipName" | Set-Content -LiteralPath $shaPath -Encoding ASCII
-
-          $probe = Join-Path $env:TEMP ("itadmin-package-probe-" + [guid]::NewGuid().ToString('N'))
-          try {
-            Expand-Archive -LiteralPath $zipPath -DestinationPath $probe -Force
-            foreach ($required in @(
-              'Setup-ITAdmin.ps1',
-              'Configure-ITAdminUpdates.ps1',
-              'release/release.manifest.json',
-              'release/deployment-tooling/Install-ITAdmin.ps1')) {
-              if (-not (Test-Path -LiteralPath (Join-Path $probe $required))) {
-                throw "Published package is missing $required"
-              }
-            }
-          }
-          finally {
-            Remove-Item -LiteralPath $probe -Recurse -Force -ErrorAction SilentlyContinue
-          }
-
           "zip=$zipRelative" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
           "sha=$shaRelative" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-          "zip_name=$zipName" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-          "sha256=$hash" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "zip_name=$($package.ZipName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "sha256=$($package.Sha256)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
       - name: Publish immutable distribution ref for optional in-app updates
         shell: bash
