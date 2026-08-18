@@ -1,0 +1,1 @@
+import{m as e}from"./react-vendor-Dcv0Zebn.js";import{C as t,S as n}from"./index-BsgHbH8p.js";var r=e();function i({message:e}){return e?(0,r.jsx)(n,{variant:`destructive`,children:(0,r.jsx)(t,{children:e})}):null}export{i as t};

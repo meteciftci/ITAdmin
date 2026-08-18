@@ -1,0 +1,1 @@
+var e=`/license-management/categories`;export{e as t};

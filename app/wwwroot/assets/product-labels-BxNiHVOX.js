@@ -1,0 +1,1 @@
+function e(e){return[e.name,e.brand,e.categoryName].filter(Boolean).join(` — `)}export{e as t};

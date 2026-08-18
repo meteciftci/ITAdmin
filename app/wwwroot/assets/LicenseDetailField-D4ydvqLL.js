@@ -1,0 +1,1 @@
+import{m as e}from"./react-vendor-Dcv0Zebn.js";import{d as t,wn as n}from"./index-BsgHbH8p.js";var r=e();function i({label:e,children:i,value:a,valueClassName:o}){return(0,r.jsxs)(`div`,{className:`space-y-1`,children:[(0,r.jsx)(t,{className:`text-muted-foreground`,children:e}),i??(0,r.jsx)(`p`,{className:n(`text-sm`,o),children:a?.trim()?a:`-`})]})}export{i as t};

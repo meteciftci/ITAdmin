@@ -1,0 +1,1 @@
+function e(e){return e.name?.trim()||e.samAccountName?.trim()||e.distinguishedName}function t(e,t){let n=[e.samAccountName?.trim(),e.distinguishedName?.trim()].filter(e=>!!e);for(let e of n)if(e!==t)return e;return null}export{t as n,e as t};

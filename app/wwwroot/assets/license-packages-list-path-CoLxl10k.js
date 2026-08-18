@@ -1,0 +1,1 @@
+var e=`/license-management/packages`;function t(t){return t?`${e}?${new URLSearchParams({purchaseId:t}).toString()}`:e}export{t as n,e as t};

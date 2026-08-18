@@ -1,0 +1,1 @@
+import{i as e}from"./ad-return-path-ODw6-vS9.js";function t(e){if(!e||typeof e!=`object`)return;let t=e.returnTo;return typeof t==`string`?t:void 0}function n(n,r){let i=t(n);return i?.trim()?e(i):r}function r(e){return{returnTo:e}}export{n,r as t};

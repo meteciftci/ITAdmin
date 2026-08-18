@@ -1,0 +1,1 @@
+var e=516,t=8192,n=67108864;function r(r){if(r.primaryGroupId===e)return!0;if(r.userAccountControl==null)return!1;let i=r.userAccountControl;return(i&t)!==0&&(i&n)!==0}export{r as t};
