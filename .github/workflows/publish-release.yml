@@ -7,7 +7,9 @@ name: Publish release
 #      enabled in-app update. The Git distribution ref is therefore retained as an update transport,
 #      not as the first-install transport.
 #
-# Both outputs are built from exactly the same annotated tag and staged distribution tree.
+# Both outputs are built from exactly the same annotated tag and staged distribution tree. Release
+# timestamps and archive metadata are pinned to the annotated tagger timestamp so a retry of the
+# same immutable release identity reproduces the same distribution commit and operator ZIP.
 
 on:
   push:
@@ -61,10 +63,16 @@ jobs:
           esac
 
           commit="$(git rev-parse "refs/tags/${tag}^{commit}")"
+          timestamp="$(git for-each-ref --format='%(taggerdate:iso-strict)' "refs/tags/${tag}")"
+          if [ -z "${timestamp}" ]; then
+            echo "::error::${tag} has no tagger timestamp."
+            exit 1
+          fi
           description="$(git tag -l --format='%(contents:subject)' "${tag}" | head -n 1 | cut -c1-500)"
           echo "version=${version}" >> "$GITHUB_OUTPUT"
           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
           echo "commit=${commit}" >> "$GITHUB_OUTPUT"
+          echo "timestamp=${timestamp}" >> "$GITHUB_OUTPUT"
           echo "description=${description}" >> "$GITHUB_OUTPUT"
           echo "ref=refs/itadmin/dist/${version}" >> "$GITHUB_OUTPUT"
 
@@ -100,20 +108,22 @@ jobs:
         shell: bash
         run: |
           dotnet publish backend/src/ITAdmin.Api/ITAdmin.Api.csproj \
-            -c Release -o artifacts/publish --no-self-contained
+            -c Release -o artifacts/publish --no-self-contained -p:ContinuousIntegrationBuild=true
           rm -f artifacts/publish/appsettings.Development.json
 
       - name: Publish Host Agent
         shell: bash
         run: |
           dotnet publish backend/src/ITAdmin.HostAgent/ITAdmin.HostAgent.csproj \
-            -c Release -r win-x64 --self-contained false -o artifacts/hostagent
+            -c Release -r win-x64 --self-contained false -o artifacts/hostagent \
+            -p:ContinuousIntegrationBuild=true
 
       - name: Publish Update Coordinator
         shell: bash
         run: |
           dotnet publish backend/src/ITAdmin.UpdateCoordinator/ITAdmin.UpdateCoordinator.csproj \
-            -c Release -r win-x64 --self-contained false -o artifacts/update-coordinator
+            -c Release -r win-x64 --self-contained false -o artifacts/update-coordinator \
+            -p:ContinuousIntegrationBuild=true
 
       - name: Stage release-matched deployment tooling
         shell: bash
@@ -157,6 +167,7 @@ jobs:
             --tag "${{ steps.identity.outputs.tag }}" \
             --commit "${{ steps.identity.outputs.commit }}" \
             --description "${{ steps.identity.outputs.description }}" \
+            --timestamp "${{ steps.identity.outputs.timestamp }}" \
             --latest-migration "${latest}" \
             --migration-count "${count}"
 
@@ -170,18 +181,23 @@ jobs:
             --version "${{ steps.identity.outputs.version }}" \
             --commit "${{ steps.identity.outputs.commit }}"
 
-      - name: Build self-contained operator package
+      - name: Build deterministic operator package
         id: package
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
+          Add-Type -AssemblyName System.IO.Compression
+
           $version = '${{ steps.identity.outputs.version }}'
+          $fixedTimestamp = [DateTimeOffset]::Parse('${{ steps.identity.outputs.timestamp }}').ToUniversalTime()
           $packageRoot = Join-Path $PWD 'artifacts/package-root'
           $releaseRoot = Join-Path $packageRoot 'release'
           $outputRoot = Join-Path $PWD 'artifacts/releases'
           $zipName = "ITAdmin-$version-windows.zip"
-          $zipPath = Join-Path $outputRoot $zipName
-          $shaPath = "$zipPath.sha256"
+          $zipRelative = "artifacts/releases/$zipName"
+          $shaRelative = "$zipRelative.sha256"
+          $zipPath = Join-Path $PWD ($zipRelative -replace '/', [IO.Path]::DirectorySeparatorChar)
+          $shaPath = Join-Path $PWD ($shaRelative -replace '/', [IO.Path]::DirectorySeparatorChar)
 
           Remove-Item -LiteralPath $packageRoot -Recurse -Force -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Path $releaseRoot, $outputRoot -Force | Out-Null
@@ -190,26 +206,52 @@ jobs:
           Copy-Item -LiteralPath 'scripts/install/Configure-ITAdminUpdates.ps1' -Destination (Join-Path $packageRoot 'Configure-ITAdminUpdates.ps1')
           Copy-Item -Path 'artifacts/dist/*' -Destination $releaseRoot -Recurse -Force
 
-          @"
-          ITAdmin $version - Windows installation package
-
-          1. Extract this ZIP to a temporary folder on Windows Server 2022/2025.
-          2. Open an elevated Windows PowerShell 5.1 session in that folder.
-          3. Run: .\Setup-ITAdmin.ps1
-
-          First installation is local/offline. Git and GitHub access are not required.
-          Repository-backed in-app updates are optional and can be enabled after installation with
-          .\Configure-ITAdminUpdates.ps1.
-          "@ | Set-Content -LiteralPath (Join-Path $packageRoot 'README.txt') -Encoding UTF8
+          @(
+            "ITAdmin $version - Windows installation package",
+            "",
+            "1. Extract this ZIP to a temporary folder on Windows Server 2022/2025.",
+            "2. Open an elevated Windows PowerShell 5.1 session in that folder.",
+            "3. Run: .\Setup-ITAdmin.ps1",
+            "",
+            "First installation is local/offline. Git and GitHub access are not required.",
+            "Repository-backed in-app updates are optional and can be enabled after installation with",
+            ".\Configure-ITAdminUpdates.ps1."
+          ) | Set-Content -LiteralPath (Join-Path $packageRoot 'README.txt') -Encoding UTF8
 
           if (Test-Path -LiteralPath $zipPath) { Remove-Item -LiteralPath $zipPath -Force }
-          Compress-Archive -Path (Join-Path $packageRoot '*') -DestinationPath $zipPath -CompressionLevel Optimal
+          $rootPath = (Resolve-Path -LiteralPath $packageRoot).Path
+          $fileStream = [IO.File]::Open($zipPath, [IO.FileMode]::CreateNew, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
+          try {
+            $archive = New-Object IO.Compression.ZipArchive($fileStream, [IO.Compression.ZipArchiveMode]::Create, $true)
+            try {
+              $files = Get-ChildItem -LiteralPath $packageRoot -Recurse -File |
+                Sort-Object { $_.FullName.Substring($rootPath.Length) }
+              foreach ($file in $files) {
+                $relative = $file.FullName.Substring($rootPath.Length).TrimStart('\', '/') -replace '\\', '/'
+                $entry = $archive.CreateEntry($relative, [IO.Compression.CompressionLevel]::Optimal)
+                $entry.LastWriteTime = $fixedTimestamp
+                $entryStream = $entry.Open()
+                $sourceStream = [IO.File]::OpenRead($file.FullName)
+                try {
+                  $sourceStream.CopyTo($entryStream)
+                }
+                finally {
+                  $sourceStream.Dispose()
+                  $entryStream.Dispose()
+                }
+              }
+            }
+            finally {
+              $archive.Dispose()
+            }
+          }
+          finally {
+            $fileStream.Dispose()
+          }
 
           $hash = (Get-FileHash -LiteralPath $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
           "$hash  $zipName" | Set-Content -LiteralPath $shaPath -Encoding ASCII
 
-          # Prove that the actual distributable, not merely the staging directory, has the required
-          # entrypoint and release manifest before it can be published.
           $probe = Join-Path $env:TEMP ("itadmin-package-probe-" + [guid]::NewGuid().ToString('N'))
           try {
             Expand-Archive -LiteralPath $zipPath -DestinationPath $probe -Force
@@ -227,12 +269,12 @@ jobs:
             Remove-Item -LiteralPath $probe -Recurse -Force -ErrorAction SilentlyContinue
           }
 
-          "zip=$zipPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-          "sha=$shaPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "zip=$zipRelative" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "sha=$shaRelative" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
           "zip_name=$zipName" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
           "sha256=$hash" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
-      - name: Publish distribution ref for optional in-app updates
+      - name: Publish immutable distribution ref for optional in-app updates
         shell: bash
         run: |
           set -euo pipefail
@@ -244,13 +286,27 @@ jobs:
           git config user.email "release@itadmin.invalid"
           cp -R ../dist/. .
           git add --all
+
+          export GIT_AUTHOR_DATE='${{ steps.identity.outputs.timestamp }}'
+          export GIT_COMMITTER_DATE='${{ steps.identity.outputs.timestamp }}'
           git commit --quiet \
             -m "ITAdmin ${{ steps.identity.outputs.version }} Windows payload" \
             -m "source-tag: ${{ steps.identity.outputs.tag }}" \
             -m "source-commit: ${{ steps.identity.outputs.commit }}"
-          git push \
-            "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" \
-            "HEAD:${{ steps.identity.outputs.ref }}"
+
+          remote_url="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          new_commit="$(git rev-parse HEAD)"
+          existing_commit="$(git ls-remote "${remote_url}" '${{ steps.identity.outputs.ref }}' | awk '{print $1}')"
+
+          if [ -z "${existing_commit}" ]; then
+            git push "${remote_url}" "HEAD:${{ steps.identity.outputs.ref }}"
+          elif [ "${existing_commit}" = "${new_commit}" ]; then
+            echo "Distribution ref already contains the identical deterministic release; leaving it unchanged."
+          else
+            echo "::error::${{ steps.identity.outputs.ref }} already exists with different content. Published release refs are immutable."
+            echo "::error::Existing ${existing_commit}; rebuilt ${new_commit}. Do not move or replace an already-published release."
+            exit 1
+          fi
 
       - name: Upload release package as workflow artifact
         uses: actions/upload-artifact@v4
