@@ -11,12 +11,37 @@ using ITAdmin.Persistence.Context;
 
 namespace ITAdmin.Persistence.Services;
 
-public sealed class SetupPreflightService(
-    AppDbContext context,
-    IConfiguration configuration,
-    IHostEnvironment hostEnvironment,
-    ISetupKeyValidator setupKeyValidator) : ISetupPreflightService
+public sealed class SetupPreflightService : ISetupPreflightService
 {
+    private readonly AppDbContext context;
+    private readonly IConfiguration configuration;
+    private readonly IHostEnvironment hostEnvironment;
+    private readonly ISetupKeyValidator setupKeyValidator;
+    private readonly Func<string, bool> directoryWriteProbe;
+
+    public SetupPreflightService(
+        AppDbContext context,
+        IConfiguration configuration,
+        IHostEnvironment hostEnvironment,
+        ISetupKeyValidator setupKeyValidator)
+        : this(context, configuration, hostEnvironment, setupKeyValidator, IsDirectoryWritable)
+    {
+    }
+
+    internal SetupPreflightService(
+        AppDbContext context,
+        IConfiguration configuration,
+        IHostEnvironment hostEnvironment,
+        ISetupKeyValidator setupKeyValidator,
+        Func<string, bool> directoryWriteProbe)
+    {
+        this.context = context;
+        this.configuration = configuration;
+        this.hostEnvironment = hostEnvironment;
+        this.setupKeyValidator = setupKeyValidator;
+        this.directoryWriteProbe = directoryWriteProbe;
+    }
+
     public async Task<SetupPreflightResult> CheckAsync(CancellationToken cancellationToken = default)
     {
         var checks = new List<SetupPreflightCheck>();
@@ -176,7 +201,7 @@ public sealed class SetupPreflightService(
             return;
         }
 
-        var isWritable = IsDirectoryWritable(keysPath);
+        var isWritable = directoryWriteProbe(keysPath);
         checks.Add(new SetupPreflightCheck(
             SetupPreflightCheckKeys.DataProtectionKeysPathWritable,
             isWritable

@@ -247,9 +247,9 @@ public sealed class DirectoryBootstrapRunnerTests
         // directory identity. ITAdmin authenticates through LDAP; a local-password bootstrap admin
         // would be a permanent second way in.
         var admin = Assert.Single(setup.LastCompleteSetupRequest!.AdminUsers);
-        Assert.False(
-            admin.GetType().GetProperties().Any(property =>
-                property.Name.Contains("password", StringComparison.OrdinalIgnoreCase)));
+        Assert.DoesNotContain(
+            admin.GetType().GetProperties(),
+            property => property.Name.Contains("password", StringComparison.OrdinalIgnoreCase));
         Assert.NotNull(admin.DirectoryObjectId);
     }
 

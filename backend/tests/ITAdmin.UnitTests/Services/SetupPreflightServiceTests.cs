@@ -83,18 +83,16 @@ public sealed class SetupPreflightServiceTests
     public async Task CheckAsync_WhenDataProtectionKeysPathNotWritable_ReportsErrorInProduction()
     {
         await using var context = CreateDbContext();
-        var nonWritableExistingPath = OperatingSystem.IsWindows()
-            ? Environment.GetFolderPath(Environment.SpecialFolder.Windows)
-            : "/usr/bin";
+        var existingPath = CreateWritableDirectory();
         var configuration = BuildConfiguration(
             jwtKey: "test-jwt-key-with-at-least-32-characters",
             setupKeyHash: SetupKeyHashValidator.ComputeConfiguredHash("setup-secret"),
-            dataProtectionKeysPath: nonWritableExistingPath);
+            dataProtectionKeysPath: existingPath);
 
         var service = CreateService(context, configuration, new FakeHostEnvironment
         {
             EnvironmentName = Environments.Production,
-        });
+        }, directoryWriteProbe: _ => false);
 
         var result = await service.CheckAsync();
         var writableCheck = Assert.Single(result.Checks, check => check.Key == SetupPreflightCheckKeys.DataProtectionKeysPathWritable);
@@ -124,8 +122,11 @@ public sealed class SetupPreflightServiceTests
     private static SetupPreflightService CreateService(
         AppDbContext context,
         IConfiguration configuration,
-        IHostEnvironment hostEnvironment) =>
-        new(context, configuration, hostEnvironment, new SetupKeyHashValidator());
+        IHostEnvironment hostEnvironment,
+        Func<string, bool>? directoryWriteProbe = null) =>
+        directoryWriteProbe is null
+            ? new(context, configuration, hostEnvironment, new SetupKeyHashValidator())
+            : new(context, configuration, hostEnvironment, new SetupKeyHashValidator(), directoryWriteProbe);
 
     private static IConfiguration BuildConfiguration(
         string jwtKey,
