@@ -150,37 +150,6 @@ jobs:
           mkdir -p artifacts/publish/wwwroot
           cp -R frontend/dist/. artifacts/publish/wwwroot/
 
-      - name: Acquire pinned runtime prerequisites
-        shell: bash
-        # The network supplies bytes; scripts/install/prerequisites/hosting-bundle.requirement.json
-        # decides which bytes are acceptable, using MICROSOFT's published digest in MICROSOFT's
-        # algorithm (SHA-512). A mismatch fails the publish, so an unverified third-party installer
-        # can never enter a distribution. ITAdmin's own SHA-256 is computed only afterwards, over the
-        # bytes that passed upstream verification.
-        run: |
-          set -euo pipefail
-          dotnet run --project backend/src/ITAdmin.Deployment/ITAdmin.Deployment.csproj \
-            -c Release --no-launch-profile -- \
-            acquire-prerequisite \
-            --requirement scripts/install/prerequisites/hosting-bundle.requirement.json \
-            --output artifacts/prerequisites | tee artifacts/prerequisite.txt
-
-          upstream_hash="$(grep '^upstreamHash=' artifacts/prerequisite.txt | cut -d= -f2-)"
-          if [ -z "${upstream_hash}" ]; then
-            echo "::error::Prerequisite acquisition reported no verified upstream digest; refusing to publish."
-            exit 1
-          fi
-
-          {
-            echo "prerequisite_name=$(grep '^name=' artifacts/prerequisite.txt | cut -d= -f2-)"
-            echo "prerequisite_version=$(grep '^version=' artifacts/prerequisite.txt | cut -d= -f2-)"
-            echo "prerequisite_path=$(grep '^path=' artifacts/prerequisite.txt | cut -d= -f2-)"
-            echo "prerequisite_url=$(grep '^sourceUrl=' artifacts/prerequisite.txt | cut -d= -f2-)"
-            echo "prerequisite_alg=$(grep '^upstreamHashAlgorithm=' artifacts/prerequisite.txt | cut -d= -f2-)"
-            echo "prerequisite_hash=${upstream_hash}"
-            echo "prerequisite_hash_src=$(grep '^upstreamHashSource=' artifacts/prerequisite.txt | cut -d= -f2-)"
-          } >> "$GITHUB_ENV"
-
       - name: Stage distribution tree
         shell: bash
         run: |
@@ -198,7 +167,6 @@ jobs:
             --host-agent artifacts/hostagent \
             --deployment-tooling artifacts/deployment-tooling \
             --update-coordinator artifacts/update-coordinator \
-            --prerequisite "${prerequisite_name}|${prerequisite_version}|${prerequisite_path}|${prerequisite_url}|${prerequisite_alg}|${prerequisite_hash}|${prerequisite_hash_src}" \
             --version "${{ steps.identity.outputs.version }}" \
             --tag "${{ steps.identity.outputs.tag }}" \
             --commit "${{ steps.identity.outputs.commit }}" \

@@ -70,17 +70,16 @@
     Run preflight and environment validation, then stop without changing the machine.
 
 .PARAMETER ProvisionPrerequisites
-    Explicitly install missing IIS role services and (when a verified Hosting Bundle installer is
-    available) the ASP.NET Core Hosting Bundle. Default behaviour only reports gaps.
+    Install missing IIS role services. The ASP.NET Core Hosting Bundle remains a manual operator
+    prerequisite: the installer prints the official Microsoft page, waits, and re-detects it.
 
 .PARAMETER PrerequisitesOnly
-    Stop after prerequisite provisioning and a confirming re-preflight. Requires no release input.
-    Implies -ProvisionPrerequisites.
+    Stop after IIS provisioning and a confirming Hosting Bundle re-preflight. Requires no release
+    input and implies -ProvisionPrerequisites.
 
 .PARAMETER HostingBundlePath
-    Path to an ASP.NET Core Hosting Bundle installer (dotnet-hosting-10.*.exe). Normally supplied by
-    the bootstrap from the repository's prerequisite distribution ref; may be given explicitly for
-    a fully offline install.
+    Legacy offline compatibility input. The normal installation lifecycle does not execute it;
+    operators install or repair the Hosting Bundle manually before confirmation.
 
 .PARAMETER HostingBundleSha256
     Expected SHA-256 of the Hosting Bundle installer. When omitted, a sidecar file
@@ -373,6 +372,7 @@ $Script:HostingBundleRequirement = [pscustomobject]@{
     AncmModuleName          = "AspNetCoreModuleV2"
     InstallerFileNamePattern = "dotnet-hosting-10.*.exe"
     SuccessRebootExitCode   = 3010
+    DownloadPage            = "https://dotnet.microsoft.com/en-us/download/dotnet/10.0"
 }
 
 function Get-RequiredIisFeatureNames {
@@ -534,9 +534,8 @@ function Get-PrerequisiteBlockingProblems {
             $problems.Add(
                 $Script:HostingBundleRequirement.DisplayName +
                 " is not installed (ASP.NET Core Module V2 was not found). " +
-                "Provide an offline installer via -HostingBundlePath (or prerequisites\" +
-                $Script:HostingBundleRequirement.InstallerFileNamePattern +
-                ") and re-run with -ProvisionPrerequisites.")
+                "Download and install the Hosting Bundle from Microsoft's official .NET 10 page: " +
+                $Script:HostingBundleRequirement.DownloadPage)
         }
         elseif (-not $Detection.SharedFrameworkOk) {
             $problems.Add(
@@ -862,6 +861,31 @@ function Restart-IisAfterHostingBundle {
     }
 }
 
+function Wait-ForManualHostingBundleInstallation {
+    param([Parameter(Mandatory = $true)][psobject]$State)
+
+    $Script:CurrentStep = "AwaitManualHostingBundle"
+    Set-Phase -State $State -Phase "ProvisioningPrerequisites"
+
+    Write-Host ""
+    Write-Host "    MANUAL ACTION REQUIRED" -ForegroundColor Yellow
+    Write-Host "    Install $($Script:HostingBundleRequirement.DisplayName)." -ForegroundColor Yellow
+    Write-Host "    Official Microsoft page:" -ForegroundColor Yellow
+    Write-Host "    $($Script:HostingBundleRequirement.DownloadPage)" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "    Select ASP.NET Core Runtime 10.x -> Windows -> Hosting Bundle." -ForegroundColor Yellow
+    Write-Host "    IIS must be installed first. If the bundle was installed before IIS, run Repair." -ForegroundColor Yellow
+    Write-Host "    ITAdmin will not download or execute this prerequisite." -ForegroundColor Yellow
+    Write-Host ""
+
+    if ($Unattended.IsPresent) {
+        throw "The Hosting Bundle requires manual operator installation. Install it from the official Microsoft page, then retry the update."
+    }
+
+    Read-Host "Kurulumu tamamladiktan sonra yeniden kontrol etmek icin ENTER tusuna basin" | Out-Null
+    Restart-IisAfterHostingBundle
+}
+
 function Invoke-PrerequisiteProvisioning {
     param(
         [Parameter(Mandatory = $true)][psobject]$State,
@@ -915,8 +939,7 @@ function Invoke-PrerequisiteProvisioning {
         }
 
         if (-not $detection.HostingBundleUsable) {
-            $repair = $detection.AncmPresent -and $detection.SharedFrameworkOk -and -not $detection.AncmModuleRegistered
-            Install-AspNetCoreHostingBundle -State $State -Repair:$repair
+            Wait-ForManualHostingBundleInstallation -State $State
             continue
         }
 

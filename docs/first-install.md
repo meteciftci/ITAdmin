@@ -2,9 +2,10 @@
 
 The exact steps to install ITAdmin on a clean Windows Server 2022 or Windows Server 2025.
 
-After the one-time preparation below, **there is no manual file transfer anywhere in installation.**
-No release ZIP, no installer script, no Hosting Bundle download, no checksum to type, no certificate,
-no FQDN.
+Application files require no manual transfer. Runtime prerequisites are different: ITAdmin never
+downloads or executes third-party installers. If the .NET 10 Hosting Bundle is missing, the
+bootstrap shows Microsoft's official download page, waits while the operator installs it, and
+continues only after detection succeeds.
 
 For the architecture behind this, see [deployment.md](deployment.md).
 
@@ -133,10 +134,10 @@ cd C:\ITAdmin-bootstrap
 | 4 | Resolves the latest **annotated stable** release tag and its peeled commit |
 | 5 | Copies the deploy key **and your verified host key** into `%ProgramData%\ITAdmin\keys` (SYSTEM + Administrators only) |
 | 6 | Writes the Host Agent configuration |
-| 7 | Fetches the distribution (`refs/itadmin/dist/<version>`) at depth 1 |
-| 8 | Verifies the release-matched installer inside the distribution before executing it |
-| 9 | Verifies source identity, distribution identity, closed component set, every component's digests, and every prerequisite chunk |
-| 10 | Provisions IIS features, determines HTTP binding ownership, and installs the Hosting Bundle **from inside that distribution** |
+| 7 | Provisions required IIS Windows features and checks the .NET 10 Hosting Bundle before downloading the application payload |
+| 8 | If the Hosting Bundle is missing, shows Microsoft's official download page and waits for manual installation and successful re-detection |
+| 9 | Fetches the smaller application distribution (`refs/itadmin/dist/<version>`) at depth 1 with visible Git progress |
+| 10 | Verifies source identity, distribution identity, the closed component set, and every component digest |
 | 11 | Prompts for the database, the directory, and the first administrator |
 | 12 | Generates the JWT signing key and setup key, DPAPI-protected |
 | 13 | Stages the release, applies migrations, establishes the Primary Directory and the initial administrator |
@@ -146,7 +147,8 @@ cd C:\ITAdmin-bootstrap
 
 ### The prompts
 
-Exactly these, and nothing else:
+Application configuration prompts are exactly these. A prerequisite confirmation prompt may appear
+first when the Hosting Bundle is missing:
 
 ```
 PostgreSQL host
@@ -165,7 +167,7 @@ administrator's own password.
 
 ```powershell
 .\scripts\install\Bootstrap-ITAdmin.ps1 -WhatIfPreflightOnly   # validate, change nothing
-.\scripts\install\Bootstrap-ITAdmin.ps1 -PrerequisitesOnly     # IIS + Hosting Bundle, then stop
+.\scripts\install\Bootstrap-ITAdmin.ps1 -PrerequisitesOnly     # IIS + manual Hosting Bundle check, then stop
 .\scripts\install\Bootstrap-ITAdmin.ps1 -Version 2.1.0         # pin a release
 .\scripts\install\Bootstrap-ITAdmin.ps1 -DeployKeyPath C:\ProgramData\ITAdmin\keys\deploy_key
 ```
@@ -301,7 +303,7 @@ git init C:\Temp\dist-probe; cd C:\Temp\dist-probe; git remote add origin git@gi
 ```
 
 The last command should leave you with `release.manifest.json`, `app\`, `hostagent\`,
-`deployment-tooling\`, `update-coordinator\`, and `prerequisites\`, and exactly one commit in
+`deployment-tooling\`, and `update-coordinator\`, and exactly one commit in
 `git rev-list --count HEAD`.
 
 ### If the Git host rejects the custom namespace

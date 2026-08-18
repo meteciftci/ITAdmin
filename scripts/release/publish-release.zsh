@@ -23,14 +23,13 @@
 #     * the server fetches ONE ref at depth 1 and receives exactly one commit and one tree;
 #     * an obsolete release is retired by deleting its ref, after which its objects are garbage.
 #
-#   The tree is ordinary files (release.manifest.json + app/ + hostagent/ + prerequisites/), not an
+#   The tree is ordinary files (release.manifest.json + app/ + hostagent/), not an
 #   archive, so Git deduplicates the many files that do not change between releases and no single
 #   object approaches the hosting provider's per-file limit.
 #
-#   The ASP.NET Core Hosting Bundle travels inside that tree. It exceeds the per-object limit as a
-#   single file, so it is stored as ordered 32 MiB chunks, each with its own digest, and the server
-#   verifies the REASSEMBLED file against the digest this repository pinned before executing it.
-#   That is what removes the last manual file transfer from a normal installation.
+#   Runtime prerequisites do not travel in this tree. The installer detects them, directs the
+#   operator to the vendor's official download page, and resumes only after re-detection succeeds.
+#   Customer servers therefore never receive third-party installers through Git distribution refs.
 #
 #   Authentication is unchanged: SSH. No PAT, no gh login, no API token.
 #
@@ -135,42 +134,6 @@ print -r -- "-- Embedding frontend into app/wwwroot"
 mkdir -p "${publish_dir}/wwwroot"
 cp -R "${source_worktree}/frontend/dist/." "${publish_dir}/wwwroot/"
 
-# ---------------------------------------------------------------------------------------------
-# 3. Acquire the pinned runtime prerequisite from its authoritative source.
-#    The network supplies bytes; scripts/install/prerequisites/hosting-bundle.requirement.json
-#    decides which bytes are acceptable, using MICROSOFT's published digest in MICROSOFT's algorithm
-#    (SHA-512). A mismatch aborts the publish. Only after that does ITAdmin compute its own
-#    distribution SHA-256 over the verified bytes.
-# ---------------------------------------------------------------------------------------------
-print -r -- "-- Acquiring pinned runtime prerequisites"
-prerequisite_dir="${work_root}/prerequisites"
-requirement_file="${source_worktree}/scripts/install/prerequisites/hosting-bundle.requirement.json"
-
-prerequisite_output="$(dotnet run --project "${release_tool}" -c Release --no-launch-profile -- \
-  acquire-prerequisite \
-  --requirement "${requirement_file}" \
-  --output "${prerequisite_dir}")"
-
-prerequisite_name="$(print -r -- "${prerequisite_output}" | grep '^name=' | cut -d= -f2-)"
-prerequisite_version="$(print -r -- "${prerequisite_output}" | grep '^version=' | cut -d= -f2-)"
-prerequisite_path="$(print -r -- "${prerequisite_output}" | grep '^path=' | cut -d= -f2-)"
-prerequisite_url="$(print -r -- "${prerequisite_output}" | grep '^sourceUrl=' | cut -d= -f2-)"
-prerequisite_alg="$(print -r -- "${prerequisite_output}" | grep '^upstreamHashAlgorithm=' | cut -d= -f2-)"
-prerequisite_hash="$(print -r -- "${prerequisite_output}" | grep '^upstreamHash=' | cut -d= -f2-)"
-prerequisite_hash_src="$(print -r -- "${prerequisite_output}" | grep '^upstreamHashSource=' | cut -d= -f2-)"
-
-if [[ -z "${prerequisite_hash}" ]]; then
-  print -r -u2 -- "Prerequisite acquisition reported no verified upstream digest; refusing to publish."
-  exit 1
-fi
-
-if [[ -z "${prerequisite_path}" || ! -f "${prerequisite_path}" ]]; then
-  print -r -u2 -- "Prerequisite acquisition did not produce a verified file; refusing to publish an"
-  print -r -u2 -- "incomplete distribution. A server would then have no way to obtain the Hosting"
-  print -r -u2 -- "Bundle except by hand, which is the failure mode this pipeline exists to remove."
-  exit 1
-fi
-
 print -r -- "-- Resolving migration identity"
 migration_ids=("${(@f)$(ls "${source_worktree}/backend/src/ITAdmin.Persistence/Migrations" \
   | grep -E '^[0-9]{14}_.*\.cs$' \
@@ -181,7 +144,7 @@ migration_count=${#migration_ids[@]}
 latest_migration="${migration_ids[-1]:-}"
 
 # ---------------------------------------------------------------------------------------------
-# 4. Stage the complete distribution tree and prove it is what we claim.
+# 3. Stage the complete distribution tree and prove it is what we claim.
 # ---------------------------------------------------------------------------------------------
 print -r -- "-- Staging distribution tree"
 dotnet run --project "${release_tool}" -c Release --no-launch-profile -- \
@@ -191,7 +154,6 @@ dotnet run --project "${release_tool}" -c Release --no-launch-profile -- \
   --host-agent "${hostagent_dir}" \
   --deployment-tooling "${tooling_dir}" \
   --update-coordinator "${coordinator_dir}" \
-  --prerequisite "${prerequisite_name}|${prerequisite_version}|${prerequisite_path}|${prerequisite_url}|${prerequisite_alg}|${prerequisite_hash}|${prerequisite_hash_src}" \
   --version "${version}" \
   --tag "${tag}" \
   --commit "${commit}" \
@@ -207,7 +169,7 @@ dotnet run --project "${release_tool}" -c Release --no-launch-profile -- \
   --commit "${commit}"
 
 # ---------------------------------------------------------------------------------------------
-# 5. Build the orphan distribution commit in a scratch repository.
+# 4. Build the orphan distribution commit in a scratch repository.
 #    Done in a throwaway clone-free repo so the payload's index and objects never touch the
 #    developer's working repository.
 # ---------------------------------------------------------------------------------------------

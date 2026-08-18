@@ -37,11 +37,10 @@
     Before anything is staged, the payload's recorded version and source commit must match the tag
     that was resolved; a mismatch fails the run.
 
-    The ASP.NET Core Hosting Bundle travels INSIDE that same distribution, as verified chunks: it
-    exceeds a Git host's per-object limit as a single file, so it is stored as ordered 32 MiB pieces
-    that the installer reassembles and hashes before running. There is therefore no manual ZIP copy,
-    no manual installer copy, no Hosting Bundle download, no SHA-256 to look up by hand, and no
-    per-version Setup.exe anywhere in a normal installation.
+    Runtime prerequisite installers do not travel inside the distribution. Before downloading the
+    application payload, the release-matched installer provisions IIS features, detects the .NET 10
+    Hosting Bundle, and, when it is missing, shows Microsoft's official download page and waits for
+    the operator to install it. ITAdmin never downloads or executes third-party prerequisites.
 
     Re-running on a partially installed host is safe: it re-enters the existing installation state
     machine, which resumes, repairs, or reports rather than wiping anything.
@@ -56,7 +55,8 @@
     stable (default) or preview. Preview accepts pre-release tags and is for pilot hosts only.
 
 .PARAMETER PrerequisitesOnly
-    Provision IIS features and the Hosting Bundle, then stop without installing the application.
+    Provision IIS features, wait for manual Hosting Bundle installation when needed, then stop
+    without downloading or installing the application.
 
 .PARAMETER WhatIfPreflightOnly
     Resolve the release and validate everything, then stop without changing the machine.
@@ -304,7 +304,8 @@ function Invoke-Git {
     param(
         [Parameter(Mandatory = $true)][string[]]$Arguments,
         [string]$WorkingDirectory,
-        [string]$SshCommand
+        [string]$SshCommand,
+        [switch]$ShowOutput
     )
 
     $previousSsh = $env:GIT_SSH_COMMAND
@@ -315,15 +316,34 @@ function Invoke-Git {
         }
         $env:GIT_TERMINAL_PROMPT = "0"
 
-        if ([string]::IsNullOrWhiteSpace($WorkingDirectory)) {
+        if ($ShowOutput.IsPresent) {
+            $lines = New-Object System.Collections.Generic.List[string]
+            if ([string]::IsNullOrWhiteSpace($WorkingDirectory)) {
+                & git @Arguments 2>&1 | ForEach-Object {
+                    $line = "$_"
+                    $lines.Add($line)
+                    Write-Host "    $line"
+                }
+            }
+            else {
+                & git -C $WorkingDirectory @Arguments 2>&1 | ForEach-Object {
+                    $line = "$_"
+                    $lines.Add($line)
+                    Write-Host "    $line"
+                }
+            }
+            $output = $lines.ToArray()
+        }
+        elseif ([string]::IsNullOrWhiteSpace($WorkingDirectory)) {
             $output = & git @Arguments 2>&1
         }
         else {
             $output = & git -C $WorkingDirectory @Arguments 2>&1
         }
 
+        $exitCode = $LASTEXITCODE
         return [pscustomobject]@{
-            ExitCode = $LASTEXITCODE
+            ExitCode = $exitCode
             Output   = @($output | ForEach-Object { "$_" })
         }
     }
@@ -583,7 +603,8 @@ function Install-DeploymentTooling {
     param(
         [Parameter(Mandatory = $true)][string]$Repository,
         [Parameter(Mandatory = $true)][string]$TagName,
-        [Parameter(Mandatory = $true)][string]$SshCommand
+        [Parameter(Mandatory = $true)][string]$SshCommand,
+        [Parameter(Mandatory = $true)][string]$ExpectedSourceCommit
     )
 
     $toolingRoot = Join-Path $ProgramFilesRoot "tooling"
@@ -600,6 +621,16 @@ function Install-DeploymentTooling {
             if ($result.ExitCode -ne 0) {
                 throw (Get-RepositoryAccessDiagnosis -Output $result.Output)
             }
+        }
+
+        $identity = Invoke-Git -Arguments @("rev-parse", "FETCH_HEAD^{commit}") `
+            -WorkingDirectory $scratch -SshCommand $SshCommand
+        $actualCommit = $identity.Output |
+            Where-Object { "$_" -match '^[0-9a-fA-F]{40,64}$' } |
+            Select-Object -First 1
+        if ($identity.ExitCode -ne 0 -or [string]::IsNullOrWhiteSpace("$actualCommit") -or
+            $actualCommit.ToString().ToLowerInvariant() -ne $ExpectedSourceCommit.ToLowerInvariant()) {
+            throw "Deployment tooling source commit does not match the resolved release tag."
         }
 
         if (-not (Test-Path -LiteralPath $toolingRoot)) {
@@ -647,9 +678,10 @@ function Get-ReleasePayload {
     foreach ($step in @(
             @("init", "--quiet"),
             @("remote", "add", "origin", $Repository),
-            @("fetch", "--depth", "1", "--quiet", "origin", $distributionRef),
+            @("fetch", "--depth", "1", "--progress", "origin", $distributionRef),
             @("checkout", "--quiet", "FETCH_HEAD"))) {
-        $result = Invoke-Git -Arguments $step -WorkingDirectory $destination -SshCommand $SshCommand
+        $result = Invoke-Git -Arguments $step -WorkingDirectory $destination -SshCommand $SshCommand `
+            -ShowOutput:($step[0] -eq "fetch")
         if ($result.ExitCode -ne 0) {
             $diagnosis = Get-RepositoryAccessDiagnosis -Output $result.Output
             Remove-Item -LiteralPath $destination -Recurse -Force -ErrorAction SilentlyContinue
@@ -841,22 +873,29 @@ try {
 
     Save-HostAgentSettings -Repository $machineRepository -KeyDirectory $keyDirectory
 
+    Write-Step "Checking server prerequisites before downloading the application payload"
+    $prerequisiteInstaller = Install-DeploymentTooling -Repository $machineRepository `
+        -TagName $release.TagName -SshCommand $sshCommand `
+        -ExpectedSourceCommit $release.SourceCommit
+
+    & $prerequisiteInstaller -PrerequisitesOnly -ProvisionPrerequisites `
+        -ProgramFilesRoot $ProgramFilesRoot -ProgramDataRoot $ProgramDataRoot `
+        -SiteName $SiteName -AppPoolName $AppPoolName
+    if ($LASTEXITCODE -ne 0) {
+        throw "Server prerequisite preparation did not complete successfully."
+    }
+
+    if ($PrerequisitesOnly.IsPresent) {
+        Write-Ok "Prerequisites confirmed; application payload was not downloaded."
+        exit 0
+    }
+
     Write-Step "Acquiring the prebuilt Windows payload"
     $releaseDirectory = Get-ReleasePayload -Repository $machineRepository -VersionText $release.VersionText -SshCommand $sshCommand
 
     try {
         $installerPath = Get-VerifiedReleaseInstaller -ReleaseDirectory $releaseDirectory `
             -VersionText $release.VersionText -SourceCommit $release.SourceCommit
-
-        if ($PrerequisitesOnly.IsPresent) {
-            Write-Step "Handing off to the installer (prerequisites only)"
-            & $installerPath -PrerequisitesOnly -ProvisionPrerequisites `
-                -ReleaseDirectory $releaseDirectory -ExpectedVersion $release.VersionText `
-                -ExpectedSourceCommit $release.SourceCommit `
-                -ProgramFilesRoot $ProgramFilesRoot -ProgramDataRoot $ProgramDataRoot `
-                -SiteName $SiteName -AppPoolName $AppPoolName
-            exit $LASTEXITCODE
-        }
 
         Write-Step "Handing off to the installer"
         Write-Detail "Installer: $installerPath"
@@ -868,8 +907,7 @@ try {
             "-ProgramFilesRoot", $ProgramFilesRoot,
             "-ProgramDataRoot", $ProgramDataRoot,
             "-SiteName", $SiteName,
-            "-AppPoolName", $AppPoolName,
-            "-ProvisionPrerequisites"
+            "-AppPoolName", $AppPoolName
         )
 
         if ($WhatIfPreflightOnly.IsPresent) {

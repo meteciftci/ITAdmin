@@ -23,10 +23,9 @@ refs/itadmin/dist/2.1.0              │      resolve → fetch → verify
   ONE distribution:           ───────┘             │
     release.manifest.json                          ▼
     app/          (payload)                 Install-ITAdmin.ps1
-    deployment-tooling/ (installer)         prerequisites → stage → configure
+    deployment-tooling/ (installer)         prerequisite check → stage → configure
     hostagent/    (privileged service)      → migrate → directory → activate
     update-coordinator/ (handoff service)
-    prerequisites/ (chunked Hosting Bundle)
                                                      │
                                             ┌────────┴────────┐
                                             ▼                 ▼
@@ -108,9 +107,10 @@ There is deliberately no:
 
 - manual release ZIP copy
 - manual installer script copy
-- manual Hosting Bundle download
-- SHA-256 to look up by hand
 - per-version `Setup.exe`
+
+The Hosting Bundle is deliberately manual: the bootstrap shows Microsoft's official page and waits
+for successful re-detection. This keeps third-party prerequisite acquisition outside ITAdmin.
 
 ### What the bootstrap does
 
@@ -315,10 +315,20 @@ Without `--push` nothing leaves the machine.
 ## 6. Runtime prerequisites
 
 Git for Windows is the operator's responsibility. Everything else ITAdmin needs at runtime travels
-**inside the distribution**, through the same read-only deploy-key trust path as the application.
-There is no manual Hosting Bundle download in a normal installation.
+through an explicit prerequisite check before the application payload is downloaded. IIS roles are
+provisioned through Windows Server's feature mechanism. Third-party installers are never downloaded
+or executed by ITAdmin. If the .NET 10 Hosting Bundle is missing, the installer displays
+<https://dotnet.microsoft.com/en-us/download/dotnet/10.0>, waits for the operator to install the
+Windows Hosting Bundle, then re-detects ANCM, the shared framework, and IIS registration.
 
-### The supply chain
+In unattended update mode the same missing prerequisite produces an operator-action failure rather
+than a hidden prompt. Once the operator installs or repairs the bundle, retrying safely resumes.
+
+### Retired bundled-prerequisite design
+
+Releases before this policy change experimented with carrying a chunked Hosting Bundle inside the
+Git distribution. That design is retained in the manifest parser for compatibility, but current
+publish pipelines emit no prerequisite components. The historical integrity model was:
 
 ```
 scripts/install/prerequisites/hosting-bundle.requirement.json   (repository-controlled)
@@ -390,13 +400,11 @@ Hosting Bundle readiness is three independent signals:
 > broken.
 
 When ANCM and the shared framework are present but IIS does not show the module — the usual result
-of installing the bundle before IIS — the installer runs `/repair` rather than a fresh install.
+of installing the bundle before IIS — the installer tells the operator to run Repair and waits for
+successful re-detection.
 
-### Retained overrides
-
-`-HostingBundlePath` (+ `-HostingBundleSha256` or a `.sha256` sidecar) remains for fully air-gapped
-sites, and a prerequisite reassembled by an earlier run is reused if it still hashes correctly. Both
-are recovery and enterprise options — not the product lifecycle.
+The normal product lifecycle has no `-HostingBundlePath`: prerequisite acquisition and installation
+remain under operator control, including in air-gapped environments.
 
 ---
 
@@ -832,7 +840,7 @@ acceptance. The following need a real Windows Server:
 - deploy-key-authenticated `ls-remote` / `fetch` against GitHub, including custom-ref-namespace
   advertisement and fetchability
 - distribution-ref publish from CI on a Windows runner
-- Hosting Bundle acquisition from Microsoft in CI, chunking, and server-side reassembly + install
+- manual Hosting Bundle prompt, operator confirmation, and successful server-side re-detection
 - machine known-hosts derivation from the operator's verified entry (`ssh-keygen -F`)
 - `ITAdmin.Api.exe --check-database` against a real PostgreSQL instance
 - IIS site creation and HTTP binding under the new HTTP-only path

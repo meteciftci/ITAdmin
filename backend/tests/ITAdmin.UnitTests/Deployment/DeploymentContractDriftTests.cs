@@ -422,41 +422,32 @@ public sealed class DeploymentContractDriftTests
         Assert.Contains("MajorVersion", source, StringComparison.Ordinal);
         Assert.Contains($"= {AspNetCoreHostingBundleRequirement.MajorVersion}", source, StringComparison.Ordinal);
         Assert.Contains(AspNetCoreHostingBundleRequirement.TargetFrameworkMoniker, source, StringComparison.Ordinal);
-        Assert.Contains("HostingBundlePath", source, StringComparison.Ordinal);
-        Assert.Contains(".sha256", source, StringComparison.Ordinal);
+        Assert.Contains("DownloadPage", source, StringComparison.Ordinal);
+        Assert.Contains("dotnet.microsoft.com", source, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Installer_TakesPrerequisitesFromTheDistributionItVerified()
+    public void Installer_RequiresManualVendorPrerequisiteInstallationAndRedetects()
     {
-        // The normal lifecycle has no manual Hosting Bundle step at all: it travels inside the same
-        // distribution as the application, through the same read-only deploy-key trust path.
         var source = InstallerSource();
 
-        Assert.Contains("DistributionPrerequisites", source, StringComparison.Ordinal);
-        Assert.Contains("dotnet-hosting-*.exe", source, StringComparison.Ordinal);
-
-        // -HostingBundlePath survives only as an offline/enterprise recovery option.
-        Assert.Contains("offline mode", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Wait-ForManualHostingBundleInstallation", source, StringComparison.Ordinal);
+        Assert.Contains("Read-Host", source, StringComparison.Ordinal);
+        Assert.Contains("ITAdmin will not download or execute this prerequisite", source, StringComparison.Ordinal);
+        Assert.Contains("$Unattended.IsPresent", source, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void PublishPipeline_AcquiresAndVerifiesPrerequisitesFromTheirAuthoritativeSource()
+    public void PublishPipeline_DoesNotCarryOrDownloadRuntimePrerequisiteInstallers()
     {
-        // If the publisher could ship a distribution without the prerequisite, the server would be
-        // back to a manual download - the exact failure this pipeline exists to remove.
         foreach (var source in new[] { PublishScriptSource(), PublishWorkflowSource() })
         {
-            Assert.Contains("acquire-prerequisite", source, StringComparison.Ordinal);
-            Assert.Contains("--prerequisite", source, StringComparison.Ordinal);
-            Assert.Contains("hosting-bundle.requirement.json", source, StringComparison.Ordinal);
+            Assert.DoesNotContain("acquire-prerequisite", source, StringComparison.Ordinal);
+            Assert.DoesNotContain("--prerequisite", source, StringComparison.Ordinal);
         }
 
-        // ...and the shell publisher aborts rather than producing an incomplete distribution.
-        Assert.Contains(
-            "refusing to publish an",
-            PublishScriptSource(),
-            StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Runtime prerequisites do not travel", PublishScriptSource(), StringComparison.Ordinal);
+        Assert.Contains("Checking server prerequisites before downloading", BootstrapSource(), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -532,20 +523,17 @@ public sealed class DeploymentContractDriftTests
     }
 
     [Fact]
-    public void PrerequisiteAuthority_PinsTheVendorsOwnAlgorithmAndValue()
+    public void PrerequisiteAuthority_RemainsWithTheOperatorAndVendor()
     {
-        // Two hashes, two jobs: Microsoft's SHA-512 says we downloaded what Microsoft published;
-        // ITAdmin's SHA-256 says those bytes reached the server intact.
         foreach (var source in new[] { PublishScriptSource(), PublishWorkflowSource() })
         {
-            Assert.Contains("upstreamHash", source, StringComparison.Ordinal);
-            Assert.Contains("upstreamHashAlgorithm", source, StringComparison.Ordinal);
-            Assert.Contains("SHA-512", source, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("acquire-prerequisite", source, StringComparison.Ordinal);
+            Assert.DoesNotContain("hosting-bundle.requirement.json", source, StringComparison.Ordinal);
         }
 
-        // ...and neither publisher will proceed without upstream evidence.
-        Assert.Contains("no verified upstream digest", PublishScriptSource(), StringComparison.Ordinal);
-        Assert.Contains("no verified upstream digest", PublishWorkflowSource(), StringComparison.Ordinal);
+        var installer = InstallerSource();
+        Assert.Contains("dotnet.microsoft.com/en-us/download/dotnet/10.0", installer, StringComparison.Ordinal);
+        Assert.Contains("manual operator installation", installer, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

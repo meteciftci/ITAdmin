@@ -25,8 +25,10 @@ cd C:\ITAdmin-bootstrap
 
 The bootstrap resolves the latest annotated stable `vMAJOR.MINOR.PATCH` tag, fetches its prebuilt
 Windows distribution from `refs/itadmin/dist/<version>`, verifies release identity and every file,
-installs IIS and the pinned .NET 10 Hosting Bundle when needed, then interactively collects the
-external PostgreSQL, LDAP bind, and initial Administrator values.
+installs the required IIS Windows features, and checks the .NET 10 Hosting Bundle. When the Hosting
+Bundle is missing, it shows Microsoft's official download page and waits for the operator to install
+it before re-checking. ITAdmin never downloads or executes prerequisite installers. It then
+interactively collects the external PostgreSQL, LDAP bind, and initial Administrator values.
 
 Supported production operating systems are Windows Server 2022 and Windows Server 2025. PostgreSQL
 must already exist and the application account must have `CONNECT` plus `CREATE, USAGE` on its
