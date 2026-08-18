@@ -2,6 +2,12 @@ name: CI
 
 on:
   push:
+    branches:
+      - main
+    paths-ignore:
+      - "**/*.md"
+      - ".claude/**"
+  pull_request:
     paths-ignore:
       - "**/*.md"
       - ".claude/**"
@@ -11,7 +17,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -22,6 +28,26 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+
+      - name: Parse repository PowerShell
+        shell: pwsh
+        run: |
+          $failed = $false
+          foreach ($file in Get-ChildItem -LiteralPath scripts -Filter '*.ps1' -File -Recurse) {
+            $tokens = $null
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile(
+              $file.FullName,
+              [ref]$tokens,
+              [ref]$errors)
+            if ($errors.Count -gt 0) {
+              $failed = $true
+              foreach ($error in $errors) {
+                Write-Error "$($file.FullName): $($error.Message) at $($error.Extent.Text)"
+              }
+            }
+          }
+          if ($failed) { exit 1 }
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
@@ -76,3 +102,84 @@ jobs:
       - name: Build
         working-directory: frontend
         run: npm run build
+
+  windows-package:
+    name: Windows package
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Parse scripts with Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $failed = $false
+          foreach ($file in Get-ChildItem -LiteralPath scripts -Filter '*.ps1' -File -Recurse) {
+            $tokens = $null
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile(
+              $file.FullName,
+              [ref]$tokens,
+              [ref]$errors)
+            if ($errors.Count -gt 0) {
+              $failed = $true
+              foreach ($error in $errors) {
+                Write-Error "$($file.FullName): $($error.Message) at $($error.Extent.Text)"
+              }
+            }
+          }
+          if ($failed) { exit 1 }
+
+      - name: Build deterministic package twice
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $distribution = Join-Path $PWD 'artifacts\package-fixture'
+          $tooling = Join-Path $distribution 'deployment-tooling'
+          $output = Join-Path $PWD 'artifacts\package-smoke'
+          New-Item -ItemType Directory -Path $tooling, $output -Force | Out-Null
+
+          '{}' | Set-Content -LiteralPath (Join-Path $distribution 'release.manifest.json') -Encoding UTF8
+          'Write-Host "fixture installer"' | Set-Content -LiteralPath (Join-Path $tooling 'Install-ITAdmin.ps1') -Encoding UTF8
+
+          $arguments = @{
+            Version = '9.9.9'
+            Timestamp = '2026-01-01T00:00:00Z'
+            DistributionRoot = $distribution
+            OutputDirectory = $output
+          }
+
+          $first = & .\scripts\release\New-ITAdminWindowsPackage.ps1 @arguments
+          if (-not (Test-Path -LiteralPath $first.ZipPath -PathType Leaf)) {
+            throw 'Package builder did not create the ZIP.'
+          }
+          if (-not (Test-Path -LiteralPath $first.Sha256Path -PathType Leaf)) {
+            throw 'Package builder did not create the SHA-256 sidecar.'
+          }
+          $firstHash = $first.Sha256
+
+          $second = & .\scripts\release\New-ITAdminWindowsPackage.ps1 @arguments
+          if ($second.Sha256 -ne $firstHash) {
+            throw "Package is not deterministic: first=$firstHash second=$($second.Sha256)"
+          }
+
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $archive = [System.IO.Compression.ZipFile]::OpenRead($second.ZipPath)
+          try {
+            $names = @($archive.Entries | ForEach-Object { $_.FullName })
+            foreach ($required in @(
+              'Setup-ITAdmin.ps1',
+              'Configure-ITAdminUpdates.ps1',
+              'release/release.manifest.json',
+              'release/deployment-tooling/Install-ITAdmin.ps1')) {
+              if ($required -notin $names) {
+                throw "Package is missing $required"
+              }
+            }
+          }
+          finally {
+            $archive.Dispose()
+          }
+
+          Write-Host "Deterministic package SHA-256: $firstHash"

@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Hosting.WindowsServices;
 using Microsoft.Extensions.Logging;
+using Microsoft.Win32;
 
 // ITAdmin Host Agent: the privileged half of an ITAdmin installation.
 //
@@ -22,13 +23,23 @@ if (!OperatingSystem.IsWindows())
 var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddWindowsService(options => options.ServiceName = HostAgentServiceMetadata.ServiceName);
 
-var layout = DeploymentLayout.Default();
+// Setup-ITAdmin records the ProgramData root before the service is registered. Reading the same
+// machine value as the Update Coordinator keeps custom installation roots coherent across both
+// LocalSystem processes instead of silently falling back to C:\ProgramData\ITAdmin in one of them.
+#pragma warning disable CA1416 // Reached only after the Windows guard above.
+var programDataRoot = Registry.GetValue(
+    @"HKEY_LOCAL_MACHINE\SOFTWARE\ITAdmin",
+    "ProgramDataRoot",
+    DeploymentLayout.DefaultProgramDataRoot) as string ?? DeploymentLayout.DefaultProgramDataRoot;
+#pragma warning restore CA1416
+
+var layout = new DeploymentLayout(DeploymentLayout.DefaultProgramFilesRoot, programDataRoot);
 var settingsPath = Path.Combine(layout.ConfigRoot, HostAgentSettings.FileName);
 
 if (!File.Exists(settingsPath))
 {
     Console.Error.WriteLine(
-        $"Host agent configuration not found at {settingsPath}. Run the ITAdmin bootstrap to install it.");
+        $"Host agent configuration not found at {settingsPath}. Run Setup-ITAdmin.ps1 to install it.");
     return 3;
 }
 
