@@ -1,14 +1,13 @@
 name: Publish release
 
-# Builds the prebuilt Windows payload for an annotated stable release tag and publishes it to that
-# release's Git distribution ref (refs/itadmin/dist/<version>).
+# A production release has two consumers:
+#   1. An operator performing first install receives one self-contained Windows ZIP. The target
+#      server does not clone source, does not need Git, and does not contact GitHub during install.
+#   2. An already-installed Host Agent may fetch refs/itadmin/dist/<version> for an explicitly
+#      enabled in-app update. The Git distribution ref is therefore retained as an update transport,
+#      not as the first-install transport.
 #
-# Why this runs in CI rather than on a developer machine: the payload is what every customer server
-# installs, so it must be built from exactly the tagged commit, on a clean machine, with no local
-# state. A developer's laptop cannot offer that.
-#
-# Why the trigger is a tag and not a branch: mutable `main` is bootstrap transport only. A release
-# exists when somebody deliberately creates an annotated tag for it.
+# Both outputs are built from exactly the same annotated tag and staged distribution tree.
 
 on:
   push:
@@ -21,23 +20,17 @@ on:
         required: true
 
 permissions:
-  # Writing a distribution ref is a write to this repository's ref namespace. It is the only write
-  # this workflow performs; it never modifies a branch or a tag.
   contents: write
 
 jobs:
   publish:
-    name: Build and publish Windows payload
-    # Windows: the payload includes web.config and the ASP.NET Core IIS hosting shim, and is what
-    # will run on IIS. Building it on the same OS family removes an entire class of "worked on the
-    # build machine" differences.
+    name: Build and publish Windows release
     runs-on: windows-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v5
         with:
-          # Tags and their objects are needed to prove the tag is annotated and to peel it.
           fetch-depth: 0
 
       - name: Resolve release identity
@@ -52,13 +45,8 @@ jobs:
           fi
           tag="v${version}"
 
-          # actions/checkout checks a tag-triggered run out by fetching the event's peeled commit
-          # directly into refs/tags/<name>. That replaces the local annotated-tag object with a
-          # commit ref even though the remote tag is still annotated. Restore the authoritative
-          # tag object from origin before enforcing the annotated-only release contract.
           git fetch --force origin "refs/tags/${tag}:refs/tags/${tag}"
 
-          # Annotated-only. A lightweight tag has no tag object, so `cat-file -t` reports "commit".
           tag_type="$(git cat-file -t "refs/tags/${tag}")"
           if [ "${tag_type}" != "tag" ]; then
             echo "::error::${tag} is a lightweight tag. Production releases must be annotated (git tag -a)."
@@ -67,7 +55,7 @@ jobs:
 
           case "${version}" in
             *-*)
-              echo "::error::${version} is a pre-release; the stable channel publishes stable versions only."
+              echo "::error::${version} is a pre-release; the stable release workflow accepts stable versions only."
               exit 1
               ;;
           esac
@@ -117,8 +105,6 @@ jobs:
 
       - name: Publish Host Agent
         shell: bash
-        # The privileged half of the product ships in the same release as the application it
-        # manages, so an update can never leave a server running an agent from a different version.
         run: |
           dotnet publish backend/src/ITAdmin.HostAgent/ITAdmin.HostAgent.csproj \
             -c Release -r win-x64 --self-contained false -o artifacts/hostagent
@@ -174,11 +160,9 @@ jobs:
             --latest-migration "${latest}" \
             --migration-count "${count}"
 
-      - name: Verify the staged tree matches the requested release identity
+      - name: Verify staged distribution identity and integrity
         shell: bash
         run: |
-          # Fail closed before publishing: a payload whose recorded version or source commit does
-          # not match the tag must never reach a distribution ref.
           dotnet run --project backend/src/ITAdmin.Deployment/ITAdmin.Deployment.csproj \
             -c Release --no-launch-profile -- \
             dist-verify \
@@ -186,12 +170,72 @@ jobs:
             --version "${{ steps.identity.outputs.version }}" \
             --commit "${{ steps.identity.outputs.commit }}"
 
-      - name: Publish distribution ref
+      - name: Build self-contained operator package
+        id: package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = '${{ steps.identity.outputs.version }}'
+          $packageRoot = Join-Path $PWD 'artifacts/package-root'
+          $releaseRoot = Join-Path $packageRoot 'release'
+          $outputRoot = Join-Path $PWD 'artifacts/releases'
+          $zipName = "ITAdmin-$version-windows.zip"
+          $zipPath = Join-Path $outputRoot $zipName
+          $shaPath = "$zipPath.sha256"
+
+          Remove-Item -LiteralPath $packageRoot -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Path $releaseRoot, $outputRoot -Force | Out-Null
+
+          Copy-Item -LiteralPath 'scripts/install/Setup-ITAdmin.ps1' -Destination (Join-Path $packageRoot 'Setup-ITAdmin.ps1')
+          Copy-Item -LiteralPath 'scripts/install/Configure-ITAdminUpdates.ps1' -Destination (Join-Path $packageRoot 'Configure-ITAdminUpdates.ps1')
+          Copy-Item -Path 'artifacts/dist/*' -Destination $releaseRoot -Recurse -Force
+
+          @"
+          ITAdmin $version - Windows installation package
+
+          1. Extract this ZIP to a temporary folder on Windows Server 2022/2025.
+          2. Open an elevated Windows PowerShell 5.1 session in that folder.
+          3. Run: .\Setup-ITAdmin.ps1
+
+          First installation is local/offline. Git and GitHub access are not required.
+          Repository-backed in-app updates are optional and can be enabled after installation with
+          .\Configure-ITAdminUpdates.ps1.
+          "@ | Set-Content -LiteralPath (Join-Path $packageRoot 'README.txt') -Encoding UTF8
+
+          if (Test-Path -LiteralPath $zipPath) { Remove-Item -LiteralPath $zipPath -Force }
+          Compress-Archive -Path (Join-Path $packageRoot '*') -DestinationPath $zipPath -CompressionLevel Optimal
+
+          $hash = (Get-FileHash -LiteralPath $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $zipName" | Set-Content -LiteralPath $shaPath -Encoding ASCII
+
+          # Prove that the actual distributable, not merely the staging directory, has the required
+          # entrypoint and release manifest before it can be published.
+          $probe = Join-Path $env:TEMP ("itadmin-package-probe-" + [guid]::NewGuid().ToString('N'))
+          try {
+            Expand-Archive -LiteralPath $zipPath -DestinationPath $probe -Force
+            foreach ($required in @(
+              'Setup-ITAdmin.ps1',
+              'Configure-ITAdminUpdates.ps1',
+              'release/release.manifest.json',
+              'release/deployment-tooling/Install-ITAdmin.ps1')) {
+              if (-not (Test-Path -LiteralPath (Join-Path $probe $required))) {
+                throw "Published package is missing $required"
+              }
+            }
+          }
+          finally {
+            Remove-Item -LiteralPath $probe -Recurse -Force -ErrorAction SilentlyContinue
+          }
+
+          "zip=$zipPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "sha=$shaPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "zip_name=$zipName" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "sha256=$hash" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Publish distribution ref for optional in-app updates
         shell: bash
         run: |
           set -euo pipefail
-          # Orphan commit in a scratch repository: the payload gets no parent, so it never joins
-          # source history and a normal clone never downloads it.
           rm -rf artifacts/dist-repo
           mkdir -p artifacts/dist-repo
           cd artifacts/dist-repo
@@ -207,3 +251,49 @@ jobs:
           git push \
             "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" \
             "HEAD:${{ steps.identity.outputs.ref }}"
+
+      - name: Upload release package as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ITAdmin-${{ steps.identity.outputs.version }}-windows
+          path: |
+            ${{ steps.package.outputs.zip }}
+            ${{ steps.package.outputs.sha }}
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Create or update GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag='${{ steps.identity.outputs.tag }}'
+          version='${{ steps.identity.outputs.version }}'
+          commit='${{ steps.identity.outputs.commit }}'
+          zip='${{ steps.package.outputs.zip }}'
+          sha='${{ steps.package.outputs.sha }}'
+          digest='${{ steps.package.outputs.sha256 }}'
+
+          notes_file="${RUNNER_TEMP}/itadmin-release-notes.md"
+          cat > "${notes_file}" <<EOF
+          ## ITAdmin ${version}
+
+          Production Windows installation package built from annotated tag \`${tag}\`.
+
+          - Source commit: \`${commit}\`
+          - First install: extract \`ITAdmin-${version}-windows.zip\` and run \`.\\Setup-ITAdmin.ps1\` from an elevated Windows PowerShell session.
+          - First install does **not** require Git or GitHub access on the server.
+          - ZIP SHA-256: \`${digest}\`
+          - Repository-backed in-app updates are optional and remain available through the release distribution ref.
+          EOF
+
+          if gh release view "${tag}" >/dev/null 2>&1; then
+            gh release upload "${tag}" "${zip}" "${sha}" --clobber
+            gh release edit "${tag}" --title "ITAdmin ${version}" --notes-file "${notes_file}"
+          else
+            gh release create "${tag}" "${zip}" "${sha}" \
+              --verify-tag \
+              --title "ITAdmin ${version}" \
+              --notes-file "${notes_file}"
+          fi
