@@ -75,7 +75,7 @@ function New-DeterministicZip {
             [System.IO.Compression.ZipArchiveMode]::Create,
             $true)
         try {
-            $files = Get-ChildItem -LiteralPath $SourceDirectory -Recurse -File |
+            $files = Get-ChildItem -LiteralPath $SourceDirectory -Recurse -File -Force |
                 Sort-Object { $_.FullName.Substring($rootPath.Length) }
 
             foreach ($file in $files) {
@@ -139,8 +139,8 @@ $releaseRoot = Join-Path $packageRoot "release"
 New-Item -ItemType Directory -Path $releaseRoot -Force | Out-Null
 
 try {
-    Copy-Item -LiteralPath $setup -Destination (Join-Path $packageRoot "Setup-ITAdmin.ps1")
-    Copy-Item -LiteralPath $updateConfiguration -Destination (Join-Path $packageRoot "Configure-ITAdminUpdates.ps1")
+    Copy-Item -LiteralPath $setup -Destination (Join-Path $packageRoot "Setup-ITAdmin.ps1") -Force
+    Copy-Item -LiteralPath $updateConfiguration -Destination (Join-Path $packageRoot "Configure-ITAdminUpdates.ps1") -Force
     Copy-Item -Path (Join-Path $distribution "*") -Destination $releaseRoot -Recurse -Force
 
     @(
