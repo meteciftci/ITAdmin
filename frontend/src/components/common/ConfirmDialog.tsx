@@ -18,6 +18,8 @@ type ConfirmDialogProps = {
   cancelText: ReactNode;
   variant?: "default" | "danger";
   isLoading?: boolean;
+  confirmDisabled?: boolean;
+  content?: ReactNode;
   onConfirm: () => void | Promise<void>;
   onOpenChange: (open: boolean) => void;
 };
@@ -30,6 +32,8 @@ export function ConfirmDialog({
   cancelText,
   variant = "default",
   isLoading = false,
+  confirmDisabled = false,
+  content,
   onConfirm,
   onOpenChange,
 }: ConfirmDialogProps) {
@@ -40,6 +44,7 @@ export function ConfirmDialog({
           <DialogTitle>{title}</DialogTitle>
           {description ? <DialogDescription>{description}</DialogDescription> : null}
         </DialogHeader>
+        {content}
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
             {cancelText}
@@ -47,7 +52,7 @@ export function ConfirmDialog({
           <Button
             variant={variant === "danger" ? "destructive" : "default"}
             onClick={onConfirm}
-            disabled={isLoading}
+            disabled={isLoading || confirmDisabled}
           >
             {confirmText}
           </Button>

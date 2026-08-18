@@ -34,6 +34,7 @@
       "notificationOutbox": "Notification Queue",
       "settings": "Settings",
       "applicationSettings": "Application Settings",
+      "systemUpdates": "Updates",
       "notificationSettings": "Notification Settings",
       "moduleSettings": "Module Settings",
       "adManagementSettings": "AD Management Settings",

@@ -37,6 +37,15 @@ jobs:
       - name: Test
         run: dotnet test backend/ITAdmin.slnx --configuration Release --no-build
 
+      - name: Reject vulnerable dependencies
+        run: |
+          output="$(dotnet list backend/ITAdmin.slnx package --vulnerable --include-transitive)"
+          printf '%s\n' "$output"
+          if printf '%s\n' "$output" | grep -Eiq 'high|critical|yüksek|kritik'; then
+            echo "::error::High or critical NuGet vulnerability detected."
+            exit 1
+          fi
+
   frontend:
     name: Frontend
     runs-on: ubuntu-latest

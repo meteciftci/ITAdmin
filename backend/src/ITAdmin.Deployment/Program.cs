@@ -28,6 +28,7 @@ static int Usage()
 
           dist-stage --publish <dir> --output <dir> --version <x.y.z> --commit <sha>
                      [--tag <v-x.y.z>] [--host-agent <dir>]
+                     [--deployment-tooling <dir>] [--update-coordinator <dir>]
                      [--prerequisite <name>|<version>|<file>|<url>|<upstreamAlgorithm>|<upstreamHash>|<upstreamHashSource>]
                        (repeatable; upstream digest required)
                      [--latest-migration <id>] [--migration-count <n>] [--timestamp <iso8601>]
@@ -300,8 +301,11 @@ static ReleasePacker.PackRequest BuildPackRequest(
         LatestMigration: options.GetValueOrDefault("latest-migration"),
         MigrationCount: int.TryParse(options.GetValueOrDefault("migration-count"), out var count) ? count : 0,
         HostAgentPublishDirectory: options.GetValueOrDefault("host-agent"),
+        DeploymentToolingDirectory: options.GetValueOrDefault("deployment-tooling"),
+        UpdateCoordinatorPublishDirectory: options.GetValueOrDefault("update-coordinator"),
         Prerequisites: prerequisites,
-        SourceTag: options.GetValueOrDefault("tag"));
+        SourceTag: options.GetValueOrDefault("tag"),
+        ReleaseDescription: options.GetValueOrDefault("description"));
 }
 
 static int Pack(string[] args)

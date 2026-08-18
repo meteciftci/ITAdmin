@@ -13,6 +13,10 @@ export function SettingsRedirectPage() {
     return <Navigate to="/settings/application" replace />;
   }
 
+  if (canAccess(user, PermissionCodes.SystemUpdates.View)) {
+    return <Navigate to="/settings/updates" replace />;
+  }
+
   if (
     canAccess(user, PermissionCodes.NotificationProviders.View) ||
     canAccess(user, PermissionCodes.NotificationTemplates.View)

@@ -48,7 +48,6 @@ fi
 
 script_dir="${0:A:h}"
 repository_dir="${script_dir:h:h}"
-release_tool="${repository_dir}/backend/src/ITAdmin.Deployment/ITAdmin.Deployment.csproj"
 
 tag="v${version}"
 
@@ -74,6 +73,7 @@ if [[ "${version}" == *-* ]]; then
 fi
 
 commit="$(git -C "${repository_dir}" rev-parse "refs/tags/${tag}^{commit}")"
+release_description="$(git -C "${repository_dir}" tag -l --format='%(contents:subject)' "${tag}" | head -n 1 | cut -c1-500)"
 print -r -- "== Publishing ITAdmin ${version} =="
 print -r -- "   tag:    ${tag} (annotated)"
 print -r -- "   commit: ${commit}"
@@ -85,8 +85,11 @@ print -r -- "   commit: ${commit}"
 # ---------------------------------------------------------------------------------------------
 work_root="${repository_dir}/artifacts/publish/${version}"
 source_worktree="${work_root}/source"
+release_tool="${source_worktree}/backend/src/ITAdmin.Deployment/ITAdmin.Deployment.csproj"
 publish_dir="${work_root}/publish"
 hostagent_dir="${work_root}/hostagent"
+coordinator_dir="${work_root}/update-coordinator"
+tooling_dir="${work_root}/deployment-tooling"
 dist_tree="${work_root}/dist"
 
 rm -rf "${work_root}"
@@ -112,10 +115,19 @@ print -r -- "-- Publishing the Host Agent"
 dotnet publish "${source_worktree}/backend/src/ITAdmin.HostAgent/ITAdmin.HostAgent.csproj" \
   -c Release -r win-x64 --self-contained false -o "${hostagent_dir}"
 
+print -r -- "-- Publishing the Update Coordinator"
+dotnet publish "${source_worktree}/backend/src/ITAdmin.UpdateCoordinator/ITAdmin.UpdateCoordinator.csproj" \
+  -c Release -r win-x64 --self-contained false -o "${coordinator_dir}"
+
+mkdir -p "${tooling_dir}"
+cp "${source_worktree}/scripts/install/Install-ITAdmin.ps1" "${tooling_dir}/"
+
 print -r -- "-- Building frontend"
 (
   cd "${source_worktree}/frontend"
   npm ci
+  npm run lint
+  npm run test:unit
   npm run build
 )
 
@@ -177,10 +189,13 @@ dotnet run --project "${release_tool}" -c Release --no-launch-profile -- \
   --publish "${publish_dir}" \
   --output "${dist_tree}" \
   --host-agent "${hostagent_dir}" \
+  --deployment-tooling "${tooling_dir}" \
+  --update-coordinator "${coordinator_dir}" \
   --prerequisite "${prerequisite_name}|${prerequisite_version}|${prerequisite_path}|${prerequisite_url}|${prerequisite_alg}|${prerequisite_hash}|${prerequisite_hash_src}" \
   --version "${version}" \
   --tag "${tag}" \
   --commit "${commit}" \
+  --description "${release_description}" \
   --latest-migration "${latest_migration}" \
   --migration-count "${migration_count}"
 

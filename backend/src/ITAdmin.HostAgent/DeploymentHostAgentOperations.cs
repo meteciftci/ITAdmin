@@ -90,7 +90,8 @@ public sealed class DeploymentHostAgentOperations(
                 _blockedByInterruptedOperation = true;
                 _updateStatus = _updateStatus with
                 {
-                    Phase = HostAgentUpdatePhase.Failed,
+                    OperationId = operation.Id,
+                    Phase = HostAgentUpdatePhase.RequiresOperatorReview,
                     TargetVersion = operation.TargetVersion,
                     Message = $"A previous update was interrupted at the {operation.Stage} stage. The "
                         + "database schema or the live site may be partially changed; an administrator "
@@ -128,6 +129,18 @@ public sealed class DeploymentHostAgentOperations(
         HostAgentRequest request,
         CancellationToken cancellationToken)
     {
+        var access = await gitClient.DiagnoseAccessAsync(cancellationToken);
+        if (!access.IsAccessible)
+        {
+            return new HostAgentResponse
+            {
+                Status = HostAgentResponseStatus.Failed,
+                Message = access.Message,
+                CorrelationId = request.CorrelationId,
+                RepositoryStatus = access.Status,
+            };
+        }
+
         var lines = await gitClient.ListRemoteTagsAsync(cancellationToken);
         var resolution = ReleaseTagResolver.Resolve(lines, settings.Channel);
         var state = ReadInstallationState();
@@ -139,12 +152,26 @@ public sealed class DeploymentHostAgentOperations(
                 request.CorrelationId);
         }
 
+        var latestManifest = await gitClient.FetchManifestAsync(resolution.Selected.Version, cancellationToken);
+        if (!ReleaseAcquisition.CommitsMatch(latestManifest.Source.Commit, resolution.Selected.SourceCommit))
+        {
+            return HostAgentResponse.Failed(
+                "The latest release metadata does not match its annotated tag.",
+                request.CorrelationId);
+        }
+
         var releases = resolution.Candidates
             .OrderByDescending(candidate => candidate.Version)
             .Select(candidate => new HostAgentAvailableRelease
             {
                 Version = candidate.Version.ToString(),
                 SourceCommit = candidate.SourceCommit,
+                PublishedAtUtc = candidate.Version == resolution.Selected.Version
+                    ? latestManifest.Distribution.BuiltAtUtc
+                    : null,
+                Description = candidate.Version == resolution.Selected.Version
+                    ? latestManifest.Distribution.Summary
+                    : null,
                 IsInstalled = string.Equals(candidate.Version.ToString(), state.ActiveVersion, StringComparison.Ordinal),
             })
             .ToList();
@@ -154,6 +181,7 @@ public sealed class DeploymentHostAgentOperations(
             Status = HostAgentResponseStatus.Ok,
             Message = $"Latest {settings.Channel.ToString().ToLowerInvariant()} release is {resolution.Selected.Version}.",
             CorrelationId = request.CorrelationId,
+            RepositoryStatus = HostAgentRepositoryStatus.Verified,
             AvailableReleases = releases,
         };
     }
@@ -174,15 +202,38 @@ public sealed class DeploymentHostAgentOperations(
             return HostAgentResponse.Rejected("targetVersion is not a valid release version.", request.CorrelationId);
         }
 
-        // The caller's version is treated as a request, not an instruction: it is only honoured if
-        // the agent can independently find an annotated tag for it on the configured channel.
+        var access = await gitClient.DiagnoseAccessAsync(cancellationToken);
+        if (!access.IsAccessible)
+        {
+            return HostAgentResponse.Failed(access.Message, request.CorrelationId);
+        }
+
+        // The caller's version is treated as a request, not an instruction. Only the newest
+        // release on the configured channel may be installed through the web application.
         var lines = await gitClient.ListRemoteTagsAsync(cancellationToken);
-        var resolution = ReleaseTagResolver.ResolveExact(lines, requested, settings.Channel);
+        var resolution = ReleaseTagResolver.Resolve(lines, settings.Channel);
         if (!resolution.IsResolved)
         {
             return HostAgentResponse.Rejected(
-                $"Release {requested} is not published as an annotated "
-                + $"{settings.Channel.ToString().ToLowerInvariant()} release tag.",
+                resolution.DescribeFailure(settings.Channel),
+                request.CorrelationId);
+        }
+
+        if (!Equals(resolution.Selected.Version, requested))
+        {
+            return HostAgentResponse.Rejected(
+                $"Only the latest {settings.Channel.ToString().ToLowerInvariant()} release "
+                + $"({resolution.Selected.Version}) may be installed.",
+                request.CorrelationId);
+        }
+
+        var installed = ReadInstallationState();
+        if (installed.ActiveVersion is not null
+            && ReleaseVersion.TryParse(installed.ActiveVersion, out var active)
+            && requested.CompareTo(active) <= 0)
+        {
+            return HostAgentResponse.Rejected(
+                $"Release {requested} is not newer than the installed release {active}.",
                 request.CorrelationId);
         }
 
@@ -195,6 +246,20 @@ public sealed class DeploymentHostAgentOperations(
                 request.CorrelationId);
         }
 
+        var persistedOperation = ReadInstallationState().CurrentOperation;
+        if (persistedOperation is not null && !persistedOperation.IsTerminal)
+        {
+            return HostAgentResponse.Rejected(
+                "An update is already in progress on this host.",
+                request.CorrelationId);
+        }
+        if (persistedOperation?.Stage is DeploymentOperationStage.RequiresOperatorReview)
+        {
+            return HostAgentResponse.Rejected(
+                "The previous update requires operator review before another update can start.",
+                request.CorrelationId);
+        }
+
         if (!await _updateGate.WaitAsync(0, cancellationToken))
         {
             return HostAgentResponse.Rejected(
@@ -204,9 +269,11 @@ public sealed class DeploymentHostAgentOperations(
 
         var release = resolution.Selected;
         var now = DateTimeOffset.UtcNow;
+        var operationId = Guid.NewGuid().ToString("N");
 
         _updateStatus = new HostAgentUpdateStatus
         {
+            OperationId = operationId,
             Phase = HostAgentUpdatePhase.Resolving,
             TargetVersion = release.Version.ToString(),
             StartedAtUtc = now,
@@ -216,10 +283,13 @@ public sealed class DeploymentHostAgentOperations(
         // Recorded BEFORE the work starts, so an interruption at any point is visible on disk to
         // the next start of this service.
         WriteOperation(DeploymentOperation.Start(
-            Guid.NewGuid().ToString("N"),
+            operationId,
             DeploymentOperationKind.Update,
             release.Version.ToString(),
-            now));
+            now) with
+        {
+            ExpectedSourceCommit = release.SourceCommit,
+        });
 
         // Deliberately not awaited: an update takes minutes and the pipe call must not hold a
         // connection open for it. Progress is polled via GetUpdateStatus.
@@ -236,14 +306,45 @@ public sealed class DeploymentHostAgentOperations(
 
     public Task<HostAgentResponse> GetUpdateStatusAsync(
         HostAgentRequest request,
-        CancellationToken cancellationToken) =>
-        Task.FromResult(new HostAgentResponse
+        CancellationToken cancellationToken)
+    {
+        var status = _updateStatus;
+        if (status.Phase is HostAgentUpdatePhase.Idle)
+        {
+            var operation = ReadInstallationState().CurrentOperation;
+            if (operation is not null)
+            {
+                status = new HostAgentUpdateStatus
+                {
+                    OperationId = operation.Id,
+                    Phase = operation.Stage switch
+                    {
+                        DeploymentOperationStage.Resolving => HostAgentUpdatePhase.Resolving,
+                        DeploymentOperationStage.Fetching => HostAgentUpdatePhase.Fetching,
+                        DeploymentOperationStage.Verifying => HostAgentUpdatePhase.Verifying,
+                        DeploymentOperationStage.Staging => HostAgentUpdatePhase.Staging,
+                        DeploymentOperationStage.Migrating => HostAgentUpdatePhase.Migrating,
+                        DeploymentOperationStage.Activating => HostAgentUpdatePhase.Activating,
+                        DeploymentOperationStage.Completed => HostAgentUpdatePhase.Completed,
+                        DeploymentOperationStage.RequiresOperatorReview => HostAgentUpdatePhase.RequiresOperatorReview,
+                        _ => HostAgentUpdatePhase.Failed,
+                    },
+                    TargetVersion = operation.TargetVersion,
+                    StartedAtUtc = operation.StartedAtUtc,
+                    CompletedAtUtc = operation.IsTerminal ? operation.UpdatedAtUtc : null,
+                    Message = operation.Message,
+                };
+            }
+        }
+
+        return Task.FromResult(new HostAgentResponse
         {
             Status = HostAgentResponseStatus.Ok,
             Message = "Update status read.",
             CorrelationId = request.CorrelationId,
-            Update = _updateStatus,
+            Update = status,
         });
+    }
 
     public async Task<HostAgentResponse> ReconcileWebBindingsAsync(
         HostAgentRequest request,
@@ -302,6 +403,16 @@ public sealed class DeploymentHostAgentOperations(
                 }
 
                 SetUpdatePhase(HostAgentUpdatePhase.Staging, release, "Staging, migrating, and activating.");
+                MutateState(state => state.CurrentOperation is null
+                    ? state
+                    : state with
+                    {
+                        CurrentOperation = state.CurrentOperation with
+                        {
+                            VerifiedReleaseDirectory = stagingRoot,
+                            UpdatedAtUtc = DateTimeOffset.UtcNow,
+                        },
+                    });
                 var execution = await updateExecutor.ApplyAsync(
                     new ReleaseUpdateRequest(release.Version, release.SourceCommit, stagingRoot),
                     cancellationToken);
@@ -314,17 +425,18 @@ public sealed class DeploymentHostAgentOperations(
 
                 _updateStatus = _updateStatus with
                 {
-                    Phase = HostAgentUpdatePhase.Completed,
-                    CompletedAtUtc = DateTimeOffset.UtcNow,
-                    Message = $"ITAdmin {release.Version} is active.",
+                    Phase = HostAgentUpdatePhase.Staging,
+                    Message = $"ITAdmin {release.Version} is being applied by the update coordinator.",
                 };
-
-                AdvanceOperation(DeploymentOperationStage.Completed, $"ITAdmin {release.Version} is active.");
-                logger.LogInformation("Update to {Version} completed.", release.Version);
+                logger.LogInformation("Update to {Version} was handed to the update coordinator.", release.Version);
             }
             finally
             {
-                TryDeleteDirectory(stagingRoot);
+                var operation = ReadInstallationState().CurrentOperation;
+                if (operation is null || operation.IsTerminal)
+                {
+                    TryDeleteDirectory(stagingRoot);
+                }
             }
         }
         catch (Exception exception)
@@ -400,7 +512,26 @@ public sealed class DeploymentHostAgentOperations(
             var updated = mutate(current) with { UpdatedAtUtc = DateTimeOffset.UtcNow };
 
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            File.WriteAllText(path, updated.ToJson());
+            var temporaryPath = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            File.WriteAllText(temporaryPath, updated.ToJson());
+            try
+            {
+                if (File.Exists(path))
+                {
+                    File.Move(temporaryPath, path, overwrite: true);
+                }
+                else
+                {
+                    File.Move(temporaryPath, path);
+                }
+            }
+            finally
+            {
+                if (File.Exists(temporaryPath))
+                {
+                    File.Delete(temporaryPath);
+                }
+            }
         }
         catch (Exception exception)
         {

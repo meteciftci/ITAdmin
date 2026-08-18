@@ -1,0 +1,76 @@
+{
+  "systemUpdates": {
+    "page": {
+      "title": "Sistem güncellemeleri",
+      "description": "Doğrulanmış en son kararlı ITAdmin sürümünü kontrol edin ve sunucuya kurun."
+    },
+    "actions": {
+      "check": "Güncellemeleri kontrol et",
+      "install": "{{version}} sürümünü kur"
+    },
+    "host": {
+      "title": "Sunucu ve repository erişimi",
+      "agent": "Host Agent",
+      "repository": "Deploy key / repository",
+      "installationPhase": "Kurulum durumu",
+      "health": "Uygulama sağlığı"
+    },
+    "release": {
+      "title": "Sürüm bilgisi",
+      "installed": "Kurulu sürüm",
+      "latest": "En son stable",
+      "previous": "Önceki sürüm",
+      "publishedAt": "Release zamanı",
+      "checkedAt": "Son kontrol"
+    },
+    "operation": {
+      "title": "Güncelleme işlemi",
+      "available": "Kurulabilecek yeni bir stable sürüm var.",
+      "upToDate": "Kurulu sürüm güncel."
+    },
+    "status": {
+      "available": "Erişilebilir",
+      "unavailable": "Erişilemiyor",
+      "verified": "Doğrulandı",
+      "notVerified": "Doğrulanamadı",
+      "healthy": "Sağlıklı",
+      "unhealthy": "Sağlıksız"
+    },
+    "repositoryStatuses": {
+      "Unknown": "Henüz kontrol edilmedi",
+      "Verified": "Doğrulandı",
+      "DeployKeyMissing": "Deploy key eksik",
+      "RepositoryRejected": "GitHub deploy key'i reddetti",
+      "HostUnreachable": "Repository sunucusuna erişilemiyor",
+      "HostKeyProblem": "SSH host key doğrulama problemi",
+      "HostAgentUnavailable": "Host Agent erişilemiyor"
+    },
+    "phases": {
+      "Idle": "Bekliyor",
+      "Resolving": "Sürüm çözülüyor",
+      "Fetching": "İndiriliyor",
+      "Verifying": "Doğrulanıyor",
+      "Staging": "Hazırlanıyor",
+      "Migrating": "Veritabanı güncelleniyor",
+      "Activating": "Etkinleştiriliyor",
+      "Completed": "Tamamlandı",
+      "Failed": "Başarısız",
+      "RequiresOperatorReview": "Operatör incelemesi gerekiyor"
+    },
+    "confirm": {
+      "title": "ITAdmin {{version}} kurulsun mu?",
+      "description": "Güncelleme sırasında kısa bir servis kesintisi olabilir. Migration sonrasında otomatik veritabanı geri dönüşü yapılmaz.",
+      "backupLabel": "Güncel ve geri yüklenebilir bir veritabanı yedeği bulunduğunu onaylıyorum.",
+      "backupDescription": "Bu onay olmadan güncelleme başlatılamaz.",
+      "submit": "Güncellemeyi başlat"
+    },
+    "connection": {
+      "interruptedTitle": "Sunucuyla bağlantı geçici olarak kesildi",
+      "interruptedDescription": "Güncelleme sırasında IIS yeniden başlatılıyor olabilir. Durum otomatik olarak yeniden kontrol edilecek."
+    },
+    "review": {
+      "title": "Operatör incelemesi gerekiyor",
+      "description": "Önceki işlem migration veya aktivasyon aşamasında kesildi. Veritabanı ve IIS durumu doğrulanmadan yeni güncelleme başlatılamaz."
+    }
+  }
+}

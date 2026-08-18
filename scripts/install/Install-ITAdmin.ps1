@@ -268,7 +268,30 @@ function Save-InstallationState {
         New-Item -ItemType Directory -Path $Script:Layout.StateRoot -Force | Out-Null
     }
 
-    $State | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $Script:StatePath -Encoding UTF8
+    $temporaryPath = "$Script:StatePath.$([guid]::NewGuid().ToString('N')).tmp"
+    try {
+        $State | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $temporaryPath -Encoding UTF8
+        Move-Item -LiteralPath $temporaryPath -Destination $Script:StatePath -Force
+    }
+    finally {
+        Remove-Item -LiteralPath $temporaryPath -Force -ErrorAction SilentlyContinue
+    }
+}
+
+function Set-CurrentUpdateOperationStage {
+    param(
+        [Parameter(Mandatory = $true)][psobject]$State,
+        [Parameter(Mandatory = $true)][string]$Stage,
+        [Parameter(Mandatory = $true)][string]$Message
+    )
+
+    if ($null -eq $State.currentOperation -or "$($State.currentOperation.kind)" -ne "Update") {
+        return
+    }
+
+    $State.currentOperation.stage = $Stage
+    $State.currentOperation.message = $Message
+    Save-InstallationState -State $State
 }
 
 function Set-Phase {
@@ -848,11 +871,11 @@ function Invoke-PrerequisiteProvisioning {
     Write-Step "Prerequisite detection"
     $os = Get-CimInstance -ClassName Win32_OperatingSystem
     Write-Detail "OS: $($os.Caption) ($($os.Version))"
-    if ([version]$os.Version -lt [version]"10.0.17763") {
-        throw "Windows Server 2019 or newer is required (found $($os.Version))."
+    if ([version]$os.Version -lt [version]"10.0.20348") {
+        throw "Windows Server 2022 or newer is required (found $($os.Version))."
     }
     if ($os.ProductType -eq 1) {
-        Write-Host "    WARN Client Windows detected; ITAdmin targets Windows Server." -ForegroundColor Yellow
+        throw "Client Windows is not supported. ITAdmin production installation requires Windows Server 2022 or 2025."
     }
 
     $maxCycles = 4
@@ -1908,6 +1931,8 @@ function Invoke-DatabaseMigration {
     # Recorded before the attempt: if this run dies mid-migration, the next run must know the
     # schema may be partially migrated rather than silently retrying.
     $State.migrationInFlight = $true
+    Set-CurrentUpdateOperationStage -State $State -Stage "Migrating" `
+        -Message "Database migrations are being applied."
     Set-Phase -State $State -Phase "Migrating"
 
     $previousConnection = $env:ITADMIN_ConnectionStrings__DefaultConnection
@@ -2610,9 +2635,7 @@ function Install-HostAgent {
         point of a separate service is that a flaw in request handling cannot reach the operations
         that update releases and rewrite IIS configuration.
 
-        Absence of the agent binaries is not fatal. A first install still produces a working,
-        loggable-into ITAdmin without in-app updates, and reporting that clearly beats failing an
-        otherwise successful installation over a feature nobody has used yet.
+        Every production release carries this component as part of the closed manifest set.
     #>
     param(
         [Parameter(Mandatory = $true)][psobject]$Config,
@@ -2622,12 +2645,13 @@ function Install-HostAgent {
     $Script:CurrentStep = "InstallHostAgent"
     Write-Step "Installing the ITAdmin Host Agent"
 
-    $agentRoot = Join-Path $Script:Layout.ProgramFilesRoot "hostagent"
+    $agentRoot = Join-Path $Script:Layout.ProgramFilesRoot `
+        "hostagent\releases\$($Artifact.VersionText)"
     $agentExecutable = Join-Path $agentRoot "ITAdmin.HostAgent.exe"
     $agentSource = Join-Path $Artifact.SourceRoot "hostagent"
 
-    # The agent lives outside every release directory. Activating or rolling back a release must
-    # never swap the running service out from under itself.
+    # Versioned service directories let the coordinator switch ImagePath only after the target
+    # release is healthy; a running service never overwrites its own binaries.
     if (Test-Path -LiteralPath $agentSource -PathType Container) {
         # Already verified as a declared component during distribution verification. A hostagent
         # directory with no matching component would have failed the closed-set check.
@@ -2651,12 +2675,7 @@ function Install-HostAgent {
     }
 
     if (-not (Test-Path -LiteralPath $agentExecutable)) {
-        # Not fatal. A first install still produces a working, loggable-into ITAdmin without in-app
-        # updates, and saying so plainly beats failing an otherwise successful installation over a
-        # feature nobody has used yet.
-        Write-Host "    WARN This release carries no Host Agent component." -ForegroundColor Yellow
-        Write-Detail "In-app updates and Settings-driven HTTPS configuration will be unavailable."
-        return $false
+        throw "This production release does not contain the required Host Agent executable."
     }
 
     # Program Files is administrator-writable only by default; the explicit deny keeps a future
@@ -2676,7 +2695,11 @@ function Install-HostAgent {
         Write-Detail "Registered service ITAdminHostAgent"
     }
     else {
-        Write-Detail "Service ITAdminHostAgent already registered."
+        & sc.exe config "ITAdminHostAgent" binPath= "`"$agentExecutable`"" start= auto | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            throw "Could not update the ITAdmin Host Agent service image path (sc.exe exit $LASTEXITCODE)."
+        }
+        Write-Detail "Service ITAdminHostAgent updated to $($Artifact.VersionText)."
     }
 
     Start-Service -Name "ITAdminHostAgent" -ErrorAction SilentlyContinue
@@ -2701,7 +2724,7 @@ function Write-InstallationSummary {
     param(
         [Parameter(Mandatory = $true)][psobject]$Config,
         [Parameter(Mandatory = $true)][psobject]$Artifact,
-        [Parameter(Mandatory = $true)][psobject]$Directory,
+        [psobject]$Directory,
         [string]$AdministratorName,
         [bool]$HostAgentRunning
     )
@@ -2712,7 +2735,7 @@ function Write-InstallationSummary {
     Write-Host "ITAdmin installation completed successfully." -ForegroundColor Green
     Write-Host ""
     Write-Host "  Version           $($Artifact.VersionText)"
-    Write-Host "  Source commit     $($Artifact.Manifest.sourceCommit)"
+    Write-Host "  Source commit     $($Artifact.Manifest.source.commit)"
     Write-Host ""
     Write-Host "  Web (HTTP only)"
     foreach ($url in $urls) {
@@ -2723,10 +2746,15 @@ function Write-InstallationSummary {
     Write-Host "  Schema            $(if ($null -ne $Script:LastMigrationApplied) { $Script:LastMigrationApplied } else { 'current' })"
     Write-Host ""
     Write-Host "  Primary Directory"
-    Write-Host "    Host            $($Directory.Host)"
-    Write-Host "    Base DN         $($Directory.BaseDn)"
-    Write-Host "    Bind            verified"
-    Write-Host "    Administrator   $(if ($AdministratorName) { $AdministratorName } else { '(existing)' })  (LDAP-backed)"
+    if ($null -ne $Directory) {
+        Write-Host "    Host            $($Directory.Host)"
+        Write-Host "    Base DN         $($Directory.BaseDn)"
+        Write-Host "    Bind            verified"
+        Write-Host "    Administrator   $(if ($AdministratorName) { $AdministratorName } else { '(existing)' })  (LDAP-backed)"
+    }
+    else {
+        Write-Host "    Existing configuration and administrator re-validated"
+    }
     Write-Host ""
     Write-Host "  IIS"
     Write-Host "    Site            $($Config.iis.siteName)"
@@ -2749,6 +2777,48 @@ function Write-InstallationSummary {
     Write-Host "    HTTPS, certificates, the public host name, and the HTTP-to-HTTPS redirect are"
     Write-Host "    configured later from ITAdmin Settings."
     Write-Host ""
+
+    # Server Core has no interactive shell/browser. On Desktop Experience this is a convenience
+    # only; a browser failure must never turn a successful installation into a failed one.
+    if (-not $Unattended.IsPresent -and [Environment]::UserInteractive) {
+        try { Start-Process $urls[0] -ErrorAction SilentlyContinue } catch { }
+    }
+}
+
+function Install-UpdateCoordinator {
+    param([Parameter(Mandatory = $true)][psobject]$Artifact)
+
+    $Script:CurrentStep = "InstallUpdateCoordinator"
+    Write-Step "Installing the ITAdmin Update Coordinator"
+
+    $source = Join-Path $Artifact.SourceRoot "update-coordinator"
+    $target = Join-Path $Script:Layout.ProgramFilesRoot `
+        "update-coordinator\releases\$($Artifact.VersionText)"
+    if (-not (Test-Path -LiteralPath $source -PathType Container)) {
+        throw "This production release does not contain the required Update Coordinator component."
+    }
+
+    New-Item -ItemType Directory -Path $target -Force | Out-Null
+    Copy-Item -Path (Join-Path $source "*") -Destination $target -Recurse -Force
+    $executable = Join-Path $target "ITAdmin.UpdateCoordinator.exe"
+    if (-not (Test-Path -LiteralPath $executable)) {
+        throw "The Update Coordinator executable is missing from the verified component."
+    }
+
+    $identity = "IIS AppPool\$AppPoolName"
+    & icacls $target /deny "${identity}:(OI)(CI)(F)" | Out-Null
+    $existing = Get-Service -Name "ITAdminUpdateCoordinator" -ErrorAction SilentlyContinue
+    if ($null -eq $existing) {
+        & sc.exe create "ITAdminUpdateCoordinator" binPath= "`"$executable`"" start= demand `
+            DisplayName= "ITAdmin Update Coordinator" obj= "LocalSystem" | Out-Null
+    }
+    else {
+        & sc.exe config "ITAdminUpdateCoordinator" binPath= "`"$executable`"" start= demand | Out-Null
+    }
+    if ($LASTEXITCODE -ne 0) {
+        throw "Could not register the ITAdmin Update Coordinator service (sc.exe exit $LASTEXITCODE)."
+    }
+    Write-Ok "ITAdmin Update Coordinator is registered as a demand-start LocalSystem service"
 }
 
 # --------------------------------------------------------------------------------------------
@@ -2839,7 +2909,22 @@ try {
     }
 
     $environmentConfig = Resolve-EnvironmentConfig
-    $directory = Resolve-DirectoryConfiguration
+    $isUnattendedExistingInstall = $Unattended.IsPresent -and $intent -in @("Upgrade", "SameVersionRepair")
+    $directory = $null
+    if ($isUnattendedExistingInstall) {
+        if ($null -eq $state.readiness -or
+            -not $state.readiness.directoryUsable -or
+            -not $state.readiness.administratorBootstrapped) {
+            throw "The existing installation does not prove directory and administrator readiness. " +
+                  "An unattended update cannot repair first-run setup; run an interactive repair."
+        }
+        $Script:Readiness.directoryUsable = $true
+        $Script:Readiness.administratorBootstrapped = $true
+        Write-Detail "Existing directory and administrator readiness will be preserved for this update."
+    }
+    else {
+        $directory = Resolve-DirectoryConfiguration
+    }
 
     Import-Module WebAdministration -ErrorAction Stop
 
@@ -2867,14 +2952,30 @@ try {
     # The directory is established BEFORE activation. An ITAdmin that is serving but has no
     # directory configuration and no administrator is not a usable installation, and reporting
     # success at that point would be a lie the operator only discovers at the login screen.
-    $administratorName = Invoke-DirectoryBootstrap -PayloadRoot $releasePaths.PayloadRoot `
-        -Directory $directory -State $state
+    $administratorName = $null
+    if (-not $isUnattendedExistingInstall) {
+        $administratorName = Invoke-DirectoryBootstrap -PayloadRoot $releasePaths.PayloadRoot `
+            -Directory $directory -State $state
+    }
 
+    Set-CurrentUpdateOperationStage -State $state -Stage "Activating" `
+        -Message "The verified release is being activated and health checked."
     Set-IisConfiguration -Config $environmentConfig -PayloadRoot $releasePaths.PayloadRoot -State $state `
         -Ownership $bindingOwnership
     Enable-Release -Config $environmentConfig -Artifact $artifact -State $state
 
-    $hostAgentRunning = Install-HostAgent -Config $environmentConfig -Artifact $artifact
+    # A service-initiated update must not stop and overwrite the process that is coordinating it.
+    # The target Host Agent remains verified in the release and is switched by the update
+    # coordinator; interactive installs/repairs install it directly.
+    $hostAgentRunning = if ($isUnattendedExistingInstall) {
+        $service = Get-Service -Name "ITAdminHostAgent" -ErrorAction SilentlyContinue
+        $null -ne $service -and $service.Status -eq "Running"
+    }
+    else {
+        $running = Install-HostAgent -Config $environmentConfig -Artifact $artifact
+        Install-UpdateCoordinator -Artifact $artifact
+        $running
+    }
 
     Write-InstallationSummary -Config $environmentConfig -Artifact $artifact -Directory $directory `
         -AdministratorName $administratorName -HostAgentRunning $hostAgentRunning

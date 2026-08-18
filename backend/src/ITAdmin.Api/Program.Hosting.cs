@@ -10,6 +10,7 @@ using ITAdmin.Api.Extensions;
 using ITAdmin.Api.HostedServices;
 using ITAdmin.Api.Middlewares;
 using ITAdmin.Api.Security;
+using ITAdmin.Api.HostAgent;
 using ITAdmin.Application;
 using ITAdmin.Application.Common.Models;
 using ITAdmin.Infrastructure;
@@ -50,6 +51,7 @@ public partial class Program
             });
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddScoped<ICorrelationIdAccessor, CorrelationIdAccessor>();
+        builder.Services.AddSingleton<IHostAgentClient, NamedPipeHostAgentClient>();
 
         // IIS / reverse proxy support: honor X-Forwarded-For / X-Forwarded-Proto only from
         // proxies declared in configuration (safe loopback-only default when config is empty).

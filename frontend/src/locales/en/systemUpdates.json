@@ -1,0 +1,76 @@
+{
+  "systemUpdates": {
+    "page": {
+      "title": "System updates",
+      "description": "Check and install the latest verified stable ITAdmin release on this server."
+    },
+    "actions": {
+      "check": "Check for updates",
+      "install": "Install {{version}}"
+    },
+    "host": {
+      "title": "Server and repository access",
+      "agent": "Host Agent",
+      "repository": "Deploy key / repository",
+      "installationPhase": "Installation phase",
+      "health": "Application health"
+    },
+    "release": {
+      "title": "Release information",
+      "installed": "Installed release",
+      "latest": "Latest stable",
+      "previous": "Previous release",
+      "publishedAt": "Release time",
+      "checkedAt": "Last checked"
+    },
+    "operation": {
+      "title": "Update operation",
+      "available": "A newer stable release is available.",
+      "upToDate": "The installed release is up to date."
+    },
+    "status": {
+      "available": "Available",
+      "unavailable": "Unavailable",
+      "verified": "Verified",
+      "notVerified": "Not verified",
+      "healthy": "Healthy",
+      "unhealthy": "Unhealthy"
+    },
+    "repositoryStatuses": {
+      "Unknown": "Not checked yet",
+      "Verified": "Verified",
+      "DeployKeyMissing": "Deploy key missing",
+      "RepositoryRejected": "GitHub rejected the deploy key",
+      "HostUnreachable": "Repository host unreachable",
+      "HostKeyProblem": "SSH host key verification problem",
+      "HostAgentUnavailable": "Host Agent unavailable"
+    },
+    "phases": {
+      "Idle": "Idle",
+      "Resolving": "Resolving release",
+      "Fetching": "Downloading",
+      "Verifying": "Verifying",
+      "Staging": "Staging",
+      "Migrating": "Migrating database",
+      "Activating": "Activating",
+      "Completed": "Completed",
+      "Failed": "Failed",
+      "RequiresOperatorReview": "Operator review required"
+    },
+    "confirm": {
+      "title": "Install ITAdmin {{version}}?",
+      "description": "A short service interruption may occur. Database migrations are not automatically rolled back.",
+      "backupLabel": "I confirm that a current, restorable database backup is available.",
+      "backupDescription": "The update cannot start without this confirmation.",
+      "submit": "Start update"
+    },
+    "connection": {
+      "interruptedTitle": "The server connection was temporarily interrupted",
+      "interruptedDescription": "IIS may be restarting during the update. Status will be checked again automatically."
+    },
+    "review": {
+      "title": "Operator review required",
+      "description": "The previous operation stopped during migration or activation. No new update can start until the database and IIS state are reviewed."
+    }
+  }
+}

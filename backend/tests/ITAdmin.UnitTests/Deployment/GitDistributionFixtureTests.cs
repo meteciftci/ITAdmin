@@ -307,10 +307,8 @@ public sealed class GitDistributionFixtureTests : IDisposable
     }
 
     [Fact]
-    public void ReleaseWithoutAHostAgentComponent_StillVerifies()
+    public void ReleaseWithoutAHostAgentComponent_IsRefused()
     {
-        // A release published before the agent existed, or one deliberately built without it, must
-        // still install. Its absence degrades in-app updates; it does not fail an install.
         var version = ReleaseVersion.Parse("1.0.0");
         Git(_work, "tag", "-a", "v1.0.0", "-m", "ITAdmin 1.0.0");
         Git(_work, "push", "--quiet", "origin", "--tags");
@@ -318,11 +316,17 @@ public sealed class GitDistributionFixtureTests : IDisposable
 
         PublishDistribution(version, sourceCommit, payloadFileCount: 3);
         var acquired = FetchDistribution(version);
+        var manifestPath = Path.Combine(acquired, ReleaseManifest.FileName);
+        var manifest = ReleaseManifest.FromJson(File.ReadAllText(manifestPath))!;
+        var components = manifest.Components
+            .Where(entry => entry.Key != DeploymentLayout.HostAgentDirectoryName)
+            .ToDictionary(entry => entry.Key, entry => entry.Value, StringComparer.Ordinal);
+        File.WriteAllText(manifestPath, (manifest with { Components = components }).ToJson());
 
         var result = ReleaseAcquisition.Verify(acquired, version, sourceCommit);
 
-        Assert.True(result.IsAcceptable, string.Join("; ", result.Problems));
-        Assert.Null(result.Manifest!.HostAgentComponent);
+        Assert.False(result.IsAcceptable);
+        Assert.Contains(result.Problems, problem => problem.Contains("hostagent", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -363,14 +367,16 @@ public sealed class GitDistributionFixtureTests : IDisposable
             File.WriteAllText(Path.Combine(payload, $"extra-{index}.txt"), $"content {index}");
         }
 
-        string? hostAgentPublish = null;
-        if (includeHostAgent)
-        {
-            hostAgentPublish = Path.Combine(publish, "hostagent-publish");
-            Directory.CreateDirectory(hostAgentPublish);
-            File.WriteAllText(Path.Combine(hostAgentPublish, "ITAdmin.HostAgent.dll"), "fake agent " + version);
-            File.WriteAllText(Path.Combine(hostAgentPublish, "ITAdmin.HostAgent.runtimeconfig.json"), "{}");
-        }
+        var hostAgentPublish = Path.Combine(publish, "hostagent-publish");
+        Directory.CreateDirectory(hostAgentPublish);
+        File.WriteAllText(Path.Combine(hostAgentPublish, "ITAdmin.HostAgent.dll"), "fake agent " + version);
+        File.WriteAllText(Path.Combine(hostAgentPublish, "ITAdmin.HostAgent.runtimeconfig.json"), "{}");
+        var deploymentTooling = Path.Combine(publish, "deployment-tooling");
+        Directory.CreateDirectory(deploymentTooling);
+        File.WriteAllText(Path.Combine(deploymentTooling, "Install-ITAdmin.ps1"), "# fake installer");
+        var updateCoordinator = Path.Combine(publish, "update-coordinator");
+        Directory.CreateDirectory(updateCoordinator);
+        File.WriteAllText(Path.Combine(updateCoordinator, "ITAdmin.UpdateCoordinator.exe"), "fake coordinator");
 
         var tree = Path.Combine(publish, "tree");
         var manifest = ReleasePacker.StageReleaseTree(
@@ -382,7 +388,9 @@ public sealed class GitDistributionFixtureTests : IDisposable
                 BuildTimestampUtc: DateTimeOffset.UnixEpoch,
                 LatestMigration: "20240101000000_Initial",
                 MigrationCount: 1,
-                HostAgentPublishDirectory: hostAgentPublish),
+                HostAgentPublishDirectory: hostAgentPublish,
+                DeploymentToolingDirectory: deploymentTooling,
+                UpdateCoordinatorPublishDirectory: updateCoordinator),
             tree);
 
         Assert.Equal(version.ToString(), manifest.Source.Version);

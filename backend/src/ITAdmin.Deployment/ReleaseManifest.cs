@@ -124,6 +124,12 @@ public sealed record ReleaseManifest
     public DistributionComponent? HostAgentComponent =>
         Components.TryGetValue(DeploymentLayout.HostAgentDirectoryName, out var component) ? component : null;
 
+    public DistributionComponent? DeploymentToolingComponent =>
+        Components.TryGetValue(DeploymentLayout.DeploymentToolingDirectoryName, out var component) ? component : null;
+
+    public DistributionComponent? UpdateCoordinatorComponent =>
+        Components.TryGetValue(DeploymentLayout.UpdateCoordinatorDirectoryName, out var component) ? component : null;
+
     /// <summary>
     /// Structural validation of a parsed manifest, independent of any files on disk. This is the
     /// first gate an installer runs before it trusts a distribution enough to look at its contents.
@@ -177,6 +183,22 @@ public sealed record ReleaseManifest
                 + "there is nothing for IIS to serve.");
         }
 
+        RequireCoreComponent(
+            HostAgentComponent,
+            DistributionComponentKind.HostAgent,
+            DeploymentLayout.HostAgentDirectoryName,
+            errors);
+        RequireCoreComponent(
+            DeploymentToolingComponent,
+            DistributionComponentKind.DeploymentTooling,
+            DeploymentLayout.DeploymentToolingDirectoryName,
+            errors);
+        RequireCoreComponent(
+            UpdateCoordinatorComponent,
+            DistributionComponentKind.UpdateCoordinator,
+            DeploymentLayout.UpdateCoordinatorDirectoryName,
+            errors);
+
         foreach (var (path, component) in Components)
         {
             errors.AddRange(component.Validate(path).Select(error => $"component '{path}': {error}"));
@@ -195,6 +217,22 @@ public sealed record ReleaseManifest
         }
 
         return new ManifestValidationResult(errors.Count == 0, errors);
+    }
+
+    private static void RequireCoreComponent(
+        DistributionComponent? component,
+        DistributionComponentKind expectedKind,
+        string path,
+        ICollection<string> errors)
+    {
+        if (component is null)
+        {
+            errors.Add($"Distribution declares no required '{path}' component.");
+        }
+        else if (component.Kind != expectedKind)
+        {
+            errors.Add($"Distribution component '{path}' must have kind '{expectedKind}'.");
+        }
     }
 }
 
@@ -270,6 +308,9 @@ public sealed record DistributionIdentity
     [JsonPropertyName("ref")]
     public string Ref { get; init; } = string.Empty;
 
+    [JsonPropertyName("description")]
+    public string Summary { get; init; } = string.Empty;
+
     internal IReadOnlyList<string> Validate()
     {
         var errors = new List<string>();
@@ -289,6 +330,11 @@ public sealed record DistributionIdentity
             errors.Add("distribution.builtAtUtc is required.");
         }
 
+        if (Summary.Length > 500)
+        {
+            errors.Add("distribution.description exceeds 500 characters.");
+        }
+
         return errors;
     }
 }
@@ -305,6 +351,12 @@ public enum DistributionComponentKind
 
     /// <summary>Windows runtime prerequisite payload (chunked third-party installers).</summary>
     RuntimePrerequisite = 2,
+
+    /// <summary>The release-matched PowerShell deployment engine.</summary>
+    DeploymentTooling = 3,
+
+    /// <summary>The one-shot privileged coordinator used to hand off service updates.</summary>
+    UpdateCoordinator = 4,
 }
 
 /// <summary>One verified directory inside a distribution.</summary>

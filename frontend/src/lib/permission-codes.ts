@@ -29,6 +29,10 @@ export const PermissionCodes = {
     View: "Settings.View",
     Update: "Settings.Update",
   },
+  SystemUpdates: {
+    View: "System.Updates.View",
+    Manage: "System.Updates.Manage",
+  },
   Setup: {
     Manage: "Setup.Manage",
   },

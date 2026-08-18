@@ -46,6 +46,12 @@ public static class PermissionCodes
         public const string Update = "Settings.Update";
     }
 
+    public static class SystemUpdates
+    {
+        public const string View = "System.Updates.View";
+        public const string Manage = "System.Updates.Manage";
+    }
+
     public static class Setup
     {
         public const string Manage = "Setup.Manage";

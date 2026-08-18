@@ -39,6 +39,10 @@ public sealed class DeploymentLayout
     /// </summary>
     public const string HostAgentDirectoryName = "hostagent";
 
+    public const string DeploymentToolingDirectoryName = "deployment-tooling";
+
+    public const string UpdateCoordinatorDirectoryName = "update-coordinator";
+
     /// <summary>
     /// Root of the runtime-prerequisite components inside a distribution. Each prerequisite gets its
     /// own subdirectory of chunk files, so one oversized redistributable cannot collide with another

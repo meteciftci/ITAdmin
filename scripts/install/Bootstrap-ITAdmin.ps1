@@ -11,19 +11,11 @@
     OPERATOR PREPARATION (once per server, unavoidable)
       1. Install Git for Windows.
       2. Create an SSH key pair for this server.
-      3. Add an ITAdmin-specific SSH alias binding that key:
-             Host github-itadmin
-                 HostName github.com
-                 User git
-                 IdentityFile <profile>\.ssh\itadmin_deploy
-                 IdentitiesOnly yes
-         The alias - rather than "Host github.com" - keeps the read-only deploy key from capturing
-         every other GitHub operation this administrator performs.
-      4. Add the PUBLIC key to the ITAdmin repository as a Deploy Key, with write access OFF.
-      5. Verify the Git host key fingerprint against the host's published value, then record it.
+      3. Add the PUBLIC key to the ITAdmin repository as a Deploy Key, with write access OFF.
+      4. Verify the Git host key fingerprint against the host's published value, then record it.
 
     THEN
-      git clone git@github-itadmin:<owner>/<repo>.git C:\ITAdmin-bootstrap
+      Clone the repository with the deploy-key-specific command in docs/first-install.md.
       cd C:\ITAdmin-bootstrap
       .\scripts\install\Bootstrap-ITAdmin.ps1
 
@@ -73,7 +65,7 @@
     .\scripts\install\Bootstrap-ITAdmin.ps1
 
 .EXAMPLE
-    .\scripts\install\Bootstrap-ITAdmin.ps1 -Version 2.1.0 -DeployKeyPath C:\Keys\itadmin_deploy
+    .\scripts\install\Bootstrap-ITAdmin.ps1 -Version 2.1.0 -DeployKeyPath C:\ProgramData\ITAdmin\keys\deploy_key
 #>
 [CmdletBinding()]
 param(
@@ -177,10 +169,10 @@ function Resolve-DeployKeyPath {
     }
 
     $candidates = @(
+        (Join-Path $ProgramDataRoot "keys\deploy_key"),
         (Join-Path $env:USERPROFILE ".ssh\itadmin_deploy"),
         (Join-Path $env:USERPROFILE ".ssh\id_ed25519"),
-        (Join-Path $env:USERPROFILE ".ssh\id_rsa"),
-        (Join-Path $ProgramDataRoot "keys\deploy_key")
+        (Join-Path $env:USERPROFILE ".ssh\id_rsa")
     )
 
     foreach ($candidate in $candidates) {
@@ -190,8 +182,8 @@ function Resolve-DeployKeyPath {
         }
     }
 
-    throw "No SSH deploy key was found. Create one (ssh-keygen -t ed25519 -f " +
-          "`"$env:USERPROFILE\.ssh\itadmin_deploy`"), add the .pub half to the ITAdmin repository as a " +
+    throw "No SSH deploy key was found. Create one under " +
+          "`"$ProgramDataRoot\keys\deploy_key`", add the .pub half to the ITAdmin repository as a " +
           "read-only Deploy Key, then re-run with -DeployKeyPath."
 }
 
@@ -236,6 +228,29 @@ function Get-RepositorySshHost {
     if ($Repository -match '^(?:[^@/]+@)?([A-Za-z0-9._-]+):(?!//)') { return $Matches[1] }
 
     throw "Could not determine the SSH host from repository URL '$Repository'."
+}
+
+function Get-RepositoryKnownHostLookup {
+    <#
+        OpenSSH stores hosts reached on a non-default port as [host]:port in known_hosts.
+        Repository URLs using ssh:// can carry that port, so preserve it for ssh-keygen -F.
+    #>
+    param([Parameter(Mandatory = $true)][string]$Repository)
+
+    $sshHost = Get-RepositorySshHost -Repository $Repository
+    if ($Repository -match '^ssh://') {
+        try {
+            $uri = [Uri]$Repository
+            if (-not $uri.IsDefaultPort -and $uri.Port -ne 22) {
+                return "[$sshHost]:$($uri.Port)"
+            }
+        }
+        catch {
+            throw "Could not determine the SSH endpoint from repository URL '$Repository'."
+        }
+    }
+
+    return $sshHost
 }
 
 function Resolve-SshHostAlias {
@@ -334,8 +349,9 @@ function Get-RepositoryAccessDiagnosis {
                "as a Deploy Key on the ITAdmin repository and has not been revoked."
     }
     if ($text -match '(?i)could not resolve hostname|connection timed out|network is unreachable') {
-        return "The repository host could not be reached. Check outbound SSH (port 22) connectivity " +
-               "and name resolution from this server."
+        return "The repository host could not be reached. Check name resolution and outbound SSH " +
+               "connectivity from this server (GitHub supports ssh.github.com on port 443 when " +
+               "port 22 is blocked)."
     }
     if ($text -match '(?i)host key verification failed') {
         return "The repository host key is not trusted by this machine. Connect once interactively " +
@@ -515,6 +531,7 @@ function Install-MachineKnownHosts {
     )
 
     $sshHost = Get-RepositorySshHost -Repository $Repository
+    $knownHostLookup = Get-RepositoryKnownHostLookup -Repository $Repository
     $destination = Join-Path $KeyDirectory "known_hosts"
 
     if (Test-Path -LiteralPath $destination) {
@@ -535,11 +552,11 @@ function Install-MachineKnownHosts {
     }
 
     # ssh-keygen -F resolves both plain and hashed entries, which a text search cannot.
-    $entries = & ssh-keygen -F $sshHost -f $operatorKnownHosts 2>$null
+    $entries = & ssh-keygen -F $knownHostLookup -f $operatorKnownHosts 2>$null
     $entryLines = @($entries | Where-Object { "$_" -notmatch '^\s*#' -and -not [string]::IsNullOrWhiteSpace("$_") })
 
     if ($entryLines.Count -eq 0) {
-        throw "No verified host key for '$sshHost' was found in $operatorKnownHosts. Complete the " +
+        throw "No verified host key for '$knownHostLookup' was found in $operatorKnownHosts. Complete the " +
               "one-time host verification step from the ITAdmin deployment guide and re-run. " +
               "ITAdmin will not record a host key it has not seen you verify."
     }
@@ -653,8 +670,8 @@ function Save-HostAgentSettings {
         lives - but never the key itself. A key inlined into configuration would turn every backup
         of ProgramData into a key leak.
 
-        In-app updates start disabled. A freshly installed host should not be persuadable into
-        replacing its own release before an administrator has deliberately turned that on.
+        In-app updates are enabled only after this bootstrap has proven machine-owned repository
+        access. Application permissions still gate who can request one.
     #>
     param(
         [Parameter(Mandatory = $true)][string]$Repository,
@@ -688,11 +705,73 @@ function Save-HostAgentSettings {
         programDataRoot    = $ProgramDataRoot
         siteName           = $SiteName
         appPoolName        = $AppPoolName
-        updatesEnabled     = $existingUpdatesEnabled
+        # Repository access was proven above with the machine-owned key and host trust. A signed-in
+        # administrator still needs System.Updates.Manage before the web application can request an
+        # update, so no second server-side enablement switch is required.
+        updatesEnabled     = $true
     }
 
     $settings | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $settingsPath -Encoding UTF8
+    $registryPath = "HKLM:\SOFTWARE\ITAdmin"
+    New-Item -Path $registryPath -Force | Out-Null
+    New-ItemProperty -Path $registryPath -Name "ProgramDataRoot" -Value $ProgramDataRoot `
+        -PropertyType String -Force | Out-Null
     Write-Ok "Host Agent configuration written to $settingsPath"
+}
+
+function Get-VerifiedReleaseInstaller {
+    param(
+        [Parameter(Mandatory = $true)][string]$ReleaseDirectory,
+        [Parameter(Mandatory = $true)][string]$VersionText,
+        [Parameter(Mandatory = $true)][string]$SourceCommit
+    )
+
+    $manifestPath = Join-Path $ReleaseDirectory "release.manifest.json"
+    if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
+        throw "The distribution has no release manifest; its installer will not be executed."
+    }
+    try { $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json }
+    catch { throw "The distribution release manifest is not valid JSON; its installer will not be executed." }
+
+    $commitMatches = "$($manifest.source.commit)" -eq $SourceCommit -or
+        $SourceCommit.StartsWith("$($manifest.source.commit)", [StringComparison]::OrdinalIgnoreCase) -or
+        "$($manifest.source.commit)".StartsWith($SourceCommit, [StringComparison]::OrdinalIgnoreCase)
+    if ("$($manifest.source.version)" -ne $VersionText -or
+        "$($manifest.distribution.version)" -ne $VersionText -or
+        -not $commitMatches) {
+        throw "The distribution identity does not match the resolved annotated release."
+    }
+
+    $component = $manifest.components.PSObject.Properties["deployment-tooling"]
+    if ($null -eq $component -or "$($component.Value.kind)" -ne "DeploymentTooling") {
+        throw "The distribution has no declared deployment-tooling component."
+    }
+    $root = Join-Path $ReleaseDirectory "deployment-tooling"
+    $expected = @{}
+    foreach ($file in $component.Value.integrity.files.PSObject.Properties) {
+        if ($file.Name -match '(^/)|(\\)|(:)|(^\.\.)|(/\.\./)|(/\.\.$)') {
+            throw "The deployment-tooling manifest contains an unsafe path."
+        }
+        $expected[$file.Name] = "$($file.Value)"
+        $path = Join-Path $root ($file.Name -replace '/', '\')
+        if (-not (Test-Path -LiteralPath $path -PathType Leaf) -or
+            (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expected[$file.Name]) {
+            throw "The deployment-tooling component failed SHA-256 verification."
+        }
+    }
+    foreach ($actual in (Get-ChildItem -LiteralPath $root -Recurse -File -Force)) {
+        $relative = $actual.FullName.Substring($root.Length).TrimStart('\') -replace '\\', '/'
+        if (-not $expected.ContainsKey($relative)) {
+            throw "The deployment-tooling component contains an undeclared file."
+        }
+    }
+
+    $installer = Join-Path $root "Install-ITAdmin.ps1"
+    if (-not $expected.ContainsKey("Install-ITAdmin.ps1") -or -not (Test-Path -LiteralPath $installer)) {
+        throw "The verified deployment-tooling component has no installer."
+    }
+    Write-Ok "Release-matched deployment tooling verified"
+    return $installer
 }
 
 # --------------------------------------------------------------------------------------------
@@ -762,21 +841,23 @@ try {
 
     Save-HostAgentSettings -Repository $machineRepository -KeyDirectory $keyDirectory
 
-    Write-Step "Persisting deployment tooling for this release"
-    $installerPath = Install-DeploymentTooling -Repository $machineRepository -TagName $release.TagName -SshCommand $sshCommand
-
-    if ($PrerequisitesOnly.IsPresent) {
-        Write-Step "Handing off to the installer (prerequisites only)"
-        & $installerPath -PrerequisitesOnly -ProvisionPrerequisites `
-            -ProgramFilesRoot $ProgramFilesRoot -ProgramDataRoot $ProgramDataRoot `
-            -SiteName $SiteName -AppPoolName $AppPoolName
-        exit $LASTEXITCODE
-    }
-
     Write-Step "Acquiring the prebuilt Windows payload"
     $releaseDirectory = Get-ReleasePayload -Repository $machineRepository -VersionText $release.VersionText -SshCommand $sshCommand
 
     try {
+        $installerPath = Get-VerifiedReleaseInstaller -ReleaseDirectory $releaseDirectory `
+            -VersionText $release.VersionText -SourceCommit $release.SourceCommit
+
+        if ($PrerequisitesOnly.IsPresent) {
+            Write-Step "Handing off to the installer (prerequisites only)"
+            & $installerPath -PrerequisitesOnly -ProvisionPrerequisites `
+                -ReleaseDirectory $releaseDirectory -ExpectedVersion $release.VersionText `
+                -ExpectedSourceCommit $release.SourceCommit `
+                -ProgramFilesRoot $ProgramFilesRoot -ProgramDataRoot $ProgramDataRoot `
+                -SiteName $SiteName -AppPoolName $AppPoolName
+            exit $LASTEXITCODE
+        }
+
         Write-Step "Handing off to the installer"
         Write-Detail "Installer: $installerPath"
 

@@ -1,6 +1,6 @@
 # ITAdmin — first installation
 
-The exact steps to install ITAdmin on a clean Windows Server.
+The exact steps to install ITAdmin on a clean Windows Server 2022 or Windows Server 2025.
 
 After the one-time preparation below, **there is no manual file transfer anywhere in installation.**
 No release ZIP, no installer script, no Hosting Bundle download, no checksum to type, no certificate,
@@ -31,43 +31,20 @@ git --version; ssh -V
 ### 2. Create a dedicated deploy key
 
 ```powershell
-ssh-keygen -t ed25519 -f "$env:USERPROFILE\.ssh\itadmin_deploy" -C "itadmin-$env:COMPUTERNAME" -N '""'
+$keyDirectory = "C:\ProgramData\ITAdmin\keys"
+New-Item -ItemType Directory -Path $keyDirectory -Force | Out-Null
+icacls $keyDirectory /inheritance:r | Out-Null
+icacls $keyDirectory /grant:r "SYSTEM:(OI)(CI)F" "Administrators:(OI)(CI)F" | Out-Null
+ssh-keygen -t ed25519 -f "$keyDirectory\deploy_key" -C "itadmin-$env:COMPUTERNAME" -N '""'
 ```
 
-### 3. Add an ITAdmin-specific SSH alias for that key
+Bu komut hedef klasör yoksa oluşturur ve anahtar üretilmeden önce erişimi yalnız `SYSTEM` ile
+`Administrators` grubuyla sınırlar.
 
-**This step is not optional, and it is the one most easily missed.** A key at a non-default path is
-invisible to `git clone`: OpenSSH tries its default identity names and whatever an agent is
-offering. Without this entry the clone either fails, or — worse — succeeds using some other
-credential that the server will not have afterwards.
+### 3. Register the public key as a read-only Deploy Key
 
 ```powershell
-$ssh = "$env:USERPROFILE\.ssh"
-New-Item -ItemType Directory -Path $ssh -Force | Out-Null
-@"
-Host github-itadmin
-    HostName github.com
-    User git
-    IdentityFile $ssh\itadmin_deploy
-    IdentitiesOnly yes
-"@ | Add-Content -Path "$ssh\config" -Encoding ascii
-```
-
-> **Why an alias and not `Host github.com`.** Matching on the real host name would route *every*
-> GitHub SSH operation this administrator ever performs — their own repositories included — through
-> a read-only deploy key scoped to one repository. On a dedicated server that is merely untidy; on a
-> jump box it silently breaks unrelated work in a way that is genuinely annoying to diagnose. The
-> alias confines the key to ITAdmin's clone, and `git@github.com:...` keeps behaving exactly as it
-> did before.
->
-> Change `HostName github.com` if the repository is hosted elsewhere; keep the alias name as-is —
-> the bootstrap resolves it. `IdentitiesOnly yes` is what guarantees the deploy key, and only the
-> deploy key, is offered.
-
-### 4. Register the public key as a read-only Deploy Key
-
-```powershell
-Get-Content "$env:USERPROFILE\.ssh\itadmin_deploy.pub"
+Get-Content "C:\ProgramData\ITAdmin\keys\deploy_key.pub"
 ```
 
 Paste that into the ITAdmin repository → **Settings → Deploy keys → Add deploy key**.
@@ -75,30 +52,47 @@ Title it after the server. **Leave "Allow write access" unchecked.**
 
 One deploy key per installation. The server never needs write access.
 
-### 5. Verify and record the host key — deliberately
+### 4. Verify and record the host key — deliberately
 
 This is the one moment where accepting whatever answers is genuinely dangerous, and the only moment
 a human can meaningfully verify. Do not use `StrictHostKeyChecking=accept-new`.
 
-Show the fingerprints the host is currently presenting:
+Birçok sunucu ağı dışarı doğru 22 numaralı portu engeller. GitHub'ın resmi SSH-over-HTTPS
+endpoint'i olan `ssh.github.com:443` kullanılır. Önce erişimi doğrulayın:
 
 ```powershell
-ssh-keyscan -t rsa,ecdsa,ed25519 github.com 2>$null | ssh-keygen -lf -
+Test-NetConnection ssh.github.com -Port 443
 ```
 
-**Compare the output against the fingerprints your Git host publishes** (for GitHub: *Authentication
-→ Connecting with SSH → GitHub's SSH key fingerprints* in their documentation). Only if they match,
-record them:
+`TcpTestSucceeded` değeri `True` olmalıdır. Ardından sunucunun sunduğu anahtarı geçici dosyaya
+alıp fingerprint'i görüntüleyin:
 
 ```powershell
-ssh-keyscan -t rsa,ecdsa,ed25519 github.com 2>$null |
-    Add-Content -Path "$env:USERPROFILE\.ssh\known_hosts" -Encoding ascii
+$sshDirectory = "$env:USERPROFILE\.ssh"
+$scannedKeys = "$env:TEMP\github-ssh-443.keys"
+New-Item -ItemType Directory -Path $sshDirectory -Force | Out-Null
+ssh-keyscan -p 443 -t ed25519 ssh.github.com 2>$null |
+    Set-Content -Path $scannedKeys -Encoding ascii
+if (-not (Test-Path $scannedKeys) -or (Get-Item $scannedKeys).Length -eq 0) {
+    throw "ssh.github.com:443 adresinden host key alınamadı."
+}
+ssh-keygen -lf $scannedKeys
 ```
 
-Confirm the whole chain works and that the repository accepts the key:
+Çıktıdaki ED25519 fingerprint'i GitHub'ın yayımladığı
+`SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU` değeriyle karşılaştırın. Eşleşiyorsa kaydedin:
 
 ```powershell
-ssh -T git@github.com
+Get-Content $scannedKeys |
+    Add-Content -Path "$sshDirectory\known_hosts" -Encoding ascii
+Remove-Item $scannedKeys
+```
+
+Deploy key ve repository erişimini doğrulayın:
+
+```powershell
+$deployKey = "C:\ProgramData\ITAdmin\keys\deploy_key"
+ssh -i $deployKey -o IdentitiesOnly=yes -p 443 -T git@ssh.github.com
 ```
 
 A message naming your repository (and refusing a shell) is success.
@@ -111,10 +105,11 @@ A message naming your repository (and refusing a shell) is success.
 
 ## Part 2 — Install
 
-Two commands, then one.
+Clone sırasında yalnız ITAdmin deploy key'inin kullanılmasını sağlamak için anahtar Git komutunda
+açıkça belirtilir:
 
 ```powershell
-git clone git@github-itadmin:<owner>/<repo>.git C:\ITAdmin-bootstrap
+git -c core.sshCommand='ssh -i "C:/ProgramData/ITAdmin/keys/deploy_key" -o IdentitiesOnly=yes' clone ssh://git@ssh.github.com:443/meteciftci/ITAdmin.git C:\ITAdmin-bootstrap
 ```
 
 ```powershell
@@ -125,10 +120,8 @@ cd C:\ITAdmin-bootstrap
 .\scripts\install\Bootstrap-ITAdmin.ps1
 ```
 
-> Note the **`github-itadmin`** alias from step 3 in place of `github.com`. The bootstrap reads the
-> remote back out of this clone, resolves the alias to the real host (via `ssh -G`), and persists
-> *that* for the machine — so the Host Agent never depends on your profile's SSH config. Nothing is
-> hard-coded, and forks or mirrors work unchanged.
+> `core.sshCommand` yalnız bu clone komutuna uygulanır. Sunucudaki diğer GitHub işlemlerini
+> etkilemeden `C:\ProgramData\ITAdmin\keys\deploy_key` anahtarının kullanılmasını garanti eder.
 
 ### What that one command does
 
@@ -138,10 +131,10 @@ cd C:\ITAdmin-bootstrap
 | 2 | Discovers the repository from the clone's own `origin` |
 | 3 | Verifies repository access with the deploy key |
 | 4 | Resolves the latest **annotated stable** release tag and its peeled commit |
-| 5 | Resolves the SSH alias to the real host; copies the deploy key **and your verified host key** into `%ProgramData%\ITAdmin\keys` (SYSTEM + Administrators only) |
+| 5 | Copies the deploy key **and your verified host key** into `%ProgramData%\ITAdmin\keys` (SYSTEM + Administrators only) |
 | 6 | Writes the Host Agent configuration |
-| 7 | Fetches that release's deployment tooling from the **release tag** |
-| 8 | Fetches the distribution (`refs/itadmin/dist/<version>`) at depth 1 |
+| 7 | Fetches the distribution (`refs/itadmin/dist/<version>`) at depth 1 |
+| 8 | Verifies the release-matched installer inside the distribution before executing it |
 | 9 | Verifies source identity, distribution identity, closed component set, every component's digests, and every prerequisite chunk |
 | 10 | Provisions IIS features, determines HTTP binding ownership, and installs the Hosting Bundle **from inside that distribution** |
 | 11 | Prompts for the database, the directory, and the first administrator |
@@ -149,7 +142,7 @@ cd C:\ITAdmin-bootstrap
 | 13 | Stages the release, applies migrations, establishes the Primary Directory and the initial administrator |
 | 14 | Creates the HTTP binding and activates |
 | 15 | Confirms readiness: serving, setup complete, directory usable, administrator bootstrapped |
-| 16 | Installs and starts the Host Agent, prints the operator summary |
+| 16 | Installs the versioned Host Agent, registers the Update Coordinator, and prints the operator summary |
 
 ### The prompts
 
@@ -174,7 +167,7 @@ administrator's own password.
 .\scripts\install\Bootstrap-ITAdmin.ps1 -WhatIfPreflightOnly   # validate, change nothing
 .\scripts\install\Bootstrap-ITAdmin.ps1 -PrerequisitesOnly     # IIS + Hosting Bundle, then stop
 .\scripts\install\Bootstrap-ITAdmin.ps1 -Version 2.1.0         # pin a release
-.\scripts\install\Bootstrap-ITAdmin.ps1 -DeployKeyPath C:\Keys\itadmin_deploy
+.\scripts\install\Bootstrap-ITAdmin.ps1 -DeployKeyPath C:\ProgramData\ITAdmin\keys\deploy_key
 ```
 
 ---
@@ -269,8 +262,7 @@ Artifact signing beyond repository trust remains a possible later enhancement.
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| `git clone` asks for a password | SSH is not using the deploy key | Step 3 was skipped, or you cloned `git@github.com:` instead of `git@github-itadmin:` |
-| Bootstrap: "no HostName could be resolved for `github-itadmin`" | Step 3 was skipped | Add the alias entry, then re-run |
+| `git clone` asks for a password | SSH is not using the deploy key | Part 2'deki `git -c core.sshCommand=... clone` komutunu eksiksiz çalıştırın |
 | Bootstrap: "HTTP binding conflict on port 80" | Another site owns the port | See *Port 80* below |
 | `Permission denied (publickey)` | Key not registered, or wrong key offered | Re-check the Deploy Key entry; confirm `IdentitiesOnly yes` |
 | `Host key verification failed` | Step 5 was skipped | Complete the verification and record the entry |
@@ -308,8 +300,9 @@ git ls-remote git@github-itadmin:<owner>/<repo>.git "refs/itadmin/dist/*"
 git init C:\Temp\dist-probe; cd C:\Temp\dist-probe; git remote add origin git@github-itadmin:<owner>/<repo>.git; git fetch --depth 1 origin refs/itadmin/dist/<version>; git checkout FETCH_HEAD; dir; git rev-list --count HEAD
 ```
 
-The last command should leave you with `release.manifest.json`, `app\`, `hostagent\`, and
-`prerequisites\`, and exactly one commit in `git rev-list --count HEAD`.
+The last command should leave you with `release.manifest.json`, `app\`, `hostagent\`,
+`deployment-tooling\`, `update-coordinator\`, and `prerequisites\`, and exactly one commit in
+`git rev-list --count HEAD`.
 
 ### If the Git host rejects the custom namespace
 

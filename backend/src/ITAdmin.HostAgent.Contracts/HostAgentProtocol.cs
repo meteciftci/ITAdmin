@@ -300,6 +300,9 @@ public sealed record HostAgentResponse
     [JsonPropertyName("availableReleases")]
     public IReadOnlyList<HostAgentAvailableRelease>? AvailableReleases { get; init; }
 
+    [JsonPropertyName("repositoryStatus")]
+    public HostAgentRepositoryStatus RepositoryStatus { get; init; } = HostAgentRepositoryStatus.Unknown;
+
     public string ToJson() => JsonSerializer.Serialize(this, HostAgentProtocol.Json);
 
     public static HostAgentResponse? FromJson(string? json)
@@ -332,6 +335,17 @@ public sealed record HostAgentResponse
         new() { Status = HostAgentResponseStatus.Failed, Message = message, CorrelationId = correlationId };
 }
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum HostAgentRepositoryStatus
+{
+    Unknown = 0,
+    Verified = 1,
+    DeployKeyMissing = 2,
+    RepositoryRejected = 3,
+    HostUnreachable = 4,
+    HostKeyProblem = 5,
+}
+
 public sealed record HostAgentInstallationStatus
 {
     [JsonPropertyName("phase")]
@@ -362,10 +376,14 @@ public enum HostAgentUpdatePhase
     Activating = 6,
     Completed = 7,
     Failed = 8,
+    RequiresOperatorReview = 9,
 }
 
 public sealed record HostAgentUpdateStatus
 {
+    [JsonPropertyName("operationId")]
+    public string? OperationId { get; init; }
+
     [JsonPropertyName("phase")]
     public HostAgentUpdatePhase Phase { get; init; }
 
@@ -394,6 +412,12 @@ public sealed record HostAgentAvailableRelease
 
     [JsonPropertyName("sourceCommit")]
     public string SourceCommit { get; init; } = string.Empty;
+
+    [JsonPropertyName("publishedAtUtc")]
+    public DateTimeOffset? PublishedAtUtc { get; init; }
+
+    [JsonPropertyName("description")]
+    public string? Description { get; init; }
 
     [JsonPropertyName("isInstalled")]
     public bool IsInstalled { get; init; }

@@ -45,6 +45,16 @@ public sealed class ReleaseManifestTests
                 Kind = DistributionComponentKind.HostAgent,
                 Integrity = SampleIntegrity("ITAdmin.HostAgent.dll"),
             },
+            [DeploymentLayout.DeploymentToolingDirectoryName] = new()
+            {
+                Kind = DistributionComponentKind.DeploymentTooling,
+                Integrity = SampleIntegrity("Install-ITAdmin.ps1"),
+            },
+            [DeploymentLayout.UpdateCoordinatorDirectoryName] = new()
+            {
+                Kind = DistributionComponentKind.UpdateCoordinator,
+                Integrity = SampleIntegrity("ITAdmin.UpdateCoordinator.exe"),
+            },
         },
     };
 
@@ -228,7 +238,7 @@ public sealed class ReleaseManifestTests
         Assert.Equal("2.1.0", restored!.Source.Version);
         Assert.Equal("v2.1.0", restored.Source.Tag);
         Assert.Equal(Commit, restored.Distribution.SourceCommit);
-        Assert.Equal(3, restored.Components.Count);
+        Assert.Equal(5, restored.Components.Count);
         Assert.Equal(DistributionComponentKind.HostAgent, restored.HostAgentComponent!.Kind);
         Assert.Equal(2, Assert.Single(restored.Prerequisites).ChunkCount);
         Assert.True(restored.Validate().IsValid);

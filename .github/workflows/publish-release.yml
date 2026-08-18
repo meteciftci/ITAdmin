@@ -67,9 +67,11 @@ jobs:
           esac
 
           commit="$(git rev-parse "refs/tags/${tag}^{commit}")"
+          description="$(git tag -l --format='%(contents:subject)' "${tag}" | head -n 1 | cut -c1-500)"
           echo "version=${version}" >> "$GITHUB_OUTPUT"
           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
           echo "commit=${commit}" >> "$GITHUB_OUTPUT"
+          echo "description=${description}" >> "$GITHUB_OUTPUT"
           echo "ref=refs/itadmin/dist/${version}" >> "$GITHUB_OUTPUT"
 
       - name: Check out the tagged commit
@@ -88,6 +90,18 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
+      - name: Validate release source
+        shell: bash
+        run: |
+          dotnet restore backend/ITAdmin.slnx
+          dotnet test backend/ITAdmin.slnx -c Release --no-restore
+          vulnerability_output="$(dotnet list backend/ITAdmin.slnx package --vulnerable --include-transitive)"
+          printf '%s\n' "$vulnerability_output"
+          if printf '%s\n' "$vulnerability_output" | grep -Eiq 'high|critical|yüksek|kritik'; then
+            echo "::error::High or critical NuGet vulnerability detected."
+            exit 1
+          fi
+
       - name: Publish backend
         shell: bash
         run: |
@@ -103,11 +117,25 @@ jobs:
           dotnet publish backend/src/ITAdmin.HostAgent/ITAdmin.HostAgent.csproj \
             -c Release -r win-x64 --self-contained false -o artifacts/hostagent
 
+      - name: Publish Update Coordinator
+        shell: bash
+        run: |
+          dotnet publish backend/src/ITAdmin.UpdateCoordinator/ITAdmin.UpdateCoordinator.csproj \
+            -c Release -r win-x64 --self-contained false -o artifacts/update-coordinator
+
+      - name: Stage release-matched deployment tooling
+        shell: bash
+        run: |
+          mkdir -p artifacts/deployment-tooling
+          cp scripts/install/Install-ITAdmin.ps1 artifacts/deployment-tooling/
+
       - name: Build frontend
         shell: bash
         working-directory: frontend
         run: |
           npm ci
+          npm run lint
+          npm run test:unit
           npm run build
 
       - name: Embed frontend
@@ -162,10 +190,13 @@ jobs:
             --publish artifacts/publish \
             --output artifacts/dist \
             --host-agent artifacts/hostagent \
+            --deployment-tooling artifacts/deployment-tooling \
+            --update-coordinator artifacts/update-coordinator \
             --prerequisite "${prerequisite_name}|${prerequisite_version}|${prerequisite_path}|${prerequisite_url}|${prerequisite_alg}|${prerequisite_hash}|${prerequisite_hash_src}" \
             --version "${{ steps.identity.outputs.version }}" \
             --tag "${{ steps.identity.outputs.tag }}" \
             --commit "${{ steps.identity.outputs.commit }}" \
+            --description "${{ steps.identity.outputs.description }}" \
             --latest-migration "${latest}" \
             --migration-count "${count}"
 

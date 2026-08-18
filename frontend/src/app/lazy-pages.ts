@@ -30,6 +30,11 @@ export const SettingsRedirectPage = lazy(() =>
     default: module.SettingsRedirectPage,
   })),
 );
+export const SystemUpdatesPage = lazy(() =>
+  import("@/features/system-updates/SystemUpdatesPage").then((module) => ({
+    default: module.SystemUpdatesPage,
+  })),
+);
 export const ApplicationSettingsPage = lazy(() =>
   import("@/features/settings/ApplicationSettingsPage").then((module) => ({
     default: module.ApplicationSettingsPage,

@@ -278,8 +278,19 @@ public sealed class PrerequisiteIntegrityTests : IDisposable
             BuildTimestampUtc: DateTimeOffset.UnixEpoch,
             LatestMigration: "20240101000000_Initial",
             MigrationCount: 1,
+            HostAgentPublishDirectory: StageCoreComponent("hostagent", "ITAdmin.HostAgent.dll"),
+            DeploymentToolingDirectory: StageCoreComponent("deployment-tooling", "Install-ITAdmin.ps1"),
+            UpdateCoordinatorPublishDirectory: StageCoreComponent("update-coordinator", "ITAdmin.UpdateCoordinator.exe"),
             Prerequisites: prerequisite is null ? null : [prerequisite],
             SourceTag: "v2.1.0");
+
+    private string StageCoreComponent(string directoryName, string requiredFile)
+    {
+        var directory = Path.Combine(_root, directoryName);
+        Directory.CreateDirectory(directory);
+        File.WriteAllText(Path.Combine(directory, requiredFile), directoryName);
+        return directory;
+    }
 
     [Fact]
     public void Staging_RefusesAPrerequisiteWithNoUpstreamEvidence()

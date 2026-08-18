@@ -30,8 +30,11 @@ public static class ReleasePacker
         string? LatestMigration,
         int MigrationCount,
         string? HostAgentPublishDirectory = null,
+        string? DeploymentToolingDirectory = null,
+        string? UpdateCoordinatorPublishDirectory = null,
         IReadOnlyList<PrerequisiteSource>? Prerequisites = null,
-        string? SourceTag = null);
+        string? SourceTag = null,
+        string? ReleaseDescription = null);
 
     /// <summary>
     /// A prerequisite file the publisher has already obtained AND verified against the vendor's
@@ -100,6 +103,14 @@ public static class ReleasePacker
             throw new DirectoryNotFoundException($"Publish directory not found: {request.PublishDirectory}");
         }
 
+        if (string.IsNullOrWhiteSpace(request.HostAgentPublishDirectory)
+            || string.IsNullOrWhiteSpace(request.DeploymentToolingDirectory)
+            || string.IsNullOrWhiteSpace(request.UpdateCoordinatorPublishDirectory))
+        {
+            throw new InvalidOperationException(
+                "A release must include Host Agent, deployment tooling, and Update Coordinator components.");
+        }
+
         if (Directory.Exists(stagingRoot))
         {
             Directory.Delete(stagingRoot, recursive: true);
@@ -122,24 +133,37 @@ public static class ReleasePacker
         // --- Host Agent ----------------------------------------------------------------------
         // Staged beside the payload, never inside it: app/ becomes the IIS physicalPath, and the
         // whole point of the agent is that the web application cannot reach it.
-        if (!string.IsNullOrWhiteSpace(request.HostAgentPublishDirectory))
+        if (!Directory.Exists(request.HostAgentPublishDirectory))
         {
-            if (!Directory.Exists(request.HostAgentPublishDirectory))
-            {
-                throw new DirectoryNotFoundException(
-                    $"Host Agent publish directory not found: {request.HostAgentPublishDirectory}");
-            }
-
-            var hostAgentRoot = Path.Combine(stagingRoot, DeploymentLayout.HostAgentDirectoryName);
-            CopyDirectory(request.HostAgentPublishDirectory, hostAgentRoot);
-            AssertHostAgentIsComplete(hostAgentRoot);
-
-            components[DeploymentLayout.HostAgentDirectoryName] = new DistributionComponent
-            {
-                Kind = DistributionComponentKind.HostAgent,
-                Integrity = ReleaseIntegrity.Create(hostAgentRoot),
-            };
+            throw new DirectoryNotFoundException(
+                $"Host Agent publish directory not found: {request.HostAgentPublishDirectory}");
         }
+
+        var hostAgentRoot = Path.Combine(stagingRoot, DeploymentLayout.HostAgentDirectoryName);
+        CopyDirectory(request.HostAgentPublishDirectory, hostAgentRoot);
+        AssertHostAgentIsComplete(hostAgentRoot);
+
+        components[DeploymentLayout.HostAgentDirectoryName] = new DistributionComponent
+        {
+            Kind = DistributionComponentKind.HostAgent,
+            Integrity = ReleaseIntegrity.Create(hostAgentRoot),
+        };
+
+        AddDirectoryComponent(
+            request.DeploymentToolingDirectory,
+            stagingRoot,
+            DeploymentLayout.DeploymentToolingDirectoryName,
+            DistributionComponentKind.DeploymentTooling,
+            requiredFile: "Install-ITAdmin.ps1",
+            components);
+
+        AddDirectoryComponent(
+            request.UpdateCoordinatorPublishDirectory,
+            stagingRoot,
+            DeploymentLayout.UpdateCoordinatorDirectoryName,
+            DistributionComponentKind.UpdateCoordinator,
+            requiredFile: "ITAdmin.UpdateCoordinator.exe",
+            components);
 
         // --- Runtime prerequisites ------------------------------------------------------------
         var prerequisites = new List<PrerequisitePayload>();
@@ -207,6 +231,7 @@ public static class ReleasePacker
                 SourceCommit = request.SourceCommit,
                 BuiltAtUtc = request.BuildTimestampUtc,
                 Ref = GitReleaseRefs.DistributionRef(request.Version),
+                Summary = request.ReleaseDescription?.Trim() ?? string.Empty,
             },
             Migrations = new ReleaseMigrationInfo
             {
@@ -272,6 +297,39 @@ public static class ReleasePacker
             throw new InvalidOperationException(
                 "Host Agent component is incomplete: ITAdmin.HostAgent executable not found.");
         }
+    }
+
+    private static void AddDirectoryComponent(
+        string? source,
+        string stagingRoot,
+        string componentPath,
+        DistributionComponentKind kind,
+        string requiredFile,
+        IDictionary<string, DistributionComponent> components)
+    {
+        if (string.IsNullOrWhiteSpace(source))
+        {
+            return;
+        }
+
+        if (!Directory.Exists(source))
+        {
+            throw new DirectoryNotFoundException($"Component directory not found: {source}");
+        }
+
+        var destination = Path.Combine(stagingRoot, componentPath);
+        CopyDirectory(source, destination);
+        if (!File.Exists(Path.Combine(destination, requiredFile)))
+        {
+            throw new InvalidOperationException(
+                $"Component '{componentPath}' is incomplete: {requiredFile} was not found.");
+        }
+
+        components[componentPath] = new DistributionComponent
+        {
+            Kind = kind,
+            Integrity = ReleaseIntegrity.Create(destination),
+        };
     }
 
     /// <summary>

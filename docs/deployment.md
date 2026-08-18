@@ -23,12 +23,14 @@ refs/itadmin/dist/2.1.0              │      resolve → fetch → verify
   ONE distribution:           ───────┘             │
     release.manifest.json                          ▼
     app/          (payload)                 Install-ITAdmin.ps1
-    hostagent/    (privileged service)      prerequisites → stage → configure
-    prerequisites/ (chunked Hosting Bundle) → migrate → directory → activate
+    deployment-tooling/ (installer)         prerequisites → stage → configure
+    hostagent/    (privileged service)      → migrate → directory → activate
+    update-coordinator/ (handoff service)
+    prerequisites/ (chunked Hosting Bundle)
                                                      │
                                             ┌────────┴────────┐
                                             ▼                 ▼
-                                    IIS (app pool,      ITAdmin Host Agent
+                                    IIS (app pool,      Host Agent + Coordinator
                                      unprivileged)      (LocalSystem, named pipe)
 ```
 
@@ -688,8 +690,9 @@ ITAdmin Host Agent
 the activation sequence cannot land in one path and be forgotten in the other. The agent constructs
 every argument from values it derived; nothing from the pipe reaches that command line.
 
-`updatesEnabled` defaults to **false** so a freshly installed host cannot be talked into replacing
-its own release before an administrator deliberately turns it on.
+`updatesEnabled` becomes **true** only after bootstrap proves repository access with the
+machine-owned Deploy Key and verified host trust. Web requests still require
+`System.Updates.Manage`, and the agent independently resolves the latest stable release.
 
 ### Durable operation state
 
@@ -707,7 +710,9 @@ classifies by how far it got:
 | Staging | `RetryFromStart` | Release dir may be half-written, live site untouched; can be requested again |
 | Migrating / Activating | `RequiresOperatorReview` | Schema or live site may be partially changed — **never** resumed automatically, and further update requests are refused until an administrator clears it |
 
-The polished Updates UI is **not** built in this pass.
+The Updates UI is available at **Settings → Updates**. It returns only sanitized repository/agent
+state, requires confirmation of a current database backup, and offers only the latest stable
+release newer than the installed version.
 
 ---
 
@@ -718,8 +723,8 @@ The polished Updates UI is **not** built in this pass.
   releases\<version>\
     release.manifest.json
     app\                             IIS physicalPath target
-  tooling\install\                   deployment tooling from the release tag
-  hostagent\                         privileged service binaries (denied to the app pool)
+  tooling\install\                   bootstrap tooling from the installed release
+  hostagent\releases\<version>\       versioned privileged service binaries
 
 %ProgramData%\ITAdmin\               machine state, survives every release change
   config\environment.json            non-secret coordinates
@@ -731,6 +736,10 @@ The polished Updates UI is **not** built in this pass.
   prerequisites\                     Hosting Bundle etc.
   logs\  backups\
 ```
+
+Each distribution also carries `deployment-tooling/` and `update-coordinator/` as closed,
+digest-verified components. The demand-start LocalSystem `ITAdminUpdateCoordinator` service applies
+the target release's own installer and then moves the Host Agent service to the target version.
 
 Replacing a release cannot touch configuration; resetting configuration cannot corrupt a release.
 

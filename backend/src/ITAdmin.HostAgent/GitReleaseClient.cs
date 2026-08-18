@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using ITAdmin.Deployment;
+using ITAdmin.HostAgent.Contracts;
 
 namespace ITAdmin.HostAgent;
 
@@ -78,6 +79,43 @@ public sealed class GitReleaseClient(HostAgentSettings settings, string gitExecu
     }
 
     /// <summary>
+    /// Reads only the manifest blob for a distribution. Partial-clone filtering keeps application
+    /// binaries and prerequisite chunks out of a routine update check.
+    /// </summary>
+    public async Task<ReleaseManifest> FetchManifestAsync(
+        ReleaseVersion version,
+        CancellationToken cancellationToken)
+    {
+        var scratch = Path.Combine(Path.GetTempPath(), "itadmin-manifest-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(scratch);
+        try
+        {
+            await RunGitOrThrowAsync(["init", "--quiet"], scratch, cancellationToken);
+            await RunGitOrThrowAsync(["remote", "add", "origin", settings.RepositoryUrl], scratch, cancellationToken);
+            await RunGitOrThrowAsync(["config", "remote.origin.promisor", "true"], scratch, cancellationToken);
+            await RunGitOrThrowAsync(["config", "remote.origin.partialclonefilter", "blob:none"], scratch, cancellationToken);
+            await RunGitOrThrowAsync(
+                ["fetch", "--quiet", "--depth", "1", "--filter=blob:none", "--no-tags", "origin", GitReleaseRefs.DistributionRef(version)],
+                scratch,
+                cancellationToken);
+            var result = await RunGitAsync(
+                ["show", $"FETCH_HEAD:{ReleaseManifest.FileName}"],
+                scratch,
+                cancellationToken);
+            var manifest = result.ExitCode == 0 ? ReleaseManifest.FromJson(result.StandardOutput) : null;
+            if (manifest is null || !manifest.Validate().IsValid)
+            {
+                throw new InvalidOperationException("The release metadata manifest is invalid.");
+            }
+            return manifest;
+        }
+        finally
+        {
+            try { Directory.Delete(scratch, recursive: true); } catch { }
+        }
+    }
+
+    /// <summary>
     /// Diagnoses repository access without fetching anything, so a broken deploy key is reported as
     /// a key problem rather than surfacing later as a mysterious update failure.
     /// </summary>
@@ -87,8 +125,9 @@ public sealed class GitReleaseClient(HostAgentSettings settings, string gitExecu
         {
             return new RepositoryAccessDiagnosis(
                 false,
-                $"The deploy key is missing at {settings.DeployKeyPath}. Re-run the ITAdmin bootstrap "
-                + "to reinstate repository access.");
+                HostAgentRepositoryStatus.DeployKeyMissing,
+                "The machine deploy key is missing. Re-run the ITAdmin bootstrap to reinstate "
+                + "repository access.");
         }
 
         if (!File.Exists(settings.KnownHostsPath))
@@ -98,8 +137,9 @@ public sealed class GitReleaseClient(HostAgentSettings settings, string gitExecu
             // own fault rather than surfacing later as an opaque transport error.
             return new RepositoryAccessDiagnosis(
                 false,
-                $"The machine known-hosts file is missing at {settings.KnownHostsPath}. Re-run the "
-                + "ITAdmin bootstrap so the verified repository host key is persisted for the service.");
+                HostAgentRepositoryStatus.HostKeyProblem,
+                "The machine known-hosts file is missing. Re-run the ITAdmin bootstrap so the "
+                + "verified repository host key is persisted for the service.");
         }
 
         var result = await RunGitAsync(
@@ -108,8 +148,8 @@ public sealed class GitReleaseClient(HostAgentSettings settings, string gitExecu
             cancellationToken);
 
         return result.ExitCode == 0
-            ? new RepositoryAccessDiagnosis(true, "Repository access verified.")
-            : new RepositoryAccessDiagnosis(false, DescribeRemoteFailure(result));
+            ? new RepositoryAccessDiagnosis(true, HostAgentRepositoryStatus.Verified, "Repository access verified.")
+            : new RepositoryAccessDiagnosis(false, ClassifyRemoteFailure(result), DescribeRemoteFailure(result));
     }
 
     /// <summary>
@@ -142,6 +182,21 @@ public sealed class GitReleaseClient(HostAgentSettings settings, string gitExecu
         }
 
         return $"Repository access failed (git exit {result.ExitCode}).";
+    }
+
+    private static HostAgentRepositoryStatus ClassifyRemoteFailure(ProcessResult result)
+    {
+        var stderr = result.StandardError;
+        if (stderr.Contains("Permission denied", StringComparison.OrdinalIgnoreCase)
+            || stderr.Contains("publickey", StringComparison.OrdinalIgnoreCase))
+            return HostAgentRepositoryStatus.RepositoryRejected;
+        if (stderr.Contains("Host key verification failed", StringComparison.OrdinalIgnoreCase))
+            return HostAgentRepositoryStatus.HostKeyProblem;
+        if (stderr.Contains("Could not resolve hostname", StringComparison.OrdinalIgnoreCase)
+            || stderr.Contains("Connection timed out", StringComparison.OrdinalIgnoreCase)
+            || stderr.Contains("Network is unreachable", StringComparison.OrdinalIgnoreCase))
+            return HostAgentRepositoryStatus.HostUnreachable;
+        return HostAgentRepositoryStatus.Unknown;
     }
 
     private async Task RunGitOrThrowAsync(
@@ -217,4 +272,7 @@ public sealed class GitReleaseClient(HostAgentSettings settings, string gitExecu
     private sealed record ProcessResult(int ExitCode, string StandardOutput, string StandardError);
 }
 
-public sealed record RepositoryAccessDiagnosis(bool IsAccessible, string Message);
+public sealed record RepositoryAccessDiagnosis(
+    bool IsAccessible,
+    HostAgentRepositoryStatus Status,
+    string Message);

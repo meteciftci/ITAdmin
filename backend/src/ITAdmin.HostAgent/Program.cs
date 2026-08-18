@@ -55,15 +55,12 @@ builder.Services.AddSingleton(new HostAgentAuthorization(settings.AppPoolName));
 builder.Services.AddSingleton(serviceProvider => new GitReleaseClient(
     serviceProvider.GetRequiredService<HostAgentSettings>()));
 
+#pragma warning disable CA1416 // Reached only after the Windows guard above.
 builder.Services.AddSingleton<IReleaseUpdateExecutor>(serviceProvider =>
     new InstallerReleaseUpdateExecutor(
         serviceProvider.GetRequiredService<HostAgentSettings>(),
-        Path.Combine(
-            serviceProvider.GetRequiredService<HostAgentSettings>().ProgramFilesRoot,
-            "tooling",
-            "install",
-            "Install-ITAdmin.ps1"),
         serviceProvider.GetRequiredService<ILogger<InstallerReleaseUpdateExecutor>>()));
+#pragma warning restore CA1416
 
 builder.Services.AddSingleton<IWebBindingReconciler, IisWebBindingReconciler>();
 builder.Services.AddSingleton<IHostAgentOperations, DeploymentHostAgentOperations>();

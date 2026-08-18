@@ -10,6 +10,7 @@ import {
   NotificationSettingsTemplatesPage,
   NotificationTemplateFormPage,
   SettingsRedirectPage,
+  SystemUpdatesPage,
 } from "@/app/lazy-pages";
 import { LazyRoute } from "@/app/route-helpers";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -29,6 +30,7 @@ export const settingsRoutes: RouteObject[] = [
             PermissionCodes.NotificationProviders.View,
             PermissionCodes.NotificationTemplates.View,
             PermissionCodes.AdManagement.Settings.View,
+            PermissionCodes.SystemUpdates.View,
           ]}
         >
           <AppLayout>
@@ -37,6 +39,20 @@ export const settingsRoutes: RouteObject[] = [
             </LazyRoute>
           </AppLayout>
         </RequireAnyPermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/settings/updates",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission={PermissionCodes.SystemUpdates.View}>
+          <AppLayout>
+            <LazyRoute>
+              <SystemUpdatesPage />
+            </LazyRoute>
+          </AppLayout>
+        </RequirePermission>
       </RequireAuth>
     ),
   },

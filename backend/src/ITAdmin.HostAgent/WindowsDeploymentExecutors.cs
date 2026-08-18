@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 namespace ITAdmin.HostAgent;
 
 /// <summary>
-/// Applies a verified release by invoking the canonical installer in its offline mode.
+/// Hands a verified release to the one-shot update coordinator.
 ///
 /// <para>
 /// The agent could reimplement staging, migration, and activation in C#. It deliberately does not.
@@ -26,45 +26,53 @@ namespace ITAdmin.HostAgent;
 [SupportedOSPlatform("windows")]
 public sealed class InstallerReleaseUpdateExecutor(
     HostAgentSettings settings,
-    string installerScriptPath,
     ILogger<InstallerReleaseUpdateExecutor> logger) : IReleaseUpdateExecutor
 {
     public async Task<ReleaseUpdateResult> ApplyAsync(
         ReleaseUpdateRequest request,
         CancellationToken cancellationToken)
     {
-        if (!File.Exists(installerScriptPath))
+        var coordinatorPath = Path.Combine(
+            request.VerifiedReleaseDirectory,
+            ITAdmin.Deployment.DeploymentLayout.UpdateCoordinatorDirectoryName,
+            "ITAdmin.UpdateCoordinator.exe");
+        if (!File.Exists(coordinatorPath))
         {
             return new ReleaseUpdateResult(
                 false,
-                "The ITAdmin deployment tooling is missing from this host. Re-run the ITAdmin bootstrap.");
+                "The verified release does not contain the update coordinator.");
         }
 
-        var arguments = new List<string>
+        var statePath = new ITAdmin.Deployment.DeploymentLayout(
+            settings.ProgramFilesRoot,
+            settings.ProgramDataRoot).InstallationStatePath;
+        var state = ITAdmin.Deployment.InstallationState.FromJson(await File.ReadAllTextAsync(statePath, cancellationToken));
+        var operationId = state?.CurrentOperation?.Id;
+        if (string.IsNullOrWhiteSpace(operationId))
         {
-            "-NoProfile",
-            "-NonInteractive",
-            "-ExecutionPolicy", "Bypass",
-            "-File", installerScriptPath,
-            "-ReleaseDirectory", request.VerifiedReleaseDirectory,
-            "-ExpectedVersion", request.Version.ToString(),
-            "-ExpectedSourceCommit", request.SourceCommit,
-            "-ProgramFilesRoot", settings.ProgramFilesRoot,
-            "-ProgramDataRoot", settings.ProgramDataRoot,
-            "-SiteName", settings.SiteName,
-            "-AppPoolName", settings.AppPoolName,
-            "-Unattended",
-        };
+            return new ReleaseUpdateResult(false, "The durable update operation could not be read.");
+        }
 
-        var result = await RunAsync("powershell.exe", arguments, cancellationToken);
+        var service = "ITAdminUpdateCoordinator";
+        var imagePath = $"\"{coordinatorPath}\" --operation-id {operationId}";
+        var query = await RunAsync("sc.exe", ["query", service], cancellationToken);
+        var configure = query.ExitCode == 0
+            ? await RunAsync("sc.exe", ["config", service, "binPath=", imagePath, "start=", "demand"], cancellationToken)
+            : await RunAsync("sc.exe", ["create", service, "binPath=", imagePath, "start=", "demand", "obj=", "LocalSystem", "DisplayName=", "ITAdmin Update Coordinator"], cancellationToken);
+        if (configure.ExitCode != 0)
+        {
+            return new ReleaseUpdateResult(false, "The Update Coordinator service could not be configured.");
+        }
+
+        var result = await RunAsync("sc.exe", ["start", service], cancellationToken);
 
         if (result.ExitCode == 0)
         {
-            return new ReleaseUpdateResult(true, $"ITAdmin {request.Version} activated.");
+            return new ReleaseUpdateResult(true, $"ITAdmin {request.Version} was handed to the update coordinator.");
         }
 
         logger.LogError(
-            "Installer exited {ExitCode} while applying {Version}. Output: {Output}",
+            "Update coordinator exited {ExitCode} while applying {Version}. Output: {Output}",
             result.ExitCode,
             request.Version,
             result.Output);

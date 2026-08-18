@@ -26,6 +26,8 @@ public sealed partial class SetupService
         ("SecurityLogs", PermissionCodes.SecurityLogs.View, "View security logs."),
         ("Settings", PermissionCodes.Settings.View, "View settings."),
         ("Settings", PermissionCodes.Settings.Update, "Update settings."),
+        ("System", PermissionCodes.SystemUpdates.View, "View application installation and update status."),
+        ("System", PermissionCodes.SystemUpdates.Manage, "Install verified ITAdmin releases from the configured repository."),
         ("AdManagement", PermissionCodes.AdManagement.Settings.View, "View AD management settings."),
         ("AdManagement", PermissionCodes.AdManagement.Settings.Update, "Update AD management settings."),
         ("AdManagement", PermissionCodes.AdManagement.Users.View, "View AD management directory users."),

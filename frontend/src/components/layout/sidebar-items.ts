@@ -18,6 +18,7 @@ import {
   Users,
   FolderTree,
   FileKey,
+  RefreshCw,
 } from "lucide-react";
 
 import type { CurrentUser } from "@/features/auth/types";
@@ -353,6 +354,7 @@ export const getSidebarGroups = (
           PermissionCodes.NotificationTemplates.View,
           PermissionCodes.AdManagement.Settings.View,
           PermissionCodes.LicenseManagement.ManageSettings,
+          PermissionCodes.SystemUpdates.View,
         ]),
         children: [
           {
@@ -369,6 +371,12 @@ export const getSidebarGroups = (
               PermissionCodes.NotificationProviders.View,
               PermissionCodes.NotificationTemplates.View,
             ]),
+          },
+          {
+            titleKey: "items.systemUpdates",
+            to: "/settings/updates",
+            icon: RefreshCw,
+            visible: canAccess(user, PermissionCodes.SystemUpdates.View),
           },
           {
             titleKey: "items.moduleSettings",

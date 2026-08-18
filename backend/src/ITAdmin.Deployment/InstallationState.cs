@@ -304,7 +304,16 @@ public sealed record DeploymentOperation
     [JsonPropertyName("message")]
     public string Message { get; init; } = string.Empty;
 
-    public bool IsTerminal => Stage is DeploymentOperationStage.Completed or DeploymentOperationStage.Failed;
+    /// <summary>Machine-local verified release owned by the update coordinator; never exposed by the pipe API.</summary>
+    [JsonPropertyName("verifiedReleaseDirectory")]
+    public string? VerifiedReleaseDirectory { get; init; }
+
+    [JsonPropertyName("expectedSourceCommit")]
+    public string? ExpectedSourceCommit { get; init; }
+
+    public bool IsTerminal => Stage is DeploymentOperationStage.Completed
+        or DeploymentOperationStage.Failed
+        or DeploymentOperationStage.RequiresOperatorReview;
 
     public static DeploymentOperation Start(
         string id,
@@ -372,6 +381,7 @@ public enum DeploymentOperationStage
     Activating = 5,
     Completed = 6,
     Failed = 7,
+    RequiresOperatorReview = 8,
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
