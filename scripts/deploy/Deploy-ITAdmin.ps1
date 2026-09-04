@@ -417,18 +417,6 @@ function Install-RequiredIisFeatures {
 # Configuration
 # --------------------------------------------------------------------------------------------
 
-function Get-JoinedDomainInfo {
-    try {
-        $cs = Get-CimInstance -ClassName Win32_ComputerSystem -ErrorAction Stop
-        if ($cs.PartOfDomain -and -not [string]::IsNullOrWhiteSpace($cs.Domain)) {
-            $baseDn = (($cs.Domain -split '\.' | Where-Object { $_ } | ForEach-Object { "DC=$_" }) -join ',')
-            return [pscustomobject]@{ Domain = $cs.Domain; BaseDn = $baseDn }
-        }
-    }
-    catch { Write-Verbose "Domain discovery failed: $($_.Exception.Message)" }
-    return $null
-}
-
 function Read-RequiredValue {
     param(
         [string]$Supplied, [string]$Existing, [string]$Default,
@@ -472,11 +460,13 @@ function Resolve-AppConfig {
     $dbPort = if ($PSBoundParameters.ContainsKey('DatabasePort')) { $DatabasePort }
               elseif ($existing) { [int]$existing.database.port } else { $DatabasePort }
 
-    $discovered = Get-JoinedDomainInfo
+    # Never auto-filled from this machine's own domain membership: silently defaulting to a
+    # discovered value would deploy against whatever AD this server happens to be joined to,
+    # which is exactly the kind of org-specific fact an operator must state, not have guessed.
     $dirHost = Read-RequiredValue -Supplied $DirectoryHost -Existing $(if ($existing) { $existing.directory.host }) `
-        -Default $(if ($discovered) { $discovered.Domain }) -Prompt "Directory host (AD domain or controller)" -Name "DirectoryHost"
+        -Prompt "Directory host (AD domain or controller, e.g. corp.example.com)" -Name "DirectoryHost"
     $dirBaseDn = Read-RequiredValue -Supplied $DirectoryBaseDn -Existing $(if ($existing) { $existing.directory.baseDn }) `
-        -Default $(if ($discovered) { $discovered.BaseDn }) -Prompt "Directory Base DN" -Name "DirectoryBaseDn"
+        -Prompt "Directory Base DN (e.g. DC=corp,DC=example,DC=com)" -Name "DirectoryBaseDn"
     $dirFilter = if (-not [string]::IsNullOrWhiteSpace($DirectoryUserSearchFilter)) { $DirectoryUserSearchFilter }
                  elseif ($existing -and $existing.directory.userSearchFilter) { $existing.directory.userSearchFilter }
                  else { "(sAMAccountName={0})" }

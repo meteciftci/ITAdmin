@@ -94,8 +94,8 @@ PostgreSQL database name
 PostgreSQL user                                    (the application login role; created if absent)
 PostgreSQL administrator user                       (used only to create the database and role)
 PostgreSQL administrator password for '<admin>'     (no echo)
-Directory host                                      (discovered from the joined AD domain)
-Directory Base DN                                   (discovered from the joined AD domain)
+Directory host                                      (AD domain or a specific controller)
+Directory Base DN                                   (e.g. DC=corp,DC=example,DC=com)
 Directory bind account
 Password for '<bind account>'                       (no echo)
 Initial ITAdmin administrator                       (UPN, sAMAccountName, or email)
