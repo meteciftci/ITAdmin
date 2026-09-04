@@ -17,7 +17,6 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { RequireAuth } from "@/features/auth/RequireAuth";
 import { RequirePermission } from "@/features/auth/RequirePermission";
-import { SetupRequiredPage } from "@/features/setup/SetupRequiredPage";
 import { PermissionCodes } from "@/lib/permission-codes";
 
 export const coreRoutes: RouteObject[] = [
@@ -28,10 +27,6 @@ export const coreRoutes: RouteObject[] = [
   {
     path: "/login",
     element: <LoginPage />,
-  },
-  {
-    path: "/setup",
-    element: <SetupRequiredPage />,
   },
   {
     path: "/error/:code",

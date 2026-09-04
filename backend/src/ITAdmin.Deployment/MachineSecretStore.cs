@@ -43,9 +43,9 @@ public sealed record MachineSecrets
     ///
     /// <para>
     /// It is held here so the installer's directory-bootstrap step can drive the application's own
-    /// setup service through exactly the path the web setup wizard uses, rather than a second
-    /// privileged code path that reimplements role assignment. It is never printed, never logged,
-    /// and never leaves this store.
+    /// setup service, rather than a second privileged code path that reimplements role assignment.
+    /// It authorizes that one internal call; there is no in-application setup wizard. It is never
+    /// printed, never logged, and never leaves this store.
     /// </para>
     /// </summary>
     [JsonPropertyName("setupKey")]

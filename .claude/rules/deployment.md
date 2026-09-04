@@ -8,7 +8,7 @@ paths:
 # Deployment rules
 
 - Production targets Windows Server / IIS and is operated by the repository owner; optimize for safe, repeatable operator workflows rather than public self-service documentation.
-- Runtime secrets belong in IIS App Pool environment variables, never repository files, publish output, logs, or generated documentation.
+- Runtime secrets belong in the DPAPI machine secret store (non-secret coordinates may go in IIS App Pool environment variables), never in repository files, publish output, logs, or generated documentation. The single sanctioned exception is the interactive installer printing the *generated* database role password once to the console at the end of a run, only when that run generated it — it is never written to a log or file. Operator-supplied and internal secrets (bind password, JWT key, setup key) are still never displayed.
 - Preserve separation between HTTPS certificates and optional DataProtection certificates.
 - Keep install/update operations idempotent where practical and preserve existing runtime configuration unless overwrite is explicit.
 - Package, migration, rollback, smoke-test, and runtime-config changes must have explicit failure behavior and must not silently continue after unsafe partial deployment.

@@ -1,9 +1,5 @@
 using System.Reflection;
 using ITAdmin.Application.Common.Models;
-using ApiCompleteSetupRequest = ITAdmin.Api.Contracts.Setup.CompleteSetupRequest;
-using ApiSearchSetupAdminUsersRequest = ITAdmin.Api.Contracts.Setup.SearchSetupAdminUsersRequest;
-using ApiValidateLdapRequest = ITAdmin.Api.Contracts.Setup.ValidateLdapRequest;
-using ApiCompleteSetupLdapSettingsRequest = ITAdmin.Api.Contracts.Setup.CompleteSetupLdapSettingsRequest;
 
 namespace ITAdmin.UnitTests.Setup;
 
@@ -17,9 +13,7 @@ public sealed class SetupNationalIdCleanupTests
             typeof(LdapUserProfileRequest),
             typeof(LdapUserProfileByObjectIdRequest),
             typeof(LdapUserLookupRequest),
-            typeof(ApiCompleteSetupLdapSettingsRequest),
-            typeof(ApiValidateLdapRequest),
-            typeof(ApiSearchSetupAdminUsersRequest),
+            typeof(CompleteSetupLdapSettings),
         };
 
         foreach (var modelType in modelTypes)

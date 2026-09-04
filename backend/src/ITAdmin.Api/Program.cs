@@ -5,8 +5,9 @@ using Serilog;
 
 try
 {
-    // Deployment modes run before any web host is built so the installer can migrate or inspect
-    // the schema using the application's own configuration, with no toolchain on the server.
+    // Deployment modes run before any web host is built so the installer can provision, migrate,
+    // or inspect the schema using the application's own configuration, with no toolchain on the
+    // server.
     if (DatabaseMigrationRunner.IsMigrateRequested(args))
     {
         Environment.ExitCode = await DatabaseMigrationRunner.RunAsync(args, Console.Out, Console.Error);
@@ -19,9 +20,9 @@ try
         return;
     }
 
-    if (DatabasePreflightRunner.IsRequested(args))
+    if (DatabaseProvisionRunner.IsRequested(args))
     {
-        Environment.ExitCode = await DatabasePreflightRunner.RunAsync(args, Console.Out, Console.Error);
+        Environment.ExitCode = await DatabaseProvisionRunner.RunAsync(args, Console.Out, Console.Error);
         return;
     }
 

@@ -11,7 +11,6 @@ import trPermissions from "@/locales/tr/permissions.json";
 import trRoles from "@/locales/tr/roles.json";
 import trSecurityLogs from "@/locales/tr/securityLogs.json";
 import trSettings from "@/locales/tr/settings.json";
-import trSetup from "@/locales/tr/setup.json";
 import trAdManagement from "@/locales/tr/adManagement.json";
 import trAdOperationLogs from "@/locales/tr/adOperationLogs.json";
 import trUsers from "@/locales/tr/users.json";
@@ -32,7 +31,6 @@ import enPermissions from "@/locales/en/permissions.json";
 import enRoles from "@/locales/en/roles.json";
 import enSecurityLogs from "@/locales/en/securityLogs.json";
 import enSettings from "@/locales/en/settings.json";
-import enSetup from "@/locales/en/setup.json";
 import enAdManagement from "@/locales/en/adManagement.json";
 import enAdOperationLogs from "@/locales/en/adOperationLogs.json";
 import enUsers from "@/locales/en/users.json";
@@ -65,7 +63,6 @@ const resources = {
     permissions: trPermissions.permissions,
     securityLogs: trSecurityLogs.securityLogs,
     settings: trSettings.settings,
-    setup: trSetup.setup,
     notificationProviders: trNotificationProviders.notificationProviders,
     notificationOutbox: trNotificationOutbox.notificationOutbox,
     notificationTemplates: trNotificationTemplates.notificationTemplates,
@@ -87,7 +84,6 @@ const resources = {
     permissions: enPermissions.permissions,
     securityLogs: enSecurityLogs.securityLogs,
     settings: enSettings.settings,
-    setup: enSetup.setup,
     notificationProviders: enNotificationProviders.notificationProviders,
     notificationOutbox: enNotificationOutbox.notificationOutbox,
     notificationTemplates: enNotificationTemplates.notificationTemplates,
@@ -116,7 +112,6 @@ void i18n.use(initReactI18next).init({
     "auditLogs",
     "securityLogs",
     "settings",
-    "setup",
     "notificationProviders",
     "notificationOutbox",
     "notificationTemplates",

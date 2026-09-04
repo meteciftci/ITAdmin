@@ -224,6 +224,25 @@ public sealed class DeploymentContractDriftTests
         Assert.Contains("--migrate", InstallerSource(), StringComparison.Ordinal);
 
     [Fact]
+    public void Installer_InvokesTheApplicationOwnedDatabaseProvisioner()
+    {
+        // The release creates its own database and least-privilege role; no psql on the target and
+        // no PowerShell reimplementation of the DDL.
+        var source = InstallerSource();
+
+        Assert.Contains("--provision-database --input $inputPath", source, StringComparison.Ordinal);
+        Assert.Contains("[SecureString]$DatabaseAdminPassword", source, StringComparison.Ordinal);
+
+        // The transient admin credential is passed through the ACL'd input file, never a command line.
+        Assert.DoesNotContain("--admin-password", source, StringComparison.OrdinalIgnoreCase);
+
+        // Provisioning happens before the machine is configured and the schema migrated.
+        var provision = source.IndexOf("Invoke-DatabaseProvisioning -Config", StringComparison.Ordinal);
+        var migrate = source.IndexOf("Invoke-DatabaseMigration -PayloadRoot", StringComparison.Ordinal);
+        Assert.True(provision > 0 && migrate > provision, "The database must be provisioned before it is migrated.");
+    }
+
+    [Fact]
     public void Installer_InvokesTheApplicationOwnedDirectoryBootstrap()
     {
         // Role seeding and administrator creation stay in the application's own setup service; a
@@ -336,10 +355,30 @@ public sealed class DeploymentContractDriftTests
         Assert.Contains("Windows DPAPI (LocalMachine)", summary, StringComparison.Ordinal);
         Assert.Contains("SecretsRoot", summary, StringComparison.Ordinal);
 
+        // The JWT key, the setup key, and the full connection string are never printed.
         foreach (var forbidden in new[] { "$jwtKey", "$setupKey", "$Script:SetupKey", "$ConnectionString", "$plain" })
         {
             Assert.DoesNotContain(forbidden, summary, StringComparison.Ordinal);
         }
+    }
+
+    [Fact]
+    public void Installer_ShowsTheGeneratedDatabasePasswordExactlyOnceAndOnlyWhenItGeneratedIt()
+    {
+        // The operator never chooses the application role's password, but their DBA and backup
+        // runbook need it. It is surfaced once, in the summary, gated on this run having generated
+        // it and on an interactive (non-unattended) console. It is never written to a file or log.
+        var source = InstallerSource();
+        var summary = source[source.IndexOf("function Write-InstallationSummary", StringComparison.Ordinal)..];
+
+        Assert.Contains("$Script:DatabaseAppPasswordGenerated", summary, StringComparison.Ordinal);
+        Assert.Contains("$Script:DatabaseAppPassword", summary, StringComparison.Ordinal);
+        Assert.Contains("-not $Unattended.IsPresent", summary, StringComparison.Ordinal);
+        Assert.Contains("SHOWN ONCE", summary, StringComparison.Ordinal);
+
+        // The generated password is only ever persisted through the DPAPI secret store.
+        Assert.Contains("appRolePassword", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("Out-File", source, StringComparison.Ordinal);
     }
 
     [Fact]

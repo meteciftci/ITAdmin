@@ -27,10 +27,10 @@ namespace ITAdmin.Api;
 /// <para>
 /// It deliberately adds no authorization logic of its own. Role seeding, permission grants, the
 /// portal-user representation of a directory identity, and the "setup is complete" marker all live
-/// in <see cref="ISetupService"/>, which the web setup wizard also uses and which is already
-/// covered by tests. Reimplementing any of that in PowerShell would create a second, unverified
-/// definition of what an ITAdmin administrator is. The installer's job is to gather input, prove
-/// the directory works, and call this.
+/// in <see cref="ISetupService"/>, which is covered by tests. There is no in-application setup
+/// wizard; this runner is the only caller of that path. Reimplementing any of it in PowerShell
+/// would create a second, unverified definition of what an ITAdmin administrator is. The
+/// installer's job is to gather input, prove the directory works, and call this.
 /// </para>
 ///
 /// <para>
