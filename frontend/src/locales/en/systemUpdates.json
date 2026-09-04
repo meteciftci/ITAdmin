@@ -2,31 +2,32 @@
   "systemUpdates": {
     "page": {
       "title": "System updates",
-      "description": "Check and install the latest verified stable ITAdmin release on this server."
+      "description": "Check and deploy the latest commit on the tracked branch to this server."
     },
     "actions": {
       "check": "Check for updates",
-      "install": "Install {{version}}"
+      "install": "Install update"
     },
     "host": {
       "title": "Server and repository access",
       "agent": "Host Agent",
-      "repository": "Deploy key / repository",
+      "repository": "Repository access",
       "installationPhase": "Installation phase",
       "health": "Application health"
     },
     "release": {
-      "title": "Release information",
-      "installed": "Installed release",
-      "latest": "Latest stable",
-      "previous": "Previous release",
-      "publishedAt": "Release time",
+      "title": "Deployment information",
+      "branch": "Branch",
+      "installed": "Deployed commit",
+      "latest": "Latest commit",
+      "previous": "Previous commit",
+      "builtAt": "Built",
       "checkedAt": "Last checked"
     },
     "operation": {
       "title": "Update operation",
-      "available": "A newer stable release is available.",
-      "upToDate": "The installed release is up to date."
+      "available": "{{count}} commit(s) behind the branch tip.",
+      "upToDate": "The deployed build is at the branch tip."
     },
     "status": {
       "available": "Available",
@@ -39,18 +40,14 @@
     "repositoryStatuses": {
       "Unknown": "Not checked yet",
       "Verified": "Verified",
-      "DeployKeyMissing": "Deploy key missing",
-      "RepositoryRejected": "GitHub rejected the deploy key",
+      "RepositoryRejected": "The repository could not be read",
       "HostUnreachable": "Repository host unreachable",
-      "HostKeyProblem": "SSH host key verification problem",
       "HostAgentUnavailable": "Host Agent unavailable"
     },
     "phases": {
       "Idle": "Idle",
-      "Resolving": "Resolving release",
-      "Fetching": "Downloading",
-      "Verifying": "Verifying",
-      "Staging": "Staging",
+      "Pulling": "Fetching the branch",
+      "Building": "Building",
       "Migrating": "Migrating database",
       "Activating": "Activating",
       "Completed": "Completed",
@@ -58,7 +55,7 @@
       "RequiresOperatorReview": "Operator review required"
     },
     "confirm": {
-      "title": "Install ITAdmin {{version}}?",
+      "title": "Deploy commit {{commit}}?",
       "description": "A short service interruption may occur. Database migrations are not automatically rolled back.",
       "backupLabel": "I confirm that a current, restorable database backup is available.",
       "backupDescription": "The update cannot start without this confirmation.",

@@ -1,7 +1,7 @@
 export type SystemUpdateOperation = {
   operationId: string | null;
   phase: string;
-  targetVersion: string | null;
+  targetCommit: string | null;
   startedAtUtc: string | null;
   completedAtUtc: string | null;
   message: string;
@@ -13,20 +13,21 @@ export type SystemUpdateStatus = {
   repositoryStatus: string;
   message: string;
   installationPhase: string | null;
-  activeVersion: string | null;
-  previousVersion: string | null;
+  activeCommit: string | null;
+  previousCommit: string | null;
+  branch: string;
+  builtAtUtc: string | null;
   healthy: boolean;
-  latestVersion: string | null;
-  latestSourceCommit: string | null;
-  latestPublishedAtUtc: string | null;
-  latestDescription: string | null;
   updateAvailable: boolean;
+  commitsBehind: number;
+  latestCommit: string | null;
+  latestSubject: string | null;
   operation: SystemUpdateOperation | null;
   checkedAtUtc: string;
 };
 
 export type InstallSystemUpdateResponse = {
-  operationId: string;
-  targetVersion: string;
+  operationId: string | null;
+  targetCommit: string | null;
   message: string;
 };

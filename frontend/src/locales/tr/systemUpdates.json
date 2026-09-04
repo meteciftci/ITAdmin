@@ -2,31 +2,32 @@
   "systemUpdates": {
     "page": {
       "title": "Sistem güncellemeleri",
-      "description": "Doğrulanmış en son kararlı ITAdmin sürümünü kontrol edin ve sunucuya kurun."
+      "description": "İzlenen daldaki en son commit'i kontrol edin ve sunucuya dağıtın."
     },
     "actions": {
       "check": "Güncellemeleri kontrol et",
-      "install": "{{version}} sürümünü kur"
+      "install": "Güncellemeyi kur"
     },
     "host": {
       "title": "Sunucu ve repository erişimi",
       "agent": "Host Agent",
-      "repository": "Deploy key / repository",
+      "repository": "Repository erişimi",
       "installationPhase": "Kurulum durumu",
       "health": "Uygulama sağlığı"
     },
     "release": {
-      "title": "Sürüm bilgisi",
-      "installed": "Kurulu sürüm",
-      "latest": "En son stable",
-      "previous": "Önceki sürüm",
-      "publishedAt": "Release zamanı",
+      "title": "Dağıtım bilgisi",
+      "branch": "Dal",
+      "installed": "Dağıtılan commit",
+      "latest": "En son commit",
+      "previous": "Önceki commit",
+      "builtAt": "Derlendi",
       "checkedAt": "Son kontrol"
     },
     "operation": {
       "title": "Güncelleme işlemi",
-      "available": "Kurulabilecek yeni bir stable sürüm var.",
-      "upToDate": "Kurulu sürüm güncel."
+      "available": "Dal ucundan {{count}} commit geride.",
+      "upToDate": "Dağıtılan sürüm dal ucuyla aynı."
     },
     "status": {
       "available": "Erişilebilir",
@@ -39,18 +40,14 @@
     "repositoryStatuses": {
       "Unknown": "Henüz kontrol edilmedi",
       "Verified": "Doğrulandı",
-      "DeployKeyMissing": "Deploy key eksik",
-      "RepositoryRejected": "GitHub deploy key'i reddetti",
+      "RepositoryRejected": "Repository okunamadı",
       "HostUnreachable": "Repository sunucusuna erişilemiyor",
-      "HostKeyProblem": "SSH host key doğrulama problemi",
       "HostAgentUnavailable": "Host Agent erişilemiyor"
     },
     "phases": {
       "Idle": "Bekliyor",
-      "Resolving": "Sürüm çözülüyor",
-      "Fetching": "İndiriliyor",
-      "Verifying": "Doğrulanıyor",
-      "Staging": "Hazırlanıyor",
+      "Pulling": "Dal çekiliyor",
+      "Building": "Derleniyor",
       "Migrating": "Veritabanı güncelleniyor",
       "Activating": "Etkinleştiriliyor",
       "Completed": "Tamamlandı",
@@ -58,7 +55,7 @@
       "RequiresOperatorReview": "Operatör incelemesi gerekiyor"
     },
     "confirm": {
-      "title": "ITAdmin {{version}} kurulsun mu?",
+      "title": "{{commit}} commit'i dağıtılsın mı?",
       "description": "Güncelleme sırasında kısa bir servis kesintisi olabilir. Migration sonrasında otomatik veritabanı geri dönüşü yapılmaz.",
       "backupLabel": "Güncel ve geri yüklenebilir bir veritabanı yedeği bulunduğunu onaylıyorum.",
       "backupDescription": "Bu onay olmadan güncelleme başlatılamaz.",

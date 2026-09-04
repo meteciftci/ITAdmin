@@ -24,14 +24,7 @@ import {
 import { PermissionCodes } from "@/lib/permission-codes";
 import { canAccess } from "@/lib/permissions";
 
-const ACTIVE_PHASES = new Set([
-  "Resolving",
-  "Fetching",
-  "Verifying",
-  "Staging",
-  "Migrating",
-  "Activating",
-]);
+const ACTIVE_PHASES = new Set(["Pulling", "Building", "Migrating", "Activating"]);
 
 export function SystemUpdatesPage() {
   const { t } = useTranslation(["systemUpdates", "common"]);
@@ -131,7 +124,9 @@ export function SystemUpdatesPage() {
               />
               <StatusRow
                 label={t("systemUpdates:host.repository")}
-                value={t(`systemUpdates:repositoryStatuses.${status?.repositoryStatus ?? "Unknown"}`)}
+                value={t(`systemUpdates:repositoryStatuses.${status?.repositoryStatus ?? "Unknown"}`, {
+                  defaultValue: t("systemUpdates:repositoryStatuses.Unknown"),
+                })}
                 success={status?.repositoryAccessible === true}
               />
               <StatusRow label={t("systemUpdates:host.installationPhase")} value={status?.installationPhase ?? "-"} />
@@ -146,25 +141,21 @@ export function SystemUpdatesPage() {
 
           <SectionCard title={t("systemUpdates:release.title")}>
             <dl className="grid gap-4 sm:grid-cols-2">
-              <StatusRow label={t("systemUpdates:release.installed")} value={status?.activeVersion ?? "-"} />
-              <StatusRow label={t("systemUpdates:release.latest")} value={status?.latestVersion ?? "-"} />
-              <StatusRow label={t("systemUpdates:release.previous")} value={status?.previousVersion ?? "-"} />
+              <StatusRow label={t("systemUpdates:release.branch")} value={status?.branch ?? "-"} />
+              <StatusRow label={t("systemUpdates:release.installed")} value={status?.activeCommit ?? "-"} />
+              <StatusRow label={t("systemUpdates:release.latest")} value={status?.latestCommit ?? "-"} />
+              <StatusRow label={t("systemUpdates:release.previous")} value={status?.previousCommit ?? "-"} />
               <StatusRow
-                label={t("systemUpdates:release.publishedAt")}
-                value={status?.latestPublishedAtUtc ? <DateTimeText value={status.latestPublishedAtUtc} /> : "-"}
+                label={t("systemUpdates:release.builtAt")}
+                value={status?.builtAtUtc ? <DateTimeText value={status.builtAtUtc} /> : "-"}
               />
               <StatusRow
                 label={t("systemUpdates:release.checkedAt")}
                 value={status?.checkedAtUtc ? <DateTimeText value={status.checkedAtUtc} /> : "-"}
               />
             </dl>
-            {status?.latestSourceCommit ? (
-              <p className="mt-4 break-all font-mono text-xs text-muted-foreground">
-                {status.latestSourceCommit}
-              </p>
-            ) : null}
-            {status?.latestDescription ? (
-              <p className="mt-3 text-sm text-muted-foreground">{status.latestDescription}</p>
+            {status?.latestSubject ? (
+              <p className="mt-3 text-sm text-muted-foreground">{status.latestSubject}</p>
             ) : null}
           </SectionCard>
         </div>
@@ -175,7 +166,7 @@ export function SystemUpdatesPage() {
             status?.updateAvailable && canManage && !requiresReview ? (
               <Button onClick={() => setConfirmOpen(true)} disabled={isRunning}>
                 <ServerCog />
-                {t("systemUpdates:actions.install", { version: status.latestVersion })}
+                {t("systemUpdates:actions.install", { count: status.commitsBehind })}
               </Button>
             ) : null
           }
@@ -186,14 +177,14 @@ export function SystemUpdatesPage() {
                 <Badge variant={phase === "Failed" || requiresReview ? "destructive" : phase === "Completed" ? "success" : "secondary"}>
                   {t(`systemUpdates:phases.${phase}`)}
                 </Badge>
-                {status.operation.targetVersion ? <span className="text-sm">{status.operation.targetVersion}</span> : null}
+                {status.operation.targetCommit ? <span className="text-sm">{status.operation.targetCommit}</span> : null}
               </div>
               <p className="text-sm text-muted-foreground">{status.operation.message}</p>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
               {status?.updateAvailable
-                ? t("systemUpdates:operation.available")
+                ? t("systemUpdates:operation.available", { count: status.commitsBehind })
                 : t("systemUpdates:operation.upToDate")}
             </p>
           )}
@@ -206,7 +197,7 @@ export function SystemUpdatesPage() {
           setConfirmOpen(open);
           if (!open) setBackupConfirmed(false);
         }}
-        title={t("systemUpdates:confirm.title", { version: status?.latestVersion })}
+        title={t("systemUpdates:confirm.title", { commit: status?.latestCommit })}
         description={t("systemUpdates:confirm.description")}
         content={
           <CheckboxField
@@ -219,11 +210,9 @@ export function SystemUpdatesPage() {
         }
         confirmText={t("systemUpdates:confirm.submit")}
         cancelText={t("common:actions.cancel")}
-        confirmDisabled={!backupConfirmed || !status?.latestVersion}
+        confirmDisabled={!backupConfirmed}
         isLoading={installMutation.isPending}
-        onConfirm={() => {
-          if (status?.latestVersion) installMutation.mutate(status.latestVersion);
-        }}
+        onConfirm={() => installMutation.mutate()}
       />
     </PageContainer>
   );

@@ -16,12 +16,10 @@ export async function checkForSystemUpdates(): Promise<SystemUpdateStatus> {
   return data;
 }
 
-export async function installSystemUpdate(
-  targetVersion: string,
-): Promise<InstallSystemUpdateResponse> {
+export async function installSystemUpdate(): Promise<InstallSystemUpdateResponse> {
   const { data } = await apiClient.post<InstallSystemUpdateResponse>(
     "/system/updates/install",
-    { targetVersion, databaseBackupConfirmed: true },
+    { databaseBackupConfirmed: true },
   );
   return data;
 }
