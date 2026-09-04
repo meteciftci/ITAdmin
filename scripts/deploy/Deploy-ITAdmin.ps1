@@ -940,12 +940,47 @@ function Set-ActiveAppPath {
     Start-Website -Name $SiteName -ErrorAction SilentlyContinue
 }
 
+function Test-HttpBindingConflict {
+    <#
+        IIS ships a "Default Web Site" bound to *:80: (no host header) on a fresh server. Creating
+        or starting a second site on an identical binding fails deep inside IIS with an opaque
+        HRESULT (0x800700B7). Catching the conflict here, before any IIS mutation, turns that into
+        an actionable message instead of a stack trace.
+    #>
+    param([Parameter(Mandatory = $true)][psobject]$Config)
+
+    $hostHeader = if ($Config.web.httpHostHeader) { $Config.web.httpHostHeader } else { "" }
+    $port = $Config.web.httpPort
+
+    $conflicts = New-Object System.Collections.Generic.List[string]
+    foreach ($site in @(Get-Website | Where-Object { $_.Name -ne $SiteName })) {
+        foreach ($binding in @($site.bindings.Collection)) {
+            if ($binding.protocol -ne "http") { continue }
+            $parts = "$($binding.bindingInformation)".Split(':')
+            $bindingPort = if ($parts.Count -ge 2) { $parts[1] } else { "" }
+            $bindingHost = if ($parts.Count -ge 3) { $parts[2] } else { "" }
+            if ("$bindingPort" -eq "$port" -and $bindingHost -eq $hostHeader) {
+                $conflicts.Add($site.Name)
+            }
+        }
+    }
+
+    if ($conflicts.Count -gt 0) {
+        $names = ($conflicts | Select-Object -Unique) -join ", "
+        $bindingLabel = if ($hostHeader) { "port $port with host header '$hostHeader'" } else { "port $port with no host header" }
+        throw "IIS site(s) [$names] already bind $bindingLabel. Stop or remove the conflicting site " +
+              "(e.g. 'Stop-Website -Name `"$($conflicts[0])`"'), or re-run with -HttpHostHeader " +
+              "<a distinct host name> so ITAdmin uses a different binding. No change was made."
+    }
+}
+
 function Set-IisSite {
     param(
         [Parameter(Mandatory = $true)][psobject]$Config,
         [Parameter(Mandatory = $true)][string]$AppPath
     )
     Write-Step "Pointing IIS at $AppPath"
+    Test-HttpBindingConflict -Config $Config
 
     if (-not (Test-Path "IIS:\Sites\$SiteName")) {
         $common = @{ Name = $SiteName; PhysicalPath = $AppPath; ApplicationPool = $AppPoolName; Port = $Config.web.httpPort; Force = $true }
