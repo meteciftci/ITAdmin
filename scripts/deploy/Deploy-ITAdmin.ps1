@@ -484,9 +484,16 @@ function Resolve-AppConfig {
     $initialAdmin = Read-RequiredValue -Supplied $InitialAdministrator -Existing $(if ($existing) { $existing.initialAdministrator }) `
         -Prompt "Initial ITAdmin administrator (UPN / sAMAccountName / mail)" -Name "InitialAdministrator"
 
+    # Optional: answering on a specific name only matters when something else on this server (or a
+    # binding an operator wants to keep separate) already owns the same port with no host header.
+    # Left blank, the site answers on every name this machine has - the common case.
     $hostHeader = if ($PSBoundParameters.ContainsKey('HttpHostHeader')) { $HttpHostHeader }
                   elseif ($existing -and $existing.web.httpHostHeader) { $existing.web.httpHostHeader }
-                  else { $null }
+                  elseif ($Unattended.IsPresent) { $null }
+                  else {
+                      $suppliedHostHeader = Read-Host "HTTP host header (optional, e.g. itadmin.corp.example.com - leave blank to answer on any host name)"
+                      if ([string]::IsNullOrWhiteSpace($suppliedHostHeader)) { $null } else { $suppliedHostHeader.Trim() }
+                  }
     $httpPortResolved = if ($PSBoundParameters.ContainsKey('HttpPort')) { $HttpPort }
                         elseif ($existing) { [int]$existing.web.httpPort } else { $HttpPort }
 

@@ -99,6 +99,7 @@ Directory Base DN                                   (e.g. DC=corp,DC=example,DC=
 Directory bind account
 Password for '<bind account>'                       (no echo)
 Initial ITAdmin administrator                       (UPN, sAMAccountName, or email)
+HTTP host header                                    (optional - Enter leaves it blank)
 ```
 
 Passwords are read as secure strings and are not echoed. The application role's own database
