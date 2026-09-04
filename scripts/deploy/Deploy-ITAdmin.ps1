@@ -473,10 +473,13 @@ function Resolve-AppConfig {
     $dirName = if (-not [string]::IsNullOrWhiteSpace($DirectoryName)) { $DirectoryName }
                elseif ($existing -and $existing.directory.name) { $existing.directory.name }
                else { $dirHost }
+    # A bare sAMAccountName (no \, no @) binds without a realm and AD rejects it. Domain-qualify
+    # it here so the operator does not have to know that -DirectoryBindDomain even exists.
     $dirBindUser = Read-RequiredValue -Supplied $DirectoryBindUser -Existing $(if ($existing) { $existing.directory.bindUser }) `
-        -Prompt "Directory bind account" -Name "DirectoryBindUser"
+        -Prompt "Directory bind account (UPN 'user@domain', or 'DOMAIN\user')" -Name "DirectoryBindUser"
     $dirBindDomain = if (-not [string]::IsNullOrWhiteSpace($DirectoryBindDomain)) { $DirectoryBindDomain }
                      elseif ($existing -and $existing.directory.bindDomain) { $existing.directory.bindDomain }
+                     elseif ($dirBindUser -notmatch '[\\@]') { $dirHost }
                      else { $null }
     $initialAdmin = Read-RequiredValue -Supplied $InitialAdministrator -Existing $(if ($existing) { $existing.initialAdministrator }) `
         -Prompt "Initial ITAdmin administrator (UPN / sAMAccountName / mail)" -Name "InitialAdministrator"
