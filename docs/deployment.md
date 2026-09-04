@@ -271,8 +271,22 @@ A tag without a successful publish workflow is not a complete production distrib
 
 ## 9. Database and rollback model
 
-PostgreSQL already exists before installation. The application runtime account should not be a
-cluster superuser.
+PostgreSQL is running and reachable before installation; nothing else is a precondition. The
+canonical installer provisions the rest before any machine change, through
+`ITAdmin.Api.exe --provision-database`: it creates the least-privilege login role (or resets its
+password), creates the database owned by that role, applies the `public`-schema grants, and
+verifies the role has effective `CREATE` + `USAGE`. The step is idempotent.
+
+The operator supplies the role name and a transient PostgreSQL administrator credential (superuser,
+or a role with `CREATEROLE` + `CREATEDB`). That credential is passed through an ACL'd input file
+deleted in a `finally` block, is never persisted, and never reaches runtime configuration — the
+application always runs as the least-privilege role, which is never a cluster superuser. The role's
+password is generated, kept in the DPAPI machine secret store, and shown once in the installer
+summary (only when that run generated it); it is never written to a log or a file in clear text.
+
+There is no in-application setup wizard: role seeding, the portal-user representation of a directory
+identity, and the "setup complete" marker live in `ISetupService`, reached only through
+`ITAdmin.Api.exe --bootstrap-directory`, which the installer runs after provisioning and migration.
 
 Migrations are forward-only. Application releases are versioned on disk and the previous release is
 retained, but database rollback is never automatic. An update should be started only when the

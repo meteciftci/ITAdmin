@@ -14,7 +14,10 @@
     provisions prerequisites, creates the IIS app-pool virtual account before any release ACL is
     applied, records the machine layout used by the LocalSystem services, writes a Host Agent
     configuration with in-app updates disabled by default, and then hands the local verified release
-    to the canonical installer.
+    to the canonical installer. The canonical installer prompts for (or takes as parameters
+    forwarded here) the PostgreSQL target and a transient PostgreSQL administrator credential; it
+    creates the database and a least-privilege login role, applies migrations, and establishes the
+    first directory-backed administrator. There is no in-application setup wizard.
 
     Repository-backed in-app updates are an optional post-install capability. Enable them separately
     with Configure-ITAdminUpdates.ps1; first installation never depends on repository connectivity.
@@ -28,6 +31,9 @@ param(
     [string]$DatabaseName,
     [string]$DatabaseUser,
     [SecureString]$DatabasePassword,
+    [string]$DatabaseAdminUser,
+    [SecureString]$DatabaseAdminPassword,
+    [string]$DatabaseAdminDatabase = "postgres",
 
     [string]$DirectoryName,
     [string]$DirectoryHost,
