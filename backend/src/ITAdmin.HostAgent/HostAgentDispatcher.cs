@@ -59,9 +59,6 @@ public sealed class HostAgentDispatcher(
                 HostAgentOperation.GetUpdateStatus =>
                     await operations.GetUpdateStatusAsync(request, cancellationToken),
 
-                HostAgentOperation.ReconcileWebBindings =>
-                    await operations.ReconcileWebBindingsAsync(request, cancellationToken),
-
                 HostAgentOperation.RecycleApplicationPool =>
                     await operations.RecycleApplicationPoolAsync(request, cancellationToken),
 
@@ -101,8 +98,6 @@ public interface IHostAgentOperations
     Task<HostAgentResponse> RequestUpdateAsync(HostAgentRequest request, CancellationToken cancellationToken);
 
     Task<HostAgentResponse> GetUpdateStatusAsync(HostAgentRequest request, CancellationToken cancellationToken);
-
-    Task<HostAgentResponse> ReconcileWebBindingsAsync(HostAgentRequest request, CancellationToken cancellationToken);
 
     Task<HostAgentResponse> RecycleApplicationPoolAsync(HostAgentRequest request, CancellationToken cancellationToken);
 

@@ -1,60 +1,42 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using ITAdmin.Deployment;
 
 namespace ITAdmin.HostAgent;
 
 /// <summary>
-/// The agent's own configuration, written by the installer under
+/// The agent's own configuration, written by <c>Deploy-ITAdmin.ps1</c> under
 /// <c>%ProgramData%\ITAdmin\config\hostagent.json</c>.
 ///
 /// <para>
-/// It records where the repository is and which channel this host follows - but not the deploy key
-/// itself. The key stays a file on disk whose ACL grants SYSTEM and Administrators only; this file
-/// merely says where to look for it. That distinction is what keeps the boundary honest: an
-/// attacker who can read the agent's configuration still cannot read the key, and the web
-/// application can read neither.
+/// It records where the public repository is, which branch this host follows, and the machine
+/// layout roots. There is no credential here: the repository is public and cloned over anonymous
+/// HTTPS, and the deployment script the agent runs is the one already checked out under
+/// <c>&lt;InstallRoot&gt;\src</c>.
 /// </para>
 /// </summary>
 public sealed record HostAgentSettings
 {
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
     public const string FileName = "hostagent.json";
-
-    /// <summary>Deploy key file name under the machine key directory.</summary>
-    public const string DeployKeyFileName = RepositoryAccessContract.DeployKeyFileName;
-
-    /// <summary>Machine-owned known-hosts file name under the same directory.</summary>
-    public const string KnownHostsFileName = RepositoryAccessContract.KnownHostsFileName;
 
     [JsonPropertyName("schemaVersion")]
     public int SchemaVersion { get; init; } = CurrentSchemaVersion;
 
-    /// <summary>SSH remote of the ITAdmin repository, as discovered from the bootstrap clone.</summary>
+    /// <summary>Public HTTPS URL of the ITAdmin repository.</summary>
     [JsonPropertyName("repositoryUrl")]
     public string RepositoryUrl { get; init; } = string.Empty;
 
-    [JsonPropertyName("channel")]
-    public ReleaseChannel Channel { get; init; } = ReleaseChannel.Stable;
+    /// <summary>Branch this host tracks. Its tip is what an update deploys.</summary>
+    [JsonPropertyName("branch")]
+    public string Branch { get; init; } = "main";
 
-    /// <summary>
-    /// Directory holding the read-only deploy key and the verified host-key entries. Never inside
-    /// the web root, and ACL'd to SYSTEM and Administrators only.
-    ///
-    /// <para>
-    /// Both files are machine-owned copies. The agent must not depend on an interactive
-    /// administrator's user profile: that account may be disabled, its profile may be removed, and
-    /// LocalSystem cannot read it in any case.
-    /// </para>
-    /// </summary>
-    [JsonPropertyName("deployKeyDirectory")]
-    public string DeployKeyDirectory { get; init; } = string.Empty;
+    /// <summary>Root that holds <c>src\</c>, <c>app\</c>, <c>hostagent\</c>, <c>update-coordinator\</c>.</summary>
+    [JsonPropertyName("installRoot")]
+    public string InstallRoot { get; init; } = @"C:\ITAdmin";
 
-    [JsonPropertyName("programFilesRoot")]
-    public string ProgramFilesRoot { get; init; } = DeploymentLayout.DefaultProgramFilesRoot;
-
-    [JsonPropertyName("programDataRoot")]
-    public string ProgramDataRoot { get; init; } = DeploymentLayout.DefaultProgramDataRoot;
+    /// <summary>Root that holds <c>config\</c>, <c>secrets\</c>, <c>state\</c>, <c>logs\</c>.</summary>
+    [JsonPropertyName("dataRoot")]
+    public string DataRoot { get; init; } = @"C:\ProgramData\ITAdmin";
 
     [JsonPropertyName("siteName")]
     public string SiteName { get; init; } = "ITAdmin";
@@ -63,12 +45,11 @@ public sealed record HostAgentSettings
     public string AppPoolName { get; init; } = "ITAdmin";
 
     /// <summary>
-    /// Whether the agent may act on an update request at all. Defaults to false so a freshly
-    /// installed host cannot be talked into replacing its own release before an administrator has
-    /// deliberately turned in-app updates on.
+    /// Whether the agent may act on an update request at all. When the repository is public this
+    /// defaults to on; a host that must never self-update can set it to false.
     /// </summary>
     [JsonPropertyName("updatesEnabled")]
-    public bool UpdatesEnabled { get; init; }
+    public bool UpdatesEnabled { get; init; } = true;
 
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
@@ -76,13 +57,25 @@ public sealed record HostAgentSettings
         PropertyNameCaseInsensitive = true,
     };
 
-    public string DeployKeyPath => Path.Combine(DeployKeyDirectory, DeployKeyFileName);
+    /// <summary>Working tree the agent fetches into and builds from.</summary>
+    public string SourceRoot => Path.Combine(InstallRoot, "src");
 
-    /// <summary>
-    /// Machine-owned known-hosts file. Used with <c>StrictHostKeyChecking=yes</c>, so the agent
-    /// trusts exactly the host keys the operator verified during preparation and nothing else.
-    /// </summary>
-    public string KnownHostsPath => Path.Combine(DeployKeyDirectory, KnownHostsFileName);
+    /// <summary>Deployment script the agent runs to apply an update. Always inside the checked-out source.</summary>
+    public string DeployScriptPath =>
+        Path.Combine(SourceRoot, "scripts", "deploy", "Deploy-ITAdmin.ps1");
+
+    public string ConfigRoot => Path.Combine(DataRoot, "config");
+    public string StateRoot => Path.Combine(DataRoot, "state");
+    public string LogsRoot => Path.Combine(DataRoot, "logs");
+
+    /// <summary>Where <c>Deploy-ITAdmin.ps1</c> records the active/previous build.</summary>
+    public string DeployStatePath => Path.Combine(StateRoot, "deploy.json");
+
+    /// <summary>Where the agent and the Update Coordinator record update progress.</summary>
+    public string UpdateOperationPath => Path.Combine(StateRoot, "update-operation.json");
+
+    public string HostAgentBuildsRoot => Path.Combine(InstallRoot, "hostagent");
+    public string CoordinatorBuildsRoot => Path.Combine(InstallRoot, "update-coordinator");
 
     public string ToJson() => JsonSerializer.Serialize(this, SerializerOptions);
 
@@ -109,7 +102,7 @@ public sealed record HostAgentSettings
 
         if (SchemaVersion != CurrentSchemaVersion)
         {
-            problems.Add($"Unsupported hostagent.json schemaVersion {SchemaVersion}.");
+            problems.Add($"Unsupported hostagent.json schemaVersion {SchemaVersion}; this agent expects {CurrentSchemaVersion}.");
         }
 
         if (string.IsNullOrWhiteSpace(RepositoryUrl))
@@ -117,9 +110,19 @@ public sealed record HostAgentSettings
             problems.Add("repositoryUrl is required.");
         }
 
-        if (string.IsNullOrWhiteSpace(DeployKeyDirectory))
+        if (string.IsNullOrWhiteSpace(Branch))
         {
-            problems.Add("deployKeyDirectory is required.");
+            problems.Add("branch is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(InstallRoot))
+        {
+            problems.Add("installRoot is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(DataRoot))
+        {
+            problems.Add("dataRoot is required.");
         }
 
         if (string.IsNullOrWhiteSpace(AppPoolName))
@@ -131,13 +134,13 @@ public sealed record HostAgentSettings
     }
 
     /// <summary>
-    /// Fields that must never appear in this file. The deploy key is a file with an ACL, not a
-    /// configuration value, and inlining it would make every backup of ProgramData a key leak.
+    /// Fields that must never appear in this file. Even though the repository is public, an inlined
+    /// credential of any kind would still be a leak in every backup of ProgramData.
     /// </summary>
     public IReadOnlyList<string> FindDisallowedSecretFields()
     {
         var json = ToJson();
-        return new[] { "privateKey", "BEGIN OPENSSH", "BEGIN RSA", "passphrase", "password" }
+        return new[] { "privateKey", "BEGIN OPENSSH", "BEGIN RSA", "passphrase", "password", "token" }
             .Where(forbidden => json.Contains(forbidden, StringComparison.OrdinalIgnoreCase))
             .ToList();
     }

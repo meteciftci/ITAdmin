@@ -31,7 +31,7 @@ public sealed class SystemUpdatesControllerTests
             NullLogger<SystemUpdatesController>.Instance);
 
         var result = await controller.Install(
-            new InstallSystemUpdateRequest("2.0.0", DatabaseBackupConfirmed: false),
+            new InstallSystemUpdateRequest(DatabaseBackupConfirmed: false),
             CancellationToken.None);
 
         Assert.IsType<BadRequestObjectResult>(result.Result);

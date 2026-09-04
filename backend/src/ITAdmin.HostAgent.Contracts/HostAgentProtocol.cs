@@ -7,47 +7,37 @@ namespace ITAdmin.HostAgent.Contracts;
 /// The wire contract between the ITAdmin web application and the privileged ITAdmin Host Agent.
 ///
 /// <para>
-/// <b>Why a separate privileged component at all.</b> Updating a release, repointing an IIS site,
-/// binding a certificate, and recycling an app pool are machine-administrator operations. The web
-/// application is internet-facing-shaped code that parses untrusted input all day; giving its app
-/// pool the rights to do those things would mean any request-handling flaw becomes machine
-/// compromise. So the app pool identity keeps exactly the rights it has today - read its release,
-/// write its logs and key ring - and a separate service running as LocalSystem performs the small,
-/// fixed set of operations that genuinely need privilege.
+/// <b>Why a separate privileged component at all.</b> Fetching source, building it, running
+/// migrations, and repointing an IIS site are machine-administrator operations. The web application
+/// is internet-facing-shaped code that parses untrusted input all day; giving its app pool the
+/// rights to do those things would mean any request-handling flaw becomes machine compromise. So
+/// the app pool identity keeps exactly the rights it has today - read its build, write its logs and
+/// key ring - and a separate service running as LocalSystem performs a small, fixed set of
+/// operations.
 /// </para>
 ///
 /// <para>
-/// <b>Why named pipes.</b> The boundary has to authenticate the caller, and on Windows a named pipe
-/// gives that for free: the server calls <c>GetImpersonationUserName</c> / impersonates to learn the
-/// connecting principal, and a pipe ACL restricts who may connect at all - enforced by the kernel,
-/// not by a token the application has to store, rotate, and protect. A localhost TCP listener would
-/// have neither property: any local process could connect, and the agent would need its own
-/// authentication scheme with its own secret. Pipes are also machine-local by construction, so
-/// there is no port to accidentally expose.
+/// <b>Why named pipes.</b> The boundary authenticates the caller for free: the server learns the
+/// connecting principal from the pipe, and a pipe ACL restricts who may connect at all - enforced
+/// by the kernel, not by a token the application has to store and protect.
 /// </para>
 ///
 /// <para>
 /// <b>Why typed operations.</b> Every operation below is a named intent with a fixed payload. There
-/// is no "run this command", no script path parameter, and no shell. That is the single most
-/// important property of this contract: a compromised web application can ask for an update to a
-/// release that the agent independently verifies against the repository, and nothing else. Adding a
-/// generic execution operation later would silently undo the whole boundary.
+/// is no "run this command", no script path parameter, no version string, and no shell. A
+/// compromised web application can ask for an update - which the agent applies by running the
+/// deployment script that already lives in the checked-out source, with arguments the agent derives
+/// entirely from its own configuration - and nothing else.
 /// </para>
 /// </summary>
 public static class HostAgentProtocol
 {
-    public const int ProtocolVersion = 1;
+    public const int ProtocolVersion = 2;
 
-    /// <summary>
-    /// Pipe name. Machine-local; the agent applies an ACL so only the app pool identity and
-    /// administrators may connect.
-    /// </summary>
+    /// <summary>Pipe name. Machine-local; the agent ACLs it to the app pool identity and administrators.</summary>
     public const string PipeName = "ITAdmin.HostAgent";
 
-    /// <summary>
-    /// Cap on a single request or response frame. Bounded so a malformed or hostile length prefix
-    /// cannot make the privileged process allocate arbitrarily.
-    /// </summary>
+    /// <summary>Cap on a single request or response frame.</summary>
     public const int MaxFrameBytes = 1 << 20;
 
     public static readonly JsonSerializerOptions Json = new()
@@ -58,13 +48,8 @@ public static class HostAgentProtocol
 }
 
 /// <summary>
-/// The complete set of things the web application may ask the privileged agent to do.
-///
-/// <para>
-/// This enum is the boundary. It is intentionally short, and every value is a specific intent whose
-/// parameters the agent validates independently - it never trusts the caller's version numbers,
-/// paths, or thumbprints without re-deriving them from the repository or the certificate store.
-/// </para>
+/// The complete set of things the web application may ask the privileged agent to do. This enum is
+/// the boundary: it is intentionally short and carries no free-form parameters.
 /// </summary>
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum HostAgentOperation
@@ -72,32 +57,25 @@ public enum HostAgentOperation
     /// <summary>Liveness and version of the agent itself.</summary>
     Ping = 0,
 
-    /// <summary>Installed version, available version, and lifecycle phase. Read-only.</summary>
+    /// <summary>Active commit, branch, and health. Read-only.</summary>
     GetInstallationStatus = 1,
 
     /// <summary>
-    /// Ask the repository which releases exist on the configured channel. Read-only; performed by
-    /// the agent using the deploy key, which the web application cannot read.
+    /// Fetch the configured branch and report how far behind it the deployed build is. Read-only.
     /// </summary>
     CheckForUpdates = 2,
 
     /// <summary>
-    /// Request that a specific release be fetched, verified, staged, migrated, and activated. The
-    /// requested version must be one the agent itself resolved from an annotated stable tag.
+    /// Rebuild and redeploy from the current branch tip by running the checked-out deployment
+    /// script. Carries no parameters - the agent builds the command line from its own configuration.
     /// </summary>
     RequestUpdate = 3,
 
     /// <summary>Progress and outcome of the most recent update request.</summary>
     GetUpdateStatus = 4,
 
-    /// <summary>
-    /// Apply the host/HTTPS settings an administrator saved in ITAdmin Settings to the IIS site:
-    /// host header, certificate selection, HTTP-to-HTTPS redirect.
-    /// </summary>
-    ReconcileWebBindings = 5,
-
     /// <summary>Recycle the ITAdmin application pool. The narrowest useful service operation.</summary>
-    RecycleApplicationPool = 6,
+    RecycleApplicationPool = 5,
 }
 
 /// <summary>One request across the pipe.</summary>
@@ -112,28 +90,6 @@ public sealed record HostAgentRequest
     /// <summary>Correlates the request with the agent's own logs and the caller's audit entry.</summary>
     [JsonPropertyName("correlationId")]
     public string? CorrelationId { get; init; }
-
-    /// <summary>
-    /// Release version for <see cref="HostAgentOperation.RequestUpdate"/>. Advisory: the agent
-    /// resolves the release independently and refuses anything that does not match a real annotated
-    /// stable tag, so a caller cannot name an arbitrary ref or path here.
-    /// </summary>
-    [JsonPropertyName("targetVersion")]
-    public string? TargetVersion { get; init; }
-
-    /// <summary>Desired public host name for <see cref="HostAgentOperation.ReconcileWebBindings"/>.</summary>
-    [JsonPropertyName("hostName")]
-    public string? HostName { get; init; }
-
-    /// <summary>Certificate thumbprint from LocalMachine\My for binding reconciliation.</summary>
-    [JsonPropertyName("certificateThumbprint")]
-    public string? CertificateThumbprint { get; init; }
-
-    [JsonPropertyName("enableHttps")]
-    public bool? EnableHttps { get; init; }
-
-    [JsonPropertyName("redirectHttpToHttps")]
-    public bool? RedirectHttpToHttps { get; init; }
 
     public string ToJson() => JsonSerializer.Serialize(this, HostAgentProtocol.Json);
 
@@ -154,11 +110,6 @@ public sealed record HostAgentRequest
         }
     }
 
-    /// <summary>
-    /// Shape validation performed by the agent before any privileged work begins. Returns every
-    /// problem rather than the first, and never reflects caller-supplied text back into a message
-    /// that could later reach a UI unescaped.
-    /// </summary>
     public IReadOnlyList<string> Validate()
     {
         var problems = new List<string>();
@@ -173,81 +124,10 @@ public sealed record HostAgentRequest
         if (!Enum.IsDefined(Operation))
         {
             problems.Add("Unknown operation.");
-            return problems;
-        }
-
-        switch (Operation)
-        {
-            case HostAgentOperation.RequestUpdate when string.IsNullOrWhiteSpace(TargetVersion):
-                problems.Add("targetVersion is required for RequestUpdate.");
-                break;
-
-            case HostAgentOperation.RequestUpdate when !IsPlainVersion(TargetVersion):
-                // A version is used to build a ref name and a directory name. Rejecting anything
-                // that is not digits, dots, and a plain pre-release label keeps a caller from
-                // steering either one.
-                problems.Add("targetVersion must be a plain MAJOR.MINOR.PATCH[-prerelease] version.");
-                break;
-
-            case HostAgentOperation.ReconcileWebBindings:
-                if (EnableHttps == true && string.IsNullOrWhiteSpace(CertificateThumbprint))
-                {
-                    problems.Add("certificateThumbprint is required when enabling HTTPS.");
-                }
-
-                if (!string.IsNullOrWhiteSpace(CertificateThumbprint) && !IsThumbprint(CertificateThumbprint))
-                {
-                    problems.Add("certificateThumbprint must be 40 hexadecimal characters.");
-                }
-
-                if (!string.IsNullOrWhiteSpace(HostName) && !IsPlainHostName(HostName))
-                {
-                    problems.Add("hostName must be a valid host name.");
-                }
-
-                if (RedirectHttpToHttps == true && EnableHttps != true)
-                {
-                    problems.Add("redirectHttpToHttps requires HTTPS to be enabled.");
-                }
-
-                break;
         }
 
         return problems;
     }
-
-    internal static bool IsPlainVersion(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value) || value.Length > 64)
-        {
-            return false;
-        }
-
-        var text = value.Trim();
-        var hyphen = text.IndexOf('-');
-        if (hyphen >= 0)
-        {
-            var label = text[(hyphen + 1)..];
-            if (label.Length == 0 || !label.All(c => char.IsAsciiLetterOrDigit(c) || c is '.' or '-'))
-            {
-                return false;
-            }
-
-            text = text[..hyphen];
-        }
-
-        var parts = text.Split('.');
-        return parts.Length == 3
-            && parts.All(part => part.Length > 0 && part.Length <= 9 && part.All(char.IsAsciiDigit));
-    }
-
-    internal static bool IsThumbprint(string? value) =>
-        value is { Length: 40 } && value.All(Uri.IsHexDigit);
-
-    internal static bool IsPlainHostName(string? value) =>
-        !string.IsNullOrWhiteSpace(value)
-        && value.Length <= 253
-        && Uri.CheckHostName(value) is UriHostNameType.Dns or UriHostNameType.IPv4 or UriHostNameType.IPv6;
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -269,13 +149,9 @@ public enum HostAgentResponseStatus
 }
 
 /// <summary>
-/// One response across the pipe.
-///
-/// <para>
-/// Everything here is safe to surface in the ITAdmin UI. There are no file-system paths beyond the
-/// ones an administrator already sees, no repository URL, no key material, and no exception text -
-/// the agent logs the detail locally and returns a message an operator can act on.
-/// </para>
+/// One response across the pipe. Everything here is safe to surface in the ITAdmin UI: no
+/// file-system paths beyond the ones an administrator already sees, no repository internals, no
+/// key material, and no exception text.
 /// </summary>
 public sealed record HostAgentResponse
 {
@@ -297,8 +173,8 @@ public sealed record HostAgentResponse
     [JsonPropertyName("update")]
     public HostAgentUpdateStatus? Update { get; init; }
 
-    [JsonPropertyName("availableReleases")]
-    public IReadOnlyList<HostAgentAvailableRelease>? AvailableReleases { get; init; }
+    [JsonPropertyName("availability")]
+    public HostAgentUpdateAvailability? Availability { get; init; }
 
     [JsonPropertyName("repositoryStatus")]
     public HostAgentRepositoryStatus RepositoryStatus { get; init; } = HostAgentRepositoryStatus.Unknown;
@@ -340,10 +216,8 @@ public enum HostAgentRepositoryStatus
 {
     Unknown = 0,
     Verified = 1,
-    DeployKeyMissing = 2,
-    RepositoryRejected = 3,
-    HostUnreachable = 4,
-    HostKeyProblem = 5,
+    RepositoryRejected = 2,
+    HostUnreachable = 3,
 }
 
 public sealed record HostAgentInstallationStatus
@@ -351,14 +225,18 @@ public sealed record HostAgentInstallationStatus
     [JsonPropertyName("phase")]
     public string Phase { get; init; } = string.Empty;
 
-    [JsonPropertyName("activeVersion")]
-    public string? ActiveVersion { get; init; }
+    /// <summary>Short commit the live build was produced from.</summary>
+    [JsonPropertyName("activeCommit")]
+    public string? ActiveCommit { get; init; }
 
-    [JsonPropertyName("previousVersion")]
-    public string? PreviousVersion { get; init; }
+    [JsonPropertyName("previousCommit")]
+    public string? PreviousCommit { get; init; }
 
-    [JsonPropertyName("channel")]
-    public string Channel { get; init; } = "stable";
+    [JsonPropertyName("branch")]
+    public string Branch { get; init; } = "main";
+
+    [JsonPropertyName("builtAtUtc")]
+    public DateTimeOffset? BuiltAtUtc { get; init; }
 
     [JsonPropertyName("healthy")]
     public bool Healthy { get; init; }
@@ -368,15 +246,13 @@ public sealed record HostAgentInstallationStatus
 public enum HostAgentUpdatePhase
 {
     Idle = 0,
-    Resolving = 1,
-    Fetching = 2,
-    Verifying = 3,
-    Staging = 4,
-    Migrating = 5,
-    Activating = 6,
-    Completed = 7,
-    Failed = 8,
-    RequiresOperatorReview = 9,
+    Pulling = 1,
+    Building = 2,
+    Migrating = 3,
+    Activating = 4,
+    Completed = 5,
+    Failed = 6,
+    RequiresOperatorReview = 7,
 }
 
 public sealed record HostAgentUpdateStatus
@@ -387,8 +263,8 @@ public sealed record HostAgentUpdateStatus
     [JsonPropertyName("phase")]
     public HostAgentUpdatePhase Phase { get; init; }
 
-    [JsonPropertyName("targetVersion")]
-    public string? TargetVersion { get; init; }
+    [JsonPropertyName("targetCommit")]
+    public string? TargetCommit { get; init; }
 
     [JsonPropertyName("startedAtUtc")]
     public DateTimeOffset? StartedAtUtc { get; init; }
@@ -401,24 +277,26 @@ public sealed record HostAgentUpdateStatus
 }
 
 /// <summary>
-/// A release the agent found on the repository. Sanitised on purpose: the version and its source
-/// commit are meaningful to an administrator, while the ref name, remote URL, and local paths are
-/// deployment-authority detail the web application has no reason to see.
+/// How far the deployed build is behind the configured branch. Sanitised: the short commits and the
+/// latest commit subject are meaningful to an administrator; the remote URL and local paths are not.
 /// </summary>
-public sealed record HostAgentAvailableRelease
+public sealed record HostAgentUpdateAvailability
 {
-    [JsonPropertyName("version")]
-    public string Version { get; init; } = string.Empty;
+    [JsonPropertyName("upToDate")]
+    public bool UpToDate { get; init; }
 
-    [JsonPropertyName("sourceCommit")]
-    public string SourceCommit { get; init; } = string.Empty;
+    [JsonPropertyName("commitsBehind")]
+    public int CommitsBehind { get; init; }
 
-    [JsonPropertyName("publishedAtUtc")]
-    public DateTimeOffset? PublishedAtUtc { get; init; }
+    [JsonPropertyName("currentCommit")]
+    public string? CurrentCommit { get; init; }
 
-    [JsonPropertyName("description")]
-    public string? Description { get; init; }
+    [JsonPropertyName("latestCommit")]
+    public string? LatestCommit { get; init; }
 
-    [JsonPropertyName("isInstalled")]
-    public bool IsInstalled { get; init; }
+    [JsonPropertyName("latestSubject")]
+    public string? LatestSubject { get; init; }
+
+    [JsonPropertyName("branch")]
+    public string Branch { get; init; } = "main";
 }

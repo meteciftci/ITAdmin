@@ -11,7 +11,4 @@
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.11" />
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.11" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\ITAdmin.Deployment\ITAdmin.Deployment.csproj" />
-  </ItemGroup>
 </Project>

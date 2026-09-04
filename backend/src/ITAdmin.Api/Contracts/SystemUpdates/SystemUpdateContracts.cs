@@ -6,25 +6,26 @@ public sealed record SystemUpdateStatusResponse(
     string RepositoryStatus,
     string Message,
     string? InstallationPhase,
-    string? ActiveVersion,
-    string? PreviousVersion,
+    string? ActiveCommit,
+    string? PreviousCommit,
+    string Branch,
+    DateTimeOffset? BuiltAtUtc,
     bool Healthy,
-    string? LatestVersion,
-    string? LatestSourceCommit,
-    DateTimeOffset? LatestPublishedAtUtc,
-    string? LatestDescription,
     bool UpdateAvailable,
+    int CommitsBehind,
+    string? LatestCommit,
+    string? LatestSubject,
     SystemUpdateOperationResponse? Operation,
     DateTimeOffset CheckedAtUtc);
 
 public sealed record SystemUpdateOperationResponse(
     string? OperationId,
     string Phase,
-    string? TargetVersion,
+    string? TargetCommit,
     DateTimeOffset? StartedAtUtc,
     DateTimeOffset? CompletedAtUtc,
     string Message);
 
-public sealed record InstallSystemUpdateRequest(string? TargetVersion, bool DatabaseBackupConfirmed);
+public sealed record InstallSystemUpdateRequest(bool DatabaseBackupConfirmed);
 
-public sealed record InstallSystemUpdateResponse(string OperationId, string TargetVersion, string Message);
+public sealed record InstallSystemUpdateResponse(string? OperationId, string? TargetCommit, string Message);

@@ -1,4 +1,3 @@
-using ITAdmin.Deployment;
 using ITAdmin.HostAgent;
 using ITAdmin.HostAgent.Contracts;
 
@@ -9,9 +8,8 @@ namespace ITAdmin.UnitTests.Deployment;
 ///
 /// <para>
 /// These are security tests, not feature tests. The boundary is the reason the web application can
-/// keep an unprivileged app pool identity while ITAdmin still updates itself and reconfigures IIS,
-/// so its properties are asserted directly rather than inferred from how the code happens to be
-/// wired today.
+/// keep an unprivileged app pool identity while ITAdmin still updates itself, so its properties are
+/// asserted directly rather than inferred from how the code happens to be wired today.
 /// </para>
 /// </summary>
 public sealed class HostAgentBoundaryTests
@@ -59,13 +57,24 @@ public sealed class HostAgentBoundaryTests
     }
 
     [Fact]
+    public void Protocol_RequestCarriesNoParametersAtAll()
+    {
+        // Every request is a bare intent: operation + correlation id. There is nothing here for a
+        // caller to steer - not a commit, not a branch, not a flag.
+        var properties = typeof(HostAgentRequest).GetProperties().Select(p => p.Name).ToArray();
+        Assert.Equal(
+            new[] { "ProtocolVersion", "Operation", "CorrelationId" }.OrderBy(x => x),
+            properties.OrderBy(x => x));
+    }
+
+    [Fact]
     public void Protocol_ResponseCarriesNoSecretOrInternalPathFields()
     {
         // Responses are rendered in the ITAdmin UI.
         foreach (var type in new[]
                  {
                      typeof(HostAgentResponse), typeof(HostAgentInstallationStatus),
-                     typeof(HostAgentUpdateStatus), typeof(HostAgentAvailableRelease),
+                     typeof(HostAgentUpdateStatus), typeof(HostAgentUpdateAvailability),
                  })
         {
             foreach (var property in type.GetProperties())
@@ -90,7 +99,6 @@ public sealed class HostAgentBoundaryTests
     [InlineData(HostAgentOperation.CheckForUpdates)]
     [InlineData(HostAgentOperation.RequestUpdate)]
     [InlineData(HostAgentOperation.GetUpdateStatus)]
-    [InlineData(HostAgentOperation.ReconcileWebBindings)]
     [InlineData(HostAgentOperation.RecycleApplicationPool)]
     public void Authorization_WebApplicationMayInvokeTheUpdateAndSettingsOperations(HostAgentOperation operation) =>
         Assert.True(Authorization.Authorize(@"IIS APPPOOL\ITAdmin", false, operation).IsAllowed);
@@ -158,7 +166,7 @@ public sealed class HostAgentBoundaryTests
         var dispatcher = new HostAgentDispatcher(Authorization, operations);
 
         var response = await dispatcher.DispatchAsync(
-            new HostAgentRequest { Operation = HostAgentOperation.RequestUpdate }.ToJson(),
+            new HostAgentRequest { ProtocolVersion = 99, Operation = HostAgentOperation.RequestUpdate }.ToJson(),
             Unknown());
 
         Assert.Equal(HostAgentResponseStatus.Rejected, response.Status);
@@ -172,11 +180,7 @@ public sealed class HostAgentBoundaryTests
         var dispatcher = new HostAgentDispatcher(Authorization, operations);
 
         var response = await dispatcher.DispatchAsync(
-            new HostAgentRequest
-            {
-                Operation = HostAgentOperation.RequestUpdate,
-                TargetVersion = "2.0.0",
-            }.ToJson(),
+            new HostAgentRequest { Operation = HostAgentOperation.RequestUpdate }.ToJson(),
             Unknown());
 
         Assert.Equal(HostAgentResponseStatus.Denied, response.Status);
@@ -199,7 +203,7 @@ public sealed class HostAgentBoundaryTests
     public async Task Dispatch_OperationFailureIsReportedWithoutLeakingInternals()
     {
         var operations = new ThrowingOperations(new InvalidOperationException(
-            @"fatal: could not read /ProgramData/ITAdmin/keys/deploy_key at git@github.com:contoso/itadmin.git"));
+            @"fatal: could not read C:\ITAdmin\src\.git\config"));
         var dispatcher = new HostAgentDispatcher(Authorization, operations);
 
         var response = await dispatcher.DispatchAsync(
@@ -207,8 +211,7 @@ public sealed class HostAgentBoundaryTests
             WebApplication());
 
         Assert.Equal(HostAgentResponseStatus.Failed, response.Status);
-        Assert.DoesNotContain("deploy_key", response.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("github.com", response.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(@"C:\ITAdmin", response.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(operations.Logged);
     }
 
@@ -225,167 +228,59 @@ public sealed class HostAgentBoundaryTests
     }
 
     // ------------------------------------------------------------------------------------------
-    // Request validation
-    // ------------------------------------------------------------------------------------------
-
-    [Theory]
-    [InlineData("../../../etc/passwd")]
-    [InlineData("2.0.0; shutdown")]
-    [InlineData(@"..\..\Windows\System32")]
-    [InlineData("refs/heads/main")]
-    [InlineData("")]
-    [InlineData("latest")]
-    public void Request_TargetVersionThatIsNotAPlainVersionIsRejected(string version)
-    {
-        // A version becomes a ref name and a directory name inside the privileged process.
-        var problems = new HostAgentRequest
-        {
-            Operation = HostAgentOperation.RequestUpdate,
-            TargetVersion = version,
-        }.Validate();
-
-        Assert.NotEmpty(problems);
-    }
-
-    [Fact]
-    public void Request_PlainVersionIsAccepted() =>
-        Assert.Empty(new HostAgentRequest
-        {
-            Operation = HostAgentOperation.RequestUpdate,
-            TargetVersion = "2.1.0",
-        }.Validate());
-
-    [Fact]
-    public void Request_EnablingHttpsWithoutACertificateIsRejected() =>
-        Assert.NotEmpty(new HostAgentRequest
-        {
-            Operation = HostAgentOperation.ReconcileWebBindings,
-            HostName = "itadmin.example.com",
-            EnableHttps = true,
-        }.Validate());
-
-    [Fact]
-    public void Request_RedirectWithoutHttpsIsRejected() =>
-        // Would remove the only working way in.
-        Assert.NotEmpty(new HostAgentRequest
-        {
-            Operation = HostAgentOperation.ReconcileWebBindings,
-            HostName = "itadmin.example.com",
-            EnableHttps = false,
-            RedirectHttpToHttps = true,
-        }.Validate());
-
-    [Theory]
-    [InlineData("not a hostname")]
-    [InlineData("http://itadmin.example.com")]
-    public void Request_MalformedHostNameIsRejected(string hostName) =>
-        Assert.NotEmpty(new HostAgentRequest
-        {
-            Operation = HostAgentOperation.ReconcileWebBindings,
-            HostName = hostName,
-        }.Validate());
-
-    [Fact]
-    public void Request_ValidBindingReconciliationIsAccepted() =>
-        Assert.Empty(new HostAgentRequest
-        {
-            Operation = HostAgentOperation.ReconcileWebBindings,
-            HostName = "itadmin.example.com",
-            EnableHttps = true,
-            CertificateThumbprint = new string('A', 40),
-            RedirectHttpToHttps = true,
-        }.Validate());
-
-    // ------------------------------------------------------------------------------------------
-    // Configuration separation
+    // Configuration
     // ------------------------------------------------------------------------------------------
 
     [Fact]
-    public void Settings_HoldTheKeysLocationButNeverTheKey()
+    public void Settings_ValidConfigurationRoundTrips()
     {
         var settings = new HostAgentSettings
         {
-            RepositoryUrl = "git@github.com:contoso/itadmin.git",
-            DeployKeyDirectory = @"C:\ProgramData\ITAdmin\keys",
-            AppPoolName = AppPool,
+            RepositoryUrl = "https://github.com/meteciftci/ITAdmin.git",
+            Branch = "main",
+            InstallRoot = @"C:\ITAdmin",
+            DataRoot = @"C:\ProgramData\ITAdmin",
+            AppPoolName = "Contoso-ITAdmin",
+            UpdatesEnabled = true,
         };
 
         Assert.Empty(settings.Validate());
         Assert.Empty(settings.FindDisallowedSecretFields());
-        Assert.EndsWith("deploy_key", settings.DeployKeyPath, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void Settings_DeployKeyIsNotUnderTheWebRootOrAReleaseDirectory()
-    {
-        var settings = new HostAgentSettings
-        {
-            RepositoryUrl = "git@github.com:contoso/itadmin.git",
-            DeployKeyDirectory = @"C:\ProgramData\ITAdmin\keys",
-            AppPoolName = AppPool,
-        };
-
-        var layout = new DeploymentLayout(settings.ProgramFilesRoot, settings.ProgramDataRoot);
-
-        // A key inside a release directory would be served by IIS and readable by the app pool.
-        Assert.False(settings.DeployKeyPath.StartsWith(layout.ReleasesRoot, StringComparison.OrdinalIgnoreCase));
-        Assert.False(settings.DeployKeyPath.StartsWith(layout.SecretsRoot, StringComparison.OrdinalIgnoreCase));
-    }
-
-    [Fact]
-    public void Settings_UpdatesAreDisabledUntilDeliberatelyEnabled() =>
-        // A freshly installed host should not be persuadable into replacing its own release.
-        Assert.False(new HostAgentSettings().UpdatesEnabled);
-
-    [Fact]
-    public void Settings_MissingRepositoryOrKeyLocationIsReported()
-    {
-        var problems = new HostAgentSettings().Validate();
-
-        Assert.Contains(problems, problem => problem.Contains("repositoryUrl", StringComparison.Ordinal));
-        Assert.Contains(problems, problem => problem.Contains("deployKeyDirectory", StringComparison.Ordinal));
-    }
-
-    [Fact]
-    public void Settings_RoundTripThroughTheirStoredForm()
-    {
-        var settings = new HostAgentSettings
-        {
-            RepositoryUrl = "git@github.com:contoso/itadmin.git",
-            DeployKeyDirectory = @"C:\ProgramData\ITAdmin\keys",
-            AppPoolName = "Contoso-ITAdmin",
-            Channel = ReleaseChannel.Preview,
-            UpdatesEnabled = true,
-        };
 
         var restored = HostAgentSettings.FromJson(settings.ToJson());
-
         Assert.NotNull(restored);
-        Assert.Equal(ReleaseChannel.Preview, restored!.Channel);
+        Assert.Equal("main", restored!.Branch);
         Assert.True(restored.UpdatesEnabled);
         Assert.Equal("Contoso-ITAdmin", restored.AppPoolName);
+        Assert.EndsWith(
+            Path.Combine("src", "scripts", "deploy", "Deploy-ITAdmin.ps1"),
+            restored.DeployScriptPath,
+            StringComparison.Ordinal);
     }
 
     [Fact]
-    public void GitClient_PinsTheDeployKeyAndKeepsHostKeyCheckingOn()
+    public void Settings_UpdatesAreEnabledByDefault() =>
+        // The repository is public; a host that must never self-update sets updatesEnabled: false.
+        Assert.True(new HostAgentSettings().UpdatesEnabled);
+
+    [Fact]
+    public void Settings_MissingRepositoryOrRootsIsReported()
     {
-        var command = RepositoryAccessContract.BuildSshCommand(
-            @"C:\ProgramData\ITAdmin\keys\deploy_key",
-            @"C:\ProgramData\ITAdmin\keys\known_hosts");
+        var problems = new HostAgentSettings { RepositoryUrl = "", InstallRoot = "", DataRoot = "" }.Validate();
 
-        // IdentitiesOnly: otherwise SSH may offer an agent or user key, making the installation
-        // depend on whichever account happened to run it.
-        Assert.Contains("IdentitiesOnly=yes", command, StringComparison.Ordinal);
-        // BatchMode: a prompt would hang a service with no console forever.
-        Assert.Contains("BatchMode=yes", command, StringComparison.Ordinal);
-        Assert.Contains("StrictHostKeyChecking=yes", command, StringComparison.Ordinal);
-        Assert.DoesNotContain("StrictHostKeyChecking=no", command, StringComparison.Ordinal);
-        Assert.DoesNotContain("StrictHostKeyChecking=accept-new", command, StringComparison.Ordinal);
+        Assert.Contains(problems, problem => problem.Contains("repositoryUrl", StringComparison.Ordinal));
+        Assert.Contains(problems, problem => problem.Contains("installRoot", StringComparison.Ordinal));
+        Assert.Contains(problems, problem => problem.Contains("dataRoot", StringComparison.Ordinal));
+    }
 
-        // The machine's own known_hosts, not an administrator's profile, and no system-wide file
-        // that could silently widen what the service trusts.
-        Assert.Contains(@"UserKnownHostsFile=""C:\ProgramData\ITAdmin\keys\known_hosts""", command, StringComparison.Ordinal);
-        Assert.Contains("GlobalKnownHostsFile=/dev/null", command, StringComparison.Ordinal);
+    [Fact]
+    public void Settings_DeployScriptStaysInsideTheCheckedOutSource()
+    {
+        // Nothing about the update path is a path a caller supplied - it is always the script that
+        // shipped with whatever commit this host currently has checked out.
+        var settings = new HostAgentSettings { InstallRoot = @"D:\Somewhere\ITAdmin" };
+
+        Assert.StartsWith(settings.SourceRoot, settings.DeployScriptPath, StringComparison.OrdinalIgnoreCase);
     }
 
     // ------------------------------------------------------------------------------------------
@@ -411,9 +306,6 @@ public sealed class HostAgentBoundaryTests
 
         public Task<HostAgentResponse> GetUpdateStatusAsync(HostAgentRequest request, CancellationToken cancellationToken) =>
             Record(HostAgentOperation.GetUpdateStatus, request);
-
-        public Task<HostAgentResponse> ReconcileWebBindingsAsync(HostAgentRequest request, CancellationToken cancellationToken) =>
-            Record(HostAgentOperation.ReconcileWebBindings, request);
 
         public Task<HostAgentResponse> RecycleApplicationPoolAsync(HostAgentRequest request, CancellationToken cancellationToken) =>
             Record(HostAgentOperation.RecycleApplicationPool, request);
@@ -441,9 +333,6 @@ public sealed class HostAgentBoundaryTests
             throw exception;
 
         public Task<HostAgentResponse> GetUpdateStatusAsync(HostAgentRequest request, CancellationToken cancellationToken) =>
-            throw exception;
-
-        public Task<HostAgentResponse> ReconcileWebBindingsAsync(HostAgentRequest request, CancellationToken cancellationToken) =>
             throw exception;
 
         public Task<HostAgentResponse> RecycleApplicationPoolAsync(HostAgentRequest request, CancellationToken cancellationToken) =>

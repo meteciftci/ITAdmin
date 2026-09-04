@@ -1,4 +1,3 @@
-using ITAdmin.Deployment;
 using ITAdmin.HostAgent;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -9,8 +8,8 @@ using Microsoft.Win32;
 // ITAdmin Host Agent: the privileged half of an ITAdmin installation.
 //
 // Runs as a Windows service under LocalSystem. It owns the machine operations the web application
-// must never be able to perform - fetching releases with the deploy key, staging and activating
-// them, and reconciling IIS bindings - and exposes them only as the fixed set of typed operations
+// must never be able to perform - applying an update by running the checked-out deployment script,
+// and recycling the application pool - and exposes them only as the fixed set of typed operations
 // in ITAdmin.HostAgent.Contracts, over an ACL'd local named pipe.
 
 if (!OperatingSystem.IsWindows())
@@ -23,23 +22,25 @@ if (!OperatingSystem.IsWindows())
 var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddWindowsService(options => options.ServiceName = HostAgentServiceMetadata.ServiceName);
 
-// Setup-ITAdmin records the ProgramData root before the service is registered. Reading the same
-// machine value as the Update Coordinator keeps custom installation roots coherent across both
-// LocalSystem processes instead of silently falling back to C:\ProgramData\ITAdmin in one of them.
+// Deploy-ITAdmin.ps1 records the ProgramData root in the registry before the service is
+// registered. Reading the same machine value as the Update Coordinator keeps a custom -DataRoot
+// coherent across both LocalSystem processes instead of silently falling back to the default in
+// one of them.
+const string DefaultProgramDataRoot = @"C:\ProgramData\ITAdmin";
+
 #pragma warning disable CA1416 // Reached only after the Windows guard above.
 var programDataRoot = Registry.GetValue(
     @"HKEY_LOCAL_MACHINE\SOFTWARE\ITAdmin",
     "ProgramDataRoot",
-    DeploymentLayout.DefaultProgramDataRoot) as string ?? DeploymentLayout.DefaultProgramDataRoot;
+    DefaultProgramDataRoot) as string ?? DefaultProgramDataRoot;
 #pragma warning restore CA1416
 
-var layout = new DeploymentLayout(DeploymentLayout.DefaultProgramFilesRoot, programDataRoot);
-var settingsPath = Path.Combine(layout.ConfigRoot, HostAgentSettings.FileName);
+var settingsPath = Path.Combine(programDataRoot, "config", HostAgentSettings.FileName);
 
 if (!File.Exists(settingsPath))
 {
     Console.Error.WriteLine(
-        $"Host agent configuration not found at {settingsPath}. Run Setup-ITAdmin.ps1 to install it.");
+        $"Host agent configuration not found at {settingsPath}. Run Deploy-ITAdmin.ps1 to install it.");
     return 3;
 }
 
@@ -63,22 +64,20 @@ if (settingsProblems.Count > 0)
 
 builder.Services.AddSingleton(settings);
 builder.Services.AddSingleton(new HostAgentAuthorization(settings.AppPoolName));
-builder.Services.AddSingleton(serviceProvider => new GitReleaseClient(
+builder.Services.AddSingleton(serviceProvider => new GitSourceClient(
     serviceProvider.GetRequiredService<HostAgentSettings>()));
 
 #pragma warning disable CA1416 // Reached only after the Windows guard above.
-builder.Services.AddSingleton<IReleaseUpdateExecutor>(serviceProvider =>
-    new InstallerReleaseUpdateExecutor(
-        serviceProvider.GetRequiredService<HostAgentSettings>(),
-        serviceProvider.GetRequiredService<ILogger<InstallerReleaseUpdateExecutor>>()));
+builder.Services.AddSingleton<IHostDeploymentExecutor, WindowsHostDeploymentExecutor>();
 #pragma warning restore CA1416
 
-builder.Services.AddSingleton<IWebBindingReconciler, IisWebBindingReconciler>();
 builder.Services.AddSingleton<IHostAgentOperations, DeploymentHostAgentOperations>();
 builder.Services.AddSingleton<HostAgentDispatcher>();
 builder.Services.AddHostedService<HostAgentPipeServer>();
 
-await builder.Build().RunAsync();
+var app = builder.Build();
+app.Services.GetRequiredService<IHostAgentOperations>().ReconcileInterruptedOperation();
+await app.RunAsync();
 return 0;
 
 /// <summary>Names shared between the agent and whatever installs it.</summary>
@@ -89,6 +88,6 @@ public static class HostAgentServiceMetadata
     public const string DisplayName = "ITAdmin Host Agent";
 
     public const string Description =
-        "Performs privileged ITAdmin host operations (release updates and IIS binding "
-        + "reconciliation) on behalf of the ITAdmin application, over a local ACL'd named pipe.";
+        "Applies updates by running the checked-out ITAdmin deployment script, and performs narrow "
+        + "IIS operations, on behalf of the ITAdmin application over a local ACL'd named pipe.";
 }

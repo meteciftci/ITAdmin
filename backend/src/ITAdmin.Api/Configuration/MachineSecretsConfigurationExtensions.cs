@@ -7,19 +7,19 @@ using Microsoft.Extensions.Configuration;
 namespace ITAdmin.Api.Configuration;
 
 /// <summary>
-/// Loads DPAPI-protected machine secrets written by the Windows installer under
+/// Loads DPAPI-protected machine secrets written by <c>Deploy-ITAdmin.ps1</c> under
 /// <c>%ProgramData%\ITAdmin\secrets\runtime.secrets.dpapi</c> into the configuration keys the
 /// application already binds (<c>ConnectionStrings:DefaultConnection</c>, <c>Jwt:Key</c>).
 ///
 /// <para>
 /// Non-Windows hosts skip this provider (local development uses user-secrets / env vars). The
-/// filename and schema must stay aligned with <c>ITAdmin.Deployment.MachineSecrets</c> — covered
-/// by a drift test.
+/// filename and JSON schema must stay aligned with the <c>Save-MachineSecrets</c> function in
+/// <c>scripts/deploy/Deploy-ITAdmin.ps1</c> — the only writer of this file.
 /// </para>
 /// </summary>
 public static class MachineSecretsConfigurationExtensions
 {
-    /// <summary>Must match <c>ITAdmin.Deployment.MachineSecrets.ProtectedFileName</c>.</summary>
+    /// <summary>Must match the file name <c>Deploy-ITAdmin.ps1</c> writes.</summary>
     public const string ProtectedFileName = "runtime.secrets.dpapi";
 
     /// <summary>

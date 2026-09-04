@@ -10,6 +10,11 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ITAdmin.Api.Controllers;
 
+/// <summary>
+/// Reads and triggers ITAdmin's own update: there is no release/version numbering any more, only
+/// "how far behind the configured branch is the deployed build". Installing runs the same
+/// Deploy-ITAdmin.ps1 an operator would run on the server, via the ITAdmin Host Agent.
+/// </summary>
 [ApiController]
 [Route("api/system/updates")]
 [Authorize]
@@ -20,8 +25,7 @@ public sealed class SystemUpdatesController(
 {
     [HttpGet("status")]
     [RequirePermission(PermissionCodes.SystemUpdates.View)]
-    public async Task<ActionResult<SystemUpdateStatusResponse>> GetStatus(
-        CancellationToken cancellationToken)
+    public async Task<ActionResult<SystemUpdateStatusResponse>> GetStatus(CancellationToken cancellationToken)
     {
         try
         {
@@ -36,8 +40,7 @@ public sealed class SystemUpdatesController(
 
     [HttpPost("check")]
     [RequirePermission(PermissionCodes.SystemUpdates.View)]
-    public async Task<ActionResult<SystemUpdateStatusResponse>> CheckForUpdates(
-        CancellationToken cancellationToken)
+    public async Task<ActionResult<SystemUpdateStatusResponse>> CheckForUpdates(CancellationToken cancellationToken)
     {
         try
         {
@@ -64,12 +67,6 @@ public sealed class SystemUpdatesController(
             return BadRequest(new { message = "A current database backup must be confirmed before updating." });
         }
 
-        var targetVersion = request.TargetVersion?.Trim();
-        if (string.IsNullOrWhiteSpace(targetVersion))
-        {
-            return BadRequest(new { message = "targetVersion is required." });
-        }
-
         try
         {
             var current = await ReadStatusAsync(checkRepository: true, cancellationToken);
@@ -78,16 +75,7 @@ public sealed class SystemUpdatesController(
                 return StatusCode(StatusCodes.Status503ServiceUnavailable, current);
             }
 
-            if (!current.UpdateAvailable || !string.Equals(
-                    targetVersion,
-                    current.LatestVersion,
-                    StringComparison.Ordinal))
-            {
-                return BadRequest(new { message = "Only the latest stable release may be installed." });
-            }
-
-            if (current.Operation?.Phase is not null
-                && IsRunningPhase(current.Operation.Phase))
+            if (current.Operation is not null && IsRunningPhase(current.Operation.Phase))
             {
                 return Conflict(new { message = "An update is already in progress." });
             }
@@ -96,7 +84,6 @@ public sealed class SystemUpdatesController(
             var response = await hostAgentClient.SendAsync(new HostAgentRequest
             {
                 Operation = HostAgentOperation.RequestUpdate,
-                TargetVersion = targetVersion,
                 CorrelationId = correlationId,
             }, cancellationToken);
 
@@ -110,27 +97,27 @@ public sealed class SystemUpdatesController(
                 return StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = response.Message });
             }
 
-            if (response.Status is not HostAgentResponseStatus.Accepted || response.Update?.OperationId is null)
+            if (response.Status is not HostAgentResponseStatus.Accepted)
             {
                 return StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = "The update was not accepted by the host." });
             }
+
+            var operationId = response.Update?.OperationId;
+            var targetCommit = response.Update?.TargetCommit;
 
             await auditLogWriter.WriteAsync(new AuditLogWriteRequest
             {
                 Action = "SystemUpdateRequested",
                 EntityName = "SystemUpdate",
-                EntityId = response.Update.OperationId,
-                Description = $"ITAdmin update to {targetVersion} was requested.",
+                EntityId = operationId,
+                Description = $"An ITAdmin update{(targetCommit is null ? string.Empty : $" to {targetCommit}")} was requested.",
                 ActorUserId = ResolveActorUserId(),
                 ActorUserName = User.Identity?.Name,
                 IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
                 UserAgent = Request.Headers.UserAgent.ToString(),
             }, cancellationToken);
 
-            return Accepted(new InstallSystemUpdateResponse(
-                response.Update.OperationId,
-                targetVersion,
-                response.Message));
+            return Accepted(new InstallSystemUpdateResponse(operationId, targetCommit, response.Message));
         }
         catch (HostAgentUnavailableException exception)
         {
@@ -142,9 +129,7 @@ public sealed class SystemUpdatesController(
         }
     }
 
-    private async Task<SystemUpdateStatusResponse> ReadStatusAsync(
-        bool checkRepository,
-        CancellationToken cancellationToken)
+    private async Task<SystemUpdateStatusResponse> ReadStatusAsync(bool checkRepository, CancellationToken cancellationToken)
     {
         var correlationId = HttpContext.TraceIdentifier;
         var installation = await hostAgentClient.SendAsync(new HostAgentRequest
@@ -159,42 +144,39 @@ public sealed class SystemUpdatesController(
             CorrelationId = correlationId,
         }, cancellationToken);
 
-        var updateIsRunning = update.Update is not null
-            && IsRunningPhase(update.Update.Phase.ToString());
-        HostAgentResponse? releases = null;
+        var updateIsRunning = update.Update is not null && IsRunningPhase(update.Update.Phase.ToString());
+
+        HostAgentResponse? availability = null;
         if (checkRepository && !updateIsRunning)
         {
-            releases = await hostAgentClient.SendAsync(new HostAgentRequest
+            availability = await hostAgentClient.SendAsync(new HostAgentRequest
             {
                 Operation = HostAgentOperation.CheckForUpdates,
                 CorrelationId = correlationId,
             }, cancellationToken);
         }
 
-        var latest = releases?.AvailableReleases?.FirstOrDefault();
-        var repositoryAccessible = updateIsRunning
-            || releases?.Status is HostAgentResponseStatus.Ok;
-        var activeVersion = installation.Installation?.ActiveVersion;
-        var latestVersion = latest?.Version ?? (updateIsRunning ? update.Update?.TargetVersion : null);
+        var repositoryAccessible = updateIsRunning || availability?.Status is HostAgentResponseStatus.Ok;
 
         return new SystemUpdateStatusResponse(
             AgentAvailable: true,
             RepositoryAccessible: repositoryAccessible,
             RepositoryStatus: updateIsRunning
                 ? nameof(HostAgentRepositoryStatus.Verified)
-                : releases?.RepositoryStatus.ToString() ?? nameof(HostAgentRepositoryStatus.Unknown),
+                : availability?.RepositoryStatus.ToString() ?? nameof(HostAgentRepositoryStatus.Unknown),
             Message: repositoryAccessible
-                ? releases?.Message ?? "Update status read."
-                : releases?.Message ?? "Repository access has not been checked.",
+                ? availability?.Message ?? "Update status read."
+                : availability?.Message ?? "Repository access has not been checked.",
             InstallationPhase: installation.Installation?.Phase,
-            ActiveVersion: activeVersion,
-            PreviousVersion: installation.Installation?.PreviousVersion,
+            ActiveCommit: installation.Installation?.ActiveCommit,
+            PreviousCommit: installation.Installation?.PreviousCommit,
+            Branch: installation.Installation?.Branch ?? availability?.Availability?.Branch ?? "main",
+            BuiltAtUtc: installation.Installation?.BuiltAtUtc,
             Healthy: installation.Installation?.Healthy ?? false,
-            LatestVersion: latestVersion,
-            LatestSourceCommit: latest?.SourceCommit,
-            LatestPublishedAtUtc: latest?.PublishedAtUtc,
-            LatestDescription: latest?.Description,
-            UpdateAvailable: IsNewer(latestVersion, activeVersion),
+            UpdateAvailable: availability?.Availability is { UpToDate: false },
+            CommitsBehind: availability?.Availability?.CommitsBehind ?? 0,
+            LatestCommit: availability?.Availability?.LatestCommit,
+            LatestSubject: availability?.Availability?.LatestSubject,
             Operation: MapOperation(update.Update),
             CheckedAtUtc: DateTimeOffset.UtcNow);
     }
@@ -205,21 +187,14 @@ public sealed class SystemUpdatesController(
             : new SystemUpdateOperationResponse(
                 update.OperationId,
                 update.Phase.ToString(),
-                update.TargetVersion,
+                update.TargetCommit,
                 update.StartedAtUtc,
                 update.CompletedAtUtc,
                 update.Message);
 
-    private static bool IsNewer(string? candidate, string? active) =>
-        Version.TryParse(candidate, out var candidateVersion)
-        && Version.TryParse(active, out var activeVersion)
-        && candidateVersion > activeVersion;
-
     private static bool IsRunningPhase(string phase) => phase is
-        nameof(HostAgentUpdatePhase.Resolving)
-        or nameof(HostAgentUpdatePhase.Fetching)
-        or nameof(HostAgentUpdatePhase.Verifying)
-        or nameof(HostAgentUpdatePhase.Staging)
+        nameof(HostAgentUpdatePhase.Pulling)
+        or nameof(HostAgentUpdatePhase.Building)
         or nameof(HostAgentUpdatePhase.Migrating)
         or nameof(HostAgentUpdatePhase.Activating);
 
@@ -232,14 +207,15 @@ public sealed class SystemUpdatesController(
         RepositoryStatus: "HostAgentUnavailable",
         Message: "The ITAdmin Host Agent could not be reached on this server.",
         InstallationPhase: null,
-        ActiveVersion: null,
-        PreviousVersion: null,
+        ActiveCommit: null,
+        PreviousCommit: null,
+        Branch: "main",
+        BuiltAtUtc: null,
         Healthy: false,
-        LatestVersion: null,
-        LatestSourceCommit: null,
-        LatestPublishedAtUtc: null,
-        LatestDescription: null,
         UpdateAvailable: false,
+        CommitsBehind: 0,
+        LatestCommit: null,
+        LatestSubject: null,
         Operation: null,
         CheckedAtUtc: DateTimeOffset.UtcNow);
 }

@@ -1,133 +1,80 @@
-using ITAdmin.Deployment;
+using System.Net.Http;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using ITAdmin.HostAgent.Contracts;
 using Microsoft.Extensions.Logging;
 
 namespace ITAdmin.HostAgent;
 
 /// <summary>
-/// The privileged operations, implemented against the existing deployment contract.
-///
-/// <para>
-/// Nothing here is a second deployment engine. Installation state is the same
-/// <see cref="InstallationState"/> file the installer writes, release identity is the same
-/// annotated-tag rule the bootstrap uses, and staging/migration/activation is the same installer -
-/// invoked by the agent with arguments the agent builds, never with anything a caller supplied.
-/// First install, repair, and update therefore converge on one implementation, and a fix to the
-/// activation sequence cannot land in one path and be forgotten in the other.
-/// </para>
+/// The privileged operations. Not a deployment engine: an update is applied by running the
+/// <c>Deploy-ITAdmin.ps1</c> already checked out under <c>&lt;InstallRoot&gt;\src</c>, via the
+/// Update Coordinator, with arguments the agent builds from its own configuration. First install
+/// and update therefore converge on one script, and a fix to the deployment sequence cannot land in
+/// one path and be forgotten in the other.
 /// </summary>
 public sealed class DeploymentHostAgentOperations(
     HostAgentSettings settings,
-    GitReleaseClient gitClient,
-    IReleaseUpdateExecutor updateExecutor,
-    IWebBindingReconciler bindingReconciler,
+    GitSourceClient gitClient,
+    IHostDeploymentExecutor executor,
     ILogger<DeploymentHostAgentOperations> logger) : IHostAgentOperations
 {
-    private readonly DeploymentLayout _layout = new(settings.ProgramFilesRoot, settings.ProgramDataRoot);
     private readonly SemaphoreSlim _updateGate = new(1, 1);
 
-    private HostAgentUpdateStatus _updateStatus = new()
+    private static readonly JsonSerializerOptions JsonOptions = new()
     {
-        Phase = HostAgentUpdatePhase.Idle,
-        Message = "No update has been requested.",
+        PropertyNameCaseInsensitive = true,
+        WriteIndented = true,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
-    /// <summary>
-    /// Reconciles what the last run of this service left behind.
-    ///
-    /// <para>
-    /// Update progress used to live only in memory, so a service restart part-way through an update
-    /// left a machine nobody could classify: the release directory might be half-staged, the schema
-    /// might be half-migrated, and nothing on disk said so. The operation is now recorded in the
-    /// existing installation state, and this reads it at start-up and decides - by how far the
-    /// operation had got - whether it can be forgotten, safely retried, or must wait for a human.
-    /// </para>
-    /// </summary>
     public void ReconcileInterruptedOperation()
     {
-        var state = ReadInstallationState();
-        if (!state.HasInterruptedOperation)
+        var record = ReadOperation();
+        if (record is null || IsTerminal(record.Phase))
         {
             return;
         }
 
-        var operation = state.CurrentOperation!;
-        var disposition = operation.Classify();
-
+        // A running phase with no live process behind it means the service died mid-update. The
+        // build on disk may be half-produced and the schema may be part-migrated; that is an
+        // operator-review situation, never a silent retry.
         logger.LogWarning(
-            "A {Kind} operation targeting {Version} was interrupted at stage {Stage}; disposition {Disposition}.",
-            operation.Kind,
-            operation.TargetVersion ?? "(none)",
-            operation.Stage,
-            disposition);
+            "An update ({OperationId}) targeting {TargetCommit} was in phase {Phase} when the agent last stopped.",
+            record.OperationId, record.TargetCommit, record.Phase);
 
-        switch (disposition)
+        WriteOperation(record with
         {
-            case InterruptedOperationDisposition.SafeToDiscard:
-                // Nothing durable changed - the staged copy was a temporary directory.
-                ClearOperation();
-                _updateStatus = _updateStatus with
-                {
-                    Phase = HostAgentUpdatePhase.Idle,
-                    Message = "A previous update was interrupted before anything changed; it was discarded.",
-                };
-                break;
-
-            case InterruptedOperationDisposition.RetryFromStart:
-                ClearOperation();
-                _updateStatus = _updateStatus with
-                {
-                    Phase = HostAgentUpdatePhase.Failed,
-                    TargetVersion = operation.TargetVersion,
-                    Message = "A previous update was interrupted while staging. No live change was made; "
-                        + "the update can be requested again.",
-                };
-                break;
-
-            default:
-                // The schema or the live site may be partially changed. This is never resumed
-                // automatically, and it blocks new update requests until an operator clears it.
-                _blockedByInterruptedOperation = true;
-                _updateStatus = _updateStatus with
-                {
-                    OperationId = operation.Id,
-                    Phase = HostAgentUpdatePhase.RequiresOperatorReview,
-                    TargetVersion = operation.TargetVersion,
-                    Message = $"A previous update was interrupted at the {operation.Stage} stage. The "
-                        + "database schema or the live site may be partially changed; an administrator "
-                        + "must review this host before further updates are accepted.",
-                };
-                break;
-        }
+            Phase = HostAgentUpdatePhase.RequiresOperatorReview,
+            CompletedAtUtc = DateTimeOffset.UtcNow,
+            Message = "A previous update was interrupted. Review the deployment state and the ITAdmin Host Agent log, "
+                      + "then run Deploy-ITAdmin.ps1 on this host to converge.",
+        });
     }
 
-    private bool _blockedByInterruptedOperation;
-
-    public Task<HostAgentResponse> GetInstallationStatusAsync(
-        HostAgentRequest request,
-        CancellationToken cancellationToken)
+    public async Task<HostAgentResponse> GetInstallationStatusAsync(HostAgentRequest request, CancellationToken cancellationToken)
     {
-        var state = ReadInstallationState();
+        var state = ReadDeployState();
+        var healthy = await IsLocallyHealthyAsync(cancellationToken);
 
-        return Task.FromResult(new HostAgentResponse
+        return new HostAgentResponse
         {
             Status = HostAgentResponseStatus.Ok,
             Message = "Installation status read.",
             CorrelationId = request.CorrelationId,
             Installation = new HostAgentInstallationStatus
             {
-                Phase = state.Phase.ToString(),
-                ActiveVersion = state.ActiveVersion,
-                PreviousVersion = state.PreviousVersion,
-                Channel = settings.Channel.ToString().ToLowerInvariant(),
-                Healthy = state.Phase is InstallationPhase.Installed && !state.MigrationInFlight,
+                Phase = state?.ActiveSha is null ? "NotInstalled" : "Installed",
+                ActiveCommit = state?.ActiveSha,
+                PreviousCommit = state?.PreviousSha,
+                Branch = settings.Branch,
+                BuiltAtUtc = TryParseTimestamp(state?.ActiveBuiltAtUtc),
+                Healthy = healthy,
             },
-        });
+        };
     }
 
-    public async Task<HostAgentResponse> CheckForUpdatesAsync(
-        HostAgentRequest request,
-        CancellationToken cancellationToken)
+    public async Task<HostAgentResponse> CheckForUpdatesAsync(HostAgentRequest request, CancellationToken cancellationToken)
     {
         var access = await gitClient.DiagnoseAccessAsync(cancellationToken);
         if (!access.IsAccessible)
@@ -141,308 +88,94 @@ public sealed class DeploymentHostAgentOperations(
             };
         }
 
-        var lines = await gitClient.ListRemoteTagsAsync(cancellationToken);
-        var resolution = ReleaseTagResolver.Resolve(lines, settings.Channel);
-        var state = ReadInstallationState();
-
-        if (!resolution.IsResolved)
-        {
-            return HostAgentResponse.Failed(
-                resolution.DescribeFailure(settings.Channel),
-                request.CorrelationId);
-        }
-
-        var latestManifest = await gitClient.FetchManifestAsync(resolution.Selected.Version, cancellationToken);
-        if (!ReleaseAcquisition.CommitsMatch(latestManifest.Source.Commit, resolution.Selected.SourceCommit))
-        {
-            return HostAgentResponse.Failed(
-                "The latest release metadata does not match its annotated tag.",
-                request.CorrelationId);
-        }
-
-        var releases = resolution.Candidates
-            .OrderByDescending(candidate => candidate.Version)
-            .Select(candidate => new HostAgentAvailableRelease
-            {
-                Version = candidate.Version.ToString(),
-                SourceCommit = candidate.SourceCommit,
-                PublishedAtUtc = candidate.Version == resolution.Selected.Version
-                    ? latestManifest.Distribution.BuiltAtUtc
-                    : null,
-                Description = candidate.Version == resolution.Selected.Version
-                    ? latestManifest.Distribution.Summary
-                    : null,
-                IsInstalled = string.Equals(candidate.Version.ToString(), state.ActiveVersion, StringComparison.Ordinal),
-            })
-            .ToList();
-
+        var availability = await gitClient.GetAvailabilityAsync(cancellationToken);
         return new HostAgentResponse
         {
             Status = HostAgentResponseStatus.Ok,
-            Message = $"Latest {settings.Channel.ToString().ToLowerInvariant()} release is {resolution.Selected.Version}.",
+            Message = availability.UpToDate
+                ? "The deployed build is at the branch tip."
+                : $"{availability.CommitsBehind} commit(s) behind {availability.Branch}.",
             CorrelationId = request.CorrelationId,
             RepositoryStatus = HostAgentRepositoryStatus.Verified,
-            AvailableReleases = releases,
+            Availability = availability,
         };
     }
 
-    public async Task<HostAgentResponse> RequestUpdateAsync(
-        HostAgentRequest request,
-        CancellationToken cancellationToken)
+    public async Task<HostAgentResponse> RequestUpdateAsync(HostAgentRequest request, CancellationToken cancellationToken)
     {
         if (!settings.UpdatesEnabled)
         {
-            return HostAgentResponse.Denied(
-                "In-app updates are disabled on this host. An administrator must enable them on the server.",
-                request.CorrelationId);
-        }
-
-        if (!ReleaseVersion.TryParse(request.TargetVersion, out var requested))
-        {
-            return HostAgentResponse.Rejected("targetVersion is not a valid release version.", request.CorrelationId);
-        }
-
-        var access = await gitClient.DiagnoseAccessAsync(cancellationToken);
-        if (!access.IsAccessible)
-        {
-            return HostAgentResponse.Failed(access.Message, request.CorrelationId);
-        }
-
-        // The caller's version is treated as a request, not an instruction. Only the newest
-        // release on the configured channel may be installed through the web application.
-        var lines = await gitClient.ListRemoteTagsAsync(cancellationToken);
-        var resolution = ReleaseTagResolver.Resolve(lines, settings.Channel);
-        if (!resolution.IsResolved)
-        {
             return HostAgentResponse.Rejected(
-                resolution.DescribeFailure(settings.Channel),
-                request.CorrelationId);
-        }
-
-        if (!Equals(resolution.Selected.Version, requested))
-        {
-            return HostAgentResponse.Rejected(
-                $"Only the latest {settings.Channel.ToString().ToLowerInvariant()} release "
-                + $"({resolution.Selected.Version}) may be installed.",
-                request.CorrelationId);
-        }
-
-        var installed = ReadInstallationState();
-        if (installed.ActiveVersion is not null
-            && ReleaseVersion.TryParse(installed.ActiveVersion, out var active)
-            && requested.CompareTo(active) <= 0)
-        {
-            return HostAgentResponse.Rejected(
-                $"Release {requested} is not newer than the installed release {active}.",
-                request.CorrelationId);
-        }
-
-        if (_blockedByInterruptedOperation)
-        {
-            return HostAgentResponse.Rejected(
-                "A previous update on this host was interrupted at a stage that may have left the "
-                + "database or the live site partially changed. An administrator must review it before "
-                + "further updates are accepted.",
-                request.CorrelationId);
-        }
-
-        var persistedOperation = ReadInstallationState().CurrentOperation;
-        if (persistedOperation is not null && !persistedOperation.IsTerminal)
-        {
-            return HostAgentResponse.Rejected(
-                "An update is already in progress on this host.",
-                request.CorrelationId);
-        }
-        if (persistedOperation?.Stage is DeploymentOperationStage.RequiresOperatorReview)
-        {
-            return HostAgentResponse.Rejected(
-                "The previous update requires operator review before another update can start.",
+                "Repository-backed updates are disabled on this host (updatesEnabled=false in hostagent.json).",
                 request.CorrelationId);
         }
 
         if (!await _updateGate.WaitAsync(0, cancellationToken))
         {
-            return HostAgentResponse.Rejected(
-                "An update is already in progress on this host.",
-                request.CorrelationId);
+            return HostAgentResponse.Rejected("An update is already being applied.", request.CorrelationId);
         }
 
-        var release = resolution.Selected;
-        var now = DateTimeOffset.UtcNow;
-        var operationId = Guid.NewGuid().ToString("N");
-
-        _updateStatus = new HostAgentUpdateStatus
-        {
-            OperationId = operationId,
-            Phase = HostAgentUpdatePhase.Resolving,
-            TargetVersion = release.Version.ToString(),
-            StartedAtUtc = now,
-            Message = "Update accepted.",
-        };
-
-        // Recorded BEFORE the work starts, so an interruption at any point is visible on disk to
-        // the next start of this service.
-        WriteOperation(DeploymentOperation.Start(
-            operationId,
-            DeploymentOperationKind.Update,
-            release.Version.ToString(),
-            now) with
-        {
-            ExpectedSourceCommit = release.SourceCommit,
-        });
-
-        // Deliberately not awaited: an update takes minutes and the pipe call must not hold a
-        // connection open for it. Progress is polled via GetUpdateStatus.
-        _ = Task.Run(() => RunUpdateAsync(release, CancellationToken.None), CancellationToken.None);
-
-        return new HostAgentResponse
-        {
-            Status = HostAgentResponseStatus.Accepted,
-            Message = $"Update to {release.Version} accepted.",
-            CorrelationId = request.CorrelationId,
-            Update = _updateStatus,
-        };
-    }
-
-    public Task<HostAgentResponse> GetUpdateStatusAsync(
-        HostAgentRequest request,
-        CancellationToken cancellationToken)
-    {
-        var status = _updateStatus;
-        if (status.Phase is HostAgentUpdatePhase.Idle)
-        {
-            var operation = ReadInstallationState().CurrentOperation;
-            if (operation is not null)
-            {
-                status = new HostAgentUpdateStatus
-                {
-                    OperationId = operation.Id,
-                    Phase = operation.Stage switch
-                    {
-                        DeploymentOperationStage.Resolving => HostAgentUpdatePhase.Resolving,
-                        DeploymentOperationStage.Fetching => HostAgentUpdatePhase.Fetching,
-                        DeploymentOperationStage.Verifying => HostAgentUpdatePhase.Verifying,
-                        DeploymentOperationStage.Staging => HostAgentUpdatePhase.Staging,
-                        DeploymentOperationStage.Migrating => HostAgentUpdatePhase.Migrating,
-                        DeploymentOperationStage.Activating => HostAgentUpdatePhase.Activating,
-                        DeploymentOperationStage.Completed => HostAgentUpdatePhase.Completed,
-                        DeploymentOperationStage.RequiresOperatorReview => HostAgentUpdatePhase.RequiresOperatorReview,
-                        _ => HostAgentUpdatePhase.Failed,
-                    },
-                    TargetVersion = operation.TargetVersion,
-                    StartedAtUtc = operation.StartedAtUtc,
-                    CompletedAtUtc = operation.IsTerminal ? operation.UpdatedAtUtc : null,
-                    Message = operation.Message,
-                };
-            }
-        }
-
-        return Task.FromResult(new HostAgentResponse
-        {
-            Status = HostAgentResponseStatus.Ok,
-            Message = "Update status read.",
-            CorrelationId = request.CorrelationId,
-            Update = status,
-        });
-    }
-
-    public async Task<HostAgentResponse> ReconcileWebBindingsAsync(
-        HostAgentRequest request,
-        CancellationToken cancellationToken)
-    {
-        var desired = new WebBindingIntent(
-            HostName: string.IsNullOrWhiteSpace(request.HostName) ? null : request.HostName.Trim(),
-            EnableHttps: request.EnableHttps ?? false,
-            CertificateThumbprint: request.CertificateThumbprint,
-            RedirectHttpToHttps: request.RedirectHttpToHttps ?? false,
-            SiteName: settings.SiteName);
-
-        var result = await bindingReconciler.ReconcileAsync(desired, cancellationToken);
-
-        return result.Succeeded
-            ? HostAgentResponse.Ok(result.Message, request.CorrelationId)
-            : HostAgentResponse.Failed(result.Message, request.CorrelationId);
-    }
-
-    public async Task<HostAgentResponse> RecycleApplicationPoolAsync(
-        HostAgentRequest request,
-        CancellationToken cancellationToken)
-    {
-        var result = await bindingReconciler.RecycleApplicationPoolAsync(settings.AppPoolName, cancellationToken);
-
-        return result.Succeeded
-            ? HostAgentResponse.Ok(result.Message, request.CorrelationId)
-            : HostAgentResponse.Failed(result.Message, request.CorrelationId);
-    }
-
-    public void LogOperationFailure(HostAgentOperation operation, Exception exception) =>
-        logger.LogError(exception, "Host agent operation {Operation} failed.", operation);
-
-    private async Task RunUpdateAsync(RemoteReleaseTag release, CancellationToken cancellationToken)
-    {
         try
         {
-            SetUpdatePhase(HostAgentUpdatePhase.Fetching, release, "Fetching the release payload.");
-
-            var stagingRoot = Path.Combine(
-                Path.GetTempPath(),
-                "itadmin-update-" + Guid.NewGuid().ToString("N"));
-
-            try
+            var existing = ReadOperation();
+            if (existing is not null && !IsTerminal(existing.Phase))
             {
-                await gitClient.FetchDistributionAsync(release.Version, stagingRoot, cancellationToken);
+                return HostAgentResponse.Rejected("An update is already in progress.", request.CorrelationId);
+            }
+            if (existing?.Phase is HostAgentUpdatePhase.RequiresOperatorReview)
+            {
+                return HostAgentResponse.Rejected(
+                    "A previous update needs operator review before another can start. Run Deploy-ITAdmin.ps1 on this host.",
+                    request.CorrelationId);
+            }
 
-                SetUpdatePhase(HostAgentUpdatePhase.Verifying, release, "Verifying release identity and integrity.");
-                var verification = ReleaseAcquisition.Verify(stagingRoot, release.Version, release.SourceCommit);
-                if (!verification.IsAcceptable)
+            var access = await gitClient.DiagnoseAccessAsync(cancellationToken);
+            if (!access.IsAccessible)
+            {
+                return new HostAgentResponse
                 {
-                    // Fail closed. A payload whose identity does not match the tag is never staged,
-                    // regardless of how it got onto the distribution ref.
-                    FailUpdate(release, "Release verification failed: " + string.Join(" ", verification.Problems));
-                    return;
-                }
-
-                SetUpdatePhase(HostAgentUpdatePhase.Staging, release, "Staging, migrating, and activating.");
-                MutateState(state => state.CurrentOperation is null
-                    ? state
-                    : state with
-                    {
-                        CurrentOperation = state.CurrentOperation with
-                        {
-                            VerifiedReleaseDirectory = stagingRoot,
-                            UpdatedAtUtc = DateTimeOffset.UtcNow,
-                        },
-                    });
-                var execution = await updateExecutor.ApplyAsync(
-                    new ReleaseUpdateRequest(release.Version, release.SourceCommit, stagingRoot),
-                    cancellationToken);
-
-                if (!execution.Succeeded)
-                {
-                    FailUpdate(release, execution.Message);
-                    return;
-                }
-
-                _updateStatus = _updateStatus with
-                {
-                    Phase = HostAgentUpdatePhase.Staging,
-                    Message = $"ITAdmin {release.Version} is being applied by the update coordinator.",
+                    Status = HostAgentResponseStatus.Failed,
+                    Message = access.Message,
+                    CorrelationId = request.CorrelationId,
+                    RepositoryStatus = access.Status,
                 };
-                logger.LogInformation("Update to {Version} was handed to the update coordinator.", release.Version);
             }
-            finally
+
+            var availability = await gitClient.GetAvailabilityAsync(cancellationToken);
+            var operationId = Guid.NewGuid().ToString("N");
+            WriteOperation(new UpdateOperationRecord
             {
-                var operation = ReadInstallationState().CurrentOperation;
-                if (operation is null || operation.IsTerminal)
+                OperationId = operationId,
+                Phase = HostAgentUpdatePhase.Pulling,
+                TargetCommit = availability.LatestCommit,
+                StartedAtUtc = DateTimeOffset.UtcNow,
+                Message = "Handing the update to the Update Coordinator.",
+            });
+
+            var handoff = await executor.ApplyUpdateAsync(operationId, cancellationToken);
+            if (!handoff.Succeeded)
+            {
+                WriteOperation(new UpdateOperationRecord
                 {
-                    TryDeleteDirectory(stagingRoot);
-                }
+                    OperationId = operationId,
+                    Phase = HostAgentUpdatePhase.Failed,
+                    TargetCommit = availability.LatestCommit,
+                    StartedAtUtc = DateTimeOffset.UtcNow,
+                    CompletedAtUtc = DateTimeOffset.UtcNow,
+                    Message = handoff.Message,
+                });
+                return HostAgentResponse.Failed(handoff.Message, request.CorrelationId);
             }
-        }
-        catch (Exception exception)
-        {
-            logger.LogError(exception, "Update to {Version} failed.", release.Version);
-            FailUpdate(release, "The update failed on the host. See the ITAdmin Host Agent log.");
+
+            return new HostAgentResponse
+            {
+                Status = HostAgentResponseStatus.Accepted,
+                Message = availability.UpToDate
+                    ? "Redeploying the current branch tip."
+                    : $"Updating to {availability.LatestCommit}: {availability.LatestSubject}",
+                CorrelationId = request.CorrelationId,
+                Update = ToStatus(ReadOperation()),
+            };
         }
         finally
         {
@@ -450,162 +183,173 @@ public sealed class DeploymentHostAgentOperations(
         }
     }
 
-    private void SetUpdatePhase(HostAgentUpdatePhase phase, RemoteReleaseTag release, string message)
+    public Task<HostAgentResponse> GetUpdateStatusAsync(HostAgentRequest request, CancellationToken cancellationToken)
     {
-        _updateStatus = _updateStatus with
+        return Task.FromResult(new HostAgentResponse
         {
-            Phase = phase,
-            TargetVersion = release.Version.ToString(),
-            Message = message,
-        };
-
-        AdvanceOperation(
-            phase switch
-            {
-                HostAgentUpdatePhase.Fetching => DeploymentOperationStage.Fetching,
-                HostAgentUpdatePhase.Verifying => DeploymentOperationStage.Verifying,
-                HostAgentUpdatePhase.Staging => DeploymentOperationStage.Staging,
-                HostAgentUpdatePhase.Migrating => DeploymentOperationStage.Migrating,
-                HostAgentUpdatePhase.Activating => DeploymentOperationStage.Activating,
-                _ => DeploymentOperationStage.Resolving,
-            },
-            message);
+            Status = HostAgentResponseStatus.Ok,
+            Message = "Update status read.",
+            CorrelationId = request.CorrelationId,
+            Update = ToStatus(ReadOperation()),
+        });
     }
 
-    private void FailUpdate(RemoteReleaseTag release, string message)
+    public async Task<HostAgentResponse> RecycleApplicationPoolAsync(HostAgentRequest request, CancellationToken cancellationToken)
     {
-        _updateStatus = _updateStatus with
-        {
-            Phase = HostAgentUpdatePhase.Failed,
-            TargetVersion = release.Version.ToString(),
-            CompletedAtUtc = DateTimeOffset.UtcNow,
-            Message = message,
-        };
-
-        AdvanceOperation(DeploymentOperationStage.Failed, message);
+        var result = await executor.RecycleAppPoolAsync(settings.AppPoolName, cancellationToken);
+        return result.Succeeded
+            ? HostAgentResponse.Ok(result.Message, request.CorrelationId)
+            : HostAgentResponse.Failed(result.Message, request.CorrelationId);
     }
 
-    // --- Durable operation state ------------------------------------------------------------
-    // All three helpers swallow write failures deliberately: losing the ability to record progress
-    // must not abort a deployment that is otherwise proceeding. A missing record degrades to the
-    // old in-memory behaviour rather than to a failed update.
+    public void LogOperationFailure(HostAgentOperation operation, Exception exception) =>
+        logger.LogError(exception, "{Operation} failed.", operation);
 
-    private void WriteOperation(DeploymentOperation operation) =>
-        MutateState(state => state with { CurrentOperation = operation });
+    // ------------------------------------------------------------------------------------------
 
-    private void AdvanceOperation(DeploymentOperationStage stage, string message) =>
-        MutateState(state => state.CurrentOperation is null
-            ? state
-            : state with
-            {
-                CurrentOperation = state.CurrentOperation.Advance(stage, message, DateTimeOffset.UtcNow),
-            });
+    private static bool IsTerminal(HostAgentUpdatePhase phase) =>
+        phase is HostAgentUpdatePhase.Idle or HostAgentUpdatePhase.Completed
+            or HostAgentUpdatePhase.Failed or HostAgentUpdatePhase.RequiresOperatorReview;
 
-    private void ClearOperation() => MutateState(state => state with { CurrentOperation = null });
+    private static HostAgentUpdateStatus ToStatus(UpdateOperationRecord? record)
+    {
+        if (record is null)
+        {
+            return new HostAgentUpdateStatus { Phase = HostAgentUpdatePhase.Idle, Message = "No update has been requested." };
+        }
 
-    private void MutateState(Func<InstallationState, InstallationState> mutate)
+        return new HostAgentUpdateStatus
+        {
+            OperationId = record.OperationId,
+            Phase = record.Phase,
+            TargetCommit = record.TargetCommit,
+            StartedAtUtc = record.StartedAtUtc,
+            CompletedAtUtc = record.CompletedAtUtc,
+            Message = record.Message,
+        };
+    }
+
+    private UpdateOperationRecord? ReadOperation()
     {
         try
         {
-            var path = _layout.InstallationStatePath;
-            var current = ReadInstallationState();
-            var updated = mutate(current) with { UpdatedAtUtc = DateTimeOffset.UtcNow };
-
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            var temporaryPath = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
-            File.WriteAllText(temporaryPath, updated.ToJson());
-            try
-            {
-                if (File.Exists(path))
-                {
-                    File.Move(temporaryPath, path, overwrite: true);
-                }
-                else
-                {
-                    File.Move(temporaryPath, path);
-                }
-            }
-            finally
-            {
-                if (File.Exists(temporaryPath))
-                {
-                    File.Delete(temporaryPath);
-                }
-            }
-        }
-        catch (Exception exception)
-        {
-            logger.LogWarning(exception, "Could not persist deployment operation state.");
-        }
-    }
-
-    private InstallationState ReadInstallationState()
-    {
-        try
-        {
-            var path = _layout.InstallationStatePath;
+            var path = settings.UpdateOperationPath;
             if (!File.Exists(path))
             {
-                return InstallationState.Fresh(DateTimeOffset.UtcNow);
+                return null;
             }
 
-            return InstallationState.FromJson(File.ReadAllText(path))
-                ?? InstallationState.Fresh(DateTimeOffset.UtcNow);
+            return JsonSerializer.Deserialize<UpdateOperationRecord>(File.ReadAllText(path), JsonOptions);
         }
-        catch (IOException)
+        catch (Exception exception) when (exception is IOException or JsonException or UnauthorizedAccessException)
         {
-            return InstallationState.Fresh(DateTimeOffset.UtcNow);
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return InstallationState.Fresh(DateTimeOffset.UtcNow);
+            return null;
         }
     }
 
-    private void TryDeleteDirectory(string path)
+    private void WriteOperation(UpdateOperationRecord record)
     {
         try
         {
-            if (Directory.Exists(path))
-            {
-                Directory.Delete(path, recursive: true);
-            }
+            Directory.CreateDirectory(settings.StateRoot);
+            var path = settings.UpdateOperationPath;
+            var temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            File.WriteAllText(temp, JsonSerializer.Serialize(record, JsonOptions));
+            File.Move(temp, path, overwrite: true);
         }
         catch (Exception exception)
         {
-            logger.LogWarning(exception, "Could not remove the update staging directory.");
+            logger.LogWarning(exception, "Could not persist the update operation record.");
+        }
+    }
+
+    private DeployStateRecord? ReadDeployState()
+    {
+        try
+        {
+            var path = settings.DeployStatePath;
+            if (!File.Exists(path))
+            {
+                return null;
+            }
+
+            return JsonSerializer.Deserialize<DeployStateRecord>(File.ReadAllText(path), JsonOptions);
+        }
+        catch (Exception exception) when (exception is IOException or JsonException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
+    private static DateTimeOffset? TryParseTimestamp(string? value) =>
+        DateTimeOffset.TryParse(value, out var parsed) ? parsed : null;
+
+    private async Task<bool> IsLocallyHealthyAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
+            var response = await client.GetAsync("http://localhost/health", cancellationToken);
+            return response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            return false;
         }
     }
 }
 
 /// <summary>
-/// Applies a verified release to this machine. An interface, so the agent's orchestration is
-/// testable and so the single real implementation - which shells out to the canonical installer -
-/// is the only place that knows how activation works.
+/// Applies an update to this machine and performs narrow app-pool control. An interface so the
+/// agent's orchestration is testable off Windows, and so the single real implementation is the only
+/// place that knows the Update Coordinator and IIS are involved.
 /// </summary>
-public interface IReleaseUpdateExecutor
+public interface IHostDeploymentExecutor
 {
-    Task<ReleaseUpdateResult> ApplyAsync(ReleaseUpdateRequest request, CancellationToken cancellationToken);
-}
+    Task<ReleaseUpdateResult> ApplyUpdateAsync(string operationId, CancellationToken cancellationToken);
 
-public sealed record ReleaseUpdateRequest(
-    ReleaseVersion Version,
-    string SourceCommit,
-    string VerifiedReleaseDirectory);
+    Task<ReleaseUpdateResult> RecycleAppPoolAsync(string appPoolName, CancellationToken cancellationToken);
+}
 
 public sealed record ReleaseUpdateResult(bool Succeeded, string Message);
 
-/// <summary>Applies host/HTTPS settings and performs narrow app-pool control.</summary>
-public interface IWebBindingReconciler
+/// <summary>What the agent and the Update Coordinator both read and write to track one update.</summary>
+public sealed record UpdateOperationRecord
 {
-    Task<ReleaseUpdateResult> ReconcileAsync(WebBindingIntent intent, CancellationToken cancellationToken);
+    [JsonPropertyName("operationId")]
+    public string OperationId { get; init; } = string.Empty;
 
-    Task<ReleaseUpdateResult> RecycleApplicationPoolAsync(string appPoolName, CancellationToken cancellationToken);
+    [JsonPropertyName("phase")]
+    public HostAgentUpdatePhase Phase { get; init; }
+
+    [JsonPropertyName("targetCommit")]
+    public string? TargetCommit { get; init; }
+
+    [JsonPropertyName("startedAtUtc")]
+    public DateTimeOffset? StartedAtUtc { get; init; }
+
+    [JsonPropertyName("completedAtUtc")]
+    public DateTimeOffset? CompletedAtUtc { get; init; }
+
+    [JsonPropertyName("message")]
+    public string Message { get; init; } = string.Empty;
 }
 
-public sealed record WebBindingIntent(
-    string? HostName,
-    bool EnableHttps,
-    string? CertificateThumbprint,
-    bool RedirectHttpToHttps,
-    string SiteName);
+/// <summary>The subset of <c>deploy.json</c> the agent reads. Written by <c>Deploy-ITAdmin.ps1</c>.</summary>
+public sealed record DeployStateRecord
+{
+    [JsonPropertyName("activeSha")]
+    public string? ActiveSha { get; init; }
+
+    [JsonPropertyName("previousSha")]
+    public string? PreviousSha { get; init; }
+
+    [JsonPropertyName("activeBuiltAtUtc")]
+    public string? ActiveBuiltAtUtc { get; init; }
+
+    [JsonPropertyName("branch")]
+    public string? Branch { get; init; }
+
+    [JsonPropertyName("lastMigration")]
+    public string? LastMigration { get; init; }
+}

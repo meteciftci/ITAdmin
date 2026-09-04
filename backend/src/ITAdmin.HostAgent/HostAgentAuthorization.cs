@@ -32,7 +32,6 @@ public sealed class HostAgentAuthorization
         HostAgentOperation.CheckForUpdates,
         HostAgentOperation.RequestUpdate,
         HostAgentOperation.GetUpdateStatus,
-        HostAgentOperation.ReconcileWebBindings,
         HostAgentOperation.RecycleApplicationPool,
     ];
 

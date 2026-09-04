@@ -25,7 +25,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ITAdmin.Deployment\ITAdmin.Deployment.csproj" />
     <ProjectReference Include="..\ITAdmin.HostAgent.Contracts\ITAdmin.HostAgent.Contracts.csproj" />
   </ItemGroup>
 
