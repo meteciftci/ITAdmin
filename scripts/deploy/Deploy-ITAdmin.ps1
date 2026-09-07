@@ -724,32 +724,59 @@ function Get-ConnectionString {
            "SSL Mode=$($Config.database.sslMode);Trust Server Certificate=true"
 }
 
+function Invoke-ApiExe {
+    <#
+        Runs ITAdmin.Api.exe in a deployment mode with EXACTLY the environment the IIS app pool
+        gets. This matters most for --bootstrap-directory: it encrypts the LDAP bind password with
+        ASP.NET Data Protection before storing it, and if the key-ring path or application name
+        differ from the running site's, the site cannot decrypt it - and every LDAP call fails
+        after login with "cannot reach the LDAP service". --migrate does not use Data Protection,
+        but running both the same way keeps one definition of "the runtime environment".
+    #>
+    param(
+        [Parameter(Mandatory = $true)][string]$AppExe,
+        [Parameter(Mandatory = $true)][string[]]$Arguments
+    )
+
+    $runtime = @{
+        "ASPNETCORE_ENVIRONMENT"                  = "Production"
+        "ITADMIN_Secrets__Root"                   = $Script:Layout.SecretsRoot
+        "ITADMIN_DataProtection__ApplicationName" = "ITAdmin"
+        "ITADMIN_DataProtection__KeysPath"        = $Script:Layout.DataProtectionRoot
+    }
+    # Break-glass process overrides must not leak in and point the child at a different database
+    # or signing key than the store the site will use.
+    $clear = @("ITADMIN_ConnectionStrings__DefaultConnection", "ITADMIN_Jwt__Key")
+
+    $saved = @{}
+    foreach ($name in (@($runtime.Keys) + $clear)) { $saved[$name] = [Environment]::GetEnvironmentVariable($name) }
+    try {
+        foreach ($name in $runtime.Keys) { Set-Item "Env:\$name" -Value $runtime[$name] }
+        foreach ($name in $clear) { Remove-Item "Env:\$name" -ErrorAction SilentlyContinue }
+
+        $output = & $AppExe @Arguments 2>&1
+        return [pscustomobject]@{ ExitCode = $LASTEXITCODE; Output = $output }
+    }
+    finally {
+        foreach ($name in $saved.Keys) {
+            if ($null -ne $saved[$name]) { Set-Item "Env:\$name" -Value $saved[$name] }
+            else { Remove-Item "Env:\$name" -ErrorAction SilentlyContinue }
+        }
+    }
+}
+
 function Invoke-DatabaseMigration {
     param([Parameter(Mandatory = $true)][string]$AppExe)
     Write-Step "Applying database migrations"
 
-    $previous = @{}
-    foreach ($name in @("ITADMIN_ConnectionStrings__DefaultConnection", "ITADMIN_Jwt__Key", "ITADMIN_Secrets__Root")) {
-        $previous[$name] = [Environment]::GetEnvironmentVariable($name)
+    $result = Invoke-ApiExe -AppExe $AppExe -Arguments @("--migrate")
+    foreach ($line in $result.Output) {
+        if ("$line" -match 'currentMigration=(.+)$') { $Script:LastMigrationApplied = $Matches[1].Trim() }
+        if ("$line" -match '^(Applying|No pending|Migration completed|  \d{14}_)') { Write-Detail "$line" }
     }
-    try {
-        $env:ITADMIN_Secrets__Root = $Script:Layout.SecretsRoot
-        Remove-Item Env:\ITADMIN_ConnectionStrings__DefaultConnection -ErrorAction SilentlyContinue
-        Remove-Item Env:\ITADMIN_Jwt__Key -ErrorAction SilentlyContinue
-
-        $output = & $AppExe --migrate 2>&1
-        $exitCode = $LASTEXITCODE
-        foreach ($line in $output) {
-            if ("$line" -match 'currentMigration=(.+)$') { $Script:LastMigrationApplied = $Matches[1].Trim() }
-            if ("$line" -match '^(Applying|No pending|Migration completed|  \d{14}_)') { Write-Detail "$line" }
-        }
-        if ($exitCode -ne 0) { throw "Database migration failed (exit $exitCode)." }
-    }
-    finally {
-        foreach ($name in $previous.Keys) {
-            if ($null -ne $previous[$name]) { Set-Item "Env:\$name" -Value $previous[$name] }
-            else { Remove-Item "Env:\$name" -ErrorAction SilentlyContinue }
-        }
+    if ($result.ExitCode -ne 0) {
+        foreach ($line in $result.Output) { Write-Fail "$line" }
+        throw "Database migration failed (exit $($result.ExitCode))."
     }
     Write-Ok "Schema at $($Script:LastMigrationApplied)"
 }
@@ -894,16 +921,9 @@ function Invoke-DirectoryBootstrap {
         & icacls $inputPath /inheritance:r | Out-Null
         & icacls $inputPath /grant:r "SYSTEM:F" "Administrators:F" | Out-Null
 
-        $previousSecretsRoot = $env:ITADMIN_Secrets__Root
-        try {
-            $env:ITADMIN_Secrets__Root = $Script:Layout.SecretsRoot
-            $output = & $AppExe --bootstrap-directory --input $inputPath 2>&1
-            $exitCode = $LASTEXITCODE
-        }
-        finally {
-            if ($null -ne $previousSecretsRoot) { $env:ITADMIN_Secrets__Root = $previousSecretsRoot }
-            else { Remove-Item Env:\ITADMIN_Secrets__Root -ErrorAction SilentlyContinue }
-        }
+        $result = Invoke-ApiExe -AppExe $AppExe -Arguments @("--bootstrap-directory", "--input", $inputPath)
+        $output = $result.Output
+        $exitCode = $result.ExitCode
 
         if ($exitCode -eq 3) {
             foreach ($line in $output) { Write-Fail "$line" }
