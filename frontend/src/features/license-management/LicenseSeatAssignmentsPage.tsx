@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -18,13 +18,20 @@ import { SectionCard } from "@/components/common/SectionCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
+import { buildAdUserDetailPath } from "@/features/ad-management/ad-user-detail-path";
+import { isGuidLike } from "@/features/ad-management/ad-user-detail-utils";
+import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useAdManagementModuleStatus";
+import { useAuthStore } from "@/features/auth/auth-store";
 import { getLicenseSeatAssignments } from "@/features/license-management/api";
+import { LicenseAssignmentDialog } from "@/features/license-management/components/LicenseAssignmentDialog";
 import { buildLicensePackageDetailPath } from "@/features/license-management/license-package-detail-path";
 import type {
   LicenseSeatAssignmentListItem,
   LicenseSeatAssignmentStatus,
 } from "@/features/license-management/types";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { canAccess } from "@/lib/permissions";
+import { PermissionCodes } from "@/lib/permission-codes";
 import { createApiErrorRouteState, getErrorRoutePath } from "@/lib/route-error";
 
 const SEAT_STATUSES: LicenseSeatAssignmentStatus[] = ["Active", "Released", "Transferred"];
@@ -37,11 +44,17 @@ function statusVariant(status: LicenseSeatAssignmentStatus): "default" | "second
 
 export function LicenseSeatAssignmentsPage() {
   const { t } = useTranslation(["licenseManagement", "common"]);
+  const queryClient = useQueryClient();
+  const user = useAuthStore((state) => state.user);
+  const canManage = canAccess(user, PermissionCodes.LicenseManagement.FulfillRequests);
+  const adStatus = useAdManagementModuleStatus();
+  const adLinksEnabled = adStatus.isOperational;
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | LicenseSeatAssignmentStatus>("all");
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [assignOpen, setAssignOpen] = useState(false);
 
   const debouncedSearch = useDebouncedValue(search, 400);
   const effectiveSearch = debouncedSearch.trim().length >= 3 ? debouncedSearch.trim() : undefined;
@@ -63,14 +76,26 @@ export function LicenseSeatAssignmentsPage() {
       {
         accessorKey: "displayName",
         header: t("licenseManagement:seats.columns.person"),
-        cell: ({ row }) => (
-          <div>
-            <div className="font-medium">{row.original.displayName}</div>
-            {row.original.nationalId ? (
-              <div className="text-xs text-muted-foreground">{row.original.nationalId}</div>
-            ) : null}
-          </div>
-        ),
+        cell: ({ row }) => {
+          const seat = row.original;
+          return (
+            <div>
+              {adLinksEnabled && seat.adObjectId && isGuidLike(seat.adObjectId) ? (
+                <Link
+                  to={buildAdUserDetailPath(seat.adObjectId)}
+                  className="font-medium text-primary underline-offset-2 hover:underline"
+                >
+                  {seat.displayName}
+                </Link>
+              ) : (
+                <div className="font-medium">{seat.displayName}</div>
+              )}
+              {seat.nationalId ? (
+                <div className="text-xs text-muted-foreground">{seat.nationalId}</div>
+              ) : null}
+            </div>
+          );
+        },
       },
       {
         accessorKey: "mail",
@@ -128,7 +153,7 @@ export function LicenseSeatAssignmentsPage() {
         ),
       },
     ],
-    [t],
+    [t, adLinksEnabled],
   );
 
   const items = listQuery.data?.items ?? [];
@@ -190,9 +215,16 @@ export function LicenseSeatAssignmentsPage() {
               </div>
             }
             actions={
-              <Button variant="outline" onClick={() => listQuery.refetch()} disabled={listQuery.isFetching}>
-                {t("common:actions.refresh")}
-              </Button>
+              <>
+                <Button variant="outline" onClick={() => listQuery.refetch()} disabled={listQuery.isFetching}>
+                  {t("common:actions.refresh")}
+                </Button>
+                {canManage ? (
+                  <Button onClick={() => setAssignOpen(true)}>
+                    {t("licenseManagement:seats.actions.assign")}
+                  </Button>
+                ) : null}
+              </>
             }
           />
           {listQuery.isLoading ? <LoadingState /> : null}
@@ -222,6 +254,18 @@ export function LicenseSeatAssignmentsPage() {
           ) : null}
         </div>
       </SectionCard>
+
+      {assignOpen ? (
+        <LicenseAssignmentDialog
+          onClose={() => setAssignOpen(false)}
+          onDone={() => {
+            setAssignOpen(false);
+            void queryClient.invalidateQueries({
+              queryKey: ["license-management", "seat-assignments"],
+            });
+          }}
+        />
+      ) : null}
     </section>
   );
 }

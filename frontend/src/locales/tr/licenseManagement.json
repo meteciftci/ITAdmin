@@ -558,10 +558,10 @@
       }
     },
     "seats": {
-      "title": "Zimmetler",
-      "description": "Bu paketin lisans koltuklarını hangi kişilerin kullandığı.",
-      "summary": "{{quantity}} koltuktan {{active}} tanesi kullanımda · {{available}} boş",
-      "empty": "Bu pakette zimmet kaydı yok.",
+      "title": "Lisans Atamaları",
+      "description": "Bu paketteki lisansların hangi kişilere atandığı.",
+      "summary": "{{quantity}} lisanstan {{active}} tanesi atanmış · {{available}} boşta",
+      "empty": "Bu pakette atama kaydı yok.",
       "showHistory": "Geçmişi göster",
       "hideHistory": "Yalnızca aktif",
       "replaces": "{{name}} kişisinden devralındı",
@@ -569,7 +569,7 @@
       "columns": {
         "person": "Kişi",
         "contact": "İletişim / birim",
-        "assignedDate": "Zimmet tarihi",
+        "assignedDate": "Atama tarihi",
         "note": "Not"
       },
       "status": {
@@ -578,43 +578,46 @@
         "Transferred": "Devredildi"
       },
       "actions": {
-        "assign": "Zimmet ekle",
+        "assign": "Lisans Ata",
         "release": "Serbest bırak",
         "transfer": "Devret",
         "copyFrom": "Başka paketten kopyala"
       },
       "toasts": {
-        "assigned": "Zimmet eklendi.",
-        "released": "Zimmet serbest bırakıldı.",
-        "transferred": "Zimmet devredildi.",
-        "copied": "{{copied}} koltuk kopyalandı, {{skipped}} atlandı."
+        "assigned": "Lisans atandı.",
+        "released": "Lisans serbest bırakıldı.",
+        "transferred": "Lisans devredildi.",
+        "copied": "{{copied}} lisans kopyalandı, {{skipped}} atlandı."
       },
       "dialog": {
-        "adUser": "AD kullanıcısı (opsiyonel)",
+        "adUser": "Kullanıcı (AD'den seç)",
+        "adSearchPlaceholder": "Ad, kullanıcı adı veya e-posta ile ara",
+        "adUserHint": "AD Yönetimi modülü aktif değil; kişiyi elle girin.",
         "displayName": "Ad soyad",
-        "nationalId": "TC kimlik no",
         "mail": "E-posta",
-        "assignedDate": "Zimmet tarihi",
+        "assignedDate": "Atama tarihi",
         "note": "Not",
-        "assignTitle": "Zimmet ekle",
-        "assignDescription": "Bu paketten bir koltuğu bir kişiye zimmetle. AD'den seçebilir veya alanları elle doldurabilirsin.",
-        "transferTitle": "Zimmeti devret",
-        "transferDescription": "{{name}} kişisindeki koltuğu başka bir kişiye aktar. Eski kayıt kapanır, yeni kayıt ona bağlanır.",
+        "packagePicker": "Lisans paketi",
+        "packagePickerPlaceholder": "Paket seç…",
+        "assignTitle": "Lisans Ata",
+        "assignDescription": "Bu paketten bir lisansı bir kişiye ata. AD Yönetimi aktifse kullanıcıyı seç, değilse alanları elle doldur.",
+        "transferTitle": "Lisansı devret",
+        "transferDescription": "{{name}} kişisindeki lisansı başka birine aktar. Eski kayıt kapanır, yeni kayıt ona bağlanır.",
         "transferDate": "Devir tarihi",
-        "releaseTitle": "Zimmeti serbest bırak",
-        "releaseDescription": "{{name}} kişisindeki koltuk boşa çıkacak.",
+        "releaseTitle": "Lisansı serbest bırak",
+        "releaseDescription": "{{name}} kişisindeki lisans boşa çıkacak.",
         "releasedDate": "Serbest bırakma tarihi",
-        "copyTitle": "Başka paketten koltuk kopyala",
-        "copyDescription": "Yenilenen bir paketteki aktif zimmetleri bu pakete taşı. Aynı kişi zaten varsa atlanır.",
+        "copyTitle": "Başka paketten lisans kopyala",
+        "copyDescription": "Yenilenen bir paketteki aktif atamaları bu pakete taşı. Aynı kişi zaten varsa atlanır.",
         "sourcePackage": "Kaynak paket",
         "sourcePackagePlaceholder": "Paket seç…",
-        "seatsUnit": "koltuk"
+        "seatsUnit": "lisans"
       },
       "list": {
-        "title": "Lisans Zimmetleri",
-        "description": "Tüm paketlerdeki lisans koltuklarının kime ait olduğu — tek listede.",
-        "cardTitle": "Zimmet listesi",
-        "searchPlaceholder": "Kişi, e-posta, TC no veya ürün ara…",
+        "title": "Lisans Atamaları",
+        "description": "Tüm paketlerdeki lisans atamaları — tek listede.",
+        "cardTitle": "Atama listesi",
+        "searchPlaceholder": "Kişi, e-posta veya ürün ara…",
         "empty": "Kayıt bulunamadı.",
         "columns": {
           "product": "Ürün",

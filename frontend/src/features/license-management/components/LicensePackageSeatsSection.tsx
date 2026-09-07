@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -23,19 +24,26 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { LicenseAdUserPicker } from "@/features/license-management/components/LicenseAdUserPicker";
+import { buildAdUserDetailPath } from "@/features/ad-management/ad-user-detail-path";
+import { isGuidLike } from "@/features/ad-management/ad-user-detail-utils";
+import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useAdManagementModuleStatus";
 import {
-  assignLicenseSeat,
   copyLicenseSeatsFromPackage,
   getLicensePackageSeatAssignments,
   getLicensePackages,
   releaseLicenseSeat,
   transferLicenseSeat,
 } from "@/features/license-management/api";
+import { LicenseAssignmentDialog } from "@/features/license-management/components/LicenseAssignmentDialog";
+import { PersonFields } from "@/features/license-management/components/license-seat-person-fields";
+import {
+  EMPTY_PERSON,
+  toPersonInput,
+  type PersonDraft,
+} from "@/features/license-management/components/license-seat-person";
 import type {
   LicenseSeatAssignment,
   LicenseSeatAssignmentStatus,
-  LicenseSeatPersonInput,
 } from "@/features/license-management/types";
 import { getApiErrorMessage } from "@/lib/api-error";
 
@@ -44,42 +52,6 @@ type Props = {
   productId: string;
   canManage: boolean;
 };
-
-type PersonDraft = {
-  adObjectId: string | null;
-  displayName: string;
-  samAccountName: string | null;
-  userPrincipalName: string | null;
-  mail: string | null;
-  nationalId: string;
-  department: string | null;
-  title: string | null;
-};
-
-const EMPTY_PERSON: PersonDraft = {
-  adObjectId: null,
-  displayName: "",
-  samAccountName: null,
-  userPrincipalName: null,
-  mail: null,
-  nationalId: "",
-  department: null,
-  title: null,
-};
-
-function toPersonInput(draft: PersonDraft): LicenseSeatPersonInput {
-  const trimmed = draft.displayName.trim();
-  return {
-    adObjectId: draft.adObjectId,
-    displayName: trimmed,
-    samAccountName: draft.samAccountName,
-    userPrincipalName: draft.userPrincipalName,
-    mail: draft.mail?.trim() || null,
-    nationalId: draft.nationalId.trim() || null,
-    department: draft.department,
-    title: draft.title,
-  };
-}
 
 function seatStatusVariant(status: LicenseSeatAssignmentStatus): "default" | "secondary" | "outline" {
   if (status === "Active") return "default";
@@ -90,6 +62,7 @@ function seatStatusVariant(status: LicenseSeatAssignmentStatus): "default" | "se
 export function LicensePackageSeatsSection({ packageId, productId, canManage }: Props) {
   const { t } = useTranslation(["licenseManagement", "common", "errors"]);
   const queryClient = useQueryClient();
+  const adStatus = useAdManagementModuleStatus();
   const [includeHistory, setIncludeHistory] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
   const [copyOpen, setCopyOpen] = useState(false);
@@ -167,7 +140,16 @@ export function LicensePackageSeatsSection({ packageId, productId, canManage }: 
                   {overview.assignments.map((seat) => (
                     <tr key={seat.id} className="border-b align-top last:border-0">
                       <td className="py-2 pr-3">
-                        <div className="font-medium">{seat.displayName}</div>
+                        {adStatus.isOperational && seat.adObjectId && isGuidLike(seat.adObjectId) ? (
+                          <Link
+                            to={buildAdUserDetailPath(seat.adObjectId)}
+                            className="font-medium text-primary underline-offset-2 hover:underline"
+                          >
+                            {seat.displayName}
+                          </Link>
+                        ) : (
+                          <div className="font-medium">{seat.displayName}</div>
+                        )}
                         {seat.nationalId ? (
                           <div className="text-xs text-muted-foreground">{seat.nationalId}</div>
                         ) : null}
@@ -240,7 +222,7 @@ export function LicensePackageSeatsSection({ packageId, productId, canManage }: 
       ) : null}
 
       {assignOpen ? (
-        <AssignSeatDialog
+        <LicenseAssignmentDialog
           packageId={packageId}
           onClose={() => setAssignOpen(false)}
           onDone={() => {
@@ -284,150 +266,6 @@ export function LicensePackageSeatsSection({ packageId, productId, canManage }: 
         />
       ) : null}
     </SectionCard>
-  );
-}
-
-function PersonFields({
-  draft,
-  onChange,
-}: {
-  draft: PersonDraft;
-  onChange: (next: PersonDraft) => void;
-}) {
-  const { t } = useTranslation(["licenseManagement"]);
-  return (
-    <div className="space-y-3">
-      <LicenseAdUserPicker
-        label={t("licenseManagement:seats.dialog.adUser")}
-        value={
-          draft.adObjectId
-            ? {
-                adObjectId: draft.adObjectId,
-                samAccountName: draft.samAccountName,
-                userPrincipalName: draft.userPrincipalName,
-                displayName: draft.displayName,
-                department: draft.department,
-                title: draft.title,
-                mail: draft.mail,
-                phone: null,
-              }
-            : null
-        }
-        onChange={(snapshot) =>
-          onChange(
-            snapshot
-              ? {
-                  adObjectId: snapshot.adObjectId,
-                  displayName: snapshot.displayName ?? draft.displayName,
-                  samAccountName: snapshot.samAccountName ?? null,
-                  userPrincipalName: snapshot.userPrincipalName ?? null,
-                  mail: snapshot.mail ?? null,
-                  nationalId: draft.nationalId,
-                  department: snapshot.department ?? null,
-                  title: snapshot.title ?? null,
-                }
-              : { ...EMPTY_PERSON, nationalId: draft.nationalId },
-          )
-        }
-      />
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="space-y-1">
-          <Label htmlFor="seat-display-name">{t("licenseManagement:seats.dialog.displayName")}</Label>
-          <Input
-            id="seat-display-name"
-            value={draft.displayName}
-            onChange={(event) => onChange({ ...draft, displayName: event.target.value })}
-          />
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor="seat-national-id">{t("licenseManagement:seats.dialog.nationalId")}</Label>
-          <Input
-            id="seat-national-id"
-            value={draft.nationalId}
-            onChange={(event) => onChange({ ...draft, nationalId: event.target.value })}
-          />
-        </div>
-        <div className="space-y-1 sm:col-span-2">
-          <Label htmlFor="seat-mail">{t("licenseManagement:seats.dialog.mail")}</Label>
-          <Input
-            id="seat-mail"
-            value={draft.mail ?? ""}
-            onChange={(event) => onChange({ ...draft, mail: event.target.value || null })}
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AssignSeatDialog({
-  packageId,
-  onClose,
-  onDone,
-}: {
-  packageId: string;
-  onClose: () => void;
-  onDone: () => void;
-}) {
-  const { t } = useTranslation(["licenseManagement", "common", "errors"]);
-  const [draft, setDraft] = useState<PersonDraft>(EMPTY_PERSON);
-  const [assignedDate, setAssignedDate] = useState("");
-  const [note, setNote] = useState("");
-
-  const mutation = useMutation({
-    mutationFn: () =>
-      assignLicenseSeat(packageId, {
-        person: toPersonInput(draft),
-        assignedDate: assignedDate || null,
-        note: note.trim() || null,
-      }),
-    onSuccess: (result) => {
-      if (!result.success) {
-        toast.error(result.message);
-        return;
-      }
-      toast.success(t("licenseManagement:seats.toasts.assigned"));
-      onDone();
-    },
-    onError: (error) => toast.error(getApiErrorMessage(error, t("errors:generic.description"))),
-  });
-
-  return (
-    <Dialog open>
-      <DialogContent onOpenChange={(open) => (!open ? onClose() : undefined)}>
-        <DialogHeader>
-          <DialogTitle>{t("licenseManagement:seats.dialog.assignTitle")}</DialogTitle>
-          <DialogDescription>{t("licenseManagement:seats.dialog.assignDescription")}</DialogDescription>
-        </DialogHeader>
-        <DialogBody className="space-y-3">
-          <PersonFields draft={draft} onChange={setDraft} />
-          <div className="space-y-1">
-            <Label htmlFor="seat-assigned-date">{t("licenseManagement:seats.dialog.assignedDate")}</Label>
-            <Input
-              id="seat-assigned-date"
-              type="date"
-              value={assignedDate}
-              onChange={(event) => setAssignedDate(event.target.value)}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="seat-note">{t("licenseManagement:seats.dialog.note")}</Label>
-            <Textarea id="seat-note" value={note} onChange={(event) => setNote(event.target.value)} rows={2} />
-          </div>
-        </DialogBody>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={mutation.isPending}>
-            {t("common:actions.cancel")}
-          </Button>
-          <Button
-            onClick={() => mutation.mutate()}
-            disabled={mutation.isPending || draft.displayName.trim().length === 0}
-          >
-            {t("licenseManagement:seats.actions.assign")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }
 

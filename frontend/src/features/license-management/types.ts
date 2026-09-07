@@ -517,6 +517,7 @@ export type LicenseSeatAssignmentListItem = {
   productBrand: string | null;
   purchaseTitle: string;
   displayName: string;
+  adObjectId: string | null;
   mail: string | null;
   nationalId: string | null;
   department: string | null;

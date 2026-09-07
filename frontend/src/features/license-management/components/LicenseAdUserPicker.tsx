@@ -9,6 +9,7 @@ type Props = {
   disabled?: boolean;
   label?: string;
   placeholder?: string;
+  searchPlaceholder?: string;
 };
 
 function toAdUserListItem(snapshot: LicenseRequestAdUserSnapshot): AdUserListItem {
@@ -34,6 +35,7 @@ export function LicenseAdUserPicker({
   disabled,
   label,
   placeholder,
+  searchPlaceholder,
 }: Props) {
   return (
     <AdUserSearchCombobox
@@ -42,6 +44,7 @@ export function LicenseAdUserPicker({
       disabled={disabled}
       label={label}
       placeholder={placeholder}
+      searchPlaceholder={searchPlaceholder}
     />
   );
 }
