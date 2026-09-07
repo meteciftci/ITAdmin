@@ -325,7 +325,7 @@ public sealed record DirectoryBootstrapRequest
     public string BaseDn { get; init; } = string.Empty;
 
     [JsonPropertyName("userSearchFilter")]
-    public string UserSearchFilter { get; init; } = "(sAMAccountName={0})";
+    public string UserSearchFilter { get; init; } = "(&(objectCategory=person)(objectClass=user)(|(sAMAccountName={0})(userPrincipalName={0})(mail={0})))";
 
     [JsonPropertyName("bindUserName")]
     public string BindUserName { get; init; } = string.Empty;

@@ -66,6 +66,12 @@ public partial class Program
         if (httpsRedirectEnabled)
         {
             builder.Services.AddHttpsRedirection(options => options.HttpsPort = httpsPort);
+
+            // HTTPS is operator-toggleable from Settings -> HTTPS. A 30-day HSTS max-age (the
+            // framework default) would strand every already-connected browser on https for a
+            // month after someone disables it. One day still protects the steady state while
+            // keeping "disable HTTPS" actually recoverable.
+            builder.Services.AddHsts(options => options.MaxAge = TimeSpan.FromDays(1));
         }
 
         builder.Services.AddLoginRateLimiting(builder.Configuration);

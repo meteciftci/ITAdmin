@@ -90,7 +90,7 @@ param(
     [string]$DirectoryName,
     [string]$DirectoryHost,
     [string]$DirectoryBaseDn,
-    [string]$DirectoryUserSearchFilter = "(sAMAccountName={0})",
+    [string]$DirectoryUserSearchFilter,
     [string]$DirectoryBindUser,
     [string]$DirectoryBindDomain,
     [SecureString]$DirectoryBindPassword,
@@ -475,7 +475,7 @@ function Resolve-AppConfig {
         -Prompt "Directory Base DN (e.g. DC=corp,DC=example,DC=com)" -Name "DirectoryBaseDn"
     $dirFilter = if (-not [string]::IsNullOrWhiteSpace($DirectoryUserSearchFilter)) { $DirectoryUserSearchFilter }
                  elseif ($existing -and $existing.directory.userSearchFilter) { $existing.directory.userSearchFilter }
-                 else { "(sAMAccountName={0})" }
+                 else { "(&(objectCategory=person)(objectClass=user)(|(sAMAccountName={0})(userPrincipalName={0})(mail={0})))" }
     $dirName = if (-not [string]::IsNullOrWhiteSpace($DirectoryName)) { $DirectoryName }
                elseif ($existing -and $existing.directory.name) { $existing.directory.name }
                else { $dirHost }

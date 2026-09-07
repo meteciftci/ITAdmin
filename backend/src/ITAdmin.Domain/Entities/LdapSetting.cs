@@ -8,7 +8,7 @@ public class LdapSetting : SoftDeletableEntity
     public string Host { get; set; } = string.Empty;
     public string BaseDn { get; set; } = string.Empty;
     public string UserSearchBase { get; set; } = string.Empty;
-    public string UserSearchFilter { get; set; } = "(sAMAccountName={0})";
+    public string UserSearchFilter { get; set; } = "(&(objectCategory=person)(objectClass=user)(|(sAMAccountName={0})(userPrincipalName={0})(mail={0})))";
     public string BindUserName { get; set; } = string.Empty;
     public string? BindUserDomain { get; set; }
     public string EncryptedBindPassword { get; set; } = string.Empty;
