@@ -38,9 +38,16 @@
     Reuse the currently active build. For a configuration-only change (e.g. -HttpHostHeader).
 
 .PARAMETER ConfigureHttps
-    Add or replace the HTTPS binding (certificate from Cert:\LocalMachine\My) and optionally the
-    HTTP-to-HTTPS redirect, then exit. No source sync, no build. The usual path is Settings ->
-    HTTPS in the application, which uploads a PFX and has the Host Agent run this.
+    Add or replace the HTTPS binding and optionally the HTTP-to-HTTPS redirect, then exit. No
+    source sync, no build. The usual path is Settings -> HTTPS in the application, which uploads a
+    PFX and has the Host Agent run this with -PfxImportPath.
+
+.PARAMETER PfxImportPath
+    With -ConfigureHttps: a PKCS#12/PFX file to import into Cert:\LocalMachine\My (via
+    Import-PfxCertificate) before binding. The password is read from the ITADMIN_HTTPS_PFX_PASSWORD
+    environment variable so it never appears on the command line. The Host Agent writes this file
+    under %ProgramData%\ITAdmin\state with a SYSTEM/Administrators-only ACL and shreds it afterwards.
+    Omit it and pass -CertificateThumbprint instead when the certificate is already in the store.
 
 .PARAMETER DisableHttps
     Remove every HTTPS binding and the redirect; the site returns to HTTP-only. The certificate is
@@ -97,6 +104,7 @@ param(
     [string]$InitialAdministrator,
 
     [string]$CertificateThumbprint,
+    [string]$PfxImportPath,
     [int]$HttpsPort = 443,
     [switch]$RedirectHttpToHttps,
 
@@ -1043,8 +1051,37 @@ function Set-HttpsBinding {
     Write-Step "Configuring the HTTPS binding"
 
     $thumbprint = $CertificateThumbprint
+
+    if (-not [string]::IsNullOrWhiteSpace($PfxImportPath)) {
+        if (-not (Test-Path -LiteralPath $PfxImportPath)) { throw "PFX file not found: $PfxImportPath" }
+
+        $pfxPassword = $env:ITADMIN_HTTPS_PFX_PASSWORD
+        $securePassword = if ([string]::IsNullOrEmpty($pfxPassword)) {
+            New-Object System.Security.SecureString
+        }
+        else {
+            ConvertTo-SecureString -String $pfxPassword -AsPlainText -Force
+        }
+
+        try {
+            $imported = Import-PfxCertificate -FilePath $PfxImportPath `
+                -CertStoreLocation Cert:\LocalMachine\My -Password $securePassword -Exportable -ErrorAction Stop
+        }
+        finally {
+            $env:ITADMIN_HTTPS_PFX_PASSWORD = $null
+            if ($null -ne $securePassword) { $securePassword.Dispose() }
+        }
+
+        $leaf = @($imported) | Where-Object { $_.HasPrivateKey } | Select-Object -First 1
+        if ($null -eq $leaf) { $leaf = @($imported) | Select-Object -First 1 }
+        if ($null -eq $leaf) { throw "Import-PfxCertificate returned no certificate." }
+
+        $thumbprint = $leaf.Thumbprint
+        Write-Detail "Imported $($leaf.Subject) ($($leaf.Thumbprint)) into Cert:\LocalMachine\My"
+    }
+
     if ([string]::IsNullOrWhiteSpace($thumbprint)) {
-        if ($Unattended.IsPresent) { throw "-CertificateThumbprint is required in unattended mode." }
+        if ($Unattended.IsPresent) { throw "-CertificateThumbprint or -PfxImportPath is required in unattended mode." }
         Write-Detail "Certificates in Cert:\LocalMachine\My:"
         Get-ChildItem Cert:\LocalMachine\My | ForEach-Object {
             Write-Host ("      {0}  {1}  (expires {2:yyyy-MM-dd})" -f $_.Thumbprint, $_.Subject, $_.NotAfter)

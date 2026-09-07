@@ -1,8 +1,10 @@
 using System.Globalization;
 using System.Net.Http;
 using System.Runtime.Versioning;
+using System.Security.AccessControl;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Security.Principal;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using ITAdmin.HostAgent.Contracts;
@@ -225,42 +227,48 @@ public sealed class DeploymentHostAgentOperations(
             return HostAgentResponse.Failed("HTTPS configuration is available only on Windows.", request.CorrelationId);
         }
 
+        var port = request.HttpsPort is > 0 and <= 65535 ? request.HttpsPort.Value : 443;
+
+        // The certificate import is delegated to Deploy-ITAdmin.ps1 (Import-PfxCertificate), not
+        // done in-process: X509CertificateLoader with MachineKeySet fails with "Access is denied"
+        // on hardened hosts even as LocalSystem, while the OS import the operator would run by hand
+        // works. The PFX lands in a short-lived file under the ACL'd state directory (SYSTEM and
+        // Administrators only, never the app pool), and is shredded in the finally below; the
+        // password is handed to the child process through its environment, never the command line.
+        Directory.CreateDirectory(settings.StateRoot);
+        var pfxPath = Path.Combine(settings.StateRoot, $"https-import-{Guid.NewGuid():N}.pfx");
         var pfxBytes = Convert.FromBase64String(request.PfxBase64!);
-        string thumbprint;
+
+        ReleaseUpdateResult result;
         try
         {
-            thumbprint = ImportCertificate(pfxBytes, request.PfxPassword ?? string.Empty);
-        }
-        catch (Exception exception) when (exception is CryptographicException or ArgumentException)
-        {
-            logger.LogWarning(exception, "The uploaded PFX could not be imported.");
+            await File.WriteAllBytesAsync(pfxPath, pfxBytes, cancellationToken);
+            RestrictToSystemAndAdministrators(pfxPath);
 
-            // The underlying message ("The specified network password is not correct.",
-            // "Cannot find the requested object.", a MAC-verification failure, ...) is the
-            // operator's fastest path to the cause and contains no secret or host path.
-            return HostAgentResponse.Failed(
-                $"The PFX could not be read: {exception.Message.Trim()} "
-                + "Check that the file is a PKCS#12/PFX with its private key and that the password is correct.",
-                request.CorrelationId);
+            var arguments = new List<string>
+            {
+                "-ConfigureHttps",
+                "-PfxImportPath", pfxPath,
+                "-HttpsPort", port.ToString(CultureInfo.InvariantCulture),
+            };
+            if (request.RedirectHttpToHttps == true)
+            {
+                arguments.Add("-RedirectHttpToHttps");
+            }
+
+            var environment = new Dictionary<string, string>
+            {
+                ["ITADMIN_HTTPS_PFX_PASSWORD"] = request.PfxPassword ?? string.Empty,
+            };
+
+            result = await executor.RunDeployScriptAsync(arguments, environment, cancellationToken);
         }
         finally
         {
             Array.Clear(pfxBytes);
+            ShredFile(pfxPath);
         }
 
-        var port = request.HttpsPort is > 0 and <= 65535 ? request.HttpsPort.Value : 443;
-        var arguments = new List<string>
-        {
-            "-ConfigureHttps",
-            "-CertificateThumbprint", thumbprint,
-            "-HttpsPort", port.ToString(CultureInfo.InvariantCulture),
-        };
-        if (request.RedirectHttpToHttps == true)
-        {
-            arguments.Add("-RedirectHttpToHttps");
-        }
-
-        var result = await executor.RunDeployScriptAsync(arguments, cancellationToken);
         if (!result.Succeeded)
         {
             return HostAgentResponse.Failed(result.Message, request.CorrelationId);
@@ -277,7 +285,7 @@ public sealed class DeploymentHostAgentOperations(
 
     public async Task<HostAgentResponse> DisableHttpsAsync(HostAgentRequest request, CancellationToken cancellationToken)
     {
-        var result = await executor.RunDeployScriptAsync(["-DisableHttps"], cancellationToken);
+        var result = await executor.RunDeployScriptAsync(["-DisableHttps"], environment: null, cancellationToken);
         return result.Succeeded
             ? new HostAgentResponse
             {
@@ -362,41 +370,57 @@ public sealed class DeploymentHostAgentOperations(
         }
     }
 
+    /// <summary>
+    /// Locks a file down to <c>SYSTEM</c> and <c>Administrators</c> only, with inheritance off, so
+    /// the transient PFX is never readable by the application pool identity or anyone else.
+    /// </summary>
     [SupportedOSPlatform("windows")]
-    private static string ImportCertificate(byte[] pfxBytes, string password)
+    private void RestrictToSystemAndAdministrators(string path)
     {
-        const X509KeyStorageFlags storageFlags =
-            X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable;
-
-        // The PFX comes from an authenticated administrator over the ACL'd pipe, not from
-        // untrusted input, so the loader's anti-DoS iteration ceilings only get in the way -
-        // enterprise and government CAs routinely issue PKCS#12 files with high KDF/MAC
-        // iteration counts that trip the defaults.
-        var certificates = X509CertificateLoader.LoadPkcs12Collection(
-            pfxBytes, password, storageFlags, Pkcs12LoaderLimits.DangerousNoLimits);
-
-        var leaf = certificates.FirstOrDefault(certificate => certificate.HasPrivateKey)
-                   ?? certificates.FirstOrDefault()
-                   ?? throw new CryptographicException("The PFX contained no certificate.");
-
-        using (var personal = new X509Store(StoreName.My, StoreLocation.LocalMachine))
+        try
         {
-            personal.Open(OpenFlags.ReadWrite);
-            personal.Add(leaf);
+            var security = new FileSecurity();
+            security.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
+            security.AddAccessRule(new FileSystemAccessRule(
+                new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null),
+                FileSystemRights.FullControl, AccessControlType.Allow));
+            security.AddAccessRule(new FileSystemAccessRule(
+                new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null),
+                FileSystemRights.FullControl, AccessControlType.Allow));
+            new FileInfo(path).SetAccessControl(security);
         }
-
-        var chain = certificates.Where(certificate => !certificate.Equals(leaf)).ToArray();
-        if (chain.Length > 0)
+        catch (Exception exception) when (exception is UnauthorizedAccessException or IOException or PlatformNotSupportedException)
         {
-            using var authorities = new X509Store(StoreName.CertificateAuthority, StoreLocation.LocalMachine);
-            authorities.Open(OpenFlags.ReadWrite);
-            foreach (var authority in chain)
+            logger.LogWarning(exception, "Could not tighten the ACL on the transient PFX file; it will still be shredded.");
+        }
+    }
+
+    /// <summary>Overwrites a file with zeros and deletes it; best effort.</summary>
+    private void ShredFile(string path)
+    {
+        try
+        {
+            if (!File.Exists(path))
             {
-                authorities.Add(authority);
+                return;
             }
-        }
 
-        return leaf.Thumbprint;
+            var length = new FileInfo(path).Length;
+            if (length > 0)
+            {
+                using (var stream = new FileStream(path, FileMode.Open, FileAccess.Write, FileShare.None))
+                {
+                    stream.Write(new byte[length]);
+                    stream.Flush();
+                }
+            }
+
+            File.Delete(path);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            logger.LogWarning(exception, "The transient PFX file {Path} could not be removed.", path);
+        }
     }
 
     private sealed record AppConfigHttps(bool Enabled, int Port, bool RedirectHttpToHttps, string? CertificateThumbprint);
@@ -542,10 +566,15 @@ public interface IHostDeploymentExecutor
 
     /// <summary>
     /// Runs the checked-out <c>Deploy-ITAdmin.ps1</c> synchronously with the given extra arguments
-    /// (e.g. <c>-ConfigureHttps -CertificateThumbprint ...</c>). Used for changes that never replace
-    /// the Host Agent binary, so no Update Coordinator handoff is needed.
+    /// (e.g. <c>-ConfigureHttps -PfxImportPath ...</c>). Used for changes that never replace the
+    /// Host Agent binary, so no Update Coordinator handoff is needed. <paramref name="environment"/>
+    /// entries are added to the child process only - the way a secret (a PFX password) is passed
+    /// without putting it on the command line.
     /// </summary>
-    Task<ReleaseUpdateResult> RunDeployScriptAsync(IReadOnlyList<string> extraArguments, CancellationToken cancellationToken);
+    Task<ReleaseUpdateResult> RunDeployScriptAsync(
+        IReadOnlyList<string> extraArguments,
+        IReadOnlyDictionary<string, string>? environment,
+        CancellationToken cancellationToken);
 }
 
 public sealed record ReleaseUpdateResult(bool Succeeded, string Message);

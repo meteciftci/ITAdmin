@@ -161,13 +161,17 @@ and `POST /api/system/https/disable` (permission `System.Https.Manage`) — see
 its password, the HTTPS port, and a redirect flag.
 
 The controller base64-encodes the PFX and forwards it to the Host Agent's `ConfigureHttps`. The
-agent imports the leaf certificate into `Cert:\LocalMachine\My` (chain certificates into `CA`)
-using `Pkcs12LoaderLimits.DangerousNoLimits` so high-iteration enterprise/government PKCS#12 files
-still load, clears the bytes and password, and runs `Deploy-ITAdmin.ps1 -ConfigureHttps
--CertificateThumbprint <derived> -HttpsPort <n> [-RedirectHttpToHttps]`. That script adds the
-`https` binding, records `web.https` in `app.json`, sets `ITADMIN_Https__Enabled` /
-`ITADMIN_Https__Port` on the app pool (and `ITADMIN_Https__RedirectEnabled` when redirect is on)
-and recycles it, which is what makes the application's `UseHttpsRedirection` take effect.
+agent writes the PFX to a short-lived file under `%ProgramData%\ITAdmin\state` locked to
+`SYSTEM`/`Administrators`, then runs `Deploy-ITAdmin.ps1 -ConfigureHttps -PfxImportPath <file>
+-HttpsPort <n> [-RedirectHttpToHttps]` with the password passed through the child process's
+environment (never the command line); the file is shredded and the in-memory buffer zeroed in a
+`finally`. The script imports the certificate with `Import-PfxCertificate` (the same OS path an
+operator would use by hand - the in-process `X509CertificateLoader` fails with "Access is denied"
+against the machine key store on hardened hosts), derives the thumbprint, adds the `https`
+binding, records `web.https` in `app.json`, sets `ITADMIN_Https__Enabled` / `ITADMIN_Https__Port`
+on the app pool (and `ITADMIN_Https__RedirectEnabled` when redirect is on) and recycles it, which
+is what makes the application's `UseHttpsRedirection` take effect. An operator whose certificate
+is already in `Cert:\LocalMachine\My` can still pass `-CertificateThumbprint` instead.
 
 Until HTTPS is configured the site stays plain HTTP so a fresh install is reachable without a
 certificate. During that HTTP-only commissioning window the auth cookies' `Secure` flag follows

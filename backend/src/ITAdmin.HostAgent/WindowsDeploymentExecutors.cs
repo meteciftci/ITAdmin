@@ -76,7 +76,9 @@ public sealed class WindowsHostDeploymentExecutor(
     }
 
     public async Task<ReleaseUpdateResult> RunDeployScriptAsync(
-        IReadOnlyList<string> extraArguments, CancellationToken cancellationToken)
+        IReadOnlyList<string> extraArguments,
+        IReadOnlyDictionary<string, string>? environment,
+        CancellationToken cancellationToken)
     {
         var deployScript = settings.DeployScriptPath;
         if (!File.Exists(deployScript))
@@ -96,7 +98,7 @@ public sealed class WindowsHostDeploymentExecutor(
         arguments.AddRange(extraArguments);
         arguments.Add("-Unattended");
 
-        var result = await RunAsync("powershell.exe", arguments, cancellationToken);
+        var result = await RunAsync("powershell.exe", arguments, cancellationToken, environment);
         if (result.ExitCode == 0)
         {
             return new ReleaseUpdateResult(true, "The deployment script completed.");
@@ -130,7 +132,10 @@ public sealed class WindowsHostDeploymentExecutor(
         await RunAsync(AppCmdPath, arguments, cancellationToken);
 
     private static async Task<(int ExitCode, string Output)> RunAsync(
-        string fileName, IReadOnlyList<string> arguments, CancellationToken cancellationToken)
+        string fileName,
+        IReadOnlyList<string> arguments,
+        CancellationToken cancellationToken,
+        IReadOnlyDictionary<string, string>? environment = null)
     {
         var startInfo = new ProcessStartInfo
         {
@@ -143,6 +148,14 @@ public sealed class WindowsHostDeploymentExecutor(
         foreach (var argument in arguments)
         {
             startInfo.ArgumentList.Add(argument);
+        }
+
+        if (environment is not null)
+        {
+            foreach (var (key, value) in environment)
+            {
+                startInfo.Environment[key] = value;
+            }
         }
 
         using var process = new Process { StartInfo = startInfo };
