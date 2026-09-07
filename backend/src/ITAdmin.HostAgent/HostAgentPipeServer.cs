@@ -110,24 +110,36 @@ public sealed class HostAgentPipeServer(
     /// </summary>
     private HostAgentCallerContext ResolveCaller(NamedPipeServerStream server)
     {
+        string? identityName;
         try
         {
-            var identityName = server.GetImpersonationUserName();
-            var isAdministrator = false;
-
-            server.RunAsClient(() =>
-            {
-                using var identity = WindowsIdentity.GetCurrent();
-                isAdministrator = new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
-            });
-
-            return new HostAgentCallerContext(identityName, isAdministrator);
+            identityName = server.GetImpersonationUserName();
         }
         catch (Exception exception)
         {
             logger.LogWarning(exception, "Could not identify the pipe caller; treating it as unknown.");
             return new HostAgentCallerContext(null, false);
         }
+
+        // The admin check is a bonus for an interactive operator on the console; the app pool
+        // identity is never an administrator and is authorized by name-match instead. If
+        // impersonation is unavailable, fall back to "not an administrator" rather than failing the
+        // whole identification.
+        var isAdministrator = false;
+        try
+        {
+            server.RunAsClient(() =>
+            {
+                using var identity = WindowsIdentity.GetCurrent();
+                isAdministrator = new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
+            });
+        }
+        catch (Exception exception)
+        {
+            logger.LogDebug(exception, "Could not evaluate administrator membership for the pipe caller.");
+        }
+
+        return new HostAgentCallerContext(identityName, isAdministrator);
     }
 
     /// <summary>

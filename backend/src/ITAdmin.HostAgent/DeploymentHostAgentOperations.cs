@@ -469,16 +469,52 @@ public sealed class DeploymentHostAgentOperations(
 
     private async Task<bool> IsLocallyHealthyAsync(CancellationToken cancellationToken)
     {
+        // The site may answer only on a specific host header, so localhost / the machine name would
+        // 404. Send the request to the loopback address but carry the configured host header.
+        var (port, hostHeader) = ReadAppConfigWeb();
+
         try
         {
             using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
-            var response = await client.GetAsync("http://localhost/health", cancellationToken);
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"http://127.0.0.1:{port}/health");
+            if (!string.IsNullOrWhiteSpace(hostHeader))
+            {
+                request.Headers.Host = hostHeader;
+            }
+
+            var response = await client.SendAsync(request, cancellationToken);
             return response.IsSuccessStatusCode;
         }
         catch
         {
             return false;
         }
+    }
+
+    private (int Port, string? HostHeader) ReadAppConfigWeb()
+    {
+        try
+        {
+            var path = Path.Combine(settings.ConfigRoot, "app.json");
+            if (File.Exists(path))
+            {
+                using var document = JsonDocument.Parse(File.ReadAllText(path));
+                if (document.RootElement.TryGetProperty("web", out var web))
+                {
+                    var port = web.TryGetProperty("httpPort", out var p) && p.TryGetInt32(out var portValue) ? portValue : 80;
+                    var hostHeader = web.TryGetProperty("httpHostHeader", out var h) && h.ValueKind == JsonValueKind.String
+                        ? h.GetString()
+                        : null;
+                    return (port, hostHeader);
+                }
+            }
+        }
+        catch (Exception exception) when (exception is IOException or JsonException or UnauthorizedAccessException)
+        {
+            // fall through to defaults
+        }
+
+        return (80, null);
     }
 }
 

@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using System.IO.Pipes;
+using System.Security.Principal;
 using System.Text;
 using ITAdmin.HostAgent.Contracts;
 
@@ -27,11 +28,16 @@ public sealed class NamedPipeHostAgentClient : IHostAgentClient
 
         try
         {
+            // Impersonation level so the Host Agent can identify (GetImpersonationUserName) and
+            // briefly impersonate (RunAsClient) the connecting principal. Without this the default
+            // is TokenImpersonationLevel.None and the agent cannot tell who is calling, so it
+            // denies every request as "the caller could not be identified".
             await using var pipe = new NamedPipeClientStream(
                 ".",
                 HostAgentProtocol.PipeName,
                 PipeDirection.InOut,
-                PipeOptions.Asynchronous | PipeOptions.WriteThrough);
+                PipeOptions.Asynchronous | PipeOptions.WriteThrough,
+                TokenImpersonationLevel.Impersonation);
 
             await pipe.ConnectAsync(ConnectTimeout, timeout.Token);
             await WriteFrameAsync(pipe, request.ToJson(), timeout.Token);
