@@ -231,11 +231,17 @@ public sealed class DeploymentHostAgentOperations(
         {
             thumbprint = ImportCertificate(pfxBytes, request.PfxPassword ?? string.Empty);
         }
-        catch (CryptographicException exception)
+        catch (Exception exception) when (exception is CryptographicException or ArgumentException)
         {
             logger.LogWarning(exception, "The uploaded PFX could not be imported.");
+
+            // The underlying message ("The specified network password is not correct.",
+            // "Cannot find the requested object.", a MAC-verification failure, ...) is the
+            // operator's fastest path to the cause and contains no secret or host path.
             return HostAgentResponse.Failed(
-                "The PFX could not be read - check the file and its password.", request.CorrelationId);
+                $"The PFX could not be read: {exception.Message.Trim()} "
+                + "Check that the file is a PKCS#12/PFX with its private key and that the password is correct.",
+                request.CorrelationId);
         }
         finally
         {
@@ -359,10 +365,15 @@ public sealed class DeploymentHostAgentOperations(
     [SupportedOSPlatform("windows")]
     private static string ImportCertificate(byte[] pfxBytes, string password)
     {
+        const X509KeyStorageFlags storageFlags =
+            X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable;
+
+        // The PFX comes from an authenticated administrator over the ACL'd pipe, not from
+        // untrusted input, so the loader's anti-DoS iteration ceilings only get in the way -
+        // enterprise and government CAs routinely issue PKCS#12 files with high KDF/MAC
+        // iteration counts that trip the defaults.
         var certificates = X509CertificateLoader.LoadPkcs12Collection(
-            pfxBytes,
-            password,
-            X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable);
+            pfxBytes, password, storageFlags, Pkcs12LoaderLimits.DangerousNoLimits);
 
         var leaf = certificates.FirstOrDefault(certificate => certificate.HasPrivateKey)
                    ?? certificates.FirstOrDefault()
