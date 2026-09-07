@@ -2,11 +2,16 @@ namespace ITAdmin.Api.Contracts.NotificationProviders;
 
 public sealed class UpdateSmsProviderSettingsRequest
 {
+    public string ProviderKey { get; set; } = "custom-http";
     public bool IsEnabled { get; set; }
     public string? DisplayName { get; set; }
+
     public string? Sender { get; set; }
     public int TimeoutSeconds { get; set; } = 30;
-    public string EndpointUrl { get; set; } = string.Empty;
+    public string TurkishCharacterMode { get; set; } = "Preserve";
+
+    // Custom HTTP
+    public string? EndpointUrl { get; set; }
     public string Method { get; set; } = "POST";
     public string ContentType { get; set; } = "application/json";
     public string AuthType { get; set; } = "None";
@@ -20,7 +25,17 @@ public sealed class UpdateSmsProviderSettingsRequest
     public string? BodyTemplate { get; set; }
     public List<int> SuccessStatusCodes { get; set; } = [200];
     public string? SuccessBodyContains { get; set; }
-    public string TurkishCharacterMode { get; set; } = "Preserve";
+
+    // Teknomart
+    public string? TeknomartBaseUrl { get; set; }
+    public string TeknomartDefaultSmsKind { get; set; } = "Single";
+    public string? TeknomartSingleSmsTitle { get; set; }
+    public int TeknomartEncoding { get; set; }
+    public int TeknomartValidity { get; set; }
+    public bool TeknomartCommercial { get; set; }
+    public string? TeknomartPushWebhookUrl { get; set; }
+    public string? TeknomartUsername { get; set; }
+    public string? TeknomartPassword { get; set; }
 }
 
 public sealed class NotificationKeyValuePairRequest

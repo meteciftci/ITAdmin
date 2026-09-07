@@ -49,6 +49,9 @@ public sealed class NotificationOutboxService(AppDbContext context) : INotificat
             RecipientMasked = MaskRecipient(channel, request.Recipient),
             Subject = string.IsNullOrWhiteSpace(request.Subject) ? null : request.Subject.Trim(),
             Body = request.Body.Trim(),
+            SmsKind = string.Equals(channel, NotificationChannels.Sms, StringComparison.OrdinalIgnoreCase)
+                ? TrimOrNull(request.SmsKind)
+                : null,
             Status = NotificationOutboxStatuses.Pending,
             Priority = request.Priority,
             AttemptCount = 0,

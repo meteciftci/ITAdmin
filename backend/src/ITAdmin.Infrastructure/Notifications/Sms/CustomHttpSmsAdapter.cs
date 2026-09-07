@@ -42,10 +42,10 @@ public sealed class CustomHttpSmsAdapter(
     public SmsProviderDefinition GetDefinition() => new(ProviderKey, DisplayName);
 
     public Task<SmsSendResult> ValidateAsync(
-        SmsProviderRuntimeSettings settings,
+        SmsProviderRuntimeSettings runtimeSettings,
         CancellationToken cancellationToken = default)
     {
-        var validationError = ValidateSettings(settings);
+        var validationError = ValidateSettings(Parse(runtimeSettings));
         return Task.FromResult(validationError is null
             ? new SmsSendResult(true, "SMS provider settings are valid.")
             : new SmsSendResult(false, validationError));
@@ -53,9 +53,10 @@ public sealed class CustomHttpSmsAdapter(
 
     public async Task<SmsSendResult> SendAsync(
         SmsSendRequest request,
-        SmsProviderRuntimeSettings settings,
+        SmsProviderRuntimeSettings runtimeSettings,
         CancellationToken cancellationToken = default)
     {
+        var settings = Parse(runtimeSettings);
         var validationError = ValidateSettings(settings);
         if (validationError is not null)
         {
@@ -134,7 +135,7 @@ public sealed class CustomHttpSmsAdapter(
         }
     }
 
-    internal static string? ValidateSettings(SmsProviderRuntimeSettings settings)
+    internal static string? ValidateSettings(CustomHttpRuntimeSettings settings)
     {
         var publicSettings = settings.Public;
 
@@ -167,7 +168,7 @@ public sealed class CustomHttpSmsAdapter(
         return ValidateAuth(settings);
     }
 
-    private static string? ValidateAuth(SmsProviderRuntimeSettings settings)
+    private static string? ValidateAuth(CustomHttpRuntimeSettings settings)
     {
         var authType = settings.Public.AuthType;
         var secrets = settings.Secrets;
@@ -190,7 +191,7 @@ public sealed class CustomHttpSmsAdapter(
     private (HttpRequestMessage? Request, string? ErrorMessage) TryBuildHttpRequest(
         string phone,
         string message,
-        SmsProviderRuntimeSettings settings)
+        CustomHttpRuntimeSettings settings)
     {
         var request = BuildHttpRequest(phone, message, settings, out var errorMessage);
         return (request, errorMessage);
@@ -199,7 +200,7 @@ public sealed class CustomHttpSmsAdapter(
     private HttpRequestMessage? BuildHttpRequest(
         string phone,
         string message,
-        SmsProviderRuntimeSettings settings,
+        CustomHttpRuntimeSettings settings,
         out string? errorMessage)
     {
         errorMessage = null;
@@ -271,7 +272,7 @@ public sealed class CustomHttpSmsAdapter(
         SmsCustomHttpSecretSettings secrets,
         string phone,
         string message,
-        SmsProviderRuntimeSettings settings)
+        CustomHttpRuntimeSettings settings)
     {
         foreach (var pair in publicSettings.Headers)
         {
@@ -321,7 +322,7 @@ public sealed class CustomHttpSmsAdapter(
         IReadOnlyList<NotificationKeyValuePair> source,
         string phone,
         string message,
-        SmsProviderRuntimeSettings settings)
+        CustomHttpRuntimeSettings settings)
     {
         var pairs = new List<KeyValuePair<string, string>>();
         foreach (var item in source)
@@ -373,6 +374,21 @@ public sealed class CustomHttpSmsAdapter(
 
         return string.Join('&', segments);
     }
+
+    private static readonly JsonSerializerOptions ParseOptions = new() { PropertyNameCaseInsensitive = true };
+
+    private static CustomHttpRuntimeSettings Parse(SmsProviderRuntimeSettings settings) => new(
+        Deserialize<SmsCustomHttpPublicSettings>(settings.PublicJson) ?? new SmsCustomHttpPublicSettings(),
+        Deserialize<SmsCustomHttpSecretSettings>(settings.SecretJson) ?? new SmsCustomHttpSecretSettings());
+
+    private static T? Deserialize<T>(string? json) where T : class =>
+        string.IsNullOrWhiteSpace(json) || json == "{}"
+            ? null
+            : JsonSerializer.Deserialize<T>(json, ParseOptions);
+
+    internal sealed record CustomHttpRuntimeSettings(
+        SmsCustomHttpPublicSettings Public,
+        SmsCustomHttpSecretSettings Secrets);
 
     private static string NormalizePhone(string phoneNumber) => phoneNumber.Trim();
 

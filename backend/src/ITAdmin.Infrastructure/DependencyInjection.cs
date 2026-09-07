@@ -79,6 +79,7 @@ public static class DependencyInjection
             sp.GetRequiredService<AdOrganizationalUnitsDirectoryService>());
 
         services.AddScoped<ISmsProviderAdapter, CustomHttpSmsAdapter>();
+        services.AddScoped<ISmsProviderAdapter, TeknomartSmsAdapter>();
         services.AddScoped<IEmailProviderAdapter, SmtpEmailProviderAdapter>();
         services.AddScoped<ISmsProviderRegistry, SmsProviderRegistry>();
         services.AddScoped<IEmailProviderRegistry, EmailProviderRegistry>();

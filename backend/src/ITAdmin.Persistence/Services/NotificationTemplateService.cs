@@ -103,6 +103,7 @@ public sealed class NotificationTemplateService(
             IsEnabled = request.IsEnabled,
             SubjectTemplate = TrimOrNull(request.SubjectTemplate),
             BodyTemplate = request.BodyTemplate.Trim(),
+            SmsKind = NormalizeSmsKind(channel, request.SmsKind),
             Description = TrimOrNull(request.Description),
             CreatedAt = now,
             CreatedBy = request.ActorUserName,
@@ -171,6 +172,7 @@ public sealed class NotificationTemplateService(
         entity.IsEnabled = request.IsEnabled;
         entity.SubjectTemplate = TrimOrNull(request.SubjectTemplate);
         entity.BodyTemplate = request.BodyTemplate.Trim();
+        entity.SmsKind = NormalizeSmsKind(channel, request.SmsKind);
         entity.Description = TrimOrNull(request.Description);
         entity.UpdatedAt = DateTimeOffset.UtcNow;
         entity.UpdatedBy = request.ActorUserName;
@@ -298,6 +300,7 @@ public sealed class NotificationTemplateService(
             AuditChangeSummaryBuilder.PublicField("IsEnabled", before.IsEnabled.ToString(), after.IsEnabled.ToString()),
             AuditChangeSummaryBuilder.PublicField("SubjectTemplate", before.SubjectTemplate, after.SubjectTemplate, treatAsLongText: true),
             AuditChangeSummaryBuilder.PublicField("BodyTemplate", before.BodyTemplate, after.BodyTemplate, treatAsLongText: true),
+            AuditChangeSummaryBuilder.PublicField("SmsKind", before.SmsKind, after.SmsKind),
             AuditChangeSummaryBuilder.PublicField("Description", before.Description, after.Description, treatAsLongText: true),
         };
 
@@ -310,14 +313,28 @@ public sealed class NotificationTemplateService(
     }
 
     private static TemplateSnapshot CloneSnapshot(NotificationTemplate entity) =>
-        new(entity.Name, entity.IsEnabled, entity.SubjectTemplate, entity.BodyTemplate, entity.Description);
+        new(entity.Name, entity.IsEnabled, entity.SubjectTemplate, entity.BodyTemplate, entity.SmsKind, entity.Description);
 
     private sealed record TemplateSnapshot(
         string Name,
         bool IsEnabled,
         string? SubjectTemplate,
         string BodyTemplate,
+        string? SmsKind,
         string? Description);
+
+    private static string? NormalizeSmsKind(string channel, string? smsKind)
+    {
+        if (!string.Equals(channel, NotificationChannels.Sms, StringComparison.OrdinalIgnoreCase)
+            || string.IsNullOrWhiteSpace(smsKind))
+        {
+            return null;
+        }
+
+        return string.Equals(smsKind.Trim(), "Otp", StringComparison.OrdinalIgnoreCase) ? "Otp"
+            : string.Equals(smsKind.Trim(), "Single", StringComparison.OrdinalIgnoreCase) ? "Single"
+            : null;
+    }
 
     private static NotificationTemplateModel Map(NotificationTemplate entity) =>
         new(
@@ -329,6 +346,7 @@ public sealed class NotificationTemplateService(
             entity.IsEnabled,
             entity.SubjectTemplate,
             entity.BodyTemplate,
+            entity.SmsKind,
             entity.Description,
             entity.CreatedAt,
             entity.CreatedBy,

@@ -30,6 +30,7 @@ public sealed class NotificationTemplateServiceTests
                 null,
                 null,
                 null,
+                null,
                 null),
             CancellationToken.None);
 
@@ -56,6 +57,7 @@ public sealed class NotificationTemplateServiceTests
                 null,
                 null,
                 null,
+                null,
                 null),
             CancellationToken.None);
 
@@ -77,6 +79,7 @@ public sealed class NotificationTemplateServiceTests
                 true,
                 null,
                 "Hello {{message}}",
+                null,
                 null,
                 null,
                 "tester",
@@ -105,6 +108,7 @@ public sealed class NotificationTemplateServiceTests
                 true,
                 null,
                 "Hello {{displayName}}",
+                null,
                 null,
                 null,
                 "tester",

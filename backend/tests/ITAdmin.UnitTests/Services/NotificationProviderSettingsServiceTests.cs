@@ -126,30 +126,28 @@ public sealed class NotificationProviderSettingsServiceTests
         string? basicUserName = null,
         string? basicPassword = null,
         string? bearerToken = null) =>
-        new(
-            isEnabled,
-            "SMS",
-            "SENDER",
-            30,
-            endpointUrl,
-            method,
-            "application/json",
-            authType,
-            null,
-            basicUserName,
-            basicPassword,
-            bearerToken,
-            null,
-            [],
-            [],
-            "{\"phone\":\"{{phone}}\",\"message\":\"{{message}}\"}",
-            [200],
-            null,
-            "Preserve",
-            Guid.NewGuid(),
-            "tester",
-            "127.0.0.1",
-            "xunit");
+        new()
+        {
+            ProviderKey = "custom-http",
+            IsEnabled = isEnabled,
+            DisplayName = "SMS",
+            Sender = "SENDER",
+            TimeoutSeconds = 30,
+            EndpointUrl = endpointUrl,
+            Method = method,
+            ContentType = "application/json",
+            AuthType = authType,
+            BasicUserName = basicUserName,
+            BasicPassword = basicPassword,
+            BearerToken = bearerToken,
+            BodyTemplate = "{\"phone\":\"{{phone}}\",\"message\":\"{{message}}\"}",
+            SuccessStatusCodes = [200],
+            TurkishCharacterMode = "Preserve",
+            ActorUserId = Guid.NewGuid(),
+            ActorUserName = "tester",
+            ActorIpAddress = "127.0.0.1",
+            ActorUserAgent = "xunit",
+        };
 
     private static AppDbContext CreateDbContext()
     {

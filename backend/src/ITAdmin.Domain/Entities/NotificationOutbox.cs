@@ -10,6 +10,10 @@ public sealed class NotificationOutbox : BaseEntity
     public string RecipientMasked { get; set; } = string.Empty;
     public string? Subject { get; set; }
     public string Body { get; set; } = string.Empty;
+
+    /// <summary>SMS channel only: "Otp" or "Single", copied from the template. Null = provider default.</summary>
+    public string? SmsKind { get; set; }
+
     public string Status { get; set; } = string.Empty;
     public int Priority { get; set; }
     public int AttemptCount { get; set; }

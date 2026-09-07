@@ -27,8 +27,14 @@ public sealed class NotificationSender(
         SmsSendRequest request,
         CancellationToken cancellationToken = default)
     {
-        var entity = await LoadSettingsAsync(NotificationChannels.Sms, NotificationProviderKeys.CustomHttp, cancellationToken);
-        if (entity is null || !entity.IsEnabled)
+        // The active SMS provider is whichever row is enabled, not a fixed key - an operator can
+        // switch between Custom HTTP and Teknomart from Settings.
+        var entity = await context.NotificationProviderSettings
+            .AsNoTracking()
+            .Where(x => x.Channel == NotificationChannels.Sms && x.IsEnabled)
+            .OrderByDescending(x => x.UpdatedAt ?? x.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (entity is null)
         {
             return new SmsSendResult(false, "SMS provider is not configured or disabled.");
         }
@@ -65,11 +71,21 @@ public sealed class NotificationSender(
 
     private SmsProviderRuntimeSettings BuildSmsRuntime(Domain.Entities.NotificationProviderSettings entity)
     {
-        var publicSettings = Deserialize<SmsCustomHttpPublicSettings>(entity.PublicSettingsJson)
-            ?? new SmsCustomHttpPublicSettings();
-        var secrets = DeserializeSecrets<SmsCustomHttpSecretSettings>(entity.EncryptedSecretSettingsJson)
-            ?? new SmsCustomHttpSecretSettings();
-        return new SmsProviderRuntimeSettings(publicSettings, secrets);
+        var publicJson = string.IsNullOrWhiteSpace(entity.PublicSettingsJson) ? "{}" : entity.PublicSettingsJson!;
+        var secretJson = "{}";
+        if (!string.IsNullOrWhiteSpace(entity.EncryptedSecretSettingsJson))
+        {
+            try
+            {
+                secretJson = secretProtector.Unprotect(entity.EncryptedSecretSettingsJson);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "SMS provider protected settings could not be decrypted.");
+            }
+        }
+
+        return new SmsProviderRuntimeSettings(entity.ProviderKey, publicJson, secretJson);
     }
 
     private EmailProviderRuntimeSettings BuildEmailRuntime(Domain.Entities.NotificationProviderSettings entity)

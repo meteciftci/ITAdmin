@@ -48,6 +48,10 @@ public sealed class NotificationTemplateConfiguration : IEntityTypeConfiguration
             .HasColumnType("text")
             .IsRequired();
 
+        builder.Property(x => x.SmsKind)
+            .HasColumnName("sms_kind")
+            .HasMaxLength(16);
+
         builder.Property(x => x.Description)
             .HasColumnName("description")
             .HasMaxLength(1000);

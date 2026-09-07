@@ -197,7 +197,8 @@ public sealed partial class AdManagementNotificationEnqueueService(
                 CorrelationId: null,
                 Priority: 0,
                 MaxAttempts: null,
-                CreatedBy: userContext.ActorUserName),
+                CreatedBy: userContext.ActorUserName,
+                SmsKind: template.SmsKind),
             cancellationToken);
 
         if (!enqueueResult.IsSuccess)

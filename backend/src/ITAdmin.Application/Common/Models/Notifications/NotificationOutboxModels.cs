@@ -13,7 +13,8 @@ public sealed record NotificationOutboxEnqueueRequest(
     string? CorrelationId,
     int Priority,
     int? MaxAttempts,
-    string? CreatedBy);
+    string? CreatedBy,
+    string? SmsKind = null);
 
 public sealed record NotificationOutboxEnqueueResult(
     bool IsSuccess,

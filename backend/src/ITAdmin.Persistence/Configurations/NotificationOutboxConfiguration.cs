@@ -42,6 +42,10 @@ public sealed class NotificationOutboxConfiguration : IEntityTypeConfiguration<N
             .HasColumnType("text")
             .IsRequired();
 
+        builder.Property(x => x.SmsKind)
+            .HasColumnName("sms_kind")
+            .HasMaxLength(16);
+
         builder.Property(x => x.Status)
             .HasColumnName("status")
             .HasMaxLength(32)

@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using ITAdmin.Application.Abstractions.Notifications;
+using ITAdmin.Application.Common.Constants;
 using ITAdmin.Application.Common.Models.Notifications;
 using ITAdmin.Infrastructure.Notifications;
 using ITAdmin.Infrastructure.Notifications.Sms;
@@ -212,7 +213,8 @@ public sealed class CustomHttpSmsAdapterTests
         string? basicUserName = null,
         string? basicPassword = null) =>
         new(
-            new SmsCustomHttpPublicSettings
+            NotificationProviderKeys.CustomHttp,
+            JsonSerializer.Serialize(new SmsCustomHttpPublicSettings
             {
                 EndpointUrl = endpointUrl,
                 Method = method,
@@ -222,12 +224,12 @@ public sealed class CustomHttpSmsAdapterTests
                 Sender = sender,
                 TimeoutSeconds = 30,
                 SuccessStatusCodes = [200],
-            },
-            new SmsCustomHttpSecretSettings
+            }),
+            JsonSerializer.Serialize(new SmsCustomHttpSecretSettings
             {
                 BasicUserName = basicUserName,
                 BasicPassword = basicPassword,
-            });
+            }));
 
     private sealed class FakeHttpClientFactory(HttpMessageHandler handler) : IHttpClientFactory
     {

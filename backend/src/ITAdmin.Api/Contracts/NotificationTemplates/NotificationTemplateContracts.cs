@@ -9,6 +9,7 @@ public sealed class SaveNotificationTemplateRequest
     public bool IsEnabled { get; set; } = true;
     public string? SubjectTemplate { get; set; }
     public string BodyTemplate { get; set; } = string.Empty;
+    public string? SmsKind { get; set; }
     public string? Description { get; set; }
 }
 
@@ -30,6 +31,7 @@ public sealed record NotificationTemplateResponse(
     bool IsEnabled,
     string? SubjectTemplate,
     string BodyTemplate,
+    string? SmsKind,
     string? Description,
     DateTimeOffset CreatedAt,
     string? CreatedBy,

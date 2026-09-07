@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using ITAdmin.Application.Abstractions.Notifications;
 using ITAdmin.Application.Abstractions.Services;
 using ITAdmin.Application.Common.Constants;
+using ITAdmin.Application.Common.Models.Notifications;
 using ITAdmin.Application.Common.Options;
 using ITAdmin.Application.Notifications;
 using ITAdmin.Domain.Entities;
@@ -153,7 +154,7 @@ public sealed class NotificationOutboxBatchProcessor(
         if (string.Equals(item.Channel, NotificationChannels.Sms, StringComparison.OrdinalIgnoreCase))
         {
             var result = await notificationSender.SendSmsAsync(
-                new SmsSendRequest(item.Recipient, item.Body),
+                new SmsSendRequest(item.Recipient, item.Body, ParseSmsKind(item.SmsKind)),
                 cancellationToken);
             return new SendOutcome(result.IsSuccess, result.Message, result.ProviderSummary);
         }
@@ -171,6 +172,13 @@ public sealed class NotificationOutboxBatchProcessor(
 
         return new SendOutcome(false, "Notification channel is invalid.", null);
     }
+
+    private static SmsSendKind ParseSmsKind(string? value) => value?.Trim().ToLowerInvariant() switch
+    {
+        "otp" => SmsSendKind.Otp,
+        "single" => SmsSendKind.Single,
+        _ => SmsSendKind.Default,
+    };
 
     private sealed record SendOutcome(bool IsSuccess, string Message, string? ProviderSummary);
 }

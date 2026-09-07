@@ -22,7 +22,13 @@ public sealed class NotificationProviderSettingsService(
 
     public async Task<SmsProviderSettingsResponse> GetSmsSettingsAsync(CancellationToken cancellationToken = default)
     {
-        var entity = await LoadAsync(NotificationChannels.Sms, NotificationProviderKeys.CustomHttp, cancellationToken)
+        var rows = await context.NotificationProviderSettings
+            .AsNoTracking()
+            .Where(x => x.Channel == NotificationChannels.Sms)
+            .ToListAsync(cancellationToken);
+
+        var entity = rows.FirstOrDefault(x => x.IsEnabled)
+            ?? rows.OrderByDescending(x => x.UpdatedAt ?? x.CreatedAt).FirstOrDefault()
             ?? CreateDefaultEntity(NotificationChannels.Sms, NotificationProviderKeys.CustomHttp);
         return MapSmsResponse(entity);
     }
@@ -38,36 +44,78 @@ public sealed class NotificationProviderSettingsService(
         UpdateSmsProviderSettingsRequest request,
         CancellationToken cancellationToken = default)
     {
-        var entity = await GetOrCreateTrackedAsync(
-            NotificationChannels.Sms,
-            NotificationProviderKeys.CustomHttp,
-            cancellationToken);
-
-        var beforePublic = DeserializeSmsPublic(entity);
-        var beforeSecrets = DeserializeSmsSecrets(entity);
-
-        var mergedSecrets = MergeSmsSecrets(beforeSecrets, request);
-        var afterPublic = BuildSmsPublicFromRequest(request);
-
-        var runtime = new SmsProviderRuntimeSettings(afterPublic, mergedSecrets);
-        var smsAdapter = smsProviderRegistry.GetRequired(NotificationProviderKeys.CustomHttp);
-        var smsValidation = await smsAdapter.ValidateAsync(runtime, cancellationToken);
-        if (!smsValidation.IsSuccess)
+        var providerKey = request.ProviderKey?.Trim().ToLowerInvariant() ?? NotificationProviderKeys.CustomHttp;
+        if (!NotificationProviderKeys.IsKnownSmsProvider(providerKey))
         {
-            return new NotificationProviderOperationResult(false, smsValidation.Message);
+            return new NotificationProviderOperationResult(false, $"Unknown SMS provider '{request.ProviderKey}'.");
         }
 
-        var auditChanges = BuildSmsAuditChanges(beforePublic, afterPublic, beforeSecrets, mergedSecrets, entity.IsEnabled, request.IsEnabled);
+        var entity = await GetOrCreateTrackedAsync(NotificationChannels.Sms, providerKey, cancellationToken);
+
+        string publicJson;
+        string? protectedSecrets;
+        string secretJsonForValidation;
+        IReadOnlyList<AuditFieldChange> auditChanges;
+
+        if (providerKey == NotificationProviderKeys.Teknomart)
+        {
+            var beforePublic = DeserializeTeknomartPublic(entity);
+            var beforeSecrets = DeserializeTeknomartSecrets(entity);
+            var afterPublic = BuildTeknomartPublicFromRequest(request);
+            var afterSecrets = new SmsTeknomartSecretSettings
+            {
+                Username = CoalesceSecret(request.TeknomartUsername, beforeSecrets.Username),
+                Password = CoalesceSecret(request.TeknomartPassword, beforeSecrets.Password),
+            };
+
+            publicJson = NotificationProviderSettingsJson.SerializePublic(afterPublic);
+            secretJsonForValidation = NotificationProviderSettingsJson.SerializePublic(afterSecrets);
+            protectedSecrets = NotificationProviderSettingsJson.ProtectSecrets(afterSecrets, secretProtector);
+            auditChanges = BuildTeknomartAuditChanges(beforePublic, afterPublic, beforeSecrets, afterSecrets, entity.IsEnabled, request.IsEnabled);
+        }
+        else
+        {
+            var beforePublic = DeserializeSmsPublic(entity);
+            var beforeSecrets = DeserializeSmsSecrets(entity);
+            var mergedSecrets = MergeSmsSecrets(beforeSecrets, request);
+            var afterPublic = BuildSmsPublicFromRequest(request);
+
+            publicJson = NotificationProviderSettingsJson.SerializePublic(afterPublic);
+            secretJsonForValidation = NotificationProviderSettingsJson.SerializePublic(mergedSecrets);
+            protectedSecrets = NotificationProviderSettingsJson.ProtectSecrets(mergedSecrets, secretProtector);
+            auditChanges = BuildSmsAuditChanges(beforePublic, afterPublic, beforeSecrets, mergedSecrets, entity.IsEnabled, request.IsEnabled);
+        }
+
+        var runtime = new SmsProviderRuntimeSettings(providerKey, publicJson, secretJsonForValidation);
+        var validation = await smsProviderRegistry.GetRequired(providerKey).ValidateAsync(runtime, cancellationToken);
+        if (!validation.IsSuccess)
+        {
+            return new NotificationProviderOperationResult(false, validation.Message);
+        }
 
         entity.IsEnabled = request.IsEnabled;
         entity.DisplayName = request.DisplayName?.Trim();
-        entity.PublicSettingsJson = NotificationProviderSettingsJson.SerializePublic(afterPublic);
-        entity.EncryptedSecretSettingsJson = NotificationProviderSettingsJson.ProtectSecrets(mergedSecrets, secretProtector);
+        entity.PublicSettingsJson = publicJson;
+        entity.EncryptedSecretSettingsJson = protectedSecrets;
+
+        // One active SMS provider at a time: enabling one disables the others.
+        if (request.IsEnabled)
+        {
+            var others = await context.NotificationProviderSettings
+                .Where(x => x.Channel == NotificationChannels.Sms && x.ProviderKey != providerKey && x.IsEnabled)
+                .ToListAsync(cancellationToken);
+            foreach (var other in others)
+            {
+                other.IsEnabled = false;
+                other.UpdatedAt = DateTimeOffset.UtcNow;
+                other.UpdatedBy = request.ActorUserName;
+            }
+        }
 
         await ApplyUpdateMetadataAsync(entity, request.ActorUserName, cancellationToken);
         await WriteUpdateAuditAsync(
             entity,
-            "Notification provider settings updated. Channel: Sms. Provider: CustomHttp.",
+            $"Notification provider settings updated. Channel: Sms. Provider: {providerKey}.",
             auditChanges,
             request,
             cancellationToken);
@@ -134,19 +182,25 @@ public sealed class NotificationProviderSettingsService(
         TestSmsProviderRequest request,
         CancellationToken cancellationToken = default)
     {
-        var entity = await context.NotificationProviderSettings
-            .FirstOrDefaultAsync(
-                x => x.Channel == NotificationChannels.Sms && x.ProviderKey == NotificationProviderKeys.CustomHttp,
-                cancellationToken);
+        var rows = await context.NotificationProviderSettings
+            .Where(x => x.Channel == NotificationChannels.Sms)
+            .ToListAsync(cancellationToken);
+        var entity = rows.FirstOrDefault(x => x.IsEnabled)
+            ?? rows.OrderByDescending(x => x.UpdatedAt ?? x.CreatedAt).FirstOrDefault();
 
         if (entity is null || string.IsNullOrWhiteSpace(entity.PublicSettingsJson))
         {
             return new NotificationProviderOperationResult(false, "SMS provider settings must be saved before testing.");
         }
 
-        var runtime = new SmsProviderRuntimeSettings(
-            DeserializeSmsPublic(entity),
-            DeserializeSmsSecrets(entity));
+        var secretJson = "{}";
+        if (!string.IsNullOrWhiteSpace(entity.EncryptedSecretSettingsJson))
+        {
+            try { secretJson = secretProtector.Unprotect(entity.EncryptedSecretSettingsJson); }
+            catch (Exception) { /* treated as no secrets */ }
+        }
+
+        var runtime = new SmsProviderRuntimeSettings(entity.ProviderKey, entity.PublicSettingsJson!, secretJson);
 
         var adapter = smsProviderRegistry.GetRequired(entity.ProviderKey);
         var result = await adapter.SendAsync(
@@ -157,8 +211,8 @@ public sealed class NotificationProviderSettingsService(
         await ApplyValidationResultAsync(entity, result.IsSuccess, result.Message, request.ActorUserName, cancellationToken);
         await WriteTestAuditAsync(
             NotificationChannels.Sms,
-            NotificationProviderKeys.CustomHttp,
-            "CustomHttp",
+            entity.ProviderKey,
+            entity.ProviderKey,
             NotificationRecipientMasker.MaskPhone(request.PhoneNumber),
             result.IsSuccess,
             result.IsSuccess ? "Success" : result.Message,
@@ -268,6 +322,62 @@ public sealed class NotificationProviderSettingsService(
             secretProtector)
         ?? new SmsCustomHttpSecretSettings();
 
+    private SmsTeknomartPublicSettings DeserializeTeknomartPublic(NotificationProviderSettings entity) =>
+        NotificationProviderSettingsJson.DeserializePublic<SmsTeknomartPublicSettings>(entity.PublicSettingsJson)
+        ?? new SmsTeknomartPublicSettings();
+
+    private SmsTeknomartSecretSettings DeserializeTeknomartSecrets(NotificationProviderSettings entity) =>
+        NotificationProviderSettingsJson.UnprotectSecrets<SmsTeknomartSecretSettings>(
+            entity.EncryptedSecretSettingsJson,
+            secretProtector)
+        ?? new SmsTeknomartSecretSettings();
+
+    private static SmsTeknomartPublicSettings BuildTeknomartPublicFromRequest(UpdateSmsProviderSettingsRequest request) =>
+        new()
+        {
+            IsEnabled = request.IsEnabled,
+            DisplayName = request.DisplayName?.Trim(),
+            BaseUrl = request.TeknomartBaseUrl?.Trim(),
+            Sender = request.Sender?.Trim(),
+            DefaultSmsKind = string.Equals(request.TeknomartDefaultSmsKind, "Otp", StringComparison.OrdinalIgnoreCase)
+                ? "Otp" : "Single",
+            SingleSmsTitle = request.TeknomartSingleSmsTitle?.Trim(),
+            Encoding = request.TeknomartEncoding,
+            Validity = request.TeknomartValidity,
+            Commercial = request.TeknomartCommercial,
+            PushWebhookUrl = request.TeknomartPushWebhookUrl?.Trim(),
+            TimeoutSeconds = request.TimeoutSeconds,
+            TurkishCharacterMode = request.TurkishCharacterMode.Trim(),
+        };
+
+    private static List<AuditFieldChange> BuildTeknomartAuditChanges(
+        SmsTeknomartPublicSettings beforePublic,
+        SmsTeknomartPublicSettings afterPublic,
+        SmsTeknomartSecretSettings beforeSecrets,
+        SmsTeknomartSecretSettings afterSecrets,
+        bool beforeEnabled,
+        bool afterEnabled)
+    {
+        var changes = new List<AuditFieldChange>
+        {
+            AuditChangeSummaryBuilder.PublicField("IsEnabled", beforeEnabled.ToString(), afterEnabled.ToString()),
+            AuditChangeSummaryBuilder.PublicField("BaseUrl", beforePublic.BaseUrl, afterPublic.BaseUrl),
+            AuditChangeSummaryBuilder.PublicField("Sender", beforePublic.Sender, afterPublic.Sender),
+            AuditChangeSummaryBuilder.PublicField("DefaultSmsKind", beforePublic.DefaultSmsKind, afterPublic.DefaultSmsKind),
+            AuditChangeSummaryBuilder.PublicField("SingleSmsTitle", beforePublic.SingleSmsTitle, afterPublic.SingleSmsTitle),
+            AuditChangeSummaryBuilder.PublicField("Encoding", beforePublic.Encoding.ToString(), afterPublic.Encoding.ToString()),
+            AuditChangeSummaryBuilder.PublicField("Validity", beforePublic.Validity.ToString(), afterPublic.Validity.ToString()),
+            AuditChangeSummaryBuilder.PublicField("Commercial", beforePublic.Commercial.ToString(), afterPublic.Commercial.ToString()),
+            AuditChangeSummaryBuilder.PublicField("TimeoutSeconds", beforePublic.TimeoutSeconds.ToString(), afterPublic.TimeoutSeconds.ToString()),
+            AuditChangeSummaryBuilder.PublicField("TurkishCharacterMode", beforePublic.TurkishCharacterMode, afterPublic.TurkishCharacterMode),
+        };
+
+        AppendSecretChange(changes, "Secret.TeknomartUsername", beforeSecrets.Username, afterSecrets.Username);
+        AppendSecretChange(changes, "Secret.TeknomartPassword", beforeSecrets.Password, afterSecrets.Password);
+
+        return changes.Where(IsMeaningfulChange).ToList();
+    }
+
     private EmailSmtpPublicSettings DeserializeEmailPublic(NotificationProviderSettings entity) =>
         NotificationProviderSettingsJson.DeserializePublic<EmailSmtpPublicSettings>(entity.PublicSettingsJson)
         ?? new EmailSmtpPublicSettings();
@@ -285,7 +395,7 @@ public sealed class NotificationProviderSettingsService(
             DisplayName = request.DisplayName?.Trim(),
             Sender = request.Sender?.Trim(),
             TimeoutSeconds = request.TimeoutSeconds,
-            EndpointUrl = request.EndpointUrl.Trim(),
+            EndpointUrl = request.EndpointUrl?.Trim() ?? string.Empty,
             Method = request.Method.Trim(),
             ContentType = request.ContentType.Trim(),
             AuthType = request.AuthType.Trim(),
@@ -343,32 +453,63 @@ public sealed class NotificationProviderSettingsService(
 
     private SmsProviderSettingsResponse MapSmsResponse(NotificationProviderSettings entity)
     {
-        var publicSettings = DeserializeSmsPublic(entity);
-        var secrets = DeserializeSmsSecrets(entity);
-        return new SmsProviderSettingsResponse(
-            entity.Channel,
-            entity.ProviderKey,
-            entity.IsEnabled,
-            entity.DisplayName ?? publicSettings.DisplayName,
-            publicSettings.Sender,
-            publicSettings.TimeoutSeconds,
-            publicSettings.EndpointUrl,
-            publicSettings.Method,
-            publicSettings.ContentType,
-            publicSettings.AuthType,
-            publicSettings.ApiKeyName,
-            publicSettings.Headers,
-            publicSettings.QueryParameters,
-            publicSettings.BodyTemplate,
-            publicSettings.SuccessStatusCodes,
-            publicSettings.SuccessBodyContains,
-            publicSettings.TurkishCharacterMode,
-            !string.IsNullOrWhiteSpace(secrets.BasicPassword),
-            !string.IsNullOrWhiteSpace(secrets.BearerToken),
-            !string.IsNullOrWhiteSpace(secrets.ApiKeyValue),
-            entity.LastValidatedAt,
-            entity.LastValidationStatus,
-            entity.LastValidationMessage);
+        var providerKey = NotificationProviderKeys.IsKnownSmsProvider(entity.ProviderKey)
+            ? entity.ProviderKey
+            : NotificationProviderKeys.CustomHttp;
+
+        var response = new SmsProviderSettingsResponse
+        {
+            Channel = NotificationChannels.Sms,
+            ProviderKey = providerKey,
+            AvailableProviders = NotificationProviderKeys.SmsProviders,
+            IsEnabled = entity.IsEnabled,
+            DisplayName = entity.DisplayName,
+            LastValidatedAt = entity.LastValidatedAt,
+            LastValidationStatus = entity.LastValidationStatus,
+            LastValidationMessage = entity.LastValidationMessage,
+        };
+
+        if (providerKey == NotificationProviderKeys.Teknomart)
+        {
+            var pub = DeserializeTeknomartPublic(entity);
+            var sec = DeserializeTeknomartSecrets(entity);
+            return response with
+            {
+                Sender = pub.Sender,
+                TimeoutSeconds = pub.TimeoutSeconds,
+                TurkishCharacterMode = pub.TurkishCharacterMode,
+                TeknomartBaseUrl = pub.BaseUrl,
+                TeknomartDefaultSmsKind = pub.DefaultSmsKind,
+                TeknomartSingleSmsTitle = pub.SingleSmsTitle,
+                TeknomartEncoding = pub.Encoding,
+                TeknomartValidity = pub.Validity,
+                TeknomartCommercial = pub.Commercial,
+                TeknomartPushWebhookUrl = pub.PushWebhookUrl,
+                HasTeknomartCredentials = !string.IsNullOrWhiteSpace(sec.Username) && !string.IsNullOrWhiteSpace(sec.Password),
+            };
+        }
+
+        var custom = DeserializeSmsPublic(entity);
+        var customSecrets = DeserializeSmsSecrets(entity);
+        return response with
+        {
+            Sender = custom.Sender,
+            TimeoutSeconds = custom.TimeoutSeconds,
+            TurkishCharacterMode = custom.TurkishCharacterMode,
+            EndpointUrl = custom.EndpointUrl,
+            Method = custom.Method,
+            ContentType = custom.ContentType,
+            AuthType = custom.AuthType,
+            ApiKeyName = custom.ApiKeyName,
+            Headers = custom.Headers,
+            QueryParameters = custom.QueryParameters,
+            BodyTemplate = custom.BodyTemplate,
+            SuccessStatusCodes = custom.SuccessStatusCodes,
+            SuccessBodyContains = custom.SuccessBodyContains,
+            HasBasicPassword = !string.IsNullOrWhiteSpace(customSecrets.BasicPassword),
+            HasBearerToken = !string.IsNullOrWhiteSpace(customSecrets.BearerToken),
+            HasApiKey = !string.IsNullOrWhiteSpace(customSecrets.ApiKeyValue),
+        };
     }
 
     private EmailProviderSettingsResponse MapEmailResponse(NotificationProviderSettings entity)
