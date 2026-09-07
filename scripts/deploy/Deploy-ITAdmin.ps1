@@ -1047,8 +1047,8 @@ function Get-ActiveAppPath {
 function Set-ActiveAppPath {
     param([Parameter(Mandatory = $true)][string]$Path)
     Set-ItemProperty -Path "IIS:\Sites\$SiteName" -Name "physicalPath" -Value $Path
-    if ((Get-WebAppPoolState -Name $AppPoolName).Value -ne "Started") { Start-WebAppPool -Name $AppPoolName }
-    else { Restart-WebAppPool -Name $AppPoolName }
+    Start-Sleep -Milliseconds 500
+    Restart-AppPoolTolerant
     Start-Website -Name $SiteName -ErrorAction SilentlyContinue
 }
 
@@ -1195,6 +1195,41 @@ function Invoke-DisableHttps {
     Write-Ok "HTTPS bindings removed; the site is HTTP-only."
 }
 
+function Restart-AppPoolTolerant {
+    <#
+        Recycles (or starts) the application pool, tolerating IIS/WAS being briefly unable to accept
+        control messages (HRESULT 0x80070425) - which happens for a moment right after an
+        applicationHost.config change (an env-var or physicalPath write) while WAS reloads. Never
+        fatal: if the pool cannot be poked right now, WAS applies the new configuration on its own
+        next recycle, so the deploy should not fail over it.
+    #>
+    param([string]$Name = $AppPoolName)
+
+    if (-not (Test-Path "IIS:\AppPools\$Name")) { return }
+
+    for ($attempt = 1; $attempt -le 6; $attempt++) {
+        try {
+            $state = (Get-WebAppPoolState -Name $Name -ErrorAction Stop).Value
+            if ($state -eq "Starting" -or $state -eq "Stopping") {
+                Start-Sleep -Milliseconds 750
+                continue
+            }
+            if ($state -eq "Started") { Restart-WebAppPool -Name $Name -ErrorAction Stop }
+            else { Start-WebAppPool -Name $Name -ErrorAction Stop }
+            return
+        }
+        catch {
+            $message = "$($_.Exception.Message)"
+            $transient = $message -match "0x80070425" -or $message -match "cannot accept control messages"
+            if ($attempt -ge 6 -or -not $transient) {
+                Write-Host ("    WARN Could not recycle app pool {0} now ({1}); IIS will pick up the new configuration on its next recycle." -f $Name, $message) -ForegroundColor Yellow
+                return
+            }
+            Start-Sleep -Seconds ([Math]::Min($attempt, 3))
+        }
+    }
+}
+
 function Sync-HttpsAppPoolEnv {
     <#
         Pushes the persisted HTTPS redirect state onto the app pool so the application's
@@ -1233,10 +1268,10 @@ function Sync-HttpsAppPoolEnv {
         Remove-AppPoolEnvironmentVariable -Name "ITADMIN_Https__Port"
     }
 
-    if (Test-Path "IIS:\AppPools\$AppPoolName") {
-        if ((Get-WebAppPoolState -Name $AppPoolName).Value -eq "Started") { Restart-WebAppPool -Name $AppPoolName }
-        else { Start-WebAppPool -Name $AppPoolName -ErrorAction SilentlyContinue }
-    }
+    # Give WAS a moment to absorb the applicationHost.config writes above before poking the pool.
+    Start-Sleep -Milliseconds 500
+    Restart-AppPoolTolerant
+
     Write-Detail "HTTP-to-HTTPS redirect $(if ($redirectEnabled) { "enabled (port $httpsPort)" } else { "disabled" }); app pool recycled."
 }
 
@@ -1542,8 +1577,9 @@ catch {
     # never restarted, start it so IIS keeps serving the previous build.
     try {
         Import-Module WebAdministration -ErrorAction SilentlyContinue
-        if ((Get-WebAppPoolState -Name $AppPoolName -ErrorAction SilentlyContinue).Value -eq "Stopped") {
-            Start-WebAppPool -Name $AppPoolName -ErrorAction SilentlyContinue
+        $poolState = (Get-WebAppPoolState -Name $AppPoolName -ErrorAction SilentlyContinue).Value
+        if ($poolState -eq "Stopped") {
+            Restart-AppPoolTolerant
             Write-Host "    Started app pool $AppPoolName so the site stays reachable." -ForegroundColor Yellow
         }
     }
