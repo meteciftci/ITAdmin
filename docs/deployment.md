@@ -112,10 +112,14 @@ Privileged work is split into Windows services:
 
 - **ITAdmin Host Agent** — LocalSystem service exposed through an ACL-protected local named pipe.
   Exposes a small, fixed set of typed operations (`GetInstallationStatus`, `CheckForUpdates`,
-  `RequestUpdate`, `GetUpdateStatus`, `RecycleApplicationPool`) — no generic command execution, no
-  script path parameter, no shell. `RequestUpdate` carries no arguments at all: the agent derives
-  everything (repository URL, branch, install/data roots) from its own configuration and hands the
-  work to the Update Coordinator.
+  `RequestUpdate`, `GetUpdateStatus`, `RecycleApplicationPool`, `GetHttpsStatus`, `ConfigureHttps`,
+  `DisableHttps`) — no generic command execution, no script path parameter, no shell. `RequestUpdate`
+  carries no arguments at all; the agent derives everything (repository URL, branch, install/data
+  roots) from its own configuration and hands the work to the Update Coordinator. `ConfigureHttps`
+  carries only validated data — the uploaded PFX bytes, its password, a port, a redirect flag — which
+  the agent decodes, imports into `Cert:\LocalMachine\My`, and then binds by running
+  `Deploy-ITAdmin.ps1 -ConfigureHttps` with a thumbprint it derived itself. The PFX buffer and
+  password are cleared after import; neither is written to disk.
 - **ITAdmin Update Coordinator** — a one-shot LocalSystem process, started only when an update needs
   to replace the release that contains the currently running Host Agent (a process cannot stop and
   repoint its own Windows service). It runs `Deploy-ITAdmin.ps1 -Unattended -NoHostAgentService` and
@@ -149,7 +153,29 @@ real deployment via `Deploy-ITAdmin.ps1`.
 
 ---
 
-## 6. Database and rollback model
+## 6. HTTPS from the application
+
+`GET /api/system/https/status` (permission `System.Https.View`), `POST /api/system/https/configure`
+and `POST /api/system/https/disable` (permission `System.Https.Manage`) — see
+`HttpsSettingsController`. `configure` is a `multipart/form-data` upload: the `.pfx`/PKCS#12 file,
+its password, the HTTPS port, and a redirect flag.
+
+The controller base64-encodes the PFX and forwards it to the Host Agent's `ConfigureHttps`. The
+agent imports the leaf certificate into `Cert:\LocalMachine\My` (chain certificates into `CA`),
+clears the bytes and password, and runs `Deploy-ITAdmin.ps1 -ConfigureHttps
+-CertificateThumbprint <derived> -HttpsPort <n> [-RedirectHttpToHttps]`. That script adds the
+`https` binding, records `web.https` in `app.json`, and — when redirect is on — sets
+`ITADMIN_Https__RedirectEnabled` / `ITADMIN_Https__Port` on the app pool and recycles it, which is
+what makes the application's `UseHttpsRedirection` take effect. Until HTTPS is configured the site
+stays plain HTTP so a fresh install is reachable without a certificate.
+
+The PFX private key and password transit the app pool process and the local named pipe; the app
+never writes them to disk and the agent zeroes its buffers after import. `DisableHttps` removes the
+`https` bindings and the redirect; the certificate is left in the store.
+
+---
+
+## 7. Database and rollback model
 
 PostgreSQL is running and reachable before installation; nothing else is a precondition. The script
 provisions the rest before any machine change, through `ITAdmin.Api.exe --provision-database`: it
@@ -179,7 +205,7 @@ health check never becomes active: IIS is reverted to the previous build automat
 
 ---
 
-## 7. What replaced the release-tag model
+## 8. What replaced the release-tag model
 
 Earlier versions of ITAdmin (through the `c7320fd` "self-contained production installer" design)
 used annotated `vMAJOR.MINOR.PATCH` tags, a CI-built Windows ZIP package, an optional Git

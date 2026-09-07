@@ -33,6 +33,10 @@ export const PermissionCodes = {
     View: "System.Updates.View",
     Manage: "System.Updates.Manage",
   },
+  SystemHttps: {
+    View: "System.Https.View",
+    Manage: "System.Https.Manage",
+  },
   Setup: {
     Manage: "Setup.Manage",
   },

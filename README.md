@@ -98,8 +98,11 @@ cd frontend && npm run lint && npm run test:unit && npm run build
 - Runtime secrets are DPAPI LocalMachine-protected under `%ProgramData%\ITAdmin\secrets`.
 - ASP.NET Data Protection keys under `%ProgramData%\ITAdmin\DataProtection-Keys` are
   infrastructure-critical and must be backed up with the database.
-- Initial installation uses HTTP so certificate issuance cannot block commissioning. Configure
-  HTTPS with `Deploy-ITAdmin.ps1 -ConfigureHttps` after login; do not treat HTTP as a steady state.
+- Initial installation uses HTTP so certificate issuance cannot block commissioning. After login,
+  configure HTTPS from **Settings → HTTPS** — upload a `.pfx` and its password; the Host Agent
+  imports the certificate and binds it. `Deploy-ITAdmin.ps1 -ConfigureHttps -CertificateThumbprint`
+  remains as an operator path for a certificate already in `Cert:\LocalMachine\My`. Do not treat
+  HTTP as a steady state.
 - The IIS application pool never receives build, deployment, or LocalSystem privilege — that stays
   with the ITAdmin Host Agent, a separate Windows service reachable only over an ACL'd local named
   pipe.

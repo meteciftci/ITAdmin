@@ -138,7 +138,7 @@ ITAdmin deployment completed successfully.
   State             C:\ProgramData\ITAdmin\state\deploy.json
 
   Next: open http://server-name/ and sign in with the initial administrator's directory credentials.
-        Configure HTTPS later with:  .\Deploy-ITAdmin.ps1 -ConfigureHttps
+        Configure HTTPS afterwards from Settings -> HTTPS.
 
   ----------------------------------------------------------------------
   SHOWN ONCE - RECORD THIS NOW
@@ -156,14 +156,23 @@ The one-time password block appears only when the script generated the applicati
 Open the printed URL and sign in with the initial administrator's **directory** credentials.
 
 > **HTTP traffic is not encrypted.** Initial installation is HTTP-only by design so that reaching a
-> working ITAdmin does not depend on a certificate being ready yet. Configure HTTPS afterwards:
+> working ITAdmin does not depend on a certificate being ready yet.
+>
+> Configure HTTPS afterwards from **Settings → HTTPS** (permission `System.Https.Manage`): upload a
+> `.pfx` / PKCS#12 file and its password, choose the port (443) and whether to redirect HTTP to
+> HTTPS, and submit. The privileged ITAdmin Host Agent imports the certificate into
+> `Cert:\LocalMachine\My` and binds it — the web application never gets certificate-store or IIS
+> write access. Enabling the redirect recycles the application pool once.
+>
+> For a certificate that is **already** in `Cert:\LocalMachine\My`, the operator path still works:
 >
 > ```powershell
 > .\Deploy-ITAdmin.ps1 -ConfigureHttps -CertificateThumbprint <40-hex-thumbprint> -RedirectHttpToHttps
+> # and to go back to HTTP-only:
+> .\Deploy-ITAdmin.ps1 -DisableHttps
 > ```
 >
-> The certificate must already be installed in `Cert:\LocalMachine\My`. Treat the HTTP-only window
-> as a commissioning state, not a steady state.
+> Treat the HTTP-only window as a commissioning state, not a steady state.
 
 ---
 

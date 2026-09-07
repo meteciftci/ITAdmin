@@ -1,0 +1,44 @@
+{
+  "systemHttps": {
+    "page": {
+      "title": "HTTPS",
+      "description": "Bu sunucuya bir TLS sertifikası bağlayın ve HTTP-HTTPS yönlendirmesini yönetin."
+    },
+    "status": {
+      "title": "Mevcut durum",
+      "state": "HTTPS",
+      "enabled": "Etkin",
+      "disabled": "Devre dışı",
+      "port": "Port",
+      "redirect": "HTTP-HTTPS yönlendirmesi",
+      "redirectOn": "Açık",
+      "redirectOff": "Kapalı",
+      "certificate": "Sertifika",
+      "expires": "Bitiş",
+      "noCertificate": "Bağlı sertifika yok",
+      "agentUnavailable": "Bu sunucuda ITAdmin Host Agent'a ulaşılamadı."
+    },
+    "form": {
+      "title": "Sertifika yükle",
+      "pfxLabel": "PFX / PKCS#12 dosyası",
+      "pfxHint": "Dosya özel anahtarı içermelidir. Zincir varsa o da içe aktarılır.",
+      "passwordLabel": "PFX parolası",
+      "passwordHint": "Dosyanın parolası yoksa boş bırakın.",
+      "portLabel": "HTTPS portu",
+      "redirectLabel": "Bağlamadan sonra HTTP'yi HTTPS'e yönlendir",
+      "redirectHint": "Bunu açmak uygulama havuzunu bir kez geri döndürür (birkaç saniye).",
+      "submit": "Yükle ve bağla"
+    },
+    "disable": {
+      "button": "HTTPS'i devre dışı bırak",
+      "confirmTitle": "HTTPS devre dışı bırakılsın mı?",
+      "confirmDescription": "HTTPS bağlaması ve yönlendirme kaldırılır, site yalnızca HTTP'ye döner. Sertifika makine deposunda kalır.",
+      "confirmSubmit": "HTTPS'i devre dışı bırak"
+    },
+    "toast": {
+      "configured": "HTTPS bağlandı.",
+      "disabled": "HTTPS devre dışı bırakıldı.",
+      "failed": "Değişiklik uygulanamadı."
+    }
+  }
+}

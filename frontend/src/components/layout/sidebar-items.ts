@@ -13,6 +13,7 @@ import {
   Network,
   Shield,
   ShieldAlert,
+  ShieldCheck,
   SlidersHorizontal,
   Tags,
   Users,
@@ -355,6 +356,7 @@ export const getSidebarGroups = (
           PermissionCodes.AdManagement.Settings.View,
           PermissionCodes.LicenseManagement.ManageSettings,
           PermissionCodes.SystemUpdates.View,
+          PermissionCodes.SystemHttps.View,
         ]),
         children: [
           {
@@ -377,6 +379,12 @@ export const getSidebarGroups = (
             to: "/settings/updates",
             icon: RefreshCw,
             visible: canAccess(user, PermissionCodes.SystemUpdates.View),
+          },
+          {
+            titleKey: "items.systemHttps",
+            to: "/settings/https",
+            icon: ShieldCheck,
+            visible: canAccess(user, PermissionCodes.SystemHttps.View),
           },
           {
             titleKey: "items.moduleSettings",

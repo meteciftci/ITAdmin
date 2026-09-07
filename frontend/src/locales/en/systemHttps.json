@@ -1,0 +1,44 @@
+{
+  "systemHttps": {
+    "page": {
+      "title": "HTTPS",
+      "description": "Bind a TLS certificate to this server and control the HTTP-to-HTTPS redirect."
+    },
+    "status": {
+      "title": "Current status",
+      "state": "HTTPS",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "port": "Port",
+      "redirect": "HTTP-to-HTTPS redirect",
+      "redirectOn": "On",
+      "redirectOff": "Off",
+      "certificate": "Certificate",
+      "expires": "Expires",
+      "noCertificate": "No certificate bound",
+      "agentUnavailable": "The ITAdmin Host Agent could not be reached on this server."
+    },
+    "form": {
+      "title": "Upload a certificate",
+      "pfxLabel": "PFX / PKCS#12 file",
+      "pfxHint": "The file must contain the private key. The chain (if present) is imported too.",
+      "passwordLabel": "PFX password",
+      "passwordHint": "Leave blank if the file has no password.",
+      "portLabel": "HTTPS port",
+      "redirectLabel": "Redirect HTTP to HTTPS after binding",
+      "redirectHint": "Enabling this recycles the application pool once (a few seconds).",
+      "submit": "Upload and bind"
+    },
+    "disable": {
+      "button": "Disable HTTPS",
+      "confirmTitle": "Disable HTTPS?",
+      "confirmDescription": "The HTTPS binding and the redirect are removed and the site returns to HTTP-only. The certificate stays in the machine store.",
+      "confirmSubmit": "Disable HTTPS"
+    },
+    "toast": {
+      "configured": "HTTPS is bound.",
+      "disabled": "HTTPS is disabled.",
+      "failed": "The change could not be applied."
+    }
+  }
+}

@@ -35,6 +35,11 @@ export const SystemUpdatesPage = lazy(() =>
     default: module.SystemUpdatesPage,
   })),
 );
+export const SystemHttpsPage = lazy(() =>
+  import("@/features/system-https/SystemHttpsPage").then((module) => ({
+    default: module.SystemHttpsPage,
+  })),
+);
 export const ApplicationSettingsPage = lazy(() =>
   import("@/features/settings/ApplicationSettingsPage").then((module) => ({
     default: module.ApplicationSettingsPage,
