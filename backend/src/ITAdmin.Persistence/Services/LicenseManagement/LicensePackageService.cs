@@ -12,7 +12,6 @@ namespace ITAdmin.Persistence.Services.LicenseManagement;
 
 public sealed class LicensePackageService(AppDbContext context) : ILicensePackageService
 {
-    private const int UsedQuantity = 0;
 
     public async Task<PagedResult<LicensePackageListItem>> GetListAsync(
         LicensePackageListQuery query,
@@ -57,25 +56,46 @@ public sealed class LicensePackageService(AppDbContext context) : ILicensePackag
         var totalCount = await itemsQuery.CountAsync(cancellationToken);
         var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
 
-        var items = await itemsQuery
+        var page = await itemsQuery
             .OrderByDescending(x => x.CreatedAt)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
-            .Select(x => new LicensePackageListItem(
+            .Select(x => new
+            {
                 x.Id,
-                x.Product.Name,
-                x.Purchase.Title,
+                ProductName = x.Product.Name,
+                PurchaseTitle = x.Purchase.Title,
                 x.LicenseType,
                 x.Quantity,
-                UsedQuantity,
-                x.Quantity - UsedQuantity,
                 x.StartDate,
                 x.EndDate,
                 x.IsPerpetual,
                 x.RenewalRequired,
                 x.Status,
-                x.IsActive))
+                x.IsActive,
+            })
             .ToListAsync(cancellationToken);
+
+        var usedByPackage = await GetActiveSeatCountsAsync(page.Select(x => x.Id).ToList(), cancellationToken);
+
+        var items = page.Select(x =>
+        {
+            var used = usedByPackage.GetValueOrDefault(x.Id);
+            return new LicensePackageListItem(
+                x.Id,
+                x.ProductName,
+                x.PurchaseTitle,
+                x.LicenseType,
+                x.Quantity,
+                used,
+                Math.Max(0, x.Quantity - used),
+                x.StartDate,
+                x.EndDate,
+                x.IsPerpetual,
+                x.RenewalRequired,
+                x.Status,
+                x.IsActive);
+        }).ToList();
 
         return new PagedResult<LicensePackageListItem>(items, pageNumber, pageSize, totalCount, totalPages);
     }
@@ -88,8 +108,30 @@ public sealed class LicensePackageService(AppDbContext context) : ILicensePackag
             .Include(x => x.Purchase)
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 
-        return entity is null ? null : Map(entity);
+        return entity is null ? null : Map(entity, await GetActiveSeatCountAsync(id, cancellationToken));
     }
+
+    private async Task<Dictionary<Guid, int>> GetActiveSeatCountsAsync(
+        IReadOnlyCollection<Guid> packageIds,
+        CancellationToken cancellationToken)
+    {
+        if (packageIds.Count == 0)
+        {
+            return new Dictionary<Guid, int>();
+        }
+
+        return await context.LicenseSeatAssignments
+            .Where(s => packageIds.Contains(s.PackageId) && s.Status == LicenseSeatAssignmentStatus.Active)
+            .GroupBy(s => s.PackageId)
+            .Select(g => new { PackageId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.PackageId, x => x.Count, cancellationToken);
+    }
+
+    private Task<int> GetActiveSeatCountAsync(Guid packageId, CancellationToken cancellationToken) =>
+        context.LicenseSeatAssignments
+            .CountAsync(
+                s => s.PackageId == packageId && s.Status == LicenseSeatAssignmentStatus.Active,
+                cancellationToken);
 
     public async Task<LicensePackageOperationResult> CreateAsync(
         CreateLicensePackageRequest request,
@@ -155,7 +197,7 @@ public sealed class LicensePackageService(AppDbContext context) : ILicensePackag
         await context.Entry(entity).Reference(x => x.Product).LoadAsync(cancellationToken);
         await context.Entry(entity).Reference(x => x.Purchase).LoadAsync(cancellationToken);
 
-        return new LicensePackageOperationResult(true, "License package created.", Map(entity));
+        return new LicensePackageOperationResult(true, "License package created.", Map(entity, 0));
     }
 
     public async Task<LicensePackageOperationResult> UpdateAsync(
@@ -219,7 +261,10 @@ public sealed class LicensePackageService(AppDbContext context) : ILicensePackag
             cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
 
-        return new LicensePackageOperationResult(true, "License package updated.", Map(entity));
+        return new LicensePackageOperationResult(
+            true,
+            "License package updated.",
+            Map(entity, await GetActiveSeatCountAsync(entity.Id, cancellationToken)));
     }
 
     public async Task<LicensePackageOperationResult> UpdateStatusAsync(
@@ -243,7 +288,10 @@ public sealed class LicensePackageService(AppDbContext context) : ILicensePackag
 
         if (entity.Status == request.Status)
         {
-            return new LicensePackageOperationResult(true, "License package status is unchanged.", Map(entity));
+            return new LicensePackageOperationResult(
+                true,
+                "License package status is unchanged.",
+                Map(entity, await GetActiveSeatCountAsync(entity.Id, cancellationToken)));
         }
 
         var now = DateTime.UtcNow;
@@ -264,7 +312,10 @@ public sealed class LicensePackageService(AppDbContext context) : ILicensePackag
             cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
 
-        return new LicensePackageOperationResult(true, "License package status updated.", Map(entity));
+        return new LicensePackageOperationResult(
+            true,
+            "License package status updated.",
+            Map(entity, await GetActiveSeatCountAsync(entity.Id, cancellationToken)));
     }
 
     private async Task<string?> ValidatePackageAsync(
@@ -318,7 +369,7 @@ public sealed class LicensePackageService(AppDbContext context) : ILicensePackag
         return null;
     }
 
-    private static LicensePackageDetail Map(LicensePackage entity) =>
+    private static LicensePackageDetail Map(LicensePackage entity, int usedQuantity) =>
         new(
             entity.Id,
             entity.PurchaseId,
@@ -327,8 +378,8 @@ public sealed class LicensePackageService(AppDbContext context) : ILicensePackag
             entity.Product.Name,
             entity.LicenseType,
             entity.Quantity,
-            UsedQuantity,
-            entity.Quantity - UsedQuantity,
+            usedQuantity,
+            Math.Max(0, entity.Quantity - usedQuantity),
             entity.StartDate,
             entity.EndDate,
             entity.IsPerpetual,

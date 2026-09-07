@@ -25,6 +25,29 @@ public sealed record LicenseSeatAssignmentItem(
     DateTime? UpdatedAt,
     string? UpdatedBy);
 
+public sealed record LicenseSeatAssignmentListQuery(
+    string? Search,
+    Guid? ProductId,
+    Guid? PackageId,
+    LicenseSeatAssignmentStatus? Status,
+    bool ActiveOnly,
+    int PageNumber,
+    int PageSize);
+
+public sealed record LicenseSeatAssignmentListItem(
+    Guid Id,
+    Guid PackageId,
+    string ProductName,
+    string? ProductBrand,
+    string PurchaseTitle,
+    string DisplayName,
+    string? Mail,
+    string? NationalId,
+    string? Department,
+    DateOnly AssignedDate,
+    DateOnly? ReleasedDate,
+    LicenseSeatAssignmentStatus Status);
+
 public sealed record LicensePackageSeatOverview(
     Guid PackageId,
     string ProductName,

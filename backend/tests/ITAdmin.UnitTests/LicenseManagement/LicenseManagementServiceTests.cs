@@ -368,6 +368,72 @@ public sealed class LicenseManagementServiceTests
     }
 
     [Fact]
+    public async Task GetPackageListAsync_CountsActiveSeatAssignmentsAsUsed()
+    {
+        await using var context = CreateDbContext();
+        var purchaseId = await SeedPurchaseAsync(context);
+        var productId = await SeedProductAsync(context);
+
+        var package = new Domain.Entities.LicensePackage
+        {
+            PurchaseId = purchaseId,
+            ProductId = productId,
+            LicenseType = LicenseType.NamedUser,
+            Quantity = 5,
+            IsActive = true,
+            Status = LicensePackageStatus.Active,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "seed",
+        };
+        context.LicensePackages.Add(package);
+        await context.SaveChangesAsync();
+
+        context.LicenseSeatAssignments.AddRange(
+            new Domain.Entities.LicenseSeatAssignment
+            {
+                PackageId = package.Id,
+                DisplayName = "Active One",
+                AssignedDate = DateOnly.FromDateTime(DateTime.UtcNow),
+                Status = LicenseSeatAssignmentStatus.Active,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = "seed",
+            },
+            new Domain.Entities.LicenseSeatAssignment
+            {
+                PackageId = package.Id,
+                DisplayName = "Active Two",
+                AssignedDate = DateOnly.FromDateTime(DateTime.UtcNow),
+                Status = LicenseSeatAssignmentStatus.Active,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = "seed",
+            },
+            new Domain.Entities.LicenseSeatAssignment
+            {
+                PackageId = package.Id,
+                DisplayName = "Released One",
+                AssignedDate = DateOnly.FromDateTime(DateTime.UtcNow),
+                ReleasedDate = DateOnly.FromDateTime(DateTime.UtcNow),
+                Status = LicenseSeatAssignmentStatus.Released,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = "seed",
+            });
+        await context.SaveChangesAsync();
+
+        var service = new LicensePackageService(context);
+        var list = await service.GetListAsync(
+            new LicensePackageListQuery(null, purchaseId, null, null, null, 1, 20),
+            CancellationToken.None);
+        var detail = await service.GetByIdAsync(package.Id, CancellationToken.None);
+
+        var listItem = Assert.Single(list.Items);
+        Assert.Equal(2, listItem.UsedQuantity);
+        Assert.Equal(3, listItem.AvailableQuantity);
+        Assert.NotNull(detail);
+        Assert.Equal(2, detail!.UsedQuantity);
+        Assert.Equal(3, detail.AvailableQuantity);
+    }
+
+    [Fact]
     public async Task GetSettingsAsync_WhenNoRowExists_ReturnsDefaults()
     {
         await using var context = CreateDbContext();

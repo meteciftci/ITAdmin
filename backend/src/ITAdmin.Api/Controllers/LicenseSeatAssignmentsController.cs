@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ITAdmin.Api.Authorization;
+using ITAdmin.Api.Contracts.Common;
 using ITAdmin.Api.Contracts.LicenseManagement;
+using ITAdmin.Domain.Enums;
 using ITAdmin.Application.Abstractions.Services;
 using ITAdmin.Application.Common.Constants;
 using AppModels = ITAdmin.Application.Common.Models.LicenseManagement;
@@ -13,6 +15,43 @@ namespace ITAdmin.Api.Controllers;
 [Authorize]
 public sealed class LicenseSeatAssignmentsController(ILicenseSeatAssignmentService seatService) : ControllerBase
 {
+    [HttpGet("seat-assignments")]
+    [RequirePermission(LicenseManagementPermissions.View)]
+    public async Task<ActionResult<PagedResponse<LicenseSeatAssignmentListItemResponse>>> Search(
+        [FromQuery] string? search,
+        [FromQuery] Guid? productId,
+        [FromQuery] Guid? packageId,
+        [FromQuery] LicenseSeatAssignmentStatus? status,
+        [FromQuery] bool activeOnly = false,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await seatService.SearchAsync(
+            new AppModels.LicenseSeatAssignmentListQuery(
+                search, productId, packageId, status, activeOnly, pageNumber, pageSize),
+            cancellationToken);
+
+        return Ok(new PagedResponse<LicenseSeatAssignmentListItemResponse>(
+            result.Items.Select(x => new LicenseSeatAssignmentListItemResponse(
+                x.Id,
+                x.PackageId,
+                x.ProductName,
+                x.ProductBrand,
+                x.PurchaseTitle,
+                x.DisplayName,
+                x.Mail,
+                x.NationalId,
+                x.Department,
+                x.AssignedDate,
+                x.ReleasedDate,
+                x.Status)).ToList(),
+            result.PageNumber,
+            result.PageSize,
+            result.TotalCount,
+            result.TotalPages));
+    }
+
     [HttpGet("packages/{packageId:guid}/seat-assignments")]
     [RequirePermission(LicenseManagementPermissions.View)]
     public async Task<ActionResult<LicensePackageSeatOverviewResponse>> GetByPackage(

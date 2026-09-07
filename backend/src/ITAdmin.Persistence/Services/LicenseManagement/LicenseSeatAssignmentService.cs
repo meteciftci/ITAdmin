@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using ITAdmin.Application.Abstractions.Services;
 using ITAdmin.Application.Common.LicenseManagement;
+using ITAdmin.Application.Common.Models;
 using ITAdmin.Application.Common.Models.LicenseManagement;
 using ITAdmin.Domain.Entities;
 using ITAdmin.Domain.Enums;
@@ -12,6 +13,70 @@ namespace ITAdmin.Persistence.Services.LicenseManagement;
 public sealed class LicenseSeatAssignmentService(AppDbContext context) : ILicenseSeatAssignmentService
 {
     private const string EntityName = "LicenseSeatAssignment";
+
+    public async Task<PagedResult<LicenseSeatAssignmentListItem>> SearchAsync(
+        LicenseSeatAssignmentListQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        var (pageNumber, pageSize) = NormalizePaging(query.PageNumber, query.PageSize);
+
+        var rows = context.LicenseSeatAssignments.AsNoTracking().AsQueryable();
+
+        if (query.ActiveOnly)
+        {
+            rows = rows.Where(x => x.Status == LicenseSeatAssignmentStatus.Active);
+        }
+        else if (query.Status is { } status)
+        {
+            rows = rows.Where(x => x.Status == status);
+        }
+
+        if (query.ProductId is { } productId)
+        {
+            rows = rows.Where(x => x.Package.ProductId == productId);
+        }
+
+        if (query.PackageId is { } packageId)
+        {
+            rows = rows.Where(x => x.PackageId == packageId);
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.Search))
+        {
+            var pattern = BuildILikeContainsPattern(query.Search);
+            rows = rows.Where(x =>
+                EF.Functions.ILike(x.DisplayName, pattern)
+                || (x.Mail != null && EF.Functions.ILike(x.Mail, pattern))
+                || (x.NationalId != null && EF.Functions.ILike(x.NationalId, pattern))
+                || EF.Functions.ILike(x.Package.Product.Name, pattern));
+        }
+
+        var totalCount = await rows.CountAsync(cancellationToken);
+        var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+
+        var items = await rows
+            .OrderByDescending(x => x.Status == LicenseSeatAssignmentStatus.Active)
+            .ThenByDescending(x => x.AssignedDate)
+            .ThenBy(x => x.DisplayName)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .Select(x => new LicenseSeatAssignmentListItem(
+                x.Id,
+                x.PackageId,
+                x.Package.Product.Name,
+                x.Package.Product.Brand,
+                x.Package.Purchase.Title,
+                x.DisplayName,
+                x.Mail,
+                x.NationalId,
+                x.Department,
+                x.AssignedDate,
+                x.ReleasedDate,
+                x.Status))
+            .ToListAsync(cancellationToken);
+
+        return new PagedResult<LicenseSeatAssignmentListItem>(items, pageNumber, pageSize, totalCount, totalPages);
+    }
 
     public async Task<LicensePackageSeatOverview?> GetByPackageAsync(
         Guid packageId,

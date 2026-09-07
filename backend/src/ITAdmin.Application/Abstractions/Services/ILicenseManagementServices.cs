@@ -144,6 +144,10 @@ public interface ILicenseRequestService
 
 public interface ILicenseSeatAssignmentService
 {
+    Task<PagedResult<LicenseSeatAssignmentListItem>> SearchAsync(
+        LicenseSeatAssignmentListQuery query,
+        CancellationToken cancellationToken = default);
+
     Task<LicensePackageSeatOverview?> GetByPackageAsync(
         Guid packageId,
         bool includeInactive,

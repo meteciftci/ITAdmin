@@ -25,6 +25,20 @@ public sealed record LicenseSeatAssignmentResponse(
     DateTime? UpdatedAt,
     string? UpdatedBy);
 
+public sealed record LicenseSeatAssignmentListItemResponse(
+    Guid Id,
+    Guid PackageId,
+    string ProductName,
+    string? ProductBrand,
+    string PurchaseTitle,
+    string DisplayName,
+    string? Mail,
+    string? NationalId,
+    string? Department,
+    DateOnly AssignedDate,
+    DateOnly? ReleasedDate,
+    LicenseSeatAssignmentStatus Status);
+
 public sealed record LicensePackageSeatOverviewResponse(
     Guid PackageId,
     string ProductName,
