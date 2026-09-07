@@ -62,6 +62,15 @@ public sealed class HostAgentDispatcher(
                 HostAgentOperation.RecycleApplicationPool =>
                     await operations.RecycleApplicationPoolAsync(request, cancellationToken),
 
+                HostAgentOperation.GetHttpsStatus =>
+                    await operations.GetHttpsStatusAsync(request, cancellationToken),
+
+                HostAgentOperation.ConfigureHttps =>
+                    await operations.ConfigureHttpsAsync(request, cancellationToken),
+
+                HostAgentOperation.DisableHttps =>
+                    await operations.DisableHttpsAsync(request, cancellationToken),
+
                 _ => HostAgentResponse.Rejected("Unsupported operation.", request.CorrelationId),
             };
         }
@@ -100,6 +109,12 @@ public interface IHostAgentOperations
     Task<HostAgentResponse> GetUpdateStatusAsync(HostAgentRequest request, CancellationToken cancellationToken);
 
     Task<HostAgentResponse> RecycleApplicationPoolAsync(HostAgentRequest request, CancellationToken cancellationToken);
+
+    Task<HostAgentResponse> GetHttpsStatusAsync(HostAgentRequest request, CancellationToken cancellationToken);
+
+    Task<HostAgentResponse> ConfigureHttpsAsync(HostAgentRequest request, CancellationToken cancellationToken);
+
+    Task<HostAgentResponse> DisableHttpsAsync(HostAgentRequest request, CancellationToken cancellationToken);
 
     void LogOperationFailure(HostAgentOperation operation, Exception exception);
 

@@ -52,6 +52,12 @@ public static class PermissionCodes
         public const string Manage = "System.Updates.Manage";
     }
 
+    public static class SystemHttps
+    {
+        public const string View = "System.Https.View";
+        public const string Manage = "System.Https.Manage";
+    }
+
     public static class Setup
     {
         public const string Manage = "Setup.Manage";

@@ -58,6 +58,16 @@ public partial class Program
         builder.Services.Configure<ForwardedHeadersOptions>(options =>
             ForwardedHeadersSetup.Apply(options, builder.Configuration));
 
+        // HTTPS redirect is opt-in and applied by the Host Agent (Settings -> HTTPS), which sets
+        // ITADMIN_Https__RedirectEnabled / ITADMIN_Https__Port on the app pool and recycles it.
+        // Until then the site stays plain HTTP so a fresh install is reachable without a certificate.
+        var httpsRedirectEnabled = builder.Configuration.GetValue("Https:RedirectEnabled", false);
+        var httpsPort = builder.Configuration.GetValue("Https:Port", 443);
+        if (httpsRedirectEnabled)
+        {
+            builder.Services.AddHttpsRedirection(options => options.HttpsPort = httpsPort);
+        }
+
         builder.Services.AddLoginRateLimiting(builder.Configuration);
         builder.Services.AddApplication();
         builder.Services.AddInfrastructure(builder.Configuration);
@@ -116,12 +126,15 @@ public partial class Program
             app.MapOpenApi();
         }
 
-        if (app.Environment.IsProduction())
+        if (app.Environment.IsProduction() && httpsRedirectEnabled)
         {
             app.UseHsts();
         }
 
-        app.UseHttpsRedirection();
+        if (httpsRedirectEnabled)
+        {
+            app.UseHttpsRedirection();
+        }
         app.UseSecurityHeaders();
         app.UseDefaultFiles();
         app.UseStaticFiles();

@@ -28,6 +28,8 @@ public sealed partial class SetupService
         ("Settings", PermissionCodes.Settings.Update, "Update settings."),
         ("System", PermissionCodes.SystemUpdates.View, "View application installation and update status."),
         ("System", PermissionCodes.SystemUpdates.Manage, "Install verified ITAdmin releases from the configured repository."),
+        ("System", PermissionCodes.SystemHttps.View, "View the HTTPS binding and certificate status."),
+        ("System", PermissionCodes.SystemHttps.Manage, "Upload a certificate and manage the HTTPS binding and redirect."),
         ("AdManagement", PermissionCodes.AdManagement.Settings.View, "View AD management settings."),
         ("AdManagement", PermissionCodes.AdManagement.Settings.Update, "Update AD management settings."),
         ("AdManagement", PermissionCodes.AdManagement.Users.View, "View AD management directory users."),

@@ -75,6 +75,43 @@ public sealed class WindowsHostDeploymentExecutor(
             : new ReleaseUpdateResult(false, "The application pool could not be recycled.");
     }
 
+    public async Task<ReleaseUpdateResult> RunDeployScriptAsync(
+        IReadOnlyList<string> extraArguments, CancellationToken cancellationToken)
+    {
+        var deployScript = settings.DeployScriptPath;
+        if (!File.Exists(deployScript))
+        {
+            return new ReleaseUpdateResult(false, $"Deployment script not found at {deployScript}. Run Deploy-ITAdmin.ps1 on this host first.");
+        }
+
+        var arguments = new List<string>
+        {
+            "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+            "-File", deployScript,
+            "-RepositoryUrl", settings.RepositoryUrl,
+            "-Branch", settings.Branch,
+            "-InstallRoot", settings.InstallRoot,
+            "-DataRoot", settings.DataRoot,
+        };
+        arguments.AddRange(extraArguments);
+        arguments.Add("-Unattended");
+
+        var result = await RunAsync("powershell.exe", arguments, cancellationToken);
+        if (result.ExitCode == 0)
+        {
+            return new ReleaseUpdateResult(true, "The deployment script completed.");
+        }
+
+        logger.LogError("Deploy-ITAdmin.ps1 exited {ExitCode}. {Output}", result.ExitCode, Tail(result.Output));
+        return new ReleaseUpdateResult(false, $"The deployment script exited {result.ExitCode}. See the ITAdmin Host Agent log.");
+    }
+
+    private static string Tail(string output)
+    {
+        var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        return string.Join('\n', lines[^Math.Min(20, lines.Length)..]);
+    }
+
     private string? ResolveNewestCoordinatorExecutable()
     {
         if (!Directory.Exists(settings.CoordinatorBuildsRoot))

@@ -8,7 +8,10 @@ namespace ITAdmin.Api.HostAgent;
 public sealed class NamedPipeHostAgentClient : IHostAgentClient
 {
     private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(3);
-    private static readonly TimeSpan OperationTimeout = TimeSpan.FromSeconds(20);
+
+    // ConfigureHttps imports a certificate and re-runs the deployment script for an IIS binding
+    // change; that is slower than a status read but still bounded.
+    private static readonly TimeSpan OperationTimeout = TimeSpan.FromSeconds(90);
 
     public async Task<HostAgentResponse> SendAsync(
         HostAgentRequest request,

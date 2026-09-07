@@ -1,4 +1,8 @@
+using System.Globalization;
 using System.Net.Http;
+using System.Runtime.Versioning;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using ITAdmin.HostAgent.Contracts;
@@ -202,10 +206,189 @@ public sealed class DeploymentHostAgentOperations(
             : HostAgentResponse.Failed(result.Message, request.CorrelationId);
     }
 
+    public Task<HostAgentResponse> GetHttpsStatusAsync(HostAgentRequest request, CancellationToken cancellationToken)
+    {
+        _ = cancellationToken;
+        return Task.FromResult(new HostAgentResponse
+        {
+            Status = HostAgentResponseStatus.Ok,
+            Message = "HTTPS status read.",
+            CorrelationId = request.CorrelationId,
+            Https = ReadHttpsStatus(),
+        });
+    }
+
+    public async Task<HostAgentResponse> ConfigureHttpsAsync(HostAgentRequest request, CancellationToken cancellationToken)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return HostAgentResponse.Failed("HTTPS configuration is available only on Windows.", request.CorrelationId);
+        }
+
+        var pfxBytes = Convert.FromBase64String(request.PfxBase64!);
+        string thumbprint;
+        try
+        {
+            thumbprint = ImportCertificate(pfxBytes, request.PfxPassword ?? string.Empty);
+        }
+        catch (CryptographicException exception)
+        {
+            logger.LogWarning(exception, "The uploaded PFX could not be imported.");
+            return HostAgentResponse.Failed(
+                "The PFX could not be read - check the file and its password.", request.CorrelationId);
+        }
+        finally
+        {
+            Array.Clear(pfxBytes);
+        }
+
+        var port = request.HttpsPort is > 0 and <= 65535 ? request.HttpsPort.Value : 443;
+        var arguments = new List<string>
+        {
+            "-ConfigureHttps",
+            "-CertificateThumbprint", thumbprint,
+            "-HttpsPort", port.ToString(CultureInfo.InvariantCulture),
+        };
+        if (request.RedirectHttpToHttps == true)
+        {
+            arguments.Add("-RedirectHttpToHttps");
+        }
+
+        var result = await executor.RunDeployScriptAsync(arguments, cancellationToken);
+        if (!result.Succeeded)
+        {
+            return HostAgentResponse.Failed(result.Message, request.CorrelationId);
+        }
+
+        return new HostAgentResponse
+        {
+            Status = HostAgentResponseStatus.Ok,
+            Message = $"HTTPS is bound on port {port}.",
+            CorrelationId = request.CorrelationId,
+            Https = ReadHttpsStatus(),
+        };
+    }
+
+    public async Task<HostAgentResponse> DisableHttpsAsync(HostAgentRequest request, CancellationToken cancellationToken)
+    {
+        var result = await executor.RunDeployScriptAsync(["-DisableHttps"], cancellationToken);
+        return result.Succeeded
+            ? new HostAgentResponse
+            {
+                Status = HostAgentResponseStatus.Ok,
+                Message = "HTTPS disabled; the site is HTTP-only.",
+                CorrelationId = request.CorrelationId,
+                Https = ReadHttpsStatus(),
+            }
+            : HostAgentResponse.Failed(result.Message, request.CorrelationId);
+    }
+
     public void LogOperationFailure(HostAgentOperation operation, Exception exception) =>
         logger.LogError(exception, "{Operation} failed.", operation);
 
     // ------------------------------------------------------------------------------------------
+
+    private HostAgentHttpsStatus ReadHttpsStatus()
+    {
+        var config = ReadAppConfigHttps();
+        var status = new HostAgentHttpsStatus
+        {
+            Enabled = config?.Enabled ?? false,
+            Port = config?.Port ?? 443,
+            RedirectHttpToHttps = config?.RedirectHttpToHttps ?? false,
+            CertificateThumbprint = config?.CertificateThumbprint,
+        };
+
+        if (!OperatingSystem.IsWindows() || string.IsNullOrWhiteSpace(status.CertificateThumbprint))
+        {
+            return status;
+        }
+
+        try
+        {
+            using var store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
+            store.Open(OpenFlags.ReadOnly);
+            var match = store.Certificates.Find(
+                X509FindType.FindByThumbprint, status.CertificateThumbprint, validOnly: false);
+            if (match.Count > 0)
+            {
+                status = status with
+                {
+                    CertificateSubject = match[0].Subject,
+                    CertificateNotAfterUtc = match[0].NotAfter.ToUniversalTime(),
+                };
+            }
+        }
+        catch (CryptographicException)
+        {
+            // The thumbprint is recorded but the cert is gone from the store; report what we have.
+        }
+
+        return status;
+    }
+
+    private AppConfigHttps? ReadAppConfigHttps()
+    {
+        try
+        {
+            var path = Path.Combine(settings.ConfigRoot, "app.json");
+            if (!File.Exists(path))
+            {
+                return null;
+            }
+
+            using var document = JsonDocument.Parse(File.ReadAllText(path));
+            if (!document.RootElement.TryGetProperty("web", out var web)
+                || !web.TryGetProperty("https", out var https))
+            {
+                return null;
+            }
+
+            return new AppConfigHttps(
+                https.TryGetProperty("enabled", out var enabled) && enabled.ValueKind == JsonValueKind.True,
+                https.TryGetProperty("port", out var port) && port.TryGetInt32(out var portValue) ? portValue : 443,
+                https.TryGetProperty("redirectHttpToHttps", out var redirect) && redirect.ValueKind == JsonValueKind.True,
+                https.TryGetProperty("certificateThumbprint", out var thumbprint) ? thumbprint.GetString() : null);
+        }
+        catch (Exception exception) when (exception is IOException or JsonException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static string ImportCertificate(byte[] pfxBytes, string password)
+    {
+        var certificates = X509CertificateLoader.LoadPkcs12Collection(
+            pfxBytes,
+            password,
+            X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable);
+
+        var leaf = certificates.FirstOrDefault(certificate => certificate.HasPrivateKey)
+                   ?? certificates.FirstOrDefault()
+                   ?? throw new CryptographicException("The PFX contained no certificate.");
+
+        using (var personal = new X509Store(StoreName.My, StoreLocation.LocalMachine))
+        {
+            personal.Open(OpenFlags.ReadWrite);
+            personal.Add(leaf);
+        }
+
+        var chain = certificates.Where(certificate => !certificate.Equals(leaf)).ToArray();
+        if (chain.Length > 0)
+        {
+            using var authorities = new X509Store(StoreName.CertificateAuthority, StoreLocation.LocalMachine);
+            authorities.Open(OpenFlags.ReadWrite);
+            foreach (var authority in chain)
+            {
+                authorities.Add(authority);
+            }
+        }
+
+        return leaf.Thumbprint;
+    }
+
+    private sealed record AppConfigHttps(bool Enabled, int Port, bool RedirectHttpToHttps, string? CertificateThumbprint);
 
     private static bool IsTerminal(HostAgentUpdatePhase phase) =>
         phase is HostAgentUpdatePhase.Idle or HostAgentUpdatePhase.Completed
@@ -309,6 +492,13 @@ public interface IHostDeploymentExecutor
     Task<ReleaseUpdateResult> ApplyUpdateAsync(string operationId, CancellationToken cancellationToken);
 
     Task<ReleaseUpdateResult> RecycleAppPoolAsync(string appPoolName, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Runs the checked-out <c>Deploy-ITAdmin.ps1</c> synchronously with the given extra arguments
+    /// (e.g. <c>-ConfigureHttps -CertificateThumbprint ...</c>). Used for changes that never replace
+    /// the Host Agent binary, so no Update Coordinator handoff is needed.
+    /// </summary>
+    Task<ReleaseUpdateResult> RunDeployScriptAsync(IReadOnlyList<string> extraArguments, CancellationToken cancellationToken);
 }
 
 public sealed record ReleaseUpdateResult(bool Succeeded, string Message);

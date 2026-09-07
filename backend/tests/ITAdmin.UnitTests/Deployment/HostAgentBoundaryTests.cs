@@ -45,9 +45,12 @@ public sealed class HostAgentBoundaryTests
     [Fact]
     public void Protocol_RequestCarriesNoPathOrCommandFields()
     {
+        // The certificate bytes / password / port for ConfigureHttps are validated data the agent
+        // acts on directly - not a path, a command, a script name, or a git ref a caller could use
+        // to steer a privileged operation.
         foreach (var property in typeof(HostAgentRequest).GetProperties())
         {
-            foreach (var forbidden in new[] { "path", "command", "script", "argument", "executable", "directory" })
+            foreach (var forbidden in new[] { "path", "command", "script", "argument", "executable", "directory", "branch", "commit", "targetversion", "repositoryurl" })
             {
                 Assert.False(
                     property.Name.Contains(forbidden, StringComparison.OrdinalIgnoreCase),
@@ -57,14 +60,39 @@ public sealed class HostAgentBoundaryTests
     }
 
     [Fact]
-    public void Protocol_RequestCarriesNoParametersAtAll()
+    public void Protocol_ConfigureHttpsValidatesItsPayload()
     {
-        // Every request is a bare intent: operation + correlation id. There is nothing here for a
-        // caller to steer - not a commit, not a branch, not a flag.
-        var properties = typeof(HostAgentRequest).GetProperties().Select(p => p.Name).ToArray();
-        Assert.Equal(
-            new[] { "ProtocolVersion", "Operation", "CorrelationId" }.OrderBy(x => x),
-            properties.OrderBy(x => x));
+        var goodPfx = Convert.ToBase64String(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 });
+
+        Assert.Empty(new HostAgentRequest
+        {
+            Operation = HostAgentOperation.ConfigureHttps,
+            PfxBase64 = goodPfx,
+            PfxPassword = "",
+            HttpsPort = 443,
+        }.Validate());
+
+        Assert.NotEmpty(new HostAgentRequest
+        {
+            Operation = HostAgentOperation.ConfigureHttps,
+            PfxBase64 = "not base64!!",
+            PfxPassword = "",
+        }.Validate());
+
+        Assert.NotEmpty(new HostAgentRequest
+        {
+            Operation = HostAgentOperation.ConfigureHttps,
+            PfxBase64 = goodPfx,
+            PfxPassword = null,
+        }.Validate());
+
+        Assert.NotEmpty(new HostAgentRequest
+        {
+            Operation = HostAgentOperation.ConfigureHttps,
+            PfxBase64 = goodPfx,
+            PfxPassword = "",
+            HttpsPort = 70000,
+        }.Validate());
     }
 
     [Fact]
@@ -75,11 +103,12 @@ public sealed class HostAgentBoundaryTests
                  {
                      typeof(HostAgentResponse), typeof(HostAgentInstallationStatus),
                      typeof(HostAgentUpdateStatus), typeof(HostAgentUpdateAvailability),
+                     typeof(HostAgentHttpsStatus),
                  })
         {
             foreach (var property in type.GetProperties())
             {
-                foreach (var forbidden in new[] { "key", "secret", "password", "token", "repositoryUrl", "path" })
+                foreach (var forbidden in new[] { "secret", "password", "token", "repositoryUrl", "privateKey", "pfx", "path" })
                 {
                     Assert.False(
                         property.Name.Contains(forbidden, StringComparison.OrdinalIgnoreCase),
@@ -100,6 +129,9 @@ public sealed class HostAgentBoundaryTests
     [InlineData(HostAgentOperation.RequestUpdate)]
     [InlineData(HostAgentOperation.GetUpdateStatus)]
     [InlineData(HostAgentOperation.RecycleApplicationPool)]
+    [InlineData(HostAgentOperation.GetHttpsStatus)]
+    [InlineData(HostAgentOperation.ConfigureHttps)]
+    [InlineData(HostAgentOperation.DisableHttps)]
     public void Authorization_WebApplicationMayInvokeTheUpdateAndSettingsOperations(HostAgentOperation operation) =>
         Assert.True(Authorization.Authorize(@"IIS APPPOOL\ITAdmin", false, operation).IsAllowed);
 
@@ -310,6 +342,15 @@ public sealed class HostAgentBoundaryTests
         public Task<HostAgentResponse> RecycleApplicationPoolAsync(HostAgentRequest request, CancellationToken cancellationToken) =>
             Record(HostAgentOperation.RecycleApplicationPool, request);
 
+        public Task<HostAgentResponse> GetHttpsStatusAsync(HostAgentRequest request, CancellationToken cancellationToken) =>
+            Record(HostAgentOperation.GetHttpsStatus, request);
+
+        public Task<HostAgentResponse> ConfigureHttpsAsync(HostAgentRequest request, CancellationToken cancellationToken) =>
+            Record(HostAgentOperation.ConfigureHttps, request);
+
+        public Task<HostAgentResponse> DisableHttpsAsync(HostAgentRequest request, CancellationToken cancellationToken) =>
+            Record(HostAgentOperation.DisableHttps, request);
+
         public void LogOperationFailure(HostAgentOperation operation, Exception exception)
         {
         }
@@ -336,6 +377,15 @@ public sealed class HostAgentBoundaryTests
             throw exception;
 
         public Task<HostAgentResponse> RecycleApplicationPoolAsync(HostAgentRequest request, CancellationToken cancellationToken) =>
+            throw exception;
+
+        public Task<HostAgentResponse> GetHttpsStatusAsync(HostAgentRequest request, CancellationToken cancellationToken) =>
+            throw exception;
+
+        public Task<HostAgentResponse> ConfigureHttpsAsync(HostAgentRequest request, CancellationToken cancellationToken) =>
+            throw exception;
+
+        public Task<HostAgentResponse> DisableHttpsAsync(HostAgentRequest request, CancellationToken cancellationToken) =>
             throw exception;
 
         public void LogOperationFailure(HostAgentOperation operation, Exception failure) => Logged = true;

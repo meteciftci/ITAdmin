@@ -33,6 +33,9 @@ public sealed class HostAgentAuthorization
         HostAgentOperation.RequestUpdate,
         HostAgentOperation.GetUpdateStatus,
         HostAgentOperation.RecycleApplicationPool,
+        HostAgentOperation.GetHttpsStatus,
+        HostAgentOperation.ConfigureHttps,
+        HostAgentOperation.DisableHttps,
     ];
 
     private readonly string _appPoolIdentity;

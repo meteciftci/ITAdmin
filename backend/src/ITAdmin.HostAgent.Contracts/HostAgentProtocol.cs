@@ -76,6 +76,19 @@ public enum HostAgentOperation
 
     /// <summary>Recycle the ITAdmin application pool. The narrowest useful service operation.</summary>
     RecycleApplicationPool = 5,
+
+    /// <summary>Current HTTPS binding state: enabled, port, redirect, and the bound certificate. Read-only.</summary>
+    GetHttpsStatus = 6,
+
+    /// <summary>
+    /// Import an uploaded PFX into the machine store and bind it to the site. The certificate bytes
+    /// and password are validated data, not a script or a path: the agent decodes, imports, and
+    /// then runs the checked-out deployment script with a thumbprint it derived itself.
+    /// </summary>
+    ConfigureHttps = 7,
+
+    /// <summary>Remove the HTTPS binding and the HTTP-to-HTTPS redirect. Back to HTTP-only.</summary>
+    DisableHttps = 8,
 }
 
 /// <summary>One request across the pipe.</summary>
@@ -90,6 +103,22 @@ public sealed record HostAgentRequest
     /// <summary>Correlates the request with the agent's own logs and the caller's audit entry.</summary>
     [JsonPropertyName("correlationId")]
     public string? CorrelationId { get; init; }
+
+    /// <summary>Base64 of the uploaded PFX, for <see cref="HostAgentOperation.ConfigureHttps"/>.</summary>
+    [JsonPropertyName("pfxBase64")]
+    public string? PfxBase64 { get; init; }
+
+    /// <summary>PFX password, for <see cref="HostAgentOperation.ConfigureHttps"/>. May be empty.</summary>
+    [JsonPropertyName("pfxPassword")]
+    public string? PfxPassword { get; init; }
+
+    /// <summary>HTTPS port for <see cref="HostAgentOperation.ConfigureHttps"/>. Defaults to 443.</summary>
+    [JsonPropertyName("httpsPort")]
+    public int? HttpsPort { get; init; }
+
+    /// <summary>Whether to enforce HTTP-to-HTTPS redirect, for <see cref="HostAgentOperation.ConfigureHttps"/>.</summary>
+    [JsonPropertyName("redirectHttpToHttps")]
+    public bool? RedirectHttpToHttps { get; init; }
 
     public string ToJson() => JsonSerializer.Serialize(this, HostAgentProtocol.Json);
 
@@ -124,9 +153,44 @@ public sealed record HostAgentRequest
         if (!Enum.IsDefined(Operation))
         {
             problems.Add("Unknown operation.");
+            return problems;
+        }
+
+        if (Operation == HostAgentOperation.ConfigureHttps)
+        {
+            if (string.IsNullOrWhiteSpace(PfxBase64) || !TryDecodeBase64(PfxBase64, out var pfxLength))
+            {
+                problems.Add("pfxBase64 must be a base64-encoded PFX.");
+            }
+            else if (pfxLength is < 1 or > 400_000)
+            {
+                problems.Add("The PFX is empty or larger than 400 KB.");
+            }
+
+            if (PfxPassword is null)
+            {
+                problems.Add("pfxPassword is required (an empty string is allowed).");
+            }
+
+            if (HttpsPort is not null and (< 1 or > 65535))
+            {
+                problems.Add("httpsPort must be between 1 and 65535.");
+            }
         }
 
         return problems;
+    }
+
+    private static bool TryDecodeBase64(string value, out int decodedLength)
+    {
+        decodedLength = 0;
+        var buffer = new byte[((value.Length * 3) + 3) / 4];
+        if (!Convert.TryFromBase64String(value, buffer, out decodedLength))
+        {
+            return false;
+        }
+
+        return true;
     }
 }
 
@@ -175,6 +239,9 @@ public sealed record HostAgentResponse
 
     [JsonPropertyName("availability")]
     public HostAgentUpdateAvailability? Availability { get; init; }
+
+    [JsonPropertyName("https")]
+    public HostAgentHttpsStatus? Https { get; init; }
 
     [JsonPropertyName("repositoryStatus")]
     public HostAgentRepositoryStatus RepositoryStatus { get; init; } = HostAgentRepositoryStatus.Unknown;
@@ -299,4 +366,29 @@ public sealed record HostAgentUpdateAvailability
 
     [JsonPropertyName("branch")]
     public string Branch { get; init; } = "main";
+}
+
+/// <summary>
+/// The site's HTTPS state. Certificate subject and expiry are useful to an administrator; the
+/// private key, the PFX password, and file-system paths never appear here.
+/// </summary>
+public sealed record HostAgentHttpsStatus
+{
+    [JsonPropertyName("enabled")]
+    public bool Enabled { get; init; }
+
+    [JsonPropertyName("port")]
+    public int Port { get; init; }
+
+    [JsonPropertyName("redirectHttpToHttps")]
+    public bool RedirectHttpToHttps { get; init; }
+
+    [JsonPropertyName("certificateThumbprint")]
+    public string? CertificateThumbprint { get; init; }
+
+    [JsonPropertyName("certificateSubject")]
+    public string? CertificateSubject { get; init; }
+
+    [JsonPropertyName("certificateNotAfterUtc")]
+    public DateTimeOffset? CertificateNotAfterUtc { get; init; }
 }

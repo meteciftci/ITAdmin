@@ -39,7 +39,12 @@
 
 .PARAMETER ConfigureHttps
     Add or replace the HTTPS binding (certificate from Cert:\LocalMachine\My) and optionally the
-    HTTP-to-HTTPS redirect, then exit. No source sync, no build.
+    HTTP-to-HTTPS redirect, then exit. No source sync, no build. The usual path is Settings ->
+    HTTPS in the application, which uploads a PFX and has the Host Agent run this.
+
+.PARAMETER DisableHttps
+    Remove every HTTPS binding and the redirect; the site returns to HTTP-only. The certificate is
+    left in the machine store. No source sync, no build.
 
 .PARAMETER Rollback
     Point IIS back at the previously active build and health-check it, then exit. Database
@@ -99,6 +104,7 @@ param(
     [switch]$InstallIisFeatures,
     [switch]$SkipBuild,
     [switch]$ConfigureHttps,
+    [switch]$DisableHttps,
     [switch]$Rollback,
     [switch]$WhatIfPreflightOnly,
     [switch]$Unattended,
@@ -826,14 +832,19 @@ function Get-AppPoolEnvironmentVariable {
     return $null
 }
 
+function Remove-AppPoolEnvironmentVariable {
+    param([Parameter(Mandatory = $true)][string]$Name)
+    if (-not (Test-Path "IIS:\AppPools\$AppPoolName")) { return }
+    if ($null -eq (Get-AppPoolEnvironmentVariable -Name $Name)) { return }
+    Remove-WebConfigurationProperty -PSPath "MACHINE/WEBROOT/APPHOST" `
+        -Filter "system.applicationHost/applicationPools/add[@name='$AppPoolName']/environmentVariables" `
+        -Name "." -AtElement @{ name = $Name } -ErrorAction SilentlyContinue
+}
+
 function Set-AppPoolEnvironmentVariables {
     param([Parameter(Mandatory = $true)][hashtable]$Variables)
     foreach ($name in $Variables.Keys) {
-        if ($null -ne (Get-AppPoolEnvironmentVariable -Name $name)) {
-            Remove-WebConfigurationProperty -PSPath "MACHINE/WEBROOT/APPHOST" `
-                -Filter "system.applicationHost/applicationPools/add[@name='$AppPoolName']/environmentVariables" `
-                -Name "." -AtElement @{ name = $name } -ErrorAction SilentlyContinue
-        }
+        Remove-AppPoolEnvironmentVariable -Name $name
         Add-WebConfigurationProperty -PSPath "MACHINE/WEBROOT/APPHOST" `
             -Filter "system.applicationHost/applicationPools/add[@name='$AppPoolName']/environmentVariables" `
             -Name "." -Value @{ name = $name; value = $Variables[$name] }
@@ -880,6 +891,11 @@ function Set-RuntimeConfiguration {
         & icacls $writable /grant "${identity}:(OI)(CI)M" /T | Out-Null
     }
     & icacls $Script:Layout.ConfigRoot /grant "${identity}:(OI)(CI)R" /T | Out-Null
+
+    # Re-apply any persisted HTTP-to-HTTPS redirect state (set earlier from Settings -> HTTPS) so a
+    # plain re-deploy does not silently drop it.
+    Sync-HttpsAppPoolEnv -Config $Config
+
     Write-Ok "Runtime configuration applied (secrets in the DPAPI store; non-secret app pool variables set)"
 }
 
@@ -1057,6 +1073,58 @@ function Set-HttpsBinding {
     if ($RedirectHttpToHttps.IsPresent) {
         Write-Detail "HTTP-to-HTTPS redirect is recorded; the application enforces it via UseHttpsRedirection."
     }
+}
+
+function Invoke-DisableHttps {
+    <#
+        Removes every HTTPS binding from the site and clears the redirect. The site returns to
+        HTTP-only. The certificate is left in the machine store - removing it is a separate,
+        deliberate act.
+    #>
+    param([Parameter(Mandatory = $true)][psobject]$Config)
+    Write-Step "Disabling HTTPS"
+
+    foreach ($binding in @(Get-WebBinding -Name $SiteName -Protocol "https" -ErrorAction SilentlyContinue)) {
+        if ($null -ne $binding) {
+            $port = "$($binding.bindingInformation)".Split(':')[1]
+            Remove-WebBinding -Name $SiteName -Protocol "https" -Port $port -ErrorAction SilentlyContinue
+        }
+    }
+
+    $Config.web.https = [pscustomobject]@{
+        enabled = $false; port = 443; certificateThumbprint = $null; redirectHttpToHttps = $false
+    }
+    Write-Ok "HTTPS bindings removed; the site is HTTP-only."
+}
+
+function Sync-HttpsAppPoolEnv {
+    <#
+        Pushes the persisted HTTPS redirect state onto the app pool so the application's
+        UseHttpsRedirection observes it, then recycles the pool so the change takes effect.
+    #>
+    param([Parameter(Mandatory = $true)][psobject]$Config)
+
+    $redirectEnabled = ($null -ne $Config.web.https) -and
+                       [bool]$Config.web.https.enabled -and
+                       [bool]$Config.web.https.redirectHttpToHttps
+    $httpsPort = if ($null -ne $Config.web.https -and $Config.web.https.port) { [int]$Config.web.https.port } else { 443 }
+
+    if ($redirectEnabled) {
+        Set-AppPoolEnvironmentVariables -Variables @{
+            "ITADMIN_Https__RedirectEnabled" = "true"
+            "ITADMIN_Https__Port"            = "$httpsPort"
+        }
+    }
+    else {
+        Remove-AppPoolEnvironmentVariable -Name "ITADMIN_Https__RedirectEnabled"
+        Remove-AppPoolEnvironmentVariable -Name "ITADMIN_Https__Port"
+    }
+
+    if (Test-Path "IIS:\AppPools\$AppPoolName") {
+        if ((Get-WebAppPoolState -Name $AppPoolName).Value -eq "Started") { Restart-WebAppPool -Name $AppPoolName }
+        else { Start-WebAppPool -Name $AppPoolName -ErrorAction SilentlyContinue }
+    }
+    Write-Detail "HTTP-to-HTTPS redirect $(if ($redirectEnabled) { "enabled (port $httpsPort)" } else { "disabled" }); app pool recycled."
 }
 
 # --------------------------------------------------------------------------------------------
@@ -1241,18 +1309,27 @@ Write-Host "ITAdmin deploy" -ForegroundColor White
 Write-Host "==============" -ForegroundColor White
 
 try {
+    # An IIS-only change (rollback, HTTPS binding) does not need the build toolchain, so it skips
+    # the full preflight - only Administrator rights and the WebAdministration module matter.
     if ($Rollback.IsPresent) { Invoke-Rollback; exit 0 }
 
-    Test-Preflight
-    Import-Module WebAdministration -ErrorAction Stop
-
-    if ($ConfigureHttps.IsPresent) {
+    if ($ConfigureHttps.IsPresent -or $DisableHttps.IsPresent) {
+        Import-Module WebAdministration -ErrorAction Stop
         $config = Resolve-AppConfig -RequireExisting
-        Set-HttpsBinding -Config $config
+        if ($ConfigureHttps.IsPresent) {
+            Set-HttpsBinding -Config $config
+        }
+        else {
+            Invoke-DisableHttps -Config $config
+        }
         Save-AppConfig -Config $config
+        Sync-HttpsAppPoolEnv -Config $config
         Write-Ok "HTTPS configuration updated."
         exit 0
     }
+
+    Test-Preflight
+    Import-Module WebAdministration -ErrorAction Stop
 
     $state = Get-DeployState
     $firstRun = [string]::IsNullOrWhiteSpace($state.activeSha) -or -not (Test-Path -LiteralPath $Script:AppConfigPath)
