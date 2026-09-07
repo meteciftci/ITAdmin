@@ -10,7 +10,6 @@ import {
   NotificationSettingsTemplatesPage,
   NotificationTemplateFormPage,
   SettingsRedirectPage,
-  SystemHttpsPage,
   SystemUpdatesPage,
 } from "@/app/lazy-pages";
 import { LazyRoute } from "@/app/route-helpers";
@@ -32,7 +31,6 @@ export const settingsRoutes: RouteObject[] = [
             PermissionCodes.NotificationTemplates.View,
             PermissionCodes.AdManagement.Settings.View,
             PermissionCodes.SystemUpdates.View,
-            PermissionCodes.SystemHttps.View,
           ]}
         >
           <AppLayout>
@@ -52,20 +50,6 @@ export const settingsRoutes: RouteObject[] = [
           <AppLayout>
             <LazyRoute>
               <SystemUpdatesPage />
-            </LazyRoute>
-          </AppLayout>
-        </RequirePermission>
-      </RequireAuth>
-    ),
-  },
-  {
-    path: "/settings/https",
-    element: (
-      <RequireAuth>
-        <RequirePermission permission={PermissionCodes.SystemHttps.View}>
-          <AppLayout>
-            <LazyRoute>
-              <SystemHttpsPage />
             </LazyRoute>
           </AppLayout>
         </RequirePermission>

@@ -94,6 +94,7 @@
     "tabs": {
       "ldap": "Kimlik Doğrulama Dizini",
       "branding": "Uygulama Kimliği",
+      "https": "HTTPS",
       "sessionSecurity": "Oturum Güvenliği"
     },
     "validation": {

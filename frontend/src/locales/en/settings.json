@@ -94,6 +94,7 @@
     "tabs": {
       "ldap": "Authentication Directory",
       "branding": "Application Branding",
+      "https": "HTTPS",
       "sessionSecurity": "Session Security"
     },
     "validation": {

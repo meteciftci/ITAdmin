@@ -14,7 +14,7 @@ export const SETTING_VALUE_TYPE_STRING = 1;
 export const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 export const MAX_FAVICON_BYTES = 512 * 1024;
 
-export type ApplicationSettingsTabValue = "ldap" | "branding" | "sessionSecurity";
+export type ApplicationSettingsTabValue = "ldap" | "branding" | "sessionSecurity" | "https";
 
 export const DEFAULT_APPLICATION_SETTINGS_TAB: ApplicationSettingsTabValue = "branding";
 

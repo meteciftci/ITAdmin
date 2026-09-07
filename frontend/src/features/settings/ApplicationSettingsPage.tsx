@@ -14,6 +14,7 @@ import {
   ApplicationSettingsForm,
 } from "@/features/settings/components/ApplicationSettingsForm";
 import { isBrandingFormDirty } from "@/features/settings/application-settings-model";
+import { HttpsSettingsTab } from "@/features/settings/components/HttpsSettingsTab";
 import { LdapSettingsForm } from "@/features/settings/components/LdapSettingsForm";
 import { SessionSecuritySettingsForm } from "@/features/settings/components/SessionSecuritySettingsForm";
 import { getSettings } from "@/features/settings/api";
@@ -44,6 +45,8 @@ export function ApplicationSettingsPage() {
   const canViewSystemSettings = canAccess(currentUser, PermissionCodes.Settings.View);
   const canUpdateSystemSettings = canAccess(currentUser, PermissionCodes.Settings.Update);
   const isSystemReadOnly = !canUpdateSystemSettings;
+  const canViewHttps = canAccess(currentUser, PermissionCodes.SystemHttps.View);
+  const canManageHttps = canAccess(currentUser, PermissionCodes.SystemHttps.Manage);
 
   const [activeTab, setActiveTab] = useState<ApplicationSettingsTabValue>(
     DEFAULT_APPLICATION_SETTINGS_TAB,
@@ -180,7 +183,8 @@ export function ApplicationSettingsPage() {
   );
   const activeTabIsDirty =
     activeTab === "branding" ? brandingIsDirty :
-      activeTab === "sessionSecurity" ? sessionSecurityDirty : ldapFormIsDirty;
+      activeTab === "sessionSecurity" ? sessionSecurityDirty :
+        activeTab === "https" ? false : ldapFormIsDirty;
 
   const handleTabChange = useCallback((value: string) => {
     const nextTab = value as ApplicationSettingsTabValue;
@@ -259,8 +263,13 @@ export function ApplicationSettingsPage() {
       ) : null}
 
       <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3">
+        <TabsList
+          className={`grid w-full grid-cols-1 ${canViewHttps ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}
+        >
           <TabsTrigger value="branding">{t("settings:tabs.branding")}</TabsTrigger>
+          {canViewHttps ? (
+            <TabsTrigger value="https">{t("settings:tabs.https")}</TabsTrigger>
+          ) : null}
           <TabsTrigger value="sessionSecurity">
             {t("settings:tabs.sessionSecurity")}
           </TabsTrigger>
@@ -297,6 +306,12 @@ export function ApplicationSettingsPage() {
               onSave={() => void saveBrandingSettings()}
             />
         </TabsContent>
+
+        {canViewHttps ? (
+          <TabsContent value="https">
+            <HttpsSettingsTab canManage={canManageHttps} />
+          </TabsContent>
+        ) : null}
 
         <TabsContent value="sessionSecurity">
             {settingsQuery.data ? (
