@@ -177,6 +177,32 @@
           "converted": "Talep satırları bir alıma dönüştürüldü.",
           "triaged": "Seçili satırlara triyaj uygulandı.",
           "operationFailed": "İşlem tamamlanamadı."
+        },
+        "renewal": {
+          "sectionTitle": "Mevcut Paketler (Yenileme)",
+          "addLabel": "Yenilenecek paket ekle",
+          "addPlaceholder": "Paket seç…",
+          "quantity": "Yeni adet",
+          "licenseType": "Lisans türü",
+          "licenseTypeInherit": "Eski paketten al",
+          "isPerpetual": "Süresiz",
+          "startDate": "Başlangıç",
+          "endDate": "Bitiş",
+          "expireSource": "Eski paketi 'süresi doldu' yap ve pasifleştir",
+          "copySeats": "Aktif atamaları yeni pakete taşı"
+        },
+        "manual": {
+          "sectionTitle": "Elle Paket",
+          "rowTitle": "Yeni paket",
+          "product": "Ürün",
+          "productPlaceholder": "Ürün seç…",
+          "quantity": "Adet",
+          "licenseType": "Lisans türü",
+          "isPerpetual": "Süresiz",
+          "startDate": "Başlangıç",
+          "endDate": "Bitiş",
+          "addRow": "Satır ekle",
+          "productRequired": "Her elle satır için bir ürün seçilmeli."
         }
       },
       "blocking": {
@@ -338,7 +364,8 @@
       "deactivateProduct": "Ürünü pasifleştir",
       "activateCategory": "Kategoriyi aktifleştir",
       "deactivateCategory": "Kategoriyi pasifleştir",
-      "updateStatus": "Durumu güncelle"
+      "updateStatus": "Durumu güncelle",
+      "addPurchaseWithLines": "Kalemli Satın Alma"
     },
     "table": {
       "companyName": "Firma adı",

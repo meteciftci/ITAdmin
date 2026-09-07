@@ -462,11 +462,33 @@ export type ConvertFulfillmentNewPurchase = {
   notes: string | null;
 };
 
+export type ConvertFulfillmentRenewalLine = {
+  sourcePackageId: string;
+  quantity: number;
+  licenseType: LicenseType | null;
+  startDate: string | null;
+  endDate: string | null;
+  isPerpetual: boolean;
+  expireSourcePackage: boolean;
+  copySeatAssignments: boolean;
+};
+
+export type ConvertFulfillmentManualLine = {
+  productId: string;
+  quantity: number;
+  licenseType: LicenseType;
+  startDate: string | null;
+  endDate: string | null;
+  isPerpetual: boolean;
+};
+
 export type ConvertLicenseRequestItemsRequest = {
   existingPurchaseId: string | null;
   newPurchase: ConvertFulfillmentNewPurchase | null;
   lines: ConvertFulfillmentLine[];
   packageDefaults: ConvertFulfillmentPackageDefaults[];
+  renewalLines?: ConvertFulfillmentRenewalLine[];
+  manualLines?: ConvertFulfillmentManualLine[];
 };
 
 export type LicenseFulfillmentResponse = {

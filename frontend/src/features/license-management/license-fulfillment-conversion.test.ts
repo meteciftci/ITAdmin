@@ -121,4 +121,39 @@ describe("buildConvertPayload", () => {
     assert.equal(payload.existingPurchaseId, "pur-1");
     assert.equal(payload.newPurchase, null);
   });
+
+  it("omits renewal/manual lines when empty and includes them when present", () => {
+    const bare = buildConvertPayload(lines, { kind: "existing", purchaseId: "pur-1" }, defaults);
+    assert.equal(bare.renewalLines, undefined);
+    assert.equal(bare.manualLines, undefined);
+
+    const renewal = {
+      sourcePackageId: "pkg-1",
+      quantity: 5,
+      licenseType: null,
+      startDate: null,
+      endDate: null,
+      isPerpetual: false,
+      expireSourcePackage: true,
+      copySeatAssignments: true,
+    };
+    const manual = {
+      productId: "p9",
+      quantity: 2,
+      licenseType: "Perpetual" as const,
+      startDate: null,
+      endDate: null,
+      isPerpetual: true,
+    };
+    const full = buildConvertPayload(
+      [],
+      { kind: "existing", purchaseId: "pur-1" },
+      [],
+      [renewal],
+      [manual],
+    );
+    assert.deepEqual(full.renewalLines, [renewal]);
+    assert.deepEqual(full.manualLines, [manual]);
+    assert.deepEqual(full.lines, []);
+  });
 });

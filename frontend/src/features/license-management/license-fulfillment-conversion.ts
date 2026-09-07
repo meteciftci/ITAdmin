@@ -1,7 +1,9 @@
 import type {
   ConvertFulfillmentLine,
+  ConvertFulfillmentManualLine,
   ConvertFulfillmentNewPurchase,
   ConvertFulfillmentPackageDefaults,
+  ConvertFulfillmentRenewalLine,
   ConvertLicenseRequestItemsRequest,
   LicenseFulfillmentCandidate,
 } from "./types.ts";
@@ -78,6 +80,8 @@ export function buildConvertPayload(
   lines: FulfillmentSelectionLine[],
   target: ConvertTarget,
   packageDefaults: ConvertFulfillmentPackageDefaults[],
+  renewalLines: ConvertFulfillmentRenewalLine[] = [],
+  manualLines: ConvertFulfillmentManualLine[] = [],
 ): ConvertLicenseRequestItemsRequest {
   return {
     existingPurchaseId: target.kind === "existing" ? target.purchaseId : null,
@@ -89,5 +93,7 @@ export function buildConvertPayload(
       }),
     ),
     packageDefaults,
+    renewalLines: renewalLines.length > 0 ? renewalLines : undefined,
+    manualLines: manualLines.length > 0 ? manualLines : undefined,
   };
 }

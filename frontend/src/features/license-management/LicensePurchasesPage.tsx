@@ -29,6 +29,7 @@ import {
   buildLicensePurchaseEditPath,
   LICENSE_PURCHASE_CREATE_PATH,
 } from "@/features/license-management/license-purchase-detail-path";
+import { LICENSE_FULFILLMENT_PATH } from "@/features/license-management/license-request-paths";
 import type {
   LicensePurchaseStatus,
   LicensePurchaseType,
@@ -48,6 +49,7 @@ export function LicensePurchasesPage() {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const canManage = canAccess(user, PermissionCodes.LicenseManagement.ManagePurchases);
+  const canFulfill = canAccess(user, PermissionCodes.LicenseManagement.FulfillRequests);
 
   const [search, setSearch] = useState("");
   const [purchaseTypeFilter, setPurchaseTypeFilter] = useState<PurchaseTypeFilter>("all");
@@ -189,6 +191,14 @@ export function LicensePurchasesPage() {
                 <Button variant="outline" onClick={() => listQuery.refetch()} disabled={listQuery.isFetching}>
                   {t("common:actions.refresh")}
                 </Button>
+                {canFulfill ? (
+                  <Link
+                    to={LICENSE_FULFILLMENT_PATH}
+                    className={cn(buttonVariants({ variant: "outline" }))}
+                  >
+                    {t("licenseManagement:actions.addPurchaseWithLines")}
+                  </Link>
+                ) : null}
                 {canManage ? (
                   <Link to={LICENSE_PURCHASE_CREATE_PATH} className={cn(buttonVariants())}>
                     {t("licenseManagement:actions.addPurchase")}

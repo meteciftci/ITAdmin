@@ -17,8 +17,10 @@ import { useAuthStore } from "@/features/auth/auth-store";
 import {
   convertLicenseRequestItems,
   getAllLicenseCompanies,
+  getAllLicensedProducts,
   getAllLicensePurchases,
   getFulfillmentCandidates,
+  getLicensePackages,
   triageLicenseRequestItems,
 } from "@/features/license-management/api";
 import { FulfillmentPackageDefaultsForm } from "@/features/license-management/components/FulfillmentPackageDefaultsForm";
@@ -26,6 +28,9 @@ import {
   FulfillmentTargetForm,
   type FulfillmentTargetKind,
 } from "@/features/license-management/components/FulfillmentTargetForm";
+import { ManualLinesSection } from "@/features/license-management/components/ManualLinesSection";
+import type { ManualLineDraft } from "@/features/license-management/components/manual-line-draft";
+import { RenewalLinesSection } from "@/features/license-management/components/RenewalLinesSection";
 import {
   getRequestItemStatusLabel,
   getRequestSourceLabel,
@@ -43,6 +48,7 @@ import { LICENSE_REQUESTS_LIST_PATH } from "@/features/license-management/licens
 import type {
   ConvertFulfillmentNewPurchase,
   ConvertFulfillmentPackageDefaults,
+  ConvertFulfillmentRenewalLine,
   LicenseFulfillmentCandidate,
   LicenseRequestItemStatus,
 } from "@/features/license-management/types";
@@ -95,6 +101,8 @@ export function LicenseFulfillmentPage() {
   const [packageDefaultsMap, setPackageDefaultsMap] = useState<
     Record<string, ConvertFulfillmentPackageDefaults>
   >({});
+  const [renewalRows, setRenewalRows] = useState<ConvertFulfillmentRenewalLine[]>([]);
+  const [manualRows, setManualRows] = useState<ManualLineDraft[]>([]);
 
   const candidatesQuery = useQuery({
     queryKey: ["license-management", "fulfillment", "candidates"],
@@ -111,6 +119,18 @@ export function LicenseFulfillmentPage() {
   const purchasesQuery = useQuery({
     queryKey: ["license-management", "purchases", "options"],
     queryFn: getAllLicensePurchases,
+    enabled: canFulfill,
+  });
+
+  const renewablePackagesQuery = useQuery({
+    queryKey: ["license-management", "packages", "renewable"],
+    queryFn: () => getLicensePackages({ isActive: true, pageSize: 100 }),
+    enabled: canFulfill,
+  });
+
+  const productsQuery = useQuery({
+    queryKey: ["license-management", "products", "all"],
+    queryFn: getAllLicensedProducts,
     enabled: canFulfill,
   });
 
@@ -253,10 +273,38 @@ export function LicenseFulfillmentPage() {
     );
   }
 
+  const manualLines = useMemo(
+    () =>
+      manualRows.map((row) => ({
+        productId: row.productId,
+        quantity: row.quantity,
+        licenseType: row.licenseType,
+        startDate: row.startDate,
+        endDate: row.endDate,
+        isPerpetual: row.isPerpetual,
+      })),
+    [manualRows],
+  );
+
+  const hasAnyLine =
+    selectionLines.length > 0 || renewalRows.length > 0 || manualRows.length > 0;
+
   function handleConvert() {
-    const validation = validateSelection(selectionLines);
-    if (!validation.isValid) {
-      toast.error(t(`licenseManagement:${validation.messageKey}`));
+    if (!hasAnyLine) {
+      toast.error(t("licenseManagement:requests.fulfillment.validation.noLines"));
+      return;
+    }
+
+    if (selectionLines.length > 0) {
+      const validation = validateSelection(selectionLines);
+      if (!validation.isValid) {
+        toast.error(t(`licenseManagement:${validation.messageKey}`));
+        return;
+      }
+    }
+
+    if (manualRows.some((row) => !row.productId)) {
+      toast.error(t("licenseManagement:requests.fulfillment.manual.productRequired"));
       return;
     }
 
@@ -283,7 +331,9 @@ export function LicenseFulfillmentPage() {
       isPerpetual: row.isPerpetual,
     }));
 
-    convertMutation.mutate(buildConvertPayload(selectionLines, target, packageDefaults));
+    convertMutation.mutate(
+      buildConvertPayload(selectionLines, target, packageDefaults, renewalRows, manualLines),
+    );
   }
 
   if (!canFulfill) {
@@ -442,7 +492,27 @@ export function LicenseFulfillmentPage() {
         </div>
       </SectionCard>
 
-      {selectionLines.length > 0 ? (
+      <SectionCard title={t("licenseManagement:requests.fulfillment.renewal.sectionTitle")}>
+        <RenewalLinesSection
+          rows={renewalRows}
+          onChange={setRenewalRows}
+          packages={renewablePackagesQuery.data?.items ?? []}
+          dateLocale={dateLocale}
+          disabled={isBusy}
+        />
+      </SectionCard>
+
+      <SectionCard title={t("licenseManagement:requests.fulfillment.manual.sectionTitle")}>
+        <ManualLinesSection
+          rows={manualRows}
+          onChange={setManualRows}
+          products={productsQuery.data ?? []}
+          dateLocale={dateLocale}
+          disabled={isBusy}
+        />
+      </SectionCard>
+
+      {hasAnyLine ? (
         <>
           <SectionCard title={t("licenseManagement:requests.fulfillment.conversion.target")}>
             <FulfillmentTargetForm
@@ -459,14 +529,16 @@ export function LicenseFulfillmentPage() {
             />
           </SectionCard>
 
-          <SectionCard title={t("licenseManagement:requests.fulfillment.packageDefaults.sectionTitle")}>
-            <FulfillmentPackageDefaultsForm
-              defaults={packageDefaultRows}
-              onChange={updatePackageDefaults}
-              dateLocale={dateLocale}
-              disabled={isBusy}
-            />
-          </SectionCard>
+          {packageDefaultRows.length > 0 ? (
+            <SectionCard title={t("licenseManagement:requests.fulfillment.packageDefaults.sectionTitle")}>
+              <FulfillmentPackageDefaultsForm
+                defaults={packageDefaultRows}
+                onChange={updatePackageDefaults}
+                dateLocale={dateLocale}
+                disabled={isBusy}
+              />
+            </SectionCard>
+          ) : null}
 
           <SectionCard title={t("licenseManagement:requests.fulfillment.conversion.summaryTitle")}>
             <div className="space-y-4">

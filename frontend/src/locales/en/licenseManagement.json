@@ -177,6 +177,32 @@
           "converted": "Request lines converted to a purchase.",
           "triaged": "Triage applied to the selected lines.",
           "operationFailed": "The operation could not be completed."
+        },
+        "renewal": {
+          "sectionTitle": "Existing Packages (Renewal)",
+          "addLabel": "Add a package to renew",
+          "addPlaceholder": "Select a package…",
+          "quantity": "New quantity",
+          "licenseType": "Licence type",
+          "licenseTypeInherit": "Inherit from source",
+          "isPerpetual": "Perpetual",
+          "startDate": "Start",
+          "endDate": "End",
+          "expireSource": "Mark the old package expired and deactivate it",
+          "copySeats": "Carry active assignments onto the new package"
+        },
+        "manual": {
+          "sectionTitle": "Manual Package",
+          "rowTitle": "New package",
+          "product": "Product",
+          "productPlaceholder": "Select a product…",
+          "quantity": "Quantity",
+          "licenseType": "Licence type",
+          "isPerpetual": "Perpetual",
+          "startDate": "Start",
+          "endDate": "End",
+          "addRow": "Add row",
+          "productRequired": "Every manual row needs a product."
         }
       },
       "blocking": {
@@ -338,7 +364,8 @@
       "deactivateProduct": "Deactivate product",
       "activateCategory": "Activate category",
       "deactivateCategory": "Deactivate category",
-      "updateStatus": "Update status"
+      "updateStatus": "Update status",
+      "addPurchaseWithLines": "Purchase with lines"
     },
     "table": {
       "companyName": "Company name",
