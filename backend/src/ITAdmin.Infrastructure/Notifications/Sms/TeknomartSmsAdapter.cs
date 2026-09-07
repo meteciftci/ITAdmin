@@ -22,6 +22,10 @@ public sealed class TeknomartSmsAdapter(
     private const string OtpPath = "/sms/create-otp";
     private const string SinglePath = "/sms/create";
 
+    /// <summary>Teknomart's docs redact the host as "[URL]:9588"; the customer's panel host is the
+    /// value they substitute, so default to that and let the operator override it.</summary>
+    internal const string DefaultBaseUrl = "https://app.teknomart.com.tr:9588";
+
     private static readonly JsonSerializerOptions JsonReadOptions = new()
     {
         PropertyNameCaseInsensitive = true,
@@ -74,7 +78,7 @@ public sealed class TeknomartSmsAdapter(
 
         var content = ApplyTurkishMode(request.Message, publicSettings.TurkishCharacterMode);
         var path = kind == SmsSendKind.Otp ? OtpPath : SinglePath;
-        var url = $"{publicSettings.BaseUrl!.TrimEnd('/')}{path}";
+        var url = $"{ResolveBaseUrl(publicSettings.BaseUrl)}{path}";
         var body = BuildBody(kind, request.PhoneNumber.Trim(), content, publicSettings);
 
         try
@@ -104,8 +108,12 @@ public sealed class TeknomartSmsAdapter(
         }
         catch (HttpRequestException exception)
         {
-            logger.LogWarning(exception, "Teknomart SMS request failed.");
-            return new SmsSendResult(false, "Teknomart SMS request failed. Check the base URL and network connectivity.");
+            logger.LogWarning(exception, "Teknomart SMS request to {Url} failed.", url);
+            var reason = (exception.InnerException ?? exception).Message.Trim();
+            return new SmsSendResult(
+                false,
+                $"Teknomart SMS request to {url} did not go through: {reason} "
+                + "Check the base URL, DNS, TLS and that outbound access to the SMS port is allowed.");
         }
         catch (Exception exception)
         {
@@ -131,11 +139,11 @@ public sealed class TeknomartSmsAdapter(
         SmsTeknomartSecretSettings secrets,
         SmsSendKind? resolvedKind)
     {
-        if (string.IsNullOrWhiteSpace(publicSettings.BaseUrl)
-            || !Uri.TryCreate(publicSettings.BaseUrl, UriKind.Absolute, out var uri)
-            || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        if (!string.IsNullOrWhiteSpace(publicSettings.BaseUrl)
+            && (!Uri.TryCreate(publicSettings.BaseUrl, UriKind.Absolute, out var uri)
+                || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)))
         {
-            return "Base URL must be a valid absolute http(s) URL (e.g. https://api.teknomart.com.tr:9588).";
+            return $"Base URL must be a valid absolute http(s) URL, or left blank to use {DefaultBaseUrl}.";
         }
 
         if (string.IsNullOrWhiteSpace(secrets.Username) || string.IsNullOrWhiteSpace(secrets.Password))
@@ -175,6 +183,9 @@ public sealed class TeknomartSmsAdapter(
 
         return null;
     }
+
+    private static string ResolveBaseUrl(string? configured) =>
+        (string.IsNullOrWhiteSpace(configured) ? DefaultBaseUrl : configured.Trim()).TrimEnd('/');
 
     private static (SmsTeknomartPublicSettings Public, SmsTeknomartSecretSettings Secrets) Parse(
         SmsProviderRuntimeSettings settings)

@@ -70,6 +70,31 @@ public sealed class TeknomartSmsAdapterTests
     }
 
     [Fact]
+    public async Task SendAsync_BlankBaseUrl_FallsBackToTheDefaultHost()
+    {
+        var handler = new CapturingHandler(_ => Json(OkBody));
+        var adapter = CreateAdapter(handler);
+
+        await adapter.SendAsync(
+            new SmsSendRequest("905551234567", "x", SmsSendKind.Otp),
+            Settings(baseUrl: ""));
+
+        Assert.Equal(
+            new Uri(TeknomartSmsAdapter.DefaultBaseUrl + "/sms/create-otp"),
+            handler.LastRequest!.RequestUri);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_BlankBaseUrl_IsAllowed()
+    {
+        var adapter = CreateAdapter(new CapturingHandler(_ => Json(OkBody)));
+
+        var result = await adapter.ValidateAsync(Settings(baseUrl: "", defaultKind: "Otp", singleTitle: null));
+
+        Assert.True(result.IsSuccess);
+    }
+
+    [Fact]
     public async Task SendAsync_ProviderError_IsSurfacedWithCodeAndMessage()
     {
         var handler = new CapturingHandler(_ => Json(
@@ -131,13 +156,14 @@ public sealed class TeknomartSmsAdapterTests
 
     private static SmsProviderRuntimeSettings Settings(
         string defaultKind = "Single",
-        string? singleTitle = "ITAdmin-Portal") =>
+        string? singleTitle = "ITAdmin-Portal",
+        string? baseUrl = "https://api.teknomart.com.tr:9588") =>
         new(
             NotificationProviderKeys.Teknomart,
             JsonSerializer.Serialize(new SmsTeknomartPublicSettings
             {
                 IsEnabled = true,
-                BaseUrl = "https://api.teknomart.com.tr:9588",
+                BaseUrl = baseUrl,
                 Sender = "ITADMIN",
                 DefaultSmsKind = defaultKind,
                 SingleSmsTitle = singleTitle,

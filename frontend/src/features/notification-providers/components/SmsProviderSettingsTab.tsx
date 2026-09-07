@@ -158,7 +158,17 @@ function SmsProviderSettingsForm({ initialSettings, readOnly, onDirtyChange }: {
     onError: (error: unknown) => setTestResult({ ok: false, message: getApiErrorMessage(error, t("notificationProviders:sms.messages.testFailed")) }),
   });
   const fieldError = (key: keyof SmsFormState) => errors[key] ? t(`notificationProviders:validation.${errors[key]}`) : undefined;
-  const save = () => { const nextErrors = validateSmsProviderForm(form); setErrors(nextErrors); if (Object.keys(nextErrors).length === 0) updateMutation.mutate(buildUpdatePayload(form)); };
+  const save = () => {
+    const nextErrors = validateSmsProviderForm(form);
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      setSaved(false);
+      setSaveError(t("notificationProviders:validation.fixHighlighted"));
+      return;
+    }
+    setSaveError(null);
+    updateMutation.mutate(buildUpdatePayload(form));
+  };
   const actionState = updateMutation.isPending ? "saving" : saveError ? "error" : isDirty ? "dirty" : saved ? "saved" : "pristine";
   const secretProps = { storedLabel: t("notificationProviders:secrets.storedLabel"), storedHint: t("notificationProviders:secrets.storedHint"), showLabel: t("notificationProviders:secrets.show"), hideLabel: t("notificationProviders:secrets.hide") };
 
@@ -166,7 +176,7 @@ function SmsProviderSettingsForm({ initialSettings, readOnly, onDirtyChange }: {
     <UnsavedChangesGuard when={isDirty && !updateMutation.isPending} title={t("notificationProviders:unsaved.title")} description={t("notificationProviders:unsaved.description")} leaveText={t("notificationProviders:unsaved.leave")} stayText={t("notificationProviders:unsaved.stay")} />
     <SettingsSection title={t("notificationProviders:sms.sectionTitle")} description={t("notificationProviders:sms.sectionDescription")} actions={<label className="flex items-center gap-2 text-sm font-medium"><span>{t("notificationProviders:fields.active")}</span><Switch checked={form.isEnabled} onCheckedChange={(value) => updateField("isEnabled", value)} disabled={isReadOnly} /></label>}>
       <div className="grid gap-5 md:grid-cols-2">
-        <SettingsField id="sms-provider" label={t("notificationProviders:fields.provider")} description={t("notificationProviders:sms.providerHint")}><Select id="sms-provider" value={form.providerKey} onChange={(e) => updateField("providerKey", e.target.value as SmsProviderKey)} disabled={isReadOnly}><option value="custom-http">{t("notificationProviders:sms.providers.customHttp")}</option><option value="teknomart">{t("notificationProviders:sms.providers.teknomart")}</option></Select></SettingsField>
+        <SettingsField id="sms-provider" label={t("notificationProviders:fields.provider")}><Select id="sms-provider" value={form.providerKey} onChange={(e) => updateField("providerKey", e.target.value as SmsProviderKey)} disabled={isReadOnly}><option value="custom-http">{t("notificationProviders:sms.providers.customHttp")}</option><option value="teknomart">{t("notificationProviders:sms.providers.teknomart")}</option></Select></SettingsField>
         <SettingsField id="sms-display-name" label={t("notificationProviders:fields.displayName")} optional optionalLabel={t("notificationProviders:fields.optional")}><Input id="sms-display-name" value={form.displayName} onChange={(e) => updateField("displayName", e.target.value)} readOnly={isReadOnly} /></SettingsField>
         <SettingsField id="sms-sender" label={t("notificationProviders:sms.fields.sender")} optional optionalLabel={t("notificationProviders:fields.optional")}><Input id="sms-sender" value={form.sender} onChange={(e) => updateField("sender", e.target.value)} readOnly={isReadOnly} /></SettingsField>
         <SettingsField id="sms-timeout" label={t("notificationProviders:fields.timeoutSeconds")} error={fieldError("timeoutSeconds")}><Input id="sms-timeout" type="number" min={5} max={300} value={form.timeoutSeconds} aria-invalid={Boolean(errors.timeoutSeconds)} onChange={(e) => updateField("timeoutSeconds", e.target.value)} readOnly={isReadOnly} /></SettingsField>
@@ -175,17 +185,26 @@ function SmsProviderSettingsForm({ initialSettings, readOnly, onDirtyChange }: {
 
     {form.providerKey === "teknomart" ? (
     <SettingsSection title={t("notificationProviders:sms.teknomart.section")} description={t("notificationProviders:sms.teknomart.description")}>
-      <div className="grid gap-5 md:grid-cols-2">
-        <SettingsField id="tk-base-url" label={t("notificationProviders:sms.teknomart.baseUrl")} description={t("notificationProviders:sms.teknomart.baseUrlHint")} className="md:col-span-2"><Input id="tk-base-url" type="url" value={form.teknomartBaseUrl} onChange={(e) => updateField("teknomartBaseUrl", e.target.value)} placeholder="https://api.teknomart.com.tr:9588" readOnly={isReadOnly} /></SettingsField>
-        <SettingsField id="tk-username" label={t("notificationProviders:sms.teknomart.username")}><SecretInput id="tk-username" value={form.teknomartUsername} onChange={(e) => updateField("teknomartUsername", e.target.value)} readOnly={isReadOnly} hasStoredValue={initialSettings.hasTeknomartCredentials} {...secretProps} /></SettingsField>
-        <SettingsField id="tk-password" label={t("notificationProviders:sms.teknomart.password")}><SecretInput id="tk-password" value={form.teknomartPassword} onChange={(e) => updateField("teknomartPassword", e.target.value)} readOnly={isReadOnly} hasStoredValue={initialSettings.hasTeknomartCredentials} {...secretProps} /></SettingsField>
+      <div className="grid gap-5">
+        <div className="grid gap-5 md:grid-cols-2">
+          <SettingsField id="tk-username" label={t("notificationProviders:sms.teknomart.username")}><SecretInput id="tk-username" value={form.teknomartUsername} onChange={(e) => updateField("teknomartUsername", e.target.value)} readOnly={isReadOnly} hasStoredValue={initialSettings.hasTeknomartCredentials} {...secretProps} /></SettingsField>
+          <SettingsField id="tk-password" label={t("notificationProviders:sms.teknomart.password")}><SecretInput id="tk-password" value={form.teknomartPassword} onChange={(e) => updateField("teknomartPassword", e.target.value)} readOnly={isReadOnly} hasStoredValue={initialSettings.hasTeknomartCredentials} {...secretProps} /></SettingsField>
+        </div>
         <SettingsField id="tk-default-kind" label={t("notificationProviders:sms.teknomart.defaultKind")} description={t("notificationProviders:sms.teknomart.defaultKindHint")}><Select id="tk-default-kind" value={form.teknomartDefaultSmsKind} onChange={(e) => updateField("teknomartDefaultSmsKind", e.target.value)} disabled={isReadOnly}><option value="Single">{t("notificationProviders:sms.teknomart.kindSingle")}</option><option value="Otp">{t("notificationProviders:sms.teknomart.kindOtp")}</option></Select></SettingsField>
-        <SettingsField id="tk-single-title" label={t("notificationProviders:sms.teknomart.singleTitle")} description={t("notificationProviders:sms.teknomart.singleTitleHint")}><Input id="tk-single-title" value={form.teknomartSingleSmsTitle} onChange={(e) => updateField("teknomartSingleSmsTitle", e.target.value)} readOnly={isReadOnly} /></SettingsField>
-        <SettingsField id="tk-encoding" label={t("notificationProviders:sms.teknomart.encoding")}><Select id="tk-encoding" value={form.teknomartEncoding} onChange={(e) => updateField("teknomartEncoding", e.target.value)} disabled={isReadOnly}><option value="0">{t("notificationProviders:sms.teknomart.encodingDefault")}</option><option value="1">{t("notificationProviders:sms.teknomart.encodingTurkish")}</option><option value="2">UTF-8</option></Select></SettingsField>
-        <SettingsField id="tk-validity" label={t("notificationProviders:sms.teknomart.validity")} description={t("notificationProviders:sms.teknomart.validityHint")}><Input id="tk-validity" type="number" min={0} max={1440} value={form.teknomartValidity} onChange={(e) => updateField("teknomartValidity", e.target.value)} readOnly={isReadOnly} /></SettingsField>
-        <SettingsField id="tk-push" label={t("notificationProviders:sms.teknomart.pushWebhook")} optional optionalLabel={t("notificationProviders:fields.optional")}><Input id="tk-push" type="url" value={form.teknomartPushWebhookUrl} onChange={(e) => updateField("teknomartPushWebhookUrl", e.target.value)} readOnly={isReadOnly} /></SettingsField>
-        <SettingsField id="tk-commercial" label={t("notificationProviders:sms.teknomart.commercial")} description={t("notificationProviders:sms.teknomart.commercialHint")}><label className="flex items-center gap-2 text-sm"><Switch checked={form.teknomartCommercial} onCheckedChange={(v) => updateField("teknomartCommercial", v)} disabled={isReadOnly} /><span>{t("notificationProviders:sms.teknomart.commercialToggle")}</span></label></SettingsField>
+        <SettingsField id="tk-single-title" label={t("notificationProviders:sms.teknomart.singleTitle")} description={t("notificationProviders:sms.teknomart.singleTitleHint")} error={fieldError("teknomartSingleSmsTitle")}><Input id="tk-single-title" value={form.teknomartSingleSmsTitle} aria-invalid={Boolean(errors.teknomartSingleSmsTitle)} onChange={(e) => updateField("teknomartSingleSmsTitle", e.target.value)} readOnly={isReadOnly} /></SettingsField>
+        <div className="grid gap-5 md:grid-cols-2">
+          <SettingsField id="tk-encoding" label={t("notificationProviders:sms.teknomart.encoding")}><Select id="tk-encoding" value={form.teknomartEncoding} onChange={(e) => updateField("teknomartEncoding", e.target.value)} disabled={isReadOnly}><option value="0">{t("notificationProviders:sms.teknomart.encodingDefault")}</option><option value="1">{t("notificationProviders:sms.teknomart.encodingTurkish")}</option><option value="2">UTF-8</option></Select></SettingsField>
+          <SettingsField id="tk-validity" label={t("notificationProviders:sms.teknomart.validity")}><Input id="tk-validity" type="number" min={0} max={1440} value={form.teknomartValidity} onChange={(e) => updateField("teknomartValidity", e.target.value)} readOnly={isReadOnly} /></SettingsField>
+        </div>
         <SettingsField id="sms-turkish-mode-tk" label={t("notificationProviders:sms.fields.turkishCharacterMode")}><Select id="sms-turkish-mode-tk" value={form.turkishCharacterMode} onChange={(e) => updateField("turkishCharacterMode", e.target.value)} disabled={isReadOnly}><option value="Preserve">{t("notificationProviders:sms.turkishModes.preserve")}</option><option value="TransliterateToAscii">{t("notificationProviders:sms.turkishModes.transliterate")}</option></Select></SettingsField>
+        <label className="flex items-center gap-2 text-sm"><Switch checked={form.teknomartCommercial} onCheckedChange={(v) => updateField("teknomartCommercial", v)} disabled={isReadOnly} /><span>{t("notificationProviders:sms.teknomart.commercialToggle")}</span></label>
+        <details className="rounded-md border border-border/60 px-3 py-2 text-sm">
+          <summary className="cursor-pointer text-muted-foreground">{t("notificationProviders:sms.teknomart.advanced")}</summary>
+          <div className="mt-3 grid gap-5">
+            <SettingsField id="tk-base-url" label={t("notificationProviders:sms.teknomart.baseUrl")} description={t("notificationProviders:sms.teknomart.baseUrlHint")} error={fieldError("teknomartBaseUrl")} optional optionalLabel={t("notificationProviders:fields.optional")}><Input id="tk-base-url" type="url" value={form.teknomartBaseUrl} aria-invalid={Boolean(errors.teknomartBaseUrl)} onChange={(e) => updateField("teknomartBaseUrl", e.target.value)} placeholder="https://app.teknomart.com.tr:9588" readOnly={isReadOnly} /></SettingsField>
+            <SettingsField id="tk-push" label={t("notificationProviders:sms.teknomart.pushWebhook")} optional optionalLabel={t("notificationProviders:fields.optional")}><Input id="tk-push" type="url" value={form.teknomartPushWebhookUrl} onChange={(e) => updateField("teknomartPushWebhookUrl", e.target.value)} readOnly={isReadOnly} /></SettingsField>
+          </div>
+        </details>
       </div>
     </SettingsSection>
     ) : null}

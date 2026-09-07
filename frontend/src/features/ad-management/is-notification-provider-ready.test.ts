@@ -118,6 +118,11 @@ describe("is-notification-provider-ready", () => {
       hasTeknomartCredentials: true,
     });
     assert.equal(isSmsNotificationProviderReady(teknomartReady), true);
+    // Base URL is optional (the adapter defaults it).
+    assert.equal(
+      isSmsNotificationProviderReady(createSmsSettings({ ...teknomartReady, teknomartBaseUrl: null })),
+      true,
+    );
 
     assert.equal(
       isSmsNotificationProviderReady(createSmsSettings({ ...teknomartReady, hasTeknomartCredentials: false })),

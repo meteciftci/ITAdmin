@@ -40,7 +40,8 @@
       "range": "Enter a value within the allowed range.",
       "email": "Enter a valid email address.",
       "url": "Enter a valid HTTP or HTTPS URL.",
-      "statusCodes": "Enter comma-separated HTTP status codes between 100 and 599."
+      "statusCodes": "Enter comma-separated HTTP status codes between 100 and 599.",
+      "fixHighlighted": "Not saved. Fix the highlighted fields."
     },
     "testDescription": "Tests use the last saved configuration and are kept separate from editing.",
     "testNeedsSave": {
@@ -60,7 +61,7 @@
     },
     "sms": {
       "sectionTitle": "SMS Provider",
-      "sectionDescription": "Configure SMS delivery via Custom HTTP.",
+      "sectionDescription": "Provider and send options for SMS notifications. One provider is active at a time.",
       "providerName": "Custom HTTP",
       "providerFixedHint": "Provider type is fixed for the SMS channel.",
       "httpSection": "HTTP Settings",
@@ -122,15 +123,15 @@
         "section": "Teknomart settings",
         "description": "Teknomart SMS API connection. Basic auth over HTTPS.",
         "baseUrl": "Base URL",
-        "baseUrlHint": "Include scheme and port, e.g. https://api.teknomart.com.tr:9588",
+        "baseUrlHint": "Blank = default (app.teknomart.com.tr:9588). Enter a value only if Teknomart gave you a different host.",
         "username": "API username",
         "password": "API password",
         "defaultKind": "Default SMS kind",
-        "defaultKindHint": "Used when a notification does not specify its own kind.",
+        "defaultKindHint": "Used when a template does not pick its own kind.",
         "kindSingle": "Single (/sms/create)",
         "kindOtp": "OTP (/sms/create-otp)",
         "singleTitle": "Single package title",
-        "singleTitleHint": "5-50 characters, for Single sends. Not used for OTP.",
+        "singleTitleHint": "5–50 characters. Single only; not needed for OTP.",
         "encoding": "Encoding",
         "encodingDefault": "Default",
         "encodingTurkish": "Turkish",
@@ -139,7 +140,8 @@
         "pushWebhook": "Delivery report webhook URL",
         "commercial": "Commercial send",
         "commercialHint": "For commercial sends that require the IYS check.",
-        "commercialToggle": "Mark as commercial"
+        "commercialToggle": "Mark as commercial",
+        "advanced": "Advanced (base URL, delivery webhook)"
       }
     },
     "email": {

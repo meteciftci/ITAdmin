@@ -40,7 +40,8 @@
       "range": "İzin verilen aralıkta bir değer girin.",
       "email": "Geçerli bir e-posta adresi girin.",
       "url": "Geçerli bir HTTP veya HTTPS URL girin.",
-      "statusCodes": "100 ile 599 arasında, virgülle ayrılmış HTTP durum kodları girin."
+      "statusCodes": "100 ile 599 arasında, virgülle ayrılmış HTTP durum kodları girin.",
+      "fixHighlighted": "Kaydedilemedi. İşaretli alanları düzelt."
     },
     "testDescription": "Testler son kaydedilen yapılandırmayı kullanır ve düzenleme akışından ayrı tutulur.",
     "testNeedsSave": {
@@ -60,7 +61,7 @@
     },
     "sms": {
       "sectionTitle": "SMS Sağlayıcısı",
-      "sectionDescription": "Custom HTTP üzerinden SMS gönderimini yapılandırın.",
+      "sectionDescription": "SMS bildirimleri için sağlayıcı ve gönderim ayarları. Aynı anda tek sağlayıcı aktif olur.",
       "providerName": "Custom HTTP",
       "providerFixedHint": "SMS kanalı için sağlayıcı tipi sabittir.",
       "httpSection": "HTTP Ayarları",
@@ -122,15 +123,15 @@
         "section": "Teknomart Ayarları",
         "description": "Teknomart SMS API bağlantısı. Basic auth ile HTTPS üzerinden çalışır.",
         "baseUrl": "Temel URL",
-        "baseUrlHint": "Şema ve port dahil, örn. https://api.teknomart.com.tr:9588",
+        "baseUrlHint": "Boş bırak = varsayılan (app.teknomart.com.tr:9588). Teknomart farklı adres verdiyse gir.",
         "username": "API kullanıcı adı",
         "password": "API parolası",
         "defaultKind": "Varsayılan SMS türü",
-        "defaultKindHint": "Bildirim kendi türünü belirtmezse bu kullanılır.",
+        "defaultKindHint": "Şablon kendi türünü seçmezse bu kullanılır.",
         "kindSingle": "Single (/sms/create)",
         "kindOtp": "OTP (/sms/create-otp)",
         "singleTitle": "Single paket başlığı",
-        "singleTitleHint": "Single gönderimler için 5-50 karakter. OTP'de kullanılmaz.",
+        "singleTitleHint": "5–50 karakter. Yalnızca Single için; OTP'de gerekmez.",
         "encoding": "Kodlama",
         "encodingDefault": "Varsayılan",
         "encodingTurkish": "Türkçe",
@@ -139,7 +140,8 @@
         "pushWebhook": "Rapor webhook URL",
         "commercial": "Ticari gönderim",
         "commercialHint": "İYS kontrolü gerektiren ticari gönderimler için.",
-        "commercialToggle": "Ticari olarak işaretle"
+        "commercialToggle": "Ticari olarak işaretle",
+        "advanced": "Gelişmiş (Temel URL, rapor webhook)"
       }
     },
     "email": {

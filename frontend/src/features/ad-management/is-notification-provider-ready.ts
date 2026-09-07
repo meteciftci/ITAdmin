@@ -94,8 +94,7 @@ export function isSmsNotificationProviderReady(
 
   const fieldsReady = settings.providerKey === "teknomart"
     ? Boolean(
-        settings.teknomartBaseUrl?.trim()
-          && settings.sender?.trim()
+        settings.sender?.trim()
           && settings.hasTeknomartCredentials
           && (settings.teknomartDefaultSmsKind === "Otp" || settings.teknomartSingleSmsTitle?.trim()),
       )
