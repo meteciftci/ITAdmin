@@ -161,6 +161,37 @@ public sealed class HostAgentBoundaryTests
         Assert.Equal(@"IIS APPPOOL\Contoso-ITAdmin", new HostAgentAuthorization("Contoso-ITAdmin").AppPoolIdentity);
 
     [Fact]
+    public void Authorization_MatchesTheAppPoolBySidEvenWhenTheImpersonatedNameDoesNot()
+    {
+        // An impersonated token's name can come back as something other than the literal
+        // "IIS APPPOOL\<name>"; its SID is exact. When the agent resolved the pool SID at start-up,
+        // a SID match authorizes the caller regardless of the name string.
+        const string poolSid = "S-1-5-82-1234567890-123456789-1234567890-123456789-1234567890";
+        var authorization = new HostAgentAuthorization("ITAdmin", poolSid);
+
+        Assert.True(authorization
+            .Authorize("IIS APPPOOL\\ITAdmin (rendered oddly)", false, HostAgentOperation.RequestUpdate, poolSid)
+            .IsAllowed);
+    }
+
+    [Fact]
+    public void Authorization_RejectsAForeignSidEvenWithAMatchingLooseName()
+    {
+        const string poolSid = "S-1-5-82-1111111111-111111111-1111111111-111111111-1111111111";
+        var authorization = new HostAgentAuthorization("ITAdmin", poolSid);
+
+        // Wrong SID and a non-matching name: denied.
+        Assert.False(authorization
+            .Authorize("IIS APPPOOL\\SomethingElse", false, HostAgentOperation.RequestUpdate, "S-1-5-82-9")
+            .IsAllowed);
+
+        // The name fallback still works for hosts where no SID was resolved.
+        Assert.True(new HostAgentAuthorization("ITAdmin")
+            .Authorize("IIS APPPOOL\\ITAdmin", false, HostAgentOperation.RequestUpdate, "S-1-5-82-9")
+            .IsAllowed);
+    }
+
+    [Fact]
     public void Authorization_AdministratorMayInvokeEverything()
     {
         foreach (var operation in Enum.GetValues<HostAgentOperation>())

@@ -39,15 +39,24 @@ public sealed class HostAgentAuthorization
     ];
 
     private readonly string _appPoolIdentity;
+    private readonly string? _appPoolSid;
 
     /// <param name="appPoolName">
     /// IIS application pool the site runs under. Its virtual account is
     /// <c>IIS APPPOOL\&lt;name&gt;</c>, which is what the pipe reports as the connecting principal.
     /// </param>
-    public HostAgentAuthorization(string appPoolName)
+    /// <param name="appPoolSid">
+    /// The SID of that virtual account, resolved once at start-up on Windows. When present it is the
+    /// primary match: an impersonated token's <em>name</em> can come back in a form that does not
+    /// string-equal <c>IIS APPPOOL\&lt;name&gt;</c> (localised group rendering, a translated SID, a
+    /// bare account), but its SID is exact. The name match is kept as a fallback for hosts where the
+    /// SID could not be resolved and for the off-Windows unit tests.
+    /// </param>
+    public HostAgentAuthorization(string appPoolName, string? appPoolSid = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(appPoolName);
         _appPoolIdentity = "IIS APPPOOL\\" + appPoolName.Trim();
+        _appPoolSid = string.IsNullOrWhiteSpace(appPoolSid) ? null : appPoolSid.Trim();
     }
 
     public string AppPoolIdentity => _appPoolIdentity;
@@ -65,7 +74,8 @@ public sealed class HostAgentAuthorization
     public HostAgentAuthorizationDecision Authorize(
         string? callerIdentity,
         bool callerIsAdministrator,
-        HostAgentOperation operation)
+        HostAgentOperation operation,
+        string? callerSid = null)
     {
         if (!Enum.IsDefined(operation))
         {
@@ -77,12 +87,19 @@ public sealed class HostAgentAuthorization
             return HostAgentAuthorizationDecision.Allow();
         }
 
-        if (string.IsNullOrWhiteSpace(callerIdentity))
+        if (string.IsNullOrWhiteSpace(callerIdentity) && string.IsNullOrWhiteSpace(callerSid))
         {
             return HostAgentAuthorizationDecision.Deny("The caller could not be identified.");
         }
 
-        if (!string.Equals(callerIdentity.Trim(), _appPoolIdentity, StringComparison.OrdinalIgnoreCase))
+        var matchesBySid = _appPoolSid is not null
+            && !string.IsNullOrWhiteSpace(callerSid)
+            && string.Equals(callerSid.Trim(), _appPoolSid, StringComparison.OrdinalIgnoreCase);
+
+        var matchesByName = !string.IsNullOrWhiteSpace(callerIdentity)
+            && string.Equals(callerIdentity.Trim(), _appPoolIdentity, StringComparison.OrdinalIgnoreCase);
+
+        if (!matchesBySid && !matchesByName)
         {
             return HostAgentAuthorizationDecision.Deny("The caller is not permitted to use this service.");
         }

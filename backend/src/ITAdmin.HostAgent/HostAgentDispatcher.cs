@@ -1,4 +1,6 @@
 using ITAdmin.HostAgent.Contracts;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ITAdmin.HostAgent;
 
@@ -15,8 +17,11 @@ namespace ITAdmin.HostAgent;
 /// </summary>
 public sealed class HostAgentDispatcher(
     HostAgentAuthorization authorization,
-    IHostAgentOperations operations)
+    IHostAgentOperations operations,
+    ILogger<HostAgentDispatcher>? logger = null)
 {
+    private readonly ILogger<HostAgentDispatcher> _logger = logger ?? NullLogger<HostAgentDispatcher>.Instance;
+
     public async Task<HostAgentResponse> DispatchAsync(
         string? requestJson,
         HostAgentCallerContext caller,
@@ -34,9 +39,23 @@ public sealed class HostAgentDispatcher(
             return HostAgentResponse.Rejected(string.Join(" ", problems), request.CorrelationId);
         }
 
-        var decision = authorization.Authorize(caller.Identity, caller.IsAdministrator, request.Operation);
+        var decision = authorization.Authorize(
+            caller.Identity, caller.IsAdministrator, request.Operation, caller.Sid);
         if (!decision.IsAllowed)
         {
+            // A denial on a privileged channel is worth a line: it is either a real
+            // misconfiguration (the app pool identity the agent expects is not the one connecting)
+            // or the start of someone probing the pipe. The identity and SID are Windows account
+            // metadata, not secrets.
+            _logger.LogWarning(
+                "Host Agent denied {Operation} for caller name={CallerName} sid={CallerSid} "
+                + "administrator={IsAdministrator}: {Reason}",
+                request.Operation,
+                caller.Identity ?? "(unknown)",
+                caller.Sid ?? "(unknown)",
+                caller.IsAdministrator,
+                decision.Reason);
+
             return HostAgentResponse.Denied(decision.Reason, request.CorrelationId);
         }
 
@@ -92,7 +111,14 @@ public sealed class HostAgentDispatcher(
 }
 
 /// <summary>Who is on the other end of the pipe, as determined by the transport.</summary>
-public sealed record HostAgentCallerContext(string? Identity, bool IsAdministrator);
+/// <param name="Identity">The caller's account name (<c>DOMAIN\user</c>), if it could be resolved.</param>
+/// <param name="IsAdministrator">Whether the caller is a member of the local Administrators group.</param>
+/// <param name="Sid">
+/// The caller's security identifier, if it could be resolved. Preferred over <paramref name="Identity"/>
+/// for authorization because it is culture-invariant and unaffected by how an impersonated token's
+/// name happens to resolve.
+/// </param>
+public sealed record HostAgentCallerContext(string? Identity, bool IsAdministrator, string? Sid = null);
 
 /// <summary>
 /// The privileged operations themselves. Kept behind an interface so the dispatcher, the

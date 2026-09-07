@@ -110,36 +110,47 @@ public sealed class HostAgentPipeServer(
     /// </summary>
     private HostAgentCallerContext ResolveCaller(NamedPipeServerStream server)
     {
-        string? identityName;
-        try
-        {
-            identityName = server.GetImpersonationUserName();
-        }
-        catch (Exception exception)
-        {
-            logger.LogWarning(exception, "Could not identify the pipe caller; treating it as unknown.");
-            return new HostAgentCallerContext(null, false);
-        }
-
-        // The admin check is a bonus for an interactive operator on the console; the app pool
-        // identity is never an administrator and is authorized by name-match instead. If
-        // impersonation is unavailable, fall back to "not an administrator" rather than failing the
-        // whole identification.
+        string? identityName = null;
+        string? identitySid = null;
         var isAdministrator = false;
+
+        // Impersonate the client once and read everything off its token: name, SID, and admin
+        // membership. The SID is what authorization matches on - it survives an impersonated token
+        // whose name resolves to something other than the literal "IIS APPPOOL\<name>".
         try
         {
             server.RunAsClient(() =>
             {
                 using var identity = WindowsIdentity.GetCurrent();
+                identityName = identity.Name;
+                identitySid = identity.User?.Value;
                 isAdministrator = new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
             });
         }
         catch (Exception exception)
         {
-            logger.LogDebug(exception, "Could not evaluate administrator membership for the pipe caller.");
+            logger.LogWarning(exception, "Could not impersonate the pipe caller to resolve its identity.");
         }
 
-        return new HostAgentCallerContext(identityName, isAdministrator);
+        if (string.IsNullOrWhiteSpace(identityName))
+        {
+            try
+            {
+                identityName = server.GetImpersonationUserName();
+            }
+            catch (Exception exception)
+            {
+                logger.LogDebug(exception, "GetImpersonationUserName fallback failed for the pipe caller.");
+            }
+        }
+
+        logger.LogDebug(
+            "Pipe caller resolved: name={CallerName} sid={CallerSid} administrator={IsAdministrator}.",
+            identityName ?? "(unknown)",
+            identitySid ?? "(unknown)",
+            isAdministrator);
+
+        return new HostAgentCallerContext(identityName, isAdministrator, identitySid);
     }
 
     /// <summary>

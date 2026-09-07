@@ -1,3 +1,4 @@
+using System.Security.Principal;
 using ITAdmin.HostAgent;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -63,7 +64,26 @@ if (settingsProblems.Count > 0)
 }
 
 builder.Services.AddSingleton(settings);
-builder.Services.AddSingleton(new HostAgentAuthorization(settings.AppPoolName));
+
+// Resolve the application pool's virtual-account SID once, here, where we are on Windows. The
+// authorization rules themselves stay pure and string-based (and testable off Windows); they just
+// get an exact identifier to prefer over the account name.
+string? appPoolSid = null;
+#pragma warning disable CA1416 // Reached only after the Windows guard above.
+try
+{
+    appPoolSid = new NTAccount("IIS APPPOOL\\" + settings.AppPoolName)
+        .Translate(typeof(SecurityIdentifier)).Value;
+}
+catch (Exception exception)
+{
+    Console.Error.WriteLine(
+        $"Could not resolve the SID for application pool '{settings.AppPoolName}' "
+        + $"({exception.Message}); falling back to name-based caller matching.");
+}
+#pragma warning restore CA1416
+
+builder.Services.AddSingleton(new HostAgentAuthorization(settings.AppPoolName, appPoolSid));
 builder.Services.AddSingleton(serviceProvider => new GitSourceClient(
     serviceProvider.GetRequiredService<HostAgentSettings>()));
 
