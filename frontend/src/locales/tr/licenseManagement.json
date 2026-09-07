@@ -609,6 +609,21 @@
         "sourcePackage": "Kaynak paket",
         "sourcePackagePlaceholder": "Paket seç…",
         "seatsUnit": "koltuk"
+      },
+      "list": {
+        "title": "Lisans Zimmetleri",
+        "description": "Tüm paketlerdeki lisans koltuklarının kime ait olduğu — tek listede.",
+        "cardTitle": "Zimmet listesi",
+        "searchPlaceholder": "Kişi, e-posta, TC no veya ürün ara…",
+        "empty": "Kayıt bulunamadı.",
+        "columns": {
+          "product": "Ürün",
+          "package": "Paket / satın alma"
+        },
+        "filters": {
+          "status": "Durum",
+          "activeOnly": "Yalnızca aktif"
+        }
       }
     }
   }

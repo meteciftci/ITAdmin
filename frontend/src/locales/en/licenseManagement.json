@@ -609,6 +609,21 @@
         "sourcePackage": "Source package",
         "sourcePackagePlaceholder": "Select a package…",
         "seatsUnit": "seats"
+      },
+      "list": {
+        "title": "Licence Seat Assignments",
+        "description": "Who holds a licence seat across every package — in one list.",
+        "cardTitle": "Seat list",
+        "searchPlaceholder": "Search person, e-mail, national ID or product…",
+        "empty": "No records found.",
+        "columns": {
+          "product": "Product",
+          "package": "Package / purchase"
+        },
+        "filters": {
+          "status": "Status",
+          "activeOnly": "Active only"
+        }
       }
     }
   }

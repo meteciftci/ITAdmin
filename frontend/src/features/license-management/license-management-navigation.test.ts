@@ -37,6 +37,7 @@ test("router includes license management routes", () => {
     "/license-management/packages/create",
     "/license-management/packages/:id",
     "/license-management/packages/:id/edit",
+    "/license-management/seat-assignments",
     "/settings/modules/license-management",
   ];
   for (const path of paths) {

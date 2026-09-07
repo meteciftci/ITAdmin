@@ -510,6 +510,21 @@ export type LicenseSeatAssignment = {
   updatedBy: string | null;
 };
 
+export type LicenseSeatAssignmentListItem = {
+  id: string;
+  packageId: string;
+  productName: string;
+  productBrand: string | null;
+  purchaseTitle: string;
+  displayName: string;
+  mail: string | null;
+  nationalId: string | null;
+  department: string | null;
+  assignedDate: string;
+  releasedDate: string | null;
+  status: LicenseSeatAssignmentStatus;
+};
+
 export type LicensePackageSeatOverview = {
   packageId: string;
   productName: string;

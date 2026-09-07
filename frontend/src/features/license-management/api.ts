@@ -24,6 +24,8 @@ import type {
   LicensePurchaseStatus,
   LicensePurchaseType,
   LicensePackageSeatOverview,
+  LicenseSeatAssignmentListItem,
+  LicenseSeatAssignmentStatus,
   AssignLicenseSeatRequest,
   ReleaseLicenseSeatRequest,
   TransferLicenseSeatRequest,
@@ -412,6 +414,26 @@ export const convertLicenseRequestItems = async (
 };
 
 // ---- Seat assignments (who holds a package's licence seats) ----
+
+export type LicenseSeatAssignmentListParams = {
+  search?: string;
+  productId?: string;
+  packageId?: string;
+  status?: LicenseSeatAssignmentStatus;
+  activeOnly?: boolean;
+  pageNumber?: number;
+  pageSize?: number;
+};
+
+export const getLicenseSeatAssignments = async (
+  params: LicenseSeatAssignmentListParams,
+): Promise<PagedResponse<LicenseSeatAssignmentListItem>> => {
+  const { data } = await apiClient.get<PagedResponse<LicenseSeatAssignmentListItem>>(
+    `${basePath}/seat-assignments`,
+    { params },
+  );
+  return data;
+};
 
 export const getLicensePackageSeatAssignments = async (
   packageId: string,
