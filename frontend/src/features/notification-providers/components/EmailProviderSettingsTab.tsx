@@ -151,7 +151,7 @@ function EmailProviderSettingsForm({ initialSettings, readOnly, onDirtyChange }:
         actions={<label className="flex items-center gap-2 text-sm font-medium"><span>{t("notificationProviders:fields.active")}</span><Switch checked={form.isEnabled} onCheckedChange={(value) => updateField("isEnabled", value)} disabled={isReadOnly} /></label>}
       >
         <div className="grid gap-5 md:grid-cols-2">
-          <SettingsField id="email-provider" label={t("notificationProviders:fields.provider")} description={t("notificationProviders:email.providerFixedHint")}><Input id="email-provider" value={t("notificationProviders:email.providerName")} readOnly disabled /></SettingsField>
+          <SettingsField id="email-provider" label={t("notificationProviders:fields.provider")}><Input id="email-provider" value={t("notificationProviders:email.providerName")} readOnly disabled /></SettingsField>
           <SettingsField id="email-display-name" label={t("notificationProviders:fields.displayName")} optional optionalLabel={t("notificationProviders:fields.optional")}><Input id="email-display-name" value={form.displayName} onChange={(e) => updateField("displayName", e.target.value)} readOnly={isReadOnly} /></SettingsField>
         </div>
       </SettingsSection>
