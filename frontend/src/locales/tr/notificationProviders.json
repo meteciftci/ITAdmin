@@ -17,7 +17,10 @@
       "show": "Gizli değeri göster",
       "hide": "Gizli değeri gizle"
     },
-    "actions": { "saving": "Kaydediliyor…", "testing": "Test gönderiliyor…" },
+    "actions": {
+      "saving": "Kaydediliyor…",
+      "testing": "Test gönderiliyor…"
+    },
     "saveStates": {
       "pristine": "Kaydedilmemiş değişiklik yok.",
       "dirty": "Kaydedilmemiş değişiklikleriniz var.",
@@ -40,8 +43,14 @@
       "statusCodes": "100 ile 599 arasında, virgülle ayrılmış HTTP durum kodları girin."
     },
     "testDescription": "Testler son kaydedilen yapılandırmayı kullanır ve düzenleme akışından ayrı tutulur.",
-    "testNeedsSave": { "title": "Testten önce kaydedin", "description": "Yapılandırma değişiklikleri kaydedilene kadar test işlemi kullanılamaz." },
-    "testResult": { "success": "Test başarılı", "failed": "Test başarısız" },
+    "testNeedsSave": {
+      "title": "Testten önce kaydedin",
+      "description": "Yapılandırma değişiklikleri kaydedilene kadar test işlemi kullanılamaz."
+    },
+    "testResult": {
+      "success": "Test başarılı",
+      "failed": "Test başarısız"
+    },
     "common": {
       "noEntries": "Henüz kayıt yok.",
       "addEntry": "Satır ekle",
@@ -103,6 +112,34 @@
         "loadFailed": "SMS sağlayıcı ayarları yüklenemedi.",
         "testFailed": "Test SMS gönderilemedi.",
         "saveBeforeTest": "Test göndermeden önce ayarları kaydedin."
+      },
+      "providerHint": "SMS kanalı için bir sağlayıcı seçin. Aynı anda yalnızca biri aktif olur.",
+      "providers": {
+        "customHttp": "Custom HTTP",
+        "teknomart": "Teknomart SMS"
+      },
+      "teknomart": {
+        "section": "Teknomart Ayarları",
+        "description": "Teknomart SMS API bağlantısı. Basic auth ile HTTPS üzerinden çalışır.",
+        "baseUrl": "Temel URL",
+        "baseUrlHint": "Şema ve port dahil, örn. https://api.teknomart.com.tr:9588",
+        "username": "API kullanıcı adı",
+        "password": "API parolası",
+        "defaultKind": "Varsayılan SMS türü",
+        "defaultKindHint": "Bildirim kendi türünü belirtmezse bu kullanılır.",
+        "kindSingle": "Single (/sms/create)",
+        "kindOtp": "OTP (/sms/create-otp)",
+        "singleTitle": "Single paket başlığı",
+        "singleTitleHint": "Single gönderimler için 5-50 karakter. OTP'de kullanılmaz.",
+        "encoding": "Kodlama",
+        "encodingDefault": "Varsayılan",
+        "encodingTurkish": "Türkçe",
+        "validity": "Geçerlilik",
+        "validityHint": "OTP 3-6, Single 60-1440 dakika. 0 = sağlayıcı varsayılanı.",
+        "pushWebhook": "Rapor webhook URL",
+        "commercial": "Ticari gönderim",
+        "commercialHint": "İYS kontrolü gerektiren ticari gönderimler için.",
+        "commercialToggle": "Ticari olarak işaretle"
       }
     },
     "email": {

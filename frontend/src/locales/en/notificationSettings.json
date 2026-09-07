@@ -25,7 +25,9 @@
       "description": "Description",
       "optional": "Optional",
       "templateNameHint": "Use a name that operators can recognize in the template list.",
-      "bodyTemplateHint": "Variables use the {{variableName}} format."
+      "bodyTemplateHint": "Variables use the {{variableName}} format.",
+      "smsKind": "SMS kind",
+      "smsKindHint": "Send this notification as OTP or Single. Empty = provider default. (Only providers that support it, e.g. Teknomart.)"
     },
     "placeholders": {
       "selectModule": "Select module",
@@ -36,12 +38,29 @@
       "cancel": "Cancel",
       "saving": "Saving…"
     },
-    "validation": { "required": "This field is required." },
-    "saveStates": {
-      "pristine": "No unsaved changes.", "dirty": "You have unsaved changes.", "saving": "Saving template…", "saved": "Template saved.", "error": "Template could not be saved.", "failedTitle": "Save failed"
+    "validation": {
+      "required": "This field is required."
     },
-    "unsaved": { "title": "Discard unsaved changes?", "description": "Your template changes have not been saved.", "leave": "Discard changes", "stay": "Keep editing" },
-    "preview": { "description": "Catalog examples are substituted locally. Actual delivery values may differ.", "subject": "Subject", "body": "Body", "empty": "Start typing to see a preview." },
+    "saveStates": {
+      "pristine": "No unsaved changes.",
+      "dirty": "You have unsaved changes.",
+      "saving": "Saving template…",
+      "saved": "Template saved.",
+      "error": "Template could not be saved.",
+      "failedTitle": "Save failed"
+    },
+    "unsaved": {
+      "title": "Discard unsaved changes?",
+      "description": "Your template changes have not been saved.",
+      "leave": "Discard changes",
+      "stay": "Keep editing"
+    },
+    "preview": {
+      "description": "Catalog examples are substituted locally. Actual delivery values may differ.",
+      "subject": "Subject",
+      "body": "Body",
+      "empty": "Start typing to see a preview."
+    },
     "templates": {
       "createTitle": "New Notification Template",
       "editTitle": "Edit Notification Template",
@@ -129,6 +148,11 @@
           "description": "Support line phone number"
         }
       }
+    },
+    "smsKinds": {
+      "default": "Provider default",
+      "otp": "OTP",
+      "single": "Single"
     }
   }
 }

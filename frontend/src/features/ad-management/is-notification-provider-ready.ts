@@ -92,13 +92,20 @@ export function isSmsNotificationProviderReady(
     return false;
   }
 
-  const fieldsReady = Boolean(
-    settings.endpointUrl?.trim()
-      && settings.method?.trim()
-      && settings.contentType?.trim()
-      && settings.bodyTemplate?.trim()
-      && hasSmsAuthCredentials(settings),
-  );
+  const fieldsReady = settings.providerKey === "teknomart"
+    ? Boolean(
+        settings.teknomartBaseUrl?.trim()
+          && settings.sender?.trim()
+          && settings.hasTeknomartCredentials
+          && (settings.teknomartDefaultSmsKind === "Otp" || settings.teknomartSingleSmsTitle?.trim()),
+      )
+    : Boolean(
+        settings.endpointUrl?.trim()
+          && settings.method?.trim()
+          && settings.contentType?.trim()
+          && settings.bodyTemplate?.trim()
+          && hasSmsAuthCredentials(settings),
+      );
 
   return finalizeProviderReadiness(fieldsReady, settings.lastValidationStatus);
 }

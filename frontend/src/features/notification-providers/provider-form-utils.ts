@@ -24,16 +24,31 @@ export function validateEmailProviderForm(form: {
 }
 
 export function validateSmsProviderForm(form: {
+  providerKey: string;
   endpointUrl: string;
   timeoutSeconds: string;
   successStatusCodes: string;
   authType: string;
   apiKeyName: string;
+  teknomartBaseUrl: string;
+  teknomartDefaultSmsKind: string;
+  teknomartSingleSmsTitle: string;
 }): ProviderFieldErrors {
   const errors: ProviderFieldErrors = {};
   const timeout = Number(form.timeoutSeconds);
-  if (!/^https?:\/\//i.test(form.endpointUrl.trim())) errors.endpointUrl = "url";
   if (!Number.isInteger(timeout) || timeout < 5 || timeout > 300) errors.timeoutSeconds = "range";
+
+  if (form.providerKey === "teknomart") {
+    if (!/^https?:\/\//i.test(form.teknomartBaseUrl.trim())) errors.teknomartBaseUrl = "url";
+    const singleReachable = form.teknomartDefaultSmsKind !== "Otp";
+    if (singleReachable) {
+      const title = form.teknomartSingleSmsTitle.trim();
+      if (title.length < 5 || title.length > 50) errors.teknomartSingleSmsTitle = "range";
+    }
+    return errors;
+  }
+
+  if (!/^https?:\/\//i.test(form.endpointUrl.trim())) errors.endpointUrl = "url";
   const codes = parseSmsStatusCodes(form.successStatusCodes);
   if (codes.length === 0 || codes.some((code) => !Number.isInteger(code) || code < 100 || code > 599)) {
     errors.successStatusCodes = "statusCodes";

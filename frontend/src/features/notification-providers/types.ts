@@ -3,13 +3,18 @@ export type NotificationKeyValuePair = {
   value: string;
 };
 
+export type SmsProviderKey = "custom-http" | "teknomart";
+
 export type SmsProviderSettings = {
   channel: string;
-  providerKey: string;
+  providerKey: SmsProviderKey;
+  availableProviders: SmsProviderKey[];
   isEnabled: boolean;
   displayName: string | null;
   sender: string | null;
   timeoutSeconds: number;
+  turkishCharacterMode: string;
+  // Custom HTTP
   endpointUrl: string | null;
   method: string;
   contentType: string;
@@ -20,10 +25,18 @@ export type SmsProviderSettings = {
   bodyTemplate: string | null;
   successStatusCodes: number[];
   successBodyContains: string | null;
-  turkishCharacterMode: string;
   hasBasicPassword: boolean;
   hasBearerToken: boolean;
   hasApiKey: boolean;
+  // Teknomart
+  teknomartBaseUrl: string | null;
+  teknomartDefaultSmsKind: string;
+  teknomartSingleSmsTitle: string | null;
+  teknomartEncoding: number;
+  teknomartValidity: number;
+  teknomartCommercial: boolean;
+  teknomartPushWebhookUrl: string | null;
+  hasTeknomartCredentials: boolean;
   lastValidatedAt: string | null;
   lastValidationStatus: string | null;
   lastValidationMessage: string | null;
@@ -48,25 +61,37 @@ export type EmailProviderSettings = {
 };
 
 export type UpdateSmsProviderSettingsRequest = {
+  providerKey: SmsProviderKey;
   isEnabled: boolean;
   displayName?: string | null;
   sender?: string | null;
   timeoutSeconds: number;
-  endpointUrl: string;
-  method: string;
-  contentType: string;
-  authType: string;
+  turkishCharacterMode: string;
+  // Custom HTTP
+  endpointUrl?: string | null;
+  method?: string;
+  contentType?: string;
+  authType?: string;
   apiKeyName?: string | null;
   basicUserName?: string | null;
   basicPassword?: string | null;
   bearerToken?: string | null;
   apiKeyValue?: string | null;
-  headers: NotificationKeyValuePair[];
-  queryParameters: NotificationKeyValuePair[];
+  headers?: NotificationKeyValuePair[];
+  queryParameters?: NotificationKeyValuePair[];
   bodyTemplate?: string | null;
-  successStatusCodes: number[];
+  successStatusCodes?: number[];
   successBodyContains?: string | null;
-  turkishCharacterMode: string;
+  // Teknomart
+  teknomartBaseUrl?: string | null;
+  teknomartDefaultSmsKind?: string;
+  teknomartSingleSmsTitle?: string | null;
+  teknomartEncoding?: number;
+  teknomartValidity?: number;
+  teknomartCommercial?: boolean;
+  teknomartPushWebhookUrl?: string | null;
+  teknomartUsername?: string | null;
+  teknomartPassword?: string | null;
 };
 
 export type UpdateEmailProviderSettingsRequest = {

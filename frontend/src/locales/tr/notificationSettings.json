@@ -25,7 +25,9 @@
       "description": "Açıklama",
       "optional": "İsteğe bağlı",
       "templateNameHint": "Operatörlerin şablon listesinde kolayca tanıyacağı bir ad kullanın.",
-      "bodyTemplateHint": "Değişkenler {{degiskenAdi}} biçimini kullanır."
+      "bodyTemplateHint": "Değişkenler {{degiskenAdi}} biçimini kullanır.",
+      "smsKind": "SMS türü",
+      "smsKindHint": "Bu bildirim OTP mi yoksa Single olarak mı gönderilsin. Boş = sağlayıcı varsayılanı. (Yalnızca destekleyen sağlayıcılarda, ör. Teknomart.)"
     },
     "placeholders": {
       "selectModule": "Modül seçin",
@@ -36,12 +38,29 @@
       "cancel": "Vazgeç",
       "saving": "Kaydediliyor…"
     },
-    "validation": { "required": "Bu alan zorunludur." },
-    "saveStates": {
-      "pristine": "Kaydedilmemiş değişiklik yok.", "dirty": "Kaydedilmemiş değişiklikleriniz var.", "saving": "Şablon kaydediliyor…", "saved": "Şablon kaydedildi.", "error": "Şablon kaydedilemedi.", "failedTitle": "Kaydetme başarısız"
+    "validation": {
+      "required": "Bu alan zorunludur."
     },
-    "unsaved": { "title": "Kaydedilmemiş değişiklikler silinsin mi?", "description": "Şablon değişiklikleriniz henüz kaydedilmedi.", "leave": "Değişiklikleri sil", "stay": "Düzenlemeye devam et" },
-    "preview": { "description": "Katalog örnekleri yerel olarak yerleştirilir. Gerçek gönderim değerleri farklı olabilir.", "subject": "Konu", "body": "Gövde", "empty": "Önizleme için yazmaya başlayın." },
+    "saveStates": {
+      "pristine": "Kaydedilmemiş değişiklik yok.",
+      "dirty": "Kaydedilmemiş değişiklikleriniz var.",
+      "saving": "Şablon kaydediliyor…",
+      "saved": "Şablon kaydedildi.",
+      "error": "Şablon kaydedilemedi.",
+      "failedTitle": "Kaydetme başarısız"
+    },
+    "unsaved": {
+      "title": "Kaydedilmemiş değişiklikler silinsin mi?",
+      "description": "Şablon değişiklikleriniz henüz kaydedilmedi.",
+      "leave": "Değişiklikleri sil",
+      "stay": "Düzenlemeye devam et"
+    },
+    "preview": {
+      "description": "Katalog örnekleri yerel olarak yerleştirilir. Gerçek gönderim değerleri farklı olabilir.",
+      "subject": "Konu",
+      "body": "Gövde",
+      "empty": "Önizleme için yazmaya başlayın."
+    },
     "templates": {
       "createTitle": "Yeni Bildirim Şablonu",
       "editTitle": "Bildirim Şablonunu Düzenle",
@@ -129,6 +148,11 @@
           "description": "Destek hattı telefon numarası"
         }
       }
+    },
+    "smsKinds": {
+      "default": "Sağlayıcı varsayılanı",
+      "otp": "OTP",
+      "single": "Single"
     }
   }
 }

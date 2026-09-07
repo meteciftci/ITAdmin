@@ -17,6 +17,7 @@ export type NotificationTemplate = {
   isEnabled: boolean;
   subjectTemplate: string | null;
   bodyTemplate: string;
+  smsKind: string | null;
   description: string | null;
   createdAt: string;
   createdBy: string | null;
@@ -32,5 +33,6 @@ export type SaveNotificationTemplateRequest = {
   isEnabled: boolean;
   subjectTemplate?: string | null;
   bodyTemplate: string;
+  smsKind?: string | null;
   description?: string | null;
 };

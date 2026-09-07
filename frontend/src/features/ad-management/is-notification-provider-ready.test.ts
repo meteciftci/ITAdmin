@@ -19,11 +19,13 @@ function createSmsSettings(
 ): SmsProviderSettings {
   return {
     channel: "Sms",
-    providerKey: "CustomHttp",
+    providerKey: "custom-http",
+    availableProviders: ["custom-http", "teknomart"],
     isEnabled: true,
     displayName: null,
     sender: null,
     timeoutSeconds: 30,
+    turkishCharacterMode: "Preserve",
     endpointUrl: "https://sms.example.com/send",
     method: "POST",
     contentType: "application/json",
@@ -34,10 +36,17 @@ function createSmsSettings(
     bodyTemplate: "{\"message\":\"{{message}}\"}",
     successStatusCodes: [200],
     successBodyContains: null,
-    turkishCharacterMode: "Preserve",
     hasBasicPassword: false,
     hasBearerToken: false,
     hasApiKey: false,
+    teknomartBaseUrl: null,
+    teknomartDefaultSmsKind: "Single",
+    teknomartSingleSmsTitle: null,
+    teknomartEncoding: 0,
+    teknomartValidity: 0,
+    teknomartCommercial: false,
+    teknomartPushWebhookUrl: null,
+    hasTeknomartCredentials: false,
     lastValidatedAt: null,
     lastValidationStatus: "Ok",
     lastValidationMessage: null,
@@ -93,6 +102,29 @@ describe("is-notification-provider-ready", () => {
   it("returns false when SMS last validation failed", () => {
     assert.equal(
       isSmsNotificationProviderReady(createSmsSettings({ lastValidationStatus: "Failed" })),
+      false,
+    );
+  });
+
+  it("evaluates Teknomart readiness against Teknomart fields, not Custom HTTP ones", () => {
+    const teknomartReady = createSmsSettings({
+      providerKey: "teknomart",
+      endpointUrl: null,
+      bodyTemplate: null,
+      sender: "ITADMIN",
+      teknomartBaseUrl: "https://api.teknomart.com.tr:9588",
+      teknomartDefaultSmsKind: "Single",
+      teknomartSingleSmsTitle: "ITAdmin-Portal",
+      hasTeknomartCredentials: true,
+    });
+    assert.equal(isSmsNotificationProviderReady(teknomartReady), true);
+
+    assert.equal(
+      isSmsNotificationProviderReady(createSmsSettings({ ...teknomartReady, hasTeknomartCredentials: false })),
+      false,
+    );
+    assert.equal(
+      isSmsNotificationProviderReady(createSmsSettings({ ...teknomartReady, teknomartSingleSmsTitle: null })),
       false,
     );
   });

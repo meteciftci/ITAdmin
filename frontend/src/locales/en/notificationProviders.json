@@ -17,7 +17,10 @@
       "show": "Show secret",
       "hide": "Hide secret"
     },
-    "actions": { "saving": "Saving…", "testing": "Sending test…" },
+    "actions": {
+      "saving": "Saving…",
+      "testing": "Sending test…"
+    },
     "saveStates": {
       "pristine": "No unsaved changes.",
       "dirty": "You have unsaved changes.",
@@ -40,8 +43,14 @@
       "statusCodes": "Enter comma-separated HTTP status codes between 100 and 599."
     },
     "testDescription": "Tests use the last saved configuration and are kept separate from editing.",
-    "testNeedsSave": { "title": "Save before testing", "description": "The test action is unavailable until your configuration changes are saved." },
-    "testResult": { "success": "Test succeeded", "failed": "Test failed" },
+    "testNeedsSave": {
+      "title": "Save before testing",
+      "description": "The test action is unavailable until your configuration changes are saved."
+    },
+    "testResult": {
+      "success": "Test succeeded",
+      "failed": "Test failed"
+    },
     "common": {
       "noEntries": "No entries yet.",
       "addEntry": "Add row",
@@ -103,6 +112,34 @@
         "loadFailed": "SMS provider settings could not be loaded.",
         "testFailed": "Test SMS could not be sent.",
         "saveBeforeTest": "Save settings before sending a test."
+      },
+      "providerHint": "Choose an SMS provider. Only one is active at a time.",
+      "providers": {
+        "customHttp": "Custom HTTP",
+        "teknomart": "Teknomart SMS"
+      },
+      "teknomart": {
+        "section": "Teknomart settings",
+        "description": "Teknomart SMS API connection. Basic auth over HTTPS.",
+        "baseUrl": "Base URL",
+        "baseUrlHint": "Include scheme and port, e.g. https://api.teknomart.com.tr:9588",
+        "username": "API username",
+        "password": "API password",
+        "defaultKind": "Default SMS kind",
+        "defaultKindHint": "Used when a notification does not specify its own kind.",
+        "kindSingle": "Single (/sms/create)",
+        "kindOtp": "OTP (/sms/create-otp)",
+        "singleTitle": "Single package title",
+        "singleTitleHint": "5-50 characters, for Single sends. Not used for OTP.",
+        "encoding": "Encoding",
+        "encodingDefault": "Default",
+        "encodingTurkish": "Turkish",
+        "validity": "Validity",
+        "validityHint": "OTP 3-6, Single 60-1440 minutes. 0 = provider default.",
+        "pushWebhook": "Delivery report webhook URL",
+        "commercial": "Commercial send",
+        "commercialHint": "For commercial sends that require the IYS check.",
+        "commercialToggle": "Mark as commercial"
       }
     },
     "email": {

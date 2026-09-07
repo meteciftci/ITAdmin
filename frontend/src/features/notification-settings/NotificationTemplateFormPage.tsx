@@ -67,6 +67,7 @@ function buildCreateInitialValues(catalog: NotificationTemplateCatalog): SaveNot
     isEnabled: true,
     subjectTemplate: "",
     bodyTemplate: "",
+    smsKind: "",
     description: "",
   };
 }
@@ -124,6 +125,7 @@ export function NotificationTemplateFormPage({ mode }: NotificationTemplateFormP
           isEnabled: templateQuery.data.isEnabled,
           subjectTemplate: templateQuery.data.subjectTemplate ?? "",
           bodyTemplate: templateQuery.data.bodyTemplate,
+          smsKind: templateQuery.data.smsKind ?? "",
           description: templateQuery.data.description ?? "",
         }
       : buildCreateInitialValues(catalogQuery.data);
@@ -220,6 +222,7 @@ function NotificationTemplateForm({
       const payload: SaveNotificationTemplateRequest = {
         ...form,
         subjectTemplate: isSmsChannel ? null : form.subjectTemplate || null,
+        smsKind: isSmsChannel ? (form.smsKind || null) : null,
       };
 
       if (mode === "create") {
@@ -405,6 +408,20 @@ function NotificationTemplateForm({
                     onChange={(event) => updateField("subjectTemplate", event.target.value)}
                     aria-invalid={Boolean(errors.subjectTemplate)}
                   />
+                </SettingsField>
+              ) : null}
+
+              {isSmsChannel ? (
+                <SettingsField id="template-sms-kind" label={t("notificationSettings:fields.smsKind")} description={t("notificationSettings:fields.smsKindHint")}>
+                  <Select
+                    id="template-sms-kind"
+                    value={form.smsKind ?? ""}
+                    onChange={(event) => updateField("smsKind", event.target.value)}
+                  >
+                    <option value="">{t("notificationSettings:smsKinds.default")}</option>
+                    <option value="Otp">{t("notificationSettings:smsKinds.otp")}</option>
+                    <option value="Single">{t("notificationSettings:smsKinds.single")}</option>
+                  </Select>
                 </SettingsField>
               ) : null}
 
