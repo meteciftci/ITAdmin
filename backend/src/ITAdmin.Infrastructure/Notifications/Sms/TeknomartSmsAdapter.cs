@@ -184,8 +184,18 @@ public sealed class TeknomartSmsAdapter(
         return null;
     }
 
-    private static string ResolveBaseUrl(string? configured) =>
-        (string.IsNullOrWhiteSpace(configured) ? DefaultBaseUrl : configured.Trim()).TrimEnd('/');
+    /// <summary>
+    /// Scheme + host + port only. Teknomart's docs and integration snippets often show the base as
+    /// the full endpoint (<c>.../sms/create-otp</c>), so an operator may paste that in; take just the
+    /// authority so the endpoint path is never doubled up.
+    /// </summary>
+    internal static string ResolveBaseUrl(string? configured)
+    {
+        var value = string.IsNullOrWhiteSpace(configured) ? DefaultBaseUrl : configured.Trim();
+        return Uri.TryCreate(value, UriKind.Absolute, out var uri)
+            ? uri.GetLeftPart(UriPartial.Authority)
+            : value.TrimEnd('/');
+    }
 
     private static (SmsTeknomartPublicSettings Public, SmsTeknomartSecretSettings Secrets) Parse(
         SmsProviderRuntimeSettings settings)

@@ -84,6 +84,24 @@ public sealed class TeknomartSmsAdapterTests
             handler.LastRequest!.RequestUri);
     }
 
+    [Theory]
+    [InlineData("https://app.teknomart.com.tr:9588")]
+    [InlineData("https://app.teknomart.com.tr:9588/")]
+    [InlineData("https://app.teknomart.com.tr:9588/sms/create-otp")]
+    public async Task SendAsync_BaseUrlWithOrWithoutAnEndpointPath_TargetsTheAuthorityPlusEndpoint(string configured)
+    {
+        var handler = new CapturingHandler(_ => Json(OkBody));
+        var adapter = CreateAdapter(handler);
+
+        await adapter.SendAsync(
+            new SmsSendRequest("905551234567", "x", SmsSendKind.Otp),
+            Settings(baseUrl: configured));
+
+        Assert.Equal(
+            new Uri("https://app.teknomart.com.tr:9588/sms/create-otp"),
+            handler.LastRequest!.RequestUri);
+    }
+
     [Fact]
     public async Task ValidateAsync_BlankBaseUrl_IsAllowed()
     {
