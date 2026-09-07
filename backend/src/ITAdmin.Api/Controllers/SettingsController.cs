@@ -18,6 +18,7 @@ namespace ITAdmin.Api.Controllers;
 public sealed class SettingsController(
     ISettingsService settingsService,
     IWebHostEnvironment webHostEnvironment,
+    IConfiguration configuration,
     ILogger<SettingsController> logger) : ControllerBase
 {
     [HttpGet]
@@ -242,7 +243,7 @@ public sealed class SettingsController(
                 content,
                 extension,
                 contentType,
-                ResolveBrandingUploadsDirectory(webHostEnvironment.WebRootPath),
+                ResolveBrandingUploadsDirectory(),
                 ResolveActorUserId(User),
                 ResolveActorUserName(User),
                 ResolveIpAddress(),
@@ -311,7 +312,7 @@ public sealed class SettingsController(
                 content,
                 extension,
                 contentType,
-                ResolveBrandingUploadsDirectory(webHostEnvironment.WebRootPath),
+                ResolveBrandingUploadsDirectory(),
                 ResolveActorUserId(User),
                 ResolveActorUserName(User),
                 ResolveIpAddress(),
@@ -504,8 +505,17 @@ public sealed class SettingsController(
         }
     }
 
-    private static string ResolveBrandingUploadsDirectory(string? webRootPath)
+    private string ResolveBrandingUploadsDirectory()
     {
+        // Production points this at <DataRoot>\uploads (via ITADMIN_Uploads__Root) so branding
+        // files are not wiped by the next build. Program.Hosting serves /uploads from the same root.
+        var uploadsRoot = configuration.GetValue<string>("Uploads:Root");
+        if (!string.IsNullOrWhiteSpace(uploadsRoot))
+        {
+            return Path.Combine(uploadsRoot, "branding");
+        }
+
+        var webRootPath = webHostEnvironment.WebRootPath;
         var root = string.IsNullOrWhiteSpace(webRootPath)
             ? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot")
             : webRootPath;

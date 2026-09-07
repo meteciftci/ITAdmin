@@ -158,6 +158,7 @@ $Script:Layout = [pscustomobject]@{
     StateRoot          = Join-Path $DataRoot "state"
     DataProtectionRoot = Join-Path $DataRoot "DataProtection-Keys"
     LogsRoot           = Join-Path $DataRoot "logs"
+    UploadsRoot        = Join-Path $DataRoot "uploads"
 }
 $Script:AppConfigPath = Join-Path $Script:Layout.ConfigRoot "app.json"
 $Script:HostAgentConfigPath = Join-Path $Script:Layout.ConfigRoot "hostagent.json"
@@ -816,8 +817,32 @@ function New-MachineDirectories {
     foreach ($dir in @(
         $Script:Layout.InstallRoot, $Script:Layout.AppRoot, $Script:Layout.HostAgentRoot, $Script:Layout.CoordinatorRoot,
         $Script:Layout.ConfigRoot, $Script:Layout.SecretsRoot, $Script:Layout.StateRoot,
-        $Script:Layout.DataProtectionRoot, $Script:Layout.LogsRoot)) {
+        $Script:Layout.DataProtectionRoot, $Script:Layout.LogsRoot,
+        $Script:Layout.UploadsRoot, (Join-Path $Script:Layout.UploadsRoot "branding"))) {
         if (-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+    }
+}
+
+function Move-LegacyUploads {
+    <#
+        Branding uploads used to live under the versioned build's wwwroot, so every update
+        orphaned them (the logo/favicon 404'd until re-uploaded). They now live under
+        <DataRoot>\uploads. Copy anything left in the active build once; never overwrite.
+    #>
+    $state = Get-DeployState
+    if ([string]::IsNullOrWhiteSpace($state.activeSha)) { return }
+
+    $legacy = Join-Path (Join-Path $Script:Layout.AppRoot $state.activeSha) "wwwroot\uploads"
+    if (-not (Test-Path -LiteralPath $legacy)) { return }
+
+    Get-ChildItem -LiteralPath $legacy -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object {
+        $relative = $_.FullName.Substring($legacy.Length).TrimStart('\', '/')
+        $target = Join-Path $Script:Layout.UploadsRoot $relative
+        if (-not (Test-Path -LiteralPath $target)) {
+            New-Item -ItemType Directory -Path (Split-Path -Parent $target) -Force | Out-Null
+            Copy-Item -LiteralPath $_.FullName -Destination $target -Force
+            Write-Detail "Migrated legacy upload $relative to $($Script:Layout.UploadsRoot)"
+        }
     }
 }
 
@@ -892,10 +917,13 @@ function Set-RuntimeConfiguration {
         "ITADMIN_Jwt__Audience"                   = "ITAdmin"
         "ITADMIN_DataProtection__ApplicationName" = "ITAdmin"
         "ITADMIN_DataProtection__KeysPath"        = $Script:Layout.DataProtectionRoot
+        "ITADMIN_Uploads__Root"                   = $Script:Layout.UploadsRoot
     }
 
+    Move-LegacyUploads
+
     $identity = "IIS AppPool\$AppPoolName"
-    foreach ($writable in @($Script:Layout.DataProtectionRoot, $Script:Layout.LogsRoot)) {
+    foreach ($writable in @($Script:Layout.DataProtectionRoot, $Script:Layout.LogsRoot, $Script:Layout.UploadsRoot)) {
         & icacls $writable /grant "${identity}:(OI)(CI)M" /T | Out-Null
     }
     & icacls $Script:Layout.ConfigRoot /grant "${identity}:(OI)(CI)R" /T | Out-Null

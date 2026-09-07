@@ -86,8 +86,12 @@ non-zero; nothing is left half-active. The newest three builds are kept under `a
   state\deploy.json      active/previous commit, last migration
   state\update-operation.json     progress of the most recent in-app update
   DataProtection-Keys\   ASP.NET Data Protection key ring - back this up with the database
+  uploads\branding\      branding logo/favicon - outside the versioned build so updates keep them
   logs\
 ```
+
+Branding uploads are served at `/uploads` from `%ProgramData%\ITAdmin\uploads` (the app pool gets
+`ITADMIN_Uploads__Root`); they used to sit under the build's `wwwroot` and 404 after every update.
 
 ---
 

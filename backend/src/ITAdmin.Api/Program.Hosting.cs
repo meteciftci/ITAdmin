@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using ITAdmin.Application.Abstractions.Security;
 using ITAdmin.Api.Authorization;
@@ -144,6 +145,21 @@ public partial class Program
         app.UseSecurityHeaders();
         app.UseDefaultFiles();
         app.UseStaticFiles();
+
+        // User uploads (branding logo/favicon) live outside the versioned build directory so they
+        // survive an update - the build only ever replaces wwwroot. When Uploads:Root is set
+        // (production, via ITADMIN_Uploads__Root) serve /uploads from there; otherwise the default
+        // static-files handler still covers wwwroot/uploads for local development.
+        var uploadsRoot = app.Configuration.GetValue<string>("Uploads:Root");
+        if (!string.IsNullOrWhiteSpace(uploadsRoot))
+        {
+            Directory.CreateDirectory(uploadsRoot);
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = new PhysicalFileProvider(uploadsRoot),
+                RequestPath = "/uploads",
+            });
+        }
 
         // Explicit routing so the endpoint (and its [EnableRateLimiting] metadata) is resolved
         // before the rate limiter runs; the limiter only engages for the login endpoint.
