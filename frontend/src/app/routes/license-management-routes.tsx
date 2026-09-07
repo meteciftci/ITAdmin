@@ -5,8 +5,6 @@ import {
   LicenseCompanyCreatePage,
   LicenseCompanyDetailPage,
   LicenseCompanyEditPage,
-  LicenseManagementOverviewPage,
-  LicenseManagementRedirectPage,
   LicensePackageCreatePage,
   LicensePackageDetailPage,
   LicensePackageEditPage,
@@ -39,31 +37,7 @@ import { PermissionCodes } from "@/lib/permission-codes";
 export const licenseManagementRoutes: RouteObject[] = [
   {
     path: "/license-management",
-    element: (
-      <RequireAuth>
-        <RequirePermission permission={PermissionCodes.LicenseManagement.View}>
-          <AppLayout>
-            <LazyRoute>
-              <LicenseManagementRedirectPage />
-            </LazyRoute>
-          </AppLayout>
-        </RequirePermission>
-      </RequireAuth>
-    ),
-  },
-  {
-    path: "/license-management/overview",
-    element: (
-      <RequireAuth>
-        <RequirePermission permission={PermissionCodes.LicenseManagement.View}>
-          <AppLayout>
-            <LazyRoute>
-              <LicenseManagementOverviewPage />
-            </LazyRoute>
-          </AppLayout>
-        </RequirePermission>
-      </RequireAuth>
-    ),
+    element: <Navigate to="/license-management/requests" replace />,
   },
   {
     path: "/license-management/companies",

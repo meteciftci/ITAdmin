@@ -73,7 +73,6 @@ export function LicenseCompanyEditPage() {
             onCancel={() => navigate(buildLicenseCompanyDetailPath(id))}
             onSaved={() => {
               queryClient.invalidateQueries({ queryKey: ["license-management", "companies"] });
-              queryClient.invalidateQueries({ queryKey: ["license-management", "overview"] });
               toast.success(t("licenseManagement:messages.companyUpdated"));
               navigate(buildLicenseCompanyDetailPath(id));
             }}

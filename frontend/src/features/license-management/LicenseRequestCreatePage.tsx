@@ -46,7 +46,6 @@ export function LicenseRequestCreatePage() {
             onCancel={() => navigate(LICENSE_REQUESTS_LIST_PATH)}
             onSaved={(requestId) => {
               queryClient.invalidateQueries({ queryKey: ["license-management", "requests"] });
-              queryClient.invalidateQueries({ queryKey: ["license-management", "overview"] });
               toast.success(t("licenseManagement:messages.requestCreated"));
               navigate(buildLicenseRequestDetailPath(requestId));
             }}

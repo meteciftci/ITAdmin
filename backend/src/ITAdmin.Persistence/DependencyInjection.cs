@@ -42,7 +42,6 @@ public static class DependencyInjection
         services.AddScoped<INotificationTemplateService, NotificationTemplateService>();
         services.AddScoped<IAdManagementNotificationEnqueueService, AdManagementNotificationEnqueueService>();
         services.AddScoped<INotificationOutboxBatchProcessor, NotificationOutboxBatchProcessor>();
-        services.AddScoped<ILicenseManagementOverviewService, LicenseManagementOverviewService>();
         services.AddScoped<ILicenseCompanyService, LicenseCompanyService>();
         services.AddScoped<ILicenseProductCategoryService, LicenseProductCategoryService>();
         services.AddScoped<ILicensedProductService, LicensedProductService>();

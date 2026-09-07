@@ -6,14 +6,6 @@ export type PagedResponse<T> = {
   totalPages: number;
 };
 
-export type LicenseManagementOverview = {
-  companyCount: number;
-  activeProductCount: number;
-  purchaseCount: number;
-  packageCount: number;
-  totalLicenseQuantity: number;
-};
-
 export type LicenseManagementSettings = {
   defaultCurrency: string;
   defaultVatIncluded: boolean;

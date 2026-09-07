@@ -72,7 +72,6 @@ export function LicenseCompaniesPage() {
       updateLicenseCompanyStatus(id, isActive),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["license-management", "companies"] });
-      queryClient.invalidateQueries({ queryKey: ["license-management", "overview"] });
       toast.success(t("licenseManagement:messages.companyStatusUpdated"));
       setConfirmTarget(null);
     },

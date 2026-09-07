@@ -2,15 +2,6 @@
   "licenseManagement": {
     "title": "License Management",
     "description": "Manage your organization's license inventory.",
-    "overview": {
-      "title": "Overview",
-      "description": "License management summary.",
-      "companyCount": "Company count",
-      "activeProductCount": "Active product count",
-      "purchaseCount": "Purchase count",
-      "packageCount": "License package count",
-      "totalLicenseQuantity": "Total license quantity"
-    },
     "companies": {
       "title": "Companies",
       "description": "Manage supplier and support companies.",

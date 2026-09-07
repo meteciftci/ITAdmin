@@ -32,7 +32,6 @@ export function LicenseProductCreatePage() {
           onCancel={() => navigate(LICENSE_PRODUCTS_LIST_PATH)}
           onSaved={() => {
             queryClient.invalidateQueries({ queryKey: ["license-management", "products"] });
-            queryClient.invalidateQueries({ queryKey: ["license-management", "overview"] });
             toast.success(t("licenseManagement:messages.productCreated"));
             navigate(LICENSE_PRODUCTS_LIST_PATH);
           }}

@@ -11,7 +11,6 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
 test("router includes license management routes", () => {
   const routerSource = readRouterSource();
   const paths = [
-    "/license-management/overview",
     "/license-management/companies",
     "/license-management/companies/create",
     "/license-management/companies/:id",
@@ -73,7 +72,6 @@ test("fulfillment conversion messageKeys resolve to existing i18n keys", () => {
 test("sidebar includes license management purchases menu", () => {
   const sidebarSource = readFileSync(join(root, "components/layout/sidebar-items.ts"), "utf8");
   assert.match(sidebarSource, /routePrefix: "\/license-management"/);
-  assert.match(sidebarSource, /items\.licenseManagementOverview/);
   assert.match(sidebarSource, /items\.licenseManagementCompanies/);
   assert.match(sidebarSource, /items\.licenseManagementCategories/);
   assert.match(sidebarSource, /items\.licenseManagementPurchases/);

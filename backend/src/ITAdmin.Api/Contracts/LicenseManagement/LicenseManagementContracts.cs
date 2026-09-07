@@ -2,13 +2,6 @@ using ITAdmin.Domain.Enums;
 
 namespace ITAdmin.Api.Contracts.LicenseManagement;
 
-public sealed record LicenseManagementOverviewResponse(
-    int CompanyCount,
-    int ActiveProductCount,
-    int PurchaseCount,
-    int PackageCount,
-    int TotalLicenseQuantity);
-
 public sealed record LicenseManagementSettingsResponse(
     string DefaultCurrency,
     bool DefaultVatIncluded,

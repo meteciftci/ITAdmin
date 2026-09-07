@@ -70,7 +70,6 @@ export function LicensePackageEditPage() {
             onCancel={() => navigate(buildLicensePackageDetailPath(id))}
             onSaved={() => {
               queryClient.invalidateQueries({ queryKey: ["license-management", "packages"] });
-              queryClient.invalidateQueries({ queryKey: ["license-management", "overview"] });
               toast.success(t("licenseManagement:messages.packageUpdated"));
               navigate(buildLicensePackageDetailPath(id));
             }}

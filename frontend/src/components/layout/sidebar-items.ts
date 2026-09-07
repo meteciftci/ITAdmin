@@ -234,12 +234,6 @@ export const getSidebarGroups = (
         visible: isLicenseManagementSectionVisible(user),
         children: [
           {
-            titleKey: "items.licenseManagementOverview",
-            to: "/license-management/overview",
-            icon: House,
-            visible: isLicenseManagementSectionVisible(user),
-          },
-          {
             titleKey: "items.licenseManagementCompanies",
             to: "/license-management/companies",
             icon: Users,

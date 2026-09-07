@@ -32,7 +32,6 @@ export function LicenseCompanyCreatePage() {
           onCancel={() => navigate(LICENSE_COMPANIES_LIST_PATH)}
           onSaved={() => {
             queryClient.invalidateQueries({ queryKey: ["license-management", "companies"] });
-            queryClient.invalidateQueries({ queryKey: ["license-management", "overview"] });
             toast.success(t("licenseManagement:messages.companyCreated"));
             navigate(LICENSE_COMPANIES_LIST_PATH);
           }}

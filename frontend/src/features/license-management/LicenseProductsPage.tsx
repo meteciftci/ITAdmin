@@ -72,7 +72,6 @@ export function LicenseProductsPage() {
       updateLicensedProductStatus(id, isActive),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["license-management", "products"] });
-      queryClient.invalidateQueries({ queryKey: ["license-management", "overview"] });
       toast.success(t("licenseManagement:messages.productStatusUpdated"));
       setConfirmTarget(null);
     },

@@ -9,25 +9,6 @@ using static ITAdmin.Persistence.Services.LicenseManagement.LicenseManagementSer
 
 namespace ITAdmin.Persistence.Services.LicenseManagement;
 
-public sealed class LicenseManagementOverviewService(AppDbContext context) : ILicenseManagementOverviewService
-{
-    public async Task<LicenseManagementOverviewSummary> GetSummaryAsync(CancellationToken cancellationToken = default)
-    {
-        var companyCount = await context.LicenseCompanies.CountAsync(cancellationToken);
-        var activeProductCount = await context.LicensedProducts.CountAsync(x => x.IsActive, cancellationToken);
-        var purchaseCount = await context.LicensePurchases.CountAsync(cancellationToken);
-        var packageCount = await context.LicensePackages.CountAsync(cancellationToken);
-        var totalLicenseQuantity = await context.LicensePackages.SumAsync(x => (int?)x.Quantity, cancellationToken) ?? 0;
-
-        return new LicenseManagementOverviewSummary(
-            companyCount,
-            activeProductCount,
-            purchaseCount,
-            packageCount,
-            totalLicenseQuantity);
-    }
-}
-
 public sealed class LicenseCompanyService(AppDbContext context) : ILicenseCompanyService
 {
     public async Task<PagedResult<LicenseCompanyListItem>> GetListAsync(

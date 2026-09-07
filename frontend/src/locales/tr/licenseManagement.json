@@ -2,15 +2,6 @@
   "licenseManagement": {
     "title": "Lisans Yönetimi",
     "description": "Kurumsal lisans envanterini yönetin.",
-    "overview": {
-      "title": "Genel Bakış",
-      "description": "Lisans yönetimi özet bilgileri.",
-      "companyCount": "Firma sayısı",
-      "activeProductCount": "Aktif ürün sayısı",
-      "purchaseCount": "Satın alma sayısı",
-      "packageCount": "Lisans paketi sayısı",
-      "totalLicenseQuantity": "Toplam lisans adedi"
-    },
     "companies": {
       "title": "Firmalar",
       "description": "Tedarikçi ve destek firmalarını yönetin.",

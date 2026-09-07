@@ -3,11 +3,6 @@ using ITAdmin.Application.Common.Models.LicenseManagement;
 
 namespace ITAdmin.Application.Abstractions.Services;
 
-public interface ILicenseManagementOverviewService
-{
-    Task<LicenseManagementOverviewSummary> GetSummaryAsync(CancellationToken cancellationToken = default);
-}
-
 public interface ILicenseManagementSettingsService
 {
     Task<LicenseManagementSettingsModel> GetSettingsAsync(CancellationToken cancellationToken = default);

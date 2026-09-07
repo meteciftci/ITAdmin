@@ -9,7 +9,6 @@ import type {
   LicensedProductDetail,
   LicensedProductFormRequest,
   LicensedProductListItem,
-  LicenseManagementOverview,
   LicenseManagementSettings,
   LicensePackageDetail,
   LicensePackageFormRequest,
@@ -47,11 +46,6 @@ import type {
 const basePath = "/license-management";
 
 export const LICENSE_MANAGEMENT_SETTINGS_QUERY_KEY = ["license-management", "settings"] as const;
-
-export const getLicenseManagementOverview = async (): Promise<LicenseManagementOverview> => {
-  const { data } = await apiClient.get<LicenseManagementOverview>(`${basePath}/overview`);
-  return data;
-};
 
 export const getLicenseManagementSettings = async (): Promise<LicenseManagementSettings> => {
   const { data } = await apiClient.get<LicenseManagementSettings>(`${basePath}/settings`);

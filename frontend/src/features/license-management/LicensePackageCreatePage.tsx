@@ -50,7 +50,6 @@ export function LicensePackageCreatePage() {
           onCancel={() => navigate(backPath)}
           onSaved={() => {
             queryClient.invalidateQueries({ queryKey: ["license-management", "packages"] });
-            queryClient.invalidateQueries({ queryKey: ["license-management", "overview"] });
             if (initialPurchaseId) {
               queryClient.invalidateQueries({
                 queryKey: ["license-management", "packages", "purchase-detail", initialPurchaseId],

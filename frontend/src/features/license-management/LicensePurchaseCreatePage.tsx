@@ -32,7 +32,6 @@ export function LicensePurchaseCreatePage() {
           onCancel={() => navigate(LICENSE_PURCHASES_LIST_PATH)}
           onSaved={() => {
             queryClient.invalidateQueries({ queryKey: ["license-management", "purchases"] });
-            queryClient.invalidateQueries({ queryKey: ["license-management", "overview"] });
             toast.success(t("licenseManagement:messages.purchaseCreated"));
             navigate(LICENSE_PURCHASES_LIST_PATH);
           }}

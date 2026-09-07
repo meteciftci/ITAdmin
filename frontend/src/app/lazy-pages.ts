@@ -195,16 +195,6 @@ export const AdDeletedObjectRestorePage = lazy(() =>
     default: module.AdDeletedObjectRestorePage,
   })),
 );
-export const LicenseManagementRedirectPage = lazy(() =>
-  import("@/features/license-management/LicenseManagementOverviewPage").then((module) => ({
-    default: module.LicenseManagementRedirectPage,
-  })),
-);
-export const LicenseManagementOverviewPage = lazy(() =>
-  import("@/features/license-management/LicenseManagementOverviewPage").then((module) => ({
-    default: module.LicenseManagementOverviewPage,
-  })),
-);
 export const LicenseCompaniesPage = lazy(() =>
   import("@/features/license-management/LicenseCompaniesPage").then((module) => ({
     default: module.LicenseCompaniesPage,
