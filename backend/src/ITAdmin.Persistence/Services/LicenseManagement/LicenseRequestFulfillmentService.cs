@@ -163,7 +163,10 @@ public sealed class LicenseRequestFulfillmentService(AppDbContext context) : ILi
         ConvertLicenseRequestItemsRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (request.Lines.Count == 0)
+        var renewalLines = request.RenewalLines ?? [];
+        var manualLines = request.ManualLines ?? [];
+
+        if (request.Lines.Count == 0 && renewalLines.Count == 0 && manualLines.Count == 0)
         {
             return new LicenseFulfillmentResult(false, "No lines were provided for conversion.");
         }
@@ -225,6 +228,57 @@ public sealed class LicenseRequestFulfillmentService(AppDbContext context) : ILi
             if (!defaultsByProduct.ContainsKey(group.Key))
             {
                 return new LicenseFulfillmentResult(false, "License package settings are required for each product.");
+            }
+        }
+
+        // Validate renewal lines.
+        var renewalSourceIds = renewalLines.Select(x => x.SourcePackageId).Distinct().ToList();
+        var renewalSources = await context.LicensePackages
+            .Where(x => renewalSourceIds.Contains(x.Id))
+            .ToDictionaryAsync(x => x.Id, cancellationToken);
+        foreach (var line in renewalLines)
+        {
+            if (!renewalSources.ContainsKey(line.SourcePackageId))
+            {
+                return new LicenseFulfillmentResult(false, "A renewal source package was not found.");
+            }
+
+            if (line.Quantity < 1)
+            {
+                return new LicenseFulfillmentResult(false, "Renewal quantity must be at least 1.");
+            }
+
+            if (line.LicenseType is { } renewalType && !Enum.IsDefined(renewalType))
+            {
+                return new LicenseFulfillmentResult(false, "Renewal license type is invalid.");
+            }
+        }
+
+        // Validate manual lines.
+        var manualProductIds = manualLines.Select(x => x.ProductId).Distinct().ToList();
+        var manualProducts = await context.LicensedProducts
+            .Where(x => manualProductIds.Contains(x.Id))
+            .ToDictionaryAsync(x => x.Id, cancellationToken);
+        foreach (var line in manualLines)
+        {
+            if (!manualProducts.TryGetValue(line.ProductId, out var manualProduct))
+            {
+                return new LicenseFulfillmentResult(false, "A manual line product was not found.");
+            }
+
+            if (!manualProduct.IsActive)
+            {
+                return new LicenseFulfillmentResult(false, "A passive product cannot be added.");
+            }
+
+            if (line.Quantity < 1)
+            {
+                return new LicenseFulfillmentResult(false, "Manual line quantity must be at least 1.");
+            }
+
+            if (!Enum.IsDefined(line.LicenseType))
+            {
+                return new LicenseFulfillmentResult(false, "Manual line license type is invalid.");
             }
         }
 
@@ -306,6 +360,144 @@ public sealed class LicenseRequestFulfillmentService(AppDbContext context) : ILi
 
         await context.SaveChangesAsync(cancellationToken);
 
+        var createdPackages = new List<LicensePackage>(packageByProduct.Values);
+
+        // Phase 2b: renewal packages (copy config from the source, optionally expire it and carry seats over).
+        var renewalPackages = new List<(ConvertFulfillmentRenewalLineInput Line, LicensePackage Source, LicensePackage New)>();
+        foreach (var line in renewalLines)
+        {
+            var source = renewalSources[line.SourcePackageId];
+            var renewal = new LicensePackage
+            {
+                PurchaseId = purchase.Id,
+                ProductId = source.ProductId,
+                LicenseType = line.LicenseType ?? source.LicenseType,
+                Quantity = line.Quantity,
+                StartDate = line.StartDate,
+                EndDate = line.EndDate,
+                IsPerpetual = line.IsPerpetual,
+                RenewalRequired = source.RenewalRequired,
+                SerialNumber = source.SerialNumber,
+                LicenseKey = source.LicenseKey,
+                LicenseAccountEmail = source.LicenseAccountEmail,
+                LicensePortalUrl = source.LicensePortalUrl,
+                LicenseNotes = source.LicenseNotes,
+                PreviousPackageId = source.Id,
+                IsActive = true,
+                Status = LicensePackageStatus.Active,
+                CreatedAt = now,
+                CreatedBy = request.ActorUserName,
+            };
+            await context.LicensePackages.AddAsync(renewal, cancellationToken);
+            renewalPackages.Add((line, source, renewal));
+            createdPackages.Add(renewal);
+
+            if (line.ExpireSourcePackage)
+            {
+                source.Status = LicensePackageStatus.Expired;
+                source.IsActive = false;
+                source.RenewalRequired = false;
+                source.UpdatedAt = now;
+                source.UpdatedBy = request.ActorUserName;
+            }
+        }
+
+        // Phase 2c: manual packages (no request line, no renewal link).
+        foreach (var line in manualLines)
+        {
+            var manual = new LicensePackage
+            {
+                PurchaseId = purchase.Id,
+                ProductId = line.ProductId,
+                LicenseType = line.LicenseType,
+                Quantity = line.Quantity,
+                StartDate = line.StartDate,
+                EndDate = line.EndDate,
+                IsPerpetual = line.IsPerpetual,
+                IsActive = true,
+                Status = LicensePackageStatus.Active,
+                CreatedAt = now,
+                CreatedBy = request.ActorUserName,
+            };
+            await context.LicensePackages.AddAsync(manual, cancellationToken);
+            createdPackages.Add(manual);
+        }
+
+        if (renewalPackages.Count > 0 || manualLines.Count > 0)
+        {
+            await context.SaveChangesAsync(cancellationToken);
+        }
+
+        // Phase 2d: carry active seat assignments from each renewed source onto its new package.
+        foreach (var (line, source, renewal) in renewalPackages)
+        {
+            if (!line.CopySeatAssignments)
+            {
+                continue;
+            }
+
+            var activeSeats = await context.LicenseSeatAssignments
+                .Where(x => x.PackageId == source.Id && x.Status == LicenseSeatAssignmentStatus.Active)
+                .ToListAsync(cancellationToken);
+
+            foreach (var seat in activeSeats)
+            {
+                await context.LicenseSeatAssignments.AddAsync(
+                    new LicenseSeatAssignment
+                    {
+                        PackageId = renewal.Id,
+                        AdObjectId = seat.AdObjectId,
+                        DisplayName = seat.DisplayName,
+                        SamAccountName = seat.SamAccountName,
+                        UserPrincipalName = seat.UserPrincipalName,
+                        Mail = seat.Mail,
+                        NationalId = seat.NationalId,
+                        Department = seat.Department,
+                        Title = seat.Title,
+                        AssignedDate = DateOnly.FromDateTime(now),
+                        Status = LicenseSeatAssignmentStatus.Active,
+                        ReplacesAssignmentId = seat.Id,
+                        SourceRequestItemId = seat.SourceRequestItemId,
+                        Note = "Carried over on renewal.",
+                        CreatedAt = now,
+                        CreatedBy = request.ActorUserName,
+                    },
+                    cancellationToken);
+
+                seat.Status = LicenseSeatAssignmentStatus.Transferred;
+                seat.ReleasedDate = DateOnly.FromDateTime(now);
+                seat.UpdatedAt = now;
+                seat.UpdatedBy = request.ActorUserName;
+            }
+
+            await WriteAuditAsync(
+                context,
+                "Renew",
+                "LicensePackage",
+                renewal.Id,
+                $"Package renewed from {source.Id}; carried {activeSeats.Count} seat assignment(s).",
+                request.ActorUserId,
+                request.ActorUserName,
+                request.ActorIpAddress,
+                request.ActorUserAgent,
+                cancellationToken);
+        }
+
+        foreach (var (_, source, renewal) in renewalPackages.Where(x => !x.Line.CopySeatAssignments))
+        {
+            await WriteAuditAsync(
+                context,
+                "Renew",
+                "LicensePackage",
+                renewal.Id,
+                $"Package renewed from {source.Id}.",
+                request.ActorUserId,
+                request.ActorUserName,
+                request.ActorIpAddress,
+                request.ActorUserAgent,
+                cancellationToken);
+        }
+
         // Phase 3: fulfillment links + item/request status derivation.
         foreach (var line in request.Lines)
         {
@@ -335,7 +527,9 @@ public sealed class LicenseRequestFulfillmentService(AppDbContext context) : ILi
             "Create",
             "LicensePurchase",
             purchase.Id,
-            $"License purchase received {packageByProduct.Count} fulfillment package(s) from {request.Lines.Count} request line(s).",
+            $"License purchase received {createdPackages.Count} package(s): "
+            + $"{packageByProduct.Count} from {request.Lines.Count} request line(s), "
+            + $"{renewalPackages.Count} renewal(s), {manualLines.Count} manual.",
             request.ActorUserId,
             request.ActorUserName,
             request.ActorIpAddress,
@@ -364,7 +558,7 @@ public sealed class LicenseRequestFulfillmentService(AppDbContext context) : ILi
             true,
             "License requests converted into a purchase.",
             purchase.Id,
-            packageByProduct.Values.Select(x => x.Id).ToList());
+            createdPackages.Select(x => x.Id).ToList());
     }
 
     private async Task DeriveAndApplyRequestStatusesAsync(

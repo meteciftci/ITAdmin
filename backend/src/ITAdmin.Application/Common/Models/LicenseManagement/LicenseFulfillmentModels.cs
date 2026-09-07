@@ -68,6 +68,26 @@ public sealed record ConvertFulfillmentNewPurchaseInput(
     bool? VatIncluded,
     string? Notes);
 
+/// <summary>Renew an existing package into a new one under the target purchase.</summary>
+public sealed record ConvertFulfillmentRenewalLineInput(
+    Guid SourcePackageId,
+    int Quantity,
+    LicenseType? LicenseType,
+    DateOnly? StartDate,
+    DateOnly? EndDate,
+    bool IsPerpetual,
+    bool ExpireSourcePackage,
+    bool CopySeatAssignments);
+
+/// <summary>A brand-new package added straight to the target purchase (no request line).</summary>
+public sealed record ConvertFulfillmentManualLineInput(
+    Guid ProductId,
+    int Quantity,
+    LicenseType LicenseType,
+    DateOnly? StartDate,
+    DateOnly? EndDate,
+    bool IsPerpetual);
+
 public sealed record ConvertLicenseRequestItemsRequest(
     Guid? ExistingPurchaseId,
     ConvertFulfillmentNewPurchaseInput? NewPurchase,
@@ -76,7 +96,9 @@ public sealed record ConvertLicenseRequestItemsRequest(
     Guid? ActorUserId,
     string? ActorUserName,
     string? ActorIpAddress,
-    string? ActorUserAgent);
+    string? ActorUserAgent,
+    IReadOnlyList<ConvertFulfillmentRenewalLineInput>? RenewalLines = null,
+    IReadOnlyList<ConvertFulfillmentManualLineInput>? ManualLines = null);
 
 public sealed record LicenseFulfillmentResult(
     bool IsSuccess,

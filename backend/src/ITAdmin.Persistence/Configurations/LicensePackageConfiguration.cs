@@ -47,6 +47,8 @@ public sealed class LicensePackageConfiguration : IEntityTypeConfiguration<Licen
             .HasMaxLength(50)
             .IsRequired();
 
+        builder.Property(x => x.PreviousPackageId).HasColumnName("previous_package_id");
+
         builder.Property(x => x.CreatedAt).HasColumnName("created_at");
         builder.Property(x => x.CreatedBy).HasColumnName("created_by").HasMaxLength(200);
         builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
@@ -62,9 +64,15 @@ public sealed class LicensePackageConfiguration : IEntityTypeConfiguration<Licen
             .HasForeignKey(x => x.ProductId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        builder.HasOne(x => x.PreviousPackage)
+            .WithMany()
+            .HasForeignKey(x => x.PreviousPackageId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasIndex(x => x.PurchaseId);
         builder.HasIndex(x => x.ProductId);
         builder.HasIndex(x => x.Status);
         builder.HasIndex(x => x.IsActive);
+        builder.HasIndex(x => x.PreviousPackageId);
     }
 }

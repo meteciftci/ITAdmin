@@ -22,7 +22,11 @@ public class LicensePackage : AuditableEntity
     public bool IsActive { get; set; } = true;
     public LicensePackageStatus Status { get; set; } = LicensePackageStatus.Active;
 
+    /// <summary>When this package renews an earlier one, the package it superseded.</summary>
+    public Guid? PreviousPackageId { get; set; }
+
     public LicensePurchase Purchase { get; set; } = null!;
+    public LicensePackage? PreviousPackage { get; set; }
     public LicensedProduct Product { get; set; } = null!;
     public ICollection<LicenseRequestItemFulfillment> Fulfillments { get; set; } = new List<LicenseRequestItemFulfillment>();
     public ICollection<LicenseSeatAssignment> SeatAssignments { get; set; } = new List<LicenseSeatAssignment>();

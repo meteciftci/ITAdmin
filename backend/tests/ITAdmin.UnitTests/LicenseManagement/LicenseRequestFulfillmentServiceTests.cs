@@ -229,6 +229,118 @@ public sealed class LicenseRequestFulfillmentServiceTests
         Assert.Contains("Create", actions);
     }
 
+    [Fact]
+    public async Task Convert_RenewalLine_CopiesPackageExpiresSourceAndCarriesSeats()
+    {
+        await using var context = CreateDbContext();
+        var product = await SeedProductAsync(context);
+
+        var sourcePurchase = new LicensePurchase
+        {
+            PurchaseType = LicensePurchaseType.DirectPurchase,
+            Title = "Original purchase",
+            Status = LicensePurchaseStatus.Active,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "seed",
+        };
+        context.LicensePurchases.Add(sourcePurchase);
+        await context.SaveChangesAsync();
+
+        var source = new LicensePackage
+        {
+            PurchaseId = sourcePurchase.Id,
+            ProductId = product,
+            LicenseType = LicenseType.Subscription,
+            Quantity = 5,
+            SerialNumber = "SER-1",
+            IsActive = true,
+            Status = LicensePackageStatus.Active,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "seed",
+        };
+        context.LicensePackages.Add(source);
+        await context.SaveChangesAsync();
+
+        var seat = new LicenseSeatAssignment
+        {
+            PackageId = source.Id,
+            DisplayName = "Ada Lovelace",
+            Mail = "ada@example.com",
+            AssignedDate = new DateOnly(2026, 1, 1),
+            Status = LicenseSeatAssignmentStatus.Active,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "seed",
+        };
+        context.LicenseSeatAssignments.Add(seat);
+        await context.SaveChangesAsync();
+
+        var service = new LicenseRequestFulfillmentService(context);
+        var result = await service.ConvertToPurchaseAsync(
+            new ConvertLicenseRequestItemsRequest(
+                null,
+                new ConvertFulfillmentNewPurchaseInput(
+                    LicensePurchaseType.Renewal, "Renewal 2027", null, new DateOnly(2027, 1, 1),
+                    null, null, null, "TRY", false, null),
+                [],
+                [],
+                null, "tester", null, null,
+                RenewalLines:
+                [
+                    new ConvertFulfillmentRenewalLineInput(
+                        source.Id, 5, null, new DateOnly(2027, 1, 1), new DateOnly(2028, 1, 1),
+                        false, ExpireSourcePackage: true, CopySeatAssignments: true),
+                ]),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+
+        var refreshedSource = await context.LicensePackages.AsNoTracking().FirstAsync(x => x.Id == source.Id);
+        Assert.Equal(LicensePackageStatus.Expired, refreshedSource.Status);
+        Assert.False(refreshedSource.IsActive);
+
+        var renewal = await context.LicensePackages.AsNoTracking()
+            .FirstAsync(x => x.PreviousPackageId == source.Id);
+        Assert.Equal("SER-1", renewal.SerialNumber);
+        Assert.Equal(5, renewal.Quantity);
+
+        var sourceSeat = await context.LicenseSeatAssignments.AsNoTracking().FirstAsync(x => x.Id == seat.Id);
+        Assert.Equal(LicenseSeatAssignmentStatus.Transferred, sourceSeat.Status);
+
+        var carried = await context.LicenseSeatAssignments.AsNoTracking()
+            .FirstAsync(x => x.PackageId == renewal.Id && x.Status == LicenseSeatAssignmentStatus.Active);
+        Assert.Equal(seat.Id, carried.ReplacesAssignmentId);
+        Assert.Equal("Ada Lovelace", carried.DisplayName);
+    }
+
+    [Fact]
+    public async Task Convert_ManualLine_AddsPackageWithoutRequestOrRenewalLink()
+    {
+        await using var context = CreateDbContext();
+        var product = await SeedProductAsync(context);
+        var service = new LicenseRequestFulfillmentService(context);
+
+        var result = await service.ConvertToPurchaseAsync(
+            new ConvertLicenseRequestItemsRequest(
+                null,
+                new ConvertFulfillmentNewPurchaseInput(
+                    LicensePurchaseType.DirectPurchase, "Manual purchase", null, null,
+                    null, null, null, "TRY", false, null),
+                [],
+                [],
+                null, "tester", null, null,
+                ManualLines:
+                [
+                    new ConvertFulfillmentManualLineInput(product, 3, LicenseType.Perpetual, null, null, true),
+                ]),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        var package = await context.LicensePackages.AsNoTracking().SingleAsync();
+        Assert.Equal(3, package.Quantity);
+        Assert.Equal(LicenseType.Perpetual, package.LicenseType);
+        Assert.Null(package.PreviousPackageId);
+    }
+
     private static ConvertLicenseRequestItemsRequest BuildConvert(
         Guid productId,
         (Guid ItemId, int Quantity)[] lines) =>

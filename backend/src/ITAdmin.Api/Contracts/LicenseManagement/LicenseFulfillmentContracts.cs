@@ -49,11 +49,31 @@ public sealed record ConvertFulfillmentNewPurchaseRequest(
     bool? VatIncluded,
     string? Notes);
 
+public sealed record ConvertFulfillmentRenewalLineRequest(
+    Guid SourcePackageId,
+    int Quantity,
+    LicenseType? LicenseType,
+    DateOnly? StartDate,
+    DateOnly? EndDate,
+    bool IsPerpetual,
+    bool ExpireSourcePackage,
+    bool CopySeatAssignments);
+
+public sealed record ConvertFulfillmentManualLineRequest(
+    Guid ProductId,
+    int Quantity,
+    LicenseType LicenseType,
+    DateOnly? StartDate,
+    DateOnly? EndDate,
+    bool IsPerpetual);
+
 public sealed record ConvertLicenseRequestItemsRequest(
     Guid? ExistingPurchaseId,
     ConvertFulfillmentNewPurchaseRequest? NewPurchase,
     IReadOnlyList<ConvertFulfillmentLineRequest> Lines,
-    IReadOnlyList<ConvertFulfillmentPackageDefaultsRequest> PackageDefaults);
+    IReadOnlyList<ConvertFulfillmentPackageDefaultsRequest> PackageDefaults,
+    IReadOnlyList<ConvertFulfillmentRenewalLineRequest>? RenewalLines = null,
+    IReadOnlyList<ConvertFulfillmentManualLineRequest>? ManualLines = null);
 
 public sealed record LicenseFulfillmentResponse(
     bool Success,

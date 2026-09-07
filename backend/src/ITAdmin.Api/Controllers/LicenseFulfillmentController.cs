@@ -105,7 +105,16 @@ public sealed class LicenseFulfillmentController(
                 LicenseManagementActorResolver.ResolveActorUserId(User),
                 LicenseManagementActorResolver.ResolveActorUserName(User),
                 LicenseManagementActorResolver.ResolveIpAddress(this),
-                LicenseManagementActorResolver.ResolveUserAgent(this)),
+                LicenseManagementActorResolver.ResolveUserAgent(this),
+                (request.RenewalLines ?? [])
+                    .Select(x => new AppModels.ConvertFulfillmentRenewalLineInput(
+                        x.SourcePackageId, x.Quantity, x.LicenseType, x.StartDate, x.EndDate,
+                        x.IsPerpetual, x.ExpireSourcePackage, x.CopySeatAssignments))
+                    .ToList(),
+                (request.ManualLines ?? [])
+                    .Select(x => new AppModels.ConvertFulfillmentManualLineInput(
+                        x.ProductId, x.Quantity, x.LicenseType, x.StartDate, x.EndDate, x.IsPerpetual))
+                    .ToList()),
             cancellationToken);
 
         if (!result.IsSuccess)
