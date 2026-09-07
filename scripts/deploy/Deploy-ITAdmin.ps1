@@ -1388,10 +1388,31 @@ Write-Host ""
 Write-Host "ITAdmin deploy" -ForegroundColor White
 Write-Host "==============" -ForegroundColor White
 
+# Everything from here is transcribed to a log, so an unattended run (the Update Coordinator has
+# no console) leaves something to read. Start-Transcript flushes on every write, so the file is
+# useful even if the run is killed before Stop-Transcript.
+$Script:DeployLog = $null
+try {
+    New-Item -ItemType Directory -Path $Script:Layout.LogsRoot -Force -ErrorAction SilentlyContinue | Out-Null
+    $Script:DeployLog = Join-Path $Script:Layout.LogsRoot ("deploy-{0}.log" -f (Get-Date -Format "yyyyMMdd-HHmmss"))
+    Start-Transcript -Path $Script:DeployLog -ErrorAction Stop | Out-Null
+    Write-Host "    Log: $Script:DeployLog"
+}
+catch {
+    $Script:DeployLog = $null
+    Write-Host "    (transcript unavailable: $($_.Exception.Message))"
+}
+
+function Stop-DeployTranscript {
+    if ($null -ne $Script:DeployLog) {
+        try { Stop-Transcript | Out-Null } catch { }
+    }
+}
+
 try {
     # An IIS-only change (rollback, HTTPS binding) does not need the build toolchain, so it skips
     # the full preflight - only Administrator rights and the WebAdministration module matter.
-    if ($Rollback.IsPresent) { Invoke-Rollback; exit 0 }
+    if ($Rollback.IsPresent) { Invoke-Rollback; Stop-DeployTranscript; exit 0 }
 
     if ($ConfigureHttps.IsPresent -or $DisableHttps.IsPresent) {
         Import-Module WebAdministration -ErrorAction Stop
@@ -1405,7 +1426,7 @@ try {
         Save-AppConfig -Config $config
         Sync-HttpsAppPoolEnv -Config $config
         Write-Ok "HTTPS configuration updated."
-        exit 0
+        Stop-DeployTranscript; exit 0
     }
 
     Test-Preflight
@@ -1421,7 +1442,7 @@ try {
 
     if ($WhatIfPreflightOnly.IsPresent) {
         Write-Ok "Preflight and configuration succeeded. No build or deployment was performed."
-        exit 0
+        Stop-DeployTranscript; exit 0
     }
 
     $source = Sync-Source
@@ -1473,12 +1494,31 @@ try {
     Save-DeployState -State $state
 
     Write-DeploySummary -Config $config -Source $source -FirstRun $firstRun
+    Stop-DeployTranscript
     exit 0
 }
 catch {
     Write-Host ""
     Write-Fail $_.Exception.Message
+    Write-Host $_.InvocationInfo.PositionMessage
+    Write-Host $_.ScriptStackTrace
     Write-Host ""
     Write-Host "The deployment did not complete. The previously active build (if any) was left in place." -ForegroundColor Yellow
+
+    # A failed run must not leave the site down: if the pool was stopped for a config change and
+    # never restarted, start it so IIS keeps serving the previous build.
+    try {
+        Import-Module WebAdministration -ErrorAction SilentlyContinue
+        if ((Get-WebAppPoolState -Name $AppPoolName -ErrorAction SilentlyContinue).Value -eq "Stopped") {
+            Start-WebAppPool -Name $AppPoolName -ErrorAction SilentlyContinue
+            Write-Host "    Started app pool $AppPoolName so the site stays reachable." -ForegroundColor Yellow
+        }
+    }
+    catch { }
+
+    if ($null -ne $Script:DeployLog) {
+        Write-Host "    Full log: $Script:DeployLog" -ForegroundColor Yellow
+    }
+    Stop-DeployTranscript
     exit 1
 }

@@ -101,7 +101,12 @@ internal static class CoordinatorRunner
 
             var previousHostAgentExecutable = ResolveNewestHostAgentExecutable(settings.InstallRoot);
 
-            var exitCode = await RunProcessAsync("powershell.exe",
+            var logDirectory = Path.Combine(dataRoot, "logs");
+            Directory.CreateDirectory(logDirectory);
+            var coordinatorLog = Path.Combine(
+                logDirectory, $"update-coordinator-{DateTime.UtcNow:yyyyMMdd-HHmmss}.log");
+
+            var (exitCode, output) = await RunProcessAsync("powershell.exe",
             [
                 "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
                 "-File", deployScript,
@@ -113,13 +118,17 @@ internal static class CoordinatorRunner
                 "-NoHostAgentService",
             ], cancellationToken);
 
+            try { await File.WriteAllTextAsync(coordinatorLog, output, cancellationToken); }
+            catch (Exception) { /* diagnostics only */ }
+
             if (exitCode != 0)
             {
                 WriteOperation(operationPath, operation with
                 {
                     Phase = "Failed",
                     CompletedAtUtc = DateTimeOffset.UtcNow,
-                    Message = $"Deploy-ITAdmin.ps1 exited {exitCode}. See the deployment log for detail.",
+                    Message = $"Deploy-ITAdmin.ps1 exited {exitCode}. {LastLines(output, 12)} "
+                        + $"Full output: {coordinatorLog}",
                 });
                 return exitCode;
             }
@@ -183,7 +192,7 @@ internal static class CoordinatorRunner
     {
         var configured = await RunProcessAsync(
             "sc.exe", ["config", "ITAdminHostAgent", "binPath=", $"\"{executable}\""], cancellationToken);
-        if (configured != 0)
+        if (configured.ExitCode != 0)
         {
             throw new InvalidOperationException("The Host Agent service image path could not be updated.");
         }
@@ -191,7 +200,7 @@ internal static class CoordinatorRunner
         await RunProcessAsync("sc.exe", ["stop", "ITAdminHostAgent"], cancellationToken);
         await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
         var started = await RunProcessAsync("sc.exe", ["start", "ITAdminHostAgent"], cancellationToken);
-        if (started != 0)
+        if (started.ExitCode != 0)
         {
             throw new InvalidOperationException("The updated Host Agent service could not be started.");
         }
@@ -255,18 +264,41 @@ internal static class CoordinatorRunner
         }
     }
 
-    private static async Task<int> RunProcessAsync(
+    private static async Task<(int ExitCode, string Output)> RunProcessAsync(
         string fileName, IReadOnlyList<string> arguments, CancellationToken cancellationToken)
     {
-        var info = new ProcessStartInfo { FileName = fileName, UseShellExecute = false, CreateNoWindow = true };
+        var info = new ProcessStartInfo
+        {
+            FileName = fileName,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
         foreach (var argument in arguments)
         {
             info.ArgumentList.Add(argument);
         }
 
         using var process = Process.Start(info) ?? throw new InvalidOperationException("Process could not be started.");
+        var buffer = new System.Text.StringBuilder();
+        process.OutputDataReceived += (_, e) => { if (e.Data is not null) { lock (buffer) { buffer.AppendLine(e.Data); } } };
+        process.ErrorDataReceived += (_, e) => { if (e.Data is not null) { lock (buffer) { buffer.AppendLine(e.Data); } } };
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
         await process.WaitForExitAsync(cancellationToken);
-        return process.ExitCode;
+        return (process.ExitCode, buffer.ToString());
+    }
+
+    private static string LastLines(string text, int count)
+    {
+        var lines = text.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Select(line => line.TrimEnd('\r'))
+            .Where(line => line.Trim().Length > 0)
+            .ToArray();
+        return lines.Length == 0
+            ? "(no output was captured)"
+            : string.Join(" | ", lines[^Math.Min(count, lines.Length)..]);
     }
 }
 
