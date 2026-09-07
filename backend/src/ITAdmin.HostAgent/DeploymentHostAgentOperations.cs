@@ -42,19 +42,22 @@ public sealed class DeploymentHostAgentOperations(
             return;
         }
 
-        // A running phase with no live process behind it means the service died mid-update. The
-        // build on disk may be half-produced and the schema may be part-migrated; that is an
-        // operator-review situation, never a silent retry.
+        // The service died mid-update (often because the update swapped the Host Agent binary and
+        // restarted this very service). Record it as Failed - a terminal, non-blocking state - so
+        // the operator can simply retry from Settings -> Updates. Migrations are forward-only and
+        // activation is health-gated with automatic rollback, so a fresh run converges.
         logger.LogWarning(
-            "An update ({OperationId}) targeting {TargetCommit} was in phase {Phase} when the agent last stopped.",
+            "An update ({OperationId}) targeting {TargetCommit} was in phase {Phase} when the agent last stopped; "
+            + "marking it Failed so it does not block a retry.",
             record.OperationId, record.TargetCommit, record.Phase);
 
         WriteOperation(record with
         {
-            Phase = HostAgentUpdatePhase.RequiresOperatorReview,
+            Phase = HostAgentUpdatePhase.Failed,
             CompletedAtUtc = DateTimeOffset.UtcNow,
-            Message = "A previous update was interrupted. Review the deployment state and the ITAdmin Host Agent log, "
-                      + "then run Deploy-ITAdmin.ps1 on this host to converge.",
+            Message = "A previous update was interrupted before it reported completion. Retrying from "
+                      + "Settings -> Updates is safe. See the ITAdmin Host Agent log and "
+                      + "%ProgramData%\\ITAdmin\\logs for what happened.",
         });
     }
 
@@ -124,15 +127,25 @@ public sealed class DeploymentHostAgentOperations(
         try
         {
             var existing = ReadOperation();
-            if (existing is not null && !IsTerminal(existing.Phase))
+
+            // Only a genuinely fresh, still-running update blocks a new request. A Failed /
+            // RequiresOperatorReview record, or a running record that has been sitting untouched
+            // for longer than a build could plausibly take, is superseded: migrations are
+            // forward-only and activation is health-gated with automatic rollback, so retrying an
+            // interrupted update is safe and is the operator's only in-app recourse.
+            if (existing is not null
+                && IsRunningPhase(existing.Phase)
+                && existing.StartedAtUtc is { } startedAtUtc
+                && DateTimeOffset.UtcNow - startedAtUtc < StaleRunningThreshold)
             {
                 return HostAgentResponse.Rejected("An update is already in progress.", request.CorrelationId);
             }
-            if (existing?.Phase is HostAgentUpdatePhase.RequiresOperatorReview)
+
+            if (existing is not null && !IsTerminal(existing.Phase))
             {
-                return HostAgentResponse.Rejected(
-                    "A previous update needs operator review before another can start. Run Deploy-ITAdmin.ps1 on this host.",
-                    request.CorrelationId);
+                logger.LogWarning(
+                    "Superseding a stalled update ({OperationId}) left in phase {Phase} since {StartedAtUtc}.",
+                    existing.OperationId, existing.Phase, existing.StartedAtUtc);
             }
 
             var access = await gitClient.DiagnoseAccessAsync(cancellationToken);
@@ -428,6 +441,13 @@ public sealed class DeploymentHostAgentOperations(
     private static bool IsTerminal(HostAgentUpdatePhase phase) =>
         phase is HostAgentUpdatePhase.Idle or HostAgentUpdatePhase.Completed
             or HostAgentUpdatePhase.Failed or HostAgentUpdatePhase.RequiresOperatorReview;
+
+    private static bool IsRunningPhase(HostAgentUpdatePhase phase) =>
+        phase is HostAgentUpdatePhase.Pulling or HostAgentUpdatePhase.Building
+            or HostAgentUpdatePhase.Migrating or HostAgentUpdatePhase.Activating;
+
+    /// <summary>A running record older than this is treated as stalled and may be superseded.</summary>
+    private static readonly TimeSpan StaleRunningThreshold = TimeSpan.FromMinutes(20);
 
     private static HostAgentUpdateStatus ToStatus(UpdateOperationRecord? record)
     {
