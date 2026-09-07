@@ -125,6 +125,40 @@ param(
 $ErrorActionPreference = "Stop"
 
 # --------------------------------------------------------------------------------------------
+# Native command runner
+# --------------------------------------------------------------------------------------------
+
+function Invoke-Native {
+    <#
+        Runs an external tool (git, dotnet, npm) and fails only on a non-zero exit code.
+
+        git/dotnet/npm write progress and warnings to stderr. Under $ErrorActionPreference = 'Stop'
+        - especially once a transcript is running or stdout/stderr is redirected (the Update
+        Coordinator does both) - Windows PowerShell 5.1 turns any such stderr line into a
+        terminating NativeCommandError, so a harmless "npm warn deprecated ..." aborts the whole
+        deploy before the exit code is ever checked. Drop to 'Continue' for the duration of the call
+        and rely on $LASTEXITCODE.
+    #>
+    param(
+        [Parameter(Mandatory = $true)][string]$FilePath,
+        [Parameter(Mandatory = $true)][string[]]$ArgumentList,
+        [string]$ErrorMessage = "Command failed"
+    )
+
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        & $FilePath @ArgumentList 2>&1 | ForEach-Object { Write-Host "      $_" }
+        $code = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previous
+    }
+
+    if ($code -ne 0) { throw ("{0} (exit {1})." -f $ErrorMessage, $code) }
+}
+
+# --------------------------------------------------------------------------------------------
 # Output
 # --------------------------------------------------------------------------------------------
 
@@ -563,16 +597,18 @@ function Sync-Source {
         else {
             New-Item -ItemType Directory -Path $Script:Layout.InstallRoot -Force | Out-Null
         }
-        & git clone --branch $Branch --single-branch $RepositoryUrl $Script:Layout.SrcRoot
-        if ($LASTEXITCODE -ne 0) { throw "git clone failed (exit $LASTEXITCODE)." }
+        Invoke-Native -FilePath "git" -ErrorMessage "git clone failed" -ArgumentList @(
+            "clone", "--branch", $Branch, "--single-branch", $RepositoryUrl, $Script:Layout.SrcRoot)
     }
     else {
-        & git -C $Script:Layout.SrcRoot remote set-url origin $RepositoryUrl
-        & git -C $Script:Layout.SrcRoot fetch --prune origin
-        if ($LASTEXITCODE -ne 0) { throw "git fetch failed (exit $LASTEXITCODE)." }
-        & git -C $Script:Layout.SrcRoot reset --hard "origin/$Branch"
-        if ($LASTEXITCODE -ne 0) { throw "git reset --hard origin/$Branch failed (exit $LASTEXITCODE)." }
-        & git -C $Script:Layout.SrcRoot clean -fdx | Out-Null
+        Invoke-Native -FilePath "git" -ErrorMessage "git remote set-url failed" -ArgumentList @(
+            "-C", $Script:Layout.SrcRoot, "remote", "set-url", "origin", $RepositoryUrl)
+        Invoke-Native -FilePath "git" -ErrorMessage "git fetch failed" -ArgumentList @(
+            "-C", $Script:Layout.SrcRoot, "fetch", "--prune", "origin")
+        Invoke-Native -FilePath "git" -ErrorMessage "git reset --hard origin/$Branch failed" -ArgumentList @(
+            "-C", $Script:Layout.SrcRoot, "reset", "--hard", "origin/$Branch")
+        Invoke-Native -FilePath "git" -ErrorMessage "git clean failed" -ArgumentList @(
+            "-C", $Script:Layout.SrcRoot, "clean", "-fdx")
     }
 
     $sha = (& git -C $Script:Layout.SrcRoot rev-parse --short HEAD).Trim()
@@ -600,27 +636,24 @@ function Invoke-Build {
     }
 
     Write-Detail "dotnet publish ITAdmin.Api"
-    & dotnet publish (Join-Path $src "backend\src\ITAdmin.Api\ITAdmin.Api.csproj") `
-        -c Release -o $appOut --nologo
-    if ($LASTEXITCODE -ne 0) { throw "dotnet publish (ITAdmin.Api) failed (exit $LASTEXITCODE)." }
+    Invoke-Native -FilePath "dotnet" -ErrorMessage "dotnet publish (ITAdmin.Api) failed" -ArgumentList @(
+        "publish", (Join-Path $src "backend\src\ITAdmin.Api\ITAdmin.Api.csproj"), "-c", "Release", "-o", $appOut, "--nologo")
 
     Write-Detail "dotnet publish ITAdmin.HostAgent"
-    & dotnet publish (Join-Path $src "backend\src\ITAdmin.HostAgent\ITAdmin.HostAgent.csproj") `
-        -c Release -o $agentOut --nologo
-    if ($LASTEXITCODE -ne 0) { throw "dotnet publish (ITAdmin.HostAgent) failed (exit $LASTEXITCODE)." }
+    Invoke-Native -FilePath "dotnet" -ErrorMessage "dotnet publish (ITAdmin.HostAgent) failed" -ArgumentList @(
+        "publish", (Join-Path $src "backend\src\ITAdmin.HostAgent\ITAdmin.HostAgent.csproj"), "-c", "Release", "-o", $agentOut, "--nologo")
 
     Write-Detail "dotnet publish ITAdmin.UpdateCoordinator"
-    & dotnet publish (Join-Path $src "backend\src\ITAdmin.UpdateCoordinator\ITAdmin.UpdateCoordinator.csproj") `
-        -c Release -o $coordOut --nologo
-    if ($LASTEXITCODE -ne 0) { throw "dotnet publish (ITAdmin.UpdateCoordinator) failed (exit $LASTEXITCODE)." }
+    Invoke-Native -FilePath "dotnet" -ErrorMessage "dotnet publish (ITAdmin.UpdateCoordinator) failed" -ArgumentList @(
+        "publish", (Join-Path $src "backend\src\ITAdmin.UpdateCoordinator\ITAdmin.UpdateCoordinator.csproj"), "-c", "Release", "-o", $coordOut, "--nologo")
 
     Write-Detail "npm ci && npm run build (frontend)"
     Push-Location (Join-Path $src "frontend")
     try {
-        & npm ci
-        if ($LASTEXITCODE -ne 0) { throw "npm ci failed (exit $LASTEXITCODE)." }
-        & npm run build
-        if ($LASTEXITCODE -ne 0) { throw "npm run build failed (exit $LASTEXITCODE)." }
+        # Through cmd.exe so npm's own npm.ps1 wrapper cannot re-assert
+        # $ErrorActionPreference='Stop' and make a stderr "npm warn deprecated ..." line fatal.
+        Invoke-Native -FilePath "cmd.exe" -ArgumentList @("/c", "npm", "ci") -ErrorMessage "npm ci failed"
+        Invoke-Native -FilePath "cmd.exe" -ArgumentList @("/c", "npm", "run", "build") -ErrorMessage "npm run build failed"
     }
     finally { Pop-Location }
 
