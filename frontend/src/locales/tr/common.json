@@ -73,7 +73,9 @@
       "first": "İlk",
       "previous": "Önceki",
       "next": "Sonraki",
-      "last": "Son"
+      "last": "Son",
+      "directoryRange": "{{start}}–{{end}} arası kayıt",
+      "directoryRangeMore": "{{start}}–{{end}} arası kayıt · daha fazlası var"
     },
     "dataTable": {
       "filters": "Filtreler",
@@ -100,4 +102,3 @@
     }
   }
 }
-

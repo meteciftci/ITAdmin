@@ -299,6 +299,7 @@ export function AdComputersPage() {
                       pageNumber={computersQuery.data.pageNumber}
                       pageSize={computersQuery.data.pageSize}
                       hasNextPage={computersQuery.data.hasNextPage}
+                      currentPageCount={computersQuery.data.items.length}
                       onPageChange={(nextPage) => {
                         updateListState({ pageNumber: nextPage });
                       }}

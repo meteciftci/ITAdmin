@@ -284,6 +284,7 @@ export function AdUsersPage() {
                     pageNumber={usersQuery.data.pageNumber}
                     pageSize={usersQuery.data.pageSize}
                     hasNextPage={usersQuery.data.hasNextPage}
+                    currentPageCount={usersQuery.data.items.length}
                     onPageChange={(nextPage) => {
                       updateListState({ pageNumber: nextPage });
                     }}

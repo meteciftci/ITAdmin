@@ -13,7 +13,7 @@ export const AD_ORGANIZATIONAL_UNITS_LIST_DEFAULTS: AdOrganizationalUnitsListSta
   pageSize: 25,
 };
 
-const PAGE_SIZE_OPTIONS = new Set([10, 25, 50]);
+const PAGE_SIZE_OPTIONS = new Set([10, 25, 50, 100]);
 
 export function normalizeAdOrganizationalUnitsListState(
   state: Partial<AdOrganizationalUnitsListState> | null | undefined,

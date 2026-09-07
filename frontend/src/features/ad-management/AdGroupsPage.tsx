@@ -176,6 +176,7 @@ export function AdGroupsPage() {
                       pageNumber={groupsQuery.data.pageNumber}
                       pageSize={groupsQuery.data.pageSize}
                       hasNextPage={groupsQuery.data.hasNextPage}
+                      currentPageCount={groupsQuery.data.items.length}
                       onPageChange={(nextPage) => {
                         updateListState({ pageNumber: nextPage });
                       }}

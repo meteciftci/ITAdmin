@@ -53,6 +53,11 @@ export type DataTableDirectoryPaginationProps = {
   pageNumber: number;
   pageSize: number;
   hasNextPage: boolean;
+  /**
+   * Rows on the current page. A directory (LDAP-paged) listing has no cheap total,
+   * so when this is provided the summary shows the record range instead of just the page.
+   */
+  currentPageCount?: number;
   onPageChange: (pageNumber: number) => void;
   onPageSizeChange: (pageSize: number) => void;
   pageSizeOptions?: number[];
@@ -428,8 +433,14 @@ export function DataTablePagination<TData>(props: DataTablePaginationProps<TData
   if (props.mode === "directory") {
     const pageSizeOptions = props.pageSizeOptions ?? DEFAULT_PAGE_SIZE_OPTIONS;
     const isFirstPage = props.pageNumber <= 1;
-    const summary =
-      props.summaryText ?? t("pagination.pageOnly", { pageNumber: props.pageNumber });
+    let summary = props.summaryText ?? t("pagination.pageOnly", { pageNumber: props.pageNumber });
+    if (!props.summaryText && typeof props.currentPageCount === "number" && props.currentPageCount > 0) {
+      const start = (props.pageNumber - 1) * props.pageSize + 1;
+      const end = start + props.currentPageCount - 1;
+      summary = props.hasNextPage
+        ? t("pagination.directoryRangeMore", { start, end })
+        : t("pagination.directoryRange", { start, end });
+    }
     return (
       <div className="flex flex-col gap-4 border-t bg-muted/20 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground">{summary}</p>

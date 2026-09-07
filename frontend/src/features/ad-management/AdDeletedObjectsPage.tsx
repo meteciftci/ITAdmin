@@ -157,6 +157,7 @@ export function AdDeletedObjectsPage() {
                       pageNumber={deletedObjectsQuery.data.pageNumber}
                       pageSize={deletedObjectsQuery.data.pageSize}
                       hasNextPage={deletedObjectsQuery.data.hasNextPage}
+                      currentPageCount={deletedObjectsQuery.data.items.length}
                       onPageChange={(nextPage) => {
                         updateListState({ pageNumber: nextPage });
                       }}

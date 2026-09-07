@@ -178,6 +178,7 @@ export function AdOrganizationalUnitsPage() {
                       pageNumber={organizationalUnitsQuery.data.pageNumber}
                       pageSize={organizationalUnitsQuery.data.pageSize}
                       hasNextPage={organizationalUnitsQuery.data.hasNextPage}
+                      currentPageCount={organizationalUnitsQuery.data.items.length}
                       onPageChange={(nextPage) => {
                         updateListState({ pageNumber: nextPage });
                       }}

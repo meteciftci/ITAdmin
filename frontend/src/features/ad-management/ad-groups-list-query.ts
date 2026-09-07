@@ -12,7 +12,7 @@ export const AD_GROUPS_LIST_DEFAULTS: AdGroupsListState = {
   pageSize: 20,
 };
 
-const PAGE_SIZE_OPTIONS = new Set([10, 20, 25, 50]);
+const PAGE_SIZE_OPTIONS = new Set([10, 20, 25, 50, 100]);
 
 export function normalizeAdGroupsListState(
   state: Partial<AdGroupsListState> | null | undefined,

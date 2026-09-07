@@ -24,7 +24,7 @@ const VALID_STATUS: ReadonlySet<AdComputerStatusFilter> = new Set([
   "all",
 ]);
 
-const PAGE_SIZE_OPTIONS = new Set([10, 20, 25, 50]);
+const PAGE_SIZE_OPTIONS = new Set([10, 20, 25, 50, 100]);
 
 export function normalizeAdComputersListState(
   state: Partial<AdComputersListState> | null | undefined,

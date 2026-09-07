@@ -42,7 +42,7 @@ import {
 } from "@/features/ad-management/ad-management-api-message";
 
 const DEFAULT_PAGE_SIZE = 20;
-const PAGE_SIZE_OPTIONS = [10, 20, 50] as const;
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const;
 
 type Props = {
   groupId: string;
@@ -291,6 +291,7 @@ export function AdGroupMembersSection({
                         pageNumber={pageNumber}
                         pageSize={pageSize}
                         hasNextPage={hasNextPage}
+                        currentPageCount={items.length}
                         onPageChange={setPageNumber}
                         onPageSizeChange={(nextSize) => {
                           setPageSize(nextSize);

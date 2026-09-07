@@ -73,7 +73,9 @@
       "first": "First",
       "previous": "Previous",
       "next": "Next",
-      "last": "Last"
+      "last": "Last",
+      "directoryRange": "Records {{start}}–{{end}}",
+      "directoryRangeMore": "Records {{start}}–{{end}} · more available"
     },
     "dataTable": {
       "filters": "Filters",
@@ -100,4 +102,3 @@
     }
   }
 }
-
