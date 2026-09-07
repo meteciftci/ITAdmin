@@ -1,0 +1,4 @@
+# Generated import SQL contains personal data (names, national IDs, e-mails) - never commit.
+itadmin_import.sql
+itadmin_license_import.sql
+*.csv
