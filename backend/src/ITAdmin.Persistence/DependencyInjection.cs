@@ -50,6 +50,7 @@ public static class DependencyInjection
         services.AddScoped<ILicensePackageService, LicensePackageService>();
         services.AddScoped<ILicenseRequestService, LicenseRequestService>();
         services.AddScoped<ILicenseRequestFulfillmentService, LicenseRequestFulfillmentService>();
+        services.AddScoped<ILicenseSeatAssignmentService, LicenseSeatAssignmentService>();
         services.AddScoped<ILicenseManagementSettingsService, LicenseManagementSettingsService>();
         services.Configure<NotificationOutboxOptions>(configuration.GetSection(NotificationOutboxOptions.SectionName));
 

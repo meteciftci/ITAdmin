@@ -25,4 +25,5 @@ public class LicensePackage : AuditableEntity
     public LicensePurchase Purchase { get; set; } = null!;
     public LicensedProduct Product { get; set; } = null!;
     public ICollection<LicenseRequestItemFulfillment> Fulfillments { get; set; } = new List<LicenseRequestItemFulfillment>();
+    public ICollection<LicenseSeatAssignment> SeatAssignments { get; set; } = new List<LicenseSeatAssignment>();
 }

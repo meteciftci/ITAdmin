@@ -142,6 +142,30 @@ public interface ILicenseRequestService
         CancellationToken cancellationToken = default);
 }
 
+public interface ILicenseSeatAssignmentService
+{
+    Task<LicensePackageSeatOverview?> GetByPackageAsync(
+        Guid packageId,
+        bool includeInactive,
+        CancellationToken cancellationToken = default);
+
+    Task<LicenseSeatAssignmentOperationResult> AssignAsync(
+        AssignLicenseSeatRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<LicenseSeatAssignmentOperationResult> ReleaseAsync(
+        ReleaseLicenseSeatRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<LicenseSeatAssignmentOperationResult> TransferAsync(
+        TransferLicenseSeatRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<CopyLicenseSeatsResult> CopySeatsAsync(
+        CopyLicenseSeatsRequest request,
+        CancellationToken cancellationToken = default);
+}
+
 public interface ILicenseRequestFulfillmentService
 {
     Task<PagedResult<LicenseFulfillmentCandidateItem>> GetCandidatesAsync(
