@@ -41,7 +41,11 @@ public sealed class WindowsHostDeploymentExecutor(
             return new ReleaseUpdateResult(false, "No Update Coordinator build was found. Run Deploy-ITAdmin.ps1 on this host first.");
         }
 
-        var imagePath = $"\"{coordinatorExe}\" --operation-id {operationId} --data-root \"{settings.DataRoot}\"";
+        // Only the operation id travels on the command line: the coordinator reads the ProgramData
+        // root from HKLM\SOFTWARE\ITAdmin like the Host Agent does. Keeping the ImagePath to one
+        // quoted path plus a short hex token avoids the sc.exe/argv quoting traps that left the
+        // service registered but unstartable.
+        var imagePath = $"\"{coordinatorExe}\" --operation-id {operationId}";
         var query = await RunAsync("sc.exe", ["query", CoordinatorServiceName], cancellationToken);
         var configure = query.ExitCode == 0
             ? await RunAsync("sc.exe", ["config", CoordinatorServiceName, "binPath=", imagePath, "start=", "demand"], cancellationToken)
@@ -49,17 +53,32 @@ public sealed class WindowsHostDeploymentExecutor(
         if (configure.ExitCode != 0)
         {
             logger.LogError("Could not configure {Service}: sc.exe exit {ExitCode}. {Output}", CoordinatorServiceName, configure.ExitCode, configure.Output);
-            return new ReleaseUpdateResult(false, "The Update Coordinator service could not be configured.");
+            return new ReleaseUpdateResult(false, $"The Update Coordinator service could not be configured (sc.exe exit {configure.ExitCode}).");
         }
 
         var start = await RunAsync("sc.exe", ["start", CoordinatorServiceName], cancellationToken);
-        if (start.ExitCode == 0)
+
+        // 0 = started; 1056 = already running (a prior handoff still finishing) - both are fine.
+        if (start.ExitCode is 0 or 1056)
         {
             return new ReleaseUpdateResult(true, "The update was handed to the Update Coordinator.");
         }
 
-        logger.LogError("Could not start {Service}: sc.exe exit {ExitCode}. {Output}", CoordinatorServiceName, start.ExitCode, start.Output);
-        return new ReleaseUpdateResult(false, "The Update Coordinator service could not be started.");
+        var state = await RunAsync("sc.exe", ["query", CoordinatorServiceName], cancellationToken);
+        logger.LogError(
+            "Could not start {Service}: sc.exe start exit {ExitCode} ({StartOutput}). Current state: {StateOutput}",
+            CoordinatorServiceName, start.ExitCode, Tail(start.Output), Tail(state.Output));
+
+        if (state.Output.Contains("RUNNING", StringComparison.OrdinalIgnoreCase)
+            || state.Output.Contains("START_PENDING", StringComparison.OrdinalIgnoreCase))
+        {
+            return new ReleaseUpdateResult(true, "The update was handed to the Update Coordinator.");
+        }
+
+        return new ReleaseUpdateResult(
+            false,
+            $"The Update Coordinator service could not be started (sc.exe exit {start.ExitCode}). "
+            + "See %ProgramData%\\ITAdmin\\logs\\update-coordinator-startup.log and the Windows event log.");
     }
 
     public async Task<ReleaseUpdateResult> RecycleAppPoolAsync(string appPoolName, CancellationToken cancellationToken)

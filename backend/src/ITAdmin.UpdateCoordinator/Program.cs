@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Hosting.WindowsServices;
+using Microsoft.Win32;
 
 // ITAdmin Update Coordinator: the one-shot handoff used when an in-app update needs to replace the
 // release that contains the currently running ITAdmin Host Agent.
@@ -13,27 +14,112 @@ using Microsoft.Extensions.Hosting.WindowsServices;
 // same one an operator would run by hand - and then, only if the Host Agent binary actually
 // changed, swaps the ITAdminHostAgent service to the new build.
 
+// Resolve the ProgramData root the way the Host Agent does, so a startup failure can always be
+// written somewhere - "no log at all" has been the recurring diagnosis problem.
+const string DefaultProgramDataRoot = @"C:\ProgramData\ITAdmin";
+var programDataRoot = DefaultProgramDataRoot;
+try
+{
+#pragma warning disable CA1416 // Guarded by the Windows check below in practice; Registry no-ops elsewhere.
+    if (OperatingSystem.IsWindows())
+    {
+        programDataRoot = Registry.GetValue(
+            @"HKEY_LOCAL_MACHINE\SOFTWARE\ITAdmin", "ProgramDataRoot", DefaultProgramDataRoot) as string
+            ?? DefaultProgramDataRoot;
+    }
+#pragma warning restore CA1416
+}
+catch (Exception)
+{
+    programDataRoot = DefaultProgramDataRoot;
+}
+
+CoordinatorStartupLog.Initialize(programDataRoot);
+CoordinatorStartupLog.Write($"starting; args=[{string.Join(' ', args)}]");
+
 if (!OperatingSystem.IsWindows())
 {
-    Console.Error.WriteLine("The ITAdmin Update Coordinator runs on Windows only.");
+    CoordinatorStartupLog.Write("not Windows; exiting 2");
     return 2;
 }
 
-if (args.Length != 4 || args[0] != "--operation-id" || !CoordinatorRunner.IsOperationId(args[1])
-    || args[2] != "--data-root" || string.IsNullOrWhiteSpace(args[3]))
+// Tolerant parse: --operation-id <32-hex> is the only required argument. --data-root is optional
+// (it falls back to the registry-derived ProgramData root). Order and extra tokens are ignored,
+// so a mangled service ImagePath cannot silently break the handoff.
+string? operationId = null;
+string? dataRootArg = null;
+for (var i = 0; i < args.Length - 1; i++)
 {
-    Console.Error.WriteLine("Usage: ITAdmin.UpdateCoordinator --operation-id <32-hex-id> --data-root <path>");
+    if (string.Equals(args[i], "--operation-id", StringComparison.OrdinalIgnoreCase)) { operationId = args[i + 1]; }
+    else if (string.Equals(args[i], "--data-root", StringComparison.OrdinalIgnoreCase)) { dataRootArg = args[i + 1]; }
+}
+
+if (operationId is null || !CoordinatorRunner.IsOperationId(operationId))
+{
+    CoordinatorStartupLog.Write($"missing/invalid --operation-id (got '{operationId ?? "<null>"}'); exiting 2");
     return 2;
 }
+
+var dataRoot = string.IsNullOrWhiteSpace(dataRootArg) ? programDataRoot : dataRootArg!;
+CoordinatorStartupLog.Write($"operationId={operationId}; dataRoot={dataRoot}");
 
 var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddWindowsService(options => options.ServiceName = "ITAdminUpdateCoordinator");
-builder.Services.AddSingleton(new CoordinatorRequest(args[1].ToLowerInvariant(), args[3]));
+builder.Services.AddSingleton(new CoordinatorRequest(operationId.ToLowerInvariant(), dataRoot));
 builder.Services.AddHostedService<CoordinatorWorker>();
-await builder.Build().RunAsync();
+
+try
+{
+    await builder.Build().RunAsync();
+    CoordinatorStartupLog.Write($"host exited; ExitCode={Environment.ExitCode}");
+}
+catch (Exception exception)
+{
+    CoordinatorStartupLog.Write($"host threw: {exception}");
+    return 1;
+}
+
 return Environment.ExitCode;
 
 internal sealed record CoordinatorRequest(string OperationId, string DataRoot);
+
+/// <summary>Append-only startup breadcrumb so a failed handoff is never silent.</summary>
+internal static class CoordinatorStartupLog
+{
+    private static string? _path;
+
+    public static void Initialize(string programDataRoot)
+    {
+        try
+        {
+            var directory = Path.Combine(programDataRoot, "logs");
+            Directory.CreateDirectory(directory);
+            _path = Path.Combine(directory, "update-coordinator-startup.log");
+        }
+        catch (Exception)
+        {
+            _path = null;
+        }
+    }
+
+    public static void Write(string message)
+    {
+        Console.Error.WriteLine(message);
+        if (_path is null)
+        {
+            return;
+        }
+
+        try
+        {
+            File.AppendAllText(_path, $"{DateTimeOffset.UtcNow:O}  {message}{Environment.NewLine}");
+        }
+        catch (Exception)
+        {
+            // best effort
+        }
+    }
+}
 
 internal sealed class CoordinatorWorker(CoordinatorRequest request, IHostApplicationLifetime lifetime)
     : BackgroundService
@@ -42,7 +128,14 @@ internal sealed class CoordinatorWorker(CoordinatorRequest request, IHostApplica
     {
         try
         {
+            CoordinatorStartupLog.Write("worker running the deployment");
             Environment.ExitCode = await CoordinatorRunner.RunAsync(request.OperationId, request.DataRoot, stoppingToken);
+            CoordinatorStartupLog.Write($"worker finished; result={Environment.ExitCode}");
+        }
+        catch (Exception exception)
+        {
+            CoordinatorStartupLog.Write($"worker threw: {exception}");
+            Environment.ExitCode = 1;
         }
         finally
         {
@@ -75,10 +168,26 @@ internal static class CoordinatorRunner
                 ?? throw new InvalidDataException("Host Agent configuration could not be read.");
 
             var operation = ReadOperation(operationPath);
-            if (operation is null || !string.Equals(operation.OperationId, operationId, StringComparison.Ordinal))
+            if (operation is null)
             {
-                Console.Error.WriteLine($"No matching update operation {operationId} was found at {operationPath}.");
-                return 3;
+                // The Host Agent normally writes this before starting us. If it is missing (a lost
+                // state write), synthesise one rather than stranding the update.
+                CoordinatorStartupLog.Write($"no update-operation.json at {operationPath}; synthesising one");
+                operation = new UpdateOperationRecord
+                {
+                    OperationId = operationId,
+                    Phase = "Pulling",
+                    StartedAtUtc = DateTimeOffset.UtcNow,
+                    Message = "Recovered by the Update Coordinator.",
+                };
+            }
+            else if (!string.Equals(operation.OperationId, operationId, StringComparison.Ordinal))
+            {
+                // The Host Agent asked for this operation id; the file holds a different one. Proceed
+                // anyway - a stale id must not strand the update - but record it.
+                CoordinatorStartupLog.Write(
+                    $"operation id mismatch (arg {operationId}, file {operation.OperationId}); proceeding with the arg id");
+                operation = operation with { OperationId = operationId };
             }
 
             WriteOperation(operationPath, operation with
