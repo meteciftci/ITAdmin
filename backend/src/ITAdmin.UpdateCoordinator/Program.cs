@@ -197,17 +197,62 @@ internal static class CoordinatorRunner
         }
     }
 
-    private static UpdateOperationRecord? ReadOperation(string path) =>
-        File.Exists(path)
-            ? JsonSerializer.Deserialize<UpdateOperationRecord>(File.ReadAllText(path), JsonOptions)
-            : null;
+    private static UpdateOperationRecord? ReadOperation(string path)
+    {
+        if (!File.Exists(path))
+        {
+            return null;
+        }
+
+        // Share-all so a concurrent status poll on the Host Agent side never blocks a replace.
+        using var stream = new FileStream(
+            path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        return JsonSerializer.Deserialize<UpdateOperationRecord>(stream, JsonOptions);
+    }
 
     private static void WriteOperation(string path, UpdateOperationRecord operation)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        var directory = Path.GetDirectoryName(path)!;
+        Directory.CreateDirectory(directory);
+
+        try
+        {
+            foreach (var stale in Directory.EnumerateFiles(directory, Path.GetFileName(path) + ".*.tmp"))
+            {
+                try { File.Delete(stale); } catch (Exception) { /* in use */ }
+            }
+        }
+        catch (Exception) { /* best effort */ }
+
+        var content = JsonSerializer.Serialize(operation, JsonOptions);
         var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
-        File.WriteAllText(temporary, JsonSerializer.Serialize(operation, JsonOptions));
-        File.Move(temporary, path, overwrite: true);
+        try
+        {
+            File.WriteAllText(temporary, content);
+            for (var attempt = 1; attempt <= 5; attempt++)
+            {
+                try
+                {
+                    File.Move(temporary, path, overwrite: true);
+                    return;
+                }
+                catch (Exception exception)
+                    when ((exception is IOException or UnauthorizedAccessException) && attempt < 5)
+                {
+                    Thread.Sleep(100);
+                }
+            }
+        }
+        catch (Exception)
+        {
+            try { File.Copy(temporary, path, overwrite: true); }
+            catch (Exception) { File.WriteAllText(path, content); }
+        }
+        finally
+        {
+            try { if (File.Exists(temporary)) File.Delete(temporary); }
+            catch (Exception) { /* pruned next write */ }
+        }
     }
 
     private static async Task<int> RunProcessAsync(

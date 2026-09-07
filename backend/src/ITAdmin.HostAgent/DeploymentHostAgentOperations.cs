@@ -451,13 +451,8 @@ public sealed class DeploymentHostAgentOperations(
     {
         try
         {
-            var path = settings.UpdateOperationPath;
-            if (!File.Exists(path))
-            {
-                return null;
-            }
-
-            return JsonSerializer.Deserialize<UpdateOperationRecord>(File.ReadAllText(path), JsonOptions);
+            var json = AtomicStateFile.Read(settings.UpdateOperationPath);
+            return json is null ? null : JsonSerializer.Deserialize<UpdateOperationRecord>(json, JsonOptions);
         }
         catch (Exception exception) when (exception is IOException or JsonException or UnauthorizedAccessException)
         {
@@ -469,15 +464,14 @@ public sealed class DeploymentHostAgentOperations(
     {
         try
         {
-            Directory.CreateDirectory(settings.StateRoot);
-            var path = settings.UpdateOperationPath;
-            var temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
-            File.WriteAllText(temp, JsonSerializer.Serialize(record, JsonOptions));
-            File.Move(temp, path, overwrite: true);
+            AtomicStateFile.Write(settings.UpdateOperationPath, JsonSerializer.Serialize(record, JsonOptions));
         }
         catch (Exception exception)
         {
-            logger.LogWarning(exception, "Could not persist the update operation record.");
+            // The whole update pipeline reads this file to know what to do next, so a lost write is
+            // not a warning-level event - it strands the operation.
+            logger.LogError(exception, "Could not persist the update operation record to {Path}.",
+                settings.UpdateOperationPath);
         }
     }
 
@@ -485,13 +479,8 @@ public sealed class DeploymentHostAgentOperations(
     {
         try
         {
-            var path = settings.DeployStatePath;
-            if (!File.Exists(path))
-            {
-                return null;
-            }
-
-            return JsonSerializer.Deserialize<DeployStateRecord>(File.ReadAllText(path), JsonOptions);
+            var json = AtomicStateFile.Read(settings.DeployStatePath);
+            return json is null ? null : JsonSerializer.Deserialize<DeployStateRecord>(json, JsonOptions);
         }
         catch (Exception exception) when (exception is IOException or JsonException or UnauthorizedAccessException)
         {
