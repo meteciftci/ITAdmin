@@ -67,6 +67,7 @@ public sealed class LicenseSeatAssignmentService(AppDbContext context) : ILicens
                 x.Package.Product.Brand,
                 x.Package.Purchase.Title,
                 x.DisplayName,
+                x.AdObjectId,
                 x.Mail,
                 x.NationalId,
                 x.Department,

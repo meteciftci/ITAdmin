@@ -40,6 +40,7 @@ public sealed class LicenseSeatAssignmentsController(ILicenseSeatAssignmentServi
                 x.ProductBrand,
                 x.PurchaseTitle,
                 x.DisplayName,
+                x.AdObjectId,
                 x.Mail,
                 x.NationalId,
                 x.Department,

@@ -32,6 +32,7 @@ public sealed record LicenseSeatAssignmentListItemResponse(
     string? ProductBrand,
     string PurchaseTitle,
     string DisplayName,
+    string? AdObjectId,
     string? Mail,
     string? NationalId,
     string? Department,
