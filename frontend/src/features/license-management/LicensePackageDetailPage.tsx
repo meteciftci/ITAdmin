@@ -16,6 +16,7 @@ import { buttonVariants } from "@/components/ui/button-variants";
 import { useAuthStore } from "@/features/auth/auth-store";
 import { getLicensePackageById } from "@/features/license-management/api";
 import { LicenseDetailField } from "@/features/license-management/components/LicenseDetailField";
+import { LicensePackageSeatsSection } from "@/features/license-management/components/LicensePackageSeatsSection";
 import { getLicenseTypeLabel, getPackageStatusLabel, maskLicenseKey } from "@/features/license-management/enum-labels";
 import { LICENSE_PACKAGES_LIST_PATH } from "@/features/license-management/license-packages-list-path";
 import { buildLicensePackageEditPath } from "@/features/license-management/license-package-detail-path";
@@ -41,6 +42,7 @@ export function LicensePackageDetailPage() {
   const { id } = useParams<{ id: string }>();
   const user = useAuthStore((state) => state.user);
   const canManage = canAccess(user, PermissionCodes.LicenseManagement.ManagePurchases);
+  const canManageSeats = canAccess(user, PermissionCodes.LicenseManagement.FulfillRequests);
   const [showLicenseKey, setShowLicenseKey] = useState(false);
 
   const detailQuery = useQuery({
@@ -156,6 +158,9 @@ export function LicensePackageDetailPage() {
             <LicenseDetailField label={t("licenseManagement:pages.detail.updatedBy")} value={pkg.updatedBy} />
           </div>
         </SectionCard>
+      ) : null}
+      {pkg ? (
+        <LicensePackageSeatsSection packageId={pkg.id} productId={pkg.productId} canManage={canManageSeats} />
       ) : null}
     </section>
   );

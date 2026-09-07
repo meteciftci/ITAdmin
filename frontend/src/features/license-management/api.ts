@@ -23,6 +23,12 @@ import type {
   LicensePurchaseListItem,
   LicensePurchaseStatus,
   LicensePurchaseType,
+  LicensePackageSeatOverview,
+  AssignLicenseSeatRequest,
+  ReleaseLicenseSeatRequest,
+  TransferLicenseSeatRequest,
+  LicenseSeatAssignmentOperationResponse,
+  CopyLicenseSeatsResponse,
   ConvertLicenseRequestItemsRequest,
   LicenseFulfillmentCandidate,
   LicenseFulfillmentResponse,
@@ -401,6 +407,64 @@ export const convertLicenseRequestItems = async (
   const { data } = await apiClient.post<LicenseFulfillmentResponse>(
     `${basePath}/fulfillment/convert`,
     request,
+  );
+  return data;
+};
+
+// ---- Seat assignments (who holds a package's licence seats) ----
+
+export const getLicensePackageSeatAssignments = async (
+  packageId: string,
+  includeInactive = false,
+): Promise<LicensePackageSeatOverview> => {
+  const { data } = await apiClient.get<LicensePackageSeatOverview>(
+    `${basePath}/packages/${packageId}/seat-assignments`,
+    { params: { includeInactive } },
+  );
+  return data;
+};
+
+export const assignLicenseSeat = async (
+  packageId: string,
+  request: AssignLicenseSeatRequest,
+): Promise<LicenseSeatAssignmentOperationResponse> => {
+  const { data } = await apiClient.post<LicenseSeatAssignmentOperationResponse>(
+    `${basePath}/packages/${packageId}/seat-assignments`,
+    request,
+  );
+  return data;
+};
+
+export const releaseLicenseSeat = async (
+  assignmentId: string,
+  request: ReleaseLicenseSeatRequest,
+): Promise<LicenseSeatAssignmentOperationResponse> => {
+  const { data } = await apiClient.post<LicenseSeatAssignmentOperationResponse>(
+    `${basePath}/seat-assignments/${assignmentId}/release`,
+    request,
+  );
+  return data;
+};
+
+export const transferLicenseSeat = async (
+  assignmentId: string,
+  request: TransferLicenseSeatRequest,
+): Promise<LicenseSeatAssignmentOperationResponse> => {
+  const { data } = await apiClient.post<LicenseSeatAssignmentOperationResponse>(
+    `${basePath}/seat-assignments/${assignmentId}/transfer`,
+    request,
+  );
+  return data;
+};
+
+export const copyLicenseSeatsFromPackage = async (
+  targetPackageId: string,
+  sourcePackageId: string,
+  assignedDate?: string | null,
+): Promise<CopyLicenseSeatsResponse> => {
+  const { data } = await apiClient.post<CopyLicenseSeatsResponse>(
+    `${basePath}/packages/${targetPackageId}/seat-assignments/copy-from/${sourcePackageId}`,
+    { sourcePackageId, assignedDate: assignedDate ?? null },
   );
   return data;
 };

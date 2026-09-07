@@ -483,3 +483,81 @@ export type LicenseFulfillmentResponse = {
   purchaseId: string | null;
   packageIds: string[];
 };
+
+export type LicenseSeatAssignmentStatus = "Active" | "Released" | "Transferred";
+
+export type LicenseSeatAssignment = {
+  id: string;
+  packageId: string;
+  adObjectId: string | null;
+  displayName: string;
+  samAccountName: string | null;
+  userPrincipalName: string | null;
+  mail: string | null;
+  nationalId: string | null;
+  department: string | null;
+  title: string | null;
+  assignedDate: string;
+  releasedDate: string | null;
+  status: LicenseSeatAssignmentStatus;
+  replacesAssignmentId: string | null;
+  replacesDisplayName: string | null;
+  sourceRequestItemId: string | null;
+  note: string | null;
+  createdAt: string;
+  createdBy: string | null;
+  updatedAt: string | null;
+  updatedBy: string | null;
+};
+
+export type LicensePackageSeatOverview = {
+  packageId: string;
+  productName: string;
+  purchaseTitle: string;
+  quantity: number;
+  activeCount: number;
+  availableCount: number;
+  assignments: LicenseSeatAssignment[];
+};
+
+export type LicenseSeatPersonInput = {
+  adObjectId?: string | null;
+  displayName: string;
+  samAccountName?: string | null;
+  userPrincipalName?: string | null;
+  mail?: string | null;
+  nationalId?: string | null;
+  department?: string | null;
+  title?: string | null;
+};
+
+export type AssignLicenseSeatRequest = {
+  person: LicenseSeatPersonInput;
+  assignedDate?: string | null;
+  sourceRequestItemId?: string | null;
+  note?: string | null;
+};
+
+export type ReleaseLicenseSeatRequest = {
+  releasedDate?: string | null;
+  note?: string | null;
+};
+
+export type TransferLicenseSeatRequest = {
+  newPerson: LicenseSeatPersonInput;
+  transferDate?: string | null;
+  note?: string | null;
+};
+
+export type LicenseSeatAssignmentOperationResponse = {
+  success: boolean;
+  message: string;
+  assignment: LicenseSeatAssignment | null;
+};
+
+export type CopyLicenseSeatsResponse = {
+  success: boolean;
+  message: string;
+  copiedCount: number;
+  skippedCount: number;
+};

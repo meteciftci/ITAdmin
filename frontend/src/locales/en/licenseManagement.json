@@ -556,6 +556,60 @@
         "Fulfilled": "Fulfilled",
         "Cancelled": "Cancelled"
       }
+    },
+    "seats": {
+      "title": "Seat assignments",
+      "description": "Who currently holds this package's licence seats.",
+      "summary": "{{active}} of {{quantity}} seats in use · {{available}} free",
+      "empty": "No seat assignments on this package.",
+      "showHistory": "Show history",
+      "hideHistory": "Active only",
+      "replaces": "taken over from {{name}}",
+      "until": "until:",
+      "columns": {
+        "person": "Person",
+        "contact": "Contact / unit",
+        "assignedDate": "Assigned",
+        "note": "Note"
+      },
+      "status": {
+        "Active": "Active",
+        "Released": "Released",
+        "Transferred": "Transferred"
+      },
+      "actions": {
+        "assign": "Assign seat",
+        "release": "Release",
+        "transfer": "Transfer",
+        "copyFrom": "Copy from another package"
+      },
+      "toasts": {
+        "assigned": "Seat assigned.",
+        "released": "Seat released.",
+        "transferred": "Seat transferred.",
+        "copied": "Copied {{copied}} seat(s), skipped {{skipped}}."
+      },
+      "dialog": {
+        "adUser": "AD user (optional)",
+        "displayName": "Full name",
+        "nationalId": "National ID",
+        "mail": "Email",
+        "assignedDate": "Assigned date",
+        "note": "Note",
+        "assignTitle": "Assign seat",
+        "assignDescription": "Give one seat of this package to a person. Pick from AD or fill the fields manually.",
+        "transferTitle": "Transfer seat",
+        "transferDescription": "Move {{name}}'s seat to another person. The old record is closed and linked from the new one.",
+        "transferDate": "Transfer date",
+        "releaseTitle": "Release seat",
+        "releaseDescription": "{{name}}'s seat will become free.",
+        "releasedDate": "Release date",
+        "copyTitle": "Copy seats from another package",
+        "copyDescription": "Carry active seat holders from a renewed package onto this one. People already here are skipped.",
+        "sourcePackage": "Source package",
+        "sourcePackagePlaceholder": "Select a package…",
+        "seatsUnit": "seats"
+      }
     }
   }
 }

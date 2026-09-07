@@ -556,6 +556,60 @@
         "Fulfilled": "Karşılandı",
         "Cancelled": "İptal edildi"
       }
+    },
+    "seats": {
+      "title": "Zimmetler",
+      "description": "Bu paketin lisans koltuklarını hangi kişilerin kullandığı.",
+      "summary": "{{quantity}} koltuktan {{active}} tanesi kullanımda · {{available}} boş",
+      "empty": "Bu pakette zimmet kaydı yok.",
+      "showHistory": "Geçmişi göster",
+      "hideHistory": "Yalnızca aktif",
+      "replaces": "{{name}} kişisinden devralındı",
+      "until": "bitiş:",
+      "columns": {
+        "person": "Kişi",
+        "contact": "İletişim / birim",
+        "assignedDate": "Zimmet tarihi",
+        "note": "Not"
+      },
+      "status": {
+        "Active": "Aktif",
+        "Released": "Serbest bırakıldı",
+        "Transferred": "Devredildi"
+      },
+      "actions": {
+        "assign": "Zimmet ekle",
+        "release": "Serbest bırak",
+        "transfer": "Devret",
+        "copyFrom": "Başka paketten kopyala"
+      },
+      "toasts": {
+        "assigned": "Zimmet eklendi.",
+        "released": "Zimmet serbest bırakıldı.",
+        "transferred": "Zimmet devredildi.",
+        "copied": "{{copied}} koltuk kopyalandı, {{skipped}} atlandı."
+      },
+      "dialog": {
+        "adUser": "AD kullanıcısı (opsiyonel)",
+        "displayName": "Ad soyad",
+        "nationalId": "TC kimlik no",
+        "mail": "E-posta",
+        "assignedDate": "Zimmet tarihi",
+        "note": "Not",
+        "assignTitle": "Zimmet ekle",
+        "assignDescription": "Bu paketten bir koltuğu bir kişiye zimmetle. AD'den seçebilir veya alanları elle doldurabilirsin.",
+        "transferTitle": "Zimmeti devret",
+        "transferDescription": "{{name}} kişisindeki koltuğu başka bir kişiye aktar. Eski kayıt kapanır, yeni kayıt ona bağlanır.",
+        "transferDate": "Devir tarihi",
+        "releaseTitle": "Zimmeti serbest bırak",
+        "releaseDescription": "{{name}} kişisindeki koltuk boşa çıkacak.",
+        "releasedDate": "Serbest bırakma tarihi",
+        "copyTitle": "Başka paketten koltuk kopyala",
+        "copyDescription": "Yenilenen bir paketteki aktif zimmetleri bu pakete taşı. Aynı kişi zaten varsa atlanır.",
+        "sourcePackage": "Kaynak paket",
+        "sourcePackagePlaceholder": "Paket seç…",
+        "seatsUnit": "koltuk"
+      }
     }
   }
 }
