@@ -41,7 +41,7 @@ public sealed class AuthCsrfCookieTests
     [Fact]
     public void Append_includes_secure_for_http_request_in_production_environment()
     {
-        var ctx = AuthCookieSecurityResolverTests.CreateHttpContextForEnvironment("Production");
+        var ctx = AuthCookieSecurityResolverTests.CreateHttpContextForEnvironment("Production", ("Https:Enabled", "true"));
         ctx.Request.Scheme = "http";
         ctx.Request.IsHttps = false;
 

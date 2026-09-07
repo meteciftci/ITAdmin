@@ -161,13 +161,20 @@ and `POST /api/system/https/disable` (permission `System.Https.Manage`) — see
 its password, the HTTPS port, and a redirect flag.
 
 The controller base64-encodes the PFX and forwards it to the Host Agent's `ConfigureHttps`. The
-agent imports the leaf certificate into `Cert:\LocalMachine\My` (chain certificates into `CA`),
-clears the bytes and password, and runs `Deploy-ITAdmin.ps1 -ConfigureHttps
+agent imports the leaf certificate into `Cert:\LocalMachine\My` (chain certificates into `CA`)
+using `Pkcs12LoaderLimits.DangerousNoLimits` so high-iteration enterprise/government PKCS#12 files
+still load, clears the bytes and password, and runs `Deploy-ITAdmin.ps1 -ConfigureHttps
 -CertificateThumbprint <derived> -HttpsPort <n> [-RedirectHttpToHttps]`. That script adds the
-`https` binding, records `web.https` in `app.json`, and — when redirect is on — sets
-`ITADMIN_Https__RedirectEnabled` / `ITADMIN_Https__Port` on the app pool and recycles it, which is
-what makes the application's `UseHttpsRedirection` take effect. Until HTTPS is configured the site
-stays plain HTTP so a fresh install is reachable without a certificate.
+`https` binding, records `web.https` in `app.json`, sets `ITADMIN_Https__Enabled` /
+`ITADMIN_Https__Port` on the app pool (and `ITADMIN_Https__RedirectEnabled` when redirect is on)
+and recycles it, which is what makes the application's `UseHttpsRedirection` take effect.
+
+Until HTTPS is configured the site stays plain HTTP so a fresh install is reachable without a
+certificate. During that HTTP-only commissioning window the auth cookies' `Secure` flag follows
+the request scheme so an operator can actually sign in; once `ITADMIN_Https__Enabled` /
+`ITADMIN_Https__RedirectEnabled` is set the flag is forced on and stays on. If a stale browser
+HSTS entry from an earlier HTTPS run is forcing `https://` against an HTTP-only reinstall, clear it
+(`chrome://net-internals/#hsts`) or just reconfigure HTTPS.
 
 The PFX private key and password transit the app pool process and the local named pipe; the app
 never writes them to disk and the agent zeroes its buffers after import. `DisableHttps` removes the

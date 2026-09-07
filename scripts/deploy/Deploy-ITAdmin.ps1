@@ -1104,10 +1104,22 @@ function Sync-HttpsAppPoolEnv {
     #>
     param([Parameter(Mandatory = $true)][psobject]$Config)
 
-    $redirectEnabled = ($null -ne $Config.web.https) -and
-                       [bool]$Config.web.https.enabled -and
-                       [bool]$Config.web.https.redirectHttpToHttps
+    $httpsEnabled = ($null -ne $Config.web.https) -and [bool]$Config.web.https.enabled
+    $redirectEnabled = $httpsEnabled -and [bool]$Config.web.https.redirectHttpToHttps
     $httpsPort = if ($null -ne $Config.web.https -and $Config.web.https.port) { [int]$Config.web.https.port } else { 443 }
+
+    if ($httpsEnabled) {
+        # ITADMIN_Https__Enabled tells the application an HTTPS listener exists, so it can keep
+        # auth cookies Secure-only. Until it is set (the HTTP-only commissioning window) the app
+        # lets the Secure flag follow the request scheme so the operator can actually sign in.
+        Set-AppPoolEnvironmentVariables -Variables @{
+            "ITADMIN_Https__Enabled" = "true"
+            "ITADMIN_Https__Port"    = "$httpsPort"
+        }
+    }
+    else {
+        Remove-AppPoolEnvironmentVariable -Name "ITADMIN_Https__Enabled"
+    }
 
     if ($redirectEnabled) {
         Set-AppPoolEnvironmentVariables -Variables @{
@@ -1117,6 +1129,9 @@ function Sync-HttpsAppPoolEnv {
     }
     else {
         Remove-AppPoolEnvironmentVariable -Name "ITADMIN_Https__RedirectEnabled"
+    }
+
+    if (-not $httpsEnabled) {
         Remove-AppPoolEnvironmentVariable -Name "ITADMIN_Https__Port"
     }
 

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
@@ -23,7 +24,24 @@ public sealed class AuthCookieSecurityResolverTests
         string? environmentName,
         bool expectedSecure)
     {
+        // Steady state: HTTPS has been configured (httpsConfigured defaults to true).
         Assert.Equal(expectedSecure, AuthCookieSecurityResolver.ResolveSecure(isHttps, environmentName));
+    }
+
+    [Theory]
+    [InlineData(true, true)]
+    [InlineData(false, false)]
+    public void ResolveSecure_production_http_follows_whether_https_is_configured(
+        bool httpsConfigured,
+        bool expectedSecure)
+    {
+        Assert.Equal(
+            expectedSecure,
+            AuthCookieSecurityResolver.ResolveSecure(false, Environments.Production, httpsConfigured));
+
+        // An HTTPS request is always Secure regardless of the commissioning flag.
+        Assert.True(
+            AuthCookieSecurityResolver.ResolveSecure(true, Environments.Production, httpsConfigured));
     }
 
     [Fact]
@@ -39,9 +57,21 @@ public sealed class AuthCookieSecurityResolverTests
     }
 
     [Fact]
-    public void ResolveSecure_is_true_for_http_request_in_production_environment()
+    public void ResolveSecure_http_production_is_not_secure_during_the_commissioning_window()
     {
+        // Fresh install: production, HTTP, no Https:* configuration yet.
         var ctx = CreateHttpContextForEnvironment(Environments.Production);
+        ctx.Request.IsHttps = false;
+
+        Assert.False(AuthCookieSecurityResolver.ResolveSecure(ctx.Request));
+    }
+
+    [Fact]
+    public void ResolveSecure_http_production_is_secure_once_https_is_configured()
+    {
+        var ctx = CreateHttpContextForEnvironment(
+            Environments.Production,
+            ("Https:Enabled", "true"));
         ctx.Request.IsHttps = false;
 
         Assert.True(AuthCookieSecurityResolver.ResolveSecure(ctx.Request));
@@ -56,10 +86,16 @@ public sealed class AuthCookieSecurityResolverTests
         Assert.False(AuthCookieSecurityResolver.ResolveSecure(ctx.Request));
     }
 
-    internal static DefaultHttpContext CreateHttpContextForEnvironment(string environmentName)
+    internal static DefaultHttpContext CreateHttpContextForEnvironment(
+        string environmentName,
+        params (string Key, string Value)[] configuration)
     {
         var services = new ServiceCollection()
             .AddSingleton<IHostEnvironment>(new FakeHostEnvironment(environmentName))
+            .AddSingleton<IConfiguration>(new ConfigurationBuilder()
+                .AddInMemoryCollection(configuration.ToDictionary(
+                    pair => pair.Key, pair => (string?)pair.Value))
+                .Build())
             .BuildServiceProvider();
 
         return new DefaultHttpContext
