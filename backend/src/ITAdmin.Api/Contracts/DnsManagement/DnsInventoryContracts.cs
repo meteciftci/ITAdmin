@@ -21,3 +21,32 @@ public sealed record DnsRecordInventoryResponse(
     string CanonicalValue, string RecordDataJson, int TimeToLiveSeconds,
     DateTime? Timestamp, string? ZoneScope, string? VirtualizationInstance,
     string RecordHash);
+
+public sealed record DnsComparisonContextResponse(
+    bool PromptForFullSyncOnOpen, DateTime? LastFullInventorySyncAt,
+    bool SynchronizationInProgress, int EnabledServerCount, int UnavailableServerCount,
+    IReadOnlyList<DnsInventoryServerResponse> Servers);
+
+public sealed record DnsComparisonZoneResponse(string Name, int ServerCount);
+
+public sealed record DnsComparisonRequest(
+    IReadOnlyList<Guid> ServerIds, IReadOnlyList<string> ZoneNames,
+    bool CompareTimeToLive, string? Search, int PageNumber = 1, int PageSize = 20);
+
+public sealed record DnsComparisonCellResponse(
+    Guid ServerId, string Status, IReadOnlyList<string> Values,
+    IReadOnlyList<int> TimeToLiveValues);
+
+public sealed record DnsComparisonRowResponse(
+    string ZoneName, string RelativeName, string RecordType,
+    string? ZoneScope, string? VirtualizationInstance,
+    IReadOnlyList<DnsComparisonCellResponse> Cells);
+
+public sealed record DnsComparisonResponse(
+    IReadOnlyList<DnsInventoryServerResponse> Servers,
+    IReadOnlyList<DnsComparisonRowResponse> Items,
+    int PageNumber, int PageSize, int TotalCount, int TotalPages);
+
+public sealed record DnsSyncBatchResponse(
+    Guid BatchId, int TargetedCount, int QueuedCount, int AlreadyQueuedCount,
+    int FailedCount, IReadOnlyList<DnsSyncJobResponse> Jobs);

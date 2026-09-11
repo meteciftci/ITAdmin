@@ -67,6 +67,24 @@ test("DNS inventory routes and API are permission guarded database snapshot read
   assert.equal(buildDnsZoneRecordsPath("zone id"), "/dns-management/zones/zone%20id/records");
 });
 
+test("DNS comparison uses cached snapshots, guarded routes, and a once-per-session refresh prompt", () => {
+  const routes = readRouterSource();
+  const api = readFileSync(join(root, "features/dns-management/api.ts"), "utf8");
+  const page = readFileSync(join(root, "features/dns-management/DnsComparisonPage.tsx"), "utf8");
+  const columns = readFileSync(join(root, "features/dns-management/dns-comparison-columns.tsx"), "utf8");
+  assert.match(routes, /path: "\/dns-management\/comparison"/);
+  assert.match(routes, /DnsManagement\.Compare/);
+  assert.match(api, /inventory\/comparison\/query/);
+  assert.match(api, /inventory\/comparison\/synchronizations/);
+  assert.match(page, /sessionStorage/);
+  assert.match(page, /MultiSelectFilter/);
+  assert.match(page, /lastFullInventorySyncAt/);
+  assert.match(page, /snapshotScope === "FullInventory"/);
+  assert.match(page, /DNS_COMPARISON_RESULTS_QUERY_KEY/);
+  assert.match(page, /DnsManagement\.Synchronize/);
+  assert.match(columns, /comparison\.status/);
+});
+
 test("DNS record values are rendered as readable structured text", () => {
   assert.equal(
     formatDnsRecordValue('{"IPv4Address":"10.0.0.10"}'),

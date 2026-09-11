@@ -12,7 +12,9 @@ namespace ITAdmin.Api.Controllers;
 [ApiController]
 [Route("api/dns-management/inventory")]
 [Authorize]
-public sealed class DnsInventoryController(IDnsInventoryQueryService service) : ControllerBase
+public sealed class DnsInventoryController(
+    IDnsInventoryQueryService service,
+    IDnsInventorySyncService inventorySyncService) : ControllerBase
 {
     [HttpGet("servers")]
     [RequireAnyPermission(DnsManagementPermissions.ZonesView, DnsManagementPermissions.RecordsView)]
@@ -64,6 +66,69 @@ public sealed class DnsInventoryController(IDnsInventoryQueryService service) : 
             result.TotalCount, result.TotalPages));
     }
 
+    [HttpGet("comparison/context")]
+    [RequirePermission(DnsManagementPermissions.Compare)]
+    public async Task<ActionResult<DnsComparisonContextResponse>> GetComparisonContext(
+        CancellationToken cancellationToken)
+    {
+        var result = await service.GetComparisonContextAsync(cancellationToken);
+        return Ok(new DnsComparisonContextResponse(
+            result.PromptForFullSyncOnOpen, result.LastFullInventorySyncAt,
+            result.SynchronizationInProgress, result.EnabledServerCount,
+            result.UnavailableServerCount, result.Servers.Select(MapServer).ToList()));
+    }
+
+    [HttpGet("comparison/zones")]
+    [RequirePermission(DnsManagementPermissions.Compare)]
+    public async Task<ActionResult<IReadOnlyList<DnsComparisonZoneResponse>>> GetComparisonZones(
+        [FromQuery] Guid[]? serverIds,
+        [FromQuery] string? search,
+        [FromQuery] int limit = 100,
+        CancellationToken cancellationToken = default)
+    {
+        var ids = serverIds?.Distinct().ToArray() ?? [];
+        if (ids.Length is < 1 or > 10)
+            return BadRequest(new { message = "Select between one and ten DNS servers." });
+        var result = await service.GetComparisonZonesAsync(ids, search, limit, cancellationToken);
+        return Ok(result.Select(x => new DnsComparisonZoneResponse(x.Name, x.ServerCount)).ToList());
+    }
+
+    [HttpPost("comparison/query")]
+    [RequirePermission(DnsManagementPermissions.Compare)]
+    public async Task<ActionResult<DnsComparisonResponse>> Compare(
+        DnsComparisonRequest request, CancellationToken cancellationToken)
+    {
+        var serverIds = request.ServerIds?.Distinct().ToArray() ?? [];
+        var zoneNames = request.ZoneNames?
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToArray() ?? [];
+        if (serverIds.Length is < 2 or > 10)
+            return BadRequest(new { message = "Select between two and ten DNS servers." });
+        if (zoneNames.Length is < 1 or > 20)
+            return BadRequest(new { message = "Select between one and twenty DNS zones." });
+
+        var result = await service.CompareAsync(new(
+            serverIds, zoneNames, request.CompareTimeToLive, request.Search,
+            request.PageNumber, request.PageSize), cancellationToken);
+        return Ok(new DnsComparisonResponse(
+            result.Servers.Select(MapServer).ToList(),
+            result.Items.Select(MapComparisonRow).ToList(),
+            result.PageNumber, result.PageSize, result.TotalCount, result.TotalPages));
+    }
+
+    [HttpPost("comparison/synchronizations")]
+    [RequirePermission(DnsManagementPermissions.Synchronize)]
+    public async Task<ActionResult<DnsSyncBatchResponse>> SynchronizeAll(
+        CancellationToken cancellationToken)
+    {
+        var result = await inventorySyncService.EnqueueAllEnabledAsync(
+            DnsManagementActorResolver.Resolve(this), cancellationToken);
+        return Accepted(new DnsSyncBatchResponse(
+            result.BatchId, result.TargetedCount, result.QueuedCount,
+            result.AlreadyQueuedCount, result.FailedCount,
+            result.Jobs.Select(MapJob).ToList()));
+    }
+
     private static DnsInventoryServerResponse MapServer(AppModels.DnsInventoryServerModel x) => new(
         x.ServerId, x.ServerDisplayName, x.Environment, x.IsEnabled,
         x.SnapshotId, x.SnapshotVersion, x.SnapshotScope, x.SnapshotCompletedAt,
@@ -79,4 +144,14 @@ public sealed class DnsInventoryController(IDnsInventoryQueryService service) : 
         x.Id, x.RelativeName, x.FullyQualifiedName, x.RecordType, x.CanonicalValue,
         x.RecordDataJson, x.TimeToLiveSeconds, x.Timestamp, x.ZoneScope,
         x.VirtualizationInstance, x.RecordHash);
+
+    private static DnsComparisonRowResponse MapComparisonRow(AppModels.DnsComparisonRowModel x) => new(
+        x.ZoneName, x.RelativeName, x.RecordType, x.ZoneScope, x.VirtualizationInstance,
+        x.Cells.Select(cell => new DnsComparisonCellResponse(
+            cell.ServerId, cell.Status, cell.Values, cell.TimeToLiveValues)).ToList());
+
+    private static DnsSyncJobResponse MapJob(AppModels.DnsSyncJobModel x) => new(
+        x.Id, x.BatchId, x.ServerId, x.ServerDisplayName, x.Scope, x.Trigger, x.Status,
+        x.AttemptCount, x.RequestedAt, x.StartedAt, x.CompletedAt,
+        x.ErrorCode, x.Message, x.AlreadyQueued);
 }

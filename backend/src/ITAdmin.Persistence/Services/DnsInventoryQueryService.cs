@@ -122,6 +122,111 @@ public sealed class DnsInventoryQueryService(AppDbContext context) : IDnsInvento
         return Page(items, pageNumber, pageSize, totalCount);
     }
 
+    public async Task<DnsComparisonContextModel> GetComparisonContextAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var prompt = await context.DnsManagementSettings.AsNoTracking()
+            .Select(x => (bool?)x.PromptForFullSyncOnComparisonOpen)
+            .SingleOrDefaultAsync(cancellationToken) ?? true;
+        var servers = await GetServersAsync(cancellationToken);
+        var enabled = servers.Where(x => x.IsEnabled).ToList();
+        var fullSnapshots = enabled.Where(IsFullInventoryAvailable).ToList();
+        var lastFullSync = enabled.Count > 0 && fullSnapshots.Count == enabled.Count
+            ? fullSnapshots.Min(x => x.SnapshotCompletedAt)
+            : null;
+        return new DnsComparisonContextModel(
+            prompt,
+            lastFullSync,
+            enabled.Any(x => x.LastSyncStatus is "Pending" or "Running"),
+            enabled.Count,
+            enabled.Count(x => !IsFullInventoryAvailable(x)),
+            servers);
+    }
+
+    public async Task<IReadOnlyList<DnsComparisonZoneModel>> GetComparisonZonesAsync(
+        IReadOnlyList<Guid> serverIds, string? search, int limit,
+        CancellationToken cancellationToken = default)
+    {
+        var ids = NormalizeServerIds(serverIds);
+        if (ids.Length == 0) return [];
+        var normalizedSearch = Normalize(search, 253)?.ToLowerInvariant();
+        var source = context.DnsZoneSnapshots.AsNoTracking()
+            .Where(x => x.InventorySnapshot.IsActive
+                && ids.Contains(x.InventorySnapshot.DnsServerId));
+        if (normalizedSearch is not null)
+            source = source.Where(x => x.Name.ToLower().Contains(normalizedSearch));
+
+        return await source
+            .GroupBy(x => x.Name.ToLower())
+            .Select(x => new DnsComparisonZoneModel(
+                x.Key, x.Select(y => y.InventorySnapshot.DnsServerId).Distinct().Count()))
+            .OrderBy(x => x.Name)
+            .Take(Math.Clamp(limit, 1, 200))
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<DnsComparisonResultModel> CompareAsync(
+        DnsComparisonQuery query, CancellationToken cancellationToken = default)
+    {
+        var serverIds = NormalizeServerIds(query.ServerIds);
+        var zoneNames = NormalizeZoneNames(query.ZoneNames);
+        var pageNumber = Math.Clamp(query.PageNumber, 1, 1_000_000);
+        var pageSize = Math.Clamp(query.PageSize, 1, 100);
+        if (serverIds.Length == 0 || zoneNames.Length == 0)
+            return new([], [], pageNumber, pageSize, 0, 0);
+
+        var serverSet = serverIds.ToHashSet();
+        var servers = (await GetServersAsync(cancellationToken))
+            .Where(x => serverSet.Contains(x.ServerId)).ToList();
+        var search = Normalize(query.Search, 512)?.ToLowerInvariant();
+        var source = context.DnsRecordSnapshots.AsNoTracking()
+            .Where(x => x.ZoneSnapshot.InventorySnapshot.IsActive
+                && serverIds.Contains(x.ZoneSnapshot.InventorySnapshot.DnsServerId)
+                && zoneNames.Contains(x.ZoneSnapshot.Name.ToLower()));
+        if (search is not null)
+            source = source.Where(x => x.RelativeName.ToLower().Contains(search)
+                || x.FullyQualifiedName.ToLower().Contains(search)
+                || x.RecordType.ToLower().Contains(search)
+                || x.CanonicalValue.ToLower().Contains(search));
+
+        var keys = source.Select(x => new ComparisonKey(
+                x.ZoneSnapshot.Name.ToLower(), x.RelativeName.ToLower(), x.RecordType.ToUpper(),
+                x.ZoneScope == null ? null : x.ZoneScope.ToLower(),
+                x.VirtualizationInstance == null ? null : x.VirtualizationInstance.ToLower()))
+            .Distinct();
+        var totalCount = await keys.CountAsync(cancellationToken);
+        var pageKeys = await keys
+            .OrderBy(x => x.ZoneName).ThenBy(x => x.RelativeName).ThenBy(x => x.RecordType)
+            .ThenBy(x => x.ZoneScope).ThenBy(x => x.VirtualizationInstance)
+            .Skip((pageNumber - 1) * pageSize).Take(pageSize)
+            .ToListAsync(cancellationToken);
+        if (pageKeys.Count == 0)
+            return new(servers, [], pageNumber, pageSize, totalCount,
+                TotalPages(totalCount, pageSize));
+
+        var pageZones = pageKeys.Select(x => x.ZoneName).Distinct().ToArray();
+        var pageOwners = pageKeys.Select(x => x.RelativeName).Distinct().ToArray();
+        var pageTypes = pageKeys.Select(x => x.RecordType).Distinct().ToArray();
+        var candidates = await source
+            .Where(x => pageZones.Contains(x.ZoneSnapshot.Name.ToLower())
+                && pageOwners.Contains(x.RelativeName.ToLower())
+                && pageTypes.Contains(x.RecordType.ToUpper()))
+            .Select(x => new ComparisonRecord(
+                x.ZoneSnapshot.InventorySnapshot.DnsServerId,
+                x.ZoneSnapshot.Name.ToLower(), x.RelativeName.ToLower(), x.RecordType.ToUpper(),
+                x.ZoneScope == null ? null : x.ZoneScope.ToLower(),
+                x.VirtualizationInstance == null ? null : x.VirtualizationInstance.ToLower(),
+                x.CanonicalValue, x.TimeToLiveSeconds))
+            .ToListAsync(cancellationToken);
+        var pageKeySet = pageKeys.ToHashSet();
+        var records = candidates.Where(x => pageKeySet.Contains(x.Key)).ToList();
+        var rows = pageKeys.Select(key => BuildComparisonRow(
+            key, servers, records, query.CompareTimeToLive)).ToList();
+
+        return new(servers, rows, pageNumber, pageSize, totalCount,
+            TotalPages(totalCount, pageSize));
+    }
+
     private static IQueryable<ZoneRow> ProjectZones(IQueryable<Domain.Entities.DnsZoneSnapshot> source) =>
         source.Select(x => new ZoneRow(
             x.Id, x.DnsInventorySnapshotId, x.InventorySnapshot.DnsServerId,
@@ -163,7 +268,54 @@ public sealed class DnsInventoryQueryService(AppDbContext context) : IDnsInvento
 
     private static PagedResult<T> Page<T>(IReadOnlyCollection<T> items, int pageNumber, int pageSize, int totalCount) =>
         new(items, pageNumber, pageSize, totalCount,
-            totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize));
+            TotalPages(totalCount, pageSize));
+
+    private static int TotalPages(int totalCount, int pageSize) =>
+        totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize);
+
+    private static Guid[] NormalizeServerIds(IReadOnlyList<Guid> serverIds) =>
+        serverIds.Where(x => x != Guid.Empty).Distinct().Take(10).ToArray();
+
+    private static string[] NormalizeZoneNames(IReadOnlyList<string> zoneNames) =>
+        zoneNames.Select(x => Normalize(x, 253)?.ToLowerInvariant())
+            .Where(x => x is not null).Cast<string>()
+            .Distinct(StringComparer.OrdinalIgnoreCase).Take(20).ToArray();
+
+    private static bool IsFullInventoryAvailable(DnsInventoryServerModel server) =>
+        server.IsAvailable && server.SnapshotScope == DnsSyncScope.FullInventory;
+
+    private static DnsComparisonRowModel BuildComparisonRow(
+        ComparisonKey key, IReadOnlyList<DnsInventoryServerModel> servers,
+        IReadOnlyList<ComparisonRecord> records, bool compareTimeToLive)
+    {
+        var byServer = records.Where(x => x.Key == key).GroupBy(x => x.ServerId)
+            .ToDictionary(x => x.Key, x => x.ToList());
+        var signatures = new Dictionary<Guid, string>();
+        foreach (var server in servers.Where(IsFullInventoryAvailable))
+        {
+            byServer.TryGetValue(server.ServerId, out var serverRecords);
+            signatures[server.ServerId] = serverRecords is null
+                ? "<missing>"
+                : string.Join('\u001e', serverRecords
+                    .Select(x => compareTimeToLive ? $"{x.CanonicalValue}\u001f{x.TimeToLiveSeconds}" : x.CanonicalValue)
+                    .Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal));
+        }
+        var isDifferent = signatures.Values.Distinct(StringComparer.Ordinal).Skip(1).Any();
+        var cells = servers.Select(server =>
+        {
+            byServer.TryGetValue(server.ServerId, out var serverRecords);
+            var values = serverRecords?.Select(x => x.CanonicalValue)
+                .Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray() ?? [];
+            var ttls = serverRecords?.Select(x => x.TimeToLiveSeconds).Distinct().Order().ToArray() ?? [];
+            var status = !IsFullInventoryAvailable(server) ? "Unavailable"
+                : server.IsStale ? "Stale"
+                : values.Length == 0 ? "Missing"
+                : isDifferent ? "Different" : "Equal";
+            return new DnsComparisonCellModel(server.ServerId, status, values, ttls);
+        }).ToList();
+        return new(key.ZoneName, key.RelativeName, key.RecordType,
+            key.ZoneScope, key.VirtualizationInstance, cells);
+    }
 
     private sealed record ZoneRow(
         Guid Id, Guid SnapshotId, Guid ServerId, string ServerDisplayName,
@@ -172,4 +324,17 @@ public sealed class DnsInventoryQueryService(AppDbContext context) : IDnsInvento
         string? DynamicUpdate, string? ReplicationScope, string? DirectoryPartitionName,
         string? ZoneFile, string? VirtualizationInstance, string? PropertiesJson,
         int RecordCount, DateTime SnapshotCompletedAt);
+
+    private sealed record ComparisonKey(
+        string ZoneName, string RelativeName, string RecordType,
+        string? ZoneScope, string? VirtualizationInstance);
+
+    private sealed record ComparisonRecord(
+        Guid ServerId, string ZoneName, string RelativeName, string RecordType,
+        string? ZoneScope, string? VirtualizationInstance,
+        string CanonicalValue, int TimeToLiveSeconds)
+    {
+        public ComparisonKey Key => new(
+            ZoneName, RelativeName, RecordType, ZoneScope, VirtualizationInstance);
+    }
 }

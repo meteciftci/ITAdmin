@@ -27,3 +27,28 @@ public sealed record DnsRecordInventoryModel(
     string CanonicalValue, string RecordDataJson, int TimeToLiveSeconds,
     DateTime? Timestamp, string? ZoneScope, string? VirtualizationInstance,
     string RecordHash);
+
+public sealed record DnsComparisonContextModel(
+    bool PromptForFullSyncOnOpen, DateTime? LastFullInventorySyncAt,
+    bool SynchronizationInProgress, int EnabledServerCount, int UnavailableServerCount,
+    IReadOnlyList<DnsInventoryServerModel> Servers);
+
+public sealed record DnsComparisonZoneModel(string Name, int ServerCount);
+
+public sealed record DnsComparisonQuery(
+    IReadOnlyList<Guid> ServerIds, IReadOnlyList<string> ZoneNames,
+    bool CompareTimeToLive, string? Search, int PageNumber, int PageSize);
+
+public sealed record DnsComparisonCellModel(
+    Guid ServerId, string Status, IReadOnlyList<string> Values,
+    IReadOnlyList<int> TimeToLiveValues);
+
+public sealed record DnsComparisonRowModel(
+    string ZoneName, string RelativeName, string RecordType,
+    string? ZoneScope, string? VirtualizationInstance,
+    IReadOnlyList<DnsComparisonCellModel> Cells);
+
+public sealed record DnsComparisonResultModel(
+    IReadOnlyList<DnsInventoryServerModel> Servers,
+    IReadOnlyList<DnsComparisonRowModel> Items,
+    int PageNumber, int PageSize, int TotalCount, int TotalPages);

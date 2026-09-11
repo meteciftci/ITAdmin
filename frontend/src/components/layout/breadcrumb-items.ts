@@ -21,6 +21,7 @@ const breadcrumbItems: BreadcrumbItem[] = [
   { to: "/security-logs", titleKey: "items.securityLogs" },
   { to: "/dns-management/zones", titleKey: "items.dnsManagementZones" },
   { to: "/dns-management/servers", titleKey: "items.dnsManagementServers" },
+  { to: "/dns-management/comparison", titleKey: "items.dnsManagementComparison" },
   {
     to: "/monitoring/module-logs/ad-operation-logs",
     titleKey: "items.adOperationLogs",

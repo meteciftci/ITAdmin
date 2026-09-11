@@ -99,3 +99,54 @@ export type DnsRecordInventory = {
   timestamp?: string | null; zoneScope?: string | null; virtualizationInstance?: string | null;
   recordHash: string;
 };
+
+export type DnsComparisonContext = {
+  promptForFullSyncOnOpen: boolean;
+  lastFullInventorySyncAt: string | null;
+  synchronizationInProgress: boolean;
+  enabledServerCount: number;
+  unavailableServerCount: number;
+  servers: DnsInventoryServer[];
+};
+
+export type DnsComparisonZone = { name: string; serverCount: number };
+
+export type DnsComparisonStatus = "Equal" | "Different" | "Missing" | "Unavailable" | "Stale";
+
+export type DnsComparisonCell = {
+  serverId: string;
+  status: DnsComparisonStatus;
+  values: string[];
+  timeToLiveValues: number[];
+};
+
+export type DnsComparisonRow = {
+  zoneName: string;
+  relativeName: string;
+  recordType: string;
+  zoneScope: string | null;
+  virtualizationInstance: string | null;
+  cells: DnsComparisonCell[];
+};
+
+export type DnsComparisonResponse = PagedDnsResponse<DnsComparisonRow> & {
+  servers: DnsInventoryServer[];
+};
+
+export type DnsComparisonRequest = {
+  serverIds: string[];
+  zoneNames: string[];
+  compareTimeToLive: boolean;
+  search?: string;
+  pageNumber: number;
+  pageSize: number;
+};
+
+export type DnsSyncBatch = {
+  batchId: string;
+  targetedCount: number;
+  queuedCount: number;
+  alreadyQueuedCount: number;
+  failedCount: number;
+  jobs: DnsSyncJob[];
+};

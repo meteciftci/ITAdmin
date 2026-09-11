@@ -1,7 +1,9 @@
 using ITAdmin.Domain.Entities;
 using ITAdmin.Domain.Enums;
+using ITAdmin.Application.Common.Models.DnsManagement;
 using ITAdmin.IntegrationTests.LicenseManagement;
 using ITAdmin.Persistence.Context;
+using ITAdmin.Persistence.Services;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -57,6 +59,25 @@ public sealed class DnsInventoryPostgresConstraintsTests
                 setup.DnsServers.Add(server);
                 await setup.SaveChangesAsync();
                 serverId = server.Id;
+                var snapshot = CompletedActiveSnapshot(serverId);
+                var zone = new DnsZoneSnapshot
+                {
+                    InventorySnapshot = snapshot,
+                    Name = "example.test",
+                    ZoneType = "Primary",
+                };
+                zone.Records.Add(new DnsRecordSnapshot
+                {
+                    RelativeName = "www",
+                    FullyQualifiedName = "www.example.test",
+                    RecordType = "A",
+                    CanonicalValue = "{\"IPv4Address\":\"192.0.2.10\"}",
+                    RecordDataJson = "{\"IPv4Address\":\"192.0.2.10\"}",
+                    TimeToLiveSeconds = 300,
+                    RecordHash = new string('a', 64),
+                });
+                setup.DnsZoneSnapshots.Add(zone);
+                await setup.SaveChangesAsync();
             }
 
             await using (var snapshots = new AppDbContext(options))
@@ -70,6 +91,13 @@ public sealed class DnsInventoryPostgresConstraintsTests
             {
                 jobs.DnsSyncJobs.AddRange(ActiveJob(serverId), ActiveJob(serverId));
                 await Assert.ThrowsAsync<DbUpdateException>(() => jobs.SaveChangesAsync());
+            }
+
+            await using (var queryContext = new AppDbContext(options))
+            {
+                var result = await new DnsInventoryQueryService(queryContext).CompareAsync(new(
+                    [serverId], ["EXAMPLE.TEST"], false, "192.0.2", 1, 20));
+                Assert.Equal("www", Assert.Single(result.Items).RelativeName);
             }
         }
         finally

@@ -25,6 +25,38 @@ public sealed class DnsInventorySyncService(
         Guid serverId, DnsActorContext actor, CancellationToken cancellationToken = default) =>
         EnqueueInternalAsync(serverId, actor, DnsSyncTrigger.Manual, 100, Guid.NewGuid(), cancellationToken);
 
+    public async Task<DnsSyncBatchModel> EnqueueAllEnabledAsync(
+        DnsActorContext actor, CancellationToken cancellationToken = default)
+    {
+        var serverIds = await context.DnsServers.AsNoTracking()
+            .Where(x => x.IsEnabled)
+            .OrderBy(x => x.DisplayName)
+            .Select(x => x.Id)
+            .ToListAsync(cancellationToken);
+        var batchId = Guid.NewGuid();
+        var jobs = new List<DnsSyncJobModel>();
+        var queued = 0;
+        var alreadyQueued = 0;
+        var failed = 0;
+        foreach (var serverId in serverIds)
+        {
+            var result = await EnqueueInternalAsync(
+                serverId, actor, DnsSyncTrigger.Manual, 100, batchId, cancellationToken);
+            if (!result.IsSuccess || result.Value is null)
+            {
+                failed++;
+                continue;
+            }
+
+            jobs.Add(result.Value);
+            if (result.Value.AlreadyQueued) alreadyQueued++;
+            else queued++;
+        }
+
+        return new DnsSyncBatchModel(
+            batchId, serverIds.Count, queued, alreadyQueued, failed, jobs);
+    }
+
     private async Task<DnsAdministrationResult<DnsSyncJobModel>> EnqueueInternalAsync(
         Guid serverId, DnsActorContext actor, DnsSyncTrigger trigger, int priority, Guid batchId,
         CancellationToken cancellationToken)

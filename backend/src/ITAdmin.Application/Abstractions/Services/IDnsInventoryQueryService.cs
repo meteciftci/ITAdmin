@@ -13,4 +13,11 @@ public interface IDnsInventoryQueryService
         Guid zoneSnapshotId, CancellationToken cancellationToken = default);
     Task<PagedResult<DnsRecordInventoryModel>> GetRecordsAsync(
         DnsRecordInventoryQuery query, CancellationToken cancellationToken = default);
+    Task<DnsComparisonContextModel> GetComparisonContextAsync(
+        CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<DnsComparisonZoneModel>> GetComparisonZonesAsync(
+        IReadOnlyList<Guid> serverIds, string? search, int limit,
+        CancellationToken cancellationToken = default);
+    Task<DnsComparisonResultModel> CompareAsync(
+        DnsComparisonQuery query, CancellationToken cancellationToken = default);
 }

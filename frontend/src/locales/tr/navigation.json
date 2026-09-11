@@ -50,6 +50,7 @@
       "dnsManagementServers": "DNS Sunucuları",
       "dnsManagementZones": "DNS Zone Envanteri",
       "dnsManagementRecords": "DNS Kayıtları",
+      "dnsManagementComparison": "DNS Karşılaştırma",
       "error": "Hata"
     }
   }

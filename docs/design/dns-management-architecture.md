@@ -156,3 +156,21 @@ names. Both the zone lookup and record query verify that the referenced snapshot
 so retained historical or failed partial snapshots cannot leak into normal inventory views. The UI
 uses the shared page header, section card, data table, filters, loading/error states, pagination,
 badges, and bilingual locale conventions.
+
+## Cached inventory comparison
+
+The comparison context exposes the configured refresh-prompt behavior and the freshness of every
+enabled server before a selection is made. A server is comparison-ready only when its active
+snapshot contains a full record inventory; a zones-only snapshot is reported as unavailable rather
+than incorrectly treating every absent record as a DNS difference. The optional refresh action
+queues one deduplicated manual synchronization batch for all enabled servers and never waits on a
+live WinRM request. The browser polls lightweight context state and invalidates zone candidates and
+open results after the batch finishes. The opening prompt is recorded in browser session storage so
+it does not repeat during the same session.
+
+Comparison requests accept two to ten servers and one to twenty zones. PostgreSQL first pages over
+distinct RRset identities (zone, owner, type, zone scope, and virtualization instance), then loads
+only candidate records for that page. Server cells aggregate multi-value RRsets and classify them
+as equal, different, missing, unavailable, or stale. TTL values participate in equality only when
+the user enables the explicit TTL comparison option. Input limits, deterministic ordering, active
+snapshot checks, and the dedicated comparison permission are enforced by the API as well as the UI.

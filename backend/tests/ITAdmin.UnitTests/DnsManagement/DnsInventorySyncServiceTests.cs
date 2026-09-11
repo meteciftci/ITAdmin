@@ -23,6 +23,10 @@ public sealed class DnsInventorySyncServiceTests
             .GetMethod(nameof(DnsManagementAdministrationController.SynchronizeServer))!
             .GetCustomAttribute<RequirePermissionAttribute>();
         Assert.Equal($"Permission:{DnsManagementPermissions.Synchronize}", attribute?.Policy);
+        var batchAttribute = typeof(DnsInventoryController)
+            .GetMethod(nameof(DnsInventoryController.SynchronizeAll))!
+            .GetCustomAttribute<RequirePermissionAttribute>();
+        Assert.Equal($"Permission:{DnsManagementPermissions.Synchronize}", batchAttribute?.Policy);
     }
 
     [Fact]
@@ -41,6 +45,34 @@ public sealed class DnsInventorySyncServiceTests
         Assert.Equal(first.Value.Id, second.Value.Id);
         Assert.Single(context.DnsSyncJobs);
         Assert.Single(context.AuditLogs);
+    }
+
+    [Fact]
+    public async Task Enqueue_all_uses_one_batch_and_deduplicates_existing_work()
+    {
+        await using var context = CreateContext();
+        var first = await SeedAsync(context);
+        var second = new DnsServer
+        {
+            DisplayName = "Public DNS",
+            HostName = "dns02.example.local",
+            Port = 5986,
+            DnsCredentialProfileId = first.DnsCredentialProfileId,
+            IsEnabled = true,
+        };
+        context.DnsServers.Add(second);
+        await context.SaveChangesAsync();
+        var service = CreateService(context, new InventoryAgent());
+        await service.EnqueueAsync(first.Id, Actor);
+
+        var result = await service.EnqueueAllEnabledAsync(Actor);
+
+        Assert.Equal(2, result.TargetedCount);
+        Assert.Equal(1, result.QueuedCount);
+        Assert.Equal(1, result.AlreadyQueuedCount);
+        Assert.Equal(0, result.FailedCount);
+        Assert.Equal(2, result.Jobs.Count);
+        Assert.Equal(result.BatchId, Assert.Single(result.Jobs, x => !x.AlreadyQueued).BatchId);
     }
 
     [Fact]

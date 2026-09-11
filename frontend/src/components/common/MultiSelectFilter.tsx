@@ -17,6 +17,7 @@ type MultiSelectFilterProps = {
   clearLabel: string;
   emptyLabel: string;
   searchPlaceholder: string;
+  disabled?: boolean;
 };
 
 export function MultiSelectFilter({
@@ -28,6 +29,7 @@ export function MultiSelectFilter({
   clearLabel,
   emptyLabel,
   searchPlaceholder,
+  disabled = false,
 }: MultiSelectFilterProps) {
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -75,6 +77,8 @@ export function MultiSelectFilter({
       <PopoverTrigger asChild>
         <Button
           type="button"
+          aria-label={label ?? placeholderText}
+          disabled={disabled}
           variant="outline"
           className={cn(
             "h-auto min-h-10 w-full justify-between gap-2 py-2 text-left sm:w-[280px]",

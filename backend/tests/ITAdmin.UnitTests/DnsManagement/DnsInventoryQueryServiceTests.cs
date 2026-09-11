@@ -25,6 +25,10 @@ public sealed class DnsInventoryQueryServiceTests
             $"{RequireAnyPermissionAttribute.PolicyPrefix}{DnsManagementPermissions.ZonesView}|{DnsManagementPermissions.RecordsView}",
             zones?.Policy);
         Assert.Equal($"Permission:{DnsManagementPermissions.RecordsView}", records?.Policy);
+        var comparison = typeof(DnsInventoryController)
+            .GetMethod(nameof(DnsInventoryController.Compare))!
+            .GetCustomAttribute<RequirePermissionAttribute>();
+        Assert.Equal($"Permission:{DnsManagementPermissions.Compare}", comparison?.Policy);
     }
 
     [Fact]
@@ -103,6 +107,74 @@ public sealed class DnsInventoryQueryServiceTests
 
         Assert.Equal(activeZone.Records.First().Id, Assert.Single(result.Items).Id);
         Assert.Empty(inactiveResult.Items);
+    }
+
+    [Fact]
+    public async Task Comparison_context_requires_a_full_snapshot_for_every_enabled_server()
+    {
+        await using var context = CreateContext();
+        context.DnsManagementSettings.Add(new DnsManagementSettings
+        {
+            PromptForFullSyncOnComparisonOpen = false,
+            ComparisonSnapshotStaleAfterMinutes = 15,
+        });
+        var fullServer = Server("Internal DNS", "dns01.example.local");
+        var zonesOnlyServer = Server("Public DNS", "dns02.example.local");
+        context.DnsInventorySnapshots.Add(Snapshot(fullServer, true, DateTime.UtcNow));
+        var zonesOnly = Snapshot(zonesOnlyServer, true, DateTime.UtcNow);
+        zonesOnly.Scope = DnsSyncScope.Zones;
+        context.DnsInventorySnapshots.Add(zonesOnly);
+        await context.SaveChangesAsync();
+
+        var result = await new DnsInventoryQueryService(context).GetComparisonContextAsync();
+
+        Assert.False(result.PromptForFullSyncOnOpen);
+        Assert.Null(result.LastFullInventorySyncAt);
+        Assert.Equal(2, result.EnabledServerCount);
+        Assert.Equal(1, result.UnavailableServerCount);
+    }
+
+    [Fact]
+    public async Task Comparison_classifies_equal_ttl_difference_missing_and_unavailable_cells()
+    {
+        await using var context = CreateContext();
+        context.DnsManagementSettings.Add(new DnsManagementSettings
+        {
+            ComparisonSnapshotStaleAfterMinutes = 15,
+        });
+        var first = Server("Internal DNS", "dns01.example.local");
+        var second = Server("Public DNS", "dns02.example.local");
+        var zonesOnlyServer = Server("Zones DNS", "dns03.example.local");
+        var firstZone = Zone(Snapshot(first, true, DateTime.UtcNow), "example.local", null);
+        var secondZone = Zone(Snapshot(second, true, DateTime.UtcNow), "example.local", null);
+        var zonesOnlySnapshot = Snapshot(zonesOnlyServer, true, DateTime.UtcNow);
+        zonesOnlySnapshot.Scope = DnsSyncScope.Zones;
+        var zonesOnlyZone = Zone(zonesOnlySnapshot, "example.local", null);
+        var firstWww = Record(firstZone, "www", "A", "{\"IPv4Address\":\"10.0.0.1\"}");
+        var secondWww = Record(secondZone, "www", "A", "{\"IPv4Address\":\"10.0.0.1\"}");
+        secondWww.TimeToLiveSeconds = 600;
+        firstZone.Records.Add(firstWww);
+        firstZone.Records.Add(Record(firstZone, "only-first", "A", "{\"IPv4Address\":\"10.0.0.2\"}"));
+        secondZone.Records.Add(secondWww);
+        context.AddRange(firstZone, secondZone, zonesOnlyZone);
+        await context.SaveChangesAsync();
+        var service = new DnsInventoryQueryService(context);
+        var serverIds = new[] { first.Id, second.Id, zonesOnlyServer.Id };
+
+        var withoutTtl = await service.CompareAsync(new(
+            serverIds, ["EXAMPLE.LOCAL"], false, null, 1, 20));
+        var withTtl = await service.CompareAsync(new(
+            serverIds, ["example.local"], true, "www", 1, 20));
+
+        var www = Assert.Single(withoutTtl.Items, x => x.RelativeName == "www");
+        Assert.Equal("Equal", Assert.Single(www.Cells, x => x.ServerId == first.Id).Status);
+        Assert.Equal("Equal", Assert.Single(www.Cells, x => x.ServerId == second.Id).Status);
+        Assert.Equal("Unavailable", Assert.Single(www.Cells, x => x.ServerId == zonesOnlyServer.Id).Status);
+        var onlyFirst = Assert.Single(withoutTtl.Items, x => x.RelativeName == "only-first");
+        Assert.Equal("Different", Assert.Single(onlyFirst.Cells, x => x.ServerId == first.Id).Status);
+        Assert.Equal("Missing", Assert.Single(onlyFirst.Cells, x => x.ServerId == second.Id).Status);
+        Assert.All(withTtl.Items.Single().Cells.Where(x => x.ServerId != zonesOnlyServer.Id),
+            x => Assert.Equal("Different", x.Status));
     }
 
     private static AppDbContext CreateContext() => new(new DbContextOptionsBuilder<AppDbContext>()

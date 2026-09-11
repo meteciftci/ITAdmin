@@ -58,3 +58,7 @@ public sealed record DnsSyncJobModel(
     DnsSyncScope Scope, DnsSyncTrigger Trigger, DnsSyncStatus Status,
     int AttemptCount, DateTime RequestedAt, DateTime? StartedAt, DateTime? CompletedAt,
     string? ErrorCode, string? Message, bool AlreadyQueued);
+
+public sealed record DnsSyncBatchModel(
+    Guid BatchId, int TargetedCount, int QueuedCount, int AlreadyQueuedCount,
+    int FailedCount, IReadOnlyList<DnsSyncJobModel> Jobs);

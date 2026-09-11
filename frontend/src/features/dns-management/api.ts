@@ -1,5 +1,5 @@
 import { apiClient } from "@/lib/api-client";
-import type { DnsCredentialProfile, DnsInventoryServer, DnsManagementSettings, DnsRecordInventory, DnsServer, DnsServerConnectionTest, DnsSyncJob, DnsZoneInventory, PagedDnsResponse, SaveDnsCredentialProfile, SaveDnsServer } from "./types";
+import type { DnsComparisonContext, DnsComparisonRequest, DnsComparisonResponse, DnsComparisonZone, DnsCredentialProfile, DnsInventoryServer, DnsManagementSettings, DnsRecordInventory, DnsServer, DnsServerConnectionTest, DnsSyncBatch, DnsSyncJob, DnsZoneInventory, PagedDnsResponse, SaveDnsCredentialProfile, SaveDnsServer } from "./types";
 
 const basePath = "/dns-management";
 export const DNS_SETTINGS_QUERY_KEY = ["dns-management", "settings"] as const;
@@ -30,3 +30,18 @@ export const getDnsZone = async (id: string) =>
   (await apiClient.get<DnsZoneInventory>(`${basePath}/inventory/zones/${id}`)).data;
 export const getDnsRecords = async (id: string, params: { search?: string; recordType?: string; pageNumber: number; pageSize: number }) =>
   (await apiClient.get<PagedDnsResponse<DnsRecordInventory>>(`${basePath}/inventory/zones/${id}/records`, { params })).data;
+
+export const DNS_COMPARISON_CONTEXT_QUERY_KEY = ["dns-management", "inventory", "comparison", "context"] as const;
+export const DNS_COMPARISON_ZONES_QUERY_KEY = ["dns-management", "inventory", "comparison", "zones"] as const;
+export const DNS_COMPARISON_RESULTS_QUERY_KEY = ["dns-management", "inventory", "comparison", "results"] as const;
+export const getDnsComparisonContext = async () =>
+  (await apiClient.get<DnsComparisonContext>(`${basePath}/inventory/comparison/context`)).data;
+export const getDnsComparisonZones = async (serverIds: string[], search?: string) =>
+  (await apiClient.get<DnsComparisonZone[]>(`${basePath}/inventory/comparison/zones`, {
+    params: { serverIds, search, limit: 200 },
+    paramsSerializer: { indexes: null },
+  })).data;
+export const compareDnsInventory = async (request: DnsComparisonRequest) =>
+  (await apiClient.post<DnsComparisonResponse>(`${basePath}/inventory/comparison/query`, request)).data;
+export const synchronizeAllDnsInventory = async () =>
+  (await apiClient.post<DnsSyncBatch>(`${basePath}/inventory/comparison/synchronizations`)).data;

@@ -19,6 +19,7 @@ import {
   UserCheck,
   FolderTree,
   FileKey,
+  GitCompareArrows,
   RefreshCw,
   ServerCog,
 } from "lucide-react";
@@ -174,6 +175,7 @@ function isDnsManagementSectionVisible(user: CurrentUser | null): boolean {
     PermissionCodes.DnsManagement.Servers.View,
     PermissionCodes.DnsManagement.Zones.View,
     PermissionCodes.DnsManagement.Records.View,
+    PermissionCodes.DnsManagement.Compare,
   ]);
 }
 
@@ -205,6 +207,7 @@ export const getSidebarGroups = (
         children: [
           { titleKey: "items.dnsManagementServers", to: "/dns-management/servers", icon: ServerCog, visible: canAccess(user, PermissionCodes.DnsManagement.Servers.View) },
           { titleKey: "items.dnsManagementZones", to: "/dns-management/zones", icon: ListTree, visible: canAccessAny(user, [PermissionCodes.DnsManagement.Zones.View, PermissionCodes.DnsManagement.Records.View]) },
+          { titleKey: "items.dnsManagementComparison", to: "/dns-management/comparison", icon: GitCompareArrows, visible: canAccess(user, PermissionCodes.DnsManagement.Compare) },
         ],
       },
       {

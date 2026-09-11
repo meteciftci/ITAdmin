@@ -20,6 +20,10 @@ export function DnsManagementRedirectPage() {
     return <Navigate to="/dns-management/zones" replace />;
   }
 
+  if (canAccess(user, PermissionCodes.DnsManagement.Compare)) {
+    return <Navigate to="/dns-management/comparison" replace />;
+  }
+
   return (
     <Navigate
       to={getErrorRoutePath("FORBIDDEN")}
