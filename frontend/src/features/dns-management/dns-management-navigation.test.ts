@@ -36,6 +36,15 @@ test("DNS connection test uses the dedicated endpoint and permission", () => {
   assert.match(page, /connectionResult\.capabilities/);
 });
 
+test("DNS inventory synchronization is queued with dedicated permission and status polling", () => {
+  const api = readFileSync(join(root, "features/dns-management/api.ts"), "utf8");
+  const page = readFileSync(join(root, "features/dns-management/DnsServersPage.tsx"), "utf8");
+  assert.match(api, /servers\/\$\{id\}\/synchronizations/);
+  assert.match(page, /DnsManagement\.Synchronize/);
+  assert.match(page, /refetchInterval/);
+  assert.match(page, /lastSuccessfulSyncAt/);
+});
+
 test("DNS locales have matching structures", () => {
   const tr = JSON.parse(readFileSync(join(root, "locales/tr/dnsManagement.json"), "utf8"));
   const en = JSON.parse(readFileSync(join(root, "locales/en/dnsManagement.json"), "utf8"));

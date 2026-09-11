@@ -52,3 +52,9 @@ public sealed record DnsServerConnectionTestModel(
     string? OperatingSystemVersion, string? PowerShellVersion, string? DnsModuleVersion,
     string? DnsServerVersion, int? ZoneCount, DnsServerCapabilitiesModel? Capabilities,
     DateTime TestedAt);
+
+public sealed record DnsSyncJobModel(
+    Guid Id, Guid BatchId, Guid ServerId, string ServerDisplayName,
+    DnsSyncScope Scope, DnsSyncTrigger Trigger, DnsSyncStatus Status,
+    int AttemptCount, DateTime RequestedAt, DateTime? StartedAt, DateTime? CompletedAt,
+    string? ErrorCode, string? Message, bool AlreadyQueued);

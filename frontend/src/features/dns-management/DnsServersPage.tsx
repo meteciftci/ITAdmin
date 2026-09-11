@@ -19,7 +19,7 @@ import { useAuthStore } from "@/features/auth/auth-store";
 import { canAccess } from "@/lib/permissions";
 import { PermissionCodes } from "@/lib/permission-codes";
 import { getApiErrorMessage } from "@/lib/api-error";
-import { deleteDnsCredential, DNS_CREDENTIALS_QUERY_KEY, DNS_SERVERS_QUERY_KEY, getDnsCredentials, getDnsServers, saveDnsCredential, saveDnsServer, testDnsServerConnection } from "./api";
+import { deleteDnsCredential, DNS_CREDENTIALS_QUERY_KEY, DNS_SERVERS_QUERY_KEY, getDnsCredentials, getDnsServers, saveDnsCredential, saveDnsServer, synchronizeDnsServer, testDnsServerConnection } from "./api";
 import type { DnsAuthenticationMode, DnsCredentialProfile, DnsServer, DnsServerConnectionTest, DnsServerEnvironment } from "./types";
 
 const emptyCredential = { name: "", userName: "", password: "", authenticationMode: "Negotiate" as DnsAuthenticationMode, isEnabled: true };
@@ -30,9 +30,10 @@ export function DnsServersPage() {
   const user = useAuthStore((x) => x.user);
   const canManage = canAccess(user, PermissionCodes.DnsManagement.Servers.Manage);
   const canTest = canAccess(user, PermissionCodes.DnsManagement.Servers.TestConnection);
+  const canSynchronize = canAccess(user, PermissionCodes.DnsManagement.Synchronize);
   const queryClient = useQueryClient();
   const credentials = useQuery({ queryKey: DNS_CREDENTIALS_QUERY_KEY, queryFn: getDnsCredentials, enabled: canManage });
-  const servers = useQuery({ queryKey: DNS_SERVERS_QUERY_KEY, queryFn: getDnsServers });
+  const servers = useQuery({ queryKey: DNS_SERVERS_QUERY_KEY, queryFn: getDnsServers, refetchInterval: (query) => query.state.data?.some((x) => x.lastSyncStatus === "Pending" || x.lastSyncStatus === "Running") ? 2000 : false });
   const [credentialId, setCredentialId] = useState<string | null>(null);
   const [credential, setCredential] = useState(emptyCredential);
   const [serverId, setServerId] = useState<string | null>(null);
@@ -45,6 +46,7 @@ export function DnsServersPage() {
   const serverMutation = useMutation({ mutationFn: () => saveDnsServer(serverId, { ...server, syncIntervalMinutes: server.syncIntervalMinutes || null, tlsCertificateThumbprint: server.tlsCertificateThumbprint || null, notes: server.notes || null }), onSuccess: async () => { setServerId(null); setServer(emptyServer); setError(null); await queryClient.invalidateQueries({ queryKey: DNS_SERVERS_QUERY_KEY }); toast.success(t("messages.serverSaved")); }, onError: (x) => setError(getApiErrorMessage(x, t("messages.saveFailed"))) });
   const removeCredential = useMutation({ mutationFn: deleteDnsCredential, onSuccess: async () => { setCredentialToDelete(null); await queryClient.invalidateQueries({ queryKey: DNS_CREDENTIALS_QUERY_KEY }); toast.success(t("messages.credentialDeleted")); }, onError: (x) => setError(getApiErrorMessage(x, t("messages.credentialInUse"))) });
   const connectionMutation = useMutation({ mutationFn: testDnsServerConnection, onSuccess: async (result) => { setConnectionResult(result); setError(null); await queryClient.invalidateQueries({ queryKey: DNS_SERVERS_QUERY_KEY }); if (result.success) toast.success(t("connection.success")); else toast.error(t("connection.failed")); }, onError: (x) => setError(getApiErrorMessage(x, t("connection.failed"))) });
+  const syncMutation = useMutation({ mutationFn: synchronizeDnsServer, onSuccess: async (result) => { setError(null); await queryClient.invalidateQueries({ queryKey: DNS_SERVERS_QUERY_KEY }); toast.success(t(result.alreadyQueued ? "synchronization.alreadyQueued" : "synchronization.queued")); }, onError: (x) => setError(getApiErrorMessage(x, t("synchronization.failedToQueue"))) });
   const editCredential = (x: DnsCredentialProfile) => { setCredentialId(x.id); setCredential({ name: x.name, userName: x.userName, password: "", authenticationMode: x.authenticationMode, isEnabled: x.isEnabled }); };
   const editServer = (x: DnsServer) => { setServerId(x.id); setServer({ displayName: x.displayName, hostName: x.hostName, port: x.port, environment: x.environment, credentialProfileId: x.credentialProfileId, isEnabled: x.isEnabled, syncIntervalMinutes: x.syncIntervalMinutes ?? null, tlsCertificateThumbprint: x.tlsCertificateThumbprint ?? "", notes: x.notes ?? "" }); };
 
@@ -55,7 +57,31 @@ export function DnsServersPage() {
     {servers.isError ? <FormError message={getApiErrorMessage(servers.error, t("messages.loadFailed"))} /> : null}
     {credentials.isError ? <FormError message={getApiErrorMessage(credentials.error, t("messages.loadFailed"))} /> : null}
     <SectionCard title={t("servers.listTitle")} description={t("servers.phaseNotice")}>
-      <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b text-left"><th className="p-3">{t("servers.fields.name")}</th><th className="p-3">{t("servers.fields.endpoint")}</th><th className="p-3">{t("servers.fields.environment")}</th><th className="p-3">{t("servers.fields.credential")}</th><th className="p-3">{t("servers.fields.status")}</th>{canManage || canTest ? <th className="p-3" /> : null}</tr></thead><tbody>{servers.data?.map((x) => <tr key={x.id} className="border-b last:border-0"><td className="p-3 font-medium">{x.displayName}</td><td className="p-3">{x.hostName}:{x.port}</td><td className="p-3">{t(`environments.${x.environment}`)}</td><td className="p-3">{x.credentialProfileName}</td><td className="p-3">{x.isEnabled ? t("common:status.active") : t("common:status.passive")}</td>{canManage || canTest ? <td className="p-3 text-right space-x-2">{canTest ? <Button variant="outline" size="sm" disabled={connectionMutation.isPending} onClick={() => connectionMutation.mutate(x.id)}>{connectionMutation.isPending && connectionMutation.variables === x.id ? t("connection.testing") : t("connection.test")}</Button> : null}{canManage ? <Button variant="outline" size="sm" onClick={() => editServer(x)}>{t("common:actions.edit")}</Button> : null}</td> : null}</tr>)}</tbody></table>{servers.data?.length === 0 ? <p className="p-4 text-sm text-muted-foreground">{t("servers.empty")}</p> : null}</div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead><tr className="border-b text-left">
+            <th className="p-3">{t("servers.fields.name")}</th><th className="p-3">{t("servers.fields.endpoint")}</th>
+            <th className="p-3">{t("servers.fields.environment")}</th><th className="p-3">{t("servers.fields.credential")}</th>
+            <th className="p-3">{t("servers.fields.status")}</th><th className="p-3">{t("synchronization.inventory")}</th>
+            {canManage || canTest || canSynchronize ? <th className="p-3" /> : null}
+          </tr></thead>
+          <tbody>{servers.data?.map((x) => {
+            const syncInProgress = x.lastSyncStatus === "Pending" || x.lastSyncStatus === "Running";
+            return <tr key={x.id} className="border-b last:border-0">
+              <td className="p-3 font-medium">{x.displayName}</td><td className="p-3">{x.hostName}:{x.port}</td>
+              <td className="p-3">{t(`environments.${x.environment}`)}</td><td className="p-3">{x.credentialProfileName}</td>
+              <td className="p-3">{x.isEnabled ? t("common:status.active") : t("common:status.passive")}</td>
+              <td className="p-3">{x.lastSyncStatus ? <><span>{t(`synchronization.status.${x.lastSyncStatus}`, { defaultValue: x.lastSyncStatus })}</span>{x.lastSuccessfulSyncAt ? <><br /><DateTimeText value={x.lastSuccessfulSyncAt} /></> : null}</> : t("synchronization.never")}</td>
+              {canManage || canTest || canSynchronize ? <td className="p-3 text-right space-x-2">
+                {canSynchronize ? <Button variant="outline" size="sm" disabled={!x.isEnabled || syncMutation.isPending || syncInProgress} onClick={() => syncMutation.mutate(x.id)}>{syncMutation.isPending && syncMutation.variables === x.id ? t("synchronization.queueing") : syncInProgress ? t(`synchronization.status.${x.lastSyncStatus}`) : t("synchronization.action")}</Button> : null}
+                {canTest ? <Button variant="outline" size="sm" disabled={connectionMutation.isPending} onClick={() => connectionMutation.mutate(x.id)}>{connectionMutation.isPending && connectionMutation.variables === x.id ? t("connection.testing") : t("connection.test")}</Button> : null}
+                {canManage ? <Button variant="outline" size="sm" onClick={() => editServer(x)}>{t("common:actions.edit")}</Button> : null}
+              </td> : null}
+            </tr>;
+          })}</tbody>
+        </table>
+        {servers.data?.length === 0 ? <p className="p-4 text-sm text-muted-foreground">{t("servers.empty")}</p> : null}
+      </div>
     </SectionCard>
     {connectionResult ? <SectionCard title={t("connection.resultTitle", { name: connectionResult.serverDisplayName })} actions={<Badge variant={connectionResult.success ? "default" : "destructive"}>{connectionResult.success ? t("connection.success") : t("connection.failed")}</Badge>}>
       <div className="space-y-4"><p className="text-sm text-muted-foreground">{connectionResult.success ? t("connection.detailsSuccess") : t(`connection.failures.${connectionResult.failureKind ?? "Unknown"}`, { defaultValue: connectionResult.message })}</p><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">{(["hostAgentAvailable", "networkReachable", "tlsValidated", "authenticationSucceeded", "dnsModuleAvailable", "dnsServiceReachable"] as const).map((key) => <div key={key} className="rounded-md border p-3"><p className="text-xs text-muted-foreground">{t(`connection.checks.${key}`)}</p><p className="font-medium">{connectionResult[key] ? t("connection.available") : t("connection.unavailable")}</p></div>)}</div>

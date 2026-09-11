@@ -98,3 +98,29 @@ Operational references:
 - [PowerShell remoting requirements](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_remote_requirements?view=powershell-7.6)
 - [Configure WinRM for HTTPS](https://learn.microsoft.com/en-us/troubleshoot/windows-client/system-management-components/configure-winrm-for-https)
 - [PowerShell remoting FAQ](https://learn.microsoft.com/en-gb/powershell/scripting/security/remoting/powershell-remoting-faq?view=powershell-7.4)
+
+## Inventory synchronization implementation
+
+Manual synchronization creates a durable, deduplicated database job and returns immediately. A
+background worker claims queued jobs with a lease and observes the configured maximum parallel
+server count. Interrupted leases are retried at most three times; an interrupted partial snapshot
+is marked failed before the retry starts.
+
+The Host Agent reads the zone catalog and resource records through fixed scripts using
+`Get-DnsServerZone`, `Get-DnsServerZoneScope`, `Get-DnsServerVirtualizationInstance`, and
+`Get-DnsServerResourceRecord`. Zone and record results are deterministically sorted and returned in
+pages of at most 250 items. The agent also applies a serialized byte budget below the named-pipe
+frame limit, so unusually large TXT or other record data cannot turn a page into an oversized
+response. Zone scope and virtualization-instance identity are retained.
+
+Each record stores normalized JSON data, a fully-qualified name, TTL, timestamp, scope, instance,
+and a SHA-256 fingerprint. Pages are written only to an inactive snapshot. After every requested
+page succeeds, one database transaction deactivates the previous snapshot, activates the completed
+snapshot, updates server freshness, and completes the job. Failures retain their inactive partial
+snapshot for diagnosis and never replace the last successful inventory.
+
+Inventory cmdlet references:
+
+- [Get-DnsServerZone](https://learn.microsoft.com/en-us/powershell/module/dnsserver/get-dnsserverzone?view=windowsserver2025-ps)
+- [Get-DnsServerZoneScope](https://learn.microsoft.com/en-us/powershell/module/dnsserver/get-dnsserverzonescope?view=windowsserver2025-ps)
+- [Get-DnsServerResourceRecord](https://learn.microsoft.com/en-us/powershell/module/dnsserver/get-dnsserverresourcerecord?view=windowsserver2025-ps)

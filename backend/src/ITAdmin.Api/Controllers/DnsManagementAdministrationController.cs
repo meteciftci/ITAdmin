@@ -13,7 +13,8 @@ namespace ITAdmin.Api.Controllers;
 [Authorize]
 public sealed class DnsManagementAdministrationController(
     IDnsManagementAdministrationService service,
-    IDnsServerConnectionTestService connectionTestService) : ControllerBase
+    IDnsServerConnectionTestService connectionTestService,
+    IDnsInventorySyncService inventorySyncService) : ControllerBase
 {
     [HttpGet("settings")]
     [RequirePermission(DnsManagementPermissions.ManageSettings)]
@@ -84,6 +85,18 @@ public sealed class DnsManagementAdministrationController(
             : BadRequest(new { message = result.Message });
     }
 
+    [HttpPost("servers/{id:guid}/synchronizations")]
+    [RequirePermission(DnsManagementPermissions.Synchronize)]
+    public async Task<ActionResult<DnsSyncJobResponse>> SynchronizeServer(
+        Guid id, CancellationToken cancellationToken)
+    {
+        var result = await inventorySyncService.EnqueueAsync(
+            id, DnsManagementActorResolver.Resolve(this), cancellationToken);
+        return result.IsSuccess && result.Value is not null
+            ? Accepted(Map(result.Value))
+            : BadRequest(new { message = result.Message });
+    }
+
     private async Task<ActionResult<DnsCredentialProfileResponse>> SaveCredential(
         Guid? id, SaveDnsCredentialProfileRequest request, CancellationToken cancellationToken)
     {
@@ -121,4 +134,7 @@ public sealed class DnsManagementAdministrationController(
             x.Capabilities.Zones, x.Capabilities.Records, x.Capabilities.ServerSettings,
             x.Capabilities.Dnssec, x.Capabilities.Policies, x.Capabilities.Scopes, x.Capabilities.Cache),
         x.TestedAt);
+    private static DnsSyncJobResponse Map(AppModels.DnsSyncJobModel x) => new(
+        x.Id, x.BatchId, x.ServerId, x.ServerDisplayName, x.Scope, x.Trigger, x.Status,
+        x.AttemptCount, x.RequestedAt, x.StartedAt, x.CompletedAt, x.ErrorCode, x.Message, x.AlreadyQueued);
 }

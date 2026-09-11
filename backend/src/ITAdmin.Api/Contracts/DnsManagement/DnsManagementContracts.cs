@@ -47,3 +47,9 @@ public sealed record DnsServerConnectionTestResponse(
     string? OperatingSystemVersion, string? PowerShellVersion, string? DnsModuleVersion,
     string? DnsServerVersion, int? ZoneCount, DnsServerCapabilitiesResponse? Capabilities,
     DateTime TestedAt);
+
+public sealed record DnsSyncJobResponse(
+    Guid Id, Guid BatchId, Guid ServerId, string ServerDisplayName,
+    DnsSyncScope Scope, DnsSyncTrigger Trigger, DnsSyncStatus Status,
+    int AttemptCount, DateTime RequestedAt, DateTime? StartedAt, DateTime? CompletedAt,
+    string? ErrorCode, string? Message, bool AlreadyQueued);

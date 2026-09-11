@@ -31,7 +31,7 @@ namespace ITAdmin.HostAgent.Contracts;
 /// </summary>
 public static class HostAgentProtocol
 {
-    public const int ProtocolVersion = 3;
+    public const int ProtocolVersion = 4;
 
     /// <summary>Pipe name. Machine-local; the agent ACLs it to the app pool identity and administrators.</summary>
     public const string PipeName = "ITAdmin.HostAgent";
@@ -94,6 +94,12 @@ public enum HostAgentOperation
     /// contains connection values only; it never carries PowerShell or command text.
     /// </summary>
     TestDnsServerConnection = 9,
+
+    /// <summary>
+    /// Read one bounded page of DNS zones or resource records. All query parameters are validated
+    /// data for the fixed inventory script; callers cannot submit executable text.
+    /// </summary>
+    ReadDnsServerInventoryPage = 10,
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -101,6 +107,13 @@ public enum HostAgentDnsAuthenticationMode
 {
     Negotiate = 0,
     BasicOverTls = 1,
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum HostAgentDnsInventoryKind
+{
+    Zones = 0,
+    Records = 1,
 }
 
 /// <summary>One request across the pipe.</summary>
@@ -152,6 +165,24 @@ public sealed record HostAgentRequest
 
     [JsonPropertyName("dnsTimeoutSeconds")]
     public int? DnsTimeoutSeconds { get; init; }
+
+    [JsonPropertyName("dnsInventoryKind")]
+    public HostAgentDnsInventoryKind? DnsInventoryKind { get; init; }
+
+    [JsonPropertyName("dnsZoneName")]
+    public string? DnsZoneName { get; init; }
+
+    [JsonPropertyName("dnsZoneScope")]
+    public string? DnsZoneScope { get; init; }
+
+    [JsonPropertyName("dnsVirtualizationInstance")]
+    public string? DnsVirtualizationInstance { get; init; }
+
+    [JsonPropertyName("dnsInventoryOffset")]
+    public int? DnsInventoryOffset { get; init; }
+
+    [JsonPropertyName("dnsInventoryPageSize")]
+    public int? DnsInventoryPageSize { get; init; }
 
     public string ToJson() => JsonSerializer.Serialize(this, HostAgentProtocol.Json);
 
@@ -211,7 +242,8 @@ public sealed record HostAgentRequest
             }
         }
 
-        if (Operation == HostAgentOperation.TestDnsServerConnection)
+        if (Operation is HostAgentOperation.TestDnsServerConnection
+            or HostAgentOperation.ReadDnsServerInventoryPage)
         {
             var hostName = DnsHostName?.Trim().TrimEnd('.');
             if (string.IsNullOrWhiteSpace(hostName) || hostName.Length > 253
@@ -233,6 +265,24 @@ public sealed record HostAgentRequest
                 problems.Add("dnsTlsCertificateThumbprint must be a SHA-1 or SHA-256 hexadecimal value.");
             if (DnsTlsCertificateThumbprint?.Any(x => !Uri.IsHexDigit(x) && !char.IsWhiteSpace(x) && x is not ':' and not '-') == true)
                 problems.Add("dnsTlsCertificateThumbprint contains invalid characters.");
+        }
+
+
+        if (Operation == HostAgentOperation.ReadDnsServerInventoryPage)
+        {
+            if (DnsInventoryKind is null || !Enum.IsDefined(DnsInventoryKind.Value))
+                problems.Add("dnsInventoryKind is required.");
+            if (DnsInventoryOffset is null or < 0)
+                problems.Add("dnsInventoryOffset must be zero or greater.");
+            if (DnsInventoryPageSize is null or < 1 or > 500)
+                problems.Add("dnsInventoryPageSize must be between 1 and 500.");
+            if (DnsInventoryKind == HostAgentDnsInventoryKind.Records
+                && (string.IsNullOrWhiteSpace(DnsZoneName) || DnsZoneName.Length > 253))
+                problems.Add("dnsZoneName is required for record inventory and may contain at most 253 characters.");
+            if (DnsZoneScope?.Length > 128)
+                problems.Add("dnsZoneScope may contain at most 128 characters.");
+            if (DnsVirtualizationInstance?.Length > 128)
+                problems.Add("dnsVirtualizationInstance may contain at most 128 characters.");
         }
 
         return problems;
@@ -305,6 +355,9 @@ public sealed record HostAgentResponse
 
     [JsonPropertyName("dnsProbe")]
     public HostAgentDnsProbeResult? DnsProbe { get; init; }
+
+    [JsonPropertyName("dnsInventoryPage")]
+    public HostAgentDnsInventoryPage? DnsInventoryPage { get; init; }
 
     [JsonPropertyName("repositoryStatus")]
     public HostAgentRepositoryStatus RepositoryStatus { get; init; } = HostAgentRepositoryStatus.Unknown;
@@ -402,6 +455,68 @@ public sealed record HostAgentDnsCapabilities
     public bool Scopes { get; init; }
     [JsonPropertyName("cache")]
     public bool Cache { get; init; }
+}
+
+public sealed record HostAgentDnsInventoryPage
+{
+    [JsonPropertyName("success")]
+    public bool Success { get; init; }
+    [JsonPropertyName("failureKind")]
+    public string? FailureKind { get; init; }
+    [JsonPropertyName("message")]
+    public string Message { get; init; } = string.Empty;
+    [JsonPropertyName("hasMore")]
+    public bool HasMore { get; init; }
+    [JsonPropertyName("zones")]
+    public IReadOnlyList<HostAgentDnsZoneInventoryItem> Zones { get; init; } = [];
+    [JsonPropertyName("records")]
+    public IReadOnlyList<HostAgentDnsRecordInventoryItem> Records { get; init; } = [];
+}
+
+public sealed record HostAgentDnsZoneInventoryItem
+{
+    [JsonPropertyName("name")]
+    public string Name { get; init; } = string.Empty;
+    [JsonPropertyName("zoneType")]
+    public string ZoneType { get; init; } = string.Empty;
+    [JsonPropertyName("isReverseLookupZone")]
+    public bool IsReverseLookupZone { get; init; }
+    [JsonPropertyName("isDsIntegrated")]
+    public bool IsDsIntegrated { get; init; }
+    [JsonPropertyName("isSigned")]
+    public bool IsSigned { get; init; }
+    [JsonPropertyName("isPaused")]
+    public bool IsPaused { get; init; }
+    [JsonPropertyName("dynamicUpdate")]
+    public string? DynamicUpdate { get; init; }
+    [JsonPropertyName("replicationScope")]
+    public string? ReplicationScope { get; init; }
+    [JsonPropertyName("directoryPartitionName")]
+    public string? DirectoryPartitionName { get; init; }
+    [JsonPropertyName("zoneFile")]
+    public string? ZoneFile { get; init; }
+    [JsonPropertyName("virtualizationInstance")]
+    public string? VirtualizationInstance { get; init; }
+    [JsonPropertyName("zoneScopes")]
+    public IReadOnlyList<string> ZoneScopes { get; init; } = [];
+}
+
+public sealed record HostAgentDnsRecordInventoryItem
+{
+    [JsonPropertyName("relativeName")]
+    public string RelativeName { get; init; } = string.Empty;
+    [JsonPropertyName("recordType")]
+    public string RecordType { get; init; } = string.Empty;
+    [JsonPropertyName("recordDataJson")]
+    public string RecordDataJson { get; init; } = "{}";
+    [JsonPropertyName("timeToLiveSeconds")]
+    public int TimeToLiveSeconds { get; init; }
+    [JsonPropertyName("timestamp")]
+    public DateTime? Timestamp { get; init; }
+    [JsonPropertyName("zoneScope")]
+    public string? ZoneScope { get; init; }
+    [JsonPropertyName("virtualizationInstance")]
+    public string? VirtualizationInstance { get; init; }
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]

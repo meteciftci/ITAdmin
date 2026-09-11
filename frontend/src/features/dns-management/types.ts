@@ -60,3 +60,12 @@ export type DnsServerConnectionTest = {
   operatingSystemVersion?: string | null; powerShellVersion?: string | null; dnsModuleVersion?: string | null;
   dnsServerVersion?: string | null; zoneCount?: number | null; capabilities?: DnsServerCapabilities | null; testedAt: string;
 };
+
+export type DnsSyncJob = {
+  id: string; batchId: string; serverId: string; serverDisplayName: string;
+  scope: "Health" | "Zones" | "Records" | "FullInventory";
+  trigger: "Scheduled" | "Manual" | "PostMutation";
+  status: "Pending" | "Running" | "Completed" | "Failed" | "Cancelled";
+  attemptCount: number; requestedAt: string; startedAt?: string | null; completedAt?: string | null;
+  errorCode?: string | null; message?: string | null; alreadyQueued: boolean;
+};

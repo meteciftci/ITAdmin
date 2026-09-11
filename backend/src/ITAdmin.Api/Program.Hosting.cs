@@ -55,6 +55,7 @@ public partial class Program
         builder.Services.AddScoped<ICorrelationIdAccessor, CorrelationIdAccessor>();
         builder.Services.AddSingleton<IHostAgentClient, NamedPipeHostAgentClient>();
         builder.Services.AddScoped<IDnsServerConnectionTestService, DnsServerConnectionTestService>();
+        builder.Services.AddScoped<IDnsInventorySyncService, DnsInventorySyncService>();
 
         // IIS / reverse proxy support: honor X-Forwarded-For / X-Forwarded-Proto only from
         // proxies declared in configuration (safe loopback-only default when config is empty).
@@ -121,6 +122,7 @@ public partial class Program
         builder.Services.AddHealthChecks();
         builder.Services.AddHostedService<NotificationOutboxWorker>();
         builder.Services.AddHostedService<LicenseRenewalReminderWorker>();
+        builder.Services.AddHostedService<DnsInventorySyncWorker>();
 
         var app = builder.Build();
 

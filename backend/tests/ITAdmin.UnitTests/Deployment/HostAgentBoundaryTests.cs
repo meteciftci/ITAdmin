@@ -104,7 +104,8 @@ public sealed class HostAgentBoundaryTests
                      typeof(HostAgentResponse), typeof(HostAgentInstallationStatus),
                      typeof(HostAgentUpdateStatus), typeof(HostAgentUpdateAvailability),
                      typeof(HostAgentHttpsStatus), typeof(HostAgentDnsProbeResult),
-                     typeof(HostAgentDnsCapabilities),
+                     typeof(HostAgentDnsCapabilities), typeof(HostAgentDnsInventoryPage),
+                     typeof(HostAgentDnsZoneInventoryItem), typeof(HostAgentDnsRecordInventoryItem),
                  })
         {
             foreach (var property in type.GetProperties())
@@ -134,6 +135,7 @@ public sealed class HostAgentBoundaryTests
     [InlineData(HostAgentOperation.ConfigureHttps)]
     [InlineData(HostAgentOperation.DisableHttps)]
     [InlineData(HostAgentOperation.TestDnsServerConnection)]
+    [InlineData(HostAgentOperation.ReadDnsServerInventoryPage)]
     public void Authorization_WebApplicationMayInvokeTheUpdateAndSettingsOperations(HostAgentOperation operation) =>
         Assert.True(Authorization.Authorize(@"IIS APPPOOL\ITAdmin", false, operation).IsAllowed);
 
@@ -298,9 +300,11 @@ public sealed class HostAgentBoundaryTests
         var valid = new HostAgentRequest
         {
             Operation = HostAgentOperation.TestDnsServerConnection,
-            DnsHostName = "dns01.example.local", DnsPort = 5986,
+            DnsHostName = "dns01.example.local",
+            DnsPort = 5986,
             DnsAuthenticationMode = HostAgentDnsAuthenticationMode.Negotiate,
-            DnsUserName = "EXAMPLE\\dns-svc", DnsPassword = "secret",
+            DnsUserName = "EXAMPLE\\dns-svc",
+            DnsPassword = "secret",
             DnsTimeoutSeconds = 30,
         };
         Assert.Empty(valid.Validate());
@@ -318,9 +322,12 @@ public sealed class HostAgentBoundaryTests
         var request = new HostAgentRequest
         {
             Operation = HostAgentOperation.TestDnsServerConnection,
-            DnsHostName = "dns01.example.local", DnsPort = 5986,
+            DnsHostName = "dns01.example.local",
+            DnsPort = 5986,
             DnsAuthenticationMode = HostAgentDnsAuthenticationMode.Negotiate,
-            DnsUserName = "EXAMPLE\\dns-svc", DnsPassword = "secret", DnsTimeoutSeconds = 30,
+            DnsUserName = "EXAMPLE\\dns-svc",
+            DnsPassword = "secret",
+            DnsTimeoutSeconds = 30,
         };
 
         var response = await dispatcher.DispatchAsync(request.ToJson(), WebApplication());
@@ -337,6 +344,67 @@ public sealed class HostAgentBoundaryTests
         Assert.DoesNotContain("DnsHostName", DnsRemoteCapabilityProbe.Script, StringComparison.Ordinal);
         Assert.DoesNotContain("DnsUserName", DnsRemoteCapabilityProbe.Script, StringComparison.Ordinal);
         Assert.DoesNotContain("$(`", DnsRemoteCapabilityProbe.Script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Protocol_DnsInventoryRequiresBoundedTypedPaging()
+    {
+        var valid = new HostAgentRequest
+        {
+            Operation = HostAgentOperation.ReadDnsServerInventoryPage,
+            DnsHostName = "dns01.example.local",
+            DnsPort = 5986,
+            DnsAuthenticationMode = HostAgentDnsAuthenticationMode.Negotiate,
+            DnsUserName = "EXAMPLE\\dns-svc",
+            DnsPassword = "secret",
+            DnsTimeoutSeconds = 30,
+            DnsInventoryKind = HostAgentDnsInventoryKind.Records,
+            DnsZoneName = "example.local",
+            DnsInventoryOffset = 0,
+            DnsInventoryPageSize = 250,
+        };
+
+        Assert.Empty(valid.Validate());
+        Assert.NotEmpty((valid with { DnsZoneName = null }).Validate());
+        Assert.NotEmpty((valid with { DnsInventoryPageSize = 501 }).Validate());
+        Assert.Empty((valid with { DnsInventoryKind = HostAgentDnsInventoryKind.Zones, DnsZoneName = null }).Validate());
+    }
+
+    [Fact]
+    public void DnsInventoryScript_IsFixedAndUsesBoundParameters()
+    {
+        Assert.StartsWith("param(", DnsRemoteInventoryProbe.Script.TrimStart(), StringComparison.Ordinal);
+        Assert.DoesNotContain("DnsPassword", DnsRemoteInventoryProbe.Script, StringComparison.Ordinal);
+        Assert.DoesNotContain("Invoke-Expression", DnsRemoteInventoryProbe.Script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ValidateRange(1,500)", DnsRemoteInventoryProbe.Script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Dispatch_DnsInventoryUsesTypedExecutorAndNeverEchoesCredentials()
+    {
+        var executor = new RecordingDnsProbeExecutor();
+        var dispatcher = new HostAgentDispatcher(
+            Authorization, new RecordingOperations(), dnsRemoteProbeExecutor: executor);
+        var request = new HostAgentRequest
+        {
+            Operation = HostAgentOperation.ReadDnsServerInventoryPage,
+            DnsHostName = "dns01.example.local",
+            DnsPort = 5986,
+            DnsAuthenticationMode = HostAgentDnsAuthenticationMode.Negotiate,
+            DnsUserName = "EXAMPLE\\dns-svc",
+            DnsPassword = "secret",
+            DnsTimeoutSeconds = 30,
+            DnsInventoryKind = HostAgentDnsInventoryKind.Zones,
+            DnsInventoryOffset = 0,
+            DnsInventoryPageSize = 250,
+        };
+
+        var response = await dispatcher.DispatchAsync(request.ToJson(), WebApplication());
+
+        Assert.Equal(1, executor.InventoryCallCount);
+        Assert.True(response.DnsInventoryPage!.Success);
+        Assert.DoesNotContain("secret", response.ToJson(), StringComparison.Ordinal);
+        Assert.DoesNotContain("dns-svc", response.ToJson(), StringComparison.Ordinal);
     }
 
     // ------------------------------------------------------------------------------------------
@@ -443,10 +511,18 @@ public sealed class HostAgentBoundaryTests
     private sealed class RecordingDnsProbeExecutor : IDnsRemoteProbeExecutor
     {
         public int CallCount { get; private set; }
+        public int InventoryCallCount { get; private set; }
         public Task<HostAgentDnsProbeResult> ProbeAsync(HostAgentRequest request, CancellationToken cancellationToken)
         {
             CallCount++;
             return Task.FromResult(new HostAgentDnsProbeResult { Success = true, Message = "ok" });
+        }
+
+        public Task<HostAgentDnsInventoryPage> ReadInventoryPageAsync(
+            HostAgentRequest request, CancellationToken cancellationToken)
+        {
+            InventoryCallCount++;
+            return Task.FromResult(new HostAgentDnsInventoryPage { Success = true, Message = "ok" });
         }
     }
 
