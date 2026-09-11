@@ -24,6 +24,20 @@ jobs:
   backend:
     name: Backend
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: itadmin_integration_test
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test -d itadmin_integration_test"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 20
 
     steps:
       - name: Checkout
@@ -61,6 +75,8 @@ jobs:
         run: dotnet build backend/ITAdmin.slnx --configuration Release --no-restore
 
       - name: Test
+        env:
+          ITADMIN_TEST_POSTGRES_CONNECTION: Host=127.0.0.1;Port=5432;Database=itadmin_integration_test;Username=test;Password=test
         run: dotnet test backend/ITAdmin.slnx --configuration Release --no-build
 
       - name: Reject vulnerable dependencies
@@ -99,9 +115,21 @@ jobs:
         working-directory: frontend
         run: npm run test:unit
 
+      - name: Reject vulnerable production dependencies
+        working-directory: frontend
+        run: npm audit --omit=dev --audit-level=high
+
       - name: Build
         working-directory: frontend
         run: npm run build
+
+      - name: Install Chromium for browser smoke tests
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser smoke tests
+        working-directory: frontend
+        run: npm run test:e2e
 
   deploy-script:
     name: Deploy script
