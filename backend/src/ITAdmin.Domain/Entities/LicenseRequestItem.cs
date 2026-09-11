@@ -7,6 +7,7 @@ public class LicenseRequestItem : AuditableEntity
 {
     public Guid RequestId { get; set; }
     public Guid ProductId { get; set; }
+    public LicenseType LicenseType { get; set; } = LicenseType.NamedUser;
     public int RequestedQuantity { get; set; }
     public int? ApprovedQuantity { get; set; }
     public int FulfilledQuantity { get; set; }

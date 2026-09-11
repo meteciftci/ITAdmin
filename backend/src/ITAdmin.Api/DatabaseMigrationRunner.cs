@@ -2,6 +2,8 @@ using ITAdmin.Api.Configuration;
 using ITAdmin.Api.Extensions;
 using ITAdmin.Persistence;
 using ITAdmin.Persistence.Context;
+using ITAdmin.Persistence.Services.LicenseManagement;
+using ITAdmin.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -59,9 +61,11 @@ public static class DatabaseMigrationRunner
             var pending = (await context.Database.GetPendingMigrationsAsync()).ToList();
             if (pending.Count == 0)
             {
+                var noPendingProtectedKeyCount = await ProtectLicensePackageKeysAsync(scope.ServiceProvider);
                 var applied = (await context.Database.GetAppliedMigrationsAsync()).ToList();
                 output.WriteLine("No pending migrations.");
                 output.WriteLine($"currentMigration={applied.LastOrDefault() ?? "(none)"}");
+                output.WriteLine($"protectedLicenseKeyCount={noPendingProtectedKeyCount}");
                 return SuccessExitCode;
             }
 
@@ -72,10 +76,12 @@ public static class DatabaseMigrationRunner
             }
 
             await context.Database.MigrateAsync();
+            var protectedKeyCount = await ProtectLicensePackageKeysAsync(scope.ServiceProvider);
 
             var current = (await context.Database.GetAppliedMigrationsAsync()).LastOrDefault();
             output.WriteLine("Migration completed.");
             output.WriteLine($"currentMigration={current ?? "(none)"}");
+            output.WriteLine($"protectedLicenseKeyCount={protectedKeyCount}");
             return SuccessExitCode;
         }
         catch (Exception exception)
@@ -122,6 +128,12 @@ public static class DatabaseMigrationRunner
         builder.Configuration.AddITAdminMachineSecrets();
         builder.Configuration.AddITAdminPrefixedEnvironmentVariables();
         builder.Services.AddPersistence(builder.Configuration);
+        builder.Services.AddInfrastructure(builder.Configuration);
         return builder.Build();
     }
+
+    private static Task<int> ProtectLicensePackageKeysAsync(IServiceProvider serviceProvider) =>
+        serviceProvider
+            .GetRequiredService<LicensePackageSecretBackfillService>()
+            .ProtectPlaintextLicenseKeysAsync();
 }

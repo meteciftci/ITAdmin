@@ -23,6 +23,7 @@ import {
 } from "@/features/license-management/enum-labels";
 import { validatePurchaseForm } from "@/features/license-management/form-validation";
 import { getLicenseManagementApiErrorMessage } from "@/features/license-management/license-api-error";
+import { getAllowedPurchaseStatuses } from "@/features/license-management/license-lifecycle";
 import {
   buildPurchasePayloadByType,
   isPurchaseFieldVisible,
@@ -199,8 +200,15 @@ export function LicensePurchaseForm({ mode, purchase, onCancel, onSaved }: Props
     isPurchaseFieldVisible(field, purchaseType);
 
   return (
-    <div className="space-y-6">
+    <form
+      className="space-y-6"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!validationKey && !mutation.isPending) mutation.mutate();
+      }}
+    >
       {errorMessage ? <FormError message={errorMessage} /> : null}
+      {companiesQuery.isError ? <FormError message={t("common:messages.operationFailed")} /> : null}
       {validationKey ? <FormError message={t(`licenseManagement:messages.${validationKey}`)} /> : null}
 
       <p className="text-sm text-muted-foreground">
@@ -211,8 +219,9 @@ export function LicensePurchaseForm({ mode, purchase, onCancel, onSaved }: Props
         <FormSectionPanel title={t("licenseManagement:form.sections.generalInfo")}>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label>{t("licenseManagement:form.purchaseType")}</Label>
+              <Label htmlFor="purchase-type">{t("licenseManagement:form.purchaseType")}</Label>
               <Select
+                id="purchase-type"
                 value={purchaseType}
                 onChange={(e) => setPurchaseType(e.target.value as LicensePurchaseType)}
               >
@@ -224,27 +233,30 @@ export function LicensePurchaseForm({ mode, purchase, onCancel, onSaved }: Props
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>{t("licenseManagement:form.status")}</Label>
-              <Select value={status} onChange={(e) => setStatus(e.target.value as LicensePurchaseStatus)}>
-                {PURCHASE_STATUSES.map((item) => (
+              <Label htmlFor="purchase-status">{t("licenseManagement:form.status")}</Label>
+              <Select id="purchase-status" value={status} onChange={(e) => setStatus(e.target.value as LicensePurchaseStatus)}>
+                {getAllowedPurchaseStatuses(mode === "edit" ? purchase?.status ?? null : null)
+                  .filter((item) => PURCHASE_STATUSES.includes(item))
+                  .map((item) => (
                   <option key={item} value={item}>
                     {getPurchaseStatusLabel(t, item)}
                   </option>
-                ))}
+                  ))}
               </Select>
             </div>
             <div className="space-y-2 md:col-span-2">
-              <Label>{t("licenseManagement:form.title")}</Label>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+              <Label htmlFor="purchase-title">{t("licenseManagement:form.title")}</Label>
+              <Input id="purchase-title" value={title} onChange={(e) => setTitle(e.target.value)} />
             </div>
             <div className="space-y-2 md:col-span-2">
-              <Label>{t("licenseManagement:form.description")}</Label>
-              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} />
+              <Label htmlFor="purchase-description">{t("licenseManagement:form.description")}</Label>
+              <Textarea id="purchase-description" value={description} onChange={(e) => setDescription(e.target.value)} />
             </div>
             {isPurchaseSectionVisible("purchaseInfo", purchaseType) ? (
               <div className="space-y-2">
-                <Label>{t("licenseManagement:form.purchaseDate")}</Label>
+                <Label htmlFor="purchase-date">{t("licenseManagement:form.purchaseDate")}</Label>
                 <DatePicker
+                  id="purchase-date"
                   value={purchaseDate}
                   onChange={setPurchaseDate}
                   placeholder={t("licenseManagement:form.purchaseDate")}
@@ -262,14 +274,15 @@ export function LicensePurchaseForm({ mode, purchase, onCancel, onSaved }: Props
           <div className="grid gap-4 md:grid-cols-2">
             {show("tenderNumber") ? (
               <div className="space-y-2">
-                <Label>{t("licenseManagement:form.tenderNumber")}</Label>
-                <Input value={tenderNumber} onChange={(e) => setTenderNumber(e.target.value)} />
+                <Label htmlFor="purchase-tender-number">{t("licenseManagement:form.tenderNumber")}</Label>
+                <Input id="purchase-tender-number" value={tenderNumber} onChange={(e) => setTenderNumber(e.target.value)} />
               </div>
             ) : null}
             {show("tenderDate") ? (
               <div className="space-y-2">
-                <Label>{t("licenseManagement:form.tenderDate")}</Label>
+                <Label htmlFor="purchase-tender-date">{t("licenseManagement:form.tenderDate")}</Label>
                 <DatePicker
+                  id="purchase-tender-date"
                   value={tenderDate}
                   onChange={setTenderDate}
                   placeholder={t("licenseManagement:form.tenderDate")}
@@ -280,8 +293,9 @@ export function LicensePurchaseForm({ mode, purchase, onCancel, onSaved }: Props
             ) : null}
             {show("directPurchaseNumber") ? (
               <div className="space-y-2">
-                <Label>{t("licenseManagement:form.directPurchaseNumber")}</Label>
+                <Label htmlFor="purchase-direct-number">{t("licenseManagement:form.directPurchaseNumber")}</Label>
                 <Input
+                  id="purchase-direct-number"
                   value={directPurchaseNumber}
                   onChange={(e) => setDirectPurchaseNumber(e.target.value)}
                 />
@@ -289,20 +303,21 @@ export function LicensePurchaseForm({ mode, purchase, onCancel, onSaved }: Props
             ) : null}
             {show("dmoOrderNumber") ? (
               <div className="space-y-2">
-                <Label>{t("licenseManagement:form.dmoOrderNumber")}</Label>
-                <Input value={dmoOrderNumber} onChange={(e) => setDmoOrderNumber(e.target.value)} />
+                <Label htmlFor="purchase-dmo-order-number">{t("licenseManagement:form.dmoOrderNumber")}</Label>
+                <Input id="purchase-dmo-order-number" value={dmoOrderNumber} onChange={(e) => setDmoOrderNumber(e.target.value)} />
               </div>
             ) : null}
             {show("contractNumber") ? (
               <div className="space-y-2">
-                <Label>{t("licenseManagement:form.contractNumber")}</Label>
-                <Input value={contractNumber} onChange={(e) => setContractNumber(e.target.value)} />
+                <Label htmlFor="purchase-contract-number">{t("licenseManagement:form.contractNumber")}</Label>
+                <Input id="purchase-contract-number" value={contractNumber} onChange={(e) => setContractNumber(e.target.value)} />
               </div>
             ) : null}
             {show("contractStartDate") ? (
               <div className="space-y-2">
-                <Label>{t("licenseManagement:form.contractStartDate")}</Label>
+                <Label htmlFor="purchase-contract-start-date">{t("licenseManagement:form.contractStartDate")}</Label>
                 <DatePicker
+                  id="purchase-contract-start-date"
                   value={contractStartDate}
                   onChange={setContractStartDate}
                   placeholder={t("licenseManagement:form.contractStartDate")}
@@ -313,8 +328,9 @@ export function LicensePurchaseForm({ mode, purchase, onCancel, onSaved }: Props
             ) : null}
             {show("contractEndDate") ? (
               <div className="space-y-2">
-                <Label>{t("licenseManagement:form.contractEndDate")}</Label>
+                <Label htmlFor="purchase-contract-end-date">{t("licenseManagement:form.contractEndDate")}</Label>
                 <DatePicker
+                  id="purchase-contract-end-date"
                   value={contractEndDate}
                   onChange={setContractEndDate}
                   placeholder={t("licenseManagement:form.contractEndDate")}
@@ -325,14 +341,15 @@ export function LicensePurchaseForm({ mode, purchase, onCancel, onSaved }: Props
             ) : null}
             {show("ebysNumber") ? (
               <div className="space-y-2">
-                <Label>{t("licenseManagement:form.ebysNumber")}</Label>
-                <Input value={ebysNumber} onChange={(e) => setEbysNumber(e.target.value)} />
+                <Label htmlFor="purchase-ebys-number">{t("licenseManagement:form.ebysNumber")}</Label>
+                <Input id="purchase-ebys-number" value={ebysNumber} onChange={(e) => setEbysNumber(e.target.value)} />
               </div>
             ) : null}
             {show("ebysDate") ? (
               <div className="space-y-2">
-                <Label>{t("licenseManagement:form.ebysDate")}</Label>
+                <Label htmlFor="purchase-ebys-date">{t("licenseManagement:form.ebysDate")}</Label>
                 <DatePicker
+                  id="purchase-ebys-date"
                   value={ebysDate}
                   onChange={setEbysDate}
                   placeholder={t("licenseManagement:form.ebysDate")}
@@ -343,14 +360,15 @@ export function LicensePurchaseForm({ mode, purchase, onCancel, onSaved }: Props
             ) : null}
             {show("invoiceNumber") ? (
               <div className="space-y-2">
-                <Label>{t("licenseManagement:form.invoiceNumber")}</Label>
-                <Input value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} />
+                <Label htmlFor="purchase-invoice-number">{t("licenseManagement:form.invoiceNumber")}</Label>
+                <Input id="purchase-invoice-number" value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} />
               </div>
             ) : null}
             {show("invoiceDate") ? (
               <div className="space-y-2">
-                <Label>{t("licenseManagement:form.invoiceDate")}</Label>
+                <Label htmlFor="purchase-invoice-date">{t("licenseManagement:form.invoiceDate")}</Label>
                 <DatePicker
+                  id="purchase-invoice-date"
                   value={invoiceDate}
                   onChange={setInvoiceDate}
                   placeholder={t("licenseManagement:form.invoiceDate")}
@@ -368,8 +386,13 @@ export function LicensePurchaseForm({ mode, purchase, onCancel, onSaved }: Props
           <div className="grid gap-4 md:grid-cols-2">
             {show("supplierCompanyId") ? (
               <div className="space-y-2">
-                <Label>{t("licenseManagement:form.supplierCompany")}</Label>
-                <Select value={supplierCompanyId} onChange={(e) => setSupplierCompanyId(e.target.value)}>
+                <Label htmlFor="purchase-supplier">{t("licenseManagement:form.supplierCompany")}</Label>
+                <Select
+                  id="purchase-supplier"
+                  value={supplierCompanyId}
+                  disabled={companiesQuery.isLoading || companiesQuery.isError}
+                  onChange={(e) => setSupplierCompanyId(e.target.value)}
+                >
                   <option value="">{t("licenseManagement:form.selectCompany")}</option>
                   {(companiesQuery.data ?? []).map((c) => (
                     <option key={c.id} value={c.id}>
@@ -381,8 +404,13 @@ export function LicensePurchaseForm({ mode, purchase, onCancel, onSaved }: Props
             ) : null}
             {show("supportCompanyId") ? (
               <div className="space-y-2">
-                <Label>{t("licenseManagement:form.supportCompany")}</Label>
-                <Select value={supportCompanyId} onChange={(e) => setSupportCompanyId(e.target.value)}>
+                <Label htmlFor="purchase-support">{t("licenseManagement:form.supportCompany")}</Label>
+                <Select
+                  id="purchase-support"
+                  value={supportCompanyId}
+                  disabled={companiesQuery.isLoading || companiesQuery.isError}
+                  onChange={(e) => setSupportCompanyId(e.target.value)}
+                >
                   <option value="">{t("licenseManagement:form.selectCompany")}</option>
                   {(companiesQuery.data ?? []).map((c) => (
                     <option key={c.id} value={c.id}>
@@ -394,8 +422,9 @@ export function LicensePurchaseForm({ mode, purchase, onCancel, onSaved }: Props
             ) : null}
             {show("actualTotalCost") ? (
               <div className="space-y-2">
-                <Label>{t("licenseManagement:form.actualTotalCost")}</Label>
+                <Label htmlFor="purchase-actual-cost">{t("licenseManagement:form.actualTotalCost")}</Label>
                 <Input
+                  id="purchase-actual-cost"
                   type="number"
                   min="0"
                   step="0.01"
@@ -406,8 +435,8 @@ export function LicensePurchaseForm({ mode, purchase, onCancel, onSaved }: Props
             ) : null}
             {show("currency") ? (
               <div className="space-y-2">
-                <Label>{t("licenseManagement:form.currency")}</Label>
-                <Input value={currency} onChange={(e) => setCurrency(e.target.value)} />
+                <Label htmlFor="purchase-currency">{t("licenseManagement:form.currency")}</Label>
+                <Input id="purchase-currency" value={currency} onChange={(e) => setCurrency(e.target.value)} />
               </div>
             ) : null}
             {show("vatIncluded") ? (
@@ -425,8 +454,8 @@ export function LicensePurchaseForm({ mode, purchase, onCancel, onSaved }: Props
       {isPurchaseSectionVisible("notes", purchaseType) ? (
         <FormSectionPanel title={t("licenseManagement:form.sections.other")}>
           <div className="space-y-2">
-            <Label>{t("licenseManagement:form.notes")}</Label>
-            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
+            <Label htmlFor="purchase-notes">{t("licenseManagement:form.notes")}</Label>
+            <Textarea id="purchase-notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
         </FormSectionPanel>
       ) : null}
@@ -436,13 +465,12 @@ export function LicensePurchaseForm({ mode, purchase, onCancel, onSaved }: Props
           {t("common:actions.cancel")}
         </Button>
         <Button
-          type="button"
+          type="submit"
           disabled={Boolean(validationKey) || mutation.isPending}
-          onClick={() => mutation.mutate()}
         >
           {t("common:actions.save")}
         </Button>
       </div>
-    </div>
+    </form>
   );
 }

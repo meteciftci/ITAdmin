@@ -35,6 +35,25 @@ public sealed class LicenseManagementSettingsConfiguration : IEntityTypeConfigur
             .HasColumnName("default_renewal_cc_recipients")
             .HasMaxLength(4000);
 
+        builder.Property(x => x.LastRenewalReminderRunAt)
+            .HasColumnName("last_renewal_reminder_run_at");
+
+        builder.Property(x => x.LastRenewalReminderStatus)
+            .HasColumnName("last_renewal_reminder_status")
+            .HasMaxLength(50);
+
+        builder.Property(x => x.LastRenewalReminderDueCount)
+            .HasColumnName("last_renewal_reminder_due_count")
+            .HasDefaultValue(0);
+
+        builder.Property(x => x.LastRenewalReminderQueuedCount)
+            .HasColumnName("last_renewal_reminder_queued_count")
+            .HasDefaultValue(0);
+
+        builder.Property(x => x.LastRenewalReminderMessage)
+            .HasColumnName("last_renewal_reminder_message")
+            .HasMaxLength(1000);
+
         builder.Property(x => x.Notes)
             .HasColumnName("notes")
             .HasMaxLength(4000);

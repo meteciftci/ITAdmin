@@ -1,11 +1,11 @@
 import type { TFunction } from "i18next";
 
-import type { LicenseRequestItemDraft } from "@/features/license-management/license-request-payload";
+import type { LicenseRequestItemDraft } from "./license-request-payload.ts";
 import type {
   LicenseRequestOuSnapshot,
   LicenseRequestSource,
-} from "@/features/license-management/types";
-import { isRequestSourceFieldVisible } from "@/features/license-management/request-source-fields";
+} from "./types.ts";
+import { isRequestSourceFieldVisible } from "./request-source-fields.ts";
 
 export type LicenseRequestFormValidationResult =
   | { isValid: true }
@@ -59,8 +59,19 @@ export function validateLicenseRequestForm(
 
     productIds.add(item.productId);
 
-    if (item.users.length === 0) {
+    if (item.licenseType === "NamedUser" && item.users.length === 0) {
       return { isValid: false, message: t("licenseManagement:requests.validation.usersRequired") };
+    }
+
+    const requestedQuantity = item.licenseType === "NamedUser"
+      ? item.users.length
+      : Number(item.requestedQuantity);
+    if (!Number.isInteger(requestedQuantity) || requestedQuantity < 1) {
+      return { isValid: false, message: t("licenseManagement:requests.validation.quantityRequired") };
+    }
+
+    if (item.licenseType !== "NamedUser" && item.users.length > 0) {
+      return { isValid: false, message: t("licenseManagement:requests.validation.quantityUsersNotAllowed") };
     }
 
     const userIds = new Set<string>();

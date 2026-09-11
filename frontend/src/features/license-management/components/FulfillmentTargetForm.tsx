@@ -125,8 +125,9 @@ export function FulfillmentTargetForm({
             />
           </div>
           <div className="space-y-2">
-            <Label>{t("licenseManagement:requests.fulfillment.newPurchase.purchaseDate")}</Label>
+            <Label htmlFor="fulfillment-purchase-date">{t("licenseManagement:requests.fulfillment.newPurchase.purchaseDate")}</Label>
             <DatePicker
+              id="fulfillment-purchase-date"
               value={newPurchase.purchaseDate}
               onChange={(value) => patchNewPurchase({ purchaseDate: value })}
               placeholder={t("licenseManagement:requests.fulfillment.newPurchase.purchaseDate")}

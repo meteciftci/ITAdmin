@@ -2,6 +2,17 @@ using ITAdmin.Domain.Enums;
 
 namespace ITAdmin.Api.Contracts.LicenseManagement;
 
+public sealed record LicenseFulfillmentCandidateUserResponse(
+    Guid Id,
+    string AdObjectId,
+    string? SamAccountName,
+    string? UserPrincipalName,
+    string? DisplayName,
+    string? Department,
+    string? Title,
+    string? Mail,
+    LicenseRequestItemUserStatus Status);
+
 public sealed record LicenseFulfillmentCandidateResponse(
     Guid RequestId,
     Guid RequestItemId,
@@ -11,24 +22,28 @@ public sealed record LicenseFulfillmentCandidateResponse(
     Guid ProductId,
     string ProductName,
     string? ProductBrand,
+    LicenseType LicenseType,
     int RequestedQuantity,
     int? ApprovedQuantity,
     int FulfilledQuantity,
     int RemainingQuantity,
     LicenseRequestItemStatus ItemStatus,
-    bool IsFulfillable);
+    bool IsFulfillable,
+    IReadOnlyList<LicenseFulfillmentCandidateUserResponse> Users);
 
 public sealed record TriageLicenseRequestItemRequest(
     Guid RequestItemId,
     LicenseRequestItemStatus Status,
-    int? ApprovedQuantity);
+    int? ApprovedQuantity,
+    IReadOnlyList<Guid>? ApprovedUserIds = null);
 
 public sealed record TriageLicenseRequestItemsRequest(
     IReadOnlyList<TriageLicenseRequestItemRequest> Items);
 
 public sealed record ConvertFulfillmentLineRequest(
     Guid RequestItemId,
-    int FulfillQuantity);
+    int FulfillQuantity,
+    IReadOnlyList<Guid>? RequestItemUserIds = null);
 
 public sealed record ConvertFulfillmentPackageDefaultsRequest(
     Guid ProductId,
@@ -57,7 +72,9 @@ public sealed record ConvertFulfillmentRenewalLineRequest(
     DateOnly? EndDate,
     bool IsPerpetual,
     bool ExpireSourcePackage,
-    bool CopySeatAssignments);
+    bool CopySeatAssignments,
+    bool? RenewalRequired = null,
+    DateOnly? RenewalDate = null);
 
 public sealed record ConvertFulfillmentManualLineRequest(
     Guid ProductId,

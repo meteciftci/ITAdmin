@@ -11,7 +11,9 @@ import {
   formatRequestUserCountLabel,
 } from "@/features/license-management/license-request-payload";
 import {
+  getLicenseTypeLabel,
   getRequestItemStatusLabel,
+  LICENSE_TYPES,
   MANUAL_REQUEST_ITEM_STATUSES,
 } from "@/features/license-management/enum-labels";
 import { formatLicensedProductLabel } from "@/features/license-management/product-labels";
@@ -74,6 +76,33 @@ export function LicenseRequestItemCard({
               <option key={product.id} value={product.id}>
                 {formatLicensedProductLabel(product)}
               </option>
+            ))}
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor={`request-item-license-type-${item.clientId}`}>
+            {t("licenseManagement:requests.fields.licenseType")}
+          </Label>
+          <Select
+            id={`request-item-license-type-${item.clientId}`}
+            value={item.licenseType}
+            disabled={disabled}
+            onChange={(event) => {
+              const licenseType = event.target.value as LicenseRequestItemDraft["licenseType"];
+              const previousQuantity = item.licenseType === "NamedUser"
+                ? Math.max(1, item.users.length)
+                : Math.max(1, Math.floor(Number(item.requestedQuantity)) || 1);
+              onChange({
+                ...item,
+                licenseType,
+                requestedQuantity: String(previousQuantity),
+                users: licenseType === "NamedUser" ? item.users : [],
+              });
+            }}
+          >
+            {LICENSE_TYPES.map((type) => (
+              <option key={type} value={type}>{getLicenseTypeLabel(t, type)}</option>
             ))}
           </Select>
         </div>
@@ -151,19 +180,36 @@ export function LicenseRequestItemCard({
         </div>
       </div>
 
-      <div className="space-y-2">
-        <p className="text-sm text-muted-foreground">
-          {formatRequestUserCountLabel(t, item.users.length)}
-        </p>
-        <LicenseAdUserMultiSelect
-          users={item.users}
-          onChange={(users) => onChange({ ...item, users })}
-          disabled={disabled}
-          label={t("licenseManagement:requests.actions.addUser")}
-          placeholder={t("licenseManagement:requests.placeholders.selectAdUser")}
-          searchPlaceholder={t("licenseManagement:requests.placeholders.searchAdUser")}
-        />
-      </div>
+      {item.licenseType === "NamedUser" ? (
+        <div className="space-y-2">
+          <p className="text-sm text-muted-foreground">
+            {formatRequestUserCountLabel(t, item.users.length)}
+          </p>
+          <LicenseAdUserMultiSelect
+            users={item.users}
+            onChange={(users) => onChange({ ...item, users })}
+            disabled={disabled}
+            label={t("licenseManagement:requests.actions.addUser")}
+            placeholder={t("licenseManagement:requests.placeholders.selectAdUser")}
+            searchPlaceholder={t("licenseManagement:requests.placeholders.searchAdUser")}
+          />
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <Label htmlFor={`request-item-quantity-${item.clientId}`}>
+            {t("licenseManagement:requests.fields.requestedQuantity")}
+          </Label>
+          <Input
+            id={`request-item-quantity-${item.clientId}`}
+            type="number"
+            min="1"
+            step="1"
+            value={item.requestedQuantity}
+            disabled={disabled}
+            onChange={(event) => onChange({ ...item, requestedQuantity: event.target.value })}
+          />
+        </div>
+      )}
     </div>
   );
 }

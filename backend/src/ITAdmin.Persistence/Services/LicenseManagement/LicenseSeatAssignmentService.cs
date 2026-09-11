@@ -58,6 +58,7 @@ public sealed class LicenseSeatAssignmentService(AppDbContext context) : ILicens
             .OrderByDescending(x => x.Status == LicenseSeatAssignmentStatus.Active)
             .ThenByDescending(x => x.AssignedDate)
             .ThenBy(x => x.DisplayName)
+            .ThenBy(x => x.Id)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .Select(x => new LicenseSeatAssignmentListItem(
@@ -138,16 +139,54 @@ public sealed class LicenseSeatAssignmentService(AppDbContext context) : ILicens
             return new LicenseSeatAssignmentOperationResult(false, "A display name is required for the seat holder.");
         }
 
+        await using var transaction = await BeginMutationTransactionAsync(context, cancellationToken);
+        await LockLicensePackagesAsync(context, [request.PackageId], cancellationToken);
         var package = await context.LicensePackages.FirstOrDefaultAsync(x => x.Id == request.PackageId, cancellationToken);
         if (package is null)
         {
             return new LicenseSeatAssignmentOperationResult(false, "License package was not found.");
         }
 
-        if (request.SourceRequestItemId is { } sourceItemId
-            && !await context.LicenseRequestItems.AnyAsync(x => x.Id == sourceItemId, cancellationToken))
+        if (!package.IsActive || package.Status != LicensePackageStatus.Active)
         {
-            return new LicenseSeatAssignmentOperationResult(false, "The linked request item was not found.");
+            return new LicenseSeatAssignmentOperationResult(
+                false,
+                "Seats can only be assigned to an active license package.");
+        }
+
+        if (package.LicenseType != LicenseType.NamedUser)
+        {
+            return new LicenseSeatAssignmentOperationResult(
+                false,
+                "Person-based seat assignments are only available for named-user license packages.");
+        }
+
+        if (request.SourceRequestItemId is { } sourceItemId)
+        {
+            var sourceItem = await context.LicenseRequestItems
+                .Include(x => x.Users)
+                .FirstOrDefaultAsync(x => x.Id == sourceItemId, cancellationToken);
+            if (sourceItem is null)
+            {
+                return new LicenseSeatAssignmentOperationResult(false, "The linked request item was not found.");
+            }
+
+            if (sourceItem.ProductId != package.ProductId || sourceItem.LicenseType != LicenseType.NamedUser)
+            {
+                return new LicenseSeatAssignmentOperationResult(
+                    false,
+                    "The linked request item does not match this named-user license package.");
+            }
+
+            if (string.IsNullOrWhiteSpace(person.AdObjectId)
+                || !sourceItem.Users.Any(user =>
+                    user.Status == LicenseRequestItemUserStatus.Fulfilled
+                    && string.Equals(user.AdObjectId, person.AdObjectId, StringComparison.OrdinalIgnoreCase)))
+            {
+                return new LicenseSeatAssignmentOperationResult(
+                    false,
+                    "The seat holder is not a fulfilled user of the linked request item.");
+            }
         }
 
         var activeCount = await context.LicenseSeatAssignments
@@ -197,6 +236,7 @@ public sealed class LicenseSeatAssignmentService(AppDbContext context) : ILicens
             request.Actor.ActorUserAgent,
             cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
+        if (transaction is not null) await transaction.CommitAsync(cancellationToken);
 
         return new LicenseSeatAssignmentOperationResult(true, "License seat assigned.", Map(entity, null));
     }
@@ -205,6 +245,8 @@ public sealed class LicenseSeatAssignmentService(AppDbContext context) : ILicens
         ReleaseLicenseSeatRequest request,
         CancellationToken cancellationToken = default)
     {
+        await using var transaction = await BeginMutationTransactionAsync(context, cancellationToken);
+        await LockLicenseSeatAssignmentsAsync(context, [request.Id], cancellationToken);
         var entity = await context.LicenseSeatAssignments.FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken);
         if (entity is null)
         {
@@ -217,8 +259,16 @@ public sealed class LicenseSeatAssignmentService(AppDbContext context) : ILicens
         }
 
         var now = DateTime.UtcNow;
+        var releasedDate = request.ReleasedDate ?? DateOnly.FromDateTime(now);
+        if (releasedDate < entity.AssignedDate)
+        {
+            return new LicenseSeatAssignmentOperationResult(
+                false,
+                "Release date cannot be earlier than the assignment date.");
+        }
+
         entity.Status = LicenseSeatAssignmentStatus.Released;
-        entity.ReleasedDate = request.ReleasedDate ?? DateOnly.FromDateTime(now);
+        entity.ReleasedDate = releasedDate;
         entity.Note = MergeNote(entity.Note, request.Note);
         entity.UpdatedAt = now;
         entity.UpdatedBy = request.Actor.ActorUserName;
@@ -235,6 +285,7 @@ public sealed class LicenseSeatAssignmentService(AppDbContext context) : ILicens
             request.Actor.ActorUserAgent,
             cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
+        if (transaction is not null) await transaction.CommitAsync(cancellationToken);
 
         return new LicenseSeatAssignmentOperationResult(true, "License seat released.", Map(entity, null));
     }
@@ -249,15 +300,28 @@ public sealed class LicenseSeatAssignmentService(AppDbContext context) : ILicens
             return new LicenseSeatAssignmentOperationResult(false, "A display name is required for the new seat holder.");
         }
 
-        var current = await context.LicenseSeatAssignments.FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken);
+        await using var transaction = await BeginMutationTransactionAsync(context, cancellationToken);
+        await LockLicenseSeatAssignmentsAsync(context, [request.Id], cancellationToken);
+        var current = await context.LicenseSeatAssignments
+            .Include(x => x.Package)
+            .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken);
         if (current is null)
         {
             return new LicenseSeatAssignmentOperationResult(false, "License seat assignment was not found.");
         }
 
+        await LockLicensePackagesAsync(context, [current.PackageId], cancellationToken);
+
         if (current.Status != LicenseSeatAssignmentStatus.Active)
         {
             return new LicenseSeatAssignmentOperationResult(false, "Only an active seat assignment can be transferred.");
+        }
+
+        if (current.Package.LicenseType != LicenseType.NamedUser)
+        {
+            return new LicenseSeatAssignmentOperationResult(
+                false,
+                "Person-based seat assignments can only be transferred on named-user license packages.");
         }
 
         if (await IsPersonActiveOnPackageAsync(current.PackageId, person, cancellationToken))
@@ -267,6 +331,12 @@ public sealed class LicenseSeatAssignmentService(AppDbContext context) : ILicens
 
         var now = DateTime.UtcNow;
         var effectiveDate = request.TransferDate ?? DateOnly.FromDateTime(now);
+        if (effectiveDate < current.AssignedDate)
+        {
+            return new LicenseSeatAssignmentOperationResult(
+                false,
+                "Transfer date cannot be earlier than the assignment date.");
+        }
 
         current.Status = LicenseSeatAssignmentStatus.Transferred;
         current.ReleasedDate = effectiveDate;
@@ -307,6 +377,7 @@ public sealed class LicenseSeatAssignmentService(AppDbContext context) : ILicens
             request.Actor.ActorUserAgent,
             cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
+        if (transaction is not null) await transaction.CommitAsync(cancellationToken);
 
         return new LicenseSeatAssignmentOperationResult(true, "License seat transferred.", Map(replacement, current.DisplayName));
     }
@@ -320,6 +391,11 @@ public sealed class LicenseSeatAssignmentService(AppDbContext context) : ILicens
             return new CopyLicenseSeatsResult(false, "Source and target packages must be different.");
         }
 
+        await using var transaction = await BeginMutationTransactionAsync(context, cancellationToken);
+        await LockLicensePackagesAsync(
+            context,
+            [request.SourcePackageId, request.TargetPackageId],
+            cancellationToken);
         var source = await context.LicensePackages.FirstOrDefaultAsync(x => x.Id == request.SourcePackageId, cancellationToken);
         if (source is null)
         {
@@ -330,6 +406,13 @@ public sealed class LicenseSeatAssignmentService(AppDbContext context) : ILicens
         if (target is null)
         {
             return new CopyLicenseSeatsResult(false, "Target package was not found.");
+        }
+
+        if (source.LicenseType != LicenseType.NamedUser || target.LicenseType != LicenseType.NamedUser)
+        {
+            return new CopyLicenseSeatsResult(
+                false,
+                "Seat assignments can only be copied between named-user license packages.");
         }
 
         var sourceSeats = await context.LicenseSeatAssignments
@@ -402,6 +485,7 @@ public sealed class LicenseSeatAssignmentService(AppDbContext context) : ILicens
             request.Actor.ActorUserAgent,
             cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
+        if (transaction is not null) await transaction.CommitAsync(cancellationToken);
 
         var message = skipped > 0
             ? $"Copied {copied} seat(s); skipped {skipped} (already present or package full)."

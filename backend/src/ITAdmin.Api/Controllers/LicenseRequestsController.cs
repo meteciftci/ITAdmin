@@ -55,6 +55,7 @@ public sealed class LicenseRequestsController(ILicenseRequestService requestServ
                 x.RequesterManagerName,
                 x.ProductCount,
                 x.UserCount,
+                x.RequestedQuantity,
                 x.EstimatedTotalCost,
                 x.Currency,
                 x.Status)).ToList(),
@@ -200,7 +201,9 @@ public sealed class LicenseRequestsController(ILicenseRequestService requestServ
                 user.Title,
                 user.Mail,
                 user.Phone,
-                user.Status)).ToList());
+                user.Status)).ToList(),
+            item.LicenseType,
+            item.RequestedQuantity);
 
     private static LicenseRequestDetailResponse MapDetail(AppModels.LicenseRequestDetail request) =>
         new(
@@ -225,6 +228,7 @@ public sealed class LicenseRequestsController(ILicenseRequestService requestServ
                 item.Id,
                 item.ProductId,
                 item.ProductName,
+                item.LicenseType,
                 item.RequestedQuantity,
                 item.ApprovedQuantity,
                 item.FulfilledQuantity,

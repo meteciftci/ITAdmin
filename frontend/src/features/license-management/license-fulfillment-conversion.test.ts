@@ -21,11 +21,14 @@ function candidate(overrides: Partial<LicenseFulfillmentCandidate> = {}): Licens
     productId: "p1",
     productName: "Photoshop",
     productBrand: "Adobe",
+    licenseType: "Subscription",
     requestedQuantity: 10,
     approvedQuantity: 10,
     fulfilledQuantity: 0,
     remainingQuantity: 10,
     itemStatus: "Approved",
+    isFulfillable: true,
+    users: [],
     ...overrides,
   };
 }
@@ -47,6 +50,16 @@ describe("summarizeByProduct", () => {
     assert.equal(p1?.lineCount, 2);
     assert.equal(p1?.totalQuantity, 7);
     assert.equal(summary.find((x) => x.productId === "p2")?.totalQuantity, 2);
+  });
+
+  it("keeps different license types for the same product in separate groups", () => {
+    const summary = summarizeByProduct([
+      line({ productId: "p1", licenseType: "Concurrent", requestItemId: "a" }, 3),
+      line({ productId: "p1", licenseType: "ServerBased", requestItemId: "b" }, 2),
+    ]);
+
+    assert.equal(summary.length, 2);
+    assert.deepEqual(summary.map((x) => x.licenseType).sort(), ["Concurrent", "ServerBased"]);
   });
 });
 
@@ -76,6 +89,31 @@ describe("validateSelection", () => {
 
   it("accepts in-range quantities", () => {
     assert.deepEqual(validateSelection([line({ remainingQuantity: 5 }, 5)]), { isValid: true });
+  });
+
+  it("requires an exact set of approved users for named-user fulfillment", () => {
+    const named = candidate({
+      licenseType: "NamedUser",
+      remainingQuantity: 2,
+      users: [
+        { id: "u1", adObjectId: "ad1", samAccountName: null, userPrincipalName: null,
+          displayName: "One", department: null, title: null, mail: null, status: "Approved" },
+        { id: "u2", adObjectId: "ad2", samAccountName: null, userPrincipalName: null,
+          displayName: "Two", department: null, title: null, mail: null, status: "Rejected" },
+      ],
+    });
+
+    assert.equal(validateSelection([{ candidate: named, fulfillQuantity: 1 }]).isValid, false);
+    assert.equal(validateSelection([{
+      candidate: named,
+      fulfillQuantity: 1,
+      requestItemUserIds: ["u2"],
+    }]).isValid, false);
+    assert.deepEqual(validateSelection([{
+      candidate: named,
+      fulfillQuantity: 1,
+      requestItemUserIds: ["u1"],
+    }]), { isValid: true });
   });
 });
 
@@ -122,6 +160,25 @@ describe("buildConvertPayload", () => {
     assert.equal(payload.newPurchase, null);
   });
 
+  it("includes exact request users for named-user lines", () => {
+    const namedLine: FulfillmentSelectionLine = {
+      candidate: candidate({ licenseType: "NamedUser", requestItemId: "named-1" }),
+      fulfillQuantity: 1,
+      requestItemUserIds: ["u1"],
+    };
+    const payload = buildConvertPayload(
+      [namedLine],
+      { kind: "existing", purchaseId: "pur-1" },
+      [{ productId: "p1", licenseType: "NamedUser", startDate: null, endDate: null, isPerpetual: false }],
+    );
+
+    assert.deepEqual(payload.lines, [{
+      requestItemId: "named-1",
+      fulfillQuantity: 1,
+      requestItemUserIds: ["u1"],
+    }]);
+  });
+
   it("omits renewal/manual lines when empty and includes them when present", () => {
     const bare = buildConvertPayload(lines, { kind: "existing", purchaseId: "pur-1" }, defaults);
     assert.equal(bare.renewalLines, undefined);
@@ -136,6 +193,8 @@ describe("buildConvertPayload", () => {
       isPerpetual: false,
       expireSourcePackage: true,
       copySeatAssignments: true,
+      renewalRequired: true,
+      renewalDate: "2028-01-01",
     };
     const manual = {
       productId: "p9",

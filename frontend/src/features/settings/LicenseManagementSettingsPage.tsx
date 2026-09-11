@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { CheckboxField } from "@/components/common/CheckboxField";
+import { DateTimeText } from "@/components/common/DateTimeText";
 import { FormError } from "@/components/common/FormError";
 import { LoadingState } from "@/components/common/LoadingState";
 import { PageHeader } from "@/components/common/PageHeader";
@@ -110,6 +111,29 @@ export function LicenseManagementSettingsPage() {
           <p className="text-sm text-muted-foreground">
             {t("settings:licenseManagement.renewalInfo")}
           </p>
+          <div className="grid gap-3 rounded-md border bg-muted/20 p-3 text-sm sm:grid-cols-3">
+            <div>
+              <p className="text-muted-foreground">{t("settings:licenseManagement.status.lastRun")}</p>
+              <p className="font-medium">
+                {settingsQuery.data?.lastRenewalReminderRunAt
+                  ? <DateTimeText value={settingsQuery.data.lastRenewalReminderRunAt} />
+                  : t("settings:licenseManagement.status.notRun")}
+              </p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">{t("settings:licenseManagement.status.duePackages")}</p>
+              <p className="font-medium">{settingsQuery.data?.lastRenewalReminderDueCount ?? 0}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">{t("settings:licenseManagement.status.queued")}</p>
+              <p className="font-medium">{settingsQuery.data?.lastRenewalReminderQueuedCount ?? 0}</p>
+            </div>
+            {settingsQuery.data?.lastRenewalReminderMessage ? (
+              <p className="text-muted-foreground sm:col-span-3">
+                {settingsQuery.data.lastRenewalReminderMessage}
+              </p>
+            ) : null}
+          </div>
           {errorMessage ? <FormError message={errorMessage} /> : null}
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">

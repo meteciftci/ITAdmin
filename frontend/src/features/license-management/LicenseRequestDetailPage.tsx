@@ -17,7 +17,7 @@ import { LicenseDetailField } from "@/features/license-management/components/Lic
 import { LicenseRequestItemStatusBadge } from "@/features/license-management/components/LicenseRequestItemStatusBadge";
 import { LicenseRequestItemUserStatusBadge } from "@/features/license-management/components/LicenseRequestItemUserStatusBadge";
 import { LicenseRequestStatusBadge } from "@/features/license-management/components/LicenseRequestStatusBadge";
-import { getRequestSourceLabel } from "@/features/license-management/enum-labels";
+import { getLicenseTypeLabel, getRequestSourceLabel } from "@/features/license-management/enum-labels";
 import { formatRequestUserCountLabel } from "@/features/license-management/license-request-payload";
 import {
   formatLicenseRequestReference,
@@ -171,12 +171,19 @@ export function LicenseRequestDetailPage() {
                     <div className="space-y-1">
                       <h3 className="text-sm font-semibold">{item.productName}</h3>
                       <p className="text-sm text-muted-foreground">
-                        {formatRequestUserCountLabel(t, item.users.length)}
+                        {getLicenseTypeLabel(t, item.licenseType)} · {item.licenseType === "NamedUser"
+                          ? formatRequestUserCountLabel(t, item.users.length)
+                          : t("licenseManagement:requests.fields.requestedQuantityValue", {
+                              count: item.requestedQuantity,
+                            })}
                       </p>
                     </div>
                     <LicenseRequestItemStatusBadge status={item.status} />
                   </div>
                   <div className="grid gap-3 md:grid-cols-2">
+                    <LicenseDetailField label={t("licenseManagement:requests.fields.requestedQuantity")}>
+                      {item.requestedQuantity}
+                    </LicenseDetailField>
                     <LicenseDetailField label={t("licenseManagement:requests.fields.estimatedTotalCost")}>
                       {item.estimatedTotalCost != null
                         ? `${item.estimatedTotalCost}${item.currency ? ` ${item.currency}` : ""}`
@@ -186,7 +193,7 @@ export function LicenseRequestDetailPage() {
                       {item.justification ?? "-"}
                     </LicenseDetailField>
                   </div>
-                  <div className="space-y-2">
+                  {item.licenseType === "NamedUser" ? <div className="space-y-2">
                     <p className="text-sm font-medium">{t("licenseManagement:requests.fields.selectedUsers")}</p>
                     <ul className="space-y-2">
                       {item.users.map((userItem) => (
@@ -198,7 +205,7 @@ export function LicenseRequestDetailPage() {
                         </li>
                       ))}
                     </ul>
-                  </div>
+                  </div> : null}
                 </div>
               ))}
             </div>

@@ -16,6 +16,11 @@ public sealed class LicenseRequestItemConfiguration : IEntityTypeConfiguration<L
 
         builder.Property(x => x.RequestId).HasColumnName("request_id").IsRequired();
         builder.Property(x => x.ProductId).HasColumnName("product_id").IsRequired();
+        builder.Property(x => x.LicenseType)
+            .HasColumnName("license_type")
+            .HasConversion<string>()
+            .HasMaxLength(50)
+            .IsRequired();
         builder.Property(x => x.RequestedQuantity).HasColumnName("requested_quantity").IsRequired();
         builder.Property(x => x.ApprovedQuantity).HasColumnName("approved_quantity");
         builder.Property(x => x.FulfilledQuantity).HasColumnName("fulfilled_quantity").HasDefaultValue(0);
@@ -55,6 +60,8 @@ public sealed class LicenseRequestItemConfiguration : IEntityTypeConfiguration<L
 
         builder.HasIndex(x => x.RequestId);
         builder.HasIndex(x => x.ProductId);
+        builder.HasIndex(x => x.Status);
+        builder.HasIndex(x => new { x.Status, x.ProductId });
         builder.HasIndex(x => new { x.RequestId, x.ProductId }).IsUnique();
     }
 }

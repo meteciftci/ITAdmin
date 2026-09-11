@@ -3,15 +3,19 @@ import { useTranslation } from "react-i18next";
 import { CheckboxField } from "@/components/common/CheckboxField";
 import { DatePicker } from "@/components/common/DatePicker";
 import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
-import { getLicenseTypeLabel, LICENSE_TYPES } from "@/features/license-management/enum-labels";
+import { getLicenseTypeLabel } from "@/features/license-management/enum-labels";
 import type { ConvertFulfillmentPackageDefaults } from "@/features/license-management/types";
 
-type ProductDefaultsRow = ConvertFulfillmentPackageDefaults & { productName: string };
+type ProductDefaultsRow = ConvertFulfillmentPackageDefaults & { groupKey: string; productName: string };
 
 type Props = {
   defaults: ProductDefaultsRow[];
-  onChange: (productId: string, patch: Partial<ConvertFulfillmentPackageDefaults>) => void;
+  onChange: (
+    groupKey: string,
+    productId: string,
+    licenseType: ConvertFulfillmentPackageDefaults["licenseType"],
+    patch: Partial<ConvertFulfillmentPackageDefaults>,
+  ) => void;
   dateLocale: "tr" | "en";
   disabled?: boolean;
 };
@@ -22,34 +26,14 @@ export function FulfillmentPackageDefaultsForm({ defaults, onChange, dateLocale,
   return (
     <div className="space-y-4">
       {defaults.map((row) => (
-        <div key={row.productId} className="space-y-3 rounded-lg border bg-card p-4">
+        <div key={row.groupKey} className="space-y-3 rounded-lg border bg-card p-4">
           <p className="text-sm font-semibold">
             {t("licenseManagement:requests.fulfillment.packageDefaults.perProduct", {
               product: row.productName,
             })}
           </p>
+          <p className="text-sm text-muted-foreground">{getLicenseTypeLabel(t, row.licenseType)}</p>
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor={`fulfillment-license-type-${row.productId}`}>
-                {t("licenseManagement:requests.fulfillment.packageDefaults.licenseType")}
-              </Label>
-              <Select
-                id={`fulfillment-license-type-${row.productId}`}
-                value={row.licenseType}
-                disabled={disabled}
-                onChange={(event) =>
-                  onChange(row.productId, {
-                    licenseType: event.target.value as ConvertFulfillmentPackageDefaults["licenseType"],
-                  })
-                }
-              >
-                {LICENSE_TYPES.map((type) => (
-                  <option key={type} value={type}>
-                    {getLicenseTypeLabel(t, type)}
-                  </option>
-                ))}
-              </Select>
-            </div>
             <div className="space-y-2 md:col-span-2">
               <CheckboxField
                 id={`fulfillment-perpetual-${row.productId}`}
@@ -57,7 +41,7 @@ export function FulfillmentPackageDefaultsForm({ defaults, onChange, dateLocale,
                 checked={row.isPerpetual}
                 disabled={disabled}
                 onCheckedChange={(checked) =>
-                  onChange(row.productId, {
+                  onChange(row.groupKey, row.productId, row.licenseType, {
                     isPerpetual: checked,
                     endDate: checked ? null : row.endDate,
                   })
@@ -65,10 +49,11 @@ export function FulfillmentPackageDefaultsForm({ defaults, onChange, dateLocale,
               />
             </div>
             <div className="space-y-2">
-              <Label>{t("licenseManagement:requests.fulfillment.packageDefaults.startDate")}</Label>
+              <Label htmlFor={`fulfillment-start-date-${row.groupKey}-${row.productId}`}>{t("licenseManagement:requests.fulfillment.packageDefaults.startDate")}</Label>
               <DatePicker
+                id={`fulfillment-start-date-${row.groupKey}-${row.productId}`}
                 value={row.startDate}
-                onChange={(value) => onChange(row.productId, { startDate: value })}
+                onChange={(value) => onChange(row.groupKey, row.productId, row.licenseType, { startDate: value })}
                 placeholder={t("licenseManagement:requests.fulfillment.packageDefaults.startDate")}
                 clearLabel={t("common:actions.clear")}
                 locale={dateLocale}
@@ -76,10 +61,11 @@ export function FulfillmentPackageDefaultsForm({ defaults, onChange, dateLocale,
               />
             </div>
             <div className="space-y-2">
-              <Label>{t("licenseManagement:requests.fulfillment.packageDefaults.endDate")}</Label>
+              <Label htmlFor={`fulfillment-end-date-${row.groupKey}-${row.productId}`}>{t("licenseManagement:requests.fulfillment.packageDefaults.endDate")}</Label>
               <DatePicker
+                id={`fulfillment-end-date-${row.groupKey}-${row.productId}`}
                 value={row.endDate}
-                onChange={(value) => onChange(row.productId, { endDate: value })}
+                onChange={(value) => onChange(row.groupKey, row.productId, row.licenseType, { endDate: value })}
                 placeholder={t("licenseManagement:requests.fulfillment.packageDefaults.endDate")}
                 clearLabel={t("common:actions.clear")}
                 locale={dateLocale}

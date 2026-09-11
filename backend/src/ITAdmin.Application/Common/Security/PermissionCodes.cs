@@ -160,6 +160,7 @@ public static class PermissionCodes
     public static class LicenseManagement
     {
         public const string View = "LicenseManagement.View";
+        public const string ViewSensitiveData = "LicenseManagement.ViewSensitiveData";
         public const string ManageCatalog = "LicenseManagement.ManageCatalog";
         public const string ManagePurchases = "LicenseManagement.ManagePurchases";
         public const string ManageRequests = "LicenseManagement.ManageRequests";

@@ -53,6 +53,7 @@ public sealed class LicensePurchaseService(AppDbContext context) : ILicensePurch
         var items = await itemsQuery
             .OrderByDescending(x => x.PurchaseDate)
             .ThenByDescending(x => x.CreatedAt)
+            .ThenBy(x => x.Id)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .Select(x => new LicensePurchaseListItem(
@@ -133,6 +134,14 @@ public sealed class LicensePurchaseService(AppDbContext context) : ILicensePurch
             return new LicensePurchaseOperationResult(false, validationError);
         }
 
+        if (!LicenseManagementLifecycleRules.IsPurchaseTransitionAllowed(entity.Status, request.Status))
+        {
+            return new LicensePurchaseOperationResult(
+                false,
+                $"License purchase status cannot change from {entity.Status} to {request.Status}.");
+        }
+
+        var previousStatus = entity.Status;
         var now = DateTime.UtcNow;
         MapToEntity(entity, request);
         entity.UpdatedAt = now;
@@ -143,7 +152,9 @@ public sealed class LicensePurchaseService(AppDbContext context) : ILicensePurch
             "Update",
             "LicensePurchase",
             entity.Id,
-            $"License purchase updated: {entity.Title}.",
+            previousStatus == entity.Status
+                ? $"License purchase updated: {entity.Title}."
+                : $"License purchase updated: {entity.Title}; status changed from {previousStatus} to {entity.Status}.",
             request.ActorUserId,
             request.ActorUserName,
             request.ActorIpAddress,
@@ -173,6 +184,19 @@ public sealed class LicensePurchaseService(AppDbContext context) : ILicensePurch
             return new LicensePurchaseOperationResult(true, "License purchase status is unchanged.", Map(entity));
         }
 
+        if (!Enum.IsDefined(request.Status))
+        {
+            return new LicensePurchaseOperationResult(false, "Purchase status is invalid.");
+        }
+
+        if (!LicenseManagementLifecycleRules.IsPurchaseTransitionAllowed(entity.Status, request.Status))
+        {
+            return new LicensePurchaseOperationResult(
+                false,
+                $"License purchase status cannot change from {entity.Status} to {request.Status}.");
+        }
+
+        var previousStatus = entity.Status;
         var now = DateTime.UtcNow;
         entity.Status = request.Status;
         entity.UpdatedAt = now;
@@ -180,10 +204,10 @@ public sealed class LicensePurchaseService(AppDbContext context) : ILicensePurch
 
         await WriteAuditAsync(
             context,
-            "Update",
+            "StatusChange",
             "LicensePurchase",
             entity.Id,
-            $"License purchase status changed to {request.Status}: {entity.Title}.",
+            $"License purchase status changed from {previousStatus} to {request.Status}: {entity.Title}.",
             request.ActorUserId,
             request.ActorUserName,
             request.ActorIpAddress,
@@ -218,6 +242,11 @@ public sealed class LicensePurchaseService(AppDbContext context) : ILicensePurch
             return "Purchase status is invalid.";
         }
 
+        if (request.Status is not (LicensePurchaseStatus.Draft or LicensePurchaseStatus.Active))
+        {
+            return "A new purchase must start as draft or active.";
+        }
+
         if (!LicenseManagementValidation.IsValidDateRange(request.ContractStartDate, request.ContractEndDate, out _))
         {
             return "Contract end date cannot be earlier than contract start date.";
@@ -245,9 +274,19 @@ public sealed class LicensePurchaseService(AppDbContext context) : ILicensePurch
             return "Purchase title is required.";
         }
 
+        if (request.Title.Trim().Length > 300)
+        {
+            return "Purchase title length is invalid.";
+        }
+
         if (!Enum.IsDefined(request.PurchaseType))
         {
             return "Purchase type is invalid.";
+        }
+
+        if (!Enum.IsDefined(request.Status))
+        {
+            return "Purchase status is invalid.";
         }
 
         if (!LicenseManagementValidation.IsValidDateRange(request.ContractStartDate, request.ContractEndDate, out _))
@@ -317,6 +356,7 @@ public sealed class LicensePurchaseService(AppDbContext context) : ILicensePurch
         entity.Currency = LicenseManagementValidation.TrimOrNull(request.Currency);
         entity.VatIncluded = request.VatIncluded;
         entity.Notes = LicenseManagementValidation.TrimOrNull(request.Notes);
+        entity.Status = request.Status;
         return entity;
     }
 
@@ -343,6 +383,7 @@ public sealed class LicensePurchaseService(AppDbContext context) : ILicensePurch
         entity.Currency = LicenseManagementValidation.TrimOrNull(request.Currency);
         entity.VatIncluded = request.VatIncluded;
         entity.Notes = LicenseManagementValidation.TrimOrNull(request.Notes);
+        entity.Status = request.Status;
         return entity;
     }
 

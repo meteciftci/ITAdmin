@@ -52,7 +52,16 @@ export function validatePurchaseForm(title: string) {
   return null;
 }
 
-export function validatePackageForm(purchaseId: string, productId: string, quantity: number) {
+export function validatePackageForm(
+  purchaseId: string,
+  productId: string,
+  quantity: number,
+  startDate: string | null = null,
+  endDate: string | null = null,
+  isPerpetual = false,
+  renewalRequired = false,
+  renewalDate: string | null = null,
+) {
   if (!purchaseId) {
     return "purchaseRequired";
   }
@@ -61,6 +70,40 @@ export function validatePackageForm(purchaseId: string, productId: string, quant
   }
   if (!Number.isFinite(quantity) || quantity < 1) {
     return "quantityMin";
+  }
+  return validatePackageDateFields(
+    startDate,
+    endDate,
+    isPerpetual,
+    renewalRequired,
+    renewalDate,
+  );
+}
+
+export function validatePackageDateFields(
+  startDate: string | null,
+  endDate: string | null,
+  isPerpetual: boolean,
+  renewalRequired: boolean,
+  renewalDate: string | null,
+) {
+  if (startDate && endDate && endDate < startDate) {
+    return "invalidLicenseDateRange";
+  }
+  if (isPerpetual && endDate) {
+    return "perpetualEndDateNotAllowed";
+  }
+  if (renewalRequired && !renewalDate) {
+    return "renewalDateRequired";
+  }
+  if (!renewalRequired && renewalDate) {
+    return "renewalDateNotAllowed";
+  }
+  if (renewalDate && startDate && renewalDate < startDate) {
+    return "renewalDateBeforeStart";
+  }
+  if (renewalDate && endDate && renewalDate > endDate) {
+    return "renewalDateAfterEnd";
   }
   return null;
 }

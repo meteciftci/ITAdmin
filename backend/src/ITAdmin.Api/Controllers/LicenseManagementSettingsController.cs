@@ -14,6 +14,19 @@ namespace ITAdmin.Api.Controllers;
 public sealed class LicenseManagementSettingsController(
     ILicenseManagementSettingsService settingsService) : ControllerBase
 {
+    [HttpGet("request-defaults")]
+    [RequireAnyPermission(
+        LicenseManagementPermissions.ManageRequests,
+        LicenseManagementPermissions.FulfillRequests)]
+    public async Task<ActionResult<LicenseRequestDefaultsResponse>> GetRequestDefaults(
+        CancellationToken cancellationToken)
+    {
+        var settings = await settingsService.GetSettingsAsync(cancellationToken);
+        return Ok(new LicenseRequestDefaultsResponse(
+            settings.DefaultCurrency,
+            settings.DefaultVatIncluded));
+    }
+
     [HttpGet]
     [RequirePermission(LicenseManagementPermissions.ManageSettings)]
     public async Task<ActionResult<LicenseManagementSettingsResponse>> GetSettings(
@@ -58,6 +71,11 @@ public sealed class LicenseManagementSettingsController(
             settings.DefaultRenewalReminderDays,
             settings.DefaultRenewalRecipients,
             settings.DefaultRenewalCcRecipients,
+            settings.LastRenewalReminderRunAt,
+            settings.LastRenewalReminderStatus,
+            settings.LastRenewalReminderDueCount,
+            settings.LastRenewalReminderQueuedCount,
+            settings.LastRenewalReminderMessage,
             settings.Notes,
             settings.UpdatedAt,
             settings.UpdatedBy);

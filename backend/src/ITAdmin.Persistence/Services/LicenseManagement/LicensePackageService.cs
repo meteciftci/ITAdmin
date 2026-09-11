@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using ITAdmin.Application.Abstractions.Services;
+using ITAdmin.Application.Abstractions.Security;
 using ITAdmin.Application.Common.LicenseManagement;
 using ITAdmin.Application.Common.Models;
 using ITAdmin.Application.Common.Models.LicenseManagement;
@@ -10,7 +11,7 @@ using static ITAdmin.Persistence.Services.LicenseManagement.LicenseManagementSer
 
 namespace ITAdmin.Persistence.Services.LicenseManagement;
 
-public sealed class LicensePackageService(AppDbContext context) : ILicensePackageService
+public sealed class LicensePackageService(AppDbContext context, ISecretProtector secretProtector) : ILicensePackageService
 {
 
     public async Task<PagedResult<LicensePackageListItem>> GetListAsync(
@@ -58,6 +59,7 @@ public sealed class LicensePackageService(AppDbContext context) : ILicensePackag
 
         var page = await itemsQuery
             .OrderByDescending(x => x.CreatedAt)
+            .ThenBy(x => x.Id)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .Select(x => new
@@ -144,17 +146,19 @@ public sealed class LicensePackageService(AppDbContext context) : ILicensePackag
             request.Quantity,
             request.LicenseAccountEmail,
             request.LicensePortalUrl,
+            request.StartDate,
             request.IsPerpetual,
             request.EndDate,
+            request.RenewalRequired,
+            request.RenewalDate,
+            request.IsActive,
+            request.Status,
+            requireOpenPurchase: true,
+            requireActiveProduct: true,
             cancellationToken);
         if (validationError is not null)
         {
             return new LicensePackageOperationResult(false, validationError);
-        }
-
-        if (!Enum.IsDefined(request.Status))
-        {
-            return new LicensePackageOperationResult(false, "License package status is invalid.");
         }
 
         var now = DateTime.UtcNow;
@@ -170,7 +174,8 @@ public sealed class LicensePackageService(AppDbContext context) : ILicensePackag
             RenewalRequired = request.RenewalRequired,
             RenewalDate = request.RenewalDate,
             SerialNumber = LicenseManagementValidation.TrimOrNull(request.SerialNumber),
-            LicenseKey = LicenseManagementValidation.TrimOrNull(request.LicenseKey),
+            LicenseKey = ProtectLicenseKey(request.LicenseKey),
+            LicenseKeyIsEncrypted = !string.IsNullOrWhiteSpace(request.LicenseKey),
             LicenseAccountEmail = LicenseManagementValidation.TrimOrNull(request.LicenseAccountEmail),
             LicensePortalUrl = LicenseManagementValidation.TrimOrNull(request.LicensePortalUrl),
             LicenseNotes = LicenseManagementValidation.TrimOrNull(request.LicenseNotes),
@@ -204,6 +209,8 @@ public sealed class LicensePackageService(AppDbContext context) : ILicensePackag
         UpdateLicensePackageRequest request,
         CancellationToken cancellationToken = default)
     {
+        await using var transaction = await BeginMutationTransactionAsync(context, cancellationToken);
+        await LockLicensePackagesAsync(context, [request.Id], cancellationToken);
         var entity = await context.LicensePackages
             .Include(x => x.Product)
             .Include(x => x.Purchase)
@@ -221,13 +228,56 @@ public sealed class LicensePackageService(AppDbContext context) : ILicensePackag
             request.Quantity,
             request.LicenseAccountEmail,
             request.LicensePortalUrl,
+            request.StartDate,
             request.IsPerpetual,
             request.EndDate,
+            request.RenewalRequired,
+            request.RenewalDate,
+            request.IsActive,
+            request.Status,
+            requireOpenPurchase: request.PurchaseId != entity.PurchaseId,
+            requireActiveProduct: request.ProductId != entity.ProductId,
             cancellationToken);
         if (validationError is not null)
         {
             return new LicensePackageOperationResult(false, validationError);
         }
+
+        if (!LicenseManagementLifecycleRules.IsPackageTransitionAllowed(entity.Status, request.Status))
+        {
+            return new LicensePackageOperationResult(
+                false,
+                $"License package status cannot change from {entity.Status} to {request.Status}.");
+        }
+
+        var activeSeatCount = await GetActiveSeatCountAsync(entity.Id, cancellationToken);
+        if (request.Quantity < activeSeatCount)
+        {
+            return new LicensePackageOperationResult(
+                false,
+                $"License quantity cannot be lower than the active seat count ({activeSeatCount}).");
+        }
+
+        var hasOperationalHistory = entity.PreviousPackageId is not null
+            || await context.LicenseRequestItemFulfillments.AnyAsync(
+                x => x.PackageId == entity.Id, cancellationToken)
+            || await context.LicenseSeatAssignments.AnyAsync(
+                x => x.PackageId == entity.Id, cancellationToken)
+            || await context.LicensePackages.AnyAsync(
+                x => x.PreviousPackageId == entity.Id, cancellationToken);
+        if (hasOperationalHistory
+            && (request.PurchaseId != entity.PurchaseId
+                || request.ProductId != entity.ProductId
+                || request.LicenseType != entity.LicenseType))
+        {
+            return new LicensePackageOperationResult(
+                false,
+                "Purchase, product, and license type cannot change after a package has operational history.");
+        }
+
+        var previousStatus = entity.Status;
+        var releasedSeatCount = await CloseActiveSeatsForTerminalStatusAsync(
+            entity.Id, request.Status, request.ActorUserName, cancellationToken);
 
         var now = DateTime.UtcNow;
         entity.PurchaseId = request.PurchaseId;
@@ -240,11 +290,13 @@ public sealed class LicensePackageService(AppDbContext context) : ILicensePackag
         entity.RenewalRequired = request.RenewalRequired;
         entity.RenewalDate = request.RenewalDate;
         entity.SerialNumber = LicenseManagementValidation.TrimOrNull(request.SerialNumber);
-        entity.LicenseKey = LicenseManagementValidation.TrimOrNull(request.LicenseKey);
+        entity.LicenseKey = ProtectLicenseKey(request.LicenseKey);
+        entity.LicenseKeyIsEncrypted = !string.IsNullOrWhiteSpace(request.LicenseKey);
         entity.LicenseAccountEmail = LicenseManagementValidation.TrimOrNull(request.LicenseAccountEmail);
         entity.LicensePortalUrl = LicenseManagementValidation.TrimOrNull(request.LicensePortalUrl);
         entity.LicenseNotes = LicenseManagementValidation.TrimOrNull(request.LicenseNotes);
-        entity.IsActive = request.IsActive;
+        entity.IsActive = LicenseManagementLifecycleRules.IsPackageActive(request.Status);
+        entity.Status = request.Status;
         entity.UpdatedAt = now;
         entity.UpdatedBy = request.ActorUserName;
 
@@ -253,24 +305,30 @@ public sealed class LicensePackageService(AppDbContext context) : ILicensePackag
             "Update",
             "LicensePackage",
             entity.Id,
-            $"License package updated: {entity.Id}.",
+            previousStatus == entity.Status
+                ? $"License package updated: {entity.Id}; closed {releasedSeatCount} active seat(s)."
+                : $"License package updated: {entity.Id}; status changed from {previousStatus} to {entity.Status}; "
+                    + $"closed {releasedSeatCount} active seat(s).",
             request.ActorUserId,
             request.ActorUserName,
             request.ActorIpAddress,
             request.ActorUserAgent,
             cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
+        if (transaction is not null) await transaction.CommitAsync(cancellationToken);
 
         return new LicensePackageOperationResult(
             true,
             "License package updated.",
-            Map(entity, await GetActiveSeatCountAsync(entity.Id, cancellationToken)));
+            Map(entity, activeSeatCount - releasedSeatCount));
     }
 
     public async Task<LicensePackageOperationResult> UpdateStatusAsync(
         UpdateLicensePackageStatusRequest request,
         CancellationToken cancellationToken = default)
     {
+        await using var transaction = await BeginMutationTransactionAsync(context, cancellationToken);
+        await LockLicensePackagesAsync(context, [request.Id], cancellationToken);
         var entity = await context.LicensePackages
             .Include(x => x.Product)
             .Include(x => x.Purchase)
@@ -286,31 +344,45 @@ public sealed class LicensePackageService(AppDbContext context) : ILicensePackag
             return new LicensePackageOperationResult(false, "License package status is invalid.");
         }
 
+        if (!LicenseManagementLifecycleRules.IsPackageTransitionAllowed(entity.Status, request.Status))
+        {
+            return new LicensePackageOperationResult(
+                false,
+                $"License package status cannot change from {entity.Status} to {request.Status}.");
+        }
+
         if (entity.Status == request.Status)
         {
+            if (transaction is not null) await transaction.CommitAsync(cancellationToken);
             return new LicensePackageOperationResult(
                 true,
                 "License package status is unchanged.",
                 Map(entity, await GetActiveSeatCountAsync(entity.Id, cancellationToken)));
         }
 
+        var previousStatus = entity.Status;
         var now = DateTime.UtcNow;
+        var releasedSeatCount = await CloseActiveSeatsForTerminalStatusAsync(
+            entity.Id, request.Status, request.ActorUserName, cancellationToken);
         entity.Status = request.Status;
+        entity.IsActive = LicenseManagementLifecycleRules.IsPackageActive(request.Status);
         entity.UpdatedAt = now;
         entity.UpdatedBy = request.ActorUserName;
 
         await WriteAuditAsync(
             context,
-            "Update",
+            "StatusChange",
             "LicensePackage",
             entity.Id,
-            $"License package status changed to {request.Status}: {entity.Id}.",
+            $"License package status changed from {previousStatus} to {request.Status}: {entity.Id}; "
+            + $"closed {releasedSeatCount} active seat(s).",
             request.ActorUserId,
             request.ActorUserName,
             request.ActorIpAddress,
             request.ActorUserAgent,
             cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
+        if (transaction is not null) await transaction.CommitAsync(cancellationToken);
 
         return new LicensePackageOperationResult(
             true,
@@ -325,8 +397,15 @@ public sealed class LicensePackageService(AppDbContext context) : ILicensePackag
         int quantity,
         string? licenseAccountEmail,
         string? licensePortalUrl,
+        DateOnly? startDate,
         bool isPerpetual,
         DateOnly? endDate,
+        bool renewalRequired,
+        DateOnly? renewalDate,
+        bool isActive,
+        LicensePackageStatus status,
+        bool requireOpenPurchase,
+        bool requireActiveProduct,
         CancellationToken cancellationToken)
     {
         if (!Enum.IsDefined(licenseType))
@@ -339,16 +418,43 @@ public sealed class LicensePackageService(AppDbContext context) : ILicensePackag
             return "License quantity must be at least 1.";
         }
 
-        var purchaseExists = await context.LicensePurchases.AnyAsync(x => x.Id == purchaseId, cancellationToken);
-        if (!purchaseExists)
+        if (!Enum.IsDefined(status))
+        {
+            return "License package status is invalid.";
+        }
+
+        if (isActive != LicenseManagementLifecycleRules.IsPackageActive(status))
+        {
+            return "License package active flag must match its status.";
+        }
+
+        var purchaseStatus = await context.LicensePurchases
+            .Where(x => x.Id == purchaseId)
+            .Select(x => (LicensePurchaseStatus?)x.Status)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (purchaseStatus is null)
         {
             return "Purchase was not found.";
         }
 
-        var productExists = await context.LicensedProducts.AnyAsync(x => x.Id == productId, cancellationToken);
-        if (!productExists)
+        if (requireOpenPurchase
+            && !LicenseManagementLifecycleRules.IsPurchaseOpenForPackages(purchaseStatus.Value))
+        {
+            return "License packages can only be attached to draft or active purchases.";
+        }
+
+        var productIsActive = await context.LicensedProducts
+            .Where(x => x.Id == productId)
+            .Select(x => (bool?)x.IsActive)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (productIsActive is null)
         {
             return "Product was not found.";
+        }
+
+        if (requireActiveProduct && !productIsActive.Value)
+        {
+            return "A passive product cannot be used by a license package.";
         }
 
         if (!LicenseManagementValidation.IsValidEmail(licenseAccountEmail))
@@ -361,15 +467,58 @@ public sealed class LicensePackageService(AppDbContext context) : ILicensePackag
             return "License portal URL format is invalid.";
         }
 
-        if (!isPerpetual && endDate is not null && endDate < DateOnly.FromDateTime(DateTime.UtcNow))
+        var dateValidationError = LicenseManagementLifecycleRules.ValidatePackageDates(
+            startDate, endDate, isPerpetual, renewalRequired, renewalDate);
+        if (dateValidationError is not null)
         {
-            // End date in past is allowed per spec - only contract date range validation required
+            return dateValidationError;
         }
 
         return null;
     }
 
-    private static LicensePackageDetail Map(LicensePackage entity, int usedQuantity) =>
+    private async Task<int> CloseActiveSeatsForTerminalStatusAsync(
+        Guid packageId,
+        LicensePackageStatus targetStatus,
+        string? actorUserName,
+        CancellationToken cancellationToken)
+    {
+        if (targetStatus is not (LicensePackageStatus.Expired
+            or LicensePackageStatus.Cancelled
+            or LicensePackageStatus.Archived))
+        {
+            return 0;
+        }
+
+        var seats = await context.LicenseSeatAssignments
+            .Where(x => x.PackageId == packageId && x.Status == LicenseSeatAssignmentStatus.Active)
+            .ToListAsync(cancellationToken);
+        var now = DateTime.UtcNow;
+        foreach (var seat in seats)
+        {
+            seat.Status = LicenseSeatAssignmentStatus.Released;
+            seat.ReleasedDate = DateOnly.FromDateTime(now);
+            seat.UpdatedAt = now;
+            seat.UpdatedBy = actorUserName;
+        }
+
+        return seats.Count;
+    }
+
+    private string? ProtectLicenseKey(string? licenseKey)
+    {
+        var normalized = LicenseManagementValidation.TrimOrNull(licenseKey);
+        return normalized is null ? null : secretProtector.Protect(normalized);
+    }
+
+    private string? UnprotectLicenseKey(LicensePackage entity) =>
+        entity.LicenseKey is null
+            ? null
+            : entity.LicenseKeyIsEncrypted
+                ? secretProtector.Unprotect(entity.LicenseKey)
+                : entity.LicenseKey;
+
+    private LicensePackageDetail Map(LicensePackage entity, int usedQuantity) =>
         new(
             entity.Id,
             entity.PurchaseId,
@@ -386,7 +535,7 @@ public sealed class LicensePackageService(AppDbContext context) : ILicensePackag
             entity.RenewalRequired,
             entity.RenewalDate,
             entity.SerialNumber,
-            entity.LicenseKey,
+            UnprotectLicenseKey(entity),
             entity.LicenseAccountEmail,
             entity.LicensePortalUrl,
             entity.LicenseNotes,

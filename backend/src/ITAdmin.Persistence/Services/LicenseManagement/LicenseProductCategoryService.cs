@@ -36,6 +36,7 @@ public sealed class LicenseProductCategoryService(AppDbContext context) : ILicen
 
         var items = await itemsQuery
             .OrderBy(x => x.Name)
+            .ThenBy(x => x.Id)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .Select(x => new LicenseProductCategoryListItem(
@@ -54,6 +55,7 @@ public sealed class LicenseProductCategoryService(AppDbContext context) : ILicen
             .AsNoTracking()
             .Where(x => x.IsActive)
             .OrderBy(x => x.Name)
+            .ThenBy(x => x.Id)
             .Select(x => new LicenseProductCategoryListItem(
                 x.Id,
                 x.Name,

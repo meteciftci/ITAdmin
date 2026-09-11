@@ -45,6 +45,7 @@ public sealed class LicensedProductService(AppDbContext context) : ILicensedProd
 
         var items = await itemsQuery
             .OrderBy(x => x.Name)
+            .ThenBy(x => x.Id)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .Select(x => new LicensedProductListItem(

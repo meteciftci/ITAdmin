@@ -5,6 +5,7 @@ namespace ITAdmin.Application.Common.Constants;
 public static class LicenseManagementPermissions
 {
     public const string View = PermissionCodes.LicenseManagement.View;
+    public const string ViewSensitiveData = PermissionCodes.LicenseManagement.ViewSensitiveData;
     public const string ManageCatalog = PermissionCodes.LicenseManagement.ManageCatalog;
     public const string ManagePurchases = PermissionCodes.LicenseManagement.ManagePurchases;
     public const string ManageRequests = PermissionCodes.LicenseManagement.ManageRequests;

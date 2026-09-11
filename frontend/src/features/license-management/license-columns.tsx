@@ -470,6 +470,10 @@ export function createLicenseRequestColumns({
       header: () => t("licenseManagement:requests.fields.productCount"),
     },
     {
+      accessorKey: "requestedQuantity",
+      header: () => t("licenseManagement:requests.fields.requestedQuantity"),
+    },
+    {
       accessorKey: "userCount",
       header: () => t("licenseManagement:requests.fields.userCount"),
     },

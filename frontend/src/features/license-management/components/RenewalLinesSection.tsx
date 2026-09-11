@@ -34,7 +34,11 @@ export function RenewalLinesSection({ rows, onChange, packages, dateLocale, disa
   }, [packages]);
 
   const available = useMemo(
-    () => packages.filter((pkg) => !rows.some((row) => row.sourcePackageId === pkg.id)),
+    () => packages.filter(
+      (pkg) => pkg.status !== "Cancelled"
+        && pkg.status !== "Archived"
+        && !rows.some((row) => row.sourcePackageId === pkg.id),
+    ),
     [packages, rows],
   );
 
@@ -53,7 +57,9 @@ export function RenewalLinesSection({ rows, onChange, packages, dateLocale, disa
         endDate: null,
         isPerpetual: false,
         expireSourcePackage: true,
-        copySeatAssignments: true,
+        copySeatAssignments: pkg.licenseType === "NamedUser",
+        renewalRequired: pkg.renewalRequired,
+        renewalDate: null,
       },
     ]);
   }
@@ -140,6 +146,9 @@ export function RenewalLinesSection({ rows, onChange, packages, dateLocale, disa
                   onChange={(event) =>
                     patchRow(row.sourcePackageId, {
                       licenseType: event.target.value ? (event.target.value as LicenseType) : null,
+                      copySeatAssignments: (event.target.value || pkg?.licenseType) === "NamedUser"
+                        ? row.copySeatAssignments
+                        : false,
                     })
                   }
                 >
@@ -152,6 +161,35 @@ export function RenewalLinesSection({ rows, onChange, packages, dateLocale, disa
                     </option>
                   ))}
                 </Select>
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <CheckboxField
+                  id={`renewal-required-${row.sourcePackageId}`}
+                  label={t("licenseManagement:requests.fulfillment.renewal.renewalRequired")}
+                  checked={row.renewalRequired}
+                  disabled={disabled}
+                  onCheckedChange={(checked) =>
+                    patchRow(row.sourcePackageId, {
+                      renewalRequired: checked,
+                      renewalDate: checked ? row.renewalDate : null,
+                    })
+                  }
+                />
+                {row.renewalRequired ? (
+                  <div className="space-y-2 pt-2">
+                    <Label htmlFor={`renewal-date-${row.sourcePackageId}`}>{t("licenseManagement:requests.fulfillment.renewal.renewalDate")}</Label>
+                    <DatePicker
+                      id={`renewal-date-${row.sourcePackageId}`}
+                      value={row.renewalDate}
+                      onChange={(value) => patchRow(row.sourcePackageId, { renewalDate: value })}
+                      placeholder={t("licenseManagement:requests.fulfillment.renewal.renewalDate")}
+                      clearLabel={t("common:actions.clear")}
+                      locale={dateLocale}
+                      disabled={disabled}
+                    />
+                  </div>
+                ) : null}
               </div>
 
               <div className="space-y-2 md:col-span-2">
@@ -170,8 +208,9 @@ export function RenewalLinesSection({ rows, onChange, packages, dateLocale, disa
               </div>
 
               <div className="space-y-2">
-                <Label>{t("licenseManagement:requests.fulfillment.renewal.startDate")}</Label>
+                <Label htmlFor={`renewal-start-date-${row.sourcePackageId}`}>{t("licenseManagement:requests.fulfillment.renewal.startDate")}</Label>
                 <DatePicker
+                  id={`renewal-start-date-${row.sourcePackageId}`}
                   value={row.startDate}
                   onChange={(value) => patchRow(row.sourcePackageId, { startDate: value })}
                   placeholder={t("licenseManagement:requests.fulfillment.renewal.startDate")}
@@ -181,8 +220,9 @@ export function RenewalLinesSection({ rows, onChange, packages, dateLocale, disa
                 />
               </div>
               <div className="space-y-2">
-                <Label>{t("licenseManagement:requests.fulfillment.renewal.endDate")}</Label>
+                <Label htmlFor={`renewal-end-date-${row.sourcePackageId}`}>{t("licenseManagement:requests.fulfillment.renewal.endDate")}</Label>
                 <DatePicker
+                  id={`renewal-end-date-${row.sourcePackageId}`}
                   value={row.endDate}
                   onChange={(value) => patchRow(row.sourcePackageId, { endDate: value })}
                   placeholder={t("licenseManagement:requests.fulfillment.renewal.endDate")}
@@ -197,7 +237,9 @@ export function RenewalLinesSection({ rows, onChange, packages, dateLocale, disa
                   id={`renewal-expire-${row.sourcePackageId}`}
                   label={t("licenseManagement:requests.fulfillment.renewal.expireSource")}
                   checked={row.expireSourcePackage}
-                  disabled={disabled}
+                  disabled={disabled
+                    || pkg?.status === "Active"
+                    || pkg?.status === "Suspended"}
                   onCheckedChange={(checked) =>
                     patchRow(row.sourcePackageId, { expireSourcePackage: checked })
                   }
@@ -206,7 +248,9 @@ export function RenewalLinesSection({ rows, onChange, packages, dateLocale, disa
                   id={`renewal-seats-${row.sourcePackageId}`}
                   label={t("licenseManagement:requests.fulfillment.renewal.copySeats")}
                   checked={row.copySeatAssignments}
-                  disabled={disabled}
+                  disabled={disabled
+                    || pkg?.licenseType !== "NamedUser"
+                    || (row.licenseType ?? pkg?.licenseType) !== "NamedUser"}
                   onCheckedChange={(checked) =>
                     patchRow(row.sourcePackageId, { copySeatAssignments: checked })
                   }

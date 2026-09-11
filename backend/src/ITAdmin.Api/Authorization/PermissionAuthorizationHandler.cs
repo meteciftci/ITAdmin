@@ -22,8 +22,11 @@ public sealed class PermissionAuthorizationHandler(
             return;
         }
 
-        var hasPermission = context.User.FindAll(CustomClaimTypes.Permission)
-            .Any(c => string.Equals(c.Value, requirement.Permission, StringComparison.Ordinal));
+        var grantedPermissions = context.User.FindAll(CustomClaimTypes.Permission)
+            .Select(c => c.Value);
+        var hasPermission = LicenseManagementPermissionRules.IsSatisfiedBy(
+            requirement.Permission,
+            grantedPermissions);
 
         if (hasPermission)
         {

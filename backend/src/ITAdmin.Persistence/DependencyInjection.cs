@@ -47,11 +47,14 @@ public static class DependencyInjection
         services.AddScoped<ILicensedProductService, LicensedProductService>();
         services.AddScoped<ILicensePurchaseService, LicensePurchaseService>();
         services.AddScoped<ILicensePackageService, LicensePackageService>();
+        services.AddScoped<LicensePackageSecretBackfillService>();
         services.AddScoped<ILicenseRequestService, LicenseRequestService>();
         services.AddScoped<ILicenseRequestFulfillmentService, LicenseRequestFulfillmentService>();
         services.AddScoped<ILicenseSeatAssignmentService, LicenseSeatAssignmentService>();
         services.AddScoped<ILicenseManagementSettingsService, LicenseManagementSettingsService>();
+        services.AddScoped<ILicenseRenewalReminderProcessor, LicenseRenewalReminderProcessor>();
         services.Configure<NotificationOutboxOptions>(configuration.GetSection(NotificationOutboxOptions.SectionName));
+        services.Configure<LicenseRenewalReminderOptions>(configuration.GetSection(LicenseRenewalReminderOptions.SectionName));
 
         return services;
     }

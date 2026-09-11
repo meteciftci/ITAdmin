@@ -32,7 +32,10 @@ public sealed class LicensePackageConfiguration : IEntityTypeConfiguration<Licen
         builder.Property(x => x.RenewalDate).HasColumnName("renewal_date");
 
         builder.Property(x => x.SerialNumber).HasColumnName("serial_number").HasMaxLength(200);
-        builder.Property(x => x.LicenseKey).HasColumnName("license_key").HasMaxLength(2000);
+        builder.Property(x => x.LicenseKey).HasColumnName("license_key").HasMaxLength(4000);
+        builder.Property(x => x.LicenseKeyIsEncrypted)
+            .HasColumnName("license_key_is_encrypted")
+            .HasDefaultValue(false);
         builder.Property(x => x.LicenseAccountEmail).HasColumnName("license_account_email").HasMaxLength(250);
         builder.Property(x => x.LicensePortalUrl).HasColumnName("license_portal_url").HasMaxLength(1000);
         builder.Property(x => x.LicenseNotes).HasColumnName("license_notes").HasMaxLength(4000);
@@ -72,7 +75,10 @@ public sealed class LicensePackageConfiguration : IEntityTypeConfiguration<Licen
         builder.HasIndex(x => x.PurchaseId);
         builder.HasIndex(x => x.ProductId);
         builder.HasIndex(x => x.Status);
+        builder.HasIndex(x => new { x.Status, x.CreatedAt });
         builder.HasIndex(x => x.IsActive);
-        builder.HasIndex(x => x.PreviousPackageId);
+        builder.HasIndex(x => x.PreviousPackageId)
+            .IsUnique()
+            .HasFilter("previous_package_id IS NOT NULL");
     }
 }

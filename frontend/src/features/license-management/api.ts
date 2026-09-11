@@ -1,4 +1,5 @@
 import { apiClient } from "@/lib/api-client";
+import { collectAllPagedItems } from "@/features/license-management/paged-items";
 
 import type {
   DirectoryOrganizationalUnitLookupSearchResult,
@@ -35,6 +36,7 @@ import type {
   LicenseFulfillmentResponse,
   TriageLicenseRequestItemRequest,
   LicenseRequestDetail,
+  LicenseRequestDefaults,
   LicenseRequestFormRequest,
   LicenseRequestListItem,
   LicenseRequestSource,
@@ -44,11 +46,19 @@ import type {
 } from "@/features/license-management/types";
 
 const basePath = "/license-management";
+const OPTION_PAGE_SIZE = 100;
 
 export const LICENSE_MANAGEMENT_SETTINGS_QUERY_KEY = ["license-management", "settings"] as const;
 
 export const getLicenseManagementSettings = async (): Promise<LicenseManagementSettings> => {
   const { data } = await apiClient.get<LicenseManagementSettings>(`${basePath}/settings`);
+  return data;
+};
+
+export const getLicenseRequestDefaults = async (): Promise<LicenseRequestDefaults> => {
+  const { data } = await apiClient.get<LicenseRequestDefaults>(
+    `${basePath}/settings/request-defaults`,
+  );
   return data;
 };
 
@@ -217,7 +227,7 @@ export const getLicensePurchaseById = async (id: string): Promise<LicensePurchas
 };
 
 export const createLicensePurchase = async (
-  request: LicensePurchaseFormRequest & { status: LicensePurchaseStatus },
+  request: LicensePurchaseFormRequest,
 ): Promise<void> => {
   await apiClient.post(`${basePath}/purchases`, request);
 };
@@ -262,7 +272,7 @@ export const getLicensePackageById = async (id: string): Promise<LicensePackageD
 };
 
 export const createLicensePackage = async (
-  request: LicensePackageFormRequest & { status: LicensePackageStatus },
+  request: LicensePackageFormRequest,
 ): Promise<void> => {
   await apiClient.post(`${basePath}/packages`, request);
 };
@@ -282,28 +292,29 @@ export const updateLicensePackageStatus = async (
 };
 
 export const getAllLicenseCompanies = async (): Promise<LicenseCompanyListItem[]> => {
-  const { data } = await apiClient.get<PagedResponse<LicenseCompanyListItem>>(
-    `${basePath}/companies`,
-    { params: { pageNumber: 1, pageSize: 100, isActive: true } },
+  return collectAllPagedItems(OPTION_PAGE_SIZE, (pageNumber, pageSize) =>
+    getLicenseCompanies({ pageNumber, pageSize, isActive: true }),
   );
-  return data.items;
 };
 
 export const getAllLicensedProducts = async (): Promise<LicensedProductListItem[]> => {
-  const { data } = await apiClient.get<PagedResponse<LicensedProductListItem>>(
-    `${basePath}/products`,
-    { params: { pageNumber: 1, pageSize: 100, isActive: true } },
+  return collectAllPagedItems(OPTION_PAGE_SIZE, (pageNumber, pageSize) =>
+    getLicensedProducts({ pageNumber, pageSize, isActive: true }),
   );
-  return data.items;
 };
 
 export const getAllLicensePurchases = async (): Promise<LicensePurchaseListItem[]> => {
-  const { data } = await apiClient.get<PagedResponse<LicensePurchaseListItem>>(
-    `${basePath}/purchases`,
-    { params: { pageNumber: 1, pageSize: 100 } },
+  return collectAllPagedItems(OPTION_PAGE_SIZE, (pageNumber, pageSize) =>
+    getLicensePurchases({ pageNumber, pageSize }),
   );
-  return data.items;
 };
+
+export const getAllLicensePackages = async (
+  params: Omit<PackageListParams, "pageNumber" | "pageSize"> = {},
+): Promise<LicensePackageListItem[]> =>
+  collectAllPagedItems(OPTION_PAGE_SIZE, (pageNumber, pageSize) =>
+    getLicensePackages({ ...params, pageNumber, pageSize }),
+  );
 
 type RequestListParams = {
   search?: string;
@@ -390,6 +401,13 @@ export const getFulfillmentCandidates = async (
   );
   return data;
 };
+
+export const getAllFulfillmentCandidates = async (
+  params: Omit<FulfillmentCandidateParams, "pageNumber" | "pageSize"> = {},
+): Promise<LicenseFulfillmentCandidate[]> =>
+  collectAllPagedItems(OPTION_PAGE_SIZE, (pageNumber, pageSize) =>
+    getFulfillmentCandidates({ ...params, pageNumber, pageSize }),
+  );
 
 export const triageLicenseRequestItems = async (
   items: TriageLicenseRequestItemRequest[],

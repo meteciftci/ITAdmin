@@ -12,10 +12,20 @@ export type LicenseManagementSettings = {
   defaultRenewalReminderDays: number;
   defaultRenewalRecipients: string | null;
   defaultRenewalCcRecipients: string | null;
+  lastRenewalReminderRunAt: string | null;
+  lastRenewalReminderStatus: string | null;
+  lastRenewalReminderDueCount: number;
+  lastRenewalReminderQueuedCount: number;
+  lastRenewalReminderMessage: string | null;
   notes: string | null;
   updatedAt: string | null;
   updatedBy: string | null;
 };
+
+export type LicenseRequestDefaults = Pick<
+  LicenseManagementSettings,
+  "defaultCurrency" | "defaultVatIncluded"
+>;
 
 export type UpdateLicenseManagementSettingsRequest = {
   defaultCurrency: string;
@@ -223,7 +233,7 @@ export type LicensePurchaseFormRequest = {
   currency?: string | null;
   vatIncluded?: boolean | null;
   notes?: string | null;
-  status?: LicensePurchaseStatus;
+  status: LicensePurchaseStatus;
 };
 
 export type LicensePackageListItem = {
@@ -255,6 +265,7 @@ export type LicensePackageDetail = LicensePackageListItem & {
   createdBy: string | null;
   updatedAt: string | null;
   updatedBy: string | null;
+  sensitiveDataVisible: boolean;
 };
 
 export type LicensePackageFormRequest = {
@@ -273,7 +284,7 @@ export type LicensePackageFormRequest = {
   licensePortalUrl?: string | null;
   licenseNotes?: string | null;
   isActive: boolean;
-  status?: LicensePackageStatus;
+  status: LicensePackageStatus;
 };
 
 export type LicenseRequestSource =
@@ -326,6 +337,8 @@ export type LicenseRequestItemUserInput = LicenseRequestAdUserSnapshot & {
 
 export type LicenseRequestItemInput = {
   productId: string;
+  licenseType: LicenseType;
+  requestedQuantity: number;
   estimatedUnitCost?: number | null;
   currency?: string | null;
   vatIncluded?: boolean | null;
@@ -344,6 +357,7 @@ export type LicenseRequestListItem = {
   requesterManagerName: string | null;
   productCount: number;
   userCount: number;
+  requestedQuantity: number;
   estimatedTotalCost: number | null;
   currency: string | null;
   status: LicenseRequestStatus;
@@ -358,6 +372,7 @@ export type LicenseRequestItemDetail = {
   id: string;
   productId: string;
   productName: string;
+  licenseType: LicenseType;
   requestedQuantity: number;
   approvedQuantity: number | null;
   fulfilledQuantity: number;
@@ -413,6 +428,18 @@ export type LicenseRequestFormRequest = {
 
 // ---- Fulfillment (request -> purchase/package conversion) ----
 
+export type LicenseFulfillmentCandidateUser = {
+  id: string;
+  adObjectId: string;
+  samAccountName: string | null;
+  userPrincipalName: string | null;
+  displayName: string | null;
+  department: string | null;
+  title: string | null;
+  mail: string | null;
+  status: LicenseRequestItemUserStatus;
+};
+
 export type LicenseFulfillmentCandidate = {
   requestId: string;
   requestItemId: string;
@@ -422,23 +449,27 @@ export type LicenseFulfillmentCandidate = {
   productId: string;
   productName: string;
   productBrand: string | null;
+  licenseType: LicenseType;
   requestedQuantity: number;
   approvedQuantity: number | null;
   fulfilledQuantity: number;
   remainingQuantity: number;
   itemStatus: LicenseRequestItemStatus;
   isFulfillable: boolean;
+  users: LicenseFulfillmentCandidateUser[];
 };
 
 export type TriageLicenseRequestItemRequest = {
   requestItemId: string;
   status: LicenseRequestItemStatus;
   approvedQuantity: number | null;
+  approvedUserIds?: string[];
 };
 
 export type ConvertFulfillmentLine = {
   requestItemId: string;
   fulfillQuantity: number;
+  requestItemUserIds?: string[];
 };
 
 export type ConvertFulfillmentPackageDefaults = {
@@ -471,6 +502,8 @@ export type ConvertFulfillmentRenewalLine = {
   isPerpetual: boolean;
   expireSourcePackage: boolean;
   copySeatAssignments: boolean;
+  renewalRequired: boolean;
+  renewalDate: string | null;
 };
 
 export type ConvertFulfillmentManualLine = {

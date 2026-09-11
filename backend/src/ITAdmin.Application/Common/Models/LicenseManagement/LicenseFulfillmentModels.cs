@@ -11,6 +11,17 @@ public sealed record LicenseFulfillmentCandidateQuery(
     int PageNumber,
     int PageSize);
 
+public sealed record LicenseFulfillmentCandidateUser(
+    Guid Id,
+    string AdObjectId,
+    string? SamAccountName,
+    string? UserPrincipalName,
+    string? DisplayName,
+    string? Department,
+    string? Title,
+    string? Mail,
+    LicenseRequestItemUserStatus Status);
+
 public sealed record LicenseFulfillmentCandidateItem(
     Guid RequestId,
     Guid RequestItemId,
@@ -20,19 +31,22 @@ public sealed record LicenseFulfillmentCandidateItem(
     Guid ProductId,
     string ProductName,
     string? ProductBrand,
+    LicenseType LicenseType,
     int RequestedQuantity,
     int? ApprovedQuantity,
     int FulfilledQuantity,
     int RemainingQuantity,
     LicenseRequestItemStatus ItemStatus,
-    bool IsFulfillable);
+    bool IsFulfillable,
+    IReadOnlyList<LicenseFulfillmentCandidateUser> Users);
 
 // ---- Triage (approve / reject / cancel / hold items) ----
 
 public sealed record TriageLicenseRequestItemInput(
     Guid RequestItemId,
     LicenseRequestItemStatus Status,
-    int? ApprovedQuantity);
+    int? ApprovedQuantity,
+    IReadOnlyList<Guid>? ApprovedUserIds = null);
 
 public sealed record TriageLicenseRequestItemsRequest(
     IReadOnlyList<TriageLicenseRequestItemInput> Items,
@@ -45,7 +59,8 @@ public sealed record TriageLicenseRequestItemsRequest(
 
 public sealed record ConvertFulfillmentLineInput(
     Guid RequestItemId,
-    int FulfillQuantity);
+    int FulfillQuantity,
+    IReadOnlyList<Guid>? RequestItemUserIds = null);
 
 /// <summary>Per-product license package defaults applied to the created package for that product.</summary>
 public sealed record ConvertFulfillmentPackageDefaultsInput(
@@ -77,7 +92,9 @@ public sealed record ConvertFulfillmentRenewalLineInput(
     DateOnly? EndDate,
     bool IsPerpetual,
     bool ExpireSourcePackage,
-    bool CopySeatAssignments);
+    bool CopySeatAssignments,
+    bool? RenewalRequired = null,
+    DateOnly? RenewalDate = null);
 
 /// <summary>A brand-new package added straight to the target purchase (no request line).</summary>
 public sealed record ConvertFulfillmentManualLineInput(

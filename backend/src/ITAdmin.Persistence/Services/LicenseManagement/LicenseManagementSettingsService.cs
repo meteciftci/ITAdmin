@@ -94,6 +94,14 @@ public sealed class LicenseManagementSettingsService(AppDbContext context) : ILi
       return "Default renewal reminder days must be positive.";
     }
 
+    var invalidRecipients = LicenseRenewalRecipientParser.InvalidEmails(
+      request.DefaultRenewalRecipients,
+      request.DefaultRenewalCcRecipients);
+    if (invalidRecipients.Count > 0)
+    {
+      return $"Renewal notification recipient is invalid: {invalidRecipients[0]}";
+    }
+
     return null;
   }
 
@@ -107,6 +115,11 @@ public sealed class LicenseManagementSettingsService(AppDbContext context) : ILi
         null,
         null,
         null,
+        0,
+        0,
+        null,
+        null,
+        null,
         null)
       : new LicenseManagementSettingsModel(
         entity.DefaultCurrency,
@@ -114,6 +127,11 @@ public sealed class LicenseManagementSettingsService(AppDbContext context) : ILi
         entity.DefaultRenewalReminderDays,
         entity.DefaultRenewalRecipients,
         entity.DefaultRenewalCcRecipients,
+        entity.LastRenewalReminderRunAt,
+        entity.LastRenewalReminderStatus,
+        entity.LastRenewalReminderDueCount,
+        entity.LastRenewalReminderQueuedCount,
+        entity.LastRenewalReminderMessage,
         entity.Notes,
         entity.UpdatedAt ?? entity.CreatedAt,
         entity.UpdatedBy ?? entity.CreatedBy);

@@ -745,6 +745,32 @@ namespace ITAdmin.Persistence.Migrations
                         .HasDefaultValue(false)
                         .HasColumnName("default_vat_included");
 
+                    b.Property<int>("LastRenewalReminderDueCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("last_renewal_reminder_due_count");
+
+                    b.Property<string>("LastRenewalReminderMessage")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("last_renewal_reminder_message");
+
+                    b.Property<int>("LastRenewalReminderQueuedCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("last_renewal_reminder_queued_count");
+
+                    b.Property<DateTime?>("LastRenewalReminderRunAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_renewal_reminder_run_at");
+
+                    b.Property<string>("LastRenewalReminderStatus")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("last_renewal_reminder_status");
+
                     b.Property<string>("Notes")
                         .HasMaxLength(4000)
                         .HasColumnType("character varying(4000)")
@@ -802,9 +828,15 @@ namespace ITAdmin.Persistence.Migrations
                         .HasColumnName("license_account_email");
 
                     b.Property<string>("LicenseKey")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
                         .HasColumnName("license_key");
+
+                    b.Property<bool>("LicenseKeyIsEncrypted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("license_key_is_encrypted");
 
                     b.Property<string>("LicenseNotes")
                         .HasMaxLength(4000)
@@ -876,13 +908,17 @@ namespace ITAdmin.Persistence.Migrations
 
                     b.HasIndex("IsActive");
 
-                    b.HasIndex("PreviousPackageId");
+                    b.HasIndex("PreviousPackageId")
+                        .IsUnique()
+                        .HasFilter("previous_package_id IS NOT NULL");
 
                     b.HasIndex("ProductId");
 
                     b.HasIndex("PurchaseId");
 
                     b.HasIndex("Status");
+
+                    b.HasIndex("Status", "CreatedAt");
 
                     b.ToTable("license_packages", (string)null);
                 });
@@ -1073,6 +1109,8 @@ namespace ITAdmin.Persistence.Migrations
 
                     b.HasIndex("Status");
 
+                    b.HasIndex("Status", "PurchaseDate");
+
                     b.HasIndex("SupplierCompanyId");
 
                     b.HasIndex("SupportCompanyId");
@@ -1198,6 +1236,8 @@ namespace ITAdmin.Persistence.Migrations
 
                     b.HasIndex("Status");
 
+                    b.HasIndex("Status", "RequestDate");
+
                     b.ToTable("license_requests", (string)null);
                 });
 
@@ -1247,6 +1287,12 @@ namespace ITAdmin.Persistence.Migrations
                         .HasColumnType("character varying(2000)")
                         .HasColumnName("justification");
 
+                    b.Property<string>("LicenseType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("license_type");
+
                     b.Property<Guid>("ProductId")
                         .HasColumnType("uuid")
                         .HasColumnName("product_id");
@@ -1283,6 +1329,10 @@ namespace ITAdmin.Persistence.Migrations
                     b.HasIndex("ProductId");
 
                     b.HasIndex("RequestId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("Status", "ProductId");
 
                     b.HasIndex("RequestId", "ProductId")
                         .IsUnique();

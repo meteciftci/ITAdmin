@@ -7,6 +7,11 @@ import {
   validateProductForm,
   validatePurchaseForm,
 } from "./form-validation.ts";
+import {
+  getAllowedPackageStatuses,
+  getAllowedPurchaseStatuses,
+  isPackageActive,
+} from "./license-lifecycle.ts";
 import { buildLicensedProductPayload } from "./product-form-payload.ts";
 import { formatLicensedProductLabel } from "./product-labels.ts";
 import {
@@ -34,6 +39,29 @@ test("validatePackageForm enforces quantity minimum", () => {
   assert.equal(validatePackageForm("", "b", 1), "purchaseRequired");
   assert.equal(validatePackageForm("a", "", 1), "productRequired");
   assert.equal(validatePackageForm("a", "b", 5), null);
+});
+
+test("validatePackageForm enforces lifecycle date consistency", () => {
+  assert.equal(
+    validatePackageForm("a", "b", 1, "2027-02-01", "2027-01-01"),
+    "invalidLicenseDateRange",
+  );
+  assert.equal(
+    validatePackageForm("a", "b", 1, null, "2027-01-01", true),
+    "perpetualEndDateNotAllowed",
+  );
+  assert.equal(
+    validatePackageForm("a", "b", 1, null, null, false, true, null),
+    "renewalDateRequired",
+  );
+});
+
+test("license lifecycle options do not reopen terminal records", () => {
+  assert.deepEqual(getAllowedPurchaseStatuses("Archived"), ["Archived"]);
+  assert.deepEqual(getAllowedPackageStatuses("Expired"), ["Expired", "Archived"]);
+  assert.deepEqual(getAllowedPurchaseStatuses(null), ["Draft", "Active"]);
+  assert.equal(isPackageActive("Active"), true);
+  assert.equal(isPackageActive("Suspended"), false);
 });
 
 describe("buildLicensedProductPayload", () => {

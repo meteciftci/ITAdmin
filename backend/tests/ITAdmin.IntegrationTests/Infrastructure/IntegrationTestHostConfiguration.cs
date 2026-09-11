@@ -31,6 +31,7 @@ internal static class IntegrationTestHostConfiguration
             ["Jwt:Issuer"] = "ITAdmin",
             ["Jwt:Audience"] = "ITAdmin.Client",
             ["NotificationOutbox:WorkerEnabled"] = "false",
+            ["LicenseRenewalReminders:WorkerEnabled"] = "false",
         };
 
     internal static void Apply(WebApplicationBuilder builder)

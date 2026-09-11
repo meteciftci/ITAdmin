@@ -135,6 +135,52 @@ public sealed class LicenseManagementApiJsonBindingTests
     }
 
     [Fact]
+    public void Deserialize_LicenseRequestItemRequest_AcceptsQuantityBasedAllocation()
+    {
+        const string json = """
+            {
+              "productId": "00000000-0000-0000-0000-000000000001",
+              "licenseType": "Concurrent",
+              "requestedQuantity": 25,
+              "estimatedUnitCost": 10,
+              "currency": "TRY",
+              "vatIncluded": false,
+              "justification": "Shared pool",
+              "status": "Pending",
+              "users": []
+            }
+            """;
+
+        var request = JsonSerializer.Deserialize<LicenseRequestItemRequest>(json, ApiJsonOptions);
+
+        Assert.NotNull(request);
+        Assert.Equal(Domain.Enums.LicenseType.Concurrent, request.LicenseType);
+        Assert.Equal(25, request.RequestedQuantity);
+        Assert.Empty(request.Users);
+    }
+
+    [Fact]
+    public void Deserialize_ConvertFulfillmentLineRequest_AcceptsNamedUserSelection()
+    {
+        const string json = """
+            {
+              "requestItemId": "00000000-0000-0000-0000-000000000001",
+              "fulfillQuantity": 2,
+              "requestItemUserIds": [
+                "00000000-0000-0000-0000-000000000002",
+                "00000000-0000-0000-0000-000000000003"
+              ]
+            }
+            """;
+
+        var request = JsonSerializer.Deserialize<ConvertFulfillmentLineRequest>(json, ApiJsonOptions);
+
+        Assert.NotNull(request);
+        Assert.Equal(2, request.FulfillQuantity);
+        Assert.Equal(2, request.RequestItemUserIds?.Count);
+    }
+
+    [Fact]
     public void Deserialize_DirectoryUserLookupReadinessResponse_DoesNotExposeSettingsFields()
     {
         const string json = """

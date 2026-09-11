@@ -1,23 +1,26 @@
-import type { AdUserListItem } from "@/features/ad-management/types";
+import type { AdUserListItem } from "../ad-management/types.ts";
 import type {
   LicenseRequestAdUserSnapshot,
   LicenseRequestDetail,
   LicenseRequestFormRequest,
   LicenseRequestItemInput,
   LicenseRequestItemUserInput,
+  LicenseRequestItemUserStatus,
   LicenseRequestOuSnapshot,
-} from "@/features/license-management/types";
-import { buildLicenseRequestPayloadBySource } from "@/features/license-management/request-source-fields";
+} from "./types.ts";
+import { buildLicenseRequestPayloadBySource } from "./request-source-fields.ts";
 
 export type LicenseRequestItemDraft = {
   clientId: string;
   productId: string;
+  licenseType: LicenseRequestItemInput["licenseType"];
+  requestedQuantity: string;
   justification: string;
   estimatedUnitCost: string;
   currency: string;
   vatIncluded: boolean;
   status: LicenseRequestItemInput["status"];
-  users: LicenseRequestAdUserSnapshot[];
+  users: (LicenseRequestAdUserSnapshot & { status?: LicenseRequestItemUserStatus })[];
 };
 
 export function mapAdUserToSnapshot(user: AdUserListItem): LicenseRequestAdUserSnapshot {
@@ -37,6 +40,8 @@ export function createEmptyRequestItemDraft(currency = "TRY"): LicenseRequestIte
   return {
     clientId: crypto.randomUUID(),
     productId: "",
+    licenseType: "NamedUser",
+    requestedQuantity: "1",
     justification: "",
     estimatedUnitCost: "",
     currency,
@@ -50,6 +55,8 @@ export function mapDetailToItemDrafts(request: LicenseRequestDetail): LicenseReq
   return request.items.map((item) => ({
     clientId: item.id,
     productId: item.productId,
+    licenseType: item.licenseType,
+    requestedQuantity: String(item.requestedQuantity),
     justification: item.justification ?? "",
     estimatedUnitCost: item.estimatedUnitCost?.toString() ?? "",
     currency: item.currency ?? request.currency ?? "TRY",
@@ -64,6 +71,7 @@ export function mapDetailToItemDrafts(request: LicenseRequestDetail): LicenseReq
       title: user.title,
       mail: user.mail,
       phone: user.phone,
+      status: user.status,
     })),
   }));
 }
@@ -95,15 +103,19 @@ export function buildLicenseRequestPayload(input: {
 }): LicenseRequestFormRequest {
   const itemPayloads: LicenseRequestItemInput[] = input.items.map((item) => ({
     productId: item.productId,
+    licenseType: item.licenseType,
+    requestedQuantity: item.licenseType === "NamedUser"
+      ? item.users.length
+      : Math.floor(Number(item.requestedQuantity)),
     estimatedUnitCost: parseOptionalDecimal(item.estimatedUnitCost),
     currency: item.currency.trim() || null,
     vatIncluded: item.vatIncluded,
     justification: item.justification.trim() || null,
     status: item.status,
-    users: item.users.map(
+    users: (item.licenseType === "NamedUser" ? item.users : []).map(
       (user): LicenseRequestItemUserInput => ({
         ...user,
-        status: "Pending",
+        status: user.status ?? "Pending",
       }),
     ),
   }));
@@ -113,7 +125,7 @@ export function buildLicenseRequestPayload(input: {
       return sum;
     }
 
-    return sum + item.estimatedUnitCost * item.users.length;
+    return sum + item.estimatedUnitCost * item.requestedQuantity;
   }, 0);
 
   const manualTotal = parseOptionalDecimal(input.estimatedTotalCost);
@@ -142,7 +154,10 @@ export function calculateItemsEstimatedTotal(items: LicenseRequestItemDraft[]): 
       return sum;
     }
 
-    return sum + unitCost * item.users.length;
+    const quantity = item.licenseType === "NamedUser"
+      ? item.users.length
+      : Math.floor(Number(item.requestedQuantity));
+    return Number.isFinite(quantity) && quantity > 0 ? sum + unitCost * quantity : sum;
   }, 0);
 }
 

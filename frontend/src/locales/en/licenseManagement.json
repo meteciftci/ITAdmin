@@ -48,7 +48,7 @@
         "unitAndManager": "Unit and manager",
         "basicInfo": "Basic information",
         "requester": "Requester",
-        "items": "Products and users",
+        "items": "Products and licenses",
         "cost": "Cost"
       },
       "fields": {
@@ -61,6 +61,9 @@
         "requesterUnit": "Requester unit",
         "requesterManagerName": "Manager / instructing authority",
         "product": "Product",
+        "licenseType": "License type",
+        "requestedQuantity": "Requested quantity",
+        "requestedQuantityValue": "{{count}} units",
         "productCount": "Product count",
         "userCount": "User count",
         "userCountSingular": "{{count}} user",
@@ -114,6 +117,8 @@
           "productFilter": "Product",
           "select": "Select",
           "fulfillNow": "Fulfill now",
+          "fulfillUsers": "Users receiving licenses now",
+          "approveUsers": "Users to approve",
           "columns": {
             "requestSource": "Source",
             "requestDate": "Request date",
@@ -170,6 +175,9 @@
         "validation": {
           "noLines": "Select at least one line to fulfill.",
           "quantityRange": "Fulfill quantity must be between 1 and the remaining quantity.",
+          "namedUsersRequired": "Select the approved users to fulfill for named-user licenses.",
+          "usersNotAllowed": "Users cannot be selected for a license type that is not user-bound.",
+          "expireSourceRequired": "The old active package must be expired when it is renewed.",
           "titleRequired": "Purchase title is required.",
           "targetRequired": "Select an existing purchase or create a new one."
         },
@@ -188,6 +196,8 @@
           "isPerpetual": "Perpetual",
           "startDate": "Start",
           "endDate": "End",
+          "renewalRequired": "Track renewal for the new package",
+          "renewalDate": "New renewal date",
           "expireSource": "Mark the old package expired and deactivate it",
           "copySeats": "Carry active assignments onto the new package"
         },
@@ -224,6 +234,8 @@
         "itemsRequired": "At least one product item is required.",
         "productRequired": "Product selection is required.",
         "usersRequired": "Each product item must include at least one user.",
+        "quantityRequired": "Requested quantity must be at least 1 for license types that are not user-bound.",
+        "quantityUsersNotAllowed": "Users cannot be selected for license types that are not user-bound.",
         "duplicateProduct": "The same product cannot be added to a request more than once.",
         "duplicateUser": "The same user cannot be added to the same product item more than once.",
         "negativeCost": "Cost fields cannot be negative."
@@ -325,7 +337,8 @@
           "summaryTitle": "Summary",
           "notFound": "License package not found.",
           "showLicenseKey": "Show key",
-          "hideLicenseKey": "Hide key"
+          "hideLicenseKey": "Hide key",
+          "sensitiveDataRestricted": "Viewing the serial number, license key, account details, and license notes requires the sensitive license data permission."
         }
       },
       "requests": {
@@ -486,7 +499,13 @@
       "categoryRequired": "Category selection is required.",
       "invalidEmail": "Enter a valid email.",
       "invalidUrl": "Enter a valid URL.",
-      "endDateWarning": "End date is not set."
+      "endDateWarning": "End date is not set.",
+      "invalidLicenseDateRange": "License end date cannot be earlier than its start date.",
+      "perpetualEndDateNotAllowed": "A perpetual license cannot have an end date.",
+      "renewalDateRequired": "Renewal date is required when renewal tracking is enabled.",
+      "renewalDateNotAllowed": "Renewal date must be empty when renewal tracking is disabled.",
+      "renewalDateBeforeStart": "Renewal date cannot be earlier than the license start date.",
+      "renewalDateAfterEnd": "Renewal date cannot be later than the license end date."
     },
     "confirm": {
       "deactivateCompanyTitle": "Deactivate company",

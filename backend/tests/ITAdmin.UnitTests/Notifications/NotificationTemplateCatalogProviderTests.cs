@@ -67,4 +67,19 @@ public sealed class NotificationTemplateCatalogProviderTests
 
         Assert.Null(error);
     }
+
+    [Fact]
+    public void GetCatalog_ContainsLicenseRenewalEmail_WithOperationalVariables()
+    {
+        var catalog = _provider.GetCatalog();
+
+        var module = catalog.Modules.Single(m => m.Key == NotificationModuleKeys.LicenseManagement);
+        var renewal = module.Events.Single(e => e.Key == NotificationEventKeys.LicenseRenewalDue);
+        var variables = renewal.Variables.Select(x => x.Key).ToHashSet(StringComparer.Ordinal);
+
+        Assert.Equal([NotificationChannels.Email], renewal.SupportedChannels);
+        Assert.Contains("productName", variables);
+        Assert.Contains("renewalDate", variables);
+        Assert.Contains("daysRemaining", variables);
+    }
 }

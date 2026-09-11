@@ -126,28 +126,42 @@ export function LicensePackageDetailPage() {
               value={pkg.renewalRequired ? t("licenseManagement:boolean.yes") : t("licenseManagement:boolean.no")}
             />
             <DateOnlyField label={t("licenseManagement:form.renewalDate")} value={pkg.renewalDate} />
-            <LicenseDetailField label={t("licenseManagement:form.serialNumber")} value={pkg.serialNumber} />
-            <LicenseDetailField label={t("licenseManagement:form.licenseKey")}>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-mono text-sm">
-                  {pkg.licenseKey
-                    ? showLicenseKey
-                      ? pkg.licenseKey
-                      : maskLicenseKey(pkg.licenseKey)
-                    : "-"}
-                </span>
-                {pkg.licenseKey ? (
-                  <Button type="button" variant="outline" size="sm" onClick={() => setShowLicenseKey((prev) => !prev)}>
-                    {showLicenseKey
-                      ? t("licenseManagement:pages.packages.detail.hideLicenseKey")
-                      : t("licenseManagement:pages.packages.detail.showLicenseKey")}
-                  </Button>
-                ) : null}
-              </div>
-            </LicenseDetailField>
-            <LicenseDetailField label={t("licenseManagement:form.licenseAccountEmail")} value={pkg.licenseAccountEmail} />
-            <LicenseDetailField label={t("licenseManagement:form.licensePortalUrl")} value={pkg.licensePortalUrl} valueClassName="break-all" />
-            <LicenseDetailField label={t("licenseManagement:form.licenseNotes")} value={pkg.licenseNotes} valueClassName="whitespace-pre-wrap md:col-span-2" />
+            {pkg.sensitiveDataVisible ? (
+              <>
+                <LicenseDetailField label={t("licenseManagement:form.serialNumber")} value={pkg.serialNumber} />
+                <LicenseDetailField label={t("licenseManagement:form.licenseKey")}>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-mono text-sm">
+                      {pkg.licenseKey
+                        ? showLicenseKey
+                          ? pkg.licenseKey
+                          : maskLicenseKey(pkg.licenseKey)
+                        : "-"}
+                    </span>
+                    {pkg.licenseKey ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        aria-pressed={showLicenseKey}
+                        onClick={() => setShowLicenseKey((prev) => !prev)}
+                      >
+                        {showLicenseKey
+                          ? t("licenseManagement:pages.packages.detail.hideLicenseKey")
+                          : t("licenseManagement:pages.packages.detail.showLicenseKey")}
+                      </Button>
+                    ) : null}
+                  </div>
+                </LicenseDetailField>
+                <LicenseDetailField label={t("licenseManagement:form.licenseAccountEmail")} value={pkg.licenseAccountEmail} />
+                <LicenseDetailField label={t("licenseManagement:form.licensePortalUrl")} value={pkg.licensePortalUrl} valueClassName="break-all" />
+                <LicenseDetailField label={t("licenseManagement:form.licenseNotes")} value={pkg.licenseNotes} valueClassName="whitespace-pre-wrap md:col-span-2" />
+              </>
+            ) : (
+              <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground md:col-span-2">
+                {t("licenseManagement:pages.packages.detail.sensitiveDataRestricted")}
+              </p>
+            )}
             <LicenseDetailField label={t("licenseManagement:pages.detail.createdAt")}>
               <DateTimeText value={pkg.createdAt} />
             </LicenseDetailField>
@@ -159,7 +173,7 @@ export function LicensePackageDetailPage() {
           </div>
         </SectionCard>
       ) : null}
-      {pkg ? (
+      {pkg && pkg.licenseType === "NamedUser" ? (
         <LicensePackageSeatsSection packageId={pkg.id} productId={pkg.productId} canManage={canManageSeats} />
       ) : null}
     </section>

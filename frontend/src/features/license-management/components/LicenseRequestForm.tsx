@@ -14,8 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   createLicenseRequest,
   getAllLicensedProducts,
-  getLicenseManagementSettings,
-  LICENSE_MANAGEMENT_SETTINGS_QUERY_KEY,
+  getLicenseRequestDefaults,
   updateLicenseRequest,
 } from "@/features/license-management/api";
 import { LicenseOuPicker } from "@/features/license-management/components/LicenseOuPicker";
@@ -79,8 +78,8 @@ export function LicenseRequestForm({ mode, request, onCancel, onSaved }: Props) 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const settingsQuery = useQuery({
-    queryKey: LICENSE_MANAGEMENT_SETTINGS_QUERY_KEY,
-    queryFn: getLicenseManagementSettings,
+    queryKey: ["license-management", "settings", "request-defaults"],
+    queryFn: getLicenseRequestDefaults,
   });
 
   const productsQuery = useQuery({
@@ -107,13 +106,14 @@ export function LicenseRequestForm({ mode, request, onCancel, onSaved }: Props) 
     setRequesterManagerName(request?.requesterManagerName ?? "");
     setDescription(request?.description ?? "");
     setEstimatedTotalCost(request?.estimatedTotalCost?.toString() ?? "");
-    setCurrency(request?.currency ?? settingsQuery.data?.defaultCurrency ?? "TRY");
+    const hydratedCurrency = request?.currency ?? settingsQuery.data?.defaultCurrency ?? "TRY";
+    setCurrency(hydratedCurrency);
     setVatIncluded(request?.vatIncluded ?? settingsQuery.data?.defaultVatIncluded ?? false);
     setCostNote(request?.costNote ?? "");
-    setItems(request ? mapDetailToItemDrafts(request) : [createEmptyRequestItemDraft(currency)]);
+    setItems(request ? mapDetailToItemDrafts(request) : [createEmptyRequestItemDraft(hydratedCurrency)]);
     setErrorMessage(null);
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, [currency, request, settingsQuery.data?.defaultCurrency, settingsQuery.data?.defaultVatIncluded]);
+  }, [request, settingsQuery.data?.defaultCurrency, settingsQuery.data?.defaultVatIncluded]);
 
   const computedTotal = useMemo(() => calculateItemsEstimatedTotal(items), [items]);
   const showExternalRequestNumber = isRequestSourceFieldVisible("externalRequestNumber", requestSource);
@@ -179,8 +179,15 @@ export function LicenseRequestForm({ mode, request, onCancel, onSaved }: Props) 
   });
 
   return (
-    <div className="space-y-6">
+    <form
+      className="space-y-6"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!saveMutation.isPending) saveMutation.mutate();
+      }}
+    >
       {errorMessage ? <FormError message={errorMessage} /> : null}
+      {productsQuery.isError ? <FormError message={t("common:messages.operationFailed")} /> : null}
 
       <section className="space-y-4">
         <SectionTitle>{t("licenseManagement:requests.sections.requestInfo")}</SectionTitle>
@@ -200,8 +207,9 @@ export function LicenseRequestForm({ mode, request, onCancel, onSaved }: Props) 
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>{t("licenseManagement:requests.fields.requestDate")}</Label>
+            <Label htmlFor="request-date">{t("licenseManagement:requests.fields.requestDate")}</Label>
             <DatePicker
+              id="request-date"
               value={requestDate}
               onChange={setRequestDate}
               placeholder={t("licenseManagement:requests.fields.requestDate")}
@@ -232,8 +240,9 @@ export function LicenseRequestForm({ mode, request, onCancel, onSaved }: Props) 
                 />
               </div>
               <div className="space-y-2">
-                <Label>{t("licenseManagement:requests.fields.ebysDate")}</Label>
+                <Label htmlFor="request-ebys-date">{t("licenseManagement:requests.fields.ebysDate")}</Label>
                 <DatePicker
+                  id="request-ebys-date"
                   value={ebysDate}
                   onChange={setEbysDate}
                   placeholder={t("licenseManagement:requests.fields.ebysDate")}
@@ -286,6 +295,7 @@ export function LicenseRequestForm({ mode, request, onCancel, onSaved }: Props) 
           items={items}
           products={productsQuery.data ?? []}
           defaultCurrency={currency}
+          disabled={productsQuery.isLoading || productsQuery.isError}
           onChange={setItems}
         />
       </section>
@@ -343,10 +353,10 @@ export function LicenseRequestForm({ mode, request, onCancel, onSaved }: Props) 
         <Button type="button" variant="outline" onClick={onCancel} disabled={saveMutation.isPending}>
           {t("common:actions.cancel")}
         </Button>
-        <Button type="button" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+        <Button type="submit" disabled={saveMutation.isPending}>
           {t("common:actions.save")}
         </Button>
       </div>
-    </div>
+    </form>
   );
 }

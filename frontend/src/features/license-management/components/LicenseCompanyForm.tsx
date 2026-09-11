@@ -90,7 +90,13 @@ export function LicenseCompanyForm({ mode, company, onCancel, onSaved }: Props) 
   });
 
   return (
-    <div className="space-y-4">
+    <form
+      className="space-y-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!validationKey && !mutation.isPending) mutation.mutate();
+      }}
+    >
       {errorMessage ? <FormError message={errorMessage} /> : null}
       {validationKey ? (
         <FormError message={t(`licenseManagement:messages.${validationKey}`)} />
@@ -140,13 +146,12 @@ export function LicenseCompanyForm({ mode, company, onCancel, onSaved }: Props) 
           {t("common:actions.cancel")}
         </Button>
         <Button
-          type="button"
+          type="submit"
           disabled={Boolean(validationKey) || mutation.isPending}
-          onClick={() => mutation.mutate()}
         >
           {t("common:actions.save")}
         </Button>
       </div>
-    </div>
+    </form>
   );
 }

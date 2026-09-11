@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { DateTimeText } from "@/components/common/DateTimeText";
 import { EmptyState } from "@/components/common/EmptyState";
+import { ErrorState } from "@/components/common/ErrorState";
 import { LoadingState } from "@/components/common/LoadingState";
 import { PageHeader } from "@/components/common/PageHeader";
 import { SectionCard } from "@/components/common/SectionCard";
@@ -16,11 +17,11 @@ import { Select } from "@/components/ui/select";
 import { useAuthStore } from "@/features/auth/auth-store";
 import {
   convertLicenseRequestItems,
+  getAllFulfillmentCandidates,
   getAllLicenseCompanies,
+  getAllLicensePackages,
   getAllLicensedProducts,
   getAllLicensePurchases,
-  getFulfillmentCandidates,
-  getLicensePackages,
   triageLicenseRequestItems,
 } from "@/features/license-management/api";
 import { FulfillmentPackageDefaultsForm } from "@/features/license-management/components/FulfillmentPackageDefaultsForm";
@@ -32,6 +33,7 @@ import { ManualLinesSection } from "@/features/license-management/components/Man
 import type { ManualLineDraft } from "@/features/license-management/components/manual-line-draft";
 import { RenewalLinesSection } from "@/features/license-management/components/RenewalLinesSection";
 import {
+  getLicenseTypeLabel,
   getRequestItemStatusLabel,
   getRequestSourceLabel,
   MANUAL_REQUEST_ITEM_STATUSES,
@@ -53,6 +55,7 @@ import type {
   LicenseRequestItemStatus,
 } from "@/features/license-management/types";
 import { getApiErrorMessage } from "@/lib/api-error";
+import { validatePackageDateFields } from "@/features/license-management/form-validation";
 import { canAccess } from "@/lib/permissions";
 import { PermissionCodes } from "@/lib/permission-codes";
 import { cn } from "@/lib/utils";
@@ -72,10 +75,13 @@ function createDefaultNewPurchase(): ConvertFulfillmentNewPurchase {
   };
 }
 
-function createDefaultPackageDefaults(productId: string): ConvertFulfillmentPackageDefaults {
+function createDefaultPackageDefaults(
+  productId: string,
+  licenseType: ConvertFulfillmentPackageDefaults["licenseType"],
+): ConvertFulfillmentPackageDefaults {
   return {
     productId,
-    licenseType: "Subscription",
+    licenseType,
     startDate: null,
     endDate: null,
     isPerpetual: false,
@@ -93,8 +99,10 @@ export function LicenseFulfillmentPage() {
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [quantities, setQuantities] = useState<Record<string, number>>({});
+  const [fulfillmentUserIds, setFulfillmentUserIds] = useState<Record<string, string[]>>({});
   const [triageStatus, setTriageStatus] = useState<Record<string, LicenseRequestItemStatus>>({});
   const [triageApprovedQty, setTriageApprovedQty] = useState<Record<string, string>>({});
+  const [triageUserIds, setTriageUserIds] = useState<Record<string, string[]>>({});
   const [targetKind, setTargetKind] = useState<FulfillmentTargetKind>("new");
   const [newPurchase, setNewPurchase] = useState<ConvertFulfillmentNewPurchase>(createDefaultNewPurchase);
   const [existingPurchaseId, setExistingPurchaseId] = useState("");
@@ -106,7 +114,7 @@ export function LicenseFulfillmentPage() {
 
   const candidatesQuery = useQuery({
     queryKey: ["license-management", "fulfillment", "candidates"],
-    queryFn: () => getFulfillmentCandidates({ pageNumber: 1, pageSize: 100 }),
+    queryFn: () => getAllFulfillmentCandidates(),
     enabled: canFulfill,
   });
 
@@ -124,7 +132,7 @@ export function LicenseFulfillmentPage() {
 
   const renewablePackagesQuery = useQuery({
     queryKey: ["license-management", "packages", "renewable"],
-    queryFn: () => getLicensePackages({ isActive: true, pageSize: 100 }),
+    queryFn: () => getAllLicensePackages(),
     enabled: canFulfill,
   });
 
@@ -134,7 +142,7 @@ export function LicenseFulfillmentPage() {
     enabled: canFulfill,
   });
 
-  const candidates = useMemo(() => candidatesQuery.data?.items ?? [], [candidatesQuery.data]);
+  const candidates = useMemo(() => candidatesQuery.data ?? [], [candidatesQuery.data]);
 
   const filteredCandidates = useMemo(() => {
     const term = search.trim().toLocaleLowerCase(dateLocale);
@@ -165,18 +173,23 @@ export function LicenseFulfillmentPage() {
         continue;
       }
 
-      const fulfillQuantity = quantities[id] ?? candidate.remainingQuantity;
-      lines.push({ candidate, fulfillQuantity });
+      const requestItemUserIds = fulfillmentUserIds[id];
+      const fulfillQuantity = candidate.licenseType === "NamedUser"
+        ? requestItemUserIds?.length ?? 0
+        : quantities[id] ?? candidate.remainingQuantity;
+      lines.push({ candidate, fulfillQuantity, requestItemUserIds });
     }
     return lines;
-  }, [candidateById, quantities, selectedIds]);
+  }, [candidateById, fulfillmentUserIds, quantities, selectedIds]);
 
   const productSummaries = useMemo(() => summarizeByProduct(selectionLines), [selectionLines]);
 
   const packageDefaultRows = useMemo(
     () =>
       productSummaries.map((summary) => ({
-        ...(packageDefaultsMap[summary.productId] ?? createDefaultPackageDefaults(summary.productId)),
+        ...(packageDefaultsMap[summary.groupKey]
+          ?? createDefaultPackageDefaults(summary.productId, summary.licenseType)),
+        groupKey: summary.groupKey,
         productName: summary.productName,
       })),
     [packageDefaultsMap, productSummaries],
@@ -198,7 +211,46 @@ export function LicenseFulfillmentPage() {
         ...current,
         [candidate.requestItemId]: current[candidate.requestItemId] ?? candidate.remainingQuantity,
       }));
+      if (candidate.licenseType === "NamedUser") {
+        setFulfillmentUserIds((current) => ({
+          ...current,
+          [candidate.requestItemId]: current[candidate.requestItemId]
+            ?? candidate.users
+              .filter((user) => user.status === "Approved")
+              .slice(0, candidate.remainingQuantity)
+              .map((user) => user.id),
+        }));
+      }
     }
+  }
+
+  function toggleFulfillmentUser(candidate: LicenseFulfillmentCandidate, userId: string, checked: boolean) {
+    setFulfillmentUserIds((current) => {
+      const selected = new Set(current[candidate.requestItemId] ?? []);
+      if (checked) {
+        if (selected.size < candidate.remainingQuantity) {
+          selected.add(userId);
+        }
+      } else {
+        selected.delete(userId);
+      }
+      return { ...current, [candidate.requestItemId]: [...selected] };
+    });
+  }
+
+  function toggleTriageUser(candidate: LicenseFulfillmentCandidate, userId: string, checked: boolean) {
+    const selected = new Set(triageUserIds[candidate.requestItemId] ?? []);
+    if (checked) {
+      selected.add(userId);
+    } else {
+      selected.delete(userId);
+    }
+    const ids = [...selected];
+    setTriageUserIds((current) => ({ ...current, [candidate.requestItemId]: ids }));
+    setTriageApprovedQty((current) => ({
+      ...current,
+      [candidate.requestItemId]: String(ids.length),
+    }));
   }
 
   function updateQuantity(candidate: LicenseFulfillmentCandidate, rawValue: number) {
@@ -208,11 +260,16 @@ export function LicenseFulfillmentPage() {
     }));
   }
 
-  function updatePackageDefaults(productId: string, patch: Partial<ConvertFulfillmentPackageDefaults>) {
+  function updatePackageDefaults(
+    groupKey: string,
+    productId: string,
+    licenseType: ConvertFulfillmentPackageDefaults["licenseType"],
+    patch: Partial<ConvertFulfillmentPackageDefaults>,
+  ) {
     setPackageDefaultsMap((current) => ({
       ...current,
-      [productId]: {
-        ...(current[productId] ?? createDefaultPackageDefaults(productId)),
+      [groupKey]: {
+        ...(current[groupKey] ?? createDefaultPackageDefaults(productId, licenseType)),
         ...patch,
       },
     }));
@@ -224,6 +281,7 @@ export function LicenseFulfillmentPage() {
       toast.success(t("licenseManagement:requests.fulfillment.messages.triaged"));
       setTriageStatus({});
       setTriageApprovedQty({});
+      setTriageUserIds({});
       await queryClient.invalidateQueries({ queryKey: ["license-management", "fulfillment"] });
     },
     onError: (error) => {
@@ -268,6 +326,10 @@ export function LicenseFulfillmentPage() {
           requestItemId,
           status,
           approvedQuantity: Number.isFinite(approvedQuantity as number) ? approvedQuantity : null,
+          ...(candidateById.get(requestItemId)?.licenseType === "NamedUser"
+            && status === "Approved"
+            ? { approvedUserIds: triageUserIds[requestItemId] ?? [] }
+            : {}),
         };
       }),
     );
@@ -318,6 +380,38 @@ export function LicenseFulfillmentPage() {
       return;
     }
 
+    const invalidPackageDates = [
+      ...packageDefaultRows.map((row) => validatePackageDateFields(
+        row.startDate, row.endDate, row.isPerpetual, false, null,
+      )),
+      ...renewalRows.map((row) => validatePackageDateFields(
+        row.startDate,
+        row.endDate,
+        row.isPerpetual,
+        row.renewalRequired,
+        row.renewalDate,
+      )),
+      ...manualRows.map((row) => validatePackageDateFields(
+        row.startDate, row.endDate, row.isPerpetual, false, null,
+      )),
+    ].find((key) => key !== null);
+    if (invalidPackageDates) {
+      toast.error(t(`licenseManagement:messages.${invalidPackageDates}`));
+      return;
+    }
+
+    if (renewalRows.some((row) => {
+      const source = renewablePackagesQuery.data?.find(
+        (pkg) => pkg.id === row.sourcePackageId,
+      );
+      return source?.status === "Active" || source?.status === "Suspended"
+        ? !row.expireSourcePackage
+        : false;
+    })) {
+      toast.error(t("licenseManagement:requests.fulfillment.validation.expireSourceRequired"));
+      return;
+    }
+
     const target: ConvertTarget =
       targetKind === "new"
         ? { kind: "new", purchase: { ...newPurchase, title: newPurchase.title.trim() } }
@@ -364,7 +458,13 @@ export function LicenseFulfillmentPage() {
           />
 
           {candidatesQuery.isLoading ? <LoadingState /> : null}
-          {!candidatesQuery.isLoading && filteredCandidates.length === 0 ? (
+          {candidatesQuery.isError ? (
+            <ErrorState
+              title={t("errors:generic.title")}
+              description={getApiErrorMessage(candidatesQuery.error, t("errors:generic.description"))}
+            />
+          ) : null}
+          {!candidatesQuery.isLoading && !candidatesQuery.isError && filteredCandidates.length === 0 ? (
             <EmptyState title={t("licenseManagement:requests.fulfillment.candidates.empty")} />
           ) : null}
 
@@ -392,7 +492,7 @@ export function LicenseFulfillmentPage() {
                           <input
                             type="checkbox"
                             checked={isSelected}
-                            disabled={isBusy}
+                            disabled={isBusy || !candidate.isFulfillable}
                             aria-label={t("licenseManagement:requests.fulfillment.candidates.select")}
                             onChange={(event) => toggleSelection(candidate, event.target.checked)}
                           />
@@ -408,9 +508,51 @@ export function LicenseFulfillmentPage() {
                         <td className="p-2">
                           <div className="space-y-0.5">
                             <p>{candidate.productName}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {getLicenseTypeLabel(t, candidate.licenseType)}
+                            </p>
                             {candidate.productBrand ? (
                               <p className="text-xs text-muted-foreground">{candidate.productBrand}</p>
                             ) : null}
+                            {candidate.licenseType === "NamedUser" && isSelected ? (
+                              <div className="mt-2 space-y-1 rounded border p-2">
+                                <p className="text-xs font-medium">
+                                  {t("licenseManagement:requests.fulfillment.candidates.fulfillUsers")}
+                                </p>
+                                {candidate.users.filter((user) => user.status === "Approved").map((user) => (
+                                  <label key={user.id} className="flex items-center gap-2 text-xs">
+                                    <input
+                                      type="checkbox"
+                                      disabled={isBusy}
+                                      checked={(fulfillmentUserIds[candidate.requestItemId] ?? []).includes(user.id)}
+                                      onChange={(event) =>
+                                        toggleFulfillmentUser(candidate, user.id, event.target.checked)}
+                                    />
+                                    <span>{user.displayName ?? user.userPrincipalName ?? user.adObjectId}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            ) : null}
+                            {candidate.licenseType === "NamedUser"
+                              && triageStatus[candidate.requestItemId] === "Approved" ? (
+                                <div className="mt-2 space-y-1 rounded border p-2">
+                                  <p className="text-xs font-medium">
+                                    {t("licenseManagement:requests.fulfillment.candidates.approveUsers")}
+                                  </p>
+                                  {candidate.users.map((user) => (
+                                    <label key={user.id} className="flex items-center gap-2 text-xs">
+                                      <input
+                                        type="checkbox"
+                                        disabled={isBusy}
+                                        checked={(triageUserIds[candidate.requestItemId] ?? []).includes(user.id)}
+                                        onChange={(event) =>
+                                          toggleTriageUser(candidate, user.id, event.target.checked)}
+                                      />
+                                      <span>{user.displayName ?? user.userPrincipalName ?? user.adObjectId}</span>
+                                    </label>
+                                  ))}
+                                </div>
+                              ) : null}
                           </div>
                         </td>
                         <td className="p-2">
@@ -426,8 +568,10 @@ export function LicenseFulfillmentPage() {
                             min="1"
                             max={candidate.remainingQuantity}
                             className="w-24"
-                            disabled={!isSelected || isBusy}
-                            value={quantities[candidate.requestItemId] ?? candidate.remainingQuantity}
+                            disabled={!isSelected || isBusy || candidate.licenseType === "NamedUser"}
+                            value={candidate.licenseType === "NamedUser"
+                              ? fulfillmentUserIds[candidate.requestItemId]?.length ?? 0
+                              : quantities[candidate.requestItemId] ?? candidate.remainingQuantity}
                             onChange={(event) => updateQuantity(candidate, Number(event.target.value))}
                           />
                         </td>
@@ -436,17 +580,35 @@ export function LicenseFulfillmentPage() {
                             className="w-40"
                             disabled={isBusy}
                             value={triageStatus[candidate.requestItemId] ?? ""}
-                            onChange={(event) =>
+                            onChange={(event) => {
+                              const status = event.target.value as LicenseRequestItemStatus | "";
                               setTriageStatus((current) => {
                                 const next = { ...current };
-                                if (event.target.value) {
-                                  next[candidate.requestItemId] = event.target.value as LicenseRequestItemStatus;
+                                if (status) {
+                                  next[candidate.requestItemId] = status;
                                 } else {
                                   delete next[candidate.requestItemId];
                                 }
                                 return next;
-                              })
-                            }
+                              });
+                              if (status === "Approved") {
+                                const defaultUsers = candidate.licenseType === "NamedUser"
+                                  ? candidate.users.filter((user) => user.status !== "Fulfilled").map((user) => user.id)
+                                  : [];
+                                setTriageUserIds((current) => ({
+                                  ...current,
+                                  [candidate.requestItemId]: defaultUsers,
+                                }));
+                                setTriageApprovedQty((current) => ({
+                                  ...current,
+                                  [candidate.requestItemId]: String(
+                                    candidate.licenseType === "NamedUser"
+                                      ? defaultUsers.length
+                                      : candidate.approvedQuantity ?? candidate.requestedQuantity,
+                                  ),
+                                }));
+                              }
+                            }}
                           >
                             <option value="">{getRequestItemStatusLabel(t, candidate.itemStatus)}</option>
                             {MANUAL_REQUEST_ITEM_STATUSES.map((status) => (
@@ -461,7 +623,9 @@ export function LicenseFulfillmentPage() {
                             type="number"
                             min="0"
                             className="w-24"
-                            disabled={isBusy || !triageStatus[candidate.requestItemId]}
+                            disabled={isBusy
+                              || triageStatus[candidate.requestItemId] !== "Approved"
+                              || candidate.licenseType === "NamedUser"}
                             value={triageApprovedQty[candidate.requestItemId] ?? ""}
                             onChange={(event) =>
                               setTriageApprovedQty((current) => ({
@@ -496,7 +660,7 @@ export function LicenseFulfillmentPage() {
         <RenewalLinesSection
           rows={renewalRows}
           onChange={setRenewalRows}
-          packages={renewablePackagesQuery.data?.items ?? []}
+          packages={renewablePackagesQuery.data ?? []}
           dateLocale={dateLocale}
           disabled={isBusy}
         />
@@ -523,7 +687,9 @@ export function LicenseFulfillmentPage() {
               existingPurchaseId={existingPurchaseId}
               onExistingPurchaseChange={setExistingPurchaseId}
               companies={companiesQuery.data ?? []}
-              purchases={purchasesQuery.data ?? []}
+              purchases={(purchasesQuery.data ?? []).filter(
+                (purchase) => purchase.status === "Draft" || purchase.status === "Active",
+              )}
               dateLocale={dateLocale}
               disabled={isBusy}
             />
@@ -553,8 +719,10 @@ export function LicenseFulfillmentPage() {
                   </thead>
                   <tbody>
                     {productSummaries.map((summary) => (
-                      <tr key={summary.productId} className="border-b">
-                        <td className="p-2">{summary.productName}</td>
+                      <tr key={summary.groupKey} className="border-b">
+                        <td className="p-2">
+                          {summary.productName} · {getLicenseTypeLabel(t, summary.licenseType)}
+                        </td>
                         <td className="p-2 text-right tabular-nums">{summary.lineCount}</td>
                         <td className="p-2 text-right tabular-nums">{summary.totalQuantity}</td>
                       </tr>

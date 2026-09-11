@@ -77,13 +77,19 @@
     },
     "licenseManagement": {
       "formTitle": "Module settings",
-      "renewalInfo": "Renewal notifications will be enabled in a later phase. Recipient lists are stored for now.",
+      "renewalInfo": "The system scans renewal dates automatically and queues one email per package, renewal date, and recipient when the reminder threshold is reached. Separate addresses with a comma, semicolon, or new line.",
+      "status": {
+        "lastRun": "Last automatic scan",
+        "notRun": "Not run yet",
+        "duePackages": "Packages due",
+        "queued": "Emails queued"
+      },
       "fields": {
         "defaultCurrency": "Default currency",
         "defaultVatIncluded": "Default VAT included",
         "defaultRenewalReminderDays": "Default renewal reminder days",
         "defaultRenewalRecipients": "Default renewal recipients",
-        "defaultRenewalCcRecipients": "Default renewal CC recipients",
+        "defaultRenewalCcRecipients": "Additional renewal recipients (sent separately)",
         "notes": "Notes"
       },
       "messages": {

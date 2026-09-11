@@ -20,7 +20,17 @@ export const hasPermission = (
 ): boolean => {
   if (!user) return false;
   if (user.isSuperAdmin) return true;
-  return user.permissions.includes(permissionCode);
+  if (user.permissions.includes(permissionCode)) return true;
+
+  if (permissionCode === "LicenseManagement.View") {
+    return user.permissions.some((code) =>
+      code === "LicenseManagement.ManageCatalog"
+      || code === "LicenseManagement.ManagePurchases"
+      || code === "LicenseManagement.ManageRequests"
+      || code === "LicenseManagement.FulfillRequests");
+  }
+
+  return false;
 };
 
 export const canAccess = (

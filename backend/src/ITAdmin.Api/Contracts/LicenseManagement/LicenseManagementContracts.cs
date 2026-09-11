@@ -8,9 +8,18 @@ public sealed record LicenseManagementSettingsResponse(
     int DefaultRenewalReminderDays,
     string? DefaultRenewalRecipients,
     string? DefaultRenewalCcRecipients,
+    DateTime? LastRenewalReminderRunAt,
+    string? LastRenewalReminderStatus,
+    int LastRenewalReminderDueCount,
+    int LastRenewalReminderQueuedCount,
+    string? LastRenewalReminderMessage,
     string? Notes,
     DateTime? UpdatedAt,
     string? UpdatedBy);
+
+public sealed record LicenseRequestDefaultsResponse(
+    string DefaultCurrency,
+    bool DefaultVatIncluded);
 
 public sealed record UpdateLicenseManagementSettingsRequest(
     string DefaultCurrency,
@@ -236,7 +245,8 @@ public sealed record UpdateLicensePurchaseRequest(
     decimal? ActualTotalCost,
     string? Currency,
     bool? VatIncluded,
-    string? Notes);
+    string? Notes,
+    LicensePurchaseStatus Status);
 
 public sealed record UpdateLicensePurchaseStatusRequest(LicensePurchaseStatus Status);
 
@@ -280,7 +290,8 @@ public sealed record LicensePackageDetailResponse(
     DateTime CreatedAt,
     string? CreatedBy,
     DateTime? UpdatedAt,
-    string? UpdatedBy);
+    string? UpdatedBy,
+    bool SensitiveDataVisible);
 
 public sealed record CreateLicensePackageRequest(
     Guid PurchaseId,
@@ -315,7 +326,8 @@ public sealed record UpdateLicensePackageRequest(
     string? LicenseAccountEmail,
     string? LicensePortalUrl,
     string? LicenseNotes,
-    bool IsActive);
+    bool IsActive,
+    LicensePackageStatus Status);
 
 public sealed record UpdateLicensePackageStatusRequest(LicensePackageStatus Status);
 
@@ -352,7 +364,9 @@ public sealed record LicenseRequestItemRequest(
     bool? VatIncluded,
     string? Justification,
     LicenseRequestItemStatus Status,
-    IReadOnlyList<LicenseRequestItemUserRequest> Users);
+    IReadOnlyList<LicenseRequestItemUserRequest> Users,
+    LicenseType LicenseType = LicenseType.NamedUser,
+    int? RequestedQuantity = null);
 
 public sealed record LicenseRequestListItemResponse(
     Guid Id,
@@ -364,6 +378,7 @@ public sealed record LicenseRequestListItemResponse(
     string? RequesterManagerName,
     int ProductCount,
     int UserCount,
+    int RequestedQuantity,
     decimal? EstimatedTotalCost,
     string? Currency,
     LicenseRequestStatus Status);
@@ -384,6 +399,7 @@ public sealed record LicenseRequestItemResponse(
     Guid Id,
     Guid ProductId,
     string ProductName,
+    LicenseType LicenseType,
     int RequestedQuantity,
     int? ApprovedQuantity,
     int FulfilledQuantity,

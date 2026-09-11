@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { assignLicenseSeat, getLicensePackages } from "@/features/license-management/api";
+import { assignLicenseSeat, getAllLicensePackages } from "@/features/license-management/api";
 import { PersonFields } from "@/features/license-management/components/license-seat-person-fields";
 import {
   EMPTY_PERSON,
@@ -44,15 +44,17 @@ export function LicenseAssignmentDialog({ packageId, onClose, onDone }: Props) {
 
   const packagesQuery = useQuery({
     queryKey: ["license-management", "packages", "assignable"],
-    queryFn: () => getLicensePackages({ isActive: true, pageSize: 100 }),
+    queryFn: () => getAllLicensePackages({ isActive: true }),
     enabled: needsPackage,
   });
 
   const packageOptions = useMemo(
     () =>
-      [...(packagesQuery.data?.items ?? [])].sort((a, b) =>
-        `${a.productName}${a.purchaseTitle}`.localeCompare(`${b.productName}${b.purchaseTitle}`, "tr"),
-      ),
+      [...(packagesQuery.data ?? [])]
+        .filter((item) => item.licenseType === "NamedUser" && item.availableQuantity > 0)
+        .sort((a, b) =>
+          `${a.productName}${a.purchaseTitle}`.localeCompare(`${b.productName}${b.purchaseTitle}`, "tr"),
+        ),
     [packagesQuery.data],
   );
 
@@ -94,6 +96,7 @@ export function LicenseAssignmentDialog({ packageId, onClose, onDone }: Props) {
                 id="assign-package"
                 value={selectedPackageId}
                 onChange={(event) => setSelectedPackageId(event.target.value)}
+                disabled={packagesQuery.isLoading || packagesQuery.isError}
               >
                 <option value="">{t("licenseManagement:seats.dialog.packagePickerPlaceholder")}</option>
                 {packageOptions.map((item) => (

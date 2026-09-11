@@ -118,6 +118,7 @@ public partial class Program
         builder.Services.AddOpenApi();
         builder.Services.AddHealthChecks();
         builder.Services.AddHostedService<NotificationOutboxWorker>();
+        builder.Services.AddHostedService<LicenseRenewalReminderWorker>();
 
         var app = builder.Build();
 

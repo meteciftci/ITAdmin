@@ -1,4 +1,6 @@
 using ITAdmin.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using ITAdmin.Persistence.Context;
 
 namespace ITAdmin.Persistence.Services.LicenseManagement;
@@ -21,6 +23,67 @@ internal static class LicenseManagementServiceHelpers
 
     internal static string BuildILikeContainsPattern(string search) =>
         $"%{search.Trim().Replace("%", "\\%").Replace("_", "\\_")}%";
+
+    internal static bool UsesPostgreSql(AppDbContext context) =>
+        string.Equals(
+            context.Database.ProviderName,
+            "Npgsql.EntityFrameworkCore.PostgreSQL",
+            StringComparison.Ordinal);
+
+    internal static async Task<IDbContextTransaction?> BeginMutationTransactionAsync(
+        AppDbContext context,
+        CancellationToken cancellationToken) =>
+        context.Database.IsRelational()
+            ? await context.Database.BeginTransactionAsync(cancellationToken)
+            : null;
+
+    internal static async Task LockLicensePackagesAsync(
+        AppDbContext context,
+        IEnumerable<Guid> packageIds,
+        CancellationToken cancellationToken)
+    {
+        var ids = packageIds.Distinct().OrderBy(x => x).ToArray();
+        if (!UsesPostgreSql(context) || ids.Length == 0)
+        {
+            return;
+        }
+
+        await context.Database.ExecuteSqlInterpolatedAsync(
+            $"SELECT id FROM license_packages WHERE id = ANY({ids}) ORDER BY id FOR UPDATE",
+            cancellationToken);
+    }
+
+    internal static async Task LockLicenseRequestItemsAsync(
+        AppDbContext context,
+        IEnumerable<Guid> requestItemIds,
+        CancellationToken cancellationToken)
+    {
+        var ids = requestItemIds.Distinct().OrderBy(x => x).ToArray();
+        if (!UsesPostgreSql(context) || ids.Length == 0)
+        {
+            return;
+        }
+
+        await context.Database.ExecuteSqlInterpolatedAsync(
+            $"SELECT id FROM license_request_items WHERE id = ANY({ids}) ORDER BY id FOR UPDATE",
+            cancellationToken);
+    }
+
+    internal static async Task LockLicenseSeatAssignmentsAsync(
+        AppDbContext context,
+        IEnumerable<Guid> assignmentIds,
+        CancellationToken cancellationToken)
+    {
+        var ids = assignmentIds.Distinct().OrderBy(x => x).ToArray();
+        if (!UsesPostgreSql(context) || ids.Length == 0)
+        {
+            return;
+        }
+
+        await context.Database.ExecuteSqlInterpolatedAsync(
+            $"SELECT id FROM license_seat_assignments WHERE id = ANY({ids}) ORDER BY id FOR UPDATE",
+            cancellationToken);
+    }
 
     internal static async Task WriteAuditAsync(
         AppDbContext context,

@@ -48,7 +48,7 @@
         "unitAndManager": "Birim ve Yönetici",
         "basicInfo": "Temel bilgiler",
         "requester": "Talep eden",
-        "items": "Ürün ve Kullanıcılar",
+        "items": "Ürün ve Lisanslar",
         "cost": "Maliyet"
       },
       "fields": {
@@ -61,6 +61,9 @@
         "requesterUnit": "Talep eden birim",
         "requesterManagerName": "Yönetici / talimat veren",
         "product": "Ürün",
+        "licenseType": "Lisans türü",
+        "requestedQuantity": "Talep edilen miktar",
+        "requestedQuantityValue": "{{count}} adet",
         "productCount": "Ürün sayısı",
         "userCount": "Kullanıcı sayısı",
         "userCountSingular": "{{count}} kullanıcı",
@@ -114,6 +117,8 @@
           "productFilter": "Ürün",
           "select": "Seç",
           "fulfillNow": "Şimdi karşıla",
+          "fulfillUsers": "Şimdi lisans atanacak kullanıcılar",
+          "approveUsers": "Onaylanacak kullanıcılar",
           "columns": {
             "requestSource": "Kaynak",
             "requestDate": "Talep tarihi",
@@ -170,6 +175,9 @@
         "validation": {
           "noLines": "Karşılamak için en az bir satır seçin.",
           "quantityRange": "Karşılama miktarı 1 ile kalan miktar arasında olmalıdır.",
+          "namedUsersRequired": "Kullanıcıya bağlı lisanslarda karşılanacak onaylı kullanıcıları seçin.",
+          "usersNotAllowed": "Kullanıcıya bağlı olmayan lisanslara kullanıcı seçilemez.",
+          "expireSourceRequired": "Aktif paket yenilenirken eski paket süresi dolmuş olarak kapatılmalıdır.",
           "titleRequired": "Alım başlığı zorunludur.",
           "targetRequired": "Mevcut bir alım seçin veya yeni bir alım oluşturun."
         },
@@ -188,6 +196,8 @@
           "isPerpetual": "Süresiz",
           "startDate": "Başlangıç",
           "endDate": "Bitiş",
+          "renewalRequired": "Yeni paket için yenileme takibi",
+          "renewalDate": "Yeni yenileme tarihi",
           "expireSource": "Eski paketi 'süresi doldu' yap ve pasifleştir",
           "copySeats": "Aktif atamaları yeni pakete taşı"
         },
@@ -224,6 +234,8 @@
         "itemsRequired": "En az bir ürün kalemi eklenmelidir.",
         "productRequired": "Ürün seçimi zorunludur.",
         "usersRequired": "Her ürün kalemi için en az bir kullanıcı seçilmelidir.",
+        "quantityRequired": "Kullanıcıya bağlı olmayan lisanslarda talep miktarı en az 1 olmalıdır.",
+        "quantityUsersNotAllowed": "Kullanıcıya bağlı olmayan lisans türlerinde kullanıcı seçilemez.",
         "duplicateProduct": "Aynı ürün talebe birden fazla kez eklenemez.",
         "duplicateUser": "Aynı kullanıcı aynı ürün kalemine birden fazla kez eklenemez.",
         "negativeCost": "Maliyet alanları negatif olamaz."
@@ -325,7 +337,8 @@
           "summaryTitle": "Özet",
           "notFound": "Lisans paketi bulunamadı.",
           "showLicenseKey": "Anahtarı göster",
-          "hideLicenseKey": "Anahtarı gizle"
+          "hideLicenseKey": "Anahtarı gizle",
+          "sensitiveDataRestricted": "Seri numarası, lisans anahtarı, hesap bilgileri ve lisans notları için hassas lisans verilerini görüntüleme yetkisi gerekir."
         }
       },
       "requests": {
@@ -486,7 +499,13 @@
       "categoryRequired": "Kategori seçimi zorunludur.",
       "invalidEmail": "Geçerli bir e-posta girin.",
       "invalidUrl": "Geçerli bir URL girin.",
-      "endDateWarning": "Bitiş tarihi girilmedi."
+      "endDateWarning": "Bitiş tarihi girilmedi.",
+      "invalidLicenseDateRange": "Lisans bitiş tarihi başlangıç tarihinden önce olamaz.",
+      "perpetualEndDateNotAllowed": "Süresiz lisanslarda bitiş tarihi kullanılamaz.",
+      "renewalDateRequired": "Yenileme takibi açıksa yenileme tarihi zorunludur.",
+      "renewalDateNotAllowed": "Yenileme takibi kapalıysa yenileme tarihi boş olmalıdır.",
+      "renewalDateBeforeStart": "Yenileme tarihi lisans başlangıcından önce olamaz.",
+      "renewalDateAfterEnd": "Yenileme tarihi lisans bitişinden sonra olamaz."
     },
     "confirm": {
       "deactivateCompanyTitle": "Firmayı pasifleştir",

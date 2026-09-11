@@ -83,21 +83,33 @@ export function LicenseProductForm({ mode, product, onCancel, onSaved }: Props) 
   });
 
   return (
-    <div className="space-y-4">
+    <form
+      className="space-y-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!validationKey && !mutation.isPending) mutation.mutate();
+      }}
+    >
       {errorMessage ? <FormError message={errorMessage} /> : null}
+      {categoriesQuery.isError ? <FormError message={t("common:messages.operationFailed")} /> : null}
       {validationKey ? <FormError message={t(`licenseManagement:messages.${validationKey}`)} /> : null}
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2 md:col-span-2">
-          <Label>{t("licenseManagement:form.productName")}</Label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} />
+          <Label htmlFor="product-name">{t("licenseManagement:form.productName")}</Label>
+          <Input id="product-name" value={name} onChange={(e) => setName(e.target.value)} />
         </div>
         <div className="space-y-2">
-          <Label>{t("licenseManagement:form.brand")}</Label>
-          <Input value={brand} onChange={(e) => setBrand(e.target.value)} />
+          <Label htmlFor="product-brand">{t("licenseManagement:form.brand")}</Label>
+          <Input id="product-brand" value={brand} onChange={(e) => setBrand(e.target.value)} />
         </div>
         <div className="space-y-2">
-          <Label>{t("licenseManagement:table.category")}</Label>
-          <Select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+          <Label htmlFor="product-category">{t("licenseManagement:table.category")}</Label>
+          <Select
+            id="product-category"
+            value={categoryId}
+            disabled={categoriesQuery.isLoading || categoriesQuery.isError}
+            onChange={(e) => setCategoryId(e.target.value)}
+          >
             <option value="">{t("licenseManagement:form.selectCategory")}</option>
             {(categoriesQuery.data ?? []).map((category) => (
               <option key={category.id} value={category.id}>
@@ -107,8 +119,8 @@ export function LicenseProductForm({ mode, product, onCancel, onSaved }: Props) 
           </Select>
         </div>
         <div className="space-y-2 md:col-span-2">
-          <Label>{t("licenseManagement:form.description")}</Label>
-          <Textarea value={description} onChange={(e) => setDescription(e.target.value)} />
+          <Label htmlFor="product-description">{t("licenseManagement:form.description")}</Label>
+          <Textarea id="product-description" value={description} onChange={(e) => setDescription(e.target.value)} />
         </div>
         <CheckboxField
           id="product-active"
@@ -122,13 +134,12 @@ export function LicenseProductForm({ mode, product, onCancel, onSaved }: Props) 
           {t("common:actions.cancel")}
         </Button>
         <Button
-          type="button"
+          type="submit"
           disabled={Boolean(validationKey) || mutation.isPending}
-          onClick={() => mutation.mutate()}
         >
           {t("common:actions.save")}
         </Button>
       </div>
-    </div>
+    </form>
   );
 }

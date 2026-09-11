@@ -98,6 +98,21 @@ public sealed class StaticNotificationTemplateCatalogProvider : INotificationTem
                             "helpDeskPhone",
                             "applicationName")),
                 ]),
+            new NotificationTemplateCatalogModule(
+                "LicenseManagement",
+                [
+                    new NotificationTemplateCatalogEvent(
+                        "RenewalDue",
+                        [NotificationChannels.Email],
+                        Variables(
+                            "applicationName",
+                            "productName",
+                            "purchaseTitle",
+                            "renewalDate",
+                            "daysRemaining",
+                            "quantity",
+                            "licenseType")),
+                ]),
         ]);
 
     private static IReadOnlyList<NotificationTemplateCatalogVariable> Variables(params string[] keys) =>

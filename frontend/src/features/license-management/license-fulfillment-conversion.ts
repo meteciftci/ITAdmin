@@ -12,12 +12,15 @@ import type {
 export type FulfillmentSelectionLine = {
   candidate: LicenseFulfillmentCandidate;
   fulfillQuantity: number;
+  requestItemUserIds?: string[];
 };
 
 /** Aggregated view used by the wizard: one row per product (packages are created per product). */
 export type ProductGroupSummary = {
+  groupKey: string;
   productId: string;
   productName: string;
+  licenseType: LicenseFulfillmentCandidate["licenseType"];
   lineCount: number;
   totalQuantity: number;
 };
@@ -25,14 +28,17 @@ export type ProductGroupSummary = {
 export function summarizeByProduct(lines: FulfillmentSelectionLine[]): ProductGroupSummary[] {
   const map = new Map<string, ProductGroupSummary>();
   for (const { candidate, fulfillQuantity } of lines) {
-    const existing = map.get(candidate.productId);
+    const groupKey = `${candidate.productId}:${candidate.licenseType}`;
+    const existing = map.get(groupKey);
     if (existing) {
       existing.lineCount += 1;
       existing.totalQuantity += fulfillQuantity;
     } else {
-      map.set(candidate.productId, {
+      map.set(groupKey, {
+        groupKey,
         productId: candidate.productId,
         productName: candidate.productName,
+        licenseType: candidate.licenseType,
         lineCount: 1,
         totalQuantity: fulfillQuantity,
       });
@@ -58,9 +64,24 @@ export function validateSelection(lines: FulfillmentSelectionLine[]): ConvertSel
     return { isValid: false, messageKey: "requests.fulfillment.validation.noLines" };
   }
 
-  for (const { candidate, fulfillQuantity } of lines) {
+  for (const { candidate, fulfillQuantity, requestItemUserIds } of lines) {
     if (fulfillQuantity < 1 || fulfillQuantity > candidate.remainingQuantity) {
       return { isValid: false, messageKey: "requests.fulfillment.validation.quantityRange" };
+    }
+
+    if (candidate.licenseType === "NamedUser") {
+      const uniqueUserIds = new Set(requestItemUserIds ?? []);
+      const approvedIds = new Set(
+        candidate.users.filter((user) => user.status === "Approved").map((user) => user.id),
+      );
+      if (
+        uniqueUserIds.size !== fulfillQuantity
+        || [...uniqueUserIds].some((id) => !approvedIds.has(id))
+      ) {
+        return { isValid: false, messageKey: "requests.fulfillment.validation.namedUsersRequired" };
+      }
+    } else if ((requestItemUserIds?.length ?? 0) > 0) {
+      return { isValid: false, messageKey: "requests.fulfillment.validation.usersNotAllowed" };
     }
   }
 
@@ -90,6 +111,9 @@ export function buildConvertPayload(
       (line): ConvertFulfillmentLine => ({
         requestItemId: line.candidate.requestItemId,
         fulfillQuantity: line.fulfillQuantity,
+        ...(line.candidate.licenseType === "NamedUser"
+          ? { requestItemUserIds: line.requestItemUserIds ?? [] }
+          : {}),
       }),
     ),
     packageDefaults,

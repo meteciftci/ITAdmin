@@ -73,6 +73,7 @@ public sealed class LicensePurchaseConfiguration : IEntityTypeConfiguration<Lice
 
         builder.HasIndex(x => x.PurchaseType);
         builder.HasIndex(x => x.Status);
+        builder.HasIndex(x => new { x.Status, x.PurchaseDate });
         builder.HasIndex(x => x.SupplierCompanyId);
         builder.HasIndex(x => x.SupportCompanyId);
     }

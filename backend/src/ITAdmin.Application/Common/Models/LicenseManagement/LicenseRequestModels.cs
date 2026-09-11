@@ -25,7 +25,9 @@ public sealed record LicenseRequestItemInput(
     bool? VatIncluded,
     string? Justification,
     LicenseRequestItemStatus Status,
-    IReadOnlyList<LicenseRequestItemUserInput> Users);
+    IReadOnlyList<LicenseRequestItemUserInput> Users,
+    LicenseType LicenseType = LicenseType.NamedUser,
+    int? RequestedQuantity = null);
 
 public sealed record LicenseRequestListQuery(
     string? Search,
@@ -48,6 +50,7 @@ public sealed record LicenseRequestListItem(
     string? RequesterManagerName,
     int ProductCount,
     int UserCount,
+    int RequestedQuantity,
     decimal? EstimatedTotalCost,
     string? Currency,
     LicenseRequestStatus Status);
@@ -68,6 +71,7 @@ public sealed record LicenseRequestItemDetail(
     Guid Id,
     Guid ProductId,
     string ProductName,
+    LicenseType LicenseType,
     int RequestedQuantity,
     int? ApprovedQuantity,
     int FulfilledQuantity,

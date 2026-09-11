@@ -26,7 +26,8 @@ public sealed class AnyPermissionAuthorizationHandler(
             .Select(c => c.Value)
             .ToHashSet(StringComparer.Ordinal);
 
-        if (requirement.Permissions.Any(permission => userPermissions.Contains(permission)))
+        if (requirement.Permissions.Any(permission =>
+                LicenseManagementPermissionRules.IsSatisfiedBy(permission, userPermissions)))
         {
             context.Succeed(requirement);
             return;

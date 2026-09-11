@@ -38,6 +38,7 @@ public sealed class LicenseCompanyService(AppDbContext context) : ILicenseCompan
 
         var items = await itemsQuery
             .OrderBy(x => x.Name)
+            .ThenBy(x => x.Id)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .Select(x => new LicenseCompanyListItem(

@@ -54,6 +54,7 @@ public sealed class LicenseRequestFulfillmentService(AppDbContext context) : ILi
         var items = await itemsQuery
             .OrderBy(x => x.Request.RequestDate)
             .ThenBy(x => x.Product.Name)
+            .ThenBy(x => x.Id)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .Select(x => new LicenseFulfillmentCandidateItem(
@@ -65,6 +66,7 @@ public sealed class LicenseRequestFulfillmentService(AppDbContext context) : ILi
                 x.ProductId,
                 x.Product.Name,
                 x.Product.Brand,
+                x.LicenseType,
                 x.RequestedQuantity,
                 x.ApprovedQuantity,
                 x.FulfilledQuantity,
@@ -72,7 +74,21 @@ public sealed class LicenseRequestFulfillmentService(AppDbContext context) : ILi
                 x.Status,
                 (x.Status == LicenseRequestItemStatus.Approved
                         || x.Status == LicenseRequestItemStatus.PartiallyFulfilled)
-                    && (x.ApprovedQuantity ?? 0) > x.FulfilledQuantity))
+                    && (x.ApprovedQuantity ?? 0) > x.FulfilledQuantity,
+                x.Users
+                    .OrderBy(user => user.CreatedAt)
+                    .ThenBy(user => user.Id)
+                    .Select(user => new LicenseFulfillmentCandidateUser(
+                        user.Id,
+                        user.AdObjectId,
+                        user.SamAccountName,
+                        user.UserPrincipalName,
+                        user.DisplayName,
+                        user.Department,
+                        user.Title,
+                        user.Mail,
+                        user.Status))
+                    .ToList()))
             .ToListAsync(cancellationToken);
 
         return new PagedResult<LicenseFulfillmentCandidateItem>(items, pageNumber, pageSize, totalCount, totalPages);
@@ -88,17 +104,26 @@ public sealed class LicenseRequestFulfillmentService(AppDbContext context) : ILi
         }
 
         var ids = request.Items.Select(x => x.RequestItemId).Distinct().ToList();
+        await using var transaction = await BeginMutationTransactionAsync(context, cancellationToken);
+        await LockLicenseRequestItemsAsync(context, ids, cancellationToken);
         var items = await context.LicenseRequestItems
             .Include(x => x.Request)
+            .Include(x => x.Users)
             .Where(x => ids.Contains(x.Id) && x.Request.IsActive)
             .ToListAsync(cancellationToken);
+
+        if (request.Items.Count != ids.Count)
+        {
+            return new LicenseRequestOperationResult(false, "A request item was listed more than once.");
+        }
 
         if (items.Count != ids.Count)
         {
             return new LicenseRequestOperationResult(false, "Some request items were not found.");
         }
 
-        var now = DateTime.UtcNow;
+        var approvedQuantities = new Dictionary<Guid, int>();
+        var approvedUsersByItem = new Dictionary<Guid, HashSet<Guid>>();
         foreach (var input in request.Items)
         {
             var item = items.First(x => x.Id == input.RequestItemId);
@@ -125,11 +150,76 @@ public sealed class LicenseRequestFulfillmentService(AppDbContext context) : ILi
                         "Approved quantity must be between 1 and the requested quantity.");
                 }
 
-                item.ApprovedQuantity = approved;
+                approvedQuantities[item.Id] = approved;
+
+                if (item.LicenseType == LicenseType.NamedUser)
+                {
+                    var approvedUserIds = input.ApprovedUserIds?.Distinct().ToHashSet()
+                        ?? item.Users
+                            .OrderBy(x => x.CreatedAt)
+                            .ThenBy(x => x.Id)
+                            .Take(approved)
+                            .Select(x => x.Id)
+                            .ToHashSet();
+
+                    if (approvedUserIds.Count != approved
+                        || approvedUserIds.Any(id => item.Users.All(user => user.Id != id)))
+                    {
+                        return new LicenseRequestOperationResult(
+                            false,
+                            "Approved named users must belong to the request item and match the approved quantity.");
+                    }
+
+                    approvedUsersByItem[item.Id] = approvedUserIds;
+                }
+                else if (input.ApprovedUserIds is { Count: > 0 })
+                {
+                    return new LicenseRequestOperationResult(
+                        false,
+                        "Users cannot be approved for a license type that is not user-bound.");
+                }
             }
             else
             {
-                item.ApprovedQuantity = null;
+                if (input.ApprovedUserIds is { Count: > 0 })
+                {
+                    return new LicenseRequestOperationResult(
+                        false,
+                        "Approved users can only be provided while approving an item.");
+                }
+
+            }
+        }
+
+        // Apply only after the complete batch has passed validation.
+        var now = DateTime.UtcNow;
+        foreach (var input in request.Items)
+        {
+            var item = items.First(x => x.Id == input.RequestItemId);
+            item.ApprovedQuantity = input.Status == LicenseRequestItemStatus.Approved
+                ? approvedQuantities[item.Id]
+                : null;
+
+            if (item.LicenseType == LicenseType.NamedUser)
+            {
+                var userStatus = input.Status switch
+                {
+                    LicenseRequestItemStatus.Approved => LicenseRequestItemUserStatus.Approved,
+                    LicenseRequestItemStatus.Rejected => LicenseRequestItemUserStatus.Rejected,
+                    LicenseRequestItemStatus.Cancelled => LicenseRequestItemUserStatus.Cancelled,
+                    _ => LicenseRequestItemUserStatus.Pending,
+                };
+                approvedUsersByItem.TryGetValue(item.Id, out var approvedUserIds);
+                foreach (var user in item.Users)
+                {
+                    user.Status = input.Status == LicenseRequestItemStatus.Approved
+                        && approvedUserIds is not null
+                        && !approvedUserIds.Contains(user.Id)
+                            ? LicenseRequestItemUserStatus.Rejected
+                            : userStatus;
+                    user.UpdatedAt = now;
+                    user.UpdatedBy = request.ActorUserName;
+                }
             }
 
             item.Status = input.Status;
@@ -156,6 +246,7 @@ public sealed class LicenseRequestFulfillmentService(AppDbContext context) : ILi
         }
 
         await context.SaveChangesAsync(cancellationToken);
+        if (transaction is not null) await transaction.CommitAsync(cancellationToken);
         return new LicenseRequestOperationResult(true, "License request items triaged.");
     }
 
@@ -184,8 +275,11 @@ public sealed class LicenseRequestFulfillmentService(AppDbContext context) : ILi
             return new LicenseFulfillmentResult(false, "A request item was listed more than once.");
         }
 
+        await using var transaction = await BeginMutationTransactionAsync(context, cancellationToken);
+        await LockLicenseRequestItemsAsync(context, lineIds, cancellationToken);
         var items = await context.LicenseRequestItems
             .Include(x => x.Product)
+            .Include(x => x.Users)
             .Where(x => lineIds.Contains(x.Id) && x.Request.IsActive)
             .ToListAsync(cancellationToken);
 
@@ -216,31 +310,148 @@ public sealed class LicenseRequestFulfillmentService(AppDbContext context) : ILi
                     false,
                     "Fulfill quantity must be between 1 and the remaining approved quantity.");
             }
+
+            var selectedUserIds = line.RequestItemUserIds?.Distinct().ToHashSet() ?? [];
+            if (item.LicenseType == LicenseType.NamedUser)
+            {
+                if (selectedUserIds.Count != line.FulfillQuantity)
+                {
+                    return new LicenseFulfillmentResult(
+                        false,
+                        "Named-user fulfillment must identify one approved request user per fulfilled license.");
+                }
+
+                if (selectedUserIds.Any(id => item.Users.All(user => user.Id != id))
+                    || item.Users.Any(user => selectedUserIds.Contains(user.Id)
+                        && user.Status != LicenseRequestItemUserStatus.Approved))
+                {
+                    return new LicenseFulfillmentResult(
+                        false,
+                        "Only approved users belonging to the request item can be fulfilled.");
+                }
+            }
+            else if (selectedUserIds.Count > 0)
+            {
+                return new LicenseFulfillmentResult(
+                    false,
+                    "Request users cannot be supplied for a license type that is not user-bound.");
+            }
+        }
+
+        var duplicateNamedUser = request.Lines
+            .SelectMany(line =>
+            {
+                var item = items.First(x => x.Id == line.RequestItemId);
+                var selectedIds = line.RequestItemUserIds?.ToHashSet() ?? [];
+                return item.Users
+                    .Where(user => selectedIds.Contains(user.Id))
+                    .Select(user => new
+                    {
+                        item.ProductId,
+                        item.LicenseType,
+                        AdObjectId = user.AdObjectId.Trim().ToUpperInvariant(),
+                    });
+            })
+            .GroupBy(x => (x.ProductId, x.LicenseType, x.AdObjectId))
+            .Any(group => group.Count() > 1);
+        if (duplicateNamedUser)
+        {
+            return new LicenseFulfillmentResult(
+                false,
+                "The same named user cannot consume more than one seat in the same license package.");
         }
 
         var productGroups = request.Lines
-            .GroupBy(line => items.First(x => x.Id == line.RequestItemId).ProductId)
+            .GroupBy(line =>
+            {
+                var item = items.First(x => x.Id == line.RequestItemId);
+                return (item.ProductId, item.LicenseType);
+            })
             .ToList();
 
-        var defaultsByProduct = request.PackageDefaults.ToDictionary(x => x.ProductId);
+        var duplicateDefaults = request.PackageDefaults
+            .GroupBy(x => (x.ProductId, x.LicenseType))
+            .Any(x => x.Count() > 1);
+        if (duplicateDefaults)
+        {
+            return new LicenseFulfillmentResult(false, "License package settings were provided more than once for the same product and license type.");
+        }
+
+        var defaultsByProductAndType = request.PackageDefaults
+            .ToDictionary(x => (x.ProductId, x.LicenseType));
         foreach (var group in productGroups)
         {
-            if (!defaultsByProduct.ContainsKey(group.Key))
+            if (!defaultsByProductAndType.ContainsKey(group.Key))
             {
-                return new LicenseFulfillmentResult(false, "License package settings are required for each product.");
+                return new LicenseFulfillmentResult(
+                    false,
+                    "License package settings are required for each product and requested license type.");
+            }
+
+            var defaults = defaultsByProductAndType[group.Key];
+            var dateError = LicenseManagementLifecycleRules.ValidatePackageDates(
+                defaults.StartDate, defaults.EndDate, defaults.IsPerpetual, false, null);
+            if (dateError is not null)
+            {
+                return new LicenseFulfillmentResult(false, dateError);
             }
         }
 
         // Validate renewal lines.
         var renewalSourceIds = renewalLines.Select(x => x.SourcePackageId).Distinct().ToList();
+        if (renewalSourceIds.Count != renewalLines.Count)
+        {
+            return new LicenseFulfillmentResult(false, "A source package can only be renewed once per conversion.");
+        }
+
+        await LockLicensePackagesAsync(context, renewalSourceIds, cancellationToken);
         var renewalSources = await context.LicensePackages
             .Where(x => renewalSourceIds.Contains(x.Id))
             .ToDictionaryAsync(x => x.Id, cancellationToken);
+        var renewalProductIds = renewalSources.Values.Select(x => x.ProductId).Distinct().ToList();
+        var activeRenewalProductIds = await context.LicensedProducts
+            .Where(x => renewalProductIds.Contains(x.Id) && x.IsActive)
+            .Select(x => x.Id)
+            .ToListAsync(cancellationToken);
+        var alreadyRenewedSourceIds = await context.LicensePackages
+            .Where(x => x.PreviousPackageId != null && renewalSourceIds.Contains(x.PreviousPackageId.Value))
+            .Select(x => x.PreviousPackageId!.Value)
+            .ToListAsync(cancellationToken);
+        var activeRenewalSeatCounts = await context.LicenseSeatAssignments
+            .Where(x => renewalSourceIds.Contains(x.PackageId)
+                && x.Status == LicenseSeatAssignmentStatus.Active)
+            .GroupBy(x => x.PackageId)
+            .Select(x => new { PackageId = x.Key, Count = x.Count() })
+            .ToDictionaryAsync(x => x.PackageId, x => x.Count, cancellationToken);
         foreach (var line in renewalLines)
         {
             if (!renewalSources.ContainsKey(line.SourcePackageId))
             {
                 return new LicenseFulfillmentResult(false, "A renewal source package was not found.");
+            }
+
+            var source = renewalSources[line.SourcePackageId];
+            if (!activeRenewalProductIds.Contains(source.ProductId))
+            {
+                return new LicenseFulfillmentResult(false, "A passive product cannot be renewed.");
+            }
+
+            if (source.Status is LicensePackageStatus.Cancelled or LicensePackageStatus.Archived)
+            {
+                return new LicenseFulfillmentResult(false, "A cancelled or archived package cannot be renewed.");
+            }
+
+            if (alreadyRenewedSourceIds.Contains(source.Id))
+            {
+                return new LicenseFulfillmentResult(false, "The source package has already been renewed.");
+            }
+
+            if ((source.Status is LicensePackageStatus.Active or LicensePackageStatus.Suspended)
+                && !line.ExpireSourcePackage)
+            {
+                return new LicenseFulfillmentResult(
+                    false,
+                    "An active or suspended source package must be expired during renewal.");
             }
 
             if (line.Quantity < 1)
@@ -251,6 +462,31 @@ public sealed class LicenseRequestFulfillmentService(AppDbContext context) : ILi
             if (line.LicenseType is { } renewalType && !Enum.IsDefined(renewalType))
             {
                 return new LicenseFulfillmentResult(false, "Renewal license type is invalid.");
+            }
+
+            var renewalRequired = line.RenewalRequired ?? source.RenewalRequired;
+            var dateError = LicenseManagementLifecycleRules.ValidatePackageDates(
+                line.StartDate, line.EndDate, line.IsPerpetual, renewalRequired, line.RenewalDate);
+            if (dateError is not null)
+            {
+                return new LicenseFulfillmentResult(false, dateError);
+            }
+
+            if (line.CopySeatAssignments
+                && activeRenewalSeatCounts.GetValueOrDefault(line.SourcePackageId) > line.Quantity)
+            {
+                return new LicenseFulfillmentResult(
+                    false,
+                    "Renewal quantity cannot be lower than the number of active seats being copied.");
+            }
+
+            if (line.CopySeatAssignments
+                && (source.LicenseType != LicenseType.NamedUser
+                    || (line.LicenseType ?? source.LicenseType) != LicenseType.NamedUser))
+            {
+                return new LicenseFulfillmentResult(
+                    false,
+                    "Seat assignments can only be carried between named-user license packages.");
             }
         }
 
@@ -280,11 +516,16 @@ public sealed class LicenseRequestFulfillmentService(AppDbContext context) : ILi
             {
                 return new LicenseFulfillmentResult(false, "Manual line license type is invalid.");
             }
+
+            var dateError = LicenseManagementLifecycleRules.ValidatePackageDates(
+                line.StartDate, line.EndDate, line.IsPerpetual, false, null);
+            if (dateError is not null)
+            {
+                return new LicenseFulfillmentResult(false, dateError);
+            }
         }
 
         var now = DateTime.UtcNow;
-        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
-
         // Phase 1: target purchase.
         LicensePurchase purchase;
         if (request.ExistingPurchaseId is { } existingPurchaseId)
@@ -334,17 +575,17 @@ public sealed class LicenseRequestFulfillmentService(AppDbContext context) : ILi
         }
 
         // Phase 2: one package per product (quantity = sum of that product's fulfill quantities).
-        var packageByProduct = new Dictionary<Guid, LicensePackage>();
+        var packageByProductAndType = new Dictionary<(Guid ProductId, LicenseType LicenseType), LicensePackage>();
         foreach (var group in productGroups)
         {
-            var defaults = defaultsByProduct[group.Key];
+            var defaults = defaultsByProductAndType[group.Key];
             var quantity = group.Sum(line => line.FulfillQuantity);
 
             var package = new LicensePackage
             {
                 PurchaseId = purchase.Id,
-                ProductId = group.Key,
-                LicenseType = defaults.LicenseType,
+                ProductId = group.Key.ProductId,
+                LicenseType = group.Key.LicenseType,
                 Quantity = quantity,
                 StartDate = defaults.StartDate,
                 EndDate = defaults.EndDate,
@@ -355,12 +596,12 @@ public sealed class LicenseRequestFulfillmentService(AppDbContext context) : ILi
                 CreatedBy = request.ActorUserName,
             };
             await context.LicensePackages.AddAsync(package, cancellationToken);
-            packageByProduct[group.Key] = package;
+            packageByProductAndType[group.Key] = package;
         }
 
         await context.SaveChangesAsync(cancellationToken);
 
-        var createdPackages = new List<LicensePackage>(packageByProduct.Values);
+        var createdPackages = new List<LicensePackage>(packageByProductAndType.Values);
 
         // Phase 2b: renewal packages (copy config from the source, optionally expire it and carry seats over).
         var renewalPackages = new List<(ConvertFulfillmentRenewalLineInput Line, LicensePackage Source, LicensePackage New)>();
@@ -376,9 +617,11 @@ public sealed class LicenseRequestFulfillmentService(AppDbContext context) : ILi
                 StartDate = line.StartDate,
                 EndDate = line.EndDate,
                 IsPerpetual = line.IsPerpetual,
-                RenewalRequired = source.RenewalRequired,
+                RenewalRequired = line.RenewalRequired ?? source.RenewalRequired,
+                RenewalDate = line.RenewalDate,
                 SerialNumber = source.SerialNumber,
                 LicenseKey = source.LicenseKey,
+                LicenseKeyIsEncrypted = source.LicenseKeyIsEncrypted,
                 LicenseAccountEmail = source.LicenseAccountEmail,
                 LicensePortalUrl = source.LicensePortalUrl,
                 LicenseNotes = source.LicenseNotes,
@@ -433,6 +676,21 @@ public sealed class LicenseRequestFulfillmentService(AppDbContext context) : ILi
         {
             if (!line.CopySeatAssignments)
             {
+                if (line.ExpireSourcePackage)
+                {
+                    var seatsToRelease = await context.LicenseSeatAssignments
+                        .Where(x => x.PackageId == source.Id
+                            && x.Status == LicenseSeatAssignmentStatus.Active)
+                        .ToListAsync(cancellationToken);
+                    foreach (var seat in seatsToRelease)
+                    {
+                        seat.Status = LicenseSeatAssignmentStatus.Released;
+                        seat.ReleasedDate = DateOnly.FromDateTime(now);
+                        seat.UpdatedAt = now;
+                        seat.UpdatedBy = request.ActorUserName;
+                    }
+                }
+
                 continue;
             }
 
@@ -502,7 +760,51 @@ public sealed class LicenseRequestFulfillmentService(AppDbContext context) : ILi
         foreach (var line in request.Lines)
         {
             var item = items.First(x => x.Id == line.RequestItemId);
-            var package = packageByProduct[item.ProductId];
+            var package = packageByProductAndType[(item.ProductId, item.LicenseType)];
+
+            if (item.LicenseType == LicenseType.NamedUser)
+            {
+                var selectedUserIds = line.RequestItemUserIds!.ToHashSet();
+                foreach (var user in item.Users.Where(user => selectedUserIds.Contains(user.Id)))
+                {
+                    var assignment = new LicenseSeatAssignment
+                    {
+                        PackageId = package.Id,
+                        AdObjectId = user.AdObjectId,
+                        DisplayName = user.DisplayName
+                            ?? user.SamAccountName
+                            ?? user.UserPrincipalName
+                            ?? user.AdObjectId,
+                        SamAccountName = user.SamAccountName,
+                        UserPrincipalName = user.UserPrincipalName,
+                        Mail = user.Mail,
+                        Department = user.Department,
+                        Title = user.Title,
+                        AssignedDate = DateOnly.FromDateTime(now),
+                        Status = LicenseSeatAssignmentStatus.Active,
+                        SourceRequestItemId = item.Id,
+                        Note = "Created from named-user request fulfillment.",
+                        CreatedAt = now,
+                        CreatedBy = request.ActorUserName,
+                    };
+                    await context.LicenseSeatAssignments.AddAsync(assignment, cancellationToken);
+                    await WriteAuditAsync(
+                        context,
+                        "Assign",
+                        "LicenseSeatAssignment",
+                        assignment.Id,
+                        $"License seat assigned to {assignment.DisplayName} from request item {item.Id}.",
+                        request.ActorUserId,
+                        request.ActorUserName,
+                        request.ActorIpAddress,
+                        request.ActorUserAgent,
+                        cancellationToken);
+
+                    user.Status = LicenseRequestItemUserStatus.Fulfilled;
+                    user.UpdatedAt = now;
+                    user.UpdatedBy = request.ActorUserName;
+                }
+            }
 
             var fulfillment = new LicenseRequestItemFulfillment
             {
@@ -528,7 +830,7 @@ public sealed class LicenseRequestFulfillmentService(AppDbContext context) : ILi
             "LicensePurchase",
             purchase.Id,
             $"License purchase received {createdPackages.Count} package(s): "
-            + $"{packageByProduct.Count} from {request.Lines.Count} request line(s), "
+            + $"{packageByProductAndType.Count} from {request.Lines.Count} request line(s), "
             + $"{renewalPackages.Count} renewal(s), {manualLines.Count} manual.",
             request.ActorUserId,
             request.ActorUserName,
@@ -552,7 +854,7 @@ public sealed class LicenseRequestFulfillmentService(AppDbContext context) : ILi
         }
 
         await context.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
+        if (transaction is not null) await transaction.CommitAsync(cancellationToken);
 
         return new LicenseFulfillmentResult(
             true,

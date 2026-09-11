@@ -489,6 +489,65 @@ public sealed class LicenseRequestServiceTests
         Assert.Equal(LicenseRequestRules.DuplicateProductMessage, result.Message);
     }
 
+    [Fact]
+    public async Task CreateAsync_ConcurrentLicense_UsesExplicitQuantityWithoutUsers()
+    {
+        await using var context = CreateDbContext();
+        var productId = await SeedProductAsync(context);
+        var service = new LicenseRequestService(context);
+        var request = BuildCreateRequest(productId, ("user-ignored", "ignored")) with
+        {
+            EstimatedTotalCost = null,
+            Items =
+            [
+                new LicenseRequestItemInput(
+                    productId,
+                    125,
+                    "TRY",
+                    false,
+                    "Concurrent pool",
+                    LicenseRequestItemStatus.Pending,
+                    [],
+                    LicenseType.Concurrent,
+                    20),
+            ],
+        };
+
+        var result = await service.CreateAsync(request, CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        var item = Assert.Single(result.Request!.Items);
+        Assert.Equal(LicenseType.Concurrent, item.LicenseType);
+        Assert.Equal(20, item.RequestedQuantity);
+        Assert.Empty(item.Users);
+        Assert.Equal(2500m, item.EstimatedTotalCost);
+        Assert.Equal(2500m, result.Request.EstimatedTotalCost);
+    }
+
+    [Fact]
+    public async Task CreateAsync_NamedUserQuantityDifferentFromUserCount_ReturnsValidationFailure()
+    {
+        await using var context = CreateDbContext();
+        var productId = await SeedProductAsync(context);
+        var service = new LicenseRequestService(context);
+        var request = BuildCreateRequest(productId, ("user-1", "hakan")) with
+        {
+            Items =
+            [
+                BuildItem(productId, ("user-1", "hakan")) with
+                {
+                    LicenseType = LicenseType.NamedUser,
+                    RequestedQuantity = 2,
+                },
+            ],
+        };
+
+        var result = await service.CreateAsync(request, CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("match", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static UpdateLicenseRequestRequest BuildUpdateRequest(
         Guid requestId,
         Guid productId,

@@ -4,6 +4,7 @@ using ITAdmin.Application.Common.Security;
 using ITAdmin.Domain.Enums;
 using ITAdmin.Persistence.Context;
 using ITAdmin.Persistence.Services.LicenseManagement;
+using ITAdmin.UnitTests.Fakes;
 
 namespace ITAdmin.UnitTests.LicenseManagement;
 
@@ -15,9 +16,11 @@ public sealed class LicenseManagementServiceTests
         var codes = new[]
         {
             PermissionCodes.LicenseManagement.View,
+            PermissionCodes.LicenseManagement.ViewSensitiveData,
             PermissionCodes.LicenseManagement.ManageCatalog,
             PermissionCodes.LicenseManagement.ManagePurchases,
             PermissionCodes.LicenseManagement.ManageRequests,
+            PermissionCodes.LicenseManagement.FulfillRequests,
             PermissionCodes.LicenseManagement.ViewReports,
             PermissionCodes.LicenseManagement.ManageSettings
         };
@@ -196,7 +199,7 @@ public sealed class LicenseManagementServiceTests
         await using var context = CreateDbContext();
         var purchaseId = await SeedPurchaseAsync(context);
         var productId = await SeedProductAsync(context);
-        var service = new LicensePackageService(context);
+        var service = new LicensePackageService(context, new FakeSecretProtector());
 
         var result = await service.CreateAsync(
             new CreateLicensePackageRequest(
@@ -204,7 +207,7 @@ public sealed class LicenseManagementServiceTests
                 productId,
                 LicenseType.NamedUser,
                 10,
-                null, null, false, false, null, null, null, null, null, null, true,
+                null, null, false, false, null, "SERIAL", "LICENSE-KEY", null, null, null, true,
                 LicensePackageStatus.Active,
                 null, "tester", null, null),
             CancellationToken.None);
@@ -213,6 +216,37 @@ public sealed class LicenseManagementServiceTests
         Assert.NotNull(result.Package);
         Assert.Equal(LicenseType.NamedUser, result.Package.LicenseType);
         Assert.Equal(LicensePackageStatus.Active, result.Package.Status);
+        Assert.Equal("LICENSE-KEY", result.Package.LicenseKey);
+        var storedPackage = await context.LicensePackages.AsNoTracking().SingleAsync(x => x.Id == result.Package.Id);
+        Assert.True(storedPackage.LicenseKeyIsEncrypted);
+        Assert.Equal("protected:LICENSE-KEY", storedPackage.LicenseKey);
+    }
+
+    [Fact]
+    public async Task SecretBackfill_ProtectsLegacyLicenseKeysAndIsIdempotent()
+    {
+        await using var context = CreateDbContext();
+        var package = new Domain.Entities.LicensePackage
+        {
+            LicenseKey = "LEGACY-KEY",
+            LicenseKeyIsEncrypted = false,
+            Quantity = 1,
+            Status = LicensePackageStatus.Active,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+        };
+        context.LicensePackages.Add(package);
+        await context.SaveChangesAsync();
+        var service = new LicensePackageSecretBackfillService(context, new FakeSecretProtector());
+
+        var firstCount = await service.ProtectPlaintextLicenseKeysAsync();
+        var secondCount = await service.ProtectPlaintextLicenseKeysAsync();
+
+        Assert.Equal(1, firstCount);
+        Assert.Equal(0, secondCount);
+        var storedPackage = await context.LicensePackages.AsNoTracking().SingleAsync(x => x.Id == package.Id);
+        Assert.True(storedPackage.LicenseKeyIsEncrypted);
+        Assert.Equal("protected:LEGACY-KEY", storedPackage.LicenseKey);
     }
 
     [Fact]
@@ -264,7 +298,7 @@ public sealed class LicenseManagementServiceTests
         var purchaseId = await SeedPurchaseAsync(context);
         var productId = await SeedProductAsync(context);
 
-        var service = new LicensePackageService(context);
+        var service = new LicensePackageService(context, new FakeSecretProtector());
         var result = await service.CreateAsync(
             new CreateLicensePackageRequest(
                 purchaseId,
@@ -286,7 +320,7 @@ public sealed class LicenseManagementServiceTests
         await using var context = CreateDbContext();
         var productId = await SeedProductAsync(context);
 
-        var service = new LicensePackageService(context);
+        var service = new LicensePackageService(context, new FakeSecretProtector());
         var result = await service.CreateAsync(
             new CreateLicensePackageRequest(
                 Guid.NewGuid(),
@@ -308,7 +342,7 @@ public sealed class LicenseManagementServiceTests
         await using var context = CreateDbContext();
         var purchaseId = await SeedPurchaseAsync(context);
 
-        var service = new LicensePackageService(context);
+        var service = new LicensePackageService(context, new FakeSecretProtector());
         var result = await service.CreateAsync(
             new CreateLicensePackageRequest(
                 purchaseId,
@@ -357,7 +391,7 @@ public sealed class LicenseManagementServiceTests
             });
         await context.SaveChangesAsync();
 
-        var service = new LicensePackageService(context);
+        var service = new LicensePackageService(context, new FakeSecretProtector());
         var result = await service.GetListAsync(
             new LicensePackageListQuery(null, purchaseId1, null, null, null, 1, 20),
             CancellationToken.None);
@@ -419,7 +453,7 @@ public sealed class LicenseManagementServiceTests
             });
         await context.SaveChangesAsync();
 
-        var service = new LicensePackageService(context);
+        var service = new LicensePackageService(context, new FakeSecretProtector());
         var list = await service.GetListAsync(
             new LicensePackageListQuery(null, purchaseId, null, null, null, 1, 20),
             CancellationToken.None);
@@ -446,6 +480,100 @@ public sealed class LicenseManagementServiceTests
         Assert.Equal(60, settings.DefaultRenewalReminderDays);
         Assert.Null(settings.DefaultRenewalRecipients);
         Assert.Null(settings.DefaultRenewalCcRecipients);
+    }
+
+    [Fact]
+    public async Task UpdatePurchaseAsync_PersistsStatusWithTheFormChanges()
+    {
+        await using var context = CreateDbContext();
+        var purchaseId = await SeedPurchaseAsync(context);
+        var service = new LicensePurchaseService(context);
+
+        var result = await service.UpdateAsync(
+            new UpdateLicensePurchaseRequest(
+                Id: purchaseId,
+                PurchaseType: LicensePurchaseType.DirectPurchase,
+                Title: "Updated Purchase",
+                Description: null,
+                PurchaseDate: null,
+                TenderNumber: null,
+                TenderDate: null,
+                DirectPurchaseNumber: null,
+                DmoOrderNumber: null,
+                EbysNumber: null,
+                EbysDate: null,
+                InvoiceNumber: null,
+                InvoiceDate: null,
+                ContractNumber: null,
+                ContractStartDate: null,
+                ContractEndDate: null,
+                SupplierCompanyId: null,
+                SupportCompanyId: null,
+                ActualTotalCost: null,
+                Currency: null,
+                VatIncluded: null,
+                Notes: null,
+                Status: LicensePurchaseStatus.Archived,
+                ActorUserId: null,
+                ActorUserName: "tester",
+                ActorIpAddress: null,
+                ActorUserAgent: null),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(LicensePurchaseStatus.Archived, result.Purchase!.Status);
+        Assert.Equal(LicensePurchaseStatus.Archived, (await context.LicensePurchases.FindAsync(purchaseId))!.Status);
+    }
+
+    [Fact]
+    public async Task UpdatePackageAsync_PersistsStatusWithTheFormChanges()
+    {
+        await using var context = CreateDbContext();
+        var purchaseId = await SeedPurchaseAsync(context);
+        var productId = await SeedProductAsync(context);
+        var package = new Domain.Entities.LicensePackage
+        {
+            PurchaseId = purchaseId,
+            ProductId = productId,
+            LicenseType = LicenseType.NamedUser,
+            Quantity = 5,
+            IsActive = true,
+            Status = LicensePackageStatus.Active,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "seed",
+        };
+        context.LicensePackages.Add(package);
+        await context.SaveChangesAsync();
+        var service = new LicensePackageService(context, new FakeSecretProtector());
+
+        var result = await service.UpdateAsync(
+            new UpdateLicensePackageRequest(
+                Id: package.Id,
+                PurchaseId: purchaseId,
+                ProductId: productId,
+                LicenseType: LicenseType.NamedUser,
+                Quantity: 5,
+                StartDate: null,
+                EndDate: null,
+                IsPerpetual: false,
+                RenewalRequired: false,
+                RenewalDate: null,
+                SerialNumber: null,
+                LicenseKey: null,
+                LicenseAccountEmail: null,
+                LicensePortalUrl: null,
+                LicenseNotes: null,
+                IsActive: false,
+                Status: LicensePackageStatus.Archived,
+                ActorUserId: null,
+                ActorUserName: "tester",
+                ActorIpAddress: null,
+                ActorUserAgent: null),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(LicensePackageStatus.Archived, result.Package!.Status);
+        Assert.Equal(LicensePackageStatus.Archived, (await context.LicensePackages.FindAsync(package.Id))!.Status);
     }
 
     [Fact]

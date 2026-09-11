@@ -60,10 +60,11 @@ export function LicenseOuPicker({
   const items = ouQuery.data?.items ?? [];
 
   const triggerLabel = value ? value.displayName : placeholder ?? t("licenseManagement:requests.placeholders.selectUnit");
+  const controlId = "license-requester-unit";
 
   return (
     <div className="space-y-2">
-      {label ? <Label>{label}</Label> : null}
+      {label ? <Label htmlFor={controlId}>{label}</Label> : null}
 
       {value ? (
         <div className="flex items-start justify-between gap-3 rounded-lg border bg-muted/20 p-3">
@@ -74,6 +75,7 @@ export function LicenseOuPicker({
             </p>
           </div>
           <Button
+            id={controlId}
             type="button"
             variant="ghost"
             size="icon"
@@ -90,6 +92,7 @@ export function LicenseOuPicker({
           <div className={AD_COMBOBOX_TRIGGER_WRAPPER_CLASSNAME}>
             <PopoverTrigger asChild>
               <button
+                id={controlId}
                 type="button"
                 disabled={disabled}
                 className={AD_COMBOBOX_TRIGGER_BUTTON_CLASSNAME}
@@ -102,6 +105,7 @@ export function LicenseOuPicker({
           <PopoverContent {...AD_COMBOBOX_POPOVER_CONTENT_PROPS}>
             <div className="space-y-2">
               <Input
+                aria-label={t("licenseManagement:requests.placeholders.searchUnit")}
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder={t("licenseManagement:requests.placeholders.searchUnit")}

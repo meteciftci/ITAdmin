@@ -9,5 +9,10 @@ public class LicenseManagementSettings : AuditableEntity
     public int DefaultRenewalReminderDays { get; set; } = 60;
     public string? DefaultRenewalRecipients { get; set; }
     public string? DefaultRenewalCcRecipients { get; set; }
+    public DateTime? LastRenewalReminderRunAt { get; set; }
+    public string? LastRenewalReminderStatus { get; set; }
+    public int LastRenewalReminderDueCount { get; set; }
+    public int LastRenewalReminderQueuedCount { get; set; }
+    public string? LastRenewalReminderMessage { get; set; }
     public string? Notes { get; set; }
 }

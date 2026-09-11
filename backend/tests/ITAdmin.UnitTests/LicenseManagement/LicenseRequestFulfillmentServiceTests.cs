@@ -90,6 +90,31 @@ public sealed class LicenseRequestFulfillmentServiceTests
     }
 
     [Fact]
+    public async Task Triage_NamedUser_ApprovesOnlyTheExplicitlySelectedUsers()
+    {
+        await using var context = CreateDbContext();
+        var product = await SeedProductAsync(context);
+        var (item, users) = await SeedNamedUserRequestItemAsync(
+            context, product, requested: 3, approved: null, LicenseRequestItemStatus.Pending);
+        var service = new LicenseRequestFulfillmentService(context);
+
+        var result = await service.TriageAsync(
+            new TriageLicenseRequestItemsRequest(
+                [new TriageLicenseRequestItemInput(
+                    item, LicenseRequestItemStatus.Approved, 2, [users[0], users[2]])],
+                null, "tester", null, null),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        var statuses = await context.LicenseRequestItemUsers.AsNoTracking()
+            .Where(x => x.RequestItemId == item)
+            .ToDictionaryAsync(x => x.Id, x => x.Status);
+        Assert.Equal(LicenseRequestItemUserStatus.Approved, statuses[users[0]]);
+        Assert.Equal(LicenseRequestItemUserStatus.Rejected, statuses[users[1]]);
+        Assert.Equal(LicenseRequestItemUserStatus.Approved, statuses[users[2]]);
+    }
+
+    [Fact]
     public async Task Convert_NewPurchase_CreatesDraftPurchasePackageAndFulfillmentLink()
     {
         await using var context = CreateDbContext();
@@ -114,6 +139,106 @@ public sealed class LicenseRequestFulfillmentServiceTests
     }
 
     [Fact]
+    public async Task Convert_NamedUserPartialFulfillment_CreatesSeatsAndTracksExactUsers()
+    {
+        await using var context = CreateDbContext();
+        var product = await SeedProductAsync(context);
+        var (item, users) = await SeedNamedUserRequestItemAsync(
+            context, product, requested: 2, approved: 2, LicenseRequestItemStatus.Approved);
+        var service = new LicenseRequestFulfillmentService(context);
+
+        var first = await service.ConvertToPurchaseAsync(
+            BuildNamedUserConvert(product, item, [users[1]]), CancellationToken.None);
+
+        Assert.True(first.IsSuccess);
+        var afterFirst = await context.LicenseRequestItems.AsNoTracking().SingleAsync(x => x.Id == item);
+        Assert.Equal(1, afterFirst.FulfilledQuantity);
+        Assert.Equal(LicenseRequestItemStatus.PartiallyFulfilled, afterFirst.Status);
+        var userStatuses = await context.LicenseRequestItemUsers.AsNoTracking()
+            .Where(x => x.RequestItemId == item)
+            .ToDictionaryAsync(x => x.Id, x => x.Status);
+        Assert.Equal(LicenseRequestItemUserStatus.Approved, userStatuses[users[0]]);
+        Assert.Equal(LicenseRequestItemUserStatus.Fulfilled, userStatuses[users[1]]);
+        var firstSeat = await context.LicenseSeatAssignments.AsNoTracking().SingleAsync();
+        Assert.Equal("user-2", firstSeat.AdObjectId);
+        Assert.Equal(item, firstSeat.SourceRequestItemId);
+
+        var repeated = await service.ConvertToPurchaseAsync(
+            BuildNamedUserConvert(product, item, [users[1]]), CancellationToken.None);
+        Assert.False(repeated.IsSuccess);
+        Assert.Single(context.LicensePurchases);
+        Assert.Single(context.LicensePackages);
+        Assert.Single(context.LicenseSeatAssignments);
+
+        var second = await service.ConvertToPurchaseAsync(
+            BuildNamedUserConvert(product, item, [users[0]]), CancellationToken.None);
+
+        Assert.True(second.IsSuccess);
+        var afterSecond = await context.LicenseRequestItems.AsNoTracking().SingleAsync(x => x.Id == item);
+        Assert.Equal(LicenseRequestItemStatus.Fulfilled, afterSecond.Status);
+        Assert.Equal(2, await context.LicenseSeatAssignments.CountAsync());
+        Assert.All(
+            await context.LicenseRequestItemUsers.AsNoTracking().Where(x => x.RequestItemId == item).ToListAsync(),
+            user => Assert.Equal(LicenseRequestItemUserStatus.Fulfilled, user.Status));
+    }
+
+    [Fact]
+    public async Task Convert_NamedUserWithoutExactApprovedUsers_FailsWithoutWrites()
+    {
+        await using var context = CreateDbContext();
+        var product = await SeedProductAsync(context);
+        var (item, users) = await SeedNamedUserRequestItemAsync(
+            context, product, requested: 2, approved: 2, LicenseRequestItemStatus.Approved);
+        var service = new LicenseRequestFulfillmentService(context);
+
+        var missingUsers = await service.ConvertToPurchaseAsync(
+            BuildNamedUserConvert(product, item, []), CancellationToken.None);
+        var foreignUser = await service.ConvertToPurchaseAsync(
+            BuildNamedUserConvert(product, item, [Guid.NewGuid()]), CancellationToken.None);
+
+        Assert.False(missingUsers.IsSuccess);
+        Assert.False(foreignUser.IsSuccess);
+        Assert.Empty(context.LicensePurchases);
+        Assert.Empty(context.LicensePackages);
+        Assert.Empty(context.LicenseSeatAssignments);
+        Assert.All(
+            await context.LicenseRequestItemUsers.AsNoTracking().Where(x => users.Contains(x.Id)).ToListAsync(),
+            user => Assert.Equal(LicenseRequestItemUserStatus.Approved, user.Status));
+    }
+
+    [Fact]
+    public async Task Convert_SameNamedUserAcrossRequestsForOnePackage_IsRejected()
+    {
+        await using var context = CreateDbContext();
+        var product = await SeedProductAsync(context);
+        var (firstItem, firstUsers) = await SeedNamedUserRequestItemAsync(
+            context, product, requested: 1, approved: 1, LicenseRequestItemStatus.Approved);
+        var (secondItem, secondUsers) = await SeedNamedUserRequestItemAsync(
+            context, product, requested: 1, approved: 1, LicenseRequestItemStatus.Approved);
+        var service = new LicenseRequestFulfillmentService(context);
+
+        var result = await service.ConvertToPurchaseAsync(
+            new ConvertLicenseRequestItemsRequest(
+                null,
+                new ConvertFulfillmentNewPurchaseInput(
+                    LicensePurchaseType.DirectPurchase, "Duplicate holder", null,
+                    new DateOnly(2026, 7, 1), null, null, null, "TRY", false, null),
+                [
+                    new ConvertFulfillmentLineInput(firstItem, 1, [firstUsers.Single()]),
+                    new ConvertFulfillmentLineInput(secondItem, 1, [secondUsers.Single()]),
+                ],
+                [new ConvertFulfillmentPackageDefaultsInput(
+                    product, LicenseType.NamedUser, null, null, false)],
+                null, "tester", null, null),
+            CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Empty(context.LicensePurchases);
+        Assert.Empty(context.LicensePackages);
+        Assert.Empty(context.LicenseSeatAssignments);
+    }
+
+    [Fact]
     public async Task Convert_AggregatesSameProductAcrossRequestsIntoOnePackage()
     {
         await using var context = CreateDbContext();
@@ -129,6 +254,45 @@ public sealed class LicenseRequestFulfillmentServiceTests
         var package = await context.LicensePackages.AsNoTracking().SingleAsync();
         Assert.Equal(7, package.Quantity);
         Assert.Equal(2, await context.LicenseRequestItemFulfillments.CountAsync());
+    }
+
+    [Fact]
+    public async Task Convert_SameProductWithDifferentLicenseTypes_CreatesSeparatePackages()
+    {
+        await using var context = CreateDbContext();
+        var product = await SeedProductAsync(context);
+        var concurrentItem = await SeedRequestItemAsync(
+            context, product, requested: 5, approved: 5,
+            status: LicenseRequestItemStatus.Approved,
+            licenseType: LicenseType.Concurrent);
+        var serverItem = await SeedRequestItemAsync(
+            context, product, requested: 2, approved: 2,
+            status: LicenseRequestItemStatus.Approved,
+            licenseType: LicenseType.ServerBased);
+        var service = new LicenseRequestFulfillmentService(context);
+
+        var result = await service.ConvertToPurchaseAsync(
+            new ConvertLicenseRequestItemsRequest(
+                null,
+                new ConvertFulfillmentNewPurchaseInput(
+                    LicensePurchaseType.DirectPurchase, "Mixed allocation", null, null,
+                    null, null, null, "TRY", false, null),
+                [
+                    new ConvertFulfillmentLineInput(concurrentItem, 5),
+                    new ConvertFulfillmentLineInput(serverItem, 2),
+                ],
+                [
+                    new ConvertFulfillmentPackageDefaultsInput(product, LicenseType.Concurrent, null, null, false),
+                    new ConvertFulfillmentPackageDefaultsInput(product, LicenseType.ServerBased, null, null, false),
+                ],
+                null, "tester", null, null),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        var packages = await context.LicensePackages.AsNoTracking().OrderBy(x => x.LicenseType).ToListAsync();
+        Assert.Equal(2, packages.Count);
+        Assert.Contains(packages, x => x.LicenseType == LicenseType.Concurrent && x.Quantity == 5);
+        Assert.Contains(packages, x => x.LicenseType == LicenseType.ServerBased && x.Quantity == 2);
     }
 
     [Fact]
@@ -250,7 +414,7 @@ public sealed class LicenseRequestFulfillmentServiceTests
         {
             PurchaseId = sourcePurchase.Id,
             ProductId = product,
-            LicenseType = LicenseType.Subscription,
+            LicenseType = LicenseType.NamedUser,
             Quantity = 5,
             SerialNumber = "SER-1",
             IsActive = true,
@@ -353,6 +517,48 @@ public sealed class LicenseRequestFulfillmentServiceTests
             [new ConvertFulfillmentPackageDefaultsInput(productId, LicenseType.Subscription, null, null, false)],
             null, "tester", null, null);
 
+    private static ConvertLicenseRequestItemsRequest BuildNamedUserConvert(
+        Guid productId,
+        Guid itemId,
+        IReadOnlyList<Guid> userIds) =>
+        new(
+            null,
+            new ConvertFulfillmentNewPurchaseInput(
+                LicensePurchaseType.DirectPurchase, "Named-user fulfillment", null,
+                new DateOnly(2026, 7, 1), null, null, null, "TRY", false, null),
+            [new ConvertFulfillmentLineInput(itemId, userIds.Count, userIds)],
+            [new ConvertFulfillmentPackageDefaultsInput(productId, LicenseType.NamedUser, null, null, false)],
+            null, "tester", null, null);
+
+    private static async Task<(Guid ItemId, List<Guid> UserIds)> SeedNamedUserRequestItemAsync(
+        AppDbContext context,
+        Guid productId,
+        int requested,
+        int? approved,
+        LicenseRequestItemStatus status)
+    {
+        var itemId = await SeedRequestItemAsync(
+            context, productId, requested, approved, status, licenseType: LicenseType.NamedUser);
+        var users = Enumerable.Range(1, requested)
+            .Select(index => new LicenseRequestItemUser
+            {
+                RequestItemId = itemId,
+                AdObjectId = $"user-{index}",
+                DisplayName = $"User {index}",
+                UserPrincipalName = $"user-{index}@test.local",
+                Mail = $"user-{index}@test.local",
+                Status = approved.HasValue
+                    ? LicenseRequestItemUserStatus.Approved
+                    : LicenseRequestItemUserStatus.Pending,
+                CreatedAt = DateTime.UtcNow.AddSeconds(index),
+                CreatedBy = "seed",
+            })
+            .ToList();
+        context.LicenseRequestItemUsers.AddRange(users);
+        await context.SaveChangesAsync();
+        return (itemId, users.Select(x => x.Id).ToList());
+    }
+
     private static async Task<Guid> SeedProductAsync(AppDbContext context, string name = "Photoshop", bool isActive = true)
     {
         var category = new LicenseProductCategory
@@ -385,7 +591,8 @@ public sealed class LicenseRequestFulfillmentServiceTests
         int requested,
         int? approved,
         LicenseRequestItemStatus status,
-        int fulfilled = 0)
+        int fulfilled = 0,
+        LicenseType licenseType = LicenseType.Subscription)
     {
         var request = new LicenseRequest
         {
@@ -403,6 +610,7 @@ public sealed class LicenseRequestFulfillmentServiceTests
                 new LicenseRequestItem
                 {
                     ProductId = productId,
+                    LicenseType = licenseType,
                     RequestedQuantity = requested,
                     ApprovedQuantity = approved,
                     FulfilledQuantity = fulfilled,

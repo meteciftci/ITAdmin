@@ -39,12 +39,23 @@ public sealed class LicenseFulfillmentController(
                 x.ProductId,
                 x.ProductName,
                 x.ProductBrand,
+                x.LicenseType,
                 x.RequestedQuantity,
                 x.ApprovedQuantity,
                 x.FulfilledQuantity,
                 x.RemainingQuantity,
                 x.ItemStatus,
-                x.IsFulfillable)).ToList(),
+                x.IsFulfillable,
+                x.Users.Select(user => new LicenseFulfillmentCandidateUserResponse(
+                    user.Id,
+                    user.AdObjectId,
+                    user.SamAccountName,
+                    user.UserPrincipalName,
+                    user.DisplayName,
+                    user.Department,
+                    user.Title,
+                    user.Mail,
+                    user.Status)).ToList())).ToList(),
             result.PageNumber,
             result.PageSize,
             result.TotalCount,
@@ -60,7 +71,8 @@ public sealed class LicenseFulfillmentController(
         var result = await fulfillmentService.TriageAsync(
             new AppModels.TriageLicenseRequestItemsRequest(
                 request.Items
-                    .Select(x => new AppModels.TriageLicenseRequestItemInput(x.RequestItemId, x.Status, x.ApprovedQuantity))
+                    .Select(x => new AppModels.TriageLicenseRequestItemInput(
+                        x.RequestItemId, x.Status, x.ApprovedQuantity, x.ApprovedUserIds))
                     .ToList(),
                 LicenseManagementActorResolver.ResolveActorUserId(User),
                 LicenseManagementActorResolver.ResolveActorUserName(User),
@@ -96,7 +108,8 @@ public sealed class LicenseFulfillmentController(
                         request.NewPurchase.VatIncluded,
                         request.NewPurchase.Notes),
                 request.Lines
-                    .Select(x => new AppModels.ConvertFulfillmentLineInput(x.RequestItemId, x.FulfillQuantity))
+                    .Select(x => new AppModels.ConvertFulfillmentLineInput(
+                        x.RequestItemId, x.FulfillQuantity, x.RequestItemUserIds))
                     .ToList(),
                 request.PackageDefaults
                     .Select(x => new AppModels.ConvertFulfillmentPackageDefaultsInput(
@@ -109,7 +122,8 @@ public sealed class LicenseFulfillmentController(
                 (request.RenewalLines ?? [])
                     .Select(x => new AppModels.ConvertFulfillmentRenewalLineInput(
                         x.SourcePackageId, x.Quantity, x.LicenseType, x.StartDate, x.EndDate,
-                        x.IsPerpetual, x.ExpireSourcePackage, x.CopySeatAssignments))
+                        x.IsPerpetual, x.ExpireSourcePackage, x.CopySeatAssignments,
+                        x.RenewalRequired, x.RenewalDate))
                     .ToList(),
                 (request.ManualLines ?? [])
                     .Select(x => new AppModels.ConvertFulfillmentManualLineInput(

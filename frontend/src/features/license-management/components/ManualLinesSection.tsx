@@ -119,8 +119,9 @@ export function ManualLinesSection({ rows, onChange, products, dateLocale, disab
             </div>
 
             <div className="space-y-2">
-              <Label>{t("licenseManagement:requests.fulfillment.manual.startDate")}</Label>
+              <Label htmlFor={`manual-start-date-${row.key}`}>{t("licenseManagement:requests.fulfillment.manual.startDate")}</Label>
               <DatePicker
+                id={`manual-start-date-${row.key}`}
                 value={row.startDate}
                 onChange={(value) => patchRow(row.key, { startDate: value })}
                 placeholder={t("licenseManagement:requests.fulfillment.manual.startDate")}
@@ -130,8 +131,9 @@ export function ManualLinesSection({ rows, onChange, products, dateLocale, disab
               />
             </div>
             <div className="space-y-2">
-              <Label>{t("licenseManagement:requests.fulfillment.manual.endDate")}</Label>
+              <Label htmlFor={`manual-end-date-${row.key}`}>{t("licenseManagement:requests.fulfillment.manual.endDate")}</Label>
               <DatePicker
+                id={`manual-end-date-${row.key}`}
                 value={row.endDate}
                 onChange={(value) => patchRow(row.key, { endDate: value })}
                 placeholder={t("licenseManagement:requests.fulfillment.manual.endDate")}

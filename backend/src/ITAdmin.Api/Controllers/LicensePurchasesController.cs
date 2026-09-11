@@ -141,6 +141,7 @@ public sealed class LicensePurchasesController(ILicensePurchaseService purchaseS
                 request.Currency,
                 request.VatIncluded,
                 request.Notes,
+                request.Status,
                 LicenseManagementActorResolver.ResolveActorUserId(User),
                 LicenseManagementActorResolver.ResolveActorUserName(User),
                 LicenseManagementActorResolver.ResolveIpAddress(this),

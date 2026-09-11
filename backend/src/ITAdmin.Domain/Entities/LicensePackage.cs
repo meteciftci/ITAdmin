@@ -16,6 +16,7 @@ public class LicensePackage : AuditableEntity
     public DateOnly? RenewalDate { get; set; }
     public string? SerialNumber { get; set; }
     public string? LicenseKey { get; set; }
+    public bool LicenseKeyIsEncrypted { get; set; }
     public string? LicenseAccountEmail { get; set; }
     public string? LicensePortalUrl { get; set; }
     public string? LicenseNotes { get; set; }

@@ -5,6 +5,7 @@ using ITAdmin.Api.Contracts.Common;
 using ITAdmin.Api.Contracts.LicenseManagement;
 using ITAdmin.Application.Abstractions.Services;
 using ITAdmin.Application.Common.Constants;
+using ITAdmin.Application.Common.Security;
 using ITAdmin.Domain.Enums;
 using AppModels = ITAdmin.Application.Common.Models.LicenseManagement;
 
@@ -65,7 +66,7 @@ public sealed class LicensePackagesController(ILicensePackageService packageServ
             return NotFound(new { message = "License package was not found." });
         }
 
-        return Ok(MapDetail(package));
+        return Ok(MapDetail(package, CanViewSensitiveData()));
     }
 
     [HttpPost]
@@ -103,7 +104,7 @@ public sealed class LicensePackagesController(ILicensePackageService packageServ
             return BadRequest(new { message = result.Message });
         }
 
-        return CreatedAtAction(nameof(GetPackageById), new { id = result.Package.Id }, MapDetail(result.Package));
+        return CreatedAtAction(nameof(GetPackageById), new { id = result.Package.Id }, MapDetail(result.Package, includeSensitiveData: true));
     }
 
     [HttpPut("{id:guid}")]
@@ -131,6 +132,7 @@ public sealed class LicensePackagesController(ILicensePackageService packageServ
                 request.LicensePortalUrl,
                 request.LicenseNotes,
                 request.IsActive,
+                request.Status,
                 LicenseManagementActorResolver.ResolveActorUserId(User),
                 LicenseManagementActorResolver.ResolveActorUserName(User),
                 LicenseManagementActorResolver.ResolveIpAddress(this),
@@ -142,7 +144,7 @@ public sealed class LicensePackagesController(ILicensePackageService packageServ
             return BadRequest(new { message = result.Message });
         }
 
-        return Ok(MapDetail(result.Package));
+        return Ok(MapDetail(result.Package, includeSensitiveData: true));
     }
 
     [HttpPatch("{id:guid}/status")]
@@ -167,10 +169,17 @@ public sealed class LicensePackagesController(ILicensePackageService packageServ
             return BadRequest(new { message = result.Message });
         }
 
-        return Ok(MapDetail(result.Package));
+        return Ok(MapDetail(result.Package, includeSensitiveData: true));
     }
 
-    private static LicensePackageDetailResponse MapDetail(AppModels.LicensePackageDetail package) =>
+    private bool CanViewSensitiveData() =>
+        User.IsInRole(SystemRoles.SuperAdmin)
+        || User.HasClaim(CustomClaimTypes.Permission, LicenseManagementPermissions.ViewSensitiveData)
+        || User.HasClaim(CustomClaimTypes.Permission, LicenseManagementPermissions.ManagePurchases);
+
+    private static LicensePackageDetailResponse MapDetail(
+        AppModels.LicensePackageDetail package,
+        bool includeSensitiveData) =>
         new(
             package.Id,
             package.PurchaseId,
@@ -186,15 +195,16 @@ public sealed class LicensePackagesController(ILicensePackageService packageServ
             package.IsPerpetual,
             package.RenewalRequired,
             package.RenewalDate,
-            package.SerialNumber,
-            package.LicenseKey,
-            package.LicenseAccountEmail,
-            package.LicensePortalUrl,
-            package.LicenseNotes,
+            includeSensitiveData ? package.SerialNumber : null,
+            includeSensitiveData ? package.LicenseKey : null,
+            includeSensitiveData ? package.LicenseAccountEmail : null,
+            includeSensitiveData ? package.LicensePortalUrl : null,
+            includeSensitiveData ? package.LicenseNotes : null,
             package.IsActive,
             package.Status,
             package.CreatedAt,
             package.CreatedBy,
             package.UpdatedAt,
-            package.UpdatedBy);
+            package.UpdatedBy,
+            includeSensitiveData);
 }

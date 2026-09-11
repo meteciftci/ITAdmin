@@ -30,7 +30,7 @@ import { useAdManagementModuleStatus } from "@/features/ad-management/hooks/useA
 import {
   copyLicenseSeatsFromPackage,
   getLicensePackageSeatAssignments,
-  getLicensePackages,
+  getAllLicensePackages,
   releaseLicenseSeat,
   transferLicenseSeat,
 } from "@/features/license-management/api";
@@ -433,11 +433,11 @@ function CopySeatsDialog({
 
   const packagesQuery = useQuery({
     queryKey: ["license-management", "packages", "by-product", productId],
-    queryFn: () => getLicensePackages({ productId, pageSize: 100 }),
+    queryFn: () => getAllLicensePackages({ productId }),
   });
 
   const options = useMemo(
-    () => (packagesQuery.data?.items ?? []).filter((item) => item.id !== targetPackageId),
+    () => (packagesQuery.data ?? []).filter((item) => item.id !== targetPackageId),
     [packagesQuery.data, targetPackageId],
   );
 

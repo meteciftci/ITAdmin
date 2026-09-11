@@ -64,6 +64,7 @@ public sealed class LicenseRequestConfiguration : IEntityTypeConfiguration<Licen
         builder.Property(x => x.UpdatedBy).HasColumnName("updated_by").HasMaxLength(200);
 
         builder.HasIndex(x => x.Status);
+        builder.HasIndex(x => new { x.Status, x.RequestDate });
         builder.HasIndex(x => x.RequestDate);
         builder.HasIndex(x => x.RequestSource);
         builder.HasIndex(x => x.RequesterUnitObjectGuid);

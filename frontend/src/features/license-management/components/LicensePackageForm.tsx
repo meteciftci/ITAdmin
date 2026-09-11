@@ -26,6 +26,10 @@ import { formatLicensedProductLabel } from "@/features/license-management/produc
 import { validatePackageForm } from "@/features/license-management/form-validation";
 import type { LicensePackageDetail, LicensePackageStatus, LicenseType } from "@/features/license-management/types";
 import { getLicenseManagementApiErrorMessage } from "@/features/license-management/license-api-error";
+import {
+  getAllowedPackageStatuses,
+  isPackageActive,
+} from "@/features/license-management/license-lifecycle";
 
 type Props = {
   mode: "create" | "edit";
@@ -57,10 +61,10 @@ export function LicensePackageForm({ mode, packageItem, initialPurchaseId, onCan
   const [renewalDate, setRenewalDate] = useState<string | null>(null);
   const [serialNumber, setSerialNumber] = useState("");
   const [licenseKey, setLicenseKey] = useState("");
+  const [showLicenseKey, setShowLicenseKey] = useState(false);
   const [licenseAccountEmail, setLicenseAccountEmail] = useState("");
   const [licensePortalUrl, setLicensePortalUrl] = useState("");
   const [licenseNotes, setLicenseNotes] = useState("");
-  const [isActive, setIsActive] = useState(true);
   const [status, setStatus] = useState<LicensePackageStatus>("Active");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -86,18 +90,27 @@ export function LicensePackageForm({ mode, packageItem, initialPurchaseId, onCan
     setRenewalDate(toDateOnly(packageItem?.renewalDate));
     setSerialNumber(packageItem?.serialNumber ?? "");
     setLicenseKey(packageItem?.licenseKey ?? "");
+    setShowLicenseKey(false);
     setLicenseAccountEmail(packageItem?.licenseAccountEmail ?? "");
     setLicensePortalUrl(packageItem?.licensePortalUrl ?? "");
     setLicenseNotes(packageItem?.licenseNotes ?? "");
-    setIsActive(packageItem?.isActive ?? true);
     setStatus(packageItem?.status ?? "Active");
     setErrorMessage(null);
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [packageItem, initialPurchaseId]);
 
   const validationKey = useMemo(
-    () => validatePackageForm(purchaseId, productId, Number(quantity)),
-    [purchaseId, productId, quantity],
+    () => validatePackageForm(
+      purchaseId,
+      productId,
+      Number(quantity),
+      startDate,
+      endDate,
+      isPerpetual,
+      renewalRequired,
+      renewalDate,
+    ),
+    [endDate, isPerpetual, productId, purchaseId, quantity, renewalDate, renewalRequired, startDate],
   );
 
   const showEndDateWarning = !isPerpetual && !endDate;
@@ -110,16 +123,16 @@ export function LicensePackageForm({ mode, packageItem, initialPurchaseId, onCan
         licenseType,
         quantity: Number(quantity),
         startDate,
-        endDate,
+        endDate: isPerpetual ? null : endDate,
         isPerpetual,
         renewalRequired,
-        renewalDate,
+        renewalDate: renewalRequired ? renewalDate : null,
         serialNumber: serialNumber || null,
         licenseKey: licenseKey || null,
         licenseAccountEmail: licenseAccountEmail || null,
         licensePortalUrl: licensePortalUrl || null,
         licenseNotes: licenseNotes || null,
-        isActive,
+        isActive: isPackageActive(status),
         status,
       };
       if (mode === "edit" && packageItem) {
@@ -143,8 +156,17 @@ export function LicensePackageForm({ mode, packageItem, initialPurchaseId, onCan
   });
 
   return (
-    <div className="space-y-4">
+    <form
+      className="space-y-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!validationKey && !mutation.isPending) mutation.mutate();
+      }}
+    >
       {errorMessage ? <FormError message={errorMessage} /> : null}
+      {purchasesQuery.isError || productsQuery.isError ? (
+        <FormError message={t("common:messages.operationFailed")} />
+      ) : null}
       {validationKey ? <FormError message={t(`licenseManagement:messages.${validationKey}`)} /> : null}
       {showEndDateWarning ? (
         <p className="text-sm text-amber-600 dark:text-amber-400">
@@ -153,17 +175,29 @@ export function LicensePackageForm({ mode, packageItem, initialPurchaseId, onCan
       ) : null}
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
-          <Label>{t("licenseManagement:form.purchase")}</Label>
-          <Select value={purchaseId} onChange={(e) => setPurchaseId(e.target.value)}>
+          <Label htmlFor="package-purchase">{t("licenseManagement:form.purchase")}</Label>
+          <Select
+            id="package-purchase"
+            value={purchaseId}
+            disabled={purchasesQuery.isLoading || purchasesQuery.isError}
+            onChange={(e) => setPurchaseId(e.target.value)}
+          >
             <option value="">{t("licenseManagement:form.selectPurchase")}</option>
-            {(purchasesQuery.data ?? []).map((item) => (
+            {(purchasesQuery.data ?? [])
+              .filter((item) => item.status === "Draft" || item.status === "Active")
+              .map((item) => (
               <option key={item.id} value={item.id}>{item.title}</option>
-            ))}
+              ))}
           </Select>
         </div>
         <div className="space-y-2">
-          <Label>{t("licenseManagement:form.product")}</Label>
-          <Select value={productId} onChange={(e) => setProductId(e.target.value)}>
+          <Label htmlFor="package-product">{t("licenseManagement:form.product")}</Label>
+          <Select
+            id="package-product"
+            value={productId}
+            disabled={productsQuery.isLoading || productsQuery.isError}
+            onChange={(e) => setProductId(e.target.value)}
+          >
             <option value="">{t("licenseManagement:form.selectProduct")}</option>
             {(productsQuery.data ?? []).map((item) => (
               <option key={item.id} value={item.id}>{formatLicensedProductLabel(item)}</option>
@@ -171,20 +205,21 @@ export function LicensePackageForm({ mode, packageItem, initialPurchaseId, onCan
           </Select>
         </div>
         <div className="space-y-2">
-          <Label>{t("licenseManagement:form.licenseType")}</Label>
-          <Select value={licenseType} onChange={(e) => setLicenseType(e.target.value as LicenseType)}>
+          <Label htmlFor="package-license-type">{t("licenseManagement:form.licenseType")}</Label>
+          <Select id="package-license-type" value={licenseType} onChange={(e) => setLicenseType(e.target.value as LicenseType)}>
             {LICENSE_TYPES.map((type) => (
               <option key={type} value={type}>{getLicenseTypeLabel(t, type)}</option>
             ))}
           </Select>
         </div>
         <div className="space-y-2">
-          <Label>{t("licenseManagement:form.quantity")}</Label>
-          <Input type="number" min="1" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+          <Label htmlFor="package-quantity">{t("licenseManagement:form.quantity")}</Label>
+          <Input id="package-quantity" type="number" min="1" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
         </div>
         <div className="space-y-2">
-          <Label>{t("licenseManagement:form.startDate")}</Label>
+          <Label htmlFor="package-start-date">{t("licenseManagement:form.startDate")}</Label>
           <DatePicker
+            id="package-start-date"
             value={startDate}
             onChange={setStartDate}
             placeholder={t("licenseManagement:form.startDate")}
@@ -193,8 +228,9 @@ export function LicensePackageForm({ mode, packageItem, initialPurchaseId, onCan
           />
         </div>
         <div className="space-y-2">
-          <Label>{t("licenseManagement:form.endDate")}</Label>
+          <Label htmlFor="package-end-date">{t("licenseManagement:form.endDate")}</Label>
           <DatePicker
+            id="package-end-date"
             value={endDate}
             onChange={setEndDate}
             placeholder={t("licenseManagement:form.endDate")}
@@ -203,12 +239,25 @@ export function LicensePackageForm({ mode, packageItem, initialPurchaseId, onCan
             disabled={isPerpetual}
           />
         </div>
-        <CheckboxField id="is-perpetual" label={t("licenseManagement:form.isPerpetual")} checked={isPerpetual} onCheckedChange={(c) => setIsPerpetual(c === true)} />
-        <CheckboxField id="renewal-required" label={t("licenseManagement:form.renewalRequired")} checked={renewalRequired} onCheckedChange={(c) => setRenewalRequired(c === true)} />
+        <CheckboxField id="is-perpetual" label={t("licenseManagement:form.isPerpetual")} checked={isPerpetual} onCheckedChange={(c) => {
+          const checked = c === true;
+          setIsPerpetual(checked);
+          if (checked) {
+            setEndDate(null);
+          }
+        }} />
+        <CheckboxField id="renewal-required" label={t("licenseManagement:form.renewalRequired")} checked={renewalRequired} onCheckedChange={(c) => {
+          const checked = c === true;
+          setRenewalRequired(checked);
+          if (!checked) {
+            setRenewalDate(null);
+          }
+        }} />
         {renewalRequired ? (
           <div className="space-y-2">
-            <Label>{t("licenseManagement:form.renewalDate")}</Label>
+            <Label htmlFor="package-renewal-date">{t("licenseManagement:form.renewalDate")}</Label>
             <DatePicker
+              id="package-renewal-date"
               value={renewalDate}
               onChange={setRenewalDate}
               placeholder={t("licenseManagement:form.renewalDate")}
@@ -218,47 +267,66 @@ export function LicensePackageForm({ mode, packageItem, initialPurchaseId, onCan
           </div>
         ) : null}
         <div className="space-y-2">
-          <Label>{t("licenseManagement:form.serialNumber")}</Label>
-          <Input value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} />
+          <Label htmlFor="package-serial-number">{t("licenseManagement:form.serialNumber")}</Label>
+          <Input id="package-serial-number" value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} />
         </div>
         <div className="space-y-2 md:col-span-2">
-          <Label>{t("licenseManagement:form.licenseKey")}</Label>
-          <Input value={licenseKey} onChange={(e) => setLicenseKey(e.target.value)} />
+          <Label htmlFor="package-license-key">{t("licenseManagement:form.licenseKey")}</Label>
+          <div className="flex gap-2">
+            <Input
+              id="package-license-key"
+              type={showLicenseKey ? "text" : "password"}
+              autoComplete="off"
+              value={licenseKey}
+              onChange={(e) => setLicenseKey(e.target.value)}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              aria-controls="package-license-key"
+              aria-pressed={showLicenseKey}
+              onClick={() => setShowLicenseKey((value) => !value)}
+            >
+              {showLicenseKey
+                ? t("licenseManagement:pages.packages.detail.hideLicenseKey")
+                : t("licenseManagement:pages.packages.detail.showLicenseKey")}
+            </Button>
+          </div>
         </div>
         <div className="space-y-2">
-          <Label>{t("licenseManagement:form.licenseAccountEmail")}</Label>
-          <Input value={licenseAccountEmail} onChange={(e) => setLicenseAccountEmail(e.target.value)} />
+          <Label htmlFor="package-account-email">{t("licenseManagement:form.licenseAccountEmail")}</Label>
+          <Input id="package-account-email" type="email" value={licenseAccountEmail} onChange={(e) => setLicenseAccountEmail(e.target.value)} />
         </div>
         <div className="space-y-2">
-          <Label>{t("licenseManagement:form.licensePortalUrl")}</Label>
-          <Input value={licensePortalUrl} onChange={(e) => setLicensePortalUrl(e.target.value)} />
+          <Label htmlFor="package-portal-url">{t("licenseManagement:form.licensePortalUrl")}</Label>
+          <Input id="package-portal-url" type="url" value={licensePortalUrl} onChange={(e) => setLicensePortalUrl(e.target.value)} />
         </div>
         <div className="space-y-2">
-          <Label>{t("licenseManagement:form.status")}</Label>
-          <Select value={status} onChange={(e) => setStatus(e.target.value as LicensePackageStatus)}>
-            {PACKAGE_STATUSES.map((item) => (
+          <Label htmlFor="package-status">{t("licenseManagement:form.status")}</Label>
+          <Select id="package-status" value={status} onChange={(e) => setStatus(e.target.value as LicensePackageStatus)}>
+            {getAllowedPackageStatuses(mode === "edit" ? packageItem?.status ?? null : null)
+              .filter((item) => PACKAGE_STATUSES.includes(item))
+              .map((item) => (
               <option key={item} value={item}>{getPackageStatusLabel(t, item)}</option>
-            ))}
+              ))}
           </Select>
         </div>
         <div className="space-y-2 md:col-span-2">
-          <Label>{t("licenseManagement:form.licenseNotes")}</Label>
-          <Textarea value={licenseNotes} onChange={(e) => setLicenseNotes(e.target.value)} />
+          <Label htmlFor="package-license-notes">{t("licenseManagement:form.licenseNotes")}</Label>
+          <Textarea id="package-license-notes" value={licenseNotes} onChange={(e) => setLicenseNotes(e.target.value)} />
         </div>
-        <CheckboxField id="package-active" label={t("common:status.active")} checked={isActive} onCheckedChange={(c) => setIsActive(c === true)} />
       </div>
       <div className="flex flex-wrap justify-end gap-2">
         <Button type="button" variant="outline" onClick={onCancel} disabled={mutation.isPending}>
           {t("common:actions.cancel")}
         </Button>
         <Button
-          type="button"
+          type="submit"
           disabled={Boolean(validationKey) || mutation.isPending}
-          onClick={() => mutation.mutate()}
         >
           {t("common:actions.save")}
         </Button>
       </div>
-    </div>
+    </form>
   );
 }
