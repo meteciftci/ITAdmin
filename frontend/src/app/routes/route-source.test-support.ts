@@ -15,6 +15,7 @@ export function readRouterSource(): string {
     new URL("./settings-routes.tsx", import.meta.url),
     new URL("./ad-management-routes.tsx", import.meta.url),
     new URL("./license-management-routes.tsx", import.meta.url),
+    new URL("./dns-management-routes.tsx", import.meta.url),
   ];
 
   return moduleUrls.map((url) => readFileSync(url, "utf8")).join("\n");

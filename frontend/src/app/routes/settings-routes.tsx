@@ -11,6 +11,7 @@ import {
   NotificationTemplateFormPage,
   SettingsRedirectPage,
   SystemUpdatesPage,
+  DnsManagementSettingsPage,
 } from "@/app/lazy-pages";
 import { LazyRoute } from "@/app/route-helpers";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -30,7 +31,9 @@ export const settingsRoutes: RouteObject[] = [
             PermissionCodes.NotificationProviders.View,
             PermissionCodes.NotificationTemplates.View,
             PermissionCodes.AdManagement.Settings.View,
+            PermissionCodes.LicenseManagement.ManageSettings,
             PermissionCodes.SystemUpdates.View,
+            PermissionCodes.DnsManagement.ManageSettings,
           ]}
         >
           <AppLayout>
@@ -165,6 +168,7 @@ export const settingsRoutes: RouteObject[] = [
         <RequireAnyPermission permissions={[
           PermissionCodes.AdManagement.Settings.View,
           PermissionCodes.LicenseManagement.ManageSettings,
+          PermissionCodes.DnsManagement.ManageSettings,
         ]}>
           <AppLayout>
             <LazyRoute>
@@ -172,6 +176,16 @@ export const settingsRoutes: RouteObject[] = [
             </LazyRoute>
           </AppLayout>
         </RequireAnyPermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/settings/modules/dns-management",
+    element: (
+      <RequireAuth>
+        <RequirePermission permission={PermissionCodes.DnsManagement.ManageSettings}>
+          <AppLayout><LazyRoute><DnsManagementSettingsPage /></LazyRoute></AppLayout>
+        </RequirePermission>
       </RequireAuth>
     ),
   },

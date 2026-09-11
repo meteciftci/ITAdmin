@@ -46,6 +46,8 @@
       "licenseManagementRequests": "Requests",
       "licenseManagementPackages": "License Packages",
       "licenseManagementSeats": "License Assignments",
+      "dnsManagement": "DNS Management",
+      "dnsManagementServers": "DNS Servers",
       "error": "Error"
     }
   }

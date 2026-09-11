@@ -295,6 +295,16 @@ export const LicenseManagementSettingsPage = lazy(() =>
     default: module.LicenseManagementSettingsPage,
   })),
 );
+export const DnsManagementSettingsPage = lazy(() =>
+  import("@/features/settings/DnsManagementSettingsPage").then((module) => ({
+    default: module.DnsManagementSettingsPage,
+  })),
+);
+export const DnsServersPage = lazy(() =>
+  import("@/features/dns-management/DnsServersPage").then((module) => ({
+    default: module.DnsServersPage,
+  })),
+);
 export const LicensePackagesPage = lazy(() =>
   import("@/features/license-management/LicensePackagesPage").then((module) => ({
     default: module.LicensePackagesPage,

@@ -1,0 +1,20 @@
+{
+  "dnsManagement": {
+    "servers": {
+      "title": "DNS Management", "description": "Manage Windows DNS servers and secure connection profiles.",
+      "listTitle": "Registered DNS servers", "phaseNotice": "Connection testing and live inventory synchronization will be enabled in the next phase.",
+      "empty": "No DNS server has been registered.", "addTitle": "Add DNS server", "editTitle": "Edit DNS server", "selectCredential": "Select a credential profile",
+      "fields": { "name": "Server name", "endpoint": "Endpoint", "hostName": "Server address", "port": "WinRM HTTPS port", "environment": "Environment", "credential": "Credential profile", "status": "Status", "syncInterval": "Synchronization interval (minutes)", "thumbprint": "TLS certificate thumbprint (optional)", "notes": "Notes", "enabled": "Server enabled" }
+    },
+    "credentials": {
+      "title": "Connection credential profiles", "securityNotice": "Passwords are stored encrypted and are never returned to the UI.", "secretStored": "Password stored", "keepPassword": "Leave blank to keep the existing password", "deleteTitle": "Delete credential profile", "deleteDescription": "Are you sure you want to delete {{name}}?",
+      "fields": { "name": "Profile name", "userName": "User name", "authenticationMode": "Authentication", "password": "Password", "enabled": "Profile enabled" }
+    },
+    "environments": { "Internal": "Internal DNS (AD)", "Public": "Public DNS (NS)", "Other": "Other" },
+    "messages": { "credentialSaved": "Credential profile saved.", "serverSaved": "DNS server saved.", "credentialDeleted": "Credential profile deleted.", "credentialInUse": "Credential profile cannot be deleted because it is in use.", "saveFailed": "The operation could not be completed. Check the fields and try again.", "loadFailed": "DNS management information could not be loaded." },
+    "settings": {
+      "title": "DNS Management settings", "description": "Configure inventory collection, scheduling, and comparison behavior.", "moduleTitle": "Module and synchronization", "moduleDescription": "DNS servers are the source of truth; comparisons use the latest successful database snapshot.", "saved": "DNS Management settings saved.", "saveFailed": "Settings could not be saved.", "loadFailed": "DNS Management settings could not be loaded.",
+      "fields": { "isEnabled": "Enable DNS Management module", "automaticSyncEnabled": "Automatic inventory synchronization", "syncRecordInventory": "Include DNS records in inventory", "promptForFullSyncOnComparisonOpen": "Prompt for full synchronization when comparison opens", "defaultSyncIntervalMinutes": "Default synchronization interval (minutes)", "healthCheckIntervalMinutes": "Health check interval (minutes)", "commandTimeoutSeconds": "Command timeout (seconds)", "maxParallelServers": "Concurrent servers", "snapshotRetentionDays": "Snapshot retention (days)", "comparisonSnapshotStaleAfterMinutes": "Comparison data stale threshold (minutes)" }
+    }
+  }
+}

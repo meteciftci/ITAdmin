@@ -23,6 +23,7 @@ import { useAuthStore } from "@/features/auth/auth-store";
 import { canAccess } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import { PermissionCodes } from "@/lib/permission-codes";
+import { DNS_SETTINGS_QUERY_KEY, getDnsSettings } from "@/features/dns-management/api";
 
 type AdManagementCardStatus = "loading" | "error" | "notConfigured" | "disabled" | "active";
 
@@ -52,13 +53,20 @@ function resolveAdManagementCardStatus(
 }
 
 export function ModuleSettingsPage() {
-  const { t } = useTranslation(["settings", "common"]);
+  const { t } = useTranslation(["settings", "common", "dnsManagement"]);
   const user = useAuthStore((state) => state.user);
   const canViewAdManagementSettings = canAccess(user, PermissionCodes.AdManagement.Settings.View);
   const canViewLicenseManagementSettings = canAccess(
     user,
     PermissionCodes.LicenseManagement.ManageSettings,
   );
+  const canViewDnsManagementSettings = canAccess(user, PermissionCodes.DnsManagement.ManageSettings);
+  const dnsSettingsQuery = useQuery({
+    queryKey: DNS_SETTINGS_QUERY_KEY,
+    queryFn: getDnsSettings,
+    enabled: canViewDnsManagementSettings,
+    staleTime: 60_000,
+  });
 
   const adManagementSettingsQuery = useQuery({
     queryKey: AD_MANAGEMENT_SETTINGS_QUERY_KEY,
@@ -138,10 +146,23 @@ export function ModuleSettingsPage() {
           </CardFooter>
         </Card>
       ) : null}
+      {canViewDnsManagementSettings ? (
+        <Card className="flex flex-col">
+          <CardHeader>
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <CardTitle className="text-lg">{t("dnsManagement:settings.title")}</CardTitle>
+              {dnsSettingsQuery.isLoading ? <Skeleton className="h-5 w-24" /> : <Badge variant={dnsSettingsQuery.data?.isEnabled ? "default" : "secondary"}>{dnsSettingsQuery.data?.isEnabled ? t("common:status.active") : t("common:status.passive")}</Badge>}
+            </div>
+            <CardDescription>{t("dnsManagement:settings.description")}</CardDescription>
+          </CardHeader>
+          <CardContent className="flex-1" />
+          <CardFooter><Link to="/settings/modules/dns-management" className={cn(buttonVariants({ variant: "default" }), "w-full sm:w-auto")}>{t("settings:modulesHub.licenseManagement.openSettings")}</Link></CardFooter>
+        </Card>
+      ) : null}
     </>
   );
 
-  const hasAnyCard = canViewAdManagementSettings || canViewLicenseManagementSettings;
+  const hasAnyCard = canViewAdManagementSettings || canViewLicenseManagementSettings || canViewDnsManagementSettings;
 
   return (
     <section className="space-y-6">

@@ -4,11 +4,13 @@ import { coreRoutes, notFoundRoute } from "@/app/routes/core-routes";
 import { adManagementRoutes } from "@/app/routes/ad-management-routes";
 import { licenseManagementRoutes } from "@/app/routes/license-management-routes";
 import { settingsRoutes } from "@/app/routes/settings-routes";
+import { dnsManagementRoutes } from "@/app/routes/dns-management-routes";
 
 export const router = createBrowserRouter([
   ...coreRoutes,
   ...settingsRoutes,
   ...adManagementRoutes,
   ...licenseManagementRoutes,
+  ...dnsManagementRoutes,
   notFoundRoute,
 ]);

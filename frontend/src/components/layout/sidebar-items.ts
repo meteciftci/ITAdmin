@@ -20,6 +20,7 @@ import {
   FolderTree,
   FileKey,
   RefreshCw,
+  ServerCog,
 } from "lucide-react";
 
 import type { CurrentUser } from "@/features/auth/types";
@@ -168,6 +169,10 @@ function isLicenseManagementSectionVisible(user: CurrentUser | null): boolean {
   return canAccess(user, PermissionCodes.LicenseManagement.View);
 }
 
+function isDnsManagementSectionVisible(user: CurrentUser | null): boolean {
+  return canAccess(user, PermissionCodes.DnsManagement.Servers.View);
+}
+
 export const getSidebarGroups = (
   user: CurrentUser | null,
   adManagementModule?: AdManagementModuleSidebarState,
@@ -187,6 +192,14 @@ export const getSidebarGroups = (
   {
     labelKey: "groups.modules",
     items: [
+      {
+        kind: "collapsible",
+        titleKey: "items.dnsManagement",
+        routePrefix: "/dns-management",
+        icon: ServerCog,
+        visible: isDnsManagementSectionVisible(user),
+        children: [{ titleKey: "items.dnsManagementServers", to: "/dns-management/servers", icon: ServerCog, visible: isDnsManagementSectionVisible(user) }],
+      },
       {
         kind: "collapsible",
         titleKey: "items.adManagement",
@@ -356,6 +369,7 @@ export const getSidebarGroups = (
           PermissionCodes.AdManagement.Settings.View,
           PermissionCodes.LicenseManagement.ManageSettings,
           PermissionCodes.SystemUpdates.View,
+          PermissionCodes.DnsManagement.ManageSettings,
         ]),
         children: [
           {
@@ -386,6 +400,7 @@ export const getSidebarGroups = (
             visible: canAccessAny(user, [
               PermissionCodes.AdManagement.Settings.View,
               PermissionCodes.LicenseManagement.ManageSettings,
+              PermissionCodes.DnsManagement.ManageSettings,
             ]),
           },
         ],
