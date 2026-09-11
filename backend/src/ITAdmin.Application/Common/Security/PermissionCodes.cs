@@ -169,6 +169,44 @@ public static class PermissionCodes
         public const string ManageSettings = "LicenseManagement.ManageSettings";
     }
 
+    public static class DnsManagement
+    {
+        public const string View = "DnsManagement.View";
+        public const string ManageSettings = "DnsManagement.ManageSettings";
+
+        public static class Servers
+        {
+            public const string View = "DnsManagement.Servers.View";
+            public const string Manage = "DnsManagement.Servers.Manage";
+            public const string TestConnection = "DnsManagement.Servers.TestConnection";
+        }
+
+        public static class Zones
+        {
+            public const string View = "DnsManagement.Zones.View";
+            public const string Create = "DnsManagement.Zones.Create";
+            public const string Update = "DnsManagement.Zones.Update";
+            public const string Delete = "DnsManagement.Zones.Delete";
+        }
+
+        public static class Records
+        {
+            public const string View = "DnsManagement.Records.View";
+            public const string Create = "DnsManagement.Records.Create";
+            public const string Update = "DnsManagement.Records.Update";
+            public const string Delete = "DnsManagement.Records.Delete";
+        }
+
+        public const string Compare = "DnsManagement.Compare";
+        public const string Export = "DnsManagement.Export";
+        public const string Synchronize = "DnsManagement.Synchronize";
+        public const string ManageServerSettings = "DnsManagement.ServerSettings.Manage";
+        public const string ManageDnssec = "DnsManagement.Dnssec.Manage";
+        public const string ManagePolicies = "DnsManagement.Policies.Manage";
+        public const string ClearCache = "DnsManagement.Cache.Clear";
+        public const string ViewOperationLogs = "DnsManagement.OperationLogs.View";
+    }
+
     public static class Directory
     {
         public static class Users

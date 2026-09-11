@@ -37,6 +37,14 @@ public class AppDbContext : DbContext
     public DbSet<LicenseRequestItemUser> LicenseRequestItemUsers => Set<LicenseRequestItemUser>();
     public DbSet<LicenseRequestItemFulfillment> LicenseRequestItemFulfillments => Set<LicenseRequestItemFulfillment>();
     public DbSet<LicenseSeatAssignment> LicenseSeatAssignments => Set<LicenseSeatAssignment>();
+    public DbSet<DnsManagementSettings> DnsManagementSettings => Set<DnsManagementSettings>();
+    public DbSet<DnsCredentialProfile> DnsCredentialProfiles => Set<DnsCredentialProfile>();
+    public DbSet<DnsServer> DnsServers => Set<DnsServer>();
+    public DbSet<DnsInventorySnapshot> DnsInventorySnapshots => Set<DnsInventorySnapshot>();
+    public DbSet<DnsZoneSnapshot> DnsZoneSnapshots => Set<DnsZoneSnapshot>();
+    public DbSet<DnsRecordSnapshot> DnsRecordSnapshots => Set<DnsRecordSnapshot>();
+    public DbSet<DnsSyncJob> DnsSyncJobs => Set<DnsSyncJob>();
+    public DbSet<DnsOperationLog> DnsOperationLogs => Set<DnsOperationLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
