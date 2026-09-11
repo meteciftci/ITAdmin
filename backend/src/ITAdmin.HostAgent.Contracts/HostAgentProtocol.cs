@@ -8,12 +8,12 @@ namespace ITAdmin.HostAgent.Contracts;
 ///
 /// <para>
 /// <b>Why a separate privileged component at all.</b> Fetching source, building it, running
-/// migrations, and repointing an IIS site are machine-administrator operations. The web application
-/// is internet-facing-shaped code that parses untrusted input all day; giving its app pool the
-/// rights to do those things would mean any request-handling flaw becomes machine compromise. So
-/// the app pool identity keeps exactly the rights it has today - read its build, write its logs and
-/// key ring - and a separate service running as LocalSystem performs a small, fixed set of
-/// operations.
+/// migrations, repointing an IIS site, and opening authenticated management sessions to registered
+/// DNS servers are privileged operations. The web application is internet-facing-shaped code that
+/// parses untrusted input all day; giving its app pool those rights would mean any request-handling
+/// flaw becomes machine compromise. So the app pool identity keeps exactly the rights it has today
+/// - read its build, write its logs and key ring - and a separate service running as LocalSystem
+/// performs a small, fixed set of operations.
 /// </para>
 ///
 /// <para>
@@ -24,15 +24,14 @@ namespace ITAdmin.HostAgent.Contracts;
 ///
 /// <para>
 /// <b>Why typed operations.</b> Every operation below is a named intent with a fixed payload. There
-/// is no "run this command", no script path parameter, no version string, and no shell. A
-/// compromised web application can ask for an update - which the agent applies by running the
-/// deployment script that already lives in the checked-out source, with arguments the agent derives
-/// entirely from its own configuration - and nothing else.
+/// is no "run this command", no caller-supplied script, and no shell. Each operation validates its
+/// bounded data and executes code compiled into the agent. Update arguments come from the agent's
+/// configuration; DNS connection values can only be used by the fixed capability probe.
 /// </para>
 /// </summary>
 public static class HostAgentProtocol
 {
-    public const int ProtocolVersion = 2;
+    public const int ProtocolVersion = 3;
 
     /// <summary>Pipe name. Machine-local; the agent ACLs it to the app pool identity and administrators.</summary>
     public const string PipeName = "ITAdmin.HostAgent";
@@ -49,7 +48,7 @@ public static class HostAgentProtocol
 
 /// <summary>
 /// The complete set of things the web application may ask the privileged agent to do. This enum is
-/// the boundary: it is intentionally short and carries no free-form parameters.
+/// the boundary: it is intentionally short and carries no executable free-form parameters.
 /// </summary>
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum HostAgentOperation
@@ -89,6 +88,19 @@ public enum HostAgentOperation
 
     /// <summary>Remove the HTTPS binding and the HTTP-to-HTTPS redirect. Back to HTTP-only.</summary>
     DisableHttps = 8,
+
+    /// <summary>
+    /// Test one registered Windows DNS endpoint and discover its fixed capability set. The request
+    /// contains connection values only; it never carries PowerShell or command text.
+    /// </summary>
+    TestDnsServerConnection = 9,
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum HostAgentDnsAuthenticationMode
+{
+    Negotiate = 0,
+    BasicOverTls = 1,
 }
 
 /// <summary>One request across the pipe.</summary>
@@ -119,6 +131,27 @@ public sealed record HostAgentRequest
     /// <summary>Whether to enforce HTTP-to-HTTPS redirect, for <see cref="HostAgentOperation.ConfigureHttps"/>.</summary>
     [JsonPropertyName("redirectHttpToHttps")]
     public bool? RedirectHttpToHttps { get; init; }
+
+    [JsonPropertyName("dnsHostName")]
+    public string? DnsHostName { get; init; }
+
+    [JsonPropertyName("dnsPort")]
+    public int? DnsPort { get; init; }
+
+    [JsonPropertyName("dnsAuthenticationMode")]
+    public HostAgentDnsAuthenticationMode? DnsAuthenticationMode { get; init; }
+
+    [JsonPropertyName("dnsUserName")]
+    public string? DnsUserName { get; init; }
+
+    [JsonPropertyName("dnsPassword")]
+    public string? DnsPassword { get; init; }
+
+    [JsonPropertyName("dnsTlsCertificateThumbprint")]
+    public string? DnsTlsCertificateThumbprint { get; init; }
+
+    [JsonPropertyName("dnsTimeoutSeconds")]
+    public int? DnsTimeoutSeconds { get; init; }
 
     public string ToJson() => JsonSerializer.Serialize(this, HostAgentProtocol.Json);
 
@@ -178,8 +211,35 @@ public sealed record HostAgentRequest
             }
         }
 
+        if (Operation == HostAgentOperation.TestDnsServerConnection)
+        {
+            var hostName = DnsHostName?.Trim().TrimEnd('.');
+            if (string.IsNullOrWhiteSpace(hostName) || hostName.Length > 253
+                || Uri.CheckHostName(hostName) == UriHostNameType.Unknown)
+            {
+                problems.Add("dnsHostName must be a valid host name or IP address.");
+            }
+            if (DnsPort is null or < 1 or > 65535) problems.Add("dnsPort must be between 1 and 65535.");
+            if (DnsAuthenticationMode is null || !Enum.IsDefined(DnsAuthenticationMode.Value))
+                problems.Add("dnsAuthenticationMode is required.");
+            if (string.IsNullOrWhiteSpace(DnsUserName) || DnsUserName.Length > 256)
+                problems.Add("dnsUserName is required and may contain at most 256 characters.");
+            if (DnsPassword is null || DnsPassword.Length > 2048)
+                problems.Add("dnsPassword is required and may contain at most 2048 characters.");
+            if (DnsTimeoutSeconds is null or < 5 or > 300)
+                problems.Add("dnsTimeoutSeconds must be between 5 and 300 seconds.");
+            var thumbprint = NormalizeThumbprint(DnsTlsCertificateThumbprint);
+            if (thumbprint is not null && thumbprint.Length is not (40 or 64))
+                problems.Add("dnsTlsCertificateThumbprint must be a SHA-1 or SHA-256 hexadecimal value.");
+            if (DnsTlsCertificateThumbprint?.Any(x => !Uri.IsHexDigit(x) && !char.IsWhiteSpace(x) && x is not ':' and not '-') == true)
+                problems.Add("dnsTlsCertificateThumbprint contains invalid characters.");
+        }
+
         return problems;
     }
+
+    private static string? NormalizeThumbprint(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : string.Concat(value.Where(Uri.IsHexDigit));
 
     private static bool TryDecodeBase64(string value, out int decodedLength)
     {
@@ -243,6 +303,9 @@ public sealed record HostAgentResponse
     [JsonPropertyName("https")]
     public HostAgentHttpsStatus? Https { get; init; }
 
+    [JsonPropertyName("dnsProbe")]
+    public HostAgentDnsProbeResult? DnsProbe { get; init; }
+
     [JsonPropertyName("repositoryStatus")]
     public HostAgentRepositoryStatus RepositoryStatus { get; init; } = HostAgentRepositoryStatus.Unknown;
 
@@ -276,6 +339,69 @@ public sealed record HostAgentResponse
 
     public static HostAgentResponse Failed(string message, string? correlationId = null) =>
         new() { Status = HostAgentResponseStatus.Failed, Message = message, CorrelationId = correlationId };
+}
+
+public sealed record HostAgentDnsProbeResult
+{
+    [JsonPropertyName("success")]
+    public bool Success { get; init; }
+
+    [JsonPropertyName("failureKind")]
+    public string? FailureKind { get; init; }
+
+    [JsonPropertyName("message")]
+    public string Message { get; init; } = string.Empty;
+
+    [JsonPropertyName("networkReachable")]
+    public bool NetworkReachable { get; init; }
+
+    [JsonPropertyName("tlsValidated")]
+    public bool TlsValidated { get; init; }
+
+    [JsonPropertyName("authenticationSucceeded")]
+    public bool AuthenticationSucceeded { get; init; }
+
+    [JsonPropertyName("dnsModuleAvailable")]
+    public bool DnsModuleAvailable { get; init; }
+
+    [JsonPropertyName("dnsServiceReachable")]
+    public bool DnsServiceReachable { get; init; }
+
+    [JsonPropertyName("operatingSystemVersion")]
+    public string? OperatingSystemVersion { get; init; }
+
+    [JsonPropertyName("powerShellVersion")]
+    public string? PowerShellVersion { get; init; }
+
+    [JsonPropertyName("dnsModuleVersion")]
+    public string? DnsModuleVersion { get; init; }
+
+    [JsonPropertyName("dnsServerVersion")]
+    public string? DnsServerVersion { get; init; }
+
+    [JsonPropertyName("zoneCount")]
+    public int? ZoneCount { get; init; }
+
+    [JsonPropertyName("capabilities")]
+    public HostAgentDnsCapabilities? Capabilities { get; init; }
+}
+
+public sealed record HostAgentDnsCapabilities
+{
+    [JsonPropertyName("zones")]
+    public bool Zones { get; init; }
+    [JsonPropertyName("records")]
+    public bool Records { get; init; }
+    [JsonPropertyName("serverSettings")]
+    public bool ServerSettings { get; init; }
+    [JsonPropertyName("dnssec")]
+    public bool Dnssec { get; init; }
+    [JsonPropertyName("policies")]
+    public bool Policies { get; init; }
+    [JsonPropertyName("scopes")]
+    public bool Scopes { get; init; }
+    [JsonPropertyName("cache")]
+    public bool Cache { get; init; }
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]

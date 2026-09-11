@@ -24,7 +24,10 @@ public sealed class NamedPipeHostAgentClient : IHostAgentClient
         }
 
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(OperationTimeout);
+        var operationTimeout = request.Operation == HostAgentOperation.TestDnsServerConnection
+            ? TimeSpan.FromSeconds(Math.Clamp((request.DnsTimeoutSeconds ?? 30) + 10, 15, 310))
+            : OperationTimeout;
+        timeout.CancelAfter(operationTimeout);
 
         try
         {
@@ -46,6 +49,10 @@ public sealed class NamedPipeHostAgentClient : IHostAgentClient
                 ?? throw new HostAgentUnavailableException("The ITAdmin Host Agent returned an invalid response.");
         }
         catch (HostAgentUnavailableException)
+        {
+            throw;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             throw;
         }

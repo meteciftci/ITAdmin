@@ -1313,11 +1313,12 @@ function Install-HostAgentService {
     if ($null -eq $existing) {
         & sc.exe create "ITAdminHostAgent" binPath= "`"$agentExe`"" start= auto DisplayName= "ITAdmin Host Agent" obj= "LocalSystem" | Out-Null
         if ($LASTEXITCODE -ne 0) { throw "Could not register the ITAdmin Host Agent service (sc.exe exit $LASTEXITCODE)." }
-        & sc.exe description "ITAdminHostAgent" "Performs privileged ITAdmin host operations (source sync, build, and IIS reconciliation) over a local ACL'd named pipe." | Out-Null
+        & sc.exe description "ITAdminHostAgent" "Performs typed update, IIS, and remote DNS management operations over a local ACL'd named pipe." | Out-Null
     }
     else {
         & sc.exe config "ITAdminHostAgent" binPath= "`"$agentExe`"" start= auto | Out-Null
         if ($LASTEXITCODE -ne 0) { throw "Could not update the ITAdmin Host Agent service image path (sc.exe exit $LASTEXITCODE)." }
+        & sc.exe description "ITAdminHostAgent" "Performs typed update, IIS, and remote DNS management operations over a local ACL'd named pipe." | Out-Null
     }
     Start-Service -Name "ITAdminHostAgent" -ErrorAction SilentlyContinue
     $service = Get-Service -Name "ITAdminHostAgent" -ErrorAction SilentlyContinue

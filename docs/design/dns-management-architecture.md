@@ -59,3 +59,42 @@ different, missing, unavailable, and stale values; TTL comparison is an explicit
 - Prompt for full synchronization on comparison open: enabled
 
 All values are module settings and the inventory interval may be overridden per server.
+
+## Agentless connection boundary
+
+DNS servers do not run an ITAdmin component. The existing Host Agent on the portal server opens a
+WinRM HTTPS session to a registered endpoint and executes a script compiled into the Host Agent.
+The browser and API can supply connection data only; they cannot supply PowerShell, command names,
+script paths, or shell arguments. Credentials cross only the machine-local ACL-protected named pipe,
+are converted to an in-memory secure credential for the remote session, and are never returned.
+
+The normal ITAdmin release build publishes the API, Host Agent, and Update Coordinator from the
+same commit. For an application-initiated update, the coordinator activates the new Host Agent build
+after deployment succeeds and restarts the existing portal service. No DNS-server-side installation
+or separate update procedure is required.
+
+## WinRM HTTPS prerequisites
+
+- Configure a WinRM HTTPS listener on every managed DNS server and restrict its firewall source to
+  the ITAdmin portal host where possible.
+- Use a non-expired Server Authentication certificate whose subject or SAN matches the registered
+  hostname and whose issuing chain and revocation status are trusted by the portal host. An optional
+  SHA-1 or SHA-256 thumbprint adds an endpoint preflight check; it never disables normal certificate
+  validation.
+- Grant the configured account permission to enter the standard `Microsoft.PowerShell` endpoint and
+  only the Windows/DNS administration rights required for the selected management operations.
+- Use Negotiate where domain trust supports it. Use Basic only over the enforced HTTPS transport for
+  workgroup or non-domain public DNS servers. ITAdmin neither requires nor changes `TrustedHosts`.
+- Install the Windows DNS Server PowerShell module on the target, as supplied with the DNS Server
+  role/management tools.
+
+The connection test distinguishes portal Host Agent availability, network reachability, certificate
+validation, authentication/remoting, DNS module access, and DNS service capability discovery. The
+fixed discovery result records operating system, PowerShell, module and DNS versions, zone count,
+and support for zones, records, server settings, DNSSEC, policies, scopes, and cache operations.
+
+Operational references:
+
+- [PowerShell remoting requirements](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_remote_requirements?view=powershell-7.6)
+- [Configure WinRM for HTTPS](https://learn.microsoft.com/en-us/troubleshoot/windows-client/system-management-components/configure-winrm-for-https)
+- [PowerShell remoting FAQ](https://learn.microsoft.com/en-gb/powershell/scripting/security/remoting/powershell-remoting-faq?view=powershell-7.4)

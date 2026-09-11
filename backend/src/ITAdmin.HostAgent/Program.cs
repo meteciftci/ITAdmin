@@ -9,9 +9,9 @@ using Microsoft.Win32;
 // ITAdmin Host Agent: the privileged half of an ITAdmin installation.
 //
 // Runs as a Windows service under LocalSystem. It owns the machine operations the web application
-// must never be able to perform - applying an update by running the checked-out deployment script,
-// and recycling the application pool - and exposes them only as the fixed set of typed operations
-// in ITAdmin.HostAgent.Contracts, over an ACL'd local named pipe.
+// must never be able to perform - applying an update, recycling the application pool, and opening
+// authenticated management sessions to registered DNS servers - and exposes them only as the fixed
+// set of typed operations in ITAdmin.HostAgent.Contracts, over an ACL'd local named pipe.
 
 if (!OperatingSystem.IsWindows())
 {
@@ -92,6 +92,9 @@ builder.Services.AddSingleton<IHostDeploymentExecutor, WindowsHostDeploymentExec
 #pragma warning restore CA1416
 
 builder.Services.AddSingleton<IHostAgentOperations, DeploymentHostAgentOperations>();
+#pragma warning disable CA1416 // Reached only after the Windows guard above.
+builder.Services.AddSingleton<IDnsRemoteProbeExecutor, PowerShellDnsRemoteProbeExecutor>();
+#pragma warning restore CA1416
 builder.Services.AddSingleton<HostAgentDispatcher>();
 builder.Services.AddHostedService<HostAgentPipeServer>();
 
@@ -108,6 +111,6 @@ public static class HostAgentServiceMetadata
     public const string DisplayName = "ITAdmin Host Agent";
 
     public const string Description =
-        "Applies updates by running the checked-out ITAdmin deployment script, and performs narrow "
-        + "IIS operations, on behalf of the ITAdmin application over a local ACL'd named pipe.";
+        "Performs typed update, IIS, and remote DNS management operations on behalf of ITAdmin "
+        + "over a local ACL'd named pipe.";
 }

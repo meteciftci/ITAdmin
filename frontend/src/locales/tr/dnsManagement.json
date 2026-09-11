@@ -2,15 +2,21 @@
   "dnsManagement": {
     "servers": {
       "title": "DNS Yönetimi", "description": "Windows DNS sunucularını ve güvenli bağlantı profillerini yönetin.",
-      "listTitle": "Kayıtlı DNS sunucuları", "phaseNotice": "Bağlantı testi ve canlı envanter senkronizasyonu bir sonraki fazda etkinleştirilecektir.",
+      "listTitle": "Kayıtlı DNS sunucuları", "phaseNotice": "Bağlantı testleri WinRM HTTPS üzerinden agentsız çalışır. Canlı envanter senkronizasyonu sonraki fazda etkinleştirilecektir.",
       "empty": "Henüz DNS sunucusu kaydedilmedi.", "addTitle": "DNS sunucusu ekle", "editTitle": "DNS sunucusunu düzenle", "selectCredential": "Kimlik profili seçin",
       "fields": { "name": "Sunucu adı", "endpoint": "Bağlantı adresi", "hostName": "Sunucu adresi", "port": "WinRM HTTPS portu", "environment": "Ortam", "credential": "Kimlik profili", "status": "Durum", "syncInterval": "Senkronizasyon aralığı (dakika)", "thumbprint": "TLS sertifika parmak izi (isteğe bağlı)", "notes": "Notlar", "enabled": "Sunucu etkin" }
     },
     "credentials": {
-      "title": "Bağlantı kimlik profilleri", "securityNotice": "Parolalar şifrelenmiş olarak saklanır ve arayüze hiçbir zaman geri gönderilmez.", "secretStored": "Parola kayıtlı", "keepPassword": "Mevcut parolayı korumak için boş bırakın", "deleteTitle": "Kimlik profilini sil", "deleteDescription": "{{name}} profilini silmek istediğinize emin misiniz?",
+      "title": "Bağlantı kimlik profilleri", "securityNotice": "Parolalar şifrelenmiş olarak saklanır ve arayüze hiçbir zaman geri gönderilmez.", "secretStored": "Parola kayıtlı", "notTested": "Henüz test edilmedi", "keepPassword": "Mevcut parolayı korumak için boş bırakın", "deleteTitle": "Kimlik profilini sil", "deleteDescription": "{{name}} profilini silmek istediğinize emin misiniz?",
       "fields": { "name": "Profil adı", "userName": "Kullanıcı adı", "authenticationMode": "Kimlik doğrulama", "password": "Parola", "enabled": "Profil etkin" }
     },
     "environments": { "Internal": "İç DNS (AD)", "Public": "Public DNS (NS)", "Other": "Diğer" },
+    "connection": {
+      "test": "Bağlantıyı test et", "testing": "Test ediliyor...", "success": "Başarılı", "failed": "Başarısız", "resultTitle": "{{name}} bağlantı sonucu", "available": "Uygun", "unavailable": "Uygun değil", "detailsSuccess": "WinRM HTTPS bağlantısı doğrulandı ve DNS Server yetenekleri okundu.", "osVersion": "İşletim sistemi", "dnsVersion": "DNS Server sürümü", "powerShellVersion": "PowerShell sürümü", "dnsModuleVersion": "DNS modül sürümü", "zoneCount": "Zone sayısı",
+      "checks": { "hostAgentAvailable": "Portal yürütme servisi", "networkReachable": "Ağ erişimi", "tlsValidated": "TLS doğrulaması", "authenticationSucceeded": "Kimlik doğrulama", "dnsModuleAvailable": "DNS yönetim modülü", "dnsServiceReachable": "DNS Server erişimi" },
+      "capabilities": { "title": "Keşfedilen yetenekler", "zones": "Zone yönetimi", "records": "Kayıt yönetimi", "serverSettings": "Sunucu ayarları", "dnssec": "DNSSEC", "policies": "DNS politikaları", "scopes": "Zone scope", "cache": "Önbellek" },
+      "failures": { "HostAgentUnavailable": "Portal sunucusundaki yürütme servisine ulaşılamıyor.", "HostAgentRejected": "Portal yürütme servisi isteği kabul etmedi. Web uygulaması ve servis sürümlerini kontrol edin.", "NetworkUnreachable": "WinRM HTTPS adresine ağ üzerinden ulaşılamadı.", "TlsValidationFailed": "Sunucu sertifikasının zinciri, adı veya parmak izi doğrulanamadı.", "AuthenticationOrRemotingFailed": "Kimlik bilgileri reddedildi veya uzak PowerShell uç noktası kullanılamıyor.", "DnsCapabilityProbeFailed": "Bağlantı kuruldu ancak DNS Server rolü ya da yönetim komutları okunamadı.", "Timeout": "Bağlantı testi ayarlanan süre içinde tamamlanamadı.", "Unknown": "Bağlantı testi tamamlanamadı." }
+    },
     "messages": { "credentialSaved": "Kimlik profili kaydedildi.", "serverSaved": "DNS sunucusu kaydedildi.", "credentialDeleted": "Kimlik profili silindi.", "credentialInUse": "Kimlik profili kullanımda olduğu için silinemedi.", "saveFailed": "İşlem tamamlanamadı. Alanları kontrol edip yeniden deneyin.", "loadFailed": "DNS yönetim bilgileri yüklenemedi." },
     "settings": {
       "title": "DNS Yönetimi ayarları", "description": "Envanter toplama, zamanlama ve karşılaştırma davranışını yapılandırın.", "moduleTitle": "Modül ve senkronizasyon", "moduleDescription": "DNS sunucuları verinin kaynağıdır; karşılaştırmalar son başarılı veritabanı anlık görüntüsünü kullanır.", "saved": "DNS Yönetimi ayarları kaydedildi.", "saveFailed": "Ayarlar kaydedilemedi.", "loadFailed": "DNS Yönetimi ayarları yüklenemedi.",

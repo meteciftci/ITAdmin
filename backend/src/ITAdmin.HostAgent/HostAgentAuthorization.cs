@@ -36,6 +36,7 @@ public sealed class HostAgentAuthorization
         HostAgentOperation.GetHttpsStatus,
         HostAgentOperation.ConfigureHttps,
         HostAgentOperation.DisableHttps,
+        HostAgentOperation.TestDnsServerConnection,
     ];
 
     private readonly string _appPoolIdentity;

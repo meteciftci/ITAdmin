@@ -103,7 +103,8 @@ public sealed class HostAgentBoundaryTests
                  {
                      typeof(HostAgentResponse), typeof(HostAgentInstallationStatus),
                      typeof(HostAgentUpdateStatus), typeof(HostAgentUpdateAvailability),
-                     typeof(HostAgentHttpsStatus),
+                     typeof(HostAgentHttpsStatus), typeof(HostAgentDnsProbeResult),
+                     typeof(HostAgentDnsCapabilities),
                  })
         {
             foreach (var property in type.GetProperties())
@@ -132,6 +133,7 @@ public sealed class HostAgentBoundaryTests
     [InlineData(HostAgentOperation.GetHttpsStatus)]
     [InlineData(HostAgentOperation.ConfigureHttps)]
     [InlineData(HostAgentOperation.DisableHttps)]
+    [InlineData(HostAgentOperation.TestDnsServerConnection)]
     public void Authorization_WebApplicationMayInvokeTheUpdateAndSettingsOperations(HostAgentOperation operation) =>
         Assert.True(Authorization.Authorize(@"IIS APPPOOL\ITAdmin", false, operation).IsAllowed);
 
@@ -290,6 +292,53 @@ public sealed class HostAgentBoundaryTests
         Assert.Equal("abc-123", response.CorrelationId);
     }
 
+    [Fact]
+    public void Protocol_DnsProbeRequiresACompleteTypedConnectionPayload()
+    {
+        var valid = new HostAgentRequest
+        {
+            Operation = HostAgentOperation.TestDnsServerConnection,
+            DnsHostName = "dns01.example.local", DnsPort = 5986,
+            DnsAuthenticationMode = HostAgentDnsAuthenticationMode.Negotiate,
+            DnsUserName = "EXAMPLE\\dns-svc", DnsPassword = "secret",
+            DnsTimeoutSeconds = 30,
+        };
+        Assert.Empty(valid.Validate());
+        Assert.NotEmpty((valid with { DnsHostName = "https://invalid/path" }).Validate());
+        Assert.NotEmpty((valid with { DnsPort = 0 }).Validate());
+        Assert.NotEmpty((valid with { DnsTlsCertificateThumbprint = "not-a-thumbprint" }).Validate());
+    }
+
+    [Fact]
+    public async Task Dispatch_DnsProbeUsesOnlyTheRegisteredTypedExecutor()
+    {
+        var executor = new RecordingDnsProbeExecutor();
+        var dispatcher = new HostAgentDispatcher(
+            Authorization, new RecordingOperations(), dnsRemoteProbeExecutor: executor);
+        var request = new HostAgentRequest
+        {
+            Operation = HostAgentOperation.TestDnsServerConnection,
+            DnsHostName = "dns01.example.local", DnsPort = 5986,
+            DnsAuthenticationMode = HostAgentDnsAuthenticationMode.Negotiate,
+            DnsUserName = "EXAMPLE\\dns-svc", DnsPassword = "secret", DnsTimeoutSeconds = 30,
+        };
+
+        var response = await dispatcher.DispatchAsync(request.ToJson(), WebApplication());
+
+        Assert.Equal(1, executor.CallCount);
+        Assert.True(response.DnsProbe!.Success);
+        Assert.DoesNotContain("secret", response.ToJson(), StringComparison.Ordinal);
+        Assert.DoesNotContain("dns-svc", response.ToJson(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DnsProbeScript_IsFixedAndDoesNotInterpolateRequestValues()
+    {
+        Assert.DoesNotContain("DnsHostName", DnsRemoteCapabilityProbe.Script, StringComparison.Ordinal);
+        Assert.DoesNotContain("DnsUserName", DnsRemoteCapabilityProbe.Script, StringComparison.Ordinal);
+        Assert.DoesNotContain("$(`", DnsRemoteCapabilityProbe.Script, StringComparison.Ordinal);
+    }
+
     // ------------------------------------------------------------------------------------------
     // Configuration
     // ------------------------------------------------------------------------------------------
@@ -389,6 +438,16 @@ public sealed class HostAgentBoundaryTests
         public void ReconcileInterruptedOperation() => ReconcileCalls++;
 
         public int ReconcileCalls { get; private set; }
+    }
+
+    private sealed class RecordingDnsProbeExecutor : IDnsRemoteProbeExecutor
+    {
+        public int CallCount { get; private set; }
+        public Task<HostAgentDnsProbeResult> ProbeAsync(HostAgentRequest request, CancellationToken cancellationToken)
+        {
+            CallCount++;
+            return Task.FromResult(new HostAgentDnsProbeResult { Success = true, Message = "ok" });
+        }
     }
 
     private sealed class ThrowingOperations(Exception exception) : IHostAgentOperations

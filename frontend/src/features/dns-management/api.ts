@@ -1,5 +1,5 @@
 import { apiClient } from "@/lib/api-client";
-import type { DnsCredentialProfile, DnsManagementSettings, DnsServer, SaveDnsCredentialProfile, SaveDnsServer } from "./types";
+import type { DnsCredentialProfile, DnsManagementSettings, DnsServer, DnsServerConnectionTest, SaveDnsCredentialProfile, SaveDnsServer } from "./types";
 
 const basePath = "/dns-management";
 export const DNS_SETTINGS_QUERY_KEY = ["dns-management", "settings"] as const;
@@ -15,3 +15,5 @@ export const deleteDnsCredential = async (id: string) => { await apiClient.delet
 export const getDnsServers = async () => (await apiClient.get<DnsServer[]>(`${basePath}/servers`)).data;
 export const saveDnsServer = async (id: string | null, request: SaveDnsServer) =>
   (id ? apiClient.put<DnsServer>(`${basePath}/servers/${id}`, request) : apiClient.post<DnsServer>(`${basePath}/servers`, request)).then((x) => x.data);
+export const testDnsServerConnection = async (id: string) =>
+  (await apiClient.post<DnsServerConnectionTest>(`${basePath}/servers/${id}/test-connection`)).data;

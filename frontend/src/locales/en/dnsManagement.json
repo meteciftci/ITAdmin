@@ -2,15 +2,21 @@
   "dnsManagement": {
     "servers": {
       "title": "DNS Management", "description": "Manage Windows DNS servers and secure connection profiles.",
-      "listTitle": "Registered DNS servers", "phaseNotice": "Connection testing and live inventory synchronization will be enabled in the next phase.",
+      "listTitle": "Registered DNS servers", "phaseNotice": "Connection tests run agentlessly over WinRM HTTPS. Live inventory synchronization will be enabled in the next phase.",
       "empty": "No DNS server has been registered.", "addTitle": "Add DNS server", "editTitle": "Edit DNS server", "selectCredential": "Select a credential profile",
       "fields": { "name": "Server name", "endpoint": "Endpoint", "hostName": "Server address", "port": "WinRM HTTPS port", "environment": "Environment", "credential": "Credential profile", "status": "Status", "syncInterval": "Synchronization interval (minutes)", "thumbprint": "TLS certificate thumbprint (optional)", "notes": "Notes", "enabled": "Server enabled" }
     },
     "credentials": {
-      "title": "Connection credential profiles", "securityNotice": "Passwords are stored encrypted and are never returned to the UI.", "secretStored": "Password stored", "keepPassword": "Leave blank to keep the existing password", "deleteTitle": "Delete credential profile", "deleteDescription": "Are you sure you want to delete {{name}}?",
+      "title": "Connection credential profiles", "securityNotice": "Passwords are stored encrypted and are never returned to the UI.", "secretStored": "Password stored", "notTested": "Not tested yet", "keepPassword": "Leave blank to keep the existing password", "deleteTitle": "Delete credential profile", "deleteDescription": "Are you sure you want to delete {{name}}?",
       "fields": { "name": "Profile name", "userName": "User name", "authenticationMode": "Authentication", "password": "Password", "enabled": "Profile enabled" }
     },
     "environments": { "Internal": "Internal DNS (AD)", "Public": "Public DNS (NS)", "Other": "Other" },
+    "connection": {
+      "test": "Test connection", "testing": "Testing...", "success": "Successful", "failed": "Failed", "resultTitle": "{{name}} connection result", "available": "Available", "unavailable": "Unavailable", "detailsSuccess": "The WinRM HTTPS connection was validated and DNS Server capabilities were read.", "osVersion": "Operating system", "dnsVersion": "DNS Server version", "powerShellVersion": "PowerShell version", "dnsModuleVersion": "DNS module version", "zoneCount": "Zone count",
+      "checks": { "hostAgentAvailable": "Portal execution service", "networkReachable": "Network access", "tlsValidated": "TLS validation", "authenticationSucceeded": "Authentication", "dnsModuleAvailable": "DNS management module", "dnsServiceReachable": "DNS Server access" },
+      "capabilities": { "title": "Discovered capabilities", "zones": "Zone management", "records": "Record management", "serverSettings": "Server settings", "dnssec": "DNSSEC", "policies": "DNS policies", "scopes": "Zone scopes", "cache": "Cache" },
+      "failures": { "HostAgentUnavailable": "The execution service on the portal server is unavailable.", "HostAgentRejected": "The portal execution service rejected the request. Check the web application and service versions.", "NetworkUnreachable": "The WinRM HTTPS endpoint could not be reached over the network.", "TlsValidationFailed": "The server certificate chain, name, or thumbprint could not be validated.", "AuthenticationOrRemotingFailed": "The credentials were rejected or the remote PowerShell endpoint is unavailable.", "DnsCapabilityProbeFailed": "The connection succeeded, but the DNS Server role or management commands could not be read.", "Timeout": "The connection test did not complete within the configured time.", "Unknown": "The connection test could not be completed." }
+    },
     "messages": { "credentialSaved": "Credential profile saved.", "serverSaved": "DNS server saved.", "credentialDeleted": "Credential profile deleted.", "credentialInUse": "Credential profile cannot be deleted because it is in use.", "saveFailed": "The operation could not be completed. Check the fields and try again.", "loadFailed": "DNS management information could not be loaded." },
     "settings": {
       "title": "DNS Management settings", "description": "Configure inventory collection, scheduling, and comparison behavior.", "moduleTitle": "Module and synchronization", "moduleDescription": "DNS servers are the source of truth; comparisons use the latest successful database snapshot.", "saved": "DNS Management settings saved.", "saveFailed": "Settings could not be saved.", "loadFailed": "DNS Management settings could not be loaded.",

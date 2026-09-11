@@ -11,7 +11,9 @@ namespace ITAdmin.Api.Controllers;
 [ApiController]
 [Route("api/dns-management")]
 [Authorize]
-public sealed class DnsManagementAdministrationController(IDnsManagementAdministrationService service) : ControllerBase
+public sealed class DnsManagementAdministrationController(
+    IDnsManagementAdministrationService service,
+    IDnsServerConnectionTestService connectionTestService) : ControllerBase
 {
     [HttpGet("settings")]
     [RequirePermission(DnsManagementPermissions.ManageSettings)]
@@ -70,6 +72,18 @@ public sealed class DnsManagementAdministrationController(IDnsManagementAdminist
     public Task<ActionResult<DnsServerResponse>> UpdateServer(Guid id, SaveDnsServerRequest request, CancellationToken cancellationToken) =>
         SaveServer(id, request, cancellationToken);
 
+    [HttpPost("servers/{id:guid}/test-connection")]
+    [RequirePermission(DnsManagementPermissions.ServersTestConnection)]
+    public async Task<ActionResult<DnsServerConnectionTestResponse>> TestServerConnection(
+        Guid id, CancellationToken cancellationToken)
+    {
+        var result = await connectionTestService.TestAsync(
+            id, DnsManagementActorResolver.Resolve(this), cancellationToken);
+        return result.IsSuccess && result.Value is not null
+            ? Ok(Map(result.Value))
+            : BadRequest(new { message = result.Message });
+    }
+
     private async Task<ActionResult<DnsCredentialProfileResponse>> SaveCredential(
         Guid? id, SaveDnsCredentialProfileRequest request, CancellationToken cancellationToken)
     {
@@ -99,4 +113,12 @@ public sealed class DnsManagementAdministrationController(IDnsManagementAdminist
         x.CredentialProfileName, x.IsEnabled, x.SyncIntervalMinutes, x.TlsCertificateThumbprint,
         x.Notes, x.OperatingSystemVersion, x.DnsServerVersion, x.LastSeenAt,
         x.LastSuccessfulSyncAt, x.LastSyncStatus, x.LastSyncMessage);
+    private static DnsServerConnectionTestResponse Map(AppModels.DnsServerConnectionTestModel x) => new(
+        x.ServerId, x.ServerDisplayName, x.Success, x.FailureKind, x.Message, x.HostAgentAvailable,
+        x.NetworkReachable, x.TlsValidated, x.AuthenticationSucceeded, x.DnsModuleAvailable,
+        x.DnsServiceReachable, x.OperatingSystemVersion, x.PowerShellVersion, x.DnsModuleVersion,
+        x.DnsServerVersion, x.ZoneCount, x.Capabilities is null ? null : new(
+            x.Capabilities.Zones, x.Capabilities.Records, x.Capabilities.ServerSettings,
+            x.Capabilities.Dnssec, x.Capabilities.Policies, x.Capabilities.Scopes, x.Capabilities.Cache),
+        x.TestedAt);
 }

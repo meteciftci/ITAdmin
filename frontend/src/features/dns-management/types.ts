@@ -51,3 +51,12 @@ export type DnsServer = {
 };
 
 export type SaveDnsServer = Omit<DnsServer, "id" | "credentialProfileName" | "operatingSystemVersion" | "dnsServerVersion" | "lastSeenAt" | "lastSuccessfulSyncAt" | "lastSyncStatus" | "lastSyncMessage">;
+
+export type DnsServerCapabilities = { zones: boolean; records: boolean; serverSettings: boolean; dnssec: boolean; policies: boolean; scopes: boolean; cache: boolean };
+export type DnsServerConnectionTest = {
+  serverId: string; serverDisplayName: string; success: boolean; failureKind?: string | null; message: string;
+  hostAgentAvailable: boolean; networkReachable: boolean; tlsValidated: boolean;
+  authenticationSucceeded: boolean; dnsModuleAvailable: boolean; dnsServiceReachable: boolean;
+  operatingSystemVersion?: string | null; powerShellVersion?: string | null; dnsModuleVersion?: string | null;
+  dnsServerVersion?: string | null; zoneCount?: number | null; capabilities?: DnsServerCapabilities | null; testedAt: string;
+};

@@ -18,7 +18,8 @@ namespace ITAdmin.HostAgent;
 public sealed class HostAgentDispatcher(
     HostAgentAuthorization authorization,
     IHostAgentOperations operations,
-    ILogger<HostAgentDispatcher>? logger = null)
+    ILogger<HostAgentDispatcher>? logger = null,
+    IDnsRemoteProbeExecutor? dnsRemoteProbeExecutor = null)
 {
     private readonly ILogger<HostAgentDispatcher> _logger = logger ?? NullLogger<HostAgentDispatcher>.Instance;
 
@@ -89,6 +90,18 @@ public sealed class HostAgentDispatcher(
 
                 HostAgentOperation.DisableHttps =>
                     await operations.DisableHttpsAsync(request, cancellationToken),
+
+                HostAgentOperation.TestDnsServerConnection when dnsRemoteProbeExecutor is not null =>
+                    new HostAgentResponse
+                    {
+                        Status = HostAgentResponseStatus.Ok,
+                        Message = "DNS server connection probe completed.",
+                        CorrelationId = request.CorrelationId,
+                        DnsProbe = await dnsRemoteProbeExecutor.ProbeAsync(request, cancellationToken),
+                    },
+
+                HostAgentOperation.TestDnsServerConnection =>
+                    HostAgentResponse.Failed("DNS remote management is unavailable on this host.", request.CorrelationId),
 
                 _ => HostAgentResponse.Rejected("Unsupported operation.", request.CorrelationId),
             };

@@ -41,3 +41,14 @@ public sealed record SaveDnsServerRequest(
     string? TlsCertificateThumbprint, string? Notes, DnsActorContext Actor);
 
 public sealed record DnsAdministrationResult<T>(bool IsSuccess, string Message, T? Value = default);
+
+public sealed record DnsServerCapabilitiesModel(
+    bool Zones, bool Records, bool ServerSettings, bool Dnssec, bool Policies, bool Scopes, bool Cache);
+
+public sealed record DnsServerConnectionTestModel(
+    Guid ServerId, string ServerDisplayName, bool Success, string? FailureKind, string Message,
+    bool HostAgentAvailable, bool NetworkReachable, bool TlsValidated,
+    bool AuthenticationSucceeded, bool DnsModuleAvailable, bool DnsServiceReachable,
+    string? OperatingSystemVersion, string? PowerShellVersion, string? DnsModuleVersion,
+    string? DnsServerVersion, int? ZoneCount, DnsServerCapabilitiesModel? Capabilities,
+    DateTime TestedAt);

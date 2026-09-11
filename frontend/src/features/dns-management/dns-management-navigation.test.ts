@@ -28,6 +28,14 @@ test("DNS settings preserve the comparison refresh prompt", () => {
   assert.match(source, /comparisonSnapshotStaleAfterMinutes/);
 });
 
+test("DNS connection test uses the dedicated endpoint and permission", () => {
+  const api = readFileSync(join(root, "features/dns-management/api.ts"), "utf8");
+  const page = readFileSync(join(root, "features/dns-management/DnsServersPage.tsx"), "utf8");
+  assert.match(api, /servers\/\$\{id\}\/test-connection/);
+  assert.match(page, /DnsManagement\.Servers\.TestConnection/);
+  assert.match(page, /connectionResult\.capabilities/);
+});
+
 test("DNS locales have matching structures", () => {
   const tr = JSON.parse(readFileSync(join(root, "locales/tr/dnsManagement.json"), "utf8"));
   const en = JSON.parse(readFileSync(join(root, "locales/en/dnsManagement.json"), "utf8"));

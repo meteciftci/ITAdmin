@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using ITAdmin.Application.Abstractions.Security;
+using ITAdmin.Application.Abstractions.Services;
 using ITAdmin.Api.Authorization;
 using ITAdmin.Api.Configuration;
 using ITAdmin.Api.Extensions;
@@ -53,6 +54,7 @@ public partial class Program
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddScoped<ICorrelationIdAccessor, CorrelationIdAccessor>();
         builder.Services.AddSingleton<IHostAgentClient, NamedPipeHostAgentClient>();
+        builder.Services.AddScoped<IDnsServerConnectionTestService, DnsServerConnectionTestService>();
 
         // IIS / reverse proxy support: honor X-Forwarded-For / X-Forwarded-Proto only from
         // proxies declared in configuration (safe loopback-only default when config is empty).

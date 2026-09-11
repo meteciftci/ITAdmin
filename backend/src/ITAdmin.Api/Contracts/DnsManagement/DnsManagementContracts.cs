@@ -36,3 +36,14 @@ public sealed record SaveDnsServerRequest(
     string DisplayName, string HostName, int Port, DnsServerEnvironment Environment,
     Guid CredentialProfileId, bool IsEnabled, int? SyncIntervalMinutes,
     string? TlsCertificateThumbprint, string? Notes);
+
+public sealed record DnsServerCapabilitiesResponse(
+    bool Zones, bool Records, bool ServerSettings, bool Dnssec, bool Policies, bool Scopes, bool Cache);
+
+public sealed record DnsServerConnectionTestResponse(
+    Guid ServerId, string ServerDisplayName, bool Success, string? FailureKind, string Message,
+    bool HostAgentAvailable, bool NetworkReachable, bool TlsValidated,
+    bool AuthenticationSucceeded, bool DnsModuleAvailable, bool DnsServiceReachable,
+    string? OperatingSystemVersion, string? PowerShellVersion, string? DnsModuleVersion,
+    string? DnsServerVersion, int? ZoneCount, DnsServerCapabilitiesResponse? Capabilities,
+    DateTime TestedAt);
