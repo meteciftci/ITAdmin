@@ -170,7 +170,11 @@ function isLicenseManagementSectionVisible(user: CurrentUser | null): boolean {
 }
 
 function isDnsManagementSectionVisible(user: CurrentUser | null): boolean {
-  return canAccess(user, PermissionCodes.DnsManagement.Servers.View);
+  return canAccessAny(user, [
+    PermissionCodes.DnsManagement.Servers.View,
+    PermissionCodes.DnsManagement.Zones.View,
+    PermissionCodes.DnsManagement.Records.View,
+  ]);
 }
 
 export const getSidebarGroups = (
@@ -198,7 +202,10 @@ export const getSidebarGroups = (
         routePrefix: "/dns-management",
         icon: ServerCog,
         visible: isDnsManagementSectionVisible(user),
-        children: [{ titleKey: "items.dnsManagementServers", to: "/dns-management/servers", icon: ServerCog, visible: isDnsManagementSectionVisible(user) }],
+        children: [
+          { titleKey: "items.dnsManagementServers", to: "/dns-management/servers", icon: ServerCog, visible: canAccess(user, PermissionCodes.DnsManagement.Servers.View) },
+          { titleKey: "items.dnsManagementZones", to: "/dns-management/zones", icon: ListTree, visible: canAccessAny(user, [PermissionCodes.DnsManagement.Zones.View, PermissionCodes.DnsManagement.Records.View]) },
+        ],
       },
       {
         kind: "collapsible",

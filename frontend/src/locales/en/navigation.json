@@ -48,6 +48,8 @@
       "licenseManagementSeats": "License Assignments",
       "dnsManagement": "DNS Management",
       "dnsManagementServers": "DNS Servers",
+      "dnsManagementZones": "DNS Zone Inventory",
+      "dnsManagementRecords": "DNS Records",
       "error": "Error"
     }
   }

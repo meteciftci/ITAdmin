@@ -98,19 +98,30 @@ public sealed class DnsServerConnectionTestService(
     {
         context.AuditLogs.Add(new AuditLog
         {
-            Action = "DnsServerConnectionTest", EntityName = "DnsServer", EntityId = server.Id.ToString(),
+            Action = "DnsServerConnectionTest",
+            EntityName = "DnsServer",
+            EntityId = server.Id.ToString(),
             Description = $"DNS server '{server.DisplayName}' connection test {(result.Success ? "succeeded" : "failed")} ({result.FailureKind ?? "None"}).",
-            ActorUserId = actor.UserId, ActorUserName = actor.UserName,
-            IpAddress = actor.IpAddress, UserAgent = actor.UserAgent, CreatedAt = DateTimeOffset.UtcNow,
+            ActorUserId = actor.UserId,
+            ActorUserName = actor.UserName,
+            IpAddress = actor.IpAddress,
+            UserAgent = actor.UserAgent,
+            CreatedAt = DateTimeOffset.UtcNow,
         });
         context.DnsOperationLogs.Add(new DnsOperationLog
         {
-            DnsServerId = server.Id, ServerDisplayName = server.DisplayName,
-            OperationType = "ServerConnectionTest", Status = result.Success ? "Succeeded" : "Failed",
-            ErrorCode = result.FailureKind, ErrorMessage = result.Success ? null : result.Message,
-            ActorUserId = actor.UserId, ActorUserName = actor.UserName,
-            IpAddress = actor.IpAddress, UserAgent = actor.UserAgent,
-            CorrelationId = correlationId, CreatedAt = DateTimeOffset.UtcNow,
+            DnsServerId = server.Id,
+            ServerDisplayName = server.DisplayName,
+            OperationType = "ServerConnectionTest",
+            Status = result.Success ? "Succeeded" : "Failed",
+            ErrorCode = result.FailureKind,
+            ErrorMessage = result.Success ? null : result.Message,
+            ActorUserId = actor.UserId,
+            ActorUserName = actor.UserName,
+            IpAddress = actor.IpAddress,
+            UserAgent = actor.UserAgent,
+            CorrelationId = correlationId,
+            CreatedAt = DateTimeOffset.UtcNow,
         });
         await context.SaveChangesAsync(cancellationToken);
     }

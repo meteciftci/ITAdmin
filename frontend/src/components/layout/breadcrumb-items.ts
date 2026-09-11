@@ -19,6 +19,8 @@ const breadcrumbItems: BreadcrumbItem[] = [
   { to: "/permissions", titleKey: "items.permissions" },
   { to: "/audit-logs", titleKey: "items.auditLogs" },
   { to: "/security-logs", titleKey: "items.securityLogs" },
+  { to: "/dns-management/zones", titleKey: "items.dnsManagementZones" },
+  { to: "/dns-management/servers", titleKey: "items.dnsManagementServers" },
   {
     to: "/monitoring/module-logs/ad-operation-logs",
     titleKey: "items.adOperationLogs",
@@ -32,6 +34,10 @@ export function getBreadcrumbKeyByPath(pathname: string): string | null {
   }
   if (pathname === "/error" || pathname.startsWith("/error/")) {
     return "items.error";
+  }
+
+  if (/^\/dns-management\/zones\/[^/]+\/records$/.test(pathname)) {
+    return "items.dnsManagementRecords";
   }
 
   if (/^\/ad-management\/users\/[^/]+\/groups$/.test(pathname)) {

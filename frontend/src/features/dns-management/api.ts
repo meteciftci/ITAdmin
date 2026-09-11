@@ -1,5 +1,5 @@
 import { apiClient } from "@/lib/api-client";
-import type { DnsCredentialProfile, DnsManagementSettings, DnsServer, DnsServerConnectionTest, DnsSyncJob, SaveDnsCredentialProfile, SaveDnsServer } from "./types";
+import type { DnsCredentialProfile, DnsInventoryServer, DnsManagementSettings, DnsRecordInventory, DnsServer, DnsServerConnectionTest, DnsSyncJob, DnsZoneInventory, PagedDnsResponse, SaveDnsCredentialProfile, SaveDnsServer } from "./types";
 
 const basePath = "/dns-management";
 export const DNS_SETTINGS_QUERY_KEY = ["dns-management", "settings"] as const;
@@ -19,3 +19,14 @@ export const testDnsServerConnection = async (id: string) =>
   (await apiClient.post<DnsServerConnectionTest>(`${basePath}/servers/${id}/test-connection`)).data;
 export const synchronizeDnsServer = async (id: string) =>
   (await apiClient.post<DnsSyncJob>(`${basePath}/servers/${id}/synchronizations`)).data;
+
+export const DNS_INVENTORY_SERVERS_QUERY_KEY = ["dns-management", "inventory", "servers"] as const;
+export const DNS_ZONES_QUERY_KEY = ["dns-management", "inventory", "zones"] as const;
+export const getDnsInventoryServers = async () =>
+  (await apiClient.get<DnsInventoryServer[]>(`${basePath}/inventory/servers`)).data;
+export const getDnsZones = async (params: { serverId?: string; search?: string; pageNumber: number; pageSize: number }) =>
+  (await apiClient.get<PagedDnsResponse<DnsZoneInventory>>(`${basePath}/inventory/zones`, { params })).data;
+export const getDnsZone = async (id: string) =>
+  (await apiClient.get<DnsZoneInventory>(`${basePath}/inventory/zones/${id}`)).data;
+export const getDnsRecords = async (id: string, params: { search?: string; recordType?: string; pageNumber: number; pageSize: number }) =>
+  (await apiClient.get<PagedDnsResponse<DnsRecordInventory>>(`${basePath}/inventory/zones/${id}/records`, { params })).data;

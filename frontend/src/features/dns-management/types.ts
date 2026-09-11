@@ -69,3 +69,33 @@ export type DnsSyncJob = {
   attemptCount: number; requestedAt: string; startedAt?: string | null; completedAt?: string | null;
   errorCode?: string | null; message?: string | null; alreadyQueued: boolean;
 };
+
+export type PagedDnsResponse<T> = {
+  items: T[]; pageNumber: number; pageSize: number; totalCount: number; totalPages: number;
+};
+
+export type DnsInventoryServer = {
+  serverId: string; serverDisplayName: string; environment: DnsServerEnvironment; isEnabled: boolean;
+  snapshotId?: string | null; snapshotVersion?: string | null;
+  snapshotScope?: "Health" | "Zones" | "Records" | "FullInventory" | null;
+  snapshotCompletedAt?: string | null; zoneCount: number; recordCount: number;
+  lastSyncStatus?: string | null; lastSyncMessage?: string | null;
+  isStale: boolean; isAvailable: boolean;
+};
+
+export type DnsZoneInventory = {
+  id: string; snapshotId: string; serverId: string; serverDisplayName: string;
+  environment: DnsServerEnvironment; name: string; zoneType: string;
+  isReverseLookupZone: boolean; isDsIntegrated: boolean; isSigned: boolean; isPaused: boolean;
+  dynamicUpdate?: string | null; replicationScope?: string | null;
+  directoryPartitionName?: string | null; zoneFile?: string | null;
+  virtualizationInstance?: string | null; zoneScopes: string[];
+  recordCount: number; snapshotCompletedAt: string;
+};
+
+export type DnsRecordInventory = {
+  id: string; relativeName: string; fullyQualifiedName: string; recordType: string;
+  canonicalValue: string; recordDataJson: string; timeToLiveSeconds: number;
+  timestamp?: string | null; zoneScope?: string | null; virtualizationInstance?: string | null;
+  recordHash: string;
+};

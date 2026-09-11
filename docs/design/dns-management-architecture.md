@@ -140,3 +140,19 @@ instances schedule the same server. Snapshot cleanup runs once per process day a
 inactive, non-running snapshots whose completion time is older than the configured retention
 period. The active snapshot and incomplete work are never eligible for cleanup; database cascades
 remove the expired snapshot's zones and records in the same operation.
+
+## Cached inventory browsing
+
+Zone and record screens query only the active PostgreSQL snapshot and never open a live WinRM
+session. The inventory summary exposes every registered server's latest successful snapshot time,
+scope, counts, availability, and freshness against the configured comparison threshold. Zone and
+record endpoints apply permission checks independently, server-side filtering, bounded pagination,
+and deterministic ordering. A record reader may traverse the zone catalog because zone identity is
+required to reach its records, while the record payload itself continues to require the dedicated
+records-view permission.
+
+Record detail routes use snapshot zone identifiers rather than caller-supplied server and zone
+names. Both the zone lookup and record query verify that the referenced snapshot is still active,
+so retained historical or failed partial snapshots cannot leak into normal inventory views. The UI
+uses the shared page header, section card, data table, filters, loading/error states, pagination,
+badges, and bilingual locale conventions.

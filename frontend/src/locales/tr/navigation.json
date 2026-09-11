@@ -48,6 +48,8 @@
       "licenseManagementSeats": "Lisans Atamaları",
       "dnsManagement": "DNS Yönetimi",
       "dnsManagementServers": "DNS Sunucuları",
+      "dnsManagementZones": "DNS Zone Envanteri",
+      "dnsManagementRecords": "DNS Kayıtları",
       "error": "Hata"
     }
   }
