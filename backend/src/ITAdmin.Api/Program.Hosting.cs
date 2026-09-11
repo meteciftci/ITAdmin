@@ -122,6 +122,7 @@ public partial class Program
         builder.Services.AddHealthChecks();
         builder.Services.AddHostedService<NotificationOutboxWorker>();
         builder.Services.AddHostedService<LicenseRenewalReminderWorker>();
+        builder.Services.AddHostedService<DnsInventoryMaintenanceWorker>();
         builder.Services.AddHostedService<DnsInventorySyncWorker>();
 
         var app = builder.Build();

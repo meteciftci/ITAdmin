@@ -21,8 +21,13 @@ public sealed class DnsInventorySyncService(
     private const int PageSize = 250;
     private static readonly TimeSpan LeaseDuration = TimeSpan.FromMinutes(10);
 
-    public async Task<DnsAdministrationResult<DnsSyncJobModel>> EnqueueAsync(
-        Guid serverId, DnsActorContext actor, CancellationToken cancellationToken = default)
+    public Task<DnsAdministrationResult<DnsSyncJobModel>> EnqueueAsync(
+        Guid serverId, DnsActorContext actor, CancellationToken cancellationToken = default) =>
+        EnqueueInternalAsync(serverId, actor, DnsSyncTrigger.Manual, 100, Guid.NewGuid(), cancellationToken);
+
+    private async Task<DnsAdministrationResult<DnsSyncJobModel>> EnqueueInternalAsync(
+        Guid serverId, DnsActorContext actor, DnsSyncTrigger trigger, int priority, Guid batchId,
+        CancellationToken cancellationToken)
     {
         var server = await context.DnsServers.Include(x => x.CredentialProfile)
             .SingleOrDefaultAsync(x => x.Id == serverId, cancellationToken);
@@ -31,6 +36,8 @@ public sealed class DnsInventorySyncService(
         if (!server.CredentialProfile.IsEnabled) return new(false, "The assigned credential profile is disabled.");
         var settings = await context.DnsManagementSettings.AsNoTracking().SingleOrDefaultAsync(cancellationToken);
         if (settings is null || !settings.IsEnabled) return new(false, "DNS Management is disabled.");
+        if (trigger == DnsSyncTrigger.Scheduled && !settings.AutomaticSyncEnabled)
+            return new(false, "Automatic DNS inventory synchronization is disabled.");
 
         var scope = settings.SyncRecordInventory ? DnsSyncScope.FullInventory : DnsSyncScope.Zones;
         var dedupeKey = $"{server.Id:N}:inventory:*";
@@ -44,13 +51,13 @@ public sealed class DnsInventorySyncService(
         var correlationId = Guid.NewGuid().ToString("N");
         var job = new DnsSyncJob
         {
-            BatchId = Guid.NewGuid(),
+            BatchId = batchId,
             DnsServerId = server.Id,
             Scope = scope,
-            Trigger = DnsSyncTrigger.Manual,
+            Trigger = trigger,
             Status = DnsSyncStatus.Pending,
             DedupeKey = dedupeKey,
-            Priority = 100,
+            Priority = priority,
             RequestedAt = now,
             RequestedByUserId = actor.UserId,
             RequestedByUserName = Limit(actor.UserName, 100),
@@ -81,7 +88,7 @@ public sealed class DnsInventorySyncService(
             RequestSummaryJson = JsonSerializer.Serialize(new
             {
                 scope = scope.ToString(),
-                trigger = DnsSyncTrigger.Manual.ToString(),
+                trigger = trigger.ToString(),
             }),
             ActorUserId = actor.UserId,
             ActorUserName = Limit(actor.UserName, 100),
@@ -105,6 +112,67 @@ public sealed class DnsInventorySyncService(
             return new(true, "A synchronization is already queued.", Map(existing, server.DisplayName, true));
         }
         return new(true, "Synchronization queued.", Map(job, server.DisplayName, false));
+    }
+
+    public async Task<int> EnqueueDueAutomaticAsync(
+        DateTime utcNow, CancellationToken cancellationToken = default)
+    {
+        var settings = await context.DnsManagementSettings.AsNoTracking().SingleOrDefaultAsync(cancellationToken);
+        if (settings is null || !settings.IsEnabled || !settings.AutomaticSyncEnabled) return 0;
+
+        var servers = await context.DnsServers.AsNoTracking()
+            .Where(x => x.IsEnabled && x.CredentialProfile.IsEnabled)
+            .Select(x => new
+            {
+                x.Id,
+                x.SyncIntervalMinutes,
+                x.LastSuccessfulSyncAt,
+            })
+            .ToListAsync(cancellationToken);
+        if (servers.Count == 0) return 0;
+
+        var serverIds = servers.Select(x => x.Id).ToArray();
+        var lastJobActivities = await context.DnsSyncJobs.AsNoTracking()
+            .Where(x => serverIds.Contains(x.DnsServerId))
+            .GroupBy(x => x.DnsServerId)
+            .Select(x => new { ServerId = x.Key, LastActivityAt = x.Max(y => y.CompletedAt ?? y.RequestedAt) })
+            .ToDictionaryAsync(x => x.ServerId, x => x.LastActivityAt, cancellationToken);
+
+        var batchId = Guid.NewGuid();
+        var actor = new DnsActorContext(null, "dns-scheduler", null, null);
+        var queued = 0;
+        foreach (var server in servers)
+        {
+            var interval = server.SyncIntervalMinutes ?? settings.DefaultSyncIntervalMinutes;
+            lastJobActivities.TryGetValue(server.Id, out var lastJobActivityAt);
+            var lastActivity = Latest(server.LastSuccessfulSyncAt,
+                lastJobActivityAt == default ? null : lastJobActivityAt);
+            if (lastActivity is not null && lastActivity > utcNow.AddMinutes(-interval)) continue;
+
+            var result = await EnqueueInternalAsync(
+                server.Id, actor, DnsSyncTrigger.Scheduled, 10, batchId, cancellationToken);
+            if (result.IsSuccess && result.Value is { AlreadyQueued: false }) queued++;
+        }
+        return queued;
+    }
+
+    public async Task<int> PurgeExpiredSnapshotsAsync(
+        DateTime utcNow, CancellationToken cancellationToken = default)
+    {
+        var retentionDays = await context.DnsManagementSettings.AsNoTracking()
+            .Select(x => (int?)x.SnapshotRetentionDays).SingleOrDefaultAsync(cancellationToken);
+        if (retentionDays is null) return 0;
+
+        var cutoff = utcNow.AddDays(-Math.Clamp(retentionDays.Value, 1, 3650));
+        var expired = context.DnsInventorySnapshots.Where(x =>
+            !x.IsActive && x.Status != DnsSyncStatus.Running && x.CompletedAt < cutoff);
+        if (context.Database.IsRelational())
+            return await expired.ExecuteDeleteAsync(cancellationToken);
+
+        var entities = await expired.ToListAsync(cancellationToken);
+        context.DnsInventorySnapshots.RemoveRange(entities);
+        await context.SaveChangesAsync(cancellationToken);
+        return entities.Count;
     }
 
     public async Task<bool> ProcessNextAsync(CancellationToken cancellationToken = default)
@@ -528,6 +596,8 @@ public sealed class DnsInventorySyncService(
             throw new DnsInventoryException("InventoryLimitExceeded", "The DNS inventory exceeded the safety limit.");
         return offset + received;
     }
+    private static DateTime? Latest(DateTime? left, DateTime? right) =>
+        left is null ? right : right is null || left >= right ? left : right;
     private static string Required(string? value, int maxLength, string field)
     {
         var normalized = value?.Trim();

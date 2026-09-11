@@ -117,6 +117,101 @@ public sealed class DnsInventorySyncServiceTests
     }
 
     [Fact]
+    public async Task Automatic_scheduler_queues_only_due_servers_and_uses_server_interval_override()
+    {
+        await using var context = CreateContext();
+        var now = DateTime.UtcNow;
+        var due = await SeedAsync(context);
+        due.SyncIntervalMinutes = 30;
+        due.LastSuccessfulSyncAt = now.AddMinutes(-31);
+        var recent = new DnsServer
+        {
+            DisplayName = "Recent DNS",
+            HostName = "dns02.example.local",
+            Port = 5986,
+            DnsCredentialProfileId = due.DnsCredentialProfileId,
+            IsEnabled = true,
+            LastSuccessfulSyncAt = now.AddMinutes(-14),
+        };
+        context.DnsServers.Add(recent);
+        await context.SaveChangesAsync();
+
+        var queued = await CreateService(context, new InventoryAgent()).EnqueueDueAutomaticAsync(now);
+
+        Assert.Equal(1, queued);
+        var job = await context.DnsSyncJobs.AsNoTracking().SingleAsync();
+        Assert.Equal(due.Id, job.DnsServerId);
+        Assert.Equal(DnsSyncTrigger.Scheduled, job.Trigger);
+        Assert.Equal(10, job.Priority);
+        Assert.Equal("dns-scheduler", job.RequestedByUserName);
+    }
+
+    [Fact]
+    public async Task Automatic_scheduler_uses_last_request_to_avoid_a_failure_hot_loop()
+    {
+        await using var context = CreateContext();
+        var now = DateTime.UtcNow;
+        var server = await SeedAsync(context);
+        server.LastSuccessfulSyncAt = now.AddHours(-1);
+        context.DnsSyncJobs.Add(new DnsSyncJob
+        {
+            BatchId = Guid.NewGuid(),
+            DnsServerId = server.Id,
+            Scope = DnsSyncScope.FullInventory,
+            Trigger = DnsSyncTrigger.Scheduled,
+            Status = DnsSyncStatus.Failed,
+            DedupeKey = $"{server.Id:N}:inventory:*",
+            RequestedAt = now.AddHours(-1),
+            CompletedAt = now.AddSeconds(-30),
+        });
+        await context.SaveChangesAsync();
+
+        var queued = await CreateService(context, new InventoryAgent()).EnqueueDueAutomaticAsync(now);
+
+        Assert.Equal(0, queued);
+        Assert.Single(context.DnsSyncJobs);
+    }
+
+    [Fact]
+    public async Task Automatic_scheduler_does_nothing_when_automatic_sync_is_disabled()
+    {
+        await using var context = CreateContext();
+        await SeedAsync(context);
+        var settings = await context.DnsManagementSettings.SingleAsync();
+        settings.AutomaticSyncEnabled = false;
+        await context.SaveChangesAsync();
+
+        var queued = await CreateService(context, new InventoryAgent())
+            .EnqueueDueAutomaticAsync(DateTime.UtcNow);
+
+        Assert.Equal(0, queued);
+        Assert.Empty(context.DnsSyncJobs);
+    }
+
+    [Fact]
+    public async Task Snapshot_retention_never_deletes_active_running_or_recent_inventory()
+    {
+        await using var context = CreateContext();
+        var now = DateTime.UtcNow;
+        var server = await SeedAsync(context);
+        var expired = Snapshot(server.Id, DnsSyncStatus.Failed, false, now.AddDays(-31));
+        var active = Snapshot(server.Id, DnsSyncStatus.Completed, true, now.AddDays(-31));
+        var running = Snapshot(server.Id, DnsSyncStatus.Running, false, now.AddDays(-31));
+        var recent = Snapshot(server.Id, DnsSyncStatus.Completed, false, now.AddDays(-29));
+        context.DnsInventorySnapshots.AddRange(expired, active, running, recent);
+        await context.SaveChangesAsync();
+
+        var purged = await CreateService(context, new InventoryAgent()).PurgeExpiredSnapshotsAsync(now);
+
+        Assert.Equal(1, purged);
+        var remaining = await context.DnsInventorySnapshots.AsNoTracking().Select(x => x.Id).ToListAsync();
+        Assert.DoesNotContain(expired.Id, remaining);
+        Assert.Contains(active.Id, remaining);
+        Assert.Contains(running.Id, remaining);
+        Assert.Contains(recent.Id, remaining);
+    }
+
+    [Fact]
     public async Task Expired_final_lease_marks_partial_snapshot_failed_without_activating_it()
     {
         await using var context = CreateContext();
@@ -160,6 +255,18 @@ public sealed class DnsInventorySyncServiceTests
     }
 
     private static readonly DnsActorContext Actor = new(null, "admin", "127.0.0.1", "unit-test");
+
+    private static DnsInventorySnapshot Snapshot(
+        Guid serverId, DnsSyncStatus status, bool isActive, DateTime completedAt) => new()
+        {
+            DnsServerId = serverId,
+            Scope = DnsSyncScope.FullInventory,
+            Trigger = DnsSyncTrigger.Scheduled,
+            Status = status,
+            IsActive = isActive,
+            StartedAt = completedAt.AddMinutes(-1),
+            CompletedAt = completedAt,
+        };
 
     private static DnsInventorySyncService CreateService(AppDbContext context, IHostAgentClient agent) =>
         new(context, new FakeSecretProtector(), agent, NullLogger<DnsInventorySyncService>.Instance);

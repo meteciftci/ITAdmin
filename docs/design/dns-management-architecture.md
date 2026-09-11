@@ -124,3 +124,19 @@ Inventory cmdlet references:
 - [Get-DnsServerZone](https://learn.microsoft.com/en-us/powershell/module/dnsserver/get-dnsserverzone?view=windowsserver2025-ps)
 - [Get-DnsServerZoneScope](https://learn.microsoft.com/en-us/powershell/module/dnsserver/get-dnsserverzonescope?view=windowsserver2025-ps)
 - [Get-DnsServerResourceRecord](https://learn.microsoft.com/en-us/powershell/module/dnsserver/get-dnsserverresourcerecord?view=windowsserver2025-ps)
+
+## Automatic synchronization and retention
+
+A dedicated maintenance worker evaluates synchronization eligibility every 30 seconds. It queues
+work only when the module and automatic synchronization are enabled, the server and its credential
+profile are enabled, and the effective interval has elapsed. A server-specific interval overrides
+the module default. Eligibility uses the newer of the last successful snapshot and the last job's
+completion time (or request time while incomplete), preventing a failing endpoint from being queued
+continuously. Automatic jobs have lower priority than manual requests and share one batch identifier
+per scheduling pass.
+
+The database's partial unique job index remains the final concurrency guard when multiple portal
+instances schedule the same server. Snapshot cleanup runs once per process day and deletes only
+inactive, non-running snapshots whose completion time is older than the configured retention
+period. The active snapshot and incomplete work are never eligible for cleanup; database cascades
+remove the expired snapshot's zones and records in the same operation.
