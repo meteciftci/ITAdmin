@@ -71,3 +71,18 @@ public sealed record UpdateDnsServerSettingsRequest(
 public sealed record DnsServerOperationResponse(
     bool Success, string? ErrorCode, string Message,
     DnsServerSettingsResponse? Settings = null);
+
+public sealed record DnsOperationLogListItemResponse(
+    Guid Id, DateTimeOffset CreatedAt, Guid? ServerId, string? ServerDisplayName,
+    string OperationType, string Status, string? ZoneName, string? RecordName,
+    string? RecordType, string? ActorUserName, string? ErrorCode,
+    string? ErrorMessage, bool HasRequestSummary, bool HasBeforeSnapshot,
+    bool HasAfterSnapshot);
+
+public sealed record DnsOperationLogDetailResponse(
+    Guid Id, DateTimeOffset CreatedAt, Guid? ServerId, string? ServerDisplayName,
+    string OperationType, string Status, string? ZoneName, string? RecordName,
+    string? RecordType, string? RequestSummaryJson, string? BeforeSnapshotJson,
+    string? AfterSnapshotJson, string? ErrorCode, string? ErrorMessage,
+    Guid? ActorUserId, string? ActorUserName, string? IpAddress,
+    string? UserAgent, string? CorrelationId);

@@ -31,6 +31,10 @@ export function DnsManagementRedirectPage() {
     return <Navigate to="/dns-management/server-settings" replace />;
   }
 
+  if (canAccess(user, PermissionCodes.DnsManagement.ViewOperationLogs)) {
+    return <Navigate to="/dns-management/operation-logs" replace />;
+  }
+
   return (
     <Navigate
       to={getErrorRoutePath("FORBIDDEN")}

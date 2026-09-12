@@ -146,6 +146,25 @@ test("DNS server settings and cache operations are live, typed, and independentl
   assert.doesNotMatch(api, /power\s*shell/i);
 });
 
+test("DNS operation history and exports use dedicated permissions and server-generated files", () => {
+  const routes = readRouterSource();
+  const api = readFileSync(join(root, "features/dns-management/api.ts"), "utf8");
+  const logs = readFileSync(join(root, "features/dns-management/DnsOperationLogsPage.tsx"), "utf8");
+  const zones = readFileSync(join(root, "features/dns-management/DnsZonesPage.tsx"), "utf8");
+  const records = readFileSync(join(root, "features/dns-management/DnsZoneRecordsPage.tsx"), "utf8");
+  const comparison = readFileSync(join(root, "features/dns-management/DnsComparisonPage.tsx"), "utf8");
+  assert.match(routes, /path: "\/dns-management\/operation-logs"/);
+  assert.match(routes, /DnsManagement\.ViewOperationLogs/);
+  assert.match(api, /operation-logs\/\$\{id\}/);
+  assert.match(api, /responseType: "blob"/);
+  assert.match(api, /inventory\/exports\/comparison/);
+  assert.match(logs, /DataTablePagination/);
+  assert.match(logs, /DateRangePicker/);
+  assert.match(zones, /DnsManagement\.Export/);
+  assert.match(records, /DnsManagement\.Export/);
+  assert.match(comparison, /DnsManagement\.Export/);
+});
+
 test("DNS locales have matching structures", () => {
   const tr = JSON.parse(readFileSync(join(root, "locales/tr/dnsManagement.json"), "utf8"));
   const en = JSON.parse(readFileSync(join(root, "locales/en/dnsManagement.json"), "utf8"));

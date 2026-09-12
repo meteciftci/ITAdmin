@@ -52,6 +52,7 @@
       "dnsManagementZones": "DNS Zone Envanteri",
       "dnsManagementRecords": "DNS Kayıtları",
       "dnsManagementComparison": "DNS Karşılaştırma",
+      "dnsManagementOperationLogs": "DNS İşlem Geçmişi",
       "error": "Hata"
     }
   }

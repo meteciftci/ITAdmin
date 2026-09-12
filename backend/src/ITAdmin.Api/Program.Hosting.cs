@@ -13,6 +13,7 @@ using ITAdmin.Api.HostedServices;
 using ITAdmin.Api.Middlewares;
 using ITAdmin.Api.Security;
 using ITAdmin.Api.HostAgent;
+using ITAdmin.Api.Services;
 using ITAdmin.Application;
 using ITAdmin.Application.Common.Models;
 using ITAdmin.Infrastructure;
@@ -59,6 +60,7 @@ public partial class Program
         builder.Services.AddScoped<IDnsRecordMutationService, DnsRecordMutationService>();
         builder.Services.AddScoped<IDnsZoneMutationService, DnsZoneMutationService>();
         builder.Services.AddScoped<IDnsServerSettingsService, DnsServerSettingsService>();
+        builder.Services.AddScoped<IDnsInventoryExportService, DnsInventoryExportService>();
 
         // IIS / reverse proxy support: honor X-Forwarded-For / X-Forwarded-Proto only from
         // proxies declared in configuration (safe loopback-only default when config is empty).

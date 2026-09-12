@@ -211,3 +211,46 @@ export type DnsServerOperation = {
   message: string;
   settings?: DnsServerSettings | null;
 };
+
+export type DnsOperationLogListItem = {
+  id: string;
+  createdAt: string;
+  serverId: string | null;
+  serverDisplayName: string | null;
+  operationType: string;
+  status: string;
+  zoneName: string | null;
+  recordName: string | null;
+  recordType: string | null;
+  actorUserName: string | null;
+  errorCode: string | null;
+  errorMessage: string | null;
+  hasRequestSummary: boolean;
+  hasBeforeSnapshot: boolean;
+  hasAfterSnapshot: boolean;
+};
+
+export type DnsOperationLogDetail = Omit<DnsOperationLogListItem,
+  "hasRequestSummary" | "hasBeforeSnapshot" | "hasAfterSnapshot"> & {
+  requestSummaryJson: string | null;
+  beforeSnapshotJson: string | null;
+  afterSnapshotJson: string | null;
+  actorUserId: string | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  correlationId: string | null;
+};
+
+export type DnsOperationLogQuery = {
+  serverId?: string;
+  operationType?: string;
+  status?: string;
+  targetSearch?: string;
+  actorUserName?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  pageNumber: number;
+  pageSize: number;
+};
+
+export type DnsDownload = { blob: Blob; fileName: string };

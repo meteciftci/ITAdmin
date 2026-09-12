@@ -21,9 +21,10 @@ import { getApiErrorMessage } from "@/lib/api-error";
 import { PermissionCodes } from "@/lib/permission-codes";
 import { canAccess } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
-import { createDnsRecord, deleteDnsRecord, getDnsRecords, getDnsZone, updateDnsRecord } from "./api";
+import { createDnsRecord, deleteDnsRecord, exportDnsRecords, getDnsRecords, getDnsZone, updateDnsRecord } from "./api";
 import { createDnsRecordColumns } from "./dns-inventory-columns";
 import { DNS_ZONES_PATH } from "./dns-inventory-paths";
+import { saveDnsDownload } from "./download-dns-export";
 import { DnsRecordDialog } from "./DnsRecordDialog";
 import type { CreateDnsRecord, DnsRecordInventory, DnsRecordMutationInput } from "./types";
 
@@ -36,6 +37,7 @@ export function DnsZoneRecordsPage() {
   const canCreate = canAccess(user, PermissionCodes.DnsManagement.Records.Create);
   const canUpdate = canAccess(user, PermissionCodes.DnsManagement.Records.Update);
   const canDelete = canAccess(user, PermissionCodes.DnsManagement.Records.Delete);
+  const canExport = canAccess(user, PermissionCodes.DnsManagement.Export);
   const queryClient = useQueryClient();
   const { zoneSnapshotId = "" } = useParams();
   const [search, setSearch] = useState("");
@@ -75,6 +77,11 @@ export function DnsZoneRecordsPage() {
     onSuccess: async () => { setRecordToDelete(null); setMutationError(null); await refreshInventory(); toast.success(t("records.deleted")); navigate(DNS_ZONES_PATH); },
     onError: (error) => { setMutationError(getApiErrorMessage(error, t("records.operationFailed"))); setRecordToDelete(null); },
   });
+  const exportMutation = useMutation({
+    mutationFn: () => exportDnsRecords(zoneSnapshotId, { search: effectiveSearch, recordType: recordType || undefined }),
+    onSuccess: (download) => { saveDnsDownload(download); setMutationError(null); toast.success(t("export.completed")); },
+    onError: (error) => setMutationError(getApiErrorMessage(error, t("export.failed"))),
+  });
   const columns = useMemo(() => createDnsRecordColumns({
     t, canUpdate, canDelete,
     onEdit: (record) => { setRecordToEdit(record); setMutationError(null); setEditorOpen(true); },
@@ -93,7 +100,7 @@ export function DnsZoneRecordsPage() {
       <PageHeader
         title={zone.data ? t("inventory.recordsTitle", { zone: zone.data.name }) : t("inventory.records")}
         description={zone.data ? t("inventory.recordsDescription", { server: zone.data.serverDisplayName }) : t("inventory.recordsLoading")}
-        actions={<div className="flex gap-2">{canCreate && zone.data ? <Button onClick={() => { setRecordToEdit(null); setMutationError(null); setEditorOpen(true); }}>{t("records.createAction")}</Button> : null}<Link to={DNS_ZONES_PATH} className={cn(buttonVariants({ variant: "outline" }))}>{t("inventory.backToZones")}</Link></div>}
+        actions={<div className="flex gap-2">{canExport && zone.data ? <Button variant="outline" disabled={exportMutation.isPending} onClick={() => exportMutation.mutate()}>{exportMutation.isPending ? t("export.preparing") : t("export.csv")}</Button> : null}{canCreate && zone.data ? <Button onClick={() => { setRecordToEdit(null); setMutationError(null); setEditorOpen(true); }}>{t("records.createAction")}</Button> : null}<Link to={DNS_ZONES_PATH} className={cn(buttonVariants({ variant: "outline" }))}>{t("inventory.backToZones")}</Link></div>}
       />
       {zone.data ? <SectionCard title={t("inventory.zoneSummary")}>
         <div className="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">

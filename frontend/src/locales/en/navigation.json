@@ -52,6 +52,7 @@
       "dnsManagementZones": "DNS Zone Inventory",
       "dnsManagementRecords": "DNS Records",
       "dnsManagementComparison": "DNS Comparison",
+      "dnsManagementOperationLogs": "DNS Operation History",
       "error": "Error"
     }
   }

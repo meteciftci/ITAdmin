@@ -23,6 +23,7 @@ const breadcrumbItems: BreadcrumbItem[] = [
   { to: "/dns-management/servers", titleKey: "items.dnsManagementServers" },
   { to: "/dns-management/server-settings", titleKey: "items.dnsManagementServerSettings" },
   { to: "/dns-management/comparison", titleKey: "items.dnsManagementComparison" },
+  { to: "/dns-management/operation-logs", titleKey: "items.dnsManagementOperationLogs" },
   {
     to: "/monitoring/module-logs/ad-operation-logs",
     titleKey: "items.adOperationLogs",

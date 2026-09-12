@@ -25,11 +25,13 @@ import {
   DNS_COMPARISON_CONTEXT_QUERY_KEY,
   DNS_COMPARISON_RESULTS_QUERY_KEY,
   DNS_COMPARISON_ZONES_QUERY_KEY,
+  exportDnsComparison,
   getDnsComparisonContext,
   getDnsComparisonZones,
   synchronizeAllDnsInventory,
 } from "./api";
 import { createDnsComparisonColumns } from "./dns-comparison-columns";
+import { saveDnsDownload } from "./download-dns-export";
 import type { DnsComparisonRequest } from "./types";
 
 const promptSessionKey = "itadmin:dns-comparison-full-sync-prompt-shown";
@@ -38,6 +40,7 @@ export function DnsComparisonPage() {
   const { t } = useTranslation(["dnsManagement", "common"]);
   const user = useAuthStore((state) => state.user);
   const canSynchronize = canAccess(user, PermissionCodes.DnsManagement.Synchronize);
+  const canExport = canAccess(user, PermissionCodes.DnsManagement.Export);
   const queryClient = useQueryClient();
   const [selectedServerNames, setSelectedServerNames] = useState<string[]>([]);
   const [selectedZones, setSelectedZones] = useState<string[]>([]);
@@ -94,6 +97,11 @@ export function DnsComparisonPage() {
       await queryClient.invalidateQueries({ queryKey: DNS_COMPARISON_CONTEXT_QUERY_KEY });
     },
     onError: (error) => toast.error(getApiErrorMessage(error, t("comparison.syncFailed"))),
+  });
+  const exportMutation = useMutation({
+    mutationFn: () => exportDnsComparison({ ...appliedSelection!, search: effectiveSearch }),
+    onSuccess: (download) => { saveDnsDownload(download); toast.success(t("export.completed")); },
+    onError: (error) => toast.error(getApiErrorMessage(error, t("export.failed"))),
   });
   const showSyncPrompt = Boolean(
     context.data?.promptForFullSyncOnOpen && canSynchronize && !syncPromptDismissed,
@@ -194,7 +202,7 @@ export function DnsComparisonPage() {
         </div>
       </SectionCard>
 
-      <SectionCard title={t("comparison.resultTitle")} description={t("comparison.resultDescription")}>
+      <SectionCard title={t("comparison.resultTitle")} description={t("comparison.resultDescription")} actions={canExport && appliedSelection ? <Button variant="outline" disabled={exportMutation.isPending} onClick={() => exportMutation.mutate()}>{exportMutation.isPending ? t("export.preparing") : t("export.csv")}</Button> : undefined}>
         <div className="space-y-4">
           <DataTableToolbar searchValue={search} onSearchChange={(value) => { setSearch(value); setPageNumber(1); }} searchPlaceholder={t("comparison.searchRecords")} />
           <DataTable table={table} isLoading={comparison.isLoading} emptyMessage={appliedSelection ? t("comparison.empty") : t("comparison.notStarted")} emptyDescription={appliedSelection ? t("comparison.emptyDescription") : t("comparison.notStartedDescription")} footer={comparison.data ? <DataTablePagination mode="server" pageNumber={comparison.data.pageNumber} pageSize={comparison.data.pageSize} totalCount={comparison.data.totalCount} totalPages={comparison.data.totalPages} onPageChange={setPageNumber} onPageSizeChange={(value) => { setPageSize(value); setPageNumber(1); }} /> : null} />

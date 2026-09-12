@@ -325,6 +325,11 @@ export const DnsComparisonPage = lazy(() =>
     default: module.DnsComparisonPage,
   })),
 );
+export const DnsOperationLogsPage = lazy(() =>
+  import("@/features/dns-management/DnsOperationLogsPage").then((module) => ({
+    default: module.DnsOperationLogsPage,
+  })),
+);
 export const LicensePackagesPage = lazy(() =>
   import("@/features/license-management/LicensePackagesPage").then((module) => ({
     default: module.LicensePackagesPage,

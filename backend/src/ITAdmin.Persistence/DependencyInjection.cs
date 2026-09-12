@@ -55,6 +55,7 @@ public static class DependencyInjection
         services.AddScoped<ILicenseRenewalReminderProcessor, LicenseRenewalReminderProcessor>();
         services.AddScoped<IDnsManagementAdministrationService, DnsManagementAdministrationService>();
         services.AddScoped<IDnsInventoryQueryService, DnsInventoryQueryService>();
+        services.AddScoped<IDnsOperationLogService, DnsOperationLogService>();
         services.Configure<NotificationOutboxOptions>(configuration.GetSection(NotificationOutboxOptions.SectionName));
         services.Configure<LicenseRenewalReminderOptions>(configuration.GetSection(LicenseRenewalReminderOptions.SectionName));
 

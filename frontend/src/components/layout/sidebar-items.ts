@@ -178,6 +178,7 @@ function isDnsManagementSectionVisible(user: CurrentUser | null): boolean {
     PermissionCodes.DnsManagement.Compare,
     PermissionCodes.DnsManagement.ManageServerSettings,
     PermissionCodes.DnsManagement.ClearCache,
+    PermissionCodes.DnsManagement.ViewOperationLogs,
   ]);
 }
 
@@ -211,6 +212,7 @@ export const getSidebarGroups = (
           { titleKey: "items.dnsManagementServerSettings", to: "/dns-management/server-settings", icon: SlidersHorizontal, visible: canAccessAny(user, [PermissionCodes.DnsManagement.ManageServerSettings, PermissionCodes.DnsManagement.ClearCache]) },
           { titleKey: "items.dnsManagementZones", to: "/dns-management/zones", icon: ListTree, visible: canAccessAny(user, [PermissionCodes.DnsManagement.Zones.View, PermissionCodes.DnsManagement.Records.View]) },
           { titleKey: "items.dnsManagementComparison", to: "/dns-management/comparison", icon: GitCompareArrows, visible: canAccess(user, PermissionCodes.DnsManagement.Compare) },
+          { titleKey: "items.dnsManagementOperationLogs", to: "/dns-management/operation-logs", icon: Activity, visible: canAccess(user, PermissionCodes.DnsManagement.ViewOperationLogs) },
         ],
       },
       {

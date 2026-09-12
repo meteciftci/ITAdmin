@@ -262,3 +262,18 @@ Server-settings cmdlet references:
 - [Get-DnsServerRecursion](https://learn.microsoft.com/en-us/powershell/module/dnsserver/get-dnsserverrecursion?view=windowsserver2025-ps)
 - [Set-DnsServerRecursion](https://learn.microsoft.com/en-us/powershell/module/dnsserver/set-dnsserverrecursion?view=windowsserver2025-ps)
 - [Clear-DnsServerCache](https://learn.microsoft.com/en-us/powershell/module/dnsserver/clear-dnsservercache?view=windowsserver2025-ps)
+
+## Operation history and export workflow
+
+DNS connection tests, inventory synchronization, record and zone mutations, server-setting updates,
+and cache clears write structured DNS operation entries. The permission-gated history screen pages
+and filters those entries by operation, status, target, actor, and local date range. Its detail view
+shows sanitized request metadata, error diagnostics, correlation identity, and the retained before
+and after snapshots. Credential secrets are never part of an operation entry.
+
+Zone inventory, records in an active zone snapshot, and an applied comparison can be exported only
+when the caller has both the dedicated export permission and the relevant data-view permission.
+Exports are generated from the complete filtered active snapshot rather than the visible table page,
+are capped at 10,000 zone rows, 50,000 record rows, and 25,000 comparison rows, and are recorded in
+the general audit log. The UTF-8 CSV output includes a byte-order mark for spreadsheet compatibility,
+quotes every cell, and prefixes formula-leading values to prevent spreadsheet formula injection.

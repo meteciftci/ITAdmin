@@ -16,7 +16,8 @@ public sealed class DnsInventoryController(
     IDnsInventoryQueryService service,
     IDnsInventorySyncService inventorySyncService,
     IDnsRecordMutationService recordMutationService,
-    IDnsZoneMutationService zoneMutationService) : ControllerBase
+    IDnsZoneMutationService zoneMutationService,
+    IDnsInventoryExportService exportService) : ControllerBase
 {
     [HttpGet("servers")]
     [RequireAnyPermission(DnsManagementPermissions.ZonesView, DnsManagementPermissions.RecordsView)]
@@ -183,6 +184,50 @@ public sealed class DnsInventoryController(
             result.Jobs.Select(MapJob).ToList()));
     }
 
+    [HttpGet("exports/zones")]
+    [RequirePermission(DnsManagementPermissions.Export)]
+    [RequireAnyPermission(DnsManagementPermissions.ZonesView, DnsManagementPermissions.RecordsView)]
+    public async Task<IActionResult> ExportZones(
+        [FromQuery] Guid? serverId, [FromQuery] string? search,
+        CancellationToken cancellationToken)
+    {
+        var result = await exportService.ExportZonesAsync(
+            serverId, search, DnsManagementActorResolver.Resolve(this), cancellationToken);
+        return ExportResult(result);
+    }
+
+    [HttpGet("exports/zones/{id:guid}/records")]
+    [RequirePermission(DnsManagementPermissions.Export)]
+    [RequirePermission(DnsManagementPermissions.RecordsView)]
+    public async Task<IActionResult> ExportRecords(
+        Guid id, [FromQuery] string? search, [FromQuery] string? recordType,
+        CancellationToken cancellationToken)
+    {
+        var result = await exportService.ExportRecordsAsync(
+            id, search, recordType, DnsManagementActorResolver.Resolve(this), cancellationToken);
+        return ExportResult(result);
+    }
+
+    [HttpPost("exports/comparison")]
+    [RequirePermission(DnsManagementPermissions.Export)]
+    [RequirePermission(DnsManagementPermissions.Compare)]
+    public async Task<IActionResult> ExportComparison(
+        DnsComparisonRequest request, CancellationToken cancellationToken)
+    {
+        var serverIds = request.ServerIds?.Distinct().ToArray() ?? [];
+        var zoneNames = request.ZoneNames?
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToArray() ?? [];
+        if (serverIds.Length is < 2 or > 10)
+            return BadRequest(new { message = "Select between two and ten DNS servers." });
+        if (zoneNames.Length is < 1 or > 20)
+            return BadRequest(new { message = "Select between one and twenty DNS zones." });
+        var result = await exportService.ExportComparisonAsync(new(
+            serverIds, zoneNames, request.CompareTimeToLive, request.Search, 1, 100),
+            DnsManagementActorResolver.Resolve(this), cancellationToken);
+        return ExportResult(result);
+    }
+
     private static DnsInventoryServerResponse MapServer(AppModels.DnsInventoryServerModel x) => new(
         x.ServerId, x.ServerDisplayName, x.Environment, x.IsEnabled,
         x.SnapshotId, x.SnapshotVersion, x.SnapshotScope, x.SnapshotCompletedAt,
@@ -209,6 +254,13 @@ public sealed class DnsInventoryController(
         x.Id, x.BatchId, x.ServerId, x.ServerDisplayName, x.Scope, x.Trigger, x.Status,
         x.AttemptCount, x.RequestedAt, x.StartedAt, x.CompletedAt,
             x.ErrorCode, x.Message, x.AlreadyQueued);
+
+    private IActionResult ExportResult(AppModels.DnsExportResultModel result)
+    {
+        if (!result.Success || result.File is null)
+            return BadRequest(new { code = result.ErrorCode, message = result.Message });
+        return File(result.File.Content, result.File.ContentType, result.File.FileName);
+    }
 
     private async Task<ActionResult<DnsRecordMutationResponse>> MutateRecord(
         AppModels.DnsRecordMutationCommand command, CancellationToken cancellationToken)

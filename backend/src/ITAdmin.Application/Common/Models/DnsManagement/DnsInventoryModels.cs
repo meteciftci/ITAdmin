@@ -54,3 +54,9 @@ public sealed record DnsComparisonResultModel(
     IReadOnlyList<DnsInventoryServerModel> Servers,
     IReadOnlyList<DnsComparisonRowModel> Items,
     int PageNumber, int PageSize, int TotalCount, int TotalPages);
+
+public sealed record DnsExportFileModel(
+    byte[] Content, string ContentType, string FileName);
+
+public sealed record DnsExportResultModel(
+    bool Success, string? ErrorCode, string Message, DnsExportFileModel? File = null);

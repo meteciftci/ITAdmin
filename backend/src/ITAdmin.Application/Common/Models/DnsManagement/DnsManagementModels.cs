@@ -125,3 +125,24 @@ public sealed record DnsServerSettingsCommand(
 public sealed record DnsServerSettingsOperationModel(
     bool Success, string? ErrorCode, string Message,
     DnsServerSettingsModel? Settings = null);
+
+public sealed record DnsOperationLogQuery(
+    Guid? ServerId, string? OperationType, string? Status,
+    string? TargetSearch, string? ActorUserName,
+    DateTimeOffset? DateFrom, DateTimeOffset? DateTo,
+    int PageNumber, int PageSize);
+
+public sealed record DnsOperationLogListItemModel(
+    Guid Id, DateTimeOffset CreatedAt, Guid? ServerId, string? ServerDisplayName,
+    string OperationType, string Status, string? ZoneName, string? RecordName,
+    string? RecordType, string? ActorUserName, string? ErrorCode,
+    string? ErrorMessage, bool HasRequestSummary, bool HasBeforeSnapshot,
+    bool HasAfterSnapshot);
+
+public sealed record DnsOperationLogDetailModel(
+    Guid Id, DateTimeOffset CreatedAt, Guid? ServerId, string? ServerDisplayName,
+    string OperationType, string Status, string? ZoneName, string? RecordName,
+    string? RecordType, string? RequestSummaryJson, string? BeforeSnapshotJson,
+    string? AfterSnapshotJson, string? ErrorCode, string? ErrorMessage,
+    Guid? ActorUserId, string? ActorUserName, string? IpAddress,
+    string? UserAgent, string? CorrelationId);
