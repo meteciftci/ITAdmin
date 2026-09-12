@@ -24,6 +24,10 @@ export function DnsManagementRedirectPage() {
     return <Navigate to="/dns-management/comparison" replace />;
   }
 
+  if (canAccess(user, PermissionCodes.DnsManagement.ManagePolicies)) {
+    return <Navigate to="/dns-management/policies" replace />;
+  }
+
   if (
     canAccess(user, PermissionCodes.DnsManagement.ManageServerSettings) ||
     canAccess(user, PermissionCodes.DnsManagement.ClearCache)

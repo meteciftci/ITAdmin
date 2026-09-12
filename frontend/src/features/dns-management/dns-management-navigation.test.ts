@@ -18,6 +18,7 @@ test("DNS management routes are permission guarded", () => {
   assert.match(redirect, /DnsManagement\.Servers\.View/);
   assert.match(redirect, /DnsManagement\.Zones\.View/);
   assert.match(redirect, /DnsManagement\.Records\.View/);
+  assert.match(redirect, /DnsManagement\.ManagePolicies/);
   assert.match(redirect, /getErrorRoutePath\("FORBIDDEN"\)/);
   assert.match(source, /path: "\/settings\/modules\/dns-management"/);
   assert.match(source, /DnsManagement\.ManageSettings/);
@@ -141,6 +142,22 @@ test("DNS server settings and cache operations are live, typed, and independentl
   assert.match(api, /servers\/\$\{id\}\/cache\/clear/);
   assert.match(page, /DnsManagement\.ManageServerSettings/);
   assert.match(page, /DnsManagement\.ClearCache/);
+  assert.match(page, /ConfirmDialog/);
+  assert.match(page, /stateToken/);
+  assert.doesNotMatch(api, /power\s*shell/i);
+});
+
+test("DNS policy, client subnet, and zone scope operations are live typed and confirmed", () => {
+  const routes = readRouterSource();
+  const api = readFileSync(join(root, "features/dns-management/api.ts"), "utf8");
+  const page = readFileSync(join(root, "features/dns-management/DnsPoliciesPage.tsx"), "utf8");
+  assert.match(routes, /path: "\/dns-management\/policies"/);
+  assert.match(routes, /DnsManagement\.ManagePolicies/);
+  assert.match(api, /servers\/\$\{id\}\/policy-configuration/);
+  assert.match(page, /SaveClientSubnet/);
+  assert.match(page, /CreateZoneScope/);
+  assert.match(page, /SaveQueryPolicy/);
+  assert.match(page, /SetQueryPolicyEnabled/);
   assert.match(page, /ConfirmDialog/);
   assert.match(page, /stateToken/);
   assert.doesNotMatch(api, /power\s*shell/i);

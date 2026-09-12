@@ -25,6 +25,8 @@ public interface IDnsRemoteProbeExecutor
         HostAgentRequest request, CancellationToken cancellationToken);
     Task<HostAgentDnsServerSettingsResult> ManageServerSettingsAsync(
         HostAgentRequest request, CancellationToken cancellationToken);
+    Task<HostAgentDnsPolicyConfigurationResult> ManagePolicyConfigurationAsync(
+        HostAgentRequest request, CancellationToken cancellationToken);
 }
 
 internal static class DnsRemoteCapabilityProbe
@@ -646,6 +648,157 @@ internal static class DnsRemoteServerSettings
         """;
 }
 
+internal static class DnsRemotePolicyConfiguration
+{
+    // Fixed cmdlet allowlist. The browser can supply only the validated JSON DTO bound below.
+    internal const string Script = """
+        param(
+            [Parameter(Mandatory=$true)][ValidateSet('Read','SaveClientSubnet','DeleteClientSubnet','CreateZoneScope','DeleteZoneScope','SaveQueryPolicy','DeleteQueryPolicy','SetQueryPolicyEnabled')][string]$Action,
+            [string]$MutationJson,
+            [string]$ExpectedConfigurationJson
+        )
+        $ErrorActionPreference = 'Stop'
+        Import-Module DnsServer -ErrorAction Stop
+
+        function Get-Configuration {
+            $subnets = @(Get-DnsServerClientSubnet -ErrorAction Stop | ForEach-Object {
+                [ordered]@{ Name="$($_.Name)"; Ipv4Subnets=@($_.IPv4Subnet | ForEach-Object { "$_" } | Sort-Object); Ipv6Subnets=@($_.IPv6Subnet | ForEach-Object { "$_" } | Sort-Object) }
+            } | Sort-Object Name)
+            $scopes = [System.Collections.Generic.List[object]]::new()
+            $policies = [System.Collections.Generic.List[object]]::new()
+            foreach ($policy in @(Get-DnsServerQueryResolutionPolicy -ErrorAction Stop)) {
+                $policies.Add((Convert-Policy $policy 'Server' $null))
+            }
+            foreach ($zone in @(Get-DnsServerZone -ErrorAction Stop | Sort-Object ZoneName)) {
+                $zoneName = "$($zone.ZoneName)"
+                foreach ($scope in @(Get-DnsServerZoneScope -ZoneName $zoneName -ErrorAction Stop)) {
+                    $scopeName = if ($scope.ZoneScope) { "$($scope.ZoneScope)" } else { "$($scope.Name)" }
+                    if ($scopeName -and $scopeName -ine $zoneName) { $scopes.Add([ordered]@{ ZoneName=$zoneName; Name=$scopeName }) }
+                }
+                foreach ($policy in @(Get-DnsServerQueryResolutionPolicy -ZoneName $zoneName -ErrorAction Stop)) {
+                    $policies.Add((Convert-Policy $policy 'Zone' $zoneName))
+                }
+            }
+            [ordered]@{ ClientSubnets=$subnets; ZoneScopes=@($scopes | Sort-Object ZoneName,Name); QueryPolicies=@($policies | Sort-Object Level,ZoneName,ProcessingOrder,Name) }
+        }
+        function Convert-Policy([object]$policy, [string]$level, [string]$zoneName) {
+            $criteria = @{}
+            foreach ($entry in @($policy.Criteria)) {
+                if ($entry.CriteriaType) { $criteria["$($entry.CriteriaType)"] = "$($entry.Criteria)" }
+            }
+            $zoneScope = @($policy.Content | ForEach-Object { "$($_.ScopeName),$($_.Weight)" }) -join ';'
+            [ordered]@{
+                Name="$($policy.Name)"; Level=$level; ZoneName=$zoneName; Action="$($policy.Action)"; Condition="$($policy.Condition)"
+                ProcessingOrder=[int]$policy.ProcessingOrder; Enabled=[bool]$policy.IsEnabled
+                ClientSubnet=if ($criteria.ClientSubnet) { "$($criteria.ClientSubnet)" } else { $null }
+                Fqdn=if ($criteria.Fqdn) { "$($criteria.Fqdn)" } else { $null }
+                QueryType=if ($criteria.Qtype) { "$($criteria.Qtype)" } else { $null }
+                TransportProtocol=if ($criteria.TransportProtocol) { "$($criteria.TransportProtocol)" } else { $null }
+                InternetProtocol=if ($criteria.NetworkProtocol) { "$($criteria.NetworkProtocol)" } else { $null }
+                ServerInterfaceIp=if ($criteria.Interface) { "$($criteria.Interface)" } else { $null }
+                ZoneScope=if ($zoneScope) { $zoneScope } else { $null }
+            }
+        }
+        function Normalize-Configuration([object]$configuration) {
+            $subnets = @($configuration.ClientSubnets | ForEach-Object {
+                [ordered]@{ Name="$($_.Name)"; Ipv4Subnets=@($_.Ipv4Subnets | ForEach-Object { "$_" } | Sort-Object); Ipv6Subnets=@($_.Ipv6Subnets | ForEach-Object { "$_" } | Sort-Object) }
+            } | Sort-Object Name)
+            $scopes = @($configuration.ZoneScopes | ForEach-Object { [ordered]@{ ZoneName="$($_.ZoneName)"; Name="$($_.Name)" } } | Sort-Object ZoneName,Name)
+            $policies = @($configuration.QueryPolicies | ForEach-Object {
+                [ordered]@{
+                    Name="$($_.Name)"; Level="$($_.Level)"; ZoneName=if ($_.ZoneName) { "$($_.ZoneName)" } else { $null }
+                    Action="$($_.Action)"; Condition="$($_.Condition)"; ProcessingOrder=[int]$_.ProcessingOrder; Enabled=[bool]$_.Enabled
+                    ClientSubnet=if ($_.ClientSubnet) { "$($_.ClientSubnet)" } else { $null }; Fqdn=if ($_.Fqdn) { "$($_.Fqdn)" } else { $null }
+                    QueryType=if ($_.QueryType) { "$($_.QueryType)" } else { $null }; TransportProtocol=if ($_.TransportProtocol) { "$($_.TransportProtocol)" } else { $null }
+                    InternetProtocol=if ($_.InternetProtocol) { "$($_.InternetProtocol)" } else { $null }; ServerInterfaceIp=if ($_.ServerInterfaceIp) { "$($_.ServerInterfaceIp)" } else { $null }
+                    ZoneScope=if ($_.ZoneScope) { "$($_.ZoneScope)" } else { $null }
+                }
+            } | Sort-Object Level,ZoneName,ProcessingOrder,Name)
+            [ordered]@{ ClientSubnets=$subnets; ZoneScopes=$scopes; QueryPolicies=$policies }
+        }
+        function Criterion([object]$criterion) {
+            if ($null -eq $criterion -or @($criterion.Values).Count -eq 0) { return $null }
+            $operator = if ("$($criterion.Operator)" -eq 'Ne') { 'NE' } else { 'EQ' }
+            return ($operator + ',' + (@($criterion.Values) -join ','))
+        }
+        function Policy-Parameters([object]$m, [bool]$isCreate) {
+            $p = @{ Name="$($m.Name)"; Condition=("$($m.Condition)".ToUpperInvariant()); ProcessingOrder=[int]$m.ProcessingOrder; ErrorAction='Stop' }
+            if ($isCreate) { $p.Action=("$($m.Decision)".ToUpperInvariant()) }
+            if ("$($m.Level)" -eq 'Zone') { $p.ZoneName="$($m.ZoneName)" }
+            $criteria = @{ ClientSubnet=(Criterion $m.ClientSubnet); FQDN=(Criterion $m.Fqdn); QType=(Criterion $m.QueryType); TransportProtocol=(Criterion $m.TransportProtocol); InternetProtocol=(Criterion $m.InternetProtocol); ServerInterfaceIP=(Criterion $m.ServerInterfaceIp) }
+            foreach ($entry in $criteria.GetEnumerator()) { if ($entry.Value) { $p[$entry.Key]=$entry.Value } }
+            if (@($m.ZoneScopes).Count -gt 0) { $p.ZoneScope=(@($m.ZoneScopes | ForEach-Object { "$($_.Name),$($_.Weight)" }) -join ';') }
+            return $p
+        }
+
+        try {
+            $before = Get-Configuration
+            if (@($before.ClientSubnets).Count -gt 500 -or @($before.ZoneScopes).Count -gt 1000 -or @($before.QueryPolicies).Count -gt 1000) {
+                return [pscustomobject]@{ Success=$false; FailureKind='PolicyConfigurationTooLarge'; Message='The DNS policy configuration exceeds the supported management limit.'; BeforeJson=$null; AfterJson=$null }
+            }
+            $beforeJson = $before | ConvertTo-Json -Compress -Depth 10
+            if ($Action -eq 'Read') { return [pscustomobject]@{ Success=$true; FailureKind=$null; Message='DNS policy configuration read.'; BeforeJson=$null; AfterJson=$beforeJson } }
+            $expected = $ExpectedConfigurationJson | ConvertFrom-Json -ErrorAction Stop
+            $liveCanonical = (Normalize-Configuration $before) | ConvertTo-Json -Compress -Depth 10
+            $expectedCanonical = (Normalize-Configuration $expected) | ConvertTo-Json -Compress -Depth 10
+            if ($liveCanonical -cne $expectedCanonical) { return [pscustomobject]@{ Success=$false; FailureKind='PolicyConfigurationChanged'; Message='The live DNS policy configuration changed. Refresh and retry.'; BeforeJson=$beforeJson; AfterJson=$null } }
+            $m = $MutationJson | ConvertFrom-Json -ErrorAction Stop
+            switch ($Action) {
+                'SaveClientSubnet' {
+                    $existing = Get-DnsServerClientSubnet -Name $m.Name -ErrorAction SilentlyContinue
+                    if ($existing) {
+                        if (@($m.Ipv4Subnets).Count -gt 0) { Set-DnsServerClientSubnet -Name $m.Name -Action REPLACE -IPv4Subnet ([string[]]@($m.Ipv4Subnets)) -ErrorAction Stop | Out-Null }
+                        elseif (@($existing.IPv4Subnet).Count -gt 0) { Set-DnsServerClientSubnet -Name $m.Name -Action REMOVE -IPv4Subnet ([string[]]@($existing.IPv4Subnet)) -ErrorAction Stop | Out-Null }
+                        if (@($m.Ipv6Subnets).Count -gt 0) { Set-DnsServerClientSubnet -Name $m.Name -Action REPLACE -IPv6Subnet ([string[]]@($m.Ipv6Subnets)) -ErrorAction Stop | Out-Null }
+                        elseif (@($existing.IPv6Subnet).Count -gt 0) { Set-DnsServerClientSubnet -Name $m.Name -Action REMOVE -IPv6Subnet ([string[]]@($existing.IPv6Subnet)) -ErrorAction Stop | Out-Null }
+                    } else {
+                        $p = @{ Name="$($m.Name)"; ErrorAction='Stop' }
+                        if (@($m.Ipv4Subnets).Count -gt 0) { $p.IPv4Subnet=[string[]]@($m.Ipv4Subnets) }
+                        if (@($m.Ipv6Subnets).Count -gt 0) { $p.IPv6Subnet=[string[]]@($m.Ipv6Subnets) }
+                        Add-DnsServerClientSubnet @p | Out-Null
+                    }
+                }
+                'DeleteClientSubnet' { Remove-DnsServerClientSubnet -Name $m.Name -Force -ErrorAction Stop | Out-Null }
+                'CreateZoneScope' { Add-DnsServerZoneScope -ZoneName $m.ZoneName -Name $m.Name -ErrorAction Stop | Out-Null }
+                'DeleteZoneScope' {
+                    $records = @(Get-DnsServerResourceRecord -ZoneName $m.ZoneName -ZoneScope $m.Name -ErrorAction Stop)
+                    if ($records.Count -gt 0) { return [pscustomobject]@{ Success=$false; FailureKind='ZoneScopeNotEmpty'; Message='Delete the records in this zone scope first.'; BeforeJson=$beforeJson; AfterJson=$null } }
+                    Remove-DnsServerZoneScope -ZoneName $m.ZoneName -Name $m.Name -Force -ErrorAction Stop | Out-Null
+                }
+                'SaveQueryPolicy' {
+                    $zoneArgs = @{}; if ("$($m.Level)" -eq 'Zone') { $zoneArgs.ZoneName="$($m.ZoneName)" }
+                    $existing = Get-DnsServerQueryResolutionPolicy -Name $m.Name @zoneArgs -ErrorAction SilentlyContinue
+                    if ($existing -and "$($existing.Action)" -ine "$($m.Decision)") { return [pscustomobject]@{ Success=$false; FailureKind='PolicyActionImmutable'; Message='Delete and recreate the policy to change its action.'; BeforeJson=$beforeJson; AfterJson=$null } }
+                    if ($existing) {
+                        $existingView = Convert-Policy $existing "$($m.Level)" "$($m.ZoneName)"
+                        if (($existingView.ClientSubnet -and $null -eq $m.ClientSubnet) -or ($existingView.Fqdn -and $null -eq $m.Fqdn) -or
+                            ($existingView.QueryType -and $null -eq $m.QueryType) -or ($existingView.TransportProtocol -and $null -eq $m.TransportProtocol) -or
+                            ($existingView.InternetProtocol -and $null -eq $m.InternetProtocol) -or ($existingView.ServerInterfaceIp -and $null -eq $m.ServerInterfaceIp) -or
+                            ($existingView.ZoneScope -and @($m.ZoneScopes).Count -eq 0)) {
+                            return [pscustomobject]@{ Success=$false; FailureKind='PolicyCriteriaRemovalRequiresRecreate'; Message='Delete and recreate the policy to remove an existing criterion.'; BeforeJson=$beforeJson; AfterJson=$null }
+                        }
+                    }
+                    $p = Policy-Parameters $m ([bool]($null -eq $existing))
+                    if ($existing) { Set-DnsServerQueryResolutionPolicy @p | Out-Null } else { Add-DnsServerQueryResolutionPolicy @p | Out-Null }
+                    if (-not [bool]$m.Enabled) { Disable-DnsServerPolicy -Name $m.Name -Level $m.Level @zoneArgs -Force -ErrorAction Stop | Out-Null }
+                }
+                'DeleteQueryPolicy' {
+                    $p=@{ Name="$($m.Name)"; ErrorAction='Stop' }; if ("$($m.Level)" -eq 'Zone') { $p.ZoneName="$($m.ZoneName)" }
+                    Remove-DnsServerQueryResolutionPolicy @p -Force | Out-Null
+                }
+                'SetQueryPolicyEnabled' {
+                    $p=@{ Name="$($m.Name)"; Level="$($m.Level)"; Force=$true; ErrorAction='Stop' }; if ("$($m.Level)" -eq 'Zone') { $p.ZoneName="$($m.ZoneName)" }
+                    if ([bool]$m.Enabled) { Enable-DnsServerPolicy @p | Out-Null } else { Disable-DnsServerPolicy @p | Out-Null }
+                }
+            }
+            $after = Get-Configuration
+            return [pscustomobject]@{ Success=$true; FailureKind=$null; Message='DNS policy configuration updated.'; BeforeJson=$beforeJson; AfterJson=($after | ConvertTo-Json -Compress -Depth 10) }
+        } catch {
+            return [pscustomobject]@{ Success=$false; FailureKind='DnsPolicyOperationFailed'; Message='The DNS server rejected the policy operation.'; BeforeJson=$beforeJson; AfterJson=$null }
+        }
+        """;
+}
+
 [SupportedOSPlatform("windows")]
 public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemoteProbeExecutor> logger)
     : IDnsRemoteProbeExecutor
@@ -725,6 +878,56 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             return ServerSettingsFailure("Timeout", "The DNS server settings operation timed out.");
+        }
+    }
+
+    public async Task<HostAgentDnsPolicyConfigurationResult> ManagePolicyConfigurationAsync(
+        HostAgentRequest request, CancellationToken cancellationToken)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(request.DnsTimeoutSeconds!.Value));
+        try { return await ManagePolicyConfigurationCoreAsync(request, timeout.Token); }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        { return PolicyConfigurationFailure("Timeout", "The DNS policy operation timed out."); }
+    }
+
+    private async Task<HostAgentDnsPolicyConfigurationResult> ManagePolicyConfigurationCoreAsync(
+        HostAgentRequest request, CancellationToken cancellationToken)
+    {
+        var host = request.DnsHostName!.Trim().TrimEnd('.');
+        var tls = await ValidateTlsAsync(host, request.DnsPort!.Value, request.DnsTlsCertificateThumbprint, cancellationToken);
+        if (!tls.NetworkReachable || !tls.Valid)
+            return PolicyConfigurationFailure(tls.NetworkReachable ? "TlsValidationFailed" : "NetworkUnreachable",
+                tls.NetworkReachable ? "The WinRM HTTPS certificate could not be validated." : "The WinRM HTTPS endpoint could not be reached.");
+        using var securePassword = ToSecureString(request.DnsPassword!);
+        var credential = new PSCredential(request.DnsUserName!, securePassword);
+        var endpoint = new UriBuilder("https", host, request.DnsPort.Value, "wsman").Uri;
+        var timeout = request.DnsTimeoutSeconds!.Value * 1000;
+        var connection = new WSManConnectionInfo(endpoint, MicrosoftPowerShellShellUri, credential)
+        {
+            AuthenticationMechanism = request.DnsAuthenticationMode == HostAgentDnsAuthenticationMode.BasicOverTls ? AuthenticationMechanism.Basic : AuthenticationMechanism.Negotiate,
+            OpenTimeout = timeout, OperationTimeout = timeout, CancelTimeout = Math.Min(timeout, 10_000), NoMachineProfile = true,
+        };
+        using var runspace = RunspaceFactory.CreateRunspace(connection);
+        try
+        {
+            await Task.Run(runspace.Open, cancellationToken);
+            using var powerShell = PowerShell.Create();
+            powerShell.Runspace = runspace;
+            powerShell.AddScript(DnsRemotePolicyConfiguration.Script, useLocalScope: true)
+                .AddParameter("Action", request.DnsPolicyAction!.Value.ToString())
+                .AddParameter("MutationJson", request.DnsPolicyMutation is null ? null : JsonSerializer.Serialize(request.DnsPolicyMutation, HostAgentProtocol.Json))
+                .AddParameter("ExpectedConfigurationJson", request.DnsExpectedPolicyConfigurationJson);
+            var output = await Task.Run(powerShell.Invoke, cancellationToken);
+            return powerShell.HadErrors || output.Count != 1
+                ? PolicyConfigurationFailure("DnsPolicyOperationFailed", "The DNS server rejected the policy operation.")
+                : MapPolicyConfigurationResult(output[0]);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception exception) when (exception is PSRemotingTransportException or RemoteException or RuntimeException or InvalidRunspaceStateException)
+        {
+            logger.LogWarning("DNS policy operation failed for {Host}:{Port} ({ExceptionType}).", host, request.DnsPort, exception.GetType().Name);
+            return PolicyConfigurationFailure("DnsPolicyOperationFailed", "The DNS server rejected the policy operation.");
         }
     }
 
@@ -1317,6 +1520,26 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
             return null;
         }
     }
+    private static HostAgentDnsPolicyConfigurationResult MapPolicyConfigurationResult(PSObject value)
+    {
+        var success = ReadBool(value, "Success");
+        return new HostAgentDnsPolicyConfigurationResult
+        {
+            Success = success,
+            FailureKind = ReadString(value, "FailureKind", 64),
+            Message = ReadString(value, "Message", 2000)
+                ?? (success ? "DNS policy operation completed." : "The DNS policy operation failed."),
+            Before = ReadPolicyConfigurationJson(value, "BeforeJson"),
+            After = ReadPolicyConfigurationJson(value, "AfterJson"),
+        };
+    }
+    private static HostAgentDnsPolicyConfiguration? ReadPolicyConfigurationJson(PSObject value, string property)
+    {
+        var json = value.Properties[property]?.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try { return JsonSerializer.Deserialize<HostAgentDnsPolicyConfiguration>(json, HostAgentProtocol.Json); }
+        catch (JsonException) { return null; }
+    }
     private static HostAgentDnsProbeResult Failure(string kind, string message, bool network, bool tls, bool authentication = false) =>
         new()
         {
@@ -1334,6 +1557,8 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
     private static HostAgentDnsZoneMutationResult ZoneMutationFailure(string kind, string message) =>
         new() { Success = false, FailureKind = kind, Message = message };
     private static HostAgentDnsServerSettingsResult ServerSettingsFailure(string kind, string message) =>
+        new() { Success = false, FailureKind = kind, Message = message };
+    private static HostAgentDnsPolicyConfigurationResult PolicyConfigurationFailure(string kind, string message) =>
         new() { Success = false, FailureKind = kind, Message = message };
     private static IReadOnlyList<T> FitPayload<T>(IEnumerable<T> source)
     {

@@ -33,7 +33,7 @@ namespace ITAdmin.HostAgent.Contracts;
 /// </summary>
 public static class HostAgentProtocol
 {
-    public const int ProtocolVersion = 7;
+    public const int ProtocolVersion = 8;
 
     /// <summary>Pipe name. Machine-local; the agent ACLs it to the app pool identity and administrators.</summary>
     public const string PipeName = "ITAdmin.HostAgent";
@@ -120,6 +120,9 @@ public enum HostAgentOperation
     /// DNS server cache. The request carries typed values only; the agent owns the fixed script.
     /// </summary>
     ManageDnsServerSettings = 13,
+
+    /// <summary>Read or mutate allowlisted DNS client subnets, zone scopes, and query policies.</summary>
+    ManageDnsPolicyConfiguration = 14,
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -167,6 +170,80 @@ public enum HostAgentDnsServerSettingsAction
     Read = 0,
     Update = 1,
     ClearCache = 2,
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum HostAgentDnsPolicyAction
+{
+    Read = 0,
+    SaveClientSubnet = 1,
+    DeleteClientSubnet = 2,
+    CreateZoneScope = 3,
+    DeleteZoneScope = 4,
+    SaveQueryPolicy = 5,
+    DeleteQueryPolicy = 6,
+    SetQueryPolicyEnabled = 7,
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum HostAgentDnsPolicyLevel { Server = 0, Zone = 1 }
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum HostAgentDnsPolicyDecision { Allow = 0, Deny = 1, Ignore = 2 }
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum HostAgentDnsPolicyCondition { And = 0, Or = 1 }
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum HostAgentDnsPolicyMatchOperator { Eq = 0, Ne = 1 }
+
+public sealed record HostAgentDnsPolicyCriterion
+{
+    [JsonPropertyName("operator")]
+    public HostAgentDnsPolicyMatchOperator Operator { get; init; }
+    [JsonPropertyName("values")]
+    public IReadOnlyList<string> Values { get; init; } = [];
+}
+
+public sealed record HostAgentDnsZoneScopeWeight
+{
+    [JsonPropertyName("name")]
+    public string Name { get; init; } = string.Empty;
+    [JsonPropertyName("weight")]
+    public int Weight { get; init; } = 1;
+}
+
+public sealed record HostAgentDnsPolicyMutation
+{
+    [JsonPropertyName("name")]
+    public string Name { get; init; } = string.Empty;
+    [JsonPropertyName("zoneName")]
+    public string? ZoneName { get; init; }
+    [JsonPropertyName("ipv4Subnets")]
+    public IReadOnlyList<string> Ipv4Subnets { get; init; } = [];
+    [JsonPropertyName("ipv6Subnets")]
+    public IReadOnlyList<string> Ipv6Subnets { get; init; } = [];
+    [JsonPropertyName("level")]
+    public HostAgentDnsPolicyLevel Level { get; init; }
+    [JsonPropertyName("decision")]
+    public HostAgentDnsPolicyDecision Decision { get; init; }
+    [JsonPropertyName("condition")]
+    public HostAgentDnsPolicyCondition Condition { get; init; }
+    [JsonPropertyName("processingOrder")]
+    public int ProcessingOrder { get; init; } = 1;
+    [JsonPropertyName("enabled")]
+    public bool Enabled { get; init; } = true;
+    [JsonPropertyName("clientSubnet")]
+    public HostAgentDnsPolicyCriterion? ClientSubnet { get; init; }
+    [JsonPropertyName("fqdn")]
+    public HostAgentDnsPolicyCriterion? Fqdn { get; init; }
+    [JsonPropertyName("queryType")]
+    public HostAgentDnsPolicyCriterion? QueryType { get; init; }
+    [JsonPropertyName("transportProtocol")]
+    public HostAgentDnsPolicyCriterion? TransportProtocol { get; init; }
+    [JsonPropertyName("internetProtocol")]
+    public HostAgentDnsPolicyCriterion? InternetProtocol { get; init; }
+    [JsonPropertyName("serverInterfaceIp")]
+    public HostAgentDnsPolicyCriterion? ServerInterfaceIp { get; init; }
+    [JsonPropertyName("zoneScopes")]
+    public IReadOnlyList<HostAgentDnsZoneScopeWeight> ZoneScopes { get; init; } = [];
 }
 
 /// <summary>One request across the pipe.</summary>
@@ -327,6 +404,13 @@ public sealed record HostAgentRequest
     [JsonPropertyName("dnsExpectedServerSettingsJson")]
     public string? DnsExpectedServerSettingsJson { get; init; }
 
+    [JsonPropertyName("dnsPolicyAction")]
+    public HostAgentDnsPolicyAction? DnsPolicyAction { get; init; }
+    [JsonPropertyName("dnsPolicyMutation")]
+    public HostAgentDnsPolicyMutation? DnsPolicyMutation { get; init; }
+    [JsonPropertyName("dnsExpectedPolicyConfigurationJson")]
+    public string? DnsExpectedPolicyConfigurationJson { get; init; }
+
     public string ToJson() => JsonSerializer.Serialize(this, HostAgentProtocol.Json);
 
     public static HostAgentRequest? FromJson(string? json)
@@ -389,7 +473,8 @@ public sealed record HostAgentRequest
             or HostAgentOperation.ReadDnsServerInventoryPage
             or HostAgentOperation.MutateDnsServerResourceRecord
             or HostAgentOperation.MutateDnsServerZone
-            or HostAgentOperation.ManageDnsServerSettings)
+            or HostAgentOperation.ManageDnsServerSettings
+            or HostAgentOperation.ManageDnsPolicyConfiguration)
         {
             var hostName = DnsHostName?.Trim().TrimEnd('.');
             if (string.IsNullOrWhiteSpace(hostName) || hostName.Length > 253
@@ -564,7 +649,74 @@ public sealed record HostAgentRequest
             }
         }
 
+
+        if (Operation == HostAgentOperation.ManageDnsPolicyConfiguration)
+        {
+            if (DnsPolicyAction is null || !Enum.IsDefined(DnsPolicyAction.Value))
+                problems.Add("dnsPolicyAction is required.");
+            if (DnsPolicyAction != HostAgentDnsPolicyAction.Read)
+            {
+                if (DnsPolicyMutation is null)
+                    problems.Add("dnsPolicyMutation is required.");
+                else
+                    ValidatePolicyMutation(DnsPolicyAction!.Value, DnsPolicyMutation, problems);
+                if (string.IsNullOrWhiteSpace(DnsExpectedPolicyConfigurationJson)
+                    || DnsExpectedPolicyConfigurationJson.Length > 524_288
+                    || !IsJsonObject(DnsExpectedPolicyConfigurationJson))
+                    problems.Add("dnsExpectedPolicyConfigurationJson must be a bounded JSON object.");
+            }
+        }
+
         return problems;
+    }
+
+    private static void ValidatePolicyMutation(HostAgentDnsPolicyAction action, HostAgentDnsPolicyMutation value, List<string> problems)
+    {
+        if (string.IsNullOrWhiteSpace(value.Name) || value.Name.Length > 256 || value.Name.Any(char.IsControl)
+            || value.Name.IndexOfAny(['<', '>', ':', '"', '/', '\\', '|', '?', '*', ',', ';']) >= 0)
+            problems.Add("DNS policy object name is required and may contain at most 256 characters.");
+        if (value.ZoneName?.Length > 253 || value.ZoneName?.Any(char.IsControl) == true)
+            problems.Add("zoneName may contain at most 253 characters.");
+        if (action is HostAgentDnsPolicyAction.CreateZoneScope or HostAgentDnsPolicyAction.DeleteZoneScope
+            && string.IsNullOrWhiteSpace(value.ZoneName))
+            problems.Add("zoneName is required for a zone scope.");
+        if (action is HostAgentDnsPolicyAction.SaveClientSubnet
+            && value.Ipv4Subnets.Count + value.Ipv6Subnets.Count == 0)
+            problems.Add("At least one client subnet is required.");
+        if (value.Ipv4Subnets.Count > 64 || value.Ipv6Subnets.Count > 64
+            || value.Ipv4Subnets.Any(x => !IsCidr(x, AddressFamily.InterNetwork, 32))
+            || value.Ipv6Subnets.Any(x => !IsCidr(x, AddressFamily.InterNetworkV6, 128)))
+            problems.Add("Client subnets must be bounded CIDR values.");
+        if (action is HostAgentDnsPolicyAction.SaveQueryPolicy)
+        {
+            if (value.Level == HostAgentDnsPolicyLevel.Zone && string.IsNullOrWhiteSpace(value.ZoneName))
+                problems.Add("zoneName is required for a zone-level policy.");
+            if (value.Level == HostAgentDnsPolicyLevel.Server && value.Decision == HostAgentDnsPolicyDecision.Allow)
+                problems.Add("Server-level query processing policies cannot use Allow.");
+            if (value.ProcessingOrder is < 1 or > 100_000)
+                problems.Add("processingOrder must be between 1 and 100000.");
+            var criteria = new[] { value.ClientSubnet, value.Fqdn, value.QueryType, value.TransportProtocol, value.InternetProtocol, value.ServerInterfaceIp };
+            if (criteria.All(x => x is null or { Values.Count: 0 }))
+                problems.Add("At least one query policy criterion is required.");
+            if (criteria.Where(x => x is not null).Any(x => !Enum.IsDefined(x!.Operator)
+                || x.Values.Count is < 1 or > 64 || x.Values.Any(v => string.IsNullOrWhiteSpace(v) || v.Length > 256
+                    || v.Any(char.IsControl) || v.Contains(',') || v.Contains(';'))))
+                problems.Add("Query policy criteria contain invalid values.");
+            if (value.ZoneScopes.Count > 32 || value.ZoneScopes.Any(x => string.IsNullOrWhiteSpace(x.Name)
+                || x.Name.Length > 256 || x.Weight is < 1 or > 10_000))
+                problems.Add("Zone scope weights are invalid.");
+            if (value.ZoneScopes.Count > 0 && (value.Level != HostAgentDnsPolicyLevel.Zone
+                || value.Decision != HostAgentDnsPolicyDecision.Allow))
+                problems.Add("Zone scopes require a zone-level Allow policy.");
+        }
+    }
+
+    private static bool IsCidr(string value, AddressFamily family, int maxPrefix)
+    {
+        var parts = value.Trim().Split('/');
+        return parts.Length == 2 && IPAddress.TryParse(parts[0], out var address)
+            && address.AddressFamily == family && int.TryParse(parts[1], out var prefix)
+            && prefix >= 0 && prefix <= maxPrefix;
     }
 
     private static string? NormalizeThumbprint(string? value) =>
@@ -675,6 +827,9 @@ public sealed record HostAgentResponse
 
     [JsonPropertyName("dnsServerSettings")]
     public HostAgentDnsServerSettingsResult? DnsServerSettings { get; init; }
+
+    [JsonPropertyName("dnsPolicyConfiguration")]
+    public HostAgentDnsPolicyConfigurationResult? DnsPolicyConfiguration { get; init; }
 
     [JsonPropertyName("repositoryStatus")]
     public HostAgentRepositoryStatus RepositoryStatus { get; init; } = HostAgentRepositoryStatus.Unknown;
@@ -906,6 +1061,53 @@ public sealed record HostAgentDnsServerSettingsResult
     public HostAgentDnsServerSettings? Before { get; init; }
     [JsonPropertyName("after")]
     public HostAgentDnsServerSettings? After { get; init; }
+}
+
+public sealed record HostAgentDnsClientSubnet
+{
+    [JsonPropertyName("name")] public string Name { get; init; } = string.Empty;
+    [JsonPropertyName("ipv4Subnets")] public IReadOnlyList<string> Ipv4Subnets { get; init; } = [];
+    [JsonPropertyName("ipv6Subnets")] public IReadOnlyList<string> Ipv6Subnets { get; init; } = [];
+}
+
+public sealed record HostAgentDnsZoneScope
+{
+    [JsonPropertyName("zoneName")] public string ZoneName { get; init; } = string.Empty;
+    [JsonPropertyName("name")] public string Name { get; init; } = string.Empty;
+}
+
+public sealed record HostAgentDnsQueryPolicy
+{
+    [JsonPropertyName("name")] public string Name { get; init; } = string.Empty;
+    [JsonPropertyName("level")] public string Level { get; init; } = string.Empty;
+    [JsonPropertyName("zoneName")] public string? ZoneName { get; init; }
+    [JsonPropertyName("action")] public string Action { get; init; } = string.Empty;
+    [JsonPropertyName("condition")] public string Condition { get; init; } = string.Empty;
+    [JsonPropertyName("processingOrder")] public int ProcessingOrder { get; init; }
+    [JsonPropertyName("enabled")] public bool Enabled { get; init; }
+    [JsonPropertyName("clientSubnet")] public string? ClientSubnet { get; init; }
+    [JsonPropertyName("fqdn")] public string? Fqdn { get; init; }
+    [JsonPropertyName("queryType")] public string? QueryType { get; init; }
+    [JsonPropertyName("transportProtocol")] public string? TransportProtocol { get; init; }
+    [JsonPropertyName("internetProtocol")] public string? InternetProtocol { get; init; }
+    [JsonPropertyName("serverInterfaceIp")] public string? ServerInterfaceIp { get; init; }
+    [JsonPropertyName("zoneScope")] public string? ZoneScope { get; init; }
+}
+
+public sealed record HostAgentDnsPolicyConfiguration
+{
+    [JsonPropertyName("clientSubnets")] public IReadOnlyList<HostAgentDnsClientSubnet> ClientSubnets { get; init; } = [];
+    [JsonPropertyName("zoneScopes")] public IReadOnlyList<HostAgentDnsZoneScope> ZoneScopes { get; init; } = [];
+    [JsonPropertyName("queryPolicies")] public IReadOnlyList<HostAgentDnsQueryPolicy> QueryPolicies { get; init; } = [];
+}
+
+public sealed record HostAgentDnsPolicyConfigurationResult
+{
+    [JsonPropertyName("success")] public bool Success { get; init; }
+    [JsonPropertyName("failureKind")] public string? FailureKind { get; init; }
+    [JsonPropertyName("message")] public string Message { get; init; } = string.Empty;
+    [JsonPropertyName("before")] public HostAgentDnsPolicyConfiguration? Before { get; init; }
+    [JsonPropertyName("after")] public HostAgentDnsPolicyConfiguration? After { get; init; }
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]

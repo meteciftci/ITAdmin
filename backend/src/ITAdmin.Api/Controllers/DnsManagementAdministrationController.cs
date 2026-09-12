@@ -15,7 +15,8 @@ public sealed class DnsManagementAdministrationController(
     IDnsManagementAdministrationService service,
     IDnsServerConnectionTestService connectionTestService,
     IDnsInventorySyncService inventorySyncService,
-    IDnsServerSettingsService serverSettingsService) : ControllerBase
+    IDnsServerSettingsService serverSettingsService,
+    IDnsPolicyManagementService policyManagementService) : ControllerBase
 {
     [HttpGet("settings")]
     [RequirePermission(DnsManagementPermissions.ManageSettings)]
@@ -60,7 +61,7 @@ public sealed class DnsManagementAdministrationController(
     }
 
     [HttpGet("servers")]
-    [RequireAnyPermission(DnsManagementPermissions.ServersView, DnsManagementPermissions.ManageServerSettings, DnsManagementPermissions.ClearCache)]
+    [RequireAnyPermission(DnsManagementPermissions.ServersView, DnsManagementPermissions.ManageServerSettings, DnsManagementPermissions.ClearCache, DnsManagementPermissions.ManagePolicies)]
     public async Task<ActionResult<IReadOnlyList<DnsServerResponse>>> GetServers(CancellationToken cancellationToken) =>
         Ok((await service.GetServersAsync(cancellationToken)).Select(Map));
 
@@ -138,6 +139,29 @@ public sealed class DnsManagementAdministrationController(
             : BadRequest(new { code = result.ErrorCode, message = result.Message });
     }
 
+    [HttpGet("servers/{id:guid}/policy-configuration")]
+    [RequirePermission(DnsManagementPermissions.ManagePolicies)]
+    public async Task<ActionResult<DnsPolicyConfigurationResponse>> GetPolicyConfiguration(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await policyManagementService.GetAsync(id, cancellationToken);
+        return result.Success && result.Configuration is not null ? Ok(Map(result.Configuration)) : BadRequest(new { code = result.ErrorCode, message = result.Message });
+    }
+
+    [HttpPost("servers/{id:guid}/policy-configuration/mutations")]
+    [RequirePermission(DnsManagementPermissions.ManagePolicies)]
+    public async Task<ActionResult<DnsPolicyOperationResponse>> MutatePolicyConfiguration(Guid id, DnsPolicyMutationRequest request, CancellationToken cancellationToken)
+    {
+        static AppModels.DnsPolicyCriterionModel? Criterion(DnsPolicyCriterionRequest? x) => x is null ? null : new(x.Operator, x.Values ?? []);
+        var result = await policyManagementService.MutateAsync(new(id, request.Action, request.Name, request.ZoneName,
+            request.Ipv4Subnets ?? [], request.Ipv6Subnets ?? [], request.Level, request.Decision, request.Condition,
+            request.ProcessingOrder, request.Enabled, Criterion(request.ClientSubnet), Criterion(request.Fqdn), Criterion(request.QueryType),
+            Criterion(request.TransportProtocol), Criterion(request.InternetProtocol), Criterion(request.ServerInterfaceIp),
+            request.ZoneScopes?.Select(x => new AppModels.DnsZoneScopeWeightModel(x.Name, x.Weight)).ToArray() ?? [],
+            request.ExpectedStateToken, DnsManagementActorResolver.Resolve(this)), cancellationToken);
+        return result.Success ? Ok(new DnsPolicyOperationResponse(true, null, result.Message, result.Configuration is null ? null : Map(result.Configuration)))
+            : BadRequest(new { code = result.ErrorCode, message = result.Message });
+    }
+
     private async Task<ActionResult<DnsCredentialProfileResponse>> SaveCredential(
         Guid? id, SaveDnsCredentialProfileRequest request, CancellationToken cancellationToken)
     {
@@ -185,4 +209,10 @@ public sealed class DnsManagementAdministrationController(
         x.RecursionSecureResponse, x.StateToken);
     private static DnsServerOperationResponse Map(AppModels.DnsServerSettingsOperationModel x) => new(
         x.Success, x.ErrorCode, x.Message, x.Settings is null ? null : Map(x.Settings));
+    private static DnsPolicyConfigurationResponse Map(AppModels.DnsPolicyConfigurationModel x) => new(
+        x.ClientSubnets.Select(v => new DnsClientSubnetResponse(v.Name, v.Ipv4Subnets, v.Ipv6Subnets)).ToArray(),
+        x.ZoneScopes.Select(v => new DnsZoneScopeResponse(v.ZoneName, v.Name)).ToArray(),
+        x.QueryPolicies.Select(v => new DnsQueryPolicyResponse(v.Name, v.Level, v.ZoneName, v.Action, v.Condition, v.ProcessingOrder,
+            v.Enabled, v.ClientSubnet, v.Fqdn, v.QueryType, v.TransportProtocol, v.InternetProtocol, v.ServerInterfaceIp, v.ZoneScope)).ToArray(),
+        x.StateToken);
 }

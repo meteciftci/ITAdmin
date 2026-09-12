@@ -148,7 +148,15 @@ public sealed class HostAgentDispatcher(
                         DnsServerSettings = await dnsRemoteProbeExecutor.ManageServerSettingsAsync(request, cancellationToken),
                     },
 
+                HostAgentOperation.ManageDnsPolicyConfiguration when dnsRemoteProbeExecutor is not null =>
+                    HostAgentResponse.Ok("DNS policy operation completed.", request.CorrelationId) with
+                    {
+                        DnsPolicyConfiguration = await dnsRemoteProbeExecutor.ManagePolicyConfigurationAsync(request, cancellationToken),
+                    },
+
                 HostAgentOperation.ManageDnsServerSettings =>
+                    HostAgentResponse.Failed("DNS remote management is unavailable on this host.", request.CorrelationId),
+                HostAgentOperation.ManageDnsPolicyConfiguration =>
                     HostAgentResponse.Failed("DNS remote management is unavailable on this host.", request.CorrelationId),
 
                 _ => HostAgentResponse.Rejected("Unsupported operation.", request.CorrelationId),

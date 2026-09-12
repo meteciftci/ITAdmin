@@ -1,4 +1,5 @@
 using ITAdmin.Domain.Enums;
+using ITAdmin.Application.Common.Models.DnsManagement;
 
 namespace ITAdmin.Api.Contracts.DnsManagement;
 
@@ -71,6 +72,28 @@ public sealed record UpdateDnsServerSettingsRequest(
 public sealed record DnsServerOperationResponse(
     bool Success, string? ErrorCode, string Message,
     DnsServerSettingsResponse? Settings = null);
+
+public sealed record DnsPolicyCriterionRequest(DnsPolicyMatchOperator Operator, IReadOnlyList<string>? Values);
+public sealed record DnsZoneScopeWeightRequest(string Name, int Weight);
+public sealed record DnsPolicyMutationRequest(
+    DnsPolicyAction Action, string Name, string? ZoneName,
+    IReadOnlyList<string>? Ipv4Subnets, IReadOnlyList<string>? Ipv6Subnets,
+    DnsPolicyLevel Level, DnsPolicyDecision Decision, DnsPolicyCondition Condition,
+    int ProcessingOrder, bool Enabled, DnsPolicyCriterionRequest? ClientSubnet,
+    DnsPolicyCriterionRequest? Fqdn, DnsPolicyCriterionRequest? QueryType,
+    DnsPolicyCriterionRequest? TransportProtocol, DnsPolicyCriterionRequest? InternetProtocol,
+    DnsPolicyCriterionRequest? ServerInterfaceIp, IReadOnlyList<DnsZoneScopeWeightRequest>? ZoneScopes,
+    string ExpectedStateToken);
+public sealed record DnsClientSubnetResponse(string Name, IReadOnlyList<string> Ipv4Subnets, IReadOnlyList<string> Ipv6Subnets);
+public sealed record DnsZoneScopeResponse(string ZoneName, string Name);
+public sealed record DnsQueryPolicyResponse(
+    string Name, string Level, string? ZoneName, string Action, string Condition, int ProcessingOrder,
+    bool Enabled, string? ClientSubnet, string? Fqdn, string? QueryType, string? TransportProtocol,
+    string? InternetProtocol, string? ServerInterfaceIp, string? ZoneScope);
+public sealed record DnsPolicyConfigurationResponse(
+    IReadOnlyList<DnsClientSubnetResponse> ClientSubnets, IReadOnlyList<DnsZoneScopeResponse> ZoneScopes,
+    IReadOnlyList<DnsQueryPolicyResponse> QueryPolicies, string StateToken);
+public sealed record DnsPolicyOperationResponse(bool Success, string? ErrorCode, string Message, DnsPolicyConfigurationResponse? Configuration = null);
 
 public sealed record DnsOperationLogListItemResponse(
     Guid Id, DateTimeOffset CreatedAt, Guid? ServerId, string? ServerDisplayName,

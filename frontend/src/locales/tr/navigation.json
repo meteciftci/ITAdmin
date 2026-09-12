@@ -49,6 +49,7 @@
       "dnsManagement": "DNS Yönetimi",
       "dnsManagementServers": "DNS Sunucuları",
       "dnsManagementServerSettings": "DNS Sunucu Ayarları",
+      "dnsManagementPolicies": "DNS Politikaları",
       "dnsManagementZones": "DNS Zone Envanteri",
       "dnsManagementRecords": "DNS Kayıtları",
       "dnsManagementComparison": "DNS Karşılaştırma",

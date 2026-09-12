@@ -212,6 +212,23 @@ export type DnsServerOperation = {
   settings?: DnsServerSettings | null;
 };
 
+export type DnsPolicyCriterion = { operator: "Eq" | "Ne"; values: string[] };
+export type DnsPolicyConfiguration = {
+  clientSubnets: { name: string; ipv4Subnets: string[]; ipv6Subnets: string[] }[];
+  zoneScopes: { zoneName: string; name: string }[];
+  queryPolicies: { name: string; level: "Server" | "Zone"; zoneName: string | null; action: string; condition: string; processingOrder: number; enabled: boolean; clientSubnet: string | null; fqdn: string | null; queryType: string | null; transportProtocol: string | null; internetProtocol: string | null; serverInterfaceIp: string | null; zoneScope: string | null }[];
+  stateToken: string;
+};
+export type DnsPolicyMutationInput = {
+  action: "SaveClientSubnet" | "DeleteClientSubnet" | "CreateZoneScope" | "DeleteZoneScope" | "SaveQueryPolicy" | "DeleteQueryPolicy" | "SetQueryPolicyEnabled";
+  name: string; zoneName?: string | null; ipv4Subnets?: string[]; ipv6Subnets?: string[];
+  level?: "Server" | "Zone"; decision?: "Allow" | "Deny" | "Ignore"; condition?: "And" | "Or";
+  processingOrder?: number; enabled?: boolean; clientSubnet?: DnsPolicyCriterion | null; fqdn?: DnsPolicyCriterion | null;
+  queryType?: DnsPolicyCriterion | null; transportProtocol?: DnsPolicyCriterion | null; internetProtocol?: DnsPolicyCriterion | null;
+  serverInterfaceIp?: DnsPolicyCriterion | null; zoneScopes?: { name: string; weight: number }[]; expectedStateToken: string;
+};
+export type DnsPolicyOperation = { success: boolean; errorCode?: string | null; message: string; configuration?: DnsPolicyConfiguration | null };
+
 export type DnsOperationLogListItem = {
   id: string;
   createdAt: string;

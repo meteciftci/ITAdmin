@@ -263,6 +263,43 @@ Server-settings cmdlet references:
 - [Set-DnsServerRecursion](https://learn.microsoft.com/en-us/powershell/module/dnsserver/set-dnsserverrecursion?view=windowsserver2025-ps)
 - [Clear-DnsServerCache](https://learn.microsoft.com/en-us/powershell/module/dnsserver/clear-dnsservercache?view=windowsserver2025-ps)
 
+## Client subnet, zone scope, and query policy workflow
+
+Policy configuration is operational state and is therefore read live from the selected DNS server;
+it is not served from the inventory snapshot. PostgreSQL stores only the immutable audit and DNS
+operation records for changes. One opaque state token represents the complete live client-subnet,
+zone-scope, and query-policy collection. Every mutation re-reads and canonically compares that
+collection before invoking a cmdlet, preventing a stale page from overwriting another
+administrator's work.
+
+The policy permission is independent from server, record, and zone lifecycle permissions. The Host
+Agent accepts a fixed operation enum and typed criteria only. It supports client subnet save/delete,
+zone scope create/delete, query policy save/delete, and policy enable/disable. Query criteria cover
+client subnet, FQDN, query type, transport protocol, IP protocol, and server-interface IP with EQ or
+NE matching, AND/OR composition, processing order, and weighted zone scopes. No cmdlet name, script,
+or executable text crosses the API or named-pipe boundary.
+
+Windows DNS query-policy actions have deliberate constraints. Server-level query-processing
+policies can use Deny or Ignore, while weighted zone scopes require a zone-level Allow policy. The
+Windows `Set-DnsServerQueryResolutionPolicy` command cannot change a policy action and cannot safely
+remove an omitted criterion. ITAdmin refuses those two ambiguous updates and requires an explicitly
+confirmed delete/recreate workflow. Zone scopes with records cannot be deleted. Windows also rejects
+client-subnet deletion while a policy references it; ITAdmin surfaces the normalized failure without
+attempting dependent deletion.
+
+DNS policies are local server configuration and are not replicated with an AD-integrated zone.
+Administrators must intentionally configure each registered DNS server that needs the policy. The
+screen never implies cross-server propagation.
+
+Policy cmdlet references:
+
+- [DNS policies overview](https://learn.microsoft.com/en-us/windows-server/networking/dns/deploy/dns-policies-overview)
+- [Add-DnsServerClientSubnet](https://learn.microsoft.com/en-us/powershell/module/dnsserver/add-dnsserverclientsubnet?view=windowsserver2025-ps)
+- [Set-DnsServerClientSubnet](https://learn.microsoft.com/en-us/powershell/module/dnsserver/set-dnsserverclientsubnet?view=windowsserver2025-ps)
+- [Add-DnsServerZoneScope](https://learn.microsoft.com/en-us/powershell/module/dnsserver/add-dnsserverzonescope?view=windowsserver2025-ps)
+- [Add-DnsServerQueryResolutionPolicy](https://learn.microsoft.com/en-us/powershell/module/dnsserver/add-dnsserverqueryresolutionpolicy?view=windowsserver2025-ps)
+- [Set-DnsServerQueryResolutionPolicy](https://learn.microsoft.com/en-us/powershell/module/dnsserver/set-dnsserverqueryresolutionpolicy?view=windowsserver2025-ps)
+
 ## Operation history and export workflow
 
 DNS connection tests, inventory synchronization, record and zone mutations, server-setting updates,

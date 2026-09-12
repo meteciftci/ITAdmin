@@ -22,6 +22,7 @@ const breadcrumbItems: BreadcrumbItem[] = [
   { to: "/dns-management/zones", titleKey: "items.dnsManagementZones" },
   { to: "/dns-management/servers", titleKey: "items.dnsManagementServers" },
   { to: "/dns-management/server-settings", titleKey: "items.dnsManagementServerSettings" },
+  { to: "/dns-management/policies", titleKey: "items.dnsManagementPolicies" },
   { to: "/dns-management/comparison", titleKey: "items.dnsManagementComparison" },
   { to: "/dns-management/operation-logs", titleKey: "items.dnsManagementOperationLogs" },
   {

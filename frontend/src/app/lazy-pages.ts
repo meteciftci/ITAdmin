@@ -310,6 +310,9 @@ export const DnsServerSettingsPage = lazy(() =>
     default: module.DnsServerSettingsPage,
   })),
 );
+export const DnsPoliciesPage = lazy(() =>
+  import("@/features/dns-management/DnsPoliciesPage").then((module) => ({ default: module.DnsPoliciesPage })),
+);
 export const DnsZonesPage = lazy(() =>
   import("@/features/dns-management/DnsZonesPage").then((module) => ({
     default: module.DnsZonesPage,

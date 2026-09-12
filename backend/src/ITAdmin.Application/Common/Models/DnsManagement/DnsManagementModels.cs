@@ -126,6 +126,33 @@ public sealed record DnsServerSettingsOperationModel(
     bool Success, string? ErrorCode, string Message,
     DnsServerSettingsModel? Settings = null);
 
+public enum DnsPolicyAction { SaveClientSubnet, DeleteClientSubnet, CreateZoneScope, DeleteZoneScope, SaveQueryPolicy, DeleteQueryPolicy, SetQueryPolicyEnabled }
+public enum DnsPolicyLevel { Server, Zone }
+public enum DnsPolicyDecision { Allow, Deny, Ignore }
+public enum DnsPolicyCondition { And, Or }
+public enum DnsPolicyMatchOperator { Eq, Ne }
+public sealed record DnsPolicyCriterionModel(DnsPolicyMatchOperator Operator, IReadOnlyList<string> Values);
+public sealed record DnsZoneScopeWeightModel(string Name, int Weight);
+public sealed record DnsClientSubnetModel(string Name, IReadOnlyList<string> Ipv4Subnets, IReadOnlyList<string> Ipv6Subnets);
+public sealed record DnsZoneScopeModel(string ZoneName, string Name);
+public sealed record DnsQueryPolicyModel(
+    string Name, string Level, string? ZoneName, string Action, string Condition, int ProcessingOrder,
+    bool Enabled, string? ClientSubnet, string? Fqdn, string? QueryType, string? TransportProtocol,
+    string? InternetProtocol, string? ServerInterfaceIp, string? ZoneScope);
+public sealed record DnsPolicyConfigurationModel(
+    IReadOnlyList<DnsClientSubnetModel> ClientSubnets, IReadOnlyList<DnsZoneScopeModel> ZoneScopes,
+    IReadOnlyList<DnsQueryPolicyModel> QueryPolicies, string StateToken);
+public sealed record DnsPolicyMutationCommand(
+    Guid ServerId, DnsPolicyAction Action, string Name, string? ZoneName,
+    IReadOnlyList<string> Ipv4Subnets, IReadOnlyList<string> Ipv6Subnets,
+    DnsPolicyLevel Level, DnsPolicyDecision Decision, DnsPolicyCondition Condition,
+    int ProcessingOrder, bool Enabled, DnsPolicyCriterionModel? ClientSubnet,
+    DnsPolicyCriterionModel? Fqdn, DnsPolicyCriterionModel? QueryType,
+    DnsPolicyCriterionModel? TransportProtocol, DnsPolicyCriterionModel? InternetProtocol,
+    DnsPolicyCriterionModel? ServerInterfaceIp, IReadOnlyList<DnsZoneScopeWeightModel> ZoneScopes,
+    string ExpectedStateToken, DnsActorContext Actor);
+public sealed record DnsPolicyOperationModel(bool Success, string? ErrorCode, string Message, DnsPolicyConfigurationModel? Configuration = null);
+
 public sealed record DnsOperationLogQuery(
     Guid? ServerId, string? OperationType, string? Status,
     string? TargetSearch, string? ActorUserName,

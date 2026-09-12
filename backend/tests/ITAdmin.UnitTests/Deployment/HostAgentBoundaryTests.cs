@@ -140,6 +140,7 @@ public sealed class HostAgentBoundaryTests
     [InlineData(HostAgentOperation.MutateDnsServerResourceRecord)]
     [InlineData(HostAgentOperation.MutateDnsServerZone)]
     [InlineData(HostAgentOperation.ManageDnsServerSettings)]
+    [InlineData(HostAgentOperation.ManageDnsPolicyConfiguration)]
     public void Authorization_WebApplicationMayInvokeTheUpdateAndSettingsOperations(HostAgentOperation operation) =>
         Assert.True(Authorization.Authorize(@"IIS APPPOOL\ITAdmin", false, operation).IsAllowed);
 
@@ -631,6 +632,67 @@ public sealed class HostAgentBoundaryTests
         Assert.Empty(parseErrors);
     }
 
+    [Fact]
+    public void Protocol_DnsPolicyMutationRequiresTypedCriteriaAndExpectedLiveState()
+    {
+        var valid = new HostAgentRequest
+        {
+            Operation = HostAgentOperation.ManageDnsPolicyConfiguration,
+            DnsHostName = "dns01.example.local", DnsPort = 5986,
+            DnsAuthenticationMode = HostAgentDnsAuthenticationMode.Negotiate,
+            DnsUserName = "EXAMPLE\\dns-svc", DnsPassword = "secret", DnsTimeoutSeconds = 30,
+            DnsPolicyAction = HostAgentDnsPolicyAction.SaveQueryPolicy,
+            DnsExpectedPolicyConfigurationJson = "{}",
+            DnsPolicyMutation = new()
+            {
+                Name = "InternalClients", ZoneName = "example.local", Level = HostAgentDnsPolicyLevel.Zone,
+                Decision = HostAgentDnsPolicyDecision.Allow, Condition = HostAgentDnsPolicyCondition.And,
+                ProcessingOrder = 1,
+                ClientSubnet = new() { Operator = HostAgentDnsPolicyMatchOperator.Eq, Values = ["Internal"] },
+                ZoneScopes = [new() { Name = "InternalScope", Weight = 1 }],
+            },
+        };
+
+        Assert.Empty(valid.Validate());
+        Assert.NotEmpty((valid with { DnsExpectedPolicyConfigurationJson = null }).Validate());
+        Assert.NotEmpty((valid with { DnsPolicyMutation = valid.DnsPolicyMutation with { ClientSubnet = null } }).Validate());
+        Assert.NotEmpty((valid with { DnsPolicyMutation = valid.DnsPolicyMutation with { ProcessingOrder = 0 } }).Validate());
+    }
+
+    [Fact]
+    public async Task Dispatch_DnsPolicyUsesFixedExecutorAndNeverEchoesCredentials()
+    {
+        var executor = new RecordingDnsProbeExecutor();
+        var dispatcher = new HostAgentDispatcher(Authorization, new RecordingOperations(), dnsRemoteProbeExecutor: executor);
+        var request = new HostAgentRequest
+        {
+            Operation = HostAgentOperation.ManageDnsPolicyConfiguration,
+            DnsHostName = "dns01.example.local", DnsPort = 5986,
+            DnsAuthenticationMode = HostAgentDnsAuthenticationMode.Negotiate,
+            DnsUserName = "EXAMPLE\\dns-svc", DnsPassword = "secret", DnsTimeoutSeconds = 30,
+            DnsPolicyAction = HostAgentDnsPolicyAction.Read,
+        };
+
+        var response = await dispatcher.DispatchAsync(request.ToJson(), WebApplication());
+
+        Assert.Equal(1, executor.PolicyCallCount);
+        Assert.True(response.DnsPolicyConfiguration!.Success);
+        Assert.DoesNotContain("secret", response.ToJson(), StringComparison.Ordinal);
+        Assert.DoesNotContain("dns-svc", response.ToJson(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DnsPolicyScript_IsFixedParsesAndDoesNotAcceptExecutableText()
+    {
+        Assert.StartsWith("param(", DnsRemotePolicyConfiguration.Script.TrimStart(), StringComparison.Ordinal);
+        Assert.DoesNotContain("Invoke-Expression", DnsRemotePolicyConfiguration.Script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ScriptBlock", DnsRemotePolicyConfiguration.Script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ExpectedConfigurationJson", DnsRemotePolicyConfiguration.Script, StringComparison.Ordinal);
+        Assert.Contains("Add-DnsServerZoneScope", DnsRemotePolicyConfiguration.Script, StringComparison.Ordinal);
+        System.Management.Automation.Language.Parser.ParseInput(DnsRemotePolicyConfiguration.Script, out _, out var errors);
+        Assert.Empty(errors);
+    }
+
     // ------------------------------------------------------------------------------------------
     // Configuration
     // ------------------------------------------------------------------------------------------
@@ -739,6 +801,7 @@ public sealed class HostAgentBoundaryTests
         public int MutationCallCount { get; private set; }
         public int ZoneMutationCallCount { get; private set; }
         public int ServerSettingsCallCount { get; private set; }
+        public int PolicyCallCount { get; private set; }
         public Task<HostAgentDnsProbeResult> ProbeAsync(HostAgentRequest request, CancellationToken cancellationToken)
         {
             CallCount++;
@@ -771,6 +834,13 @@ public sealed class HostAgentBoundaryTests
         {
             ServerSettingsCallCount++;
             return Task.FromResult(new HostAgentDnsServerSettingsResult { Success = true, Message = "ok" });
+        }
+
+        public Task<HostAgentDnsPolicyConfigurationResult> ManagePolicyConfigurationAsync(
+            HostAgentRequest request, CancellationToken cancellationToken)
+        {
+            PolicyCallCount++;
+            return Task.FromResult(new HostAgentDnsPolicyConfigurationResult { Success = true, Message = "ok" });
         }
     }
 
