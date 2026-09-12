@@ -16,7 +16,8 @@ public sealed class DnsManagementAdministrationController(
     IDnsServerConnectionTestService connectionTestService,
     IDnsInventorySyncService inventorySyncService,
     IDnsServerSettingsService serverSettingsService,
-    IDnsPolicyManagementService policyManagementService) : ControllerBase
+    IDnsPolicyManagementService policyManagementService,
+    IDnssecManagementService dnssecManagementService) : ControllerBase
 {
     [HttpGet("settings")]
     [RequirePermission(DnsManagementPermissions.ManageSettings)]
@@ -61,7 +62,7 @@ public sealed class DnsManagementAdministrationController(
     }
 
     [HttpGet("servers")]
-    [RequireAnyPermission(DnsManagementPermissions.ServersView, DnsManagementPermissions.ManageServerSettings, DnsManagementPermissions.ClearCache, DnsManagementPermissions.ManagePolicies)]
+    [RequireAnyPermission(DnsManagementPermissions.ServersView, DnsManagementPermissions.ManageServerSettings, DnsManagementPermissions.ClearCache, DnsManagementPermissions.ManagePolicies, DnsManagementPermissions.ManageDnssec)]
     public async Task<ActionResult<IReadOnlyList<DnsServerResponse>>> GetServers(CancellationToken cancellationToken) =>
         Ok((await service.GetServersAsync(cancellationToken)).Select(Map));
 
@@ -162,6 +163,30 @@ public sealed class DnsManagementAdministrationController(
             : BadRequest(new { code = result.ErrorCode, message = result.Message });
     }
 
+    [HttpGet("servers/{id:guid}/dnssec-configuration")]
+    [RequirePermission(DnsManagementPermissions.ManageDnssec)]
+    public async Task<ActionResult<DnssecConfigurationResponse>> GetDnssecConfiguration(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await dnssecManagementService.GetAsync(id, cancellationToken);
+        return result.Success && result.Configuration is not null
+            ? Ok(Map(result.Configuration))
+            : BadRequest(new { code = result.ErrorCode, message = result.Message });
+    }
+
+    [HttpPost("servers/{id:guid}/dnssec-configuration/mutations")]
+    [RequirePermission(DnsManagementPermissions.ManageDnssec)]
+    public async Task<ActionResult<DnssecOperationResponse>> MutateDnssecConfiguration(
+        Guid id, DnssecMutationRequest request, CancellationToken cancellationToken)
+    {
+        var result = await dnssecManagementService.MutateAsync(new(
+            id, request.Action, request.ZoneName, request.KeyIds ?? [], request.ExpectedStateToken,
+            DnsManagementActorResolver.Resolve(this)), cancellationToken);
+        return result.Success
+            ? Ok(new DnssecOperationResponse(true, null, result.Message,
+                result.Configuration is null ? null : Map(result.Configuration)))
+            : BadRequest(new { code = result.ErrorCode, message = result.Message });
+    }
+
     private async Task<ActionResult<DnsCredentialProfileResponse>> SaveCredential(
         Guid? id, SaveDnsCredentialProfileRequest request, CancellationToken cancellationToken)
     {
@@ -215,4 +240,15 @@ public sealed class DnsManagementAdministrationController(
         x.QueryPolicies.Select(v => new DnsQueryPolicyResponse(v.Name, v.Level, v.ZoneName, v.Action, v.Condition, v.ProcessingOrder,
             v.Enabled, v.ClientSubnet, v.Fqdn, v.QueryType, v.TransportProtocol, v.InternetProtocol, v.ServerInterfaceIp, v.ZoneScope)).ToArray(),
         x.StateToken);
+    private static DnssecConfigurationResponse Map(AppModels.DnssecConfigurationModel x) => new(
+        x.Zones.Select(zone => new DnssecZoneResponse(
+            zone.Name, zone.ZoneType, zone.IsDsIntegrated, zone.IsAutoCreated, zone.IsSigned,
+            zone.IsEligibleForSigning, zone.IneligibilityReason, zone.IsKeyMasterServer,
+            zone.KeyMasterServer, zone.KeyMasterStatus, zone.DenialOfExistence,
+            zone.Nsec3Iterations, zone.Nsec3OptOut, zone.DnsKeyRecordSetTtlSeconds,
+            zone.DsRecordSetTtlSeconds, zone.DsRecordGenerationAlgorithms,
+            zone.ParentHasSecureDelegation, zone.SigningKeys.Select(key => new DnssecSigningKeyResponse(
+                key.KeyId, key.KeyType, key.CryptoAlgorithm, key.KeyLength, key.KeyStatus,
+                key.KeyStorageProvider, key.IsRolloverEnabled, key.RolloverPeriodSeconds,
+                key.NextRolloverAction, key.NextRolloverTime)).ToArray())).ToArray(), x.StateToken);
 }

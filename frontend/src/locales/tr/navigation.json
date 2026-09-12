@@ -50,6 +50,7 @@
       "dnsManagementServers": "DNS Sunucuları",
       "dnsManagementServerSettings": "DNS Sunucu Ayarları",
       "dnsManagementPolicies": "DNS Politikaları",
+      "dnsManagementDnssec": "DNSSEC Yönetimi",
       "dnsManagementZones": "DNS Zone Envanteri",
       "dnsManagementRecords": "DNS Kayıtları",
       "dnsManagementComparison": "DNS Karşılaştırma",

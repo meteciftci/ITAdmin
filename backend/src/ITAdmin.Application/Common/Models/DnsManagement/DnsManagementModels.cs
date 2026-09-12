@@ -153,6 +153,25 @@ public sealed record DnsPolicyMutationCommand(
     string ExpectedStateToken, DnsActorContext Actor);
 public sealed record DnsPolicyOperationModel(bool Success, string? ErrorCode, string Message, DnsPolicyConfigurationModel? Configuration = null);
 
+public enum DnssecAction { SignWithDefaults, Resign, Unsign, RolloverKeys }
+public sealed record DnssecSigningKeyModel(
+    Guid KeyId, string KeyType, string? CryptoAlgorithm, int? KeyLength, string? KeyStatus,
+    string? KeyStorageProvider, bool? IsRolloverEnabled, long? RolloverPeriodSeconds,
+    string? NextRolloverAction, DateTimeOffset? NextRolloverTime);
+public sealed record DnssecZoneModel(
+    string Name, string ZoneType, bool IsDsIntegrated, bool IsAutoCreated, bool IsSigned,
+    bool IsEligibleForSigning, string? IneligibilityReason, bool? IsKeyMasterServer,
+    string? KeyMasterServer, string? KeyMasterStatus, string? DenialOfExistence,
+    int? Nsec3Iterations, bool? Nsec3OptOut, long? DnsKeyRecordSetTtlSeconds,
+    long? DsRecordSetTtlSeconds, IReadOnlyList<string> DsRecordGenerationAlgorithms,
+    bool? ParentHasSecureDelegation, IReadOnlyList<DnssecSigningKeyModel> SigningKeys);
+public sealed record DnssecConfigurationModel(IReadOnlyList<DnssecZoneModel> Zones, string StateToken);
+public sealed record DnssecMutationCommand(
+    Guid ServerId, DnssecAction Action, string ZoneName, IReadOnlyList<Guid> KeyIds,
+    string ExpectedStateToken, DnsActorContext Actor);
+public sealed record DnssecOperationModel(
+    bool Success, string? ErrorCode, string Message, DnssecConfigurationModel? Configuration = null);
+
 public sealed record DnsOperationLogQuery(
     Guid? ServerId, string? OperationType, string? Status,
     string? TargetSearch, string? ActorUserName,

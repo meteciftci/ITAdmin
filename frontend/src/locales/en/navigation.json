@@ -50,6 +50,7 @@
       "dnsManagementServers": "DNS Servers",
       "dnsManagementServerSettings": "DNS Server Settings",
       "dnsManagementPolicies": "DNS Policies",
+      "dnsManagementDnssec": "DNSSEC Management",
       "dnsManagementZones": "DNS Zone Inventory",
       "dnsManagementRecords": "DNS Records",
       "dnsManagementComparison": "DNS Comparison",

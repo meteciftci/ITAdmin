@@ -33,7 +33,7 @@ namespace ITAdmin.HostAgent.Contracts;
 /// </summary>
 public static class HostAgentProtocol
 {
-    public const int ProtocolVersion = 8;
+    public const int ProtocolVersion = 9;
 
     /// <summary>Pipe name. Machine-local; the agent ACLs it to the app pool identity and administrators.</summary>
     public const string PipeName = "ITAdmin.HostAgent";
@@ -123,6 +123,9 @@ public enum HostAgentOperation
 
     /// <summary>Read or mutate allowlisted DNS client subnets, zone scopes, and query policies.</summary>
     ManageDnsPolicyConfiguration = 14,
+
+    /// <summary>Read or mutate the authoritative DNSSEC lifecycle for primary zones.</summary>
+    ManageDnssecConfiguration = 15,
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -183,6 +186,16 @@ public enum HostAgentDnsPolicyAction
     SaveQueryPolicy = 5,
     DeleteQueryPolicy = 6,
     SetQueryPolicyEnabled = 7,
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum HostAgentDnssecAction
+{
+    Read = 0,
+    SignWithDefaults = 1,
+    Resign = 2,
+    Unsign = 3,
+    RolloverKeys = 4,
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -411,6 +424,15 @@ public sealed record HostAgentRequest
     [JsonPropertyName("dnsExpectedPolicyConfigurationJson")]
     public string? DnsExpectedPolicyConfigurationJson { get; init; }
 
+    [JsonPropertyName("dnssecAction")]
+    public HostAgentDnssecAction? DnssecAction { get; init; }
+    [JsonPropertyName("dnssecZoneName")]
+    public string? DnssecZoneName { get; init; }
+    [JsonPropertyName("dnssecKeyIds")]
+    public IReadOnlyList<Guid>? DnssecKeyIds { get; init; }
+    [JsonPropertyName("dnsExpectedDnssecConfigurationJson")]
+    public string? DnsExpectedDnssecConfigurationJson { get; init; }
+
     public string ToJson() => JsonSerializer.Serialize(this, HostAgentProtocol.Json);
 
     public static HostAgentRequest? FromJson(string? json)
@@ -474,7 +496,8 @@ public sealed record HostAgentRequest
             or HostAgentOperation.MutateDnsServerResourceRecord
             or HostAgentOperation.MutateDnsServerZone
             or HostAgentOperation.ManageDnsServerSettings
-            or HostAgentOperation.ManageDnsPolicyConfiguration)
+            or HostAgentOperation.ManageDnsPolicyConfiguration
+            or HostAgentOperation.ManageDnssecConfiguration)
         {
             var hostName = DnsHostName?.Trim().TrimEnd('.');
             if (string.IsNullOrWhiteSpace(hostName) || hostName.Length > 253
@@ -667,6 +690,30 @@ public sealed record HostAgentRequest
             }
         }
 
+
+        if (Operation == HostAgentOperation.ManageDnssecConfiguration)
+        {
+            if (DnssecAction is null || !Enum.IsDefined(DnssecAction.Value))
+                problems.Add("dnssecAction is required.");
+            if (DnssecAction != HostAgentDnssecAction.Read)
+            {
+                if (string.IsNullOrWhiteSpace(DnssecZoneName) || DnssecZoneName.Length > 253
+                    || DnssecZoneName.Any(char.IsControl))
+                    problems.Add("dnssecZoneName is required and may contain at most 253 characters.");
+                if (string.IsNullOrWhiteSpace(DnsExpectedDnssecConfigurationJson)
+                    || DnsExpectedDnssecConfigurationJson.Length > 524_288
+                    || !IsJsonObject(DnsExpectedDnssecConfigurationJson))
+                    problems.Add("dnsExpectedDnssecConfigurationJson must be a bounded JSON object.");
+            }
+            if (DnssecAction == HostAgentDnssecAction.RolloverKeys
+                && (DnssecKeyIds is null || DnssecKeyIds.Count is < 1 or > 8
+                    || DnssecKeyIds.Any(x => x == Guid.Empty)
+                    || DnssecKeyIds.Distinct().Count() != DnssecKeyIds.Count))
+                problems.Add("dnssecKeyIds must contain between 1 and 8 unique key identifiers for rollover.");
+            if (DnssecAction != HostAgentDnssecAction.RolloverKeys && DnssecKeyIds is { Count: > 0 })
+                problems.Add("dnssecKeyIds is only valid for key rollover.");
+        }
+
         return problems;
     }
 
@@ -830,6 +877,9 @@ public sealed record HostAgentResponse
 
     [JsonPropertyName("dnsPolicyConfiguration")]
     public HostAgentDnsPolicyConfigurationResult? DnsPolicyConfiguration { get; init; }
+
+    [JsonPropertyName("dnssecConfiguration")]
+    public HostAgentDnssecConfigurationResult? DnssecConfiguration { get; init; }
 
     [JsonPropertyName("repositoryStatus")]
     public HostAgentRepositoryStatus RepositoryStatus { get; init; } = HostAgentRepositoryStatus.Unknown;
@@ -1108,6 +1158,56 @@ public sealed record HostAgentDnsPolicyConfigurationResult
     [JsonPropertyName("message")] public string Message { get; init; } = string.Empty;
     [JsonPropertyName("before")] public HostAgentDnsPolicyConfiguration? Before { get; init; }
     [JsonPropertyName("after")] public HostAgentDnsPolicyConfiguration? After { get; init; }
+}
+
+public sealed record HostAgentDnssecSigningKey
+{
+    [JsonPropertyName("keyId")] public Guid KeyId { get; init; }
+    [JsonPropertyName("keyType")] public string KeyType { get; init; } = string.Empty;
+    [JsonPropertyName("cryptoAlgorithm")] public string? CryptoAlgorithm { get; init; }
+    [JsonPropertyName("keyLength")] public int? KeyLength { get; init; }
+    [JsonPropertyName("keyStatus")] public string? KeyStatus { get; init; }
+    [JsonPropertyName("keyStorageProvider")] public string? KeyStorageProvider { get; init; }
+    [JsonPropertyName("isRolloverEnabled")] public bool? IsRolloverEnabled { get; init; }
+    [JsonPropertyName("rolloverPeriodSeconds")] public long? RolloverPeriodSeconds { get; init; }
+    [JsonPropertyName("nextRolloverAction")] public string? NextRolloverAction { get; init; }
+    [JsonPropertyName("nextRolloverTime")] public DateTimeOffset? NextRolloverTime { get; init; }
+}
+
+public sealed record HostAgentDnssecZone
+{
+    [JsonPropertyName("name")] public string Name { get; init; } = string.Empty;
+    [JsonPropertyName("zoneType")] public string ZoneType { get; init; } = string.Empty;
+    [JsonPropertyName("isDsIntegrated")] public bool IsDsIntegrated { get; init; }
+    [JsonPropertyName("isAutoCreated")] public bool IsAutoCreated { get; init; }
+    [JsonPropertyName("isSigned")] public bool IsSigned { get; init; }
+    [JsonPropertyName("isEligibleForSigning")] public bool IsEligibleForSigning { get; init; }
+    [JsonPropertyName("ineligibilityReason")] public string? IneligibilityReason { get; init; }
+    [JsonPropertyName("isKeyMasterServer")] public bool? IsKeyMasterServer { get; init; }
+    [JsonPropertyName("keyMasterServer")] public string? KeyMasterServer { get; init; }
+    [JsonPropertyName("keyMasterStatus")] public string? KeyMasterStatus { get; init; }
+    [JsonPropertyName("denialOfExistence")] public string? DenialOfExistence { get; init; }
+    [JsonPropertyName("nsec3Iterations")] public int? Nsec3Iterations { get; init; }
+    [JsonPropertyName("nsec3OptOut")] public bool? Nsec3OptOut { get; init; }
+    [JsonPropertyName("dnsKeyRecordSetTtlSeconds")] public long? DnsKeyRecordSetTtlSeconds { get; init; }
+    [JsonPropertyName("dsRecordSetTtlSeconds")] public long? DsRecordSetTtlSeconds { get; init; }
+    [JsonPropertyName("dsRecordGenerationAlgorithms")] public IReadOnlyList<string> DsRecordGenerationAlgorithms { get; init; } = [];
+    [JsonPropertyName("parentHasSecureDelegation")] public bool? ParentHasSecureDelegation { get; init; }
+    [JsonPropertyName("signingKeys")] public IReadOnlyList<HostAgentDnssecSigningKey> SigningKeys { get; init; } = [];
+}
+
+public sealed record HostAgentDnssecConfiguration
+{
+    [JsonPropertyName("zones")] public IReadOnlyList<HostAgentDnssecZone> Zones { get; init; } = [];
+}
+
+public sealed record HostAgentDnssecConfigurationResult
+{
+    [JsonPropertyName("success")] public bool Success { get; init; }
+    [JsonPropertyName("failureKind")] public string? FailureKind { get; init; }
+    [JsonPropertyName("message")] public string Message { get; init; } = string.Empty;
+    [JsonPropertyName("before")] public HostAgentDnssecConfiguration? Before { get; init; }
+    [JsonPropertyName("after")] public HostAgentDnssecConfiguration? After { get; init; }
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]

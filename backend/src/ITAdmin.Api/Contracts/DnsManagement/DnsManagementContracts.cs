@@ -95,6 +95,23 @@ public sealed record DnsPolicyConfigurationResponse(
     IReadOnlyList<DnsQueryPolicyResponse> QueryPolicies, string StateToken);
 public sealed record DnsPolicyOperationResponse(bool Success, string? ErrorCode, string Message, DnsPolicyConfigurationResponse? Configuration = null);
 
+public sealed record DnssecSigningKeyResponse(
+    Guid KeyId, string KeyType, string? CryptoAlgorithm, int? KeyLength, string? KeyStatus,
+    string? KeyStorageProvider, bool? IsRolloverEnabled, long? RolloverPeriodSeconds,
+    string? NextRolloverAction, DateTimeOffset? NextRolloverTime);
+public sealed record DnssecZoneResponse(
+    string Name, string ZoneType, bool IsDsIntegrated, bool IsAutoCreated, bool IsSigned,
+    bool IsEligibleForSigning, string? IneligibilityReason, bool? IsKeyMasterServer,
+    string? KeyMasterServer, string? KeyMasterStatus, string? DenialOfExistence,
+    int? Nsec3Iterations, bool? Nsec3OptOut, long? DnsKeyRecordSetTtlSeconds,
+    long? DsRecordSetTtlSeconds, IReadOnlyList<string> DsRecordGenerationAlgorithms,
+    bool? ParentHasSecureDelegation, IReadOnlyList<DnssecSigningKeyResponse> SigningKeys);
+public sealed record DnssecConfigurationResponse(IReadOnlyList<DnssecZoneResponse> Zones, string StateToken);
+public sealed record DnssecMutationRequest(
+    DnssecAction Action, string ZoneName, IReadOnlyList<Guid>? KeyIds, string ExpectedStateToken);
+public sealed record DnssecOperationResponse(
+    bool Success, string? ErrorCode, string Message, DnssecConfigurationResponse? Configuration = null);
+
 public sealed record DnsOperationLogListItemResponse(
     Guid Id, DateTimeOffset CreatedAt, Guid? ServerId, string? ServerDisplayName,
     string OperationType, string Status, string? ZoneName, string? RecordName,

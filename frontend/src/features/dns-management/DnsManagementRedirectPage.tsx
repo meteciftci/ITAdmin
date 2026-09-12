@@ -28,6 +28,10 @@ export function DnsManagementRedirectPage() {
     return <Navigate to="/dns-management/policies" replace />;
   }
 
+  if (canAccess(user, PermissionCodes.DnsManagement.ManageDnssec)) {
+    return <Navigate to="/dns-management/dnssec" replace />;
+  }
+
   if (
     canAccess(user, PermissionCodes.DnsManagement.ManageServerSettings) ||
     canAccess(user, PermissionCodes.DnsManagement.ClearCache)

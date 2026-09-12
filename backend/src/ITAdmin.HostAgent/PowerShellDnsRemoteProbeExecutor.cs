@@ -27,6 +27,8 @@ public interface IDnsRemoteProbeExecutor
         HostAgentRequest request, CancellationToken cancellationToken);
     Task<HostAgentDnsPolicyConfigurationResult> ManagePolicyConfigurationAsync(
         HostAgentRequest request, CancellationToken cancellationToken);
+    Task<HostAgentDnssecConfigurationResult> ManageDnssecConfigurationAsync(
+        HostAgentRequest request, CancellationToken cancellationToken);
 }
 
 internal static class DnsRemoteCapabilityProbe
@@ -56,7 +58,11 @@ internal static class DnsRemoteCapabilityProbe
                 [bool](Get-Command Remove-DnsServerForwarder -ErrorAction SilentlyContinue) -and
                 [bool](Get-Command Get-DnsServerRecursion -ErrorAction SilentlyContinue) -and
                 [bool](Get-Command Set-DnsServerRecursion -ErrorAction SilentlyContinue)
-            Dnssec = [bool](Get-Command Get-DnsServerDnsSecZoneSetting -ErrorAction SilentlyContinue)
+            Dnssec = [bool](Get-Command Get-DnsServerDnsSecZoneSetting -ErrorAction SilentlyContinue) -and
+                [bool](Get-Command Get-DnsServerSigningKey -ErrorAction SilentlyContinue) -and
+                [bool](Get-Command Invoke-DnsServerZoneSign -ErrorAction SilentlyContinue) -and
+                [bool](Get-Command Invoke-DnsServerZoneUnsign -ErrorAction SilentlyContinue) -and
+                [bool](Get-Command Invoke-DnsServerSigningKeyRollover -ErrorAction SilentlyContinue)
             Policies = [bool](Get-Command Get-DnsServerQueryResolutionPolicy -ErrorAction SilentlyContinue)
             Scopes = [bool](Get-Command Get-DnsServerZoneScope -ErrorAction SilentlyContinue)
             Cache = [bool](Get-Command Clear-DnsServerCache -ErrorAction SilentlyContinue)
@@ -799,6 +805,155 @@ internal static class DnsRemotePolicyConfiguration
         """;
 }
 
+internal static class DnsRemoteDnssecConfiguration
+{
+    // Authoritative DNSSEC lifecycle only. Values are parameter-bound and the available cmdlets
+    // are fixed here; trust-anchor and resolver validation management are deliberately excluded.
+    internal const string Script = """
+        param(
+            [Parameter(Mandatory=$true)][ValidateSet('Read','SignWithDefaults','Resign','Unsign','RolloverKeys')][string]$Action,
+            [string]$ZoneName,
+            [Guid[]]$KeyIds,
+            [string]$ExpectedConfigurationJson
+        )
+        $ErrorActionPreference = 'Stop'
+        Import-Module DnsServer -ErrorAction Stop
+
+        function Seconds([object]$value) {
+            if ($null -eq $value) { return $null }
+            if ($value -is [TimeSpan]) { return [long][Math]::Round($value.TotalSeconds) }
+            try { return [long]$value } catch { return $null }
+        }
+        function Text-OrNull([object]$value) {
+            if ($null -eq $value -or "$value" -eq '') { return $null }
+            return "$value"
+        }
+        function Get-KeyType([object]$key) {
+            if ($null -ne $key.IsKeySigningKey) { return $(if ([bool]$key.IsKeySigningKey) { 'KeySigningKey' } else { 'ZoneSigningKey' }) }
+            if ($key.KeyType) { return "$($key.KeyType)" }
+            return 'Unknown'
+        }
+        function Convert-Key([object]$key) {
+            $nextTime = $null
+            if ($key.NextRolloverTime -is [DateTime]) { $nextTime = $key.NextRolloverTime.ToUniversalTime().ToString('O') }
+            [ordered]@{
+                KeyId=[Guid]$key.KeyId; KeyType=(Get-KeyType $key); CryptoAlgorithm=(Text-OrNull $key.CryptoAlgorithm)
+                KeyLength=if ($null -ne $key.KeyLength) { [int]$key.KeyLength } else { $null }
+                KeyStatus=(Text-OrNull $key.KeyStatus); KeyStorageProvider=(Text-OrNull $key.KeyStorageProvider)
+                IsRolloverEnabled=if ($null -ne $key.IsRolloverEnabled) { [bool]$key.IsRolloverEnabled } else { $null }
+                RolloverPeriodSeconds=(Seconds $key.RolloverPeriod); NextRolloverAction=(Text-OrNull $key.NextRolloverAction)
+                NextRolloverTime=$nextTime
+            }
+        }
+        function Convert-Zone([object]$zone) {
+            $name = "$($zone.ZoneName)"
+            $isPrimary = "$($zone.ZoneType)" -ieq 'Primary'
+            $isBuiltIn = [bool]$zone.IsAutoCreated -or $name -eq '.' -or $name -ieq 'TrustAnchors'
+            $eligible = $isPrimary -and -not $isBuiltIn
+            $reason = if (-not $isPrimary) { 'OnlyPrimaryZonesSupported' } elseif ($isBuiltIn) { 'BuiltInZoneNotSupported' } else { $null }
+            $settings = $null
+            $keys = @()
+            if ([bool]$zone.IsSigned) {
+                $settings = Get-DnsServerDnsSecZoneSetting -ZoneName $name -ErrorAction Stop
+                $keys = @(Get-DnsServerSigningKey -ZoneName $name -ErrorAction Stop | ForEach-Object { Convert-Key $_ } | Sort-Object KeyType,KeyId)
+            }
+            [ordered]@{
+                Name=$name; ZoneType="$($zone.ZoneType)"; IsDsIntegrated=[bool]$zone.IsDsIntegrated
+                IsAutoCreated=[bool]$zone.IsAutoCreated; IsSigned=[bool]$zone.IsSigned
+                IsEligibleForSigning=$eligible; IneligibilityReason=$reason
+                IsKeyMasterServer=if ($null -ne $settings.IsKeyMasterServer) { [bool]$settings.IsKeyMasterServer } else { $null }
+                KeyMasterServer=(Text-OrNull $settings.KeyMasterServer); KeyMasterStatus=(Text-OrNull $settings.KeyMasterStatus)
+                DenialOfExistence=(Text-OrNull $settings.DenialOfExistence)
+                Nsec3Iterations=if ($null -ne $settings.NSec3Iterations) { [int]$settings.NSec3Iterations } else { $null }
+                Nsec3OptOut=if ($null -ne $settings.NSec3OptOut) { [bool]$settings.NSec3OptOut } else { $null }
+                DnsKeyRecordSetTtlSeconds=(Seconds $settings.DnsKeyRecordSetTTL)
+                DsRecordSetTtlSeconds=(Seconds $settings.DSRecordSetTTL)
+                DsRecordGenerationAlgorithms=@($settings.DSRecordGenerationAlgorithm | ForEach-Object { "$_" } | Sort-Object)
+                ParentHasSecureDelegation=if ($null -ne $settings.ParentHasSecureDelegation) { [bool]$settings.ParentHasSecureDelegation } else { $null }
+                SigningKeys=$keys
+            }
+        }
+        function Get-Configuration {
+            $zones = @(Get-DnsServerZone -ErrorAction Stop | ForEach-Object { Convert-Zone $_ } | Sort-Object Name)
+            [ordered]@{ Zones=$zones }
+        }
+        function Normalize-Zone([object]$zone) {
+            [ordered]@{
+                Name="$($zone.Name)".ToLowerInvariant(); ZoneType="$($zone.ZoneType)".ToLowerInvariant()
+                IsDsIntegrated=[bool]$zone.IsDsIntegrated; IsAutoCreated=[bool]$zone.IsAutoCreated
+                IsSigned=[bool]$zone.IsSigned; IsEligibleForSigning=[bool]$zone.IsEligibleForSigning
+                IneligibilityReason=(Text-OrNull $zone.IneligibilityReason)
+                IsKeyMasterServer=if ($null -ne $zone.IsKeyMasterServer) { [bool]$zone.IsKeyMasterServer } else { $null }
+                KeyMasterServer=(Text-OrNull $zone.KeyMasterServer); KeyMasterStatus=(Text-OrNull $zone.KeyMasterStatus)
+                DenialOfExistence=(Text-OrNull $zone.DenialOfExistence)
+                Nsec3Iterations=if ($null -ne $zone.Nsec3Iterations) { [int]$zone.Nsec3Iterations } else { $null }
+                Nsec3OptOut=if ($null -ne $zone.Nsec3OptOut) { [bool]$zone.Nsec3OptOut } else { $null }
+                DnsKeyRecordSetTtlSeconds=if ($null -ne $zone.DnsKeyRecordSetTtlSeconds) { [long]$zone.DnsKeyRecordSetTtlSeconds } else { $null }
+                DsRecordSetTtlSeconds=if ($null -ne $zone.DsRecordSetTtlSeconds) { [long]$zone.DsRecordSetTtlSeconds } else { $null }
+                DsRecordGenerationAlgorithms=@($zone.DsRecordGenerationAlgorithms | ForEach-Object { "$_".ToLowerInvariant() } | Sort-Object)
+                ParentHasSecureDelegation=if ($null -ne $zone.ParentHasSecureDelegation) { [bool]$zone.ParentHasSecureDelegation } else { $null }
+                SigningKeys=@($zone.SigningKeys | ForEach-Object {
+                    [ordered]@{ KeyId="$($_.KeyId)".ToLowerInvariant(); KeyType="$($_.KeyType)".ToLowerInvariant(); CryptoAlgorithm=(Text-OrNull $_.CryptoAlgorithm)
+                        KeyLength=if ($null -ne $_.KeyLength) { [int]$_.KeyLength } else { $null }; KeyStatus=(Text-OrNull $_.KeyStatus)
+                        KeyStorageProvider=(Text-OrNull $_.KeyStorageProvider); IsRolloverEnabled=if ($null -ne $_.IsRolloverEnabled) { [bool]$_.IsRolloverEnabled } else { $null }
+                        RolloverPeriodSeconds=if ($null -ne $_.RolloverPeriodSeconds) { [long]$_.RolloverPeriodSeconds } else { $null }
+                        NextRolloverAction=(Text-OrNull $_.NextRolloverAction); NextRolloverTime=(Text-OrNull $_.NextRolloverTime) }
+                } | Sort-Object KeyType,KeyId)
+            }
+        }
+
+        $before = $null
+        $beforeJson = $null
+        try {
+            $before = Get-Configuration
+            if (@($before.Zones).Count -gt 500 -or @($before.Zones.SigningKeys).Count -gt 1000) {
+                return [pscustomobject]@{ Success=$false; FailureKind='DnssecConfigurationTooLarge'; Message='The DNSSEC configuration exceeds the supported management limit.'; BeforeJson=$null; AfterJson=$null }
+            }
+            $beforeJson = $before | ConvertTo-Json -Compress -Depth 10
+            if ($Action -eq 'Read') { return [pscustomobject]@{ Success=$true; FailureKind=$null; Message='DNSSEC configuration read.'; BeforeJson=$null; AfterJson=$beforeJson } }
+
+            $target = @($before.Zones | Where-Object { $_.Name -ieq $ZoneName })
+            if ($target.Count -ne 1) { return [pscustomobject]@{ Success=$false; FailureKind='ZoneNotFound'; Message='The DNS zone was not found.'; BeforeJson=$beforeJson; AfterJson=$null } }
+            if (-not [bool]$target[0].IsEligibleForSigning) { return [pscustomobject]@{ Success=$false; FailureKind='ZoneNotEligible'; Message='Only non-built-in primary zones support this DNSSEC operation.'; BeforeJson=$beforeJson; AfterJson=$null } }
+
+            $expected = $ExpectedConfigurationJson | ConvertFrom-Json -ErrorAction Stop
+            $expectedTarget = @($expected.Zones | Where-Object { $_.Name -ieq $ZoneName })
+            if ($expectedTarget.Count -ne 1 -or ((Normalize-Zone $target[0]) | ConvertTo-Json -Compress -Depth 10) -cne ((Normalize-Zone $expectedTarget[0]) | ConvertTo-Json -Compress -Depth 10)) {
+                return [pscustomobject]@{ Success=$false; FailureKind='DnssecConfigurationChanged'; Message='The live DNSSEC zone state changed. Refresh and retry.'; BeforeJson=$beforeJson; AfterJson=$null }
+            }
+
+            switch ($Action) {
+                'SignWithDefaults' {
+                    if ([bool]$target[0].IsSigned) { return [pscustomobject]@{ Success=$false; FailureKind='ZoneAlreadySigned'; Message='The DNS zone is already signed.'; BeforeJson=$beforeJson; AfterJson=$null } }
+                    Invoke-DnsServerZoneSign -ZoneName $ZoneName -SignWithDefault -Force -ErrorAction Stop | Out-Null
+                }
+                'Resign' {
+                    if (-not [bool]$target[0].IsSigned) { return [pscustomobject]@{ Success=$false; FailureKind='ZoneNotSigned'; Message='The DNS zone is not signed.'; BeforeJson=$beforeJson; AfterJson=$null } }
+                    Invoke-DnsServerZoneSign -ZoneName $ZoneName -DoResign -Force -ErrorAction Stop | Out-Null
+                }
+                'Unsign' {
+                    if (-not [bool]$target[0].IsSigned) { return [pscustomobject]@{ Success=$false; FailureKind='ZoneNotSigned'; Message='The DNS zone is not signed.'; BeforeJson=$beforeJson; AfterJson=$null } }
+                    Invoke-DnsServerZoneUnsign -ZoneName $ZoneName -Force -ErrorAction Stop | Out-Null
+                }
+                'RolloverKeys' {
+                    if (-not [bool]$target[0].IsSigned) { return [pscustomobject]@{ Success=$false; FailureKind='ZoneNotSigned'; Message='The DNS zone is not signed.'; BeforeJson=$beforeJson; AfterJson=$null } }
+                    $liveIds = @($target[0].SigningKeys | ForEach-Object { "$($_.KeyId)".ToLowerInvariant() })
+                    foreach ($id in @($KeyIds)) { if (-not $liveIds.Contains("$id".ToLowerInvariant())) { return [pscustomobject]@{ Success=$false; FailureKind='SigningKeyNotFound'; Message='One or more selected signing keys no longer exist.'; BeforeJson=$beforeJson; AfterJson=$null } } }
+                    Invoke-DnsServerSigningKeyRollover -ZoneName $ZoneName -KeyId ([Guid[]]$KeyIds) -Force -ErrorAction Stop | Out-Null
+                }
+            }
+            $after = Get-Configuration
+            $afterTarget = @($after.Zones | Where-Object { $_.Name -ieq $ZoneName })[0]
+            if ($Action -in @('SignWithDefaults','Resign') -and -not [bool]$afterTarget.IsSigned) { throw 'DNSSEC signing read-back verification failed.' }
+            if ($Action -eq 'Unsign' -and [bool]$afterTarget.IsSigned) { throw 'DNSSEC unsigning read-back verification failed.' }
+            $message = if ($Action -eq 'RolloverKeys') { 'DNSSEC signing key rollover initiated.' } else { 'DNSSEC zone operation completed.' }
+            return [pscustomobject]@{ Success=$true; FailureKind=$null; Message=$message; BeforeJson=$beforeJson; AfterJson=($after | ConvertTo-Json -Compress -Depth 10) }
+        } catch {
+            return [pscustomobject]@{ Success=$false; FailureKind='DnssecOperationFailed'; Message='The DNS server rejected the DNSSEC operation.'; BeforeJson=$beforeJson; AfterJson=$null }
+        }
+        """;
+}
+
 [SupportedOSPlatform("windows")]
 public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemoteProbeExecutor> logger)
     : IDnsRemoteProbeExecutor
@@ -889,6 +1044,57 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
         try { return await ManagePolicyConfigurationCoreAsync(request, timeout.Token); }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         { return PolicyConfigurationFailure("Timeout", "The DNS policy operation timed out."); }
+    }
+
+    public async Task<HostAgentDnssecConfigurationResult> ManageDnssecConfigurationAsync(
+        HostAgentRequest request, CancellationToken cancellationToken)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(request.DnsTimeoutSeconds!.Value));
+        try { return await ManageDnssecConfigurationCoreAsync(request, timeout.Token); }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        { return DnssecConfigurationFailure("Timeout", "The DNSSEC operation timed out."); }
+    }
+
+    private async Task<HostAgentDnssecConfigurationResult> ManageDnssecConfigurationCoreAsync(
+        HostAgentRequest request, CancellationToken cancellationToken)
+    {
+        var host = request.DnsHostName!.Trim().TrimEnd('.');
+        var tls = await ValidateTlsAsync(host, request.DnsPort!.Value, request.DnsTlsCertificateThumbprint, cancellationToken);
+        if (!tls.NetworkReachable || !tls.Valid)
+            return DnssecConfigurationFailure(tls.NetworkReachable ? "TlsValidationFailed" : "NetworkUnreachable",
+                tls.NetworkReachable ? "The WinRM HTTPS certificate could not be validated." : "The WinRM HTTPS endpoint could not be reached.");
+        using var securePassword = ToSecureString(request.DnsPassword!);
+        var credential = new PSCredential(request.DnsUserName!, securePassword);
+        var endpoint = new UriBuilder("https", host, request.DnsPort.Value, "wsman").Uri;
+        var timeout = request.DnsTimeoutSeconds!.Value * 1000;
+        var connection = new WSManConnectionInfo(endpoint, MicrosoftPowerShellShellUri, credential)
+        {
+            AuthenticationMechanism = request.DnsAuthenticationMode == HostAgentDnsAuthenticationMode.BasicOverTls ? AuthenticationMechanism.Basic : AuthenticationMechanism.Negotiate,
+            OpenTimeout = timeout, OperationTimeout = timeout, CancelTimeout = Math.Min(timeout, 10_000), NoMachineProfile = true,
+        };
+        using var runspace = RunspaceFactory.CreateRunspace(connection);
+        try
+        {
+            await Task.Run(runspace.Open, cancellationToken);
+            using var powerShell = PowerShell.Create();
+            powerShell.Runspace = runspace;
+            powerShell.AddScript(DnsRemoteDnssecConfiguration.Script, useLocalScope: true)
+                .AddParameter("Action", request.DnssecAction!.Value.ToString())
+                .AddParameter("ZoneName", request.DnssecZoneName)
+                .AddParameter("KeyIds", request.DnssecKeyIds?.ToArray() ?? [])
+                .AddParameter("ExpectedConfigurationJson", request.DnsExpectedDnssecConfigurationJson);
+            var output = await Task.Run(powerShell.Invoke, cancellationToken);
+            return powerShell.HadErrors || output.Count != 1
+                ? DnssecConfigurationFailure("DnssecOperationFailed", "The DNS server rejected the DNSSEC operation.")
+                : MapDnssecConfigurationResult(output[0]);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception exception) when (exception is PSRemotingTransportException or RemoteException or RuntimeException or InvalidRunspaceStateException)
+        {
+            logger.LogWarning("DNSSEC operation failed for {Host}:{Port} ({ExceptionType}).", host, request.DnsPort, exception.GetType().Name);
+            return DnssecConfigurationFailure("DnssecOperationFailed", "The DNS server rejected the DNSSEC operation.");
+        }
     }
 
     private async Task<HostAgentDnsPolicyConfigurationResult> ManagePolicyConfigurationCoreAsync(
@@ -1540,6 +1746,26 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
         try { return JsonSerializer.Deserialize<HostAgentDnsPolicyConfiguration>(json, HostAgentProtocol.Json); }
         catch (JsonException) { return null; }
     }
+    private static HostAgentDnssecConfigurationResult MapDnssecConfigurationResult(PSObject value)
+    {
+        var success = ReadBool(value, "Success");
+        return new HostAgentDnssecConfigurationResult
+        {
+            Success = success,
+            FailureKind = ReadString(value, "FailureKind", 64),
+            Message = ReadString(value, "Message", 2000)
+                ?? (success ? "DNSSEC operation completed." : "The DNSSEC operation failed."),
+            Before = ReadDnssecConfigurationJson(value, "BeforeJson"),
+            After = ReadDnssecConfigurationJson(value, "AfterJson"),
+        };
+    }
+    private static HostAgentDnssecConfiguration? ReadDnssecConfigurationJson(PSObject value, string property)
+    {
+        var json = value.Properties[property]?.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try { return JsonSerializer.Deserialize<HostAgentDnssecConfiguration>(json, HostAgentProtocol.Json); }
+        catch (JsonException) { return null; }
+    }
     private static HostAgentDnsProbeResult Failure(string kind, string message, bool network, bool tls, bool authentication = false) =>
         new()
         {
@@ -1559,6 +1785,8 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
     private static HostAgentDnsServerSettingsResult ServerSettingsFailure(string kind, string message) =>
         new() { Success = false, FailureKind = kind, Message = message };
     private static HostAgentDnsPolicyConfigurationResult PolicyConfigurationFailure(string kind, string message) =>
+        new() { Success = false, FailureKind = kind, Message = message };
+    private static HostAgentDnssecConfigurationResult DnssecConfigurationFailure(string kind, string message) =>
         new() { Success = false, FailureKind = kind, Message = message };
     private static IReadOnlyList<T> FitPayload<T>(IEnumerable<T> source)
     {

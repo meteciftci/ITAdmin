@@ -229,6 +229,26 @@ export type DnsPolicyMutationInput = {
 };
 export type DnsPolicyOperation = { success: boolean; errorCode?: string | null; message: string; configuration?: DnsPolicyConfiguration | null };
 
+export type DnssecSigningKey = {
+  keyId: string; keyType: string; cryptoAlgorithm?: string | null; keyLength?: number | null;
+  keyStatus?: string | null; keyStorageProvider?: string | null; isRolloverEnabled?: boolean | null;
+  rolloverPeriodSeconds?: number | null; nextRolloverAction?: string | null; nextRolloverTime?: string | null;
+};
+export type DnssecZone = {
+  name: string; zoneType: string; isDsIntegrated: boolean; isAutoCreated: boolean; isSigned: boolean;
+  isEligibleForSigning: boolean; ineligibilityReason?: string | null; isKeyMasterServer?: boolean | null;
+  keyMasterServer?: string | null; keyMasterStatus?: string | null; denialOfExistence?: string | null;
+  nsec3Iterations?: number | null; nsec3OptOut?: boolean | null; dnsKeyRecordSetTtlSeconds?: number | null;
+  dsRecordSetTtlSeconds?: number | null; dsRecordGenerationAlgorithms: string[];
+  parentHasSecureDelegation?: boolean | null; signingKeys: DnssecSigningKey[];
+};
+export type DnssecConfiguration = { zones: DnssecZone[]; stateToken: string };
+export type DnssecMutationInput = {
+  action: "SignWithDefaults" | "Resign" | "Unsign" | "RolloverKeys";
+  zoneName: string; keyIds?: string[]; expectedStateToken: string;
+};
+export type DnssecOperation = { success: boolean; errorCode?: string | null; message: string; configuration?: DnssecConfiguration | null };
+
 export type DnsOperationLogListItem = {
   id: string;
   createdAt: string;

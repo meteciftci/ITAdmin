@@ -141,6 +141,7 @@ public sealed class HostAgentBoundaryTests
     [InlineData(HostAgentOperation.MutateDnsServerZone)]
     [InlineData(HostAgentOperation.ManageDnsServerSettings)]
     [InlineData(HostAgentOperation.ManageDnsPolicyConfiguration)]
+    [InlineData(HostAgentOperation.ManageDnssecConfiguration)]
     public void Authorization_WebApplicationMayInvokeTheUpdateAndSettingsOperations(HostAgentOperation operation) =>
         Assert.True(Authorization.Authorize(@"IIS APPPOOL\ITAdmin", false, operation).IsAllowed);
 
@@ -693,6 +694,66 @@ public sealed class HostAgentBoundaryTests
         Assert.Empty(errors);
     }
 
+    [Fact]
+    public void Protocol_DnssecMutationRequiresZoneExpectedStateAndBoundedKeys()
+    {
+        var valid = new HostAgentRequest
+        {
+            Operation = HostAgentOperation.ManageDnssecConfiguration,
+            DnsHostName = "dns01.example.local", DnsPort = 5986,
+            DnsAuthenticationMode = HostAgentDnsAuthenticationMode.Negotiate,
+            DnsUserName = "EXAMPLE\\dns-svc", DnsPassword = "secret", DnsTimeoutSeconds = 120,
+            DnssecAction = HostAgentDnssecAction.RolloverKeys,
+            DnssecZoneName = "example.local",
+            DnssecKeyIds = [Guid.NewGuid()],
+            DnsExpectedDnssecConfigurationJson = "{\"zones\":[]}",
+        };
+
+        Assert.Empty(valid.Validate());
+        Assert.NotEmpty((valid with { DnssecZoneName = null }).Validate());
+        Assert.NotEmpty((valid with { DnssecKeyIds = [] }).Validate());
+        Assert.NotEmpty((valid with { DnssecKeyIds = [Guid.Empty] }).Validate());
+        Assert.NotEmpty((valid with { DnsExpectedDnssecConfigurationJson = null }).Validate());
+        Assert.NotEmpty((valid with { DnssecAction = HostAgentDnssecAction.Unsign, DnssecKeyIds = [Guid.NewGuid()] }).Validate());
+    }
+
+    [Fact]
+    public async Task Dispatch_DnssecUsesFixedExecutorAndNeverEchoesCredentials()
+    {
+        var executor = new RecordingDnsProbeExecutor();
+        var dispatcher = new HostAgentDispatcher(Authorization, new RecordingOperations(), dnsRemoteProbeExecutor: executor);
+        var request = new HostAgentRequest
+        {
+            Operation = HostAgentOperation.ManageDnssecConfiguration,
+            DnsHostName = "dns01.example.local", DnsPort = 5986,
+            DnsAuthenticationMode = HostAgentDnsAuthenticationMode.Negotiate,
+            DnsUserName = "EXAMPLE\\dns-svc", DnsPassword = "secret", DnsTimeoutSeconds = 30,
+            DnssecAction = HostAgentDnssecAction.Read,
+        };
+
+        var response = await dispatcher.DispatchAsync(request.ToJson(), WebApplication());
+
+        Assert.Equal(1, executor.DnssecCallCount);
+        Assert.True(response.DnssecConfiguration!.Success);
+        Assert.DoesNotContain("secret", response.ToJson(), StringComparison.Ordinal);
+        Assert.DoesNotContain("dns-svc", response.ToJson(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DnssecScript_IsFixedParsesAndUsesOnlyAuthoritativeLifecycleCmdlets()
+    {
+        Assert.StartsWith("param(", DnsRemoteDnssecConfiguration.Script.TrimStart(), StringComparison.Ordinal);
+        Assert.DoesNotContain("Invoke-Expression", DnsRemoteDnssecConfiguration.Script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ScriptBlock", DnsRemoteDnssecConfiguration.Script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Add-DnsServerTrustAnchor", DnsRemoteDnssecConfiguration.Script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Remove-DnsServerTrustAnchor", DnsRemoteDnssecConfiguration.Script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Invoke-DnsServerZoneSign", DnsRemoteDnssecConfiguration.Script, StringComparison.Ordinal);
+        Assert.Contains("Invoke-DnsServerZoneUnsign", DnsRemoteDnssecConfiguration.Script, StringComparison.Ordinal);
+        Assert.Contains("Invoke-DnsServerSigningKeyRollover", DnsRemoteDnssecConfiguration.Script, StringComparison.Ordinal);
+        System.Management.Automation.Language.Parser.ParseInput(DnsRemoteDnssecConfiguration.Script, out _, out var errors);
+        Assert.Empty(errors);
+    }
+
     // ------------------------------------------------------------------------------------------
     // Configuration
     // ------------------------------------------------------------------------------------------
@@ -802,6 +863,7 @@ public sealed class HostAgentBoundaryTests
         public int ZoneMutationCallCount { get; private set; }
         public int ServerSettingsCallCount { get; private set; }
         public int PolicyCallCount { get; private set; }
+        public int DnssecCallCount { get; private set; }
         public Task<HostAgentDnsProbeResult> ProbeAsync(HostAgentRequest request, CancellationToken cancellationToken)
         {
             CallCount++;
@@ -841,6 +903,13 @@ public sealed class HostAgentBoundaryTests
         {
             PolicyCallCount++;
             return Task.FromResult(new HostAgentDnsPolicyConfigurationResult { Success = true, Message = "ok" });
+        }
+
+        public Task<HostAgentDnssecConfigurationResult> ManageDnssecConfigurationAsync(
+            HostAgentRequest request, CancellationToken cancellationToken)
+        {
+            DnssecCallCount++;
+            return Task.FromResult(new HostAgentDnssecConfigurationResult { Success = true, Message = "ok" });
         }
     }
 

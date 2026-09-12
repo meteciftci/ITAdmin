@@ -1,6 +1,6 @@
 import axios from "axios";
 import { apiClient } from "@/lib/api-client";
-import type { CreateDnsRecord, DnsComparisonContext, DnsComparisonRequest, DnsComparisonResponse, DnsComparisonZone, DnsCredentialProfile, DnsDownload, DnsInventoryServer, DnsManagementSettings, DnsOperationLogDetail, DnsOperationLogListItem, DnsOperationLogQuery, DnsPolicyConfiguration, DnsPolicyMutationInput, DnsPolicyOperation, DnsRecordInventory, DnsRecordMutation, DnsRecordMutationInput, DnsServer, DnsServerConnectionTest, DnsServerOperation, DnsServerSettings, DnsSyncBatch, DnsSyncJob, DnsZoneInventory, DnsZoneMutation, PagedDnsResponse, SaveDnsCredentialProfile, SaveDnsServer, SaveDnsZone, UpdateDnsServerSettings, UpdateDnsZone } from "./types";
+import type { CreateDnsRecord, DnsComparisonContext, DnsComparisonRequest, DnsComparisonResponse, DnsComparisonZone, DnsCredentialProfile, DnsDownload, DnsInventoryServer, DnsManagementSettings, DnsOperationLogDetail, DnsOperationLogListItem, DnsOperationLogQuery, DnsPolicyConfiguration, DnsPolicyMutationInput, DnsPolicyOperation, DnsRecordInventory, DnsRecordMutation, DnsRecordMutationInput, DnsServer, DnsServerConnectionTest, DnsServerOperation, DnsServerSettings, DnsSyncBatch, DnsSyncJob, DnsZoneInventory, DnsZoneMutation, DnssecConfiguration, DnssecMutationInput, DnssecOperation, PagedDnsResponse, SaveDnsCredentialProfile, SaveDnsServer, SaveDnsZone, UpdateDnsServerSettings, UpdateDnsZone } from "./types";
 
 const basePath = "/dns-management";
 export const DNS_SETTINGS_QUERY_KEY = ["dns-management", "settings"] as const;
@@ -32,6 +32,11 @@ export const getDnsPolicyConfiguration = async (id: string) =>
   (await apiClient.get<DnsPolicyConfiguration>(`${basePath}/servers/${id}/policy-configuration`)).data;
 export const mutateDnsPolicyConfiguration = async (id: string, request: DnsPolicyMutationInput) =>
   (await apiClient.post<DnsPolicyOperation>(`${basePath}/servers/${id}/policy-configuration/mutations`, request)).data;
+export const DNSSEC_CONFIGURATION_QUERY_KEY = ["dns-management", "dnssec-configuration"] as const;
+export const getDnssecConfiguration = async (id: string) =>
+  (await apiClient.get<DnssecConfiguration>(`${basePath}/servers/${id}/dnssec-configuration`)).data;
+export const mutateDnssecConfiguration = async (id: string, request: DnssecMutationInput) =>
+  (await apiClient.post<DnssecOperation>(`${basePath}/servers/${id}/dnssec-configuration/mutations`, request)).data;
 
 export const DNS_INVENTORY_SERVERS_QUERY_KEY = ["dns-management", "inventory", "servers"] as const;
 export const DNS_ZONES_QUERY_KEY = ["dns-management", "inventory", "zones"] as const;

@@ -300,6 +300,38 @@ Policy cmdlet references:
 - [Add-DnsServerQueryResolutionPolicy](https://learn.microsoft.com/en-us/powershell/module/dnsserver/add-dnsserverqueryresolutionpolicy?view=windowsserver2025-ps)
 - [Set-DnsServerQueryResolutionPolicy](https://learn.microsoft.com/en-us/powershell/module/dnsserver/set-dnsserverqueryresolutionpolicy?view=windowsserver2025-ps)
 
+## Authoritative DNSSEC lifecycle workflow
+
+DNSSEC configuration is operational state and is read live from the selected server. This phase
+manages only authoritative primary-zone signing: sign an unsigned zone with Windows defaults,
+re-sign an already signed zone, remove signing, and initiate rollover for an explicitly selected
+KSK or ZSK. Trust-anchor distribution and recursive-resolver validation are intentionally separate
+because they have different replication, failure, and authorization consequences.
+
+The Host Agent exposes one typed DNSSEC operation; no cmdlet or script text crosses the API or pipe.
+Every write includes an opaque state token. Immediately before mutation, the agent re-reads and
+canonically compares the target zone, including signing settings and key identifiers, so a stale
+page cannot overwrite concurrent DNSSEC work. Built-in, root, TrustAnchors, secondary, stub, and
+forwarder zones remain visible but are not valid signing targets. Every operation requires explicit
+UI confirmation and writes general audit plus DNS before/after operation history. Key rollover is
+reported as initiated because Windows can complete its lifecycle asynchronously.
+
+Signing a zone creates DNSSEC record sets and the NSEC/NSEC3 denial-of-existence records, but it
+does not create the DS record in the parent zone. The UI warns before signing that the administrator
+must publish the DS record with the parent DNS operator to complete the chain of trust. Conversely,
+removing signing can cause a validation outage if a parent DS record remains published. The current
+workflow therefore makes no claim that signing alone makes an Internet delegation securely valid.
+
+DNSSEC references:
+
+- [DNSSEC overview](https://learn.microsoft.com/en-us/windows-server/networking/dns/dnssec-overview)
+- [Sign a DNS zone](https://learn.microsoft.com/en-us/windows-server/networking/dns/sign-dnssec-zone)
+- [Invoke-DnsServerZoneSign](https://learn.microsoft.com/en-us/powershell/module/dnsserver/invoke-dnsserverzonesign?view=windowsserver2025-ps)
+- [Invoke-DnsServerZoneUnsign](https://learn.microsoft.com/en-us/powershell/module/dnsserver/invoke-dnsserverzoneunsign?view=windowsserver2025-ps)
+- [Get-DnsServerDnsSecZoneSetting](https://learn.microsoft.com/en-us/powershell/module/dnsserver/get-dnsserverdnsseczonesetting?view=windowsserver2025-ps)
+- [Get-DnsServerSigningKey](https://learn.microsoft.com/en-us/powershell/module/dnsserver/get-dnsserversigningkey?view=windowsserver2025-ps)
+- [Invoke-DnsServerSigningKeyRollover](https://learn.microsoft.com/en-us/powershell/module/dnsserver/invoke-dnsserversigningkeyrollover?view=windowsserver2025-ps)
+
 ## Operation history and export workflow
 
 DNS connection tests, inventory synchronization, record and zone mutations, server-setting updates,
