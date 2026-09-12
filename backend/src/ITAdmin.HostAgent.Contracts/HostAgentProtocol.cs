@@ -28,12 +28,12 @@ namespace ITAdmin.HostAgent.Contracts;
 /// <b>Why typed operations.</b> Every operation below is a named intent with a fixed payload. There
 /// is no "run this command", no caller-supplied script, and no shell. Each operation validates its
 /// bounded data and executes code compiled into the agent. Update arguments come from the agent's
-/// configuration; DNS connection values can only be used by the fixed capability probe.
+/// configuration; DNS connection values can only be used by fixed, typed DNS operations.
 /// </para>
 /// </summary>
 public static class HostAgentProtocol
 {
-    public const int ProtocolVersion = 5;
+    public const int ProtocolVersion = 6;
 
     /// <summary>Pipe name. Machine-local; the agent ACLs it to the app pool identity and administrators.</summary>
     public const string PipeName = "ITAdmin.HostAgent";
@@ -108,6 +108,12 @@ public enum HostAgentOperation
     /// validated record fields; the agent owns the fixed PowerShell implementation.
     /// </summary>
     MutateDnsServerResourceRecord = 11,
+
+    /// <summary>
+    /// Create, update, or delete one supported DNS zone. The request contains a typed zone
+    /// configuration and never carries executable text.
+    /// </summary>
+    MutateDnsServerZone = 12,
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -130,6 +136,23 @@ public enum HostAgentDnsRecordMutationKind
     Create = 0,
     Update = 1,
     Delete = 2,
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum HostAgentDnsZoneMutationKind
+{
+    Create = 0,
+    Update = 1,
+    Delete = 2,
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum HostAgentDnsZoneKind
+{
+    Primary = 0,
+    Secondary = 1,
+    Stub = 2,
+    Forwarder = 3,
 }
 
 /// <summary>One request across the pipe.</summary>
@@ -224,6 +247,39 @@ public sealed record HostAgentRequest
     [JsonPropertyName("dnsExpectedRecordTimeToLiveSeconds")]
     public int? DnsExpectedRecordTimeToLiveSeconds { get; init; }
 
+    [JsonPropertyName("dnsZoneMutationKind")]
+    public HostAgentDnsZoneMutationKind? DnsZoneMutationKind { get; init; }
+
+    [JsonPropertyName("dnsZoneKind")]
+    public HostAgentDnsZoneKind? DnsZoneKind { get; init; }
+
+    [JsonPropertyName("dnsZoneIsDsIntegrated")]
+    public bool? DnsZoneIsDsIntegrated { get; init; }
+
+    [JsonPropertyName("dnsZoneDynamicUpdate")]
+    public string? DnsZoneDynamicUpdate { get; init; }
+
+    [JsonPropertyName("dnsZoneReplicationScope")]
+    public string? DnsZoneReplicationScope { get; init; }
+
+    [JsonPropertyName("dnsZonePartitionName")]
+    public string? DnsZonePartitionName { get; init; }
+
+    [JsonPropertyName("dnsZoneFile")]
+    public string? DnsZoneFile { get; init; }
+
+    [JsonPropertyName("dnsZoneMasterServers")]
+    public IReadOnlyList<string>? DnsZoneMasterServers { get; init; }
+
+    [JsonPropertyName("dnsZoneForwarderTimeoutSeconds")]
+    public int? DnsZoneForwarderTimeoutSeconds { get; init; }
+
+    [JsonPropertyName("dnsZoneUseRecursion")]
+    public bool? DnsZoneUseRecursion { get; init; }
+
+    [JsonPropertyName("dnsExpectedZoneStateJson")]
+    public string? DnsExpectedZoneStateJson { get; init; }
+
     public string ToJson() => JsonSerializer.Serialize(this, HostAgentProtocol.Json);
 
     public static HostAgentRequest? FromJson(string? json)
@@ -284,7 +340,8 @@ public sealed record HostAgentRequest
 
         if (Operation is HostAgentOperation.TestDnsServerConnection
             or HostAgentOperation.ReadDnsServerInventoryPage
-            or HostAgentOperation.MutateDnsServerResourceRecord)
+            or HostAgentOperation.MutateDnsServerResourceRecord
+            or HostAgentOperation.MutateDnsServerZone)
         {
             var hostName = DnsHostName?.Trim().TrimEnd('.');
             if (string.IsNullOrWhiteSpace(hostName) || hostName.Length > 253
@@ -362,6 +419,73 @@ public sealed record HostAgentRequest
             if (DnsZoneScope?.Length > 128) problems.Add("dnsZoneScope may contain at most 128 characters.");
             if (DnsVirtualizationInstance?.Length > 128)
                 problems.Add("dnsVirtualizationInstance may contain at most 128 characters.");
+        }
+
+
+        if (Operation == HostAgentOperation.MutateDnsServerZone)
+        {
+            if (DnsZoneMutationKind is null || !Enum.IsDefined(DnsZoneMutationKind.Value))
+                problems.Add("dnsZoneMutationKind is required.");
+            if (DnsZoneKind is null || !Enum.IsDefined(DnsZoneKind.Value))
+                problems.Add("dnsZoneKind is required.");
+            if (string.IsNullOrWhiteSpace(DnsZoneName) || DnsZoneName.Length > 253
+                || DnsZoneName.Any(char.IsControl))
+                problems.Add("dnsZoneName is required and may contain at most 253 characters.");
+            if (!string.IsNullOrWhiteSpace(DnsVirtualizationInstance))
+                problems.Add("Virtualization-instance zone mutation is not supported.");
+            if (DnsZoneIsDsIntegrated is null)
+                problems.Add("dnsZoneIsDsIntegrated is required.");
+            if (DnsZoneDynamicUpdate is not null
+                && DnsZoneDynamicUpdate is not ("None" or "NonsecureAndSecure" or "Secure"))
+                problems.Add("dnsZoneDynamicUpdate is invalid.");
+            if (DnsZoneReplicationScope is not null
+                && DnsZoneReplicationScope is not ("Forest" or "Domain" or "Legacy" or "Custom"))
+                problems.Add("dnsZoneReplicationScope is invalid.");
+            if (DnsZonePartitionName?.Length > 512)
+                problems.Add("dnsZonePartitionName may contain at most 512 characters.");
+            if (DnsZoneFile?.Length > 255 || DnsZoneFile?.Any(char.IsControl) == true)
+                problems.Add("dnsZoneFile may contain at most 255 characters.");
+            if (DnsZoneMasterServers is { Count: > 16 }
+                || DnsZoneMasterServers?.Any(x => !IPAddress.TryParse(x, out _)) == true)
+                problems.Add("dnsZoneMasterServers must contain at most 16 IP addresses.");
+            if (DnsZoneKind is HostAgentDnsZoneKind.Secondary or HostAgentDnsZoneKind.Stub or HostAgentDnsZoneKind.Forwarder
+                && DnsZoneMutationKind != HostAgentDnsZoneMutationKind.Delete
+                && DnsZoneMasterServers is not { Count: > 0 })
+                problems.Add("dnsZoneMasterServers is required for this zone type.");
+            if (DnsZoneForwarderTimeoutSeconds is not null and (< 0 or > 15))
+                problems.Add("dnsZoneForwarderTimeoutSeconds must be between 0 and 15.");
+            if (DnsZoneKind == HostAgentDnsZoneKind.Secondary && DnsZoneIsDsIntegrated == true)
+                problems.Add("Secondary zones cannot be Active Directory integrated.");
+            if (DnsZoneMutationKind != HostAgentDnsZoneMutationKind.Delete
+                && DnsZoneIsDsIntegrated == true && DnsZoneReplicationScope is null)
+                problems.Add("dnsZoneReplicationScope is required for Active Directory-integrated zones.");
+            if (DnsZoneMutationKind != HostAgentDnsZoneMutationKind.Delete
+                && DnsZoneReplicationScope == "Custom" && string.IsNullOrWhiteSpace(DnsZonePartitionName))
+                problems.Add("dnsZonePartitionName is required for custom replication.");
+            if (DnsZoneMutationKind != HostAgentDnsZoneMutationKind.Delete
+                && DnsZoneIsDsIntegrated == false && DnsZoneKind != HostAgentDnsZoneKind.Forwarder
+                && (string.IsNullOrWhiteSpace(DnsZoneFile)
+                    || !DnsZoneFile.EndsWith(".dns", StringComparison.OrdinalIgnoreCase)
+                    || DnsZoneFile.IndexOfAny(['/', '\\', ':']) >= 0))
+                problems.Add("dnsZoneFile must be a .dns file name without a path.");
+            if (DnsZoneMutationKind != HostAgentDnsZoneMutationKind.Delete
+                && DnsZoneKind == HostAgentDnsZoneKind.Primary
+                && DnsZoneDynamicUpdate is not ("None" or "NonsecureAndSecure" or "Secure"))
+                problems.Add("dnsZoneDynamicUpdate is required for primary zones.");
+            if (DnsZoneMutationKind != HostAgentDnsZoneMutationKind.Delete
+                && DnsZoneKind == HostAgentDnsZoneKind.Primary && DnsZoneIsDsIntegrated == false
+                && DnsZoneDynamicUpdate == "Secure")
+                problems.Add("Secure dynamic updates require an Active Directory-integrated zone.");
+            if (DnsZoneMutationKind != HostAgentDnsZoneMutationKind.Delete
+                && DnsZoneKind == HostAgentDnsZoneKind.Forwarder
+                && (DnsZoneForwarderTimeoutSeconds is null || DnsZoneUseRecursion is null))
+                problems.Add("Forwarder timeout and recursion settings are required.");
+            if (DnsZoneMutationKind is HostAgentDnsZoneMutationKind.Update or HostAgentDnsZoneMutationKind.Delete)
+            {
+                if (string.IsNullOrWhiteSpace(DnsExpectedZoneStateJson)
+                    || DnsExpectedZoneStateJson.Length > 32_768 || !IsJsonObject(DnsExpectedZoneStateJson))
+                    problems.Add("dnsExpectedZoneStateJson must be a bounded JSON object.");
+            }
         }
 
         return problems;
@@ -469,6 +593,9 @@ public sealed record HostAgentResponse
 
     [JsonPropertyName("dnsRecordMutation")]
     public HostAgentDnsRecordMutationResult? DnsRecordMutation { get; init; }
+
+    [JsonPropertyName("dnsZoneMutation")]
+    public HostAgentDnsZoneMutationResult? DnsZoneMutation { get; init; }
 
     [JsonPropertyName("repositoryStatus")]
     public HostAgentRepositoryStatus RepositoryStatus { get; init; } = HostAgentRepositoryStatus.Unknown;
@@ -610,6 +737,14 @@ public sealed record HostAgentDnsZoneInventoryItem
     public string? VirtualizationInstance { get; init; }
     [JsonPropertyName("zoneScopes")]
     public IReadOnlyList<string> ZoneScopes { get; init; } = [];
+    [JsonPropertyName("isAutoCreated")]
+    public bool IsAutoCreated { get; init; }
+    [JsonPropertyName("masterServers")]
+    public IReadOnlyList<string> MasterServers { get; init; } = [];
+    [JsonPropertyName("forwarderTimeoutSeconds")]
+    public int? ForwarderTimeoutSeconds { get; init; }
+    [JsonPropertyName("useRecursion")]
+    public bool? UseRecursion { get; init; }
 }
 
 public sealed record HostAgentDnsRecordInventoryItem
@@ -642,6 +777,20 @@ public sealed record HostAgentDnsRecordMutationResult
     public HostAgentDnsRecordInventoryItem? Before { get; init; }
     [JsonPropertyName("after")]
     public HostAgentDnsRecordInventoryItem? After { get; init; }
+}
+
+public sealed record HostAgentDnsZoneMutationResult
+{
+    [JsonPropertyName("success")]
+    public bool Success { get; init; }
+    [JsonPropertyName("failureKind")]
+    public string? FailureKind { get; init; }
+    [JsonPropertyName("message")]
+    public string Message { get; init; } = string.Empty;
+    [JsonPropertyName("before")]
+    public HostAgentDnsZoneInventoryItem? Before { get; init; }
+    [JsonPropertyName("after")]
+    public HostAgentDnsZoneInventoryItem? After { get; init; }
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]

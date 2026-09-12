@@ -112,6 +112,24 @@ test("DNS record mutations are typed, permission-aware, confirmed, and refresh c
   assert.doesNotMatch(api, /power\s*shell/i);
 });
 
+test("DNS zone lifecycle is typed, permission-aware, protected, and refreshes inventory", () => {
+  const api = readFileSync(join(root, "features/dns-management/api.ts"), "utf8");
+  const page = readFileSync(join(root, "features/dns-management/DnsZonesPage.tsx"), "utf8");
+  const columns = readFileSync(join(root, "features/dns-management/dns-inventory-columns.tsx"), "utf8");
+  const dialog = readFileSync(join(root, "features/dns-management/DnsZoneDialog.tsx"), "utf8");
+  assert.match(api, /inventory\/servers\/\$\{serverId\}\/zones/);
+  assert.match(api, /apiClient\.delete<DnsZoneMutation>/);
+  assert.match(page, /DnsManagement\.Zones\.Create/);
+  assert.match(page, /DnsManagement\.Zones\.Update/);
+  assert.match(page, /DnsManagement\.Zones\.Delete/);
+  assert.match(page, /ConfirmDialog/);
+  assert.match(page, /deleteAdDescription/);
+  assert.match(columns, /isAutoCreated/);
+  assert.match(columns, /virtualizationInstance/);
+  assert.match(dialog, /Primary.*Secondary.*Stub.*Forwarder/);
+  assert.doesNotMatch(api, /power\s*shell/i);
+});
+
 test("DNS locales have matching structures", () => {
   const tr = JSON.parse(readFileSync(join(root, "locales/tr/dnsManagement.json"), "utf8"));
   const en = JSON.parse(readFileSync(join(root, "locales/en/dnsManagement.json"), "utf8"));

@@ -57,6 +57,7 @@ public partial class Program
         builder.Services.AddScoped<IDnsServerConnectionTestService, DnsServerConnectionTestService>();
         builder.Services.AddScoped<IDnsInventorySyncService, DnsInventorySyncService>();
         builder.Services.AddScoped<IDnsRecordMutationService, DnsRecordMutationService>();
+        builder.Services.AddScoped<IDnsZoneMutationService, DnsZoneMutationService>();
 
         // IIS / reverse proxy support: honor X-Forwarded-For / X-Forwarded-Proto only from
         // proxies declared in configuration (safe loopback-only default when config is empty).

@@ -236,27 +236,49 @@ public sealed class DnsInventoryQueryService(AppDbContext context) : IDnsInvento
             x.VirtualizationInstance, x.PropertiesJson, x.Records.Count,
             x.InventorySnapshot.CompletedAt ?? x.InventorySnapshot.StartedAt));
 
-    private static DnsZoneInventoryModel MapZone(ZoneRow x) => new(
-        x.Id, x.SnapshotId, x.ServerId, x.ServerDisplayName, x.Environment,
-        x.Name, x.ZoneType, x.IsReverseLookupZone, x.IsDsIntegrated, x.IsSigned, x.IsPaused,
-        x.DynamicUpdate, x.ReplicationScope, x.DirectoryPartitionName, x.ZoneFile,
-        x.VirtualizationInstance, ReadZoneScopes(x.PropertiesJson), x.RecordCount, x.SnapshotCompletedAt);
-
-    private static IReadOnlyList<string> ReadZoneScopes(string? propertiesJson)
+    private static DnsZoneInventoryModel MapZone(ZoneRow x)
     {
-        if (string.IsNullOrWhiteSpace(propertiesJson)) return [];
+        var properties = ReadZoneProperties(x.PropertiesJson);
+        return new(
+            x.Id, x.SnapshotId, x.ServerId, x.ServerDisplayName, x.Environment,
+            x.Name, x.ZoneType, x.IsReverseLookupZone, x.IsDsIntegrated, x.IsSigned, x.IsPaused,
+            x.DynamicUpdate, x.ReplicationScope, x.DirectoryPartitionName, x.ZoneFile,
+            x.VirtualizationInstance, properties.ZoneScopes, properties.IsAutoCreated,
+            properties.MasterServers, properties.ForwarderTimeoutSeconds, properties.UseRecursion,
+            x.RecordCount, x.SnapshotCompletedAt);
+    }
+
+    private static ZoneProperties ReadZoneProperties(string? propertiesJson)
+    {
+        if (string.IsNullOrWhiteSpace(propertiesJson)) return new([], false, [], null, null);
         try
         {
             using var document = JsonDocument.Parse(propertiesJson);
-            if (!document.RootElement.TryGetProperty("zoneScopes", out var scopes)
-                || scopes.ValueKind != JsonValueKind.Array) return [];
-            return scopes.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.String)
+            var root = document.RootElement;
+            var scopes = root.TryGetProperty("zoneScopes", out var scopeElement)
+                && scopeElement.ValueKind == JsonValueKind.Array
+                ? scopeElement.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.String)
                 .Select(x => x.GetString()).Where(x => !string.IsNullOrWhiteSpace(x))
-                .Cast<string>().Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+                .Cast<string>().Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
+                : [];
+            var masters = root.TryGetProperty("masterServers", out var masterElement)
+                && masterElement.ValueKind == JsonValueKind.Array
+                ? masterElement.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.String)
+                    .Select(x => x.GetString()).Where(x => !string.IsNullOrWhiteSpace(x))
+                    .Cast<string>().Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
+                : [];
+            var autoCreated = root.TryGetProperty("isAutoCreated", out var autoElement)
+                && autoElement.ValueKind is JsonValueKind.True or JsonValueKind.False && autoElement.GetBoolean();
+            var timeout = root.TryGetProperty("forwarderTimeoutSeconds", out var timeoutElement)
+                && timeoutElement.TryGetInt32(out var timeoutValue) ? timeoutValue : (int?)null;
+            var recursion = root.TryGetProperty("useRecursion", out var recursionElement)
+                && recursionElement.ValueKind is JsonValueKind.True or JsonValueKind.False
+                ? recursionElement.GetBoolean() : (bool?)null;
+            return new(scopes, autoCreated, masters, timeout, recursion);
         }
         catch (JsonException)
         {
-            return [];
+            return new([], false, [], null, null);
         }
     }
 
@@ -324,6 +346,10 @@ public sealed class DnsInventoryQueryService(AppDbContext context) : IDnsInvento
         string? DynamicUpdate, string? ReplicationScope, string? DirectoryPartitionName,
         string? ZoneFile, string? VirtualizationInstance, string? PropertiesJson,
         int RecordCount, DateTime SnapshotCompletedAt);
+
+    private sealed record ZoneProperties(
+        IReadOnlyList<string> ZoneScopes, bool IsAutoCreated,
+        IReadOnlyList<string> MasterServers, int? ForwarderTimeoutSeconds, bool? UseRecursion);
 
     private sealed record ComparisonKey(
         string ZoneName, string RelativeName, string RecordType,

@@ -1,4 +1,5 @@
 using ITAdmin.Domain.Enums;
+using AppModels = ITAdmin.Application.Common.Models.DnsManagement;
 
 namespace ITAdmin.Api.Contracts.DnsManagement;
 
@@ -14,6 +15,8 @@ public sealed record DnsZoneInventoryResponse(
     bool IsReverseLookupZone, bool IsDsIntegrated, bool IsSigned, bool IsPaused,
     string? DynamicUpdate, string? ReplicationScope, string? DirectoryPartitionName,
     string? ZoneFile, string? VirtualizationInstance, IReadOnlyList<string> ZoneScopes,
+    bool IsAutoCreated, IReadOnlyList<string> MasterServers,
+    int? ForwarderTimeoutSeconds, bool? UseRecursion,
     int RecordCount, DateTime SnapshotCompletedAt);
 
 public sealed record DnsRecordInventoryResponse(
@@ -63,4 +66,19 @@ public sealed record DeleteDnsRecordRequest(string ExpectedRecordHash);
 public sealed record DnsRecordMutationResponse(
     bool Success, string? ErrorCode, string Message,
     DnsRecordInventoryResponse? Before, DnsRecordInventoryResponse? After,
+    DnsSyncJobResponse? Synchronization);
+
+public sealed record CreateDnsZoneRequest(
+    string Name, AppModels.DnsZoneKind ZoneKind, bool IsDsIntegrated,
+    string? DynamicUpdate, string? ReplicationScope, string? DirectoryPartitionName,
+    string? ZoneFile, IReadOnlyList<string> MasterServers,
+    int? ForwarderTimeoutSeconds, bool? UseRecursion);
+
+public sealed record UpdateDnsZoneRequest(
+    string? DynamicUpdate, IReadOnlyList<string> MasterServers,
+    int? ForwarderTimeoutSeconds, bool? UseRecursion);
+
+public sealed record DnsZoneMutationResponse(
+    bool Success, string? ErrorCode, string Message,
+    DnsZoneInventoryResponse? Before, DnsZoneInventoryResponse? After,
     DnsSyncJobResponse? Synchronization);

@@ -106,7 +106,7 @@ public sealed class HostAgentBoundaryTests
                      typeof(HostAgentHttpsStatus), typeof(HostAgentDnsProbeResult),
                      typeof(HostAgentDnsCapabilities), typeof(HostAgentDnsInventoryPage),
                      typeof(HostAgentDnsZoneInventoryItem), typeof(HostAgentDnsRecordInventoryItem),
-                     typeof(HostAgentDnsRecordMutationResult),
+                     typeof(HostAgentDnsRecordMutationResult), typeof(HostAgentDnsZoneMutationResult),
                  })
         {
             foreach (var property in type.GetProperties())
@@ -138,6 +138,7 @@ public sealed class HostAgentBoundaryTests
     [InlineData(HostAgentOperation.TestDnsServerConnection)]
     [InlineData(HostAgentOperation.ReadDnsServerInventoryPage)]
     [InlineData(HostAgentOperation.MutateDnsServerResourceRecord)]
+    [InlineData(HostAgentOperation.MutateDnsServerZone)]
     public void Authorization_WebApplicationMayInvokeTheUpdateAndSettingsOperations(HostAgentOperation operation) =>
         Assert.True(Authorization.Authorize(@"IIS APPPOOL\ITAdmin", false, operation).IsAllowed);
 
@@ -488,6 +489,77 @@ public sealed class HostAgentBoundaryTests
         Assert.Empty(parseErrors);
     }
 
+    [Fact]
+    public void Protocol_DnsZoneMutationRequiresTypedBoundedConfigurationAndExpectedState()
+    {
+        var valid = new HostAgentRequest
+        {
+            Operation = HostAgentOperation.MutateDnsServerZone,
+            DnsHostName = "dns01.example.local",
+            DnsPort = 5986,
+            DnsAuthenticationMode = HostAgentDnsAuthenticationMode.Negotiate,
+            DnsUserName = "EXAMPLE\\dns-svc",
+            DnsPassword = "secret",
+            DnsTimeoutSeconds = 30,
+            DnsZoneMutationKind = HostAgentDnsZoneMutationKind.Update,
+            DnsZoneKind = HostAgentDnsZoneKind.Forwarder,
+            DnsZoneName = "partners.example",
+            DnsZoneIsDsIntegrated = false,
+            DnsZoneMasterServers = ["192.0.2.10"],
+            DnsZoneForwarderTimeoutSeconds = 5,
+            DnsZoneUseRecursion = false,
+            DnsExpectedZoneStateJson = "{\"Name\":\"partners.example\"}",
+        };
+
+        Assert.Empty(valid.Validate());
+        Assert.NotEmpty((valid with { DnsExpectedZoneStateJson = null }).Validate());
+        Assert.NotEmpty((valid with { DnsZoneMasterServers = ["not-an-ip"] }).Validate());
+        Assert.NotEmpty((valid with { DnsVirtualizationInstance = "tenant" }).Validate());
+    }
+
+    [Fact]
+    public async Task Dispatch_DnsZoneMutationUsesFixedExecutorAndNeverEchoesCredentials()
+    {
+        var executor = new RecordingDnsProbeExecutor();
+        var dispatcher = new HostAgentDispatcher(
+            Authorization, new RecordingOperations(), dnsRemoteProbeExecutor: executor);
+        var request = new HostAgentRequest
+        {
+            Operation = HostAgentOperation.MutateDnsServerZone,
+            DnsHostName = "dns01.example.local",
+            DnsPort = 5986,
+            DnsAuthenticationMode = HostAgentDnsAuthenticationMode.Negotiate,
+            DnsUserName = "EXAMPLE\\dns-svc",
+            DnsPassword = "secret",
+            DnsTimeoutSeconds = 30,
+            DnsZoneMutationKind = HostAgentDnsZoneMutationKind.Create,
+            DnsZoneKind = HostAgentDnsZoneKind.Primary,
+            DnsZoneName = "example.local",
+            DnsZoneIsDsIntegrated = false,
+            DnsZoneDynamicUpdate = "None",
+            DnsZoneFile = "example.local.dns",
+        };
+
+        var response = await dispatcher.DispatchAsync(request.ToJson(), WebApplication());
+
+        Assert.Equal(1, executor.ZoneMutationCallCount);
+        Assert.True(response.DnsZoneMutation!.Success);
+        Assert.DoesNotContain("secret", response.ToJson(), StringComparison.Ordinal);
+        Assert.DoesNotContain("dns-svc", response.ToJson(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DnsZoneMutationScript_IsFixedAndUsesBoundParameters()
+    {
+        Assert.StartsWith("param(", DnsRemoteZoneMutation.Script.TrimStart(), StringComparison.Ordinal);
+        Assert.DoesNotContain("DnsPassword", DnsRemoteZoneMutation.Script, StringComparison.Ordinal);
+        Assert.DoesNotContain("Invoke-Expression", DnsRemoteZoneMutation.Script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ExpectedZoneStateJson", DnsRemoteZoneMutation.Script, StringComparison.Ordinal);
+        System.Management.Automation.Language.Parser.ParseInput(
+            DnsRemoteZoneMutation.Script, out _, out var parseErrors);
+        Assert.Empty(parseErrors);
+    }
+
     // ------------------------------------------------------------------------------------------
     // Configuration
     // ------------------------------------------------------------------------------------------
@@ -594,6 +666,7 @@ public sealed class HostAgentBoundaryTests
         public int CallCount { get; private set; }
         public int InventoryCallCount { get; private set; }
         public int MutationCallCount { get; private set; }
+        public int ZoneMutationCallCount { get; private set; }
         public Task<HostAgentDnsProbeResult> ProbeAsync(HostAgentRequest request, CancellationToken cancellationToken)
         {
             CallCount++;
@@ -612,6 +685,13 @@ public sealed class HostAgentBoundaryTests
         {
             MutationCallCount++;
             return Task.FromResult(new HostAgentDnsRecordMutationResult { Success = true, Message = "ok" });
+        }
+
+        public Task<HostAgentDnsZoneMutationResult> MutateZoneAsync(
+            HostAgentRequest request, CancellationToken cancellationToken)
+        {
+            ZoneMutationCallCount++;
+            return Task.FromResult(new HostAgentDnsZoneMutationResult { Success = true, Message = "ok" });
         }
     }
 

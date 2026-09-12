@@ -21,6 +21,8 @@ public interface IDnsRemoteProbeExecutor
         HostAgentRequest request, CancellationToken cancellationToken);
     Task<HostAgentDnsRecordMutationResult> MutateRecordAsync(
         HostAgentRequest request, CancellationToken cancellationToken);
+    Task<HostAgentDnsZoneMutationResult> MutateZoneAsync(
+        HostAgentRequest request, CancellationToken cancellationToken);
 }
 
 internal static class DnsRemoteCapabilityProbe
@@ -112,6 +114,12 @@ internal static class DnsRemoteInventoryProbe
                         ZoneFile = if ($zone.ZoneFile) { "$($zone.ZoneFile)" } else { $null }
                         VirtualizationInstance = if ($instanceName) { $instanceName } else { $null }
                         ZoneScopes = $scopes
+                        IsAutoCreated = [bool]$zone.IsAutoCreated
+                        MasterServers = @($zone.MasterServers | ForEach-Object {
+                            if ($_ -is [System.Net.IPAddress]) { $_.IPAddressToString } else { "$_" }
+                        })
+                        ForwarderTimeoutSeconds = if ($null -ne $zone.ForwarderTimeout) { [int]$zone.ForwarderTimeout } else { $null }
+                        UseRecursion = if ($null -ne $zone.UseRecursion) { [bool]$zone.UseRecursion } else { $null }
                     })
                 }
             }
@@ -338,6 +346,186 @@ internal static class DnsRemoteRecordMutation
         """;
 }
 
+internal static class DnsRemoteZoneMutation
+{
+    // Fixed allowlisted implementation. Every request value is supplied as a bound parameter.
+    internal const string Script = """
+        param(
+            [Parameter(Mandatory=$true)][ValidateSet('Create','Update','Delete')][string]$MutationKind,
+            [Parameter(Mandatory=$true)][ValidateSet('Primary','Secondary','Stub','Forwarder')][string]$ZoneKind,
+            [Parameter(Mandatory=$true)][string]$ZoneName,
+            [Parameter(Mandatory=$true)][bool]$IsDsIntegrated,
+            [string]$DynamicUpdate,
+            [string]$ReplicationScope,
+            [string]$DirectoryPartitionName,
+            [string]$ZoneFile,
+            [string[]]$MasterServers,
+            [int]$ForwarderTimeoutSeconds,
+            [bool]$UseRecursion,
+            [string]$ExpectedZoneStateJson
+        )
+        $ErrorActionPreference = 'Stop'
+        Import-Module DnsServer -ErrorAction Stop
+
+        function Convert-Zone([object]$zone) {
+            if ($null -eq $zone) { return $null }
+            [ordered]@{
+                Name = "$($zone.ZoneName)"
+                ZoneType = "$($zone.ZoneType)"
+                IsReverseLookupZone = [bool]$zone.IsReverseLookupZone
+                IsDsIntegrated = [bool]$zone.IsDsIntegrated
+                IsSigned = [bool]$zone.IsSigned
+                IsPaused = [bool]$zone.IsPaused
+                DynamicUpdate = if ($null -ne $zone.DynamicUpdate) { "$($zone.DynamicUpdate)" } else { $null }
+                ReplicationScope = if ($null -ne $zone.ReplicationScope) { "$($zone.ReplicationScope)" } else { $null }
+                DirectoryPartitionName = if ($zone.DirectoryPartitionName) { "$($zone.DirectoryPartitionName)" } else { $null }
+                ZoneFile = if ($zone.ZoneFile) { "$($zone.ZoneFile)" } else { $null }
+                VirtualizationInstance = $null
+                ZoneScopes = @()
+                IsAutoCreated = [bool]$zone.IsAutoCreated
+                MasterServers = @($zone.MasterServers | ForEach-Object {
+                    if ($_ -is [System.Net.IPAddress]) { $_.IPAddressToString } else { "$_" }
+                } | Sort-Object)
+                ForwarderTimeoutSeconds = if ($null -ne $zone.ForwarderTimeout) { [int]$zone.ForwarderTimeout } else { $null }
+                UseRecursion = if ($null -ne $zone.UseRecursion) { [bool]$zone.UseRecursion } else { $null }
+            }
+        }
+
+        function Get-LiveZone {
+            return Get-DnsServerZone -Name $ZoneName -ErrorAction SilentlyContinue
+        }
+
+        function Test-ExpectedZone([object]$zone) {
+            $actual = Convert-Zone $zone
+            $expected = $ExpectedZoneStateJson | ConvertFrom-Json -ErrorAction Stop
+            $actualMasters = @($actual.MasterServers | ForEach-Object { "$_".ToLowerInvariant() } | Sort-Object) -join ','
+            $expectedMasters = @($expected.MasterServers | ForEach-Object { "$_".ToLowerInvariant() } | Sort-Object) -join ','
+            return $actual.Name -ieq "$($expected.Name)" -and
+                $actual.ZoneType -ieq "$($expected.ZoneType)" -and
+                $actual.IsDsIntegrated -eq [bool]$expected.IsDsIntegrated -and
+                $actual.IsSigned -eq [bool]$expected.IsSigned -and
+                $actual.IsPaused -eq [bool]$expected.IsPaused -and
+                $actual.IsAutoCreated -eq [bool]$expected.IsAutoCreated -and
+                "$($actual.DynamicUpdate)" -ieq "$($expected.DynamicUpdate)" -and
+                "$($actual.ReplicationScope)" -ieq "$($expected.ReplicationScope)" -and
+                "$($actual.DirectoryPartitionName)" -ieq "$($expected.DirectoryPartitionName)" -and
+                "$($actual.ZoneFile)" -ieq "$($expected.ZoneFile)" -and
+                $actualMasters -eq $expectedMasters -and
+                "$($actual.ForwarderTimeoutSeconds)" -eq "$($expected.ForwarderTimeoutSeconds)" -and
+                "$($actual.UseRecursion)" -eq "$($expected.UseRecursion)"
+        }
+
+        function Test-RequestedZone([object]$zone) {
+            $actual = Convert-Zone $zone
+            if ($actual.ZoneType -ine $ZoneKind -or $actual.IsDsIntegrated -ne $IsDsIntegrated) { return $false }
+            if ($ZoneKind -eq 'Primary' -and $actual.DynamicUpdate -ine $DynamicUpdate) { return $false }
+            if ($IsDsIntegrated) {
+                if ($ReplicationScope -eq 'Custom') {
+                    if ($actual.DirectoryPartitionName -ine $DirectoryPartitionName) { return $false }
+                } elseif ($actual.ReplicationScope -ine $ReplicationScope) { return $false }
+            } elseif ($ZoneKind -ne 'Forwarder' -and $actual.ZoneFile -ine $ZoneFile) { return $false }
+            if ($ZoneKind -in @('Secondary','Stub','Forwarder')) {
+                $actualMasters = @($actual.MasterServers | ForEach-Object { "$_".ToLowerInvariant() } | Sort-Object) -join ','
+                $requestedMasters = @($MasterServers | ForEach-Object { "$_".ToLowerInvariant() } | Sort-Object) -join ','
+                if ($actualMasters -ne $requestedMasters) { return $false }
+            }
+            if ($ZoneKind -eq 'Forwarder' -and
+                ($actual.ForwarderTimeoutSeconds -ne $ForwarderTimeoutSeconds -or
+                 $actual.UseRecursion -ne $UseRecursion)) { return $false }
+            return $true
+        }
+
+        function Add-StorageParameters([hashtable]$parameters) {
+            if ($IsDsIntegrated) {
+                if ($ReplicationScope -eq 'Custom') { $parameters.DirectoryPartitionName = $DirectoryPartitionName }
+                else { $parameters.ReplicationScope = $ReplicationScope }
+            } elseif ($ZoneKind -ne 'Forwarder') {
+                $parameters.ZoneFile = $ZoneFile
+            }
+        }
+
+        try {
+            $existing = Get-LiveZone
+            if ($MutationKind -eq 'Create') {
+                if ($null -ne $existing) {
+                    return [pscustomobject]@{ Success=$false; FailureKind='ZoneAlreadyExists'; Message='The DNS zone already exists.'; BeforeZoneJson=$null; AfterZoneJson=$null }
+                }
+                $parameters = @{ Name=$ZoneName; PassThru=$true; ErrorAction='Stop' }
+                Add-StorageParameters $parameters
+                switch ($ZoneKind) {
+                    'Primary' {
+                        $parameters.DynamicUpdate = $DynamicUpdate
+                        Add-DnsServerPrimaryZone @parameters | Out-Null
+                    }
+                    'Secondary' {
+                        $parameters.MasterServers = [System.Net.IPAddress[]]@($MasterServers)
+                        Add-DnsServerSecondaryZone @parameters | Out-Null
+                    }
+                    'Stub' {
+                        $parameters.MasterServers = [System.Net.IPAddress[]]@($MasterServers)
+                        Add-DnsServerStubZone @parameters | Out-Null
+                    }
+                    'Forwarder' {
+                        $parameters.MasterServers = [System.Net.IPAddress[]]@($MasterServers)
+                        $parameters.ForwarderTimeout = $ForwarderTimeoutSeconds
+                        $parameters.UseRecursion = $UseRecursion
+                        Add-DnsServerConditionalForwarderZone @parameters | Out-Null
+                    }
+                }
+                $after = Get-LiveZone
+                if ($null -eq $after -or -not (Test-RequestedZone $after)) { throw 'Zone read-back verification failed.' }
+                return [pscustomobject]@{ Success=$true; FailureKind=$null; Message='The DNS zone was created.'; BeforeZoneJson=$null; AfterZoneJson=((Convert-Zone $after) | ConvertTo-Json -Compress -Depth 8) }
+            }
+
+            if ($null -eq $existing) {
+                return [pscustomobject]@{ Success=$false; FailureKind='ZoneChanged'; Message='The DNS zone no longer exists.'; BeforeZoneJson=$null; AfterZoneJson=$null }
+            }
+            if (-not (Test-ExpectedZone $existing)) {
+                return [pscustomobject]@{ Success=$false; FailureKind='ZoneChanged'; Message='The live DNS zone differs from the inventory snapshot.'; BeforeZoneJson=$null; AfterZoneJson=$null }
+            }
+            $beforeJson = (Convert-Zone $existing) | ConvertTo-Json -Compress -Depth 8
+            if ($existing.IsAutoCreated -or $ZoneName -ieq 'TrustAnchors' -or $ZoneName -eq '.') {
+                return [pscustomobject]@{ Success=$false; FailureKind='ProtectedZone'; Message='This system-managed DNS zone cannot be changed.'; BeforeZoneJson=$beforeJson; AfterZoneJson=$null }
+            }
+            if ($MutationKind -eq 'Delete') {
+                if ($existing.IsSigned) {
+                    return [pscustomobject]@{ Success=$false; FailureKind='SignedZone'; Message='Remove DNSSEC signing before deleting this zone.'; BeforeZoneJson=$beforeJson; AfterZoneJson=$null }
+                }
+                Remove-DnsServerZone -Name $ZoneName -Force -ErrorAction Stop
+                if ($null -ne (Get-LiveZone)) { throw 'Zone deletion could not be verified.' }
+                return [pscustomobject]@{ Success=$true; FailureKind=$null; Message='The DNS zone was deleted.'; BeforeZoneJson=$beforeJson; AfterZoneJson=$null }
+            }
+
+            $parameters = @{ Name=$ZoneName; PassThru=$true; ErrorAction='Stop' }
+            switch ($ZoneKind) {
+                'Primary' {
+                    $parameters.DynamicUpdate = $DynamicUpdate
+                    Set-DnsServerPrimaryZone @parameters | Out-Null
+                }
+                'Secondary' {
+                    $parameters.MasterServers = [System.Net.IPAddress[]]@($MasterServers)
+                    Set-DnsServerSecondaryZone @parameters | Out-Null
+                }
+                'Stub' {
+                    $parameters.MasterServers = [System.Net.IPAddress[]]@($MasterServers)
+                    Set-DnsServerStubZone @parameters | Out-Null
+                }
+                'Forwarder' {
+                    $parameters.MasterServers = [System.Net.IPAddress[]]@($MasterServers)
+                    $parameters.ForwarderTimeout = $ForwarderTimeoutSeconds
+                    $parameters.UseRecursion = $UseRecursion
+                    Set-DnsServerConditionalForwarderZone @parameters | Out-Null
+                }
+            }
+            $after = Get-LiveZone
+            if ($null -eq $after -or -not (Test-RequestedZone $after)) { throw 'Zone read-back verification failed.' }
+            return [pscustomobject]@{ Success=$true; FailureKind=$null; Message='The DNS zone was updated.'; BeforeZoneJson=$beforeJson; AfterZoneJson=((Convert-Zone $after) | ConvertTo-Json -Compress -Depth 8) }
+        } catch {
+            return [pscustomobject]@{ Success=$false; FailureKind='DnsZoneMutationFailed'; Message='The DNS server rejected the zone operation.'; BeforeZoneJson=$null; AfterZoneJson=$null }
+        }
+        """;
+}
+
 [SupportedOSPlatform("windows")]
 public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemoteProbeExecutor> logger)
     : IDnsRemoteProbeExecutor
@@ -387,6 +575,88 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             return MutationFailure("Timeout", "The DNS record operation timed out.");
+        }
+    }
+
+    public async Task<HostAgentDnsZoneMutationResult> MutateZoneAsync(
+        HostAgentRequest request, CancellationToken cancellationToken)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(request.DnsTimeoutSeconds!.Value));
+        try
+        {
+            return await MutateZoneCoreAsync(request, timeout.Token);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return ZoneMutationFailure("Timeout", "The DNS zone operation timed out.");
+        }
+    }
+
+    private async Task<HostAgentDnsZoneMutationResult> MutateZoneCoreAsync(
+        HostAgentRequest request, CancellationToken cancellationToken)
+    {
+        var host = request.DnsHostName!.Trim().TrimEnd('.');
+        var tls = await ValidateTlsAsync(host, request.DnsPort!.Value,
+            request.DnsTlsCertificateThumbprint, cancellationToken);
+        if (!tls.NetworkReachable || !tls.Valid)
+        {
+            return ZoneMutationFailure(tls.NetworkReachable ? "TlsValidationFailed" : "NetworkUnreachable",
+                tls.NetworkReachable
+                    ? "The WinRM HTTPS certificate could not be validated."
+                    : "The WinRM HTTPS endpoint could not be reached.");
+        }
+
+        using var securePassword = ToSecureString(request.DnsPassword!);
+        var credential = new PSCredential(request.DnsUserName!, securePassword);
+        var endpoint = new UriBuilder("https", host, request.DnsPort.Value, "wsman").Uri;
+        var timeout = request.DnsTimeoutSeconds!.Value * 1000;
+        var connection = new WSManConnectionInfo(endpoint, MicrosoftPowerShellShellUri, credential)
+        {
+            AuthenticationMechanism = request.DnsAuthenticationMode == HostAgentDnsAuthenticationMode.BasicOverTls
+                ? AuthenticationMechanism.Basic : AuthenticationMechanism.Negotiate,
+            OpenTimeout = timeout,
+            OperationTimeout = timeout,
+            CancelTimeout = Math.Min(timeout, 10_000),
+            NoMachineProfile = true,
+        };
+
+        using var runspace = RunspaceFactory.CreateRunspace(connection);
+        try
+        {
+            await Task.Run(runspace.Open, cancellationToken);
+            using var powerShell = PowerShell.Create();
+            powerShell.Runspace = runspace;
+            powerShell.AddScript(DnsRemoteZoneMutation.Script, useLocalScope: true)
+                .AddParameter("MutationKind", request.DnsZoneMutationKind!.Value.ToString())
+                .AddParameter("ZoneKind", request.DnsZoneKind!.Value.ToString())
+                .AddParameter("ZoneName", request.DnsZoneName)
+                .AddParameter("IsDsIntegrated", request.DnsZoneIsDsIntegrated)
+                .AddParameter("DynamicUpdate", request.DnsZoneDynamicUpdate)
+                .AddParameter("ReplicationScope", request.DnsZoneReplicationScope)
+                .AddParameter("DirectoryPartitionName", request.DnsZonePartitionName)
+                .AddParameter("ZoneFile", request.DnsZoneFile)
+                .AddParameter("MasterServers", request.DnsZoneMasterServers?.ToArray() ?? [])
+                .AddParameter("ForwarderTimeoutSeconds", request.DnsZoneForwarderTimeoutSeconds ?? 5)
+                .AddParameter("UseRecursion", request.DnsZoneUseRecursion ?? false)
+                .AddParameter("ExpectedZoneStateJson", request.DnsExpectedZoneStateJson);
+            var output = await Task.Run(powerShell.Invoke, cancellationToken);
+            if (powerShell.HadErrors || output.Count != 1)
+                return ZoneMutationFailure("DnsZoneMutationFailed", "The DNS server rejected the zone operation.");
+            return MapZoneMutation(output[0]);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception) when (exception is PSRemotingTransportException
+                                          or RemoteException
+                                          or RuntimeException
+                                          or InvalidRunspaceStateException)
+        {
+            logger.LogWarning("DNS zone mutation failed for {Host}:{Port} ({ExceptionType}).",
+                host, request.DnsPort, exception.GetType().Name);
+            return ZoneMutationFailure("DnsZoneMutationFailed", "The DNS server rejected the zone operation.");
         }
     }
 
@@ -753,6 +1023,10 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
         ZoneFile = ReadString(value, "ZoneFile", 512),
         VirtualizationInstance = ReadString(value, "VirtualizationInstance", 128),
         ZoneScopes = ReadStrings(value, "ZoneScopes", 128),
+        IsAutoCreated = ReadBool(value, "IsAutoCreated"),
+        MasterServers = ReadStrings(value, "MasterServers", 64),
+        ForwarderTimeoutSeconds = ReadInt(value, "ForwarderTimeoutSeconds"),
+        UseRecursion = value.Properties["UseRecursion"]?.Value is null ? null : ReadBool(value, "UseRecursion"),
     };
     private static HostAgentDnsRecordInventoryItem MapRecord(PSObject value) => new()
     {
@@ -790,6 +1064,32 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
             return null;
         }
     }
+    private static HostAgentDnsZoneMutationResult MapZoneMutation(PSObject value)
+    {
+        var success = ReadBool(value, "Success");
+        return new HostAgentDnsZoneMutationResult
+        {
+            Success = success,
+            FailureKind = ReadString(value, "FailureKind", 64),
+            Message = ReadString(value, "Message", 2000)
+                ?? (success ? "DNS zone operation completed." : "The DNS zone operation failed."),
+            Before = ReadZoneJson(value, "BeforeZoneJson"),
+            After = ReadZoneJson(value, "AfterZoneJson"),
+        };
+    }
+    private static HostAgentDnsZoneInventoryItem? ReadZoneJson(PSObject value, string property)
+    {
+        var json = value.Properties[property]?.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            return JsonSerializer.Deserialize<HostAgentDnsZoneInventoryItem>(json, HostAgentProtocol.Json);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
     private static HostAgentDnsProbeResult Failure(string kind, string message, bool network, bool tls, bool authentication = false) =>
         new()
         {
@@ -803,6 +1103,8 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
     private static HostAgentDnsInventoryPage InventoryFailure(string kind, string message) =>
         new() { Success = false, FailureKind = kind, Message = message };
     private static HostAgentDnsRecordMutationResult MutationFailure(string kind, string message) =>
+        new() { Success = false, FailureKind = kind, Message = message };
+    private static HostAgentDnsZoneMutationResult ZoneMutationFailure(string kind, string message) =>
         new() { Success = false, FailureKind = kind, Message = message };
     private static IReadOnlyList<T> FitPayload<T>(IEnumerable<T> source)
     {

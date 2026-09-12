@@ -71,7 +71,7 @@ public sealed class DnsInventoryQueryServiceTests
         var server = Server("Internal DNS", "dns01.example.local");
         var active = Snapshot(server, true, DateTime.UtcNow);
         var inactive = Snapshot(server, false, DateTime.UtcNow.AddHours(-1));
-        var activeZone = Zone(active, "example.local", "{\"zoneScopes\":[\"blue\",\"green\"]}");
+        var activeZone = Zone(active, "example.local", "{\"zoneScopes\":[\"blue\",\"green\"],\"isAutoCreated\":true,\"masterServers\":[\"192.0.2.10\"],\"forwarderTimeoutSeconds\":5,\"useRecursion\":false}");
         var inactiveZone = Zone(inactive, "old.example.local", null);
         activeZone.Records.Add(Record(activeZone, "www", "A", "{\"IPv4Address\":\"10.0.0.1\"}"));
         context.AddRange(activeZone, inactiveZone);
@@ -83,6 +83,10 @@ public sealed class DnsInventoryQueryServiceTests
         var zone = Assert.Single(result.Items);
         Assert.Equal(activeZone.Id, zone.Id);
         Assert.Equal(["blue", "green"], zone.ZoneScopes);
+        Assert.True(zone.IsAutoCreated);
+        Assert.Equal("192.0.2.10", Assert.Single(zone.MasterServers));
+        Assert.Equal(5, zone.ForwarderTimeoutSeconds);
+        Assert.False(zone.UseRecursion);
         Assert.Equal(1, zone.RecordCount);
     }
 

@@ -345,7 +345,16 @@ public sealed class DnsInventorySyncService(
                     DirectoryPartitionName = Limit(source.DirectoryPartitionName, 512),
                     ZoneFile = Limit(source.ZoneFile, 512),
                     VirtualizationInstance = instance,
-                    PropertiesJson = JsonSerializer.Serialize(new { zoneScopes = scopes }),
+                    PropertiesJson = JsonSerializer.Serialize(new
+                    {
+                        zoneScopes = scopes,
+                        isAutoCreated = source.IsAutoCreated,
+                        masterServers = source.MasterServers
+                            .Select(x => Limit(x, 64)).Where(x => x is not null).Cast<string>()
+                            .Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
+                        forwarderTimeoutSeconds = source.ForwarderTimeoutSeconds,
+                        useRecursion = source.UseRecursion,
+                    }),
                 };
                 context.DnsZoneSnapshots.Add(entity);
                 result.Add(new(entity, scopes));

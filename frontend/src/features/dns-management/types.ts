@@ -90,7 +90,24 @@ export type DnsZoneInventory = {
   dynamicUpdate?: string | null; replicationScope?: string | null;
   directoryPartitionName?: string | null; zoneFile?: string | null;
   virtualizationInstance?: string | null; zoneScopes: string[];
+  isAutoCreated: boolean; masterServers: string[];
+  forwarderTimeoutSeconds?: number | null; useRecursion?: boolean | null;
   recordCount: number; snapshotCompletedAt: string;
+};
+
+export type DnsZoneKind = "Primary" | "Secondary" | "Stub" | "Forwarder";
+export type SaveDnsZone = {
+  name: string; zoneKind: DnsZoneKind; isDsIntegrated: boolean;
+  dynamicUpdate?: string | null; replicationScope?: string | null;
+  directoryPartitionName?: string | null; zoneFile?: string | null;
+  masterServers: string[]; forwarderTimeoutSeconds?: number | null;
+  useRecursion?: boolean | null;
+};
+export type UpdateDnsZone = Pick<SaveDnsZone, "dynamicUpdate" | "masterServers" | "forwarderTimeoutSeconds" | "useRecursion">;
+export type DnsZoneMutation = {
+  success: boolean; errorCode?: string | null; message: string;
+  before?: DnsZoneInventory | null; after?: DnsZoneInventory | null;
+  synchronization?: DnsSyncJob | null;
 };
 
 export type DnsRecordInventory = {

@@ -1,9 +1,11 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 import { DateTimeText } from "@/components/common/DateTimeText";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { DataTable, DataTablePagination, DataTableToolbar } from "@/components/common/data-table";
 import { useServerDataTable } from "@/components/common/data-table-hooks";
 import { FormError } from "@/components/common/FormError";
@@ -16,20 +18,31 @@ import { Select } from "@/components/ui/select";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useAuthStore } from "@/features/auth/auth-store";
 import { canAccess } from "@/lib/permissions";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { PermissionCodes } from "@/lib/permission-codes";
-import { DNS_INVENTORY_SERVERS_QUERY_KEY, DNS_ZONES_QUERY_KEY, getDnsInventoryServers, getDnsZones } from "./api";
+import { createDnsZone, deleteDnsZone, DNS_INVENTORY_SERVERS_QUERY_KEY, DNS_ZONES_QUERY_KEY, getDnsInventoryServers, getDnsZones, updateDnsZone } from "./api";
 import { createDnsZoneColumns } from "./dns-inventory-columns";
 import { buildDnsZoneRecordsPath } from "./dns-inventory-paths";
+import { DnsZoneDialog } from "./DnsZoneDialog";
+import type { DnsZoneInventory, SaveDnsZone, UpdateDnsZone } from "./types";
 
 export function DnsZonesPage() {
   const { t } = useTranslation(["dnsManagement", "common"]);
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const canViewRecords = canAccess(user, PermissionCodes.DnsManagement.Records.View);
+  const canCreate = canAccess(user, PermissionCodes.DnsManagement.Zones.Create);
+  const canUpdate = canAccess(user, PermissionCodes.DnsManagement.Zones.Update);
+  const canDelete = canAccess(user, PermissionCodes.DnsManagement.Zones.Delete);
+  const queryClient = useQueryClient();
   const [serverId, setServerId] = useState("");
   const [search, setSearch] = useState("");
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [zoneToEdit, setZoneToEdit] = useState<DnsZoneInventory | null>(null);
+  const [zoneToDelete, setZoneToDelete] = useState<DnsZoneInventory | null>(null);
+  const [mutationError, setMutationError] = useState<string | null>(null);
   const effectiveSearch = useDebouncedValue(search, 350).trim() || undefined;
 
   const inventory = useQuery({
@@ -42,11 +55,28 @@ export function DnsZonesPage() {
     queryKey: [...DNS_ZONES_QUERY_KEY, snapshotKey, serverId, effectiveSearch, pageNumber, pageSize],
     queryFn: () => getDnsZones({ serverId: serverId || undefined, search: effectiveSearch, pageNumber, pageSize }),
   });
+  const refreshInventory = async () => queryClient.invalidateQueries({ queryKey: ["dns-management", "inventory"] });
+  const createMutation = useMutation({
+    mutationFn: (request: SaveDnsZone) => createDnsZone(serverId, request),
+    onSuccess: async () => { setEditorOpen(false); setMutationError(null); await refreshInventory(); toast.success(t("zones.created")); },
+    onError: (error) => setMutationError(getApiErrorMessage(error, t("zones.operationFailed"))),
+  });
+  const updateMutation = useMutation({
+    mutationFn: (request: UpdateDnsZone) => updateDnsZone(zoneToEdit!.id, request),
+    onSuccess: async () => { setEditorOpen(false); setZoneToEdit(null); setMutationError(null); await refreshInventory(); toast.success(t("zones.updated")); },
+    onError: (error) => setMutationError(getApiErrorMessage(error, t("zones.operationFailed"))),
+  });
+  const removeMutation = useMutation({
+    mutationFn: (zone: DnsZoneInventory) => deleteDnsZone(zone.id),
+    onSuccess: async () => { setZoneToDelete(null); setMutationError(null); await refreshInventory(); toast.success(t("zones.deleted")); },
+    onError: (error) => { setZoneToDelete(null); setMutationError(getApiErrorMessage(error, t("zones.operationFailed"))); },
+  });
   const columns = useMemo(() => createDnsZoneColumns({
-    t,
-    canViewRecords,
+    t, canViewRecords, canUpdate, canDelete,
     onViewRecords: (zone) => navigate(buildDnsZoneRecordsPath(zone.id)),
-  }), [t, canViewRecords, navigate]);
+    onEdit: (zone) => { setZoneToEdit(zone); setMutationError(null); setEditorOpen(true); },
+    onDelete: (zone) => { setMutationError(null); setZoneToDelete(zone); },
+  }), [t, canViewRecords, canUpdate, canDelete, navigate]);
   const table = useServerDataTable({
     data: zones.data?.items ?? [],
     columns,
@@ -55,13 +85,16 @@ export function DnsZonesPage() {
     pageSize,
   });
   const selectedServer = inventory.data?.find((x) => x.serverId === serverId);
+  const editorServer = zoneToEdit
+    ? inventory.data?.find((x) => x.serverId === zoneToEdit.serverId)
+    : selectedServer;
 
   return (
     <section className="space-y-4">
       <PageHeader
         title={t("inventory.title")}
         description={t("inventory.description")}
-        actions={<Button variant="outline" disabled={inventory.isFetching || zones.isFetching} onClick={() => { inventory.refetch(); zones.refetch(); }}>{t("common:actions.refresh")}</Button>}
+        actions={<div className="flex gap-2">{canCreate ? <Button disabled={!selectedServer} onClick={() => { setZoneToEdit(null); setMutationError(null); setEditorOpen(true); }}>{t("zones.createAction")}</Button> : null}<Button variant="outline" disabled={inventory.isFetching || zones.isFetching} onClick={() => { inventory.refetch(); zones.refetch(); }}>{t("common:actions.refresh")}</Button></div>}
       />
 
       <SectionCard title={t("inventory.freshnessTitle")} description={t("inventory.freshnessDescription")}>
@@ -109,8 +142,11 @@ export function DnsZonesPage() {
             footer={zones.data ? <DataTablePagination mode="server" pageNumber={zones.data.pageNumber} pageSize={zones.data.pageSize} totalCount={zones.data.totalCount} totalPages={zones.data.totalPages} onPageChange={setPageNumber} onPageSizeChange={(value) => { setPageSize(value); setPageNumber(1); }} /> : null}
           />
           {inventory.isError || zones.isError ? <FormError message={t("inventory.loadFailed")} /> : null}
+          {mutationError && !editorOpen ? <FormError message={mutationError} /> : null}
         </div>
       </SectionCard>
+      {editorServer && editorOpen ? <DnsZoneDialog open server={editorServer} zone={zoneToEdit} isLoading={createMutation.isPending || updateMutation.isPending} error={mutationError} onOpenChange={(open) => { setEditorOpen(open); if (!open) { setZoneToEdit(null); setMutationError(null); } }} onSubmit={(request) => { if (zoneToEdit) updateMutation.mutate(request as UpdateDnsZone); else createMutation.mutate(request as SaveDnsZone); }} /> : null}
+      <ConfirmDialog open={zoneToDelete !== null} title={t("zones.deleteTitle")} description={t(zoneToDelete?.isDsIntegrated ? "zones.deleteAdDescription" : "zones.deleteDescription", { zone: zoneToDelete?.name, server: zoneToDelete?.serverDisplayName })} confirmText={t("common:actions.delete")} cancelText={t("common:actions.cancel")} variant="danger" isLoading={removeMutation.isPending} onOpenChange={(open) => { if (!open) setZoneToDelete(null); }} onConfirm={() => { if (zoneToDelete) removeMutation.mutate(zoneToDelete); }} />
     </section>
   );
 }

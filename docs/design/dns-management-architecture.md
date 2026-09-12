@@ -201,3 +201,35 @@ Mutation cmdlet references:
 - [Add-DnsServerResourceRecord](https://learn.microsoft.com/en-us/powershell/module/dnsserver/add-dnsserverresourcerecord?view=windowsserver2025-ps)
 - [Set-DnsServerResourceRecord](https://learn.microsoft.com/en-us/powershell/module/dnsserver/set-dnsserverresourcerecord?view=windowsserver2025-ps)
 - [Remove-DnsServerResourceRecord](https://learn.microsoft.com/en-us/powershell/module/dnsserver/remove-dnsserverresourcerecord?view=windowsserver2025-ps)
+
+## Zone lifecycle workflow
+
+Primary, secondary, stub, and conditional-forwarder zones use a second typed Host Agent operation.
+File-backed primary, secondary, and stub zones require a bounded `.dns` file name rather than a
+caller-controlled path. AD-integrated primary, stub, and conditional-forwarder zones accept only
+the Forest, Domain, Legacy, or Custom replication choices; a custom choice requires an explicit
+directory-partition name. Secondary zones are always file-backed. Master endpoints are parsed as
+IPv4 or IPv6 addresses and limited to sixteen entries.
+
+Zone identity, type, storage model, and replication placement are immutable in the edit workflow.
+Primary-zone edits change the dynamic-update policy; secondary and stub edits replace the typed
+master-server list; conditional-forwarder edits replace masters, timeout, and recursion behavior.
+The active snapshot carries the fields needed for a live optimistic-concurrency comparison. A
+missing or changed live zone is rejected before any write, and every successful write is read back
+and followed by a full inventory refresh.
+
+Auto-created zones, the root and TrustAnchors zones, and virtualization-instance zones are visible
+but read-only. Signed zones cannot be deleted until DNSSEC signing is removed through its dedicated
+workflow. Zone deletion always has an explicit destructive confirmation; AD-integrated zones show
+the additional warning that deletion can replicate to other DNS servers. General audit history and
+the DNS before/after operation log are written for every attempted live operation without storing
+credentials or master-server values in the request summary.
+
+Zone cmdlet references:
+
+- [Manage DNS zones in Windows Server](https://learn.microsoft.com/en-us/windows-server/networking/dns/manage-dns-zones)
+- [Add-DnsServerPrimaryZone](https://learn.microsoft.com/en-us/powershell/module/dnsserver/add-dnsserverprimaryzone?view=windowsserver2025-ps)
+- [Add-DnsServerSecondaryZone](https://learn.microsoft.com/en-us/powershell/module/dnsserver/add-dnsserversecondaryzone?view=windowsserver2025-ps)
+- [Add-DnsServerStubZone](https://learn.microsoft.com/en-us/powershell/module/dnsserver/add-dnsserverstubzone?view=windowsserver2025-ps)
+- [Add-DnsServerConditionalForwarderZone](https://learn.microsoft.com/en-us/powershell/module/dnsserver/add-dnsserverconditionalforwarderzone?view=windowsserver2025-ps)
+- [Remove-DnsServerZone](https://learn.microsoft.com/en-us/powershell/module/dnsserver/remove-dnsserverzone?view=windowsserver2025-ps)

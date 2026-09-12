@@ -15,7 +15,8 @@ namespace ITAdmin.Api.Controllers;
 public sealed class DnsInventoryController(
     IDnsInventoryQueryService service,
     IDnsInventorySyncService inventorySyncService,
-    IDnsRecordMutationService recordMutationService) : ControllerBase
+    IDnsRecordMutationService recordMutationService,
+    IDnsZoneMutationService zoneMutationService) : ControllerBase
 {
     [HttpGet("servers")]
     [RequireAnyPermission(DnsManagementPermissions.ZonesView, DnsManagementPermissions.RecordsView)]
@@ -49,6 +50,33 @@ public sealed class DnsInventoryController(
             ? NotFound(new { message = "The active DNS zone snapshot was not found." })
             : Ok(MapZone(zone));
     }
+
+    [HttpPost("servers/{serverId:guid}/zones")]
+    [RequirePermission(DnsManagementPermissions.ZonesCreate)]
+    public Task<ActionResult<DnsZoneMutationResponse>> CreateZone(
+        Guid serverId, CreateDnsZoneRequest request, CancellationToken cancellationToken) =>
+        MutateZone(new(serverId, null, request.Name, request.ZoneKind, request.IsDsIntegrated,
+            request.DynamicUpdate, request.ReplicationScope, request.DirectoryPartitionName,
+            request.ZoneFile, request.MasterServers ?? [], request.ForwarderTimeoutSeconds,
+            request.UseRecursion, AppModels.DnsZoneMutationKind.Create,
+            DnsManagementActorResolver.Resolve(this)), cancellationToken);
+
+    [HttpPut("zones/{id:guid}")]
+    [RequirePermission(DnsManagementPermissions.ZonesUpdate)]
+    public Task<ActionResult<DnsZoneMutationResponse>> UpdateZone(
+        Guid id, UpdateDnsZoneRequest request, CancellationToken cancellationToken) =>
+        MutateZone(new(Guid.Empty, id, string.Empty, AppModels.DnsZoneKind.Primary, false,
+            request.DynamicUpdate, null, null, null, request.MasterServers ?? [],
+            request.ForwarderTimeoutSeconds, request.UseRecursion,
+            AppModels.DnsZoneMutationKind.Update, DnsManagementActorResolver.Resolve(this)), cancellationToken);
+
+    [HttpDelete("zones/{id:guid}")]
+    [RequirePermission(DnsManagementPermissions.ZonesDelete)]
+    public Task<ActionResult<DnsZoneMutationResponse>> DeleteZone(
+        Guid id, CancellationToken cancellationToken) =>
+        MutateZone(new(Guid.Empty, id, string.Empty, AppModels.DnsZoneKind.Primary, false,
+            null, null, null, null, [], null, null,
+            AppModels.DnsZoneMutationKind.Delete, DnsManagementActorResolver.Resolve(this)), cancellationToken);
 
     [HttpGet("zones/{id:guid}/records")]
     [RequirePermission(DnsManagementPermissions.RecordsView)]
@@ -164,7 +192,8 @@ public sealed class DnsInventoryController(
         x.Id, x.SnapshotId, x.ServerId, x.ServerDisplayName, x.Environment,
         x.Name, x.ZoneType, x.IsReverseLookupZone, x.IsDsIntegrated, x.IsSigned, x.IsPaused,
         x.DynamicUpdate, x.ReplicationScope, x.DirectoryPartitionName, x.ZoneFile,
-        x.VirtualizationInstance, x.ZoneScopes, x.RecordCount, x.SnapshotCompletedAt);
+        x.VirtualizationInstance, x.ZoneScopes, x.IsAutoCreated, x.MasterServers,
+        x.ForwarderTimeoutSeconds, x.UseRecursion, x.RecordCount, x.SnapshotCompletedAt);
 
     private static DnsRecordInventoryResponse MapRecord(AppModels.DnsRecordInventoryModel x) => new(
         x.Id, x.RelativeName, x.FullyQualifiedName, x.RecordType, x.CanonicalValue,
@@ -192,6 +221,21 @@ public sealed class DnsInventoryController(
             result.Synchronization is null ? null : MapJob(result.Synchronization));
         if (result.Success) return Ok(response);
         return result.ErrorCode is "RecordChanged" or "SnapshotExpired"
+            ? Conflict(response)
+            : BadRequest(response);
+    }
+
+    private async Task<ActionResult<DnsZoneMutationResponse>> MutateZone(
+        AppModels.DnsZoneMutationCommand command, CancellationToken cancellationToken)
+    {
+        var result = await zoneMutationService.ExecuteAsync(command, cancellationToken);
+        var response = new DnsZoneMutationResponse(
+            result.Success, result.ErrorCode, result.Message,
+            result.Before is null ? null : MapZone(result.Before),
+            result.After is null ? null : MapZone(result.After),
+            result.Synchronization is null ? null : MapJob(result.Synchronization));
+        if (result.Success) return Ok(response);
+        return result.ErrorCode is "ZoneChanged" or "SnapshotExpired"
             ? Conflict(response)
             : BadRequest(response);
     }

@@ -1,5 +1,5 @@
 import { apiClient } from "@/lib/api-client";
-import type { CreateDnsRecord, DnsComparisonContext, DnsComparisonRequest, DnsComparisonResponse, DnsComparisonZone, DnsCredentialProfile, DnsInventoryServer, DnsManagementSettings, DnsRecordInventory, DnsRecordMutation, DnsRecordMutationInput, DnsServer, DnsServerConnectionTest, DnsSyncBatch, DnsSyncJob, DnsZoneInventory, PagedDnsResponse, SaveDnsCredentialProfile, SaveDnsServer } from "./types";
+import type { CreateDnsRecord, DnsComparisonContext, DnsComparisonRequest, DnsComparisonResponse, DnsComparisonZone, DnsCredentialProfile, DnsInventoryServer, DnsManagementSettings, DnsRecordInventory, DnsRecordMutation, DnsRecordMutationInput, DnsServer, DnsServerConnectionTest, DnsSyncBatch, DnsSyncJob, DnsZoneInventory, DnsZoneMutation, PagedDnsResponse, SaveDnsCredentialProfile, SaveDnsServer, SaveDnsZone, UpdateDnsZone } from "./types";
 
 const basePath = "/dns-management";
 export const DNS_SETTINGS_QUERY_KEY = ["dns-management", "settings"] as const;
@@ -28,6 +28,12 @@ export const getDnsZones = async (params: { serverId?: string; search?: string; 
   (await apiClient.get<PagedDnsResponse<DnsZoneInventory>>(`${basePath}/inventory/zones`, { params })).data;
 export const getDnsZone = async (id: string) =>
   (await apiClient.get<DnsZoneInventory>(`${basePath}/inventory/zones/${id}`)).data;
+export const createDnsZone = async (serverId: string, request: SaveDnsZone) =>
+  (await apiClient.post<DnsZoneMutation>(`${basePath}/inventory/servers/${serverId}/zones`, request)).data;
+export const updateDnsZone = async (zoneId: string, request: UpdateDnsZone) =>
+  (await apiClient.put<DnsZoneMutation>(`${basePath}/inventory/zones/${zoneId}`, request)).data;
+export const deleteDnsZone = async (zoneId: string) =>
+  (await apiClient.delete<DnsZoneMutation>(`${basePath}/inventory/zones/${zoneId}`)).data;
 export const getDnsRecords = async (id: string, params: { search?: string; recordType?: string; pageNumber: number; pageSize: number }) =>
   (await apiClient.get<PagedDnsResponse<DnsRecordInventory>>(`${basePath}/inventory/zones/${id}/records`, { params })).data;
 export const createDnsRecord = async (zoneId: string, request: CreateDnsRecord) =>

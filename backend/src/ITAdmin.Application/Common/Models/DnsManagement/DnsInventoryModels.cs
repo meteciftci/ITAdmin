@@ -17,6 +17,8 @@ public sealed record DnsZoneInventoryModel(
     bool IsReverseLookupZone, bool IsDsIntegrated, bool IsSigned, bool IsPaused,
     string? DynamicUpdate, string? ReplicationScope, string? DirectoryPartitionName,
     string? ZoneFile, string? VirtualizationInstance, IReadOnlyList<string> ZoneScopes,
+    bool IsAutoCreated, IReadOnlyList<string> MasterServers,
+    int? ForwarderTimeoutSeconds, bool? UseRecursion,
     int RecordCount, DateTime SnapshotCompletedAt);
 
 public sealed record DnsRecordInventoryQuery(

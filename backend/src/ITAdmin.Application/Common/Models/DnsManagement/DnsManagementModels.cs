@@ -80,3 +80,30 @@ public sealed record DnsRecordMutationModel(
     bool Success, string? ErrorCode, string Message,
     DnsRecordInventoryModel? Before, DnsRecordInventoryModel? After,
     DnsSyncJobModel? Synchronization);
+
+public enum DnsZoneMutationKind
+{
+    Create = 0,
+    Update = 1,
+    Delete = 2,
+}
+
+public enum DnsZoneKind
+{
+    Primary = 0,
+    Secondary = 1,
+    Stub = 2,
+    Forwarder = 3,
+}
+
+public sealed record DnsZoneMutationCommand(
+    Guid ServerId, Guid? ZoneSnapshotId, string Name, DnsZoneKind ZoneKind,
+    bool IsDsIntegrated, string? DynamicUpdate, string? ReplicationScope,
+    string? DirectoryPartitionName, string? ZoneFile, IReadOnlyList<string> MasterServers,
+    int? ForwarderTimeoutSeconds, bool? UseRecursion, DnsZoneMutationKind Kind,
+    DnsActorContext Actor);
+
+public sealed record DnsZoneMutationModel(
+    bool Success, string? ErrorCode, string Message,
+    DnsZoneInventoryModel? Before, DnsZoneInventoryModel? After,
+    DnsSyncJobModel? Synchronization);

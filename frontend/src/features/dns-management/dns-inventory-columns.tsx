@@ -12,11 +12,19 @@ import type { DnsRecordInventory, DnsZoneInventory } from "./types";
 export const createDnsZoneColumns = ({
   t,
   canViewRecords,
+  canUpdate = false,
+  canDelete = false,
   onViewRecords,
+  onEdit,
+  onDelete,
 }: {
   t: TFunction;
   canViewRecords: boolean;
+  canUpdate?: boolean;
+  canDelete?: boolean;
   onViewRecords: (zone: DnsZoneInventory) => void;
+  onEdit?: (zone: DnsZoneInventory) => void;
+  onDelete?: (zone: DnsZoneInventory) => void;
 }): ColumnDef<DnsZoneInventory, unknown>[] => {
   const columns: ColumnDef<DnsZoneInventory, unknown>[] = [
     {
@@ -64,16 +72,21 @@ export const createDnsZoneColumns = ({
       cell: ({ row }) => <DateTimeText value={row.original.snapshotCompletedAt} />,
     },
   ];
-  if (canViewRecords) {
+  if (canViewRecords || canUpdate || canDelete) {
     columns.push({
       id: "actions",
       header: () => t("common:fields.actions"),
       meta: { isAction: true } satisfies DataTableColumnMeta,
-      cell: ({ row }) => (
-        <Button variant="outline" size="sm" onClick={() => onViewRecords(row.original)}>
-          {t("dnsManagement:inventory.viewRecords")}
-        </Button>
-      ),
+      cell: ({ row }) => {
+        const mutable = !row.original.isAutoCreated && !row.original.virtualizationInstance
+          && row.original.name !== "." && row.original.name.toLowerCase() !== "trustanchors"
+          && ["Primary", "Secondary", "Stub", "Forwarder"].includes(row.original.zoneType);
+        return <div className="flex justify-end gap-2">
+          {canViewRecords ? <Button variant="outline" size="sm" onClick={() => onViewRecords(row.original)}>{t("dnsManagement:inventory.viewRecords")}</Button> : null}
+          {canUpdate && onEdit && mutable ? <Button variant="outline" size="sm" onClick={() => onEdit(row.original)}>{t("common:actions.edit")}</Button> : null}
+          {canDelete && onDelete && mutable && !row.original.isSigned ? <Button variant="destructive" size="sm" onClick={() => onDelete(row.original)}>{t("common:actions.delete")}</Button> : null}
+        </div>;
+      },
     });
   }
   return columns;
