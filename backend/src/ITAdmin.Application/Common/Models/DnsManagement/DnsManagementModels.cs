@@ -62,3 +62,21 @@ public sealed record DnsSyncJobModel(
 public sealed record DnsSyncBatchModel(
     Guid BatchId, int TargetedCount, int QueuedCount, int AlreadyQueuedCount,
     int FailedCount, IReadOnlyList<DnsSyncJobModel> Jobs);
+
+public enum DnsRecordMutationKind
+{
+    Create = 0,
+    Update = 1,
+    Delete = 2,
+}
+
+public sealed record DnsRecordMutationCommand(
+    Guid ZoneSnapshotId, Guid? RecordSnapshotId, string RelativeName, string RecordType,
+    IReadOnlyList<string> Values, int TimeToLiveSeconds, string? ZoneScope,
+    string? ExpectedRecordHash, DnsRecordMutationKind Kind,
+    DnsActorContext Actor);
+
+public sealed record DnsRecordMutationModel(
+    bool Success, string? ErrorCode, string Message,
+    DnsRecordInventoryModel? Before, DnsRecordInventoryModel? After,
+    DnsSyncJobModel? Synchronization);

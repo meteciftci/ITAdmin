@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Sockets;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -31,7 +33,7 @@ namespace ITAdmin.HostAgent.Contracts;
 /// </summary>
 public static class HostAgentProtocol
 {
-    public const int ProtocolVersion = 4;
+    public const int ProtocolVersion = 5;
 
     /// <summary>Pipe name. Machine-local; the agent ACLs it to the app pool identity and administrators.</summary>
     public const string PipeName = "ITAdmin.HostAgent";
@@ -100,6 +102,12 @@ public enum HostAgentOperation
     /// data for the fixed inventory script; callers cannot submit executable text.
     /// </summary>
     ReadDnsServerInventoryPage = 10,
+
+    /// <summary>
+    /// Create, update, or delete one supported DNS resource record. The request contains only
+    /// validated record fields; the agent owns the fixed PowerShell implementation.
+    /// </summary>
+    MutateDnsServerResourceRecord = 11,
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -114,6 +122,14 @@ public enum HostAgentDnsInventoryKind
 {
     Zones = 0,
     Records = 1,
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum HostAgentDnsRecordMutationKind
+{
+    Create = 0,
+    Update = 1,
+    Delete = 2,
 }
 
 /// <summary>One request across the pipe.</summary>
@@ -184,6 +200,30 @@ public sealed record HostAgentRequest
     [JsonPropertyName("dnsInventoryPageSize")]
     public int? DnsInventoryPageSize { get; init; }
 
+    [JsonPropertyName("dnsRecordMutationKind")]
+    public HostAgentDnsRecordMutationKind? DnsRecordMutationKind { get; init; }
+
+    [JsonPropertyName("dnsRecordRelativeName")]
+    public string? DnsRecordRelativeName { get; init; }
+
+    [JsonPropertyName("dnsRecordType")]
+    public string? DnsRecordType { get; init; }
+
+    [JsonPropertyName("dnsRecordValues")]
+    public IReadOnlyList<string>? DnsRecordValues { get; init; }
+
+    [JsonPropertyName("dnsRecordTimeToLiveSeconds")]
+    public int? DnsRecordTimeToLiveSeconds { get; init; }
+
+    [JsonPropertyName("dnsExpectedRecordHash")]
+    public string? DnsExpectedRecordHash { get; init; }
+
+    [JsonPropertyName("dnsExpectedRecordDataJson")]
+    public string? DnsExpectedRecordDataJson { get; init; }
+
+    [JsonPropertyName("dnsExpectedRecordTimeToLiveSeconds")]
+    public int? DnsExpectedRecordTimeToLiveSeconds { get; init; }
+
     public string ToJson() => JsonSerializer.Serialize(this, HostAgentProtocol.Json);
 
     public static HostAgentRequest? FromJson(string? json)
@@ -243,7 +283,8 @@ public sealed record HostAgentRequest
         }
 
         if (Operation is HostAgentOperation.TestDnsServerConnection
-            or HostAgentOperation.ReadDnsServerInventoryPage)
+            or HostAgentOperation.ReadDnsServerInventoryPage
+            or HostAgentOperation.MutateDnsServerResourceRecord)
         {
             var hostName = DnsHostName?.Trim().TrimEnd('.');
             if (string.IsNullOrWhiteSpace(hostName) || hostName.Length > 253
@@ -267,7 +308,6 @@ public sealed record HostAgentRequest
                 problems.Add("dnsTlsCertificateThumbprint contains invalid characters.");
         }
 
-
         if (Operation == HostAgentOperation.ReadDnsServerInventoryPage)
         {
             if (DnsInventoryKind is null || !Enum.IsDefined(DnsInventoryKind.Value))
@@ -281,6 +321,45 @@ public sealed record HostAgentRequest
                 problems.Add("dnsZoneName is required for record inventory and may contain at most 253 characters.");
             if (DnsZoneScope?.Length > 128)
                 problems.Add("dnsZoneScope may contain at most 128 characters.");
+            if (DnsVirtualizationInstance?.Length > 128)
+                problems.Add("dnsVirtualizationInstance may contain at most 128 characters.");
+        }
+
+
+        if (Operation == HostAgentOperation.MutateDnsServerResourceRecord)
+        {
+            if (DnsRecordMutationKind is null || !Enum.IsDefined(DnsRecordMutationKind.Value))
+                problems.Add("dnsRecordMutationKind is required.");
+            if (string.IsNullOrWhiteSpace(DnsZoneName) || DnsZoneName.Length > 253 || DnsZoneName.Any(char.IsControl))
+                problems.Add("dnsZoneName is required and may contain at most 253 characters.");
+            if (string.IsNullOrWhiteSpace(DnsRecordRelativeName) || DnsRecordRelativeName.Length > 253
+                || DnsRecordRelativeName.Any(char.IsControl))
+                problems.Add("dnsRecordRelativeName is required and may contain at most 253 characters.");
+            var recordType = DnsRecordType?.Trim().ToUpperInvariant();
+            if (recordType is not ("A" or "AAAA" or "CNAME" or "MX" or "NS" or "PTR" or "SRV" or "TXT"))
+                problems.Add("dnsRecordType is not supported for mutation.");
+            if (DnsRecordTimeToLiveSeconds is null or < 0 or > 2_147_483)
+                problems.Add("dnsRecordTimeToLiveSeconds must be between 0 and 2147483.");
+            if (DnsRecordMutationKind != HostAgentDnsRecordMutationKind.Delete)
+            {
+                if (DnsRecordValues is null || DnsRecordValues.Count is < 1 or > 4
+                    || DnsRecordValues.Any(x => string.IsNullOrEmpty(x) || x.Length > 2048 || x.Any(char.IsControl)))
+                    problems.Add("dnsRecordValues must contain between 1 and 4 bounded values.");
+                else if (!ValidateDnsRecordValues(recordType!, DnsRecordValues))
+                    problems.Add("dnsRecordValues do not match dnsRecordType.");
+            }
+            if (DnsRecordMutationKind is HostAgentDnsRecordMutationKind.Update or HostAgentDnsRecordMutationKind.Delete)
+            {
+                var hash = DnsExpectedRecordHash?.Trim();
+                if (hash is null || hash.Length != 64 || hash.Any(x => !Uri.IsHexDigit(x)))
+                    problems.Add("dnsExpectedRecordHash must be a SHA-256 hexadecimal value.");
+                if (string.IsNullOrWhiteSpace(DnsExpectedRecordDataJson)
+                    || DnsExpectedRecordDataJson.Length > 256_000 || !IsJsonObject(DnsExpectedRecordDataJson))
+                    problems.Add("dnsExpectedRecordDataJson must be a bounded JSON object.");
+                if (DnsExpectedRecordTimeToLiveSeconds is null or < 0 or > 2_147_483)
+                    problems.Add("dnsExpectedRecordTimeToLiveSeconds must be between 0 and 2147483.");
+            }
+            if (DnsZoneScope?.Length > 128) problems.Add("dnsZoneScope may contain at most 128 characters.");
             if (DnsVirtualizationInstance?.Length > 128)
                 problems.Add("dnsVirtualizationInstance may contain at most 128 characters.");
         }
@@ -301,6 +380,35 @@ public sealed record HostAgentRequest
         }
 
         return true;
+    }
+
+    private static bool ValidateDnsRecordValues(string type, IReadOnlyList<string> values)
+    {
+        static bool UInt16(string value) => ushort.TryParse(value, out _);
+        static bool Address(string value, AddressFamily family) =>
+            IPAddress.TryParse(value, out var address) && address.AddressFamily == family;
+        return type switch
+        {
+            "A" => values.Count == 1 && Address(values[0], AddressFamily.InterNetwork),
+            "AAAA" => values.Count == 1 && Address(values[0], AddressFamily.InterNetworkV6),
+            "CNAME" or "NS" or "PTR" or "TXT" => values.Count == 1,
+            "MX" => values.Count == 2 && UInt16(values[0]),
+            "SRV" => values.Count == 4 && values.Take(3).All(UInt16),
+            _ => false,
+        };
+    }
+
+    private static bool IsJsonObject(string value)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(value, new JsonDocumentOptions { MaxDepth = 16 });
+            return document.RootElement.ValueKind == JsonValueKind.Object;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 }
 
@@ -358,6 +466,9 @@ public sealed record HostAgentResponse
 
     [JsonPropertyName("dnsInventoryPage")]
     public HostAgentDnsInventoryPage? DnsInventoryPage { get; init; }
+
+    [JsonPropertyName("dnsRecordMutation")]
+    public HostAgentDnsRecordMutationResult? DnsRecordMutation { get; init; }
 
     [JsonPropertyName("repositoryStatus")]
     public HostAgentRepositoryStatus RepositoryStatus { get; init; } = HostAgentRepositoryStatus.Unknown;
@@ -517,6 +628,20 @@ public sealed record HostAgentDnsRecordInventoryItem
     public string? ZoneScope { get; init; }
     [JsonPropertyName("virtualizationInstance")]
     public string? VirtualizationInstance { get; init; }
+}
+
+public sealed record HostAgentDnsRecordMutationResult
+{
+    [JsonPropertyName("success")]
+    public bool Success { get; init; }
+    [JsonPropertyName("failureKind")]
+    public string? FailureKind { get; init; }
+    [JsonPropertyName("message")]
+    public string Message { get; init; } = string.Empty;
+    [JsonPropertyName("before")]
+    public HostAgentDnsRecordInventoryItem? Before { get; init; }
+    [JsonPropertyName("after")]
+    public HostAgentDnsRecordInventoryItem? After { get; init; }
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]

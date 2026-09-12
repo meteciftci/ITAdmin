@@ -79,7 +79,15 @@ export const createDnsZoneColumns = ({
   return columns;
 };
 
-export const createDnsRecordColumns = ({ t }: { t: TFunction }): ColumnDef<DnsRecordInventory, unknown>[] => [
+export const createDnsRecordColumns = ({ t, canUpdate = false, canDelete = false, onEdit, onDelete }: {
+  t: TFunction;
+  canUpdate?: boolean;
+  canDelete?: boolean;
+  onEdit?: (record: DnsRecordInventory) => void;
+  onDelete?: (record: DnsRecordInventory) => void;
+}): ColumnDef<DnsRecordInventory, unknown>[] => {
+  const writableTypes = new Set(["A", "AAAA", "CNAME", "MX", "NS", "PTR", "SRV", "TXT"]);
+  const columns: ColumnDef<DnsRecordInventory, unknown>[] = [
   {
     accessorKey: "relativeName",
     header: () => t("dnsManagement:inventory.fields.owner"),
@@ -115,4 +123,17 @@ export const createDnsRecordColumns = ({ t }: { t: TFunction }): ColumnDef<DnsRe
     header: () => t("dnsManagement:inventory.fields.timestamp"),
     cell: ({ row }) => <DateTimeText value={row.original.timestamp} />,
   },
-];
+  ];
+  if (canUpdate || canDelete) {
+    columns.push({
+      id: "actions",
+      header: () => t("common:fields.actions"),
+      meta: { isAction: true } satisfies DataTableColumnMeta,
+      cell: ({ row }) => <div className="flex justify-end gap-2">
+        {canUpdate && onEdit && writableTypes.has(row.original.recordType) ? <Button variant="outline" size="sm" onClick={() => onEdit(row.original)}>{t("common:actions.edit")}</Button> : null}
+        {canDelete && onDelete && writableTypes.has(row.original.recordType) ? <Button variant="destructive" size="sm" onClick={() => onDelete(row.original)}>{t("common:actions.delete")}</Button> : null}
+      </div>,
+    });
+  }
+  return columns;
+};

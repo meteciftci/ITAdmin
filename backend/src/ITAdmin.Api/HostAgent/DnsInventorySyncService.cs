@@ -25,6 +25,10 @@ public sealed class DnsInventorySyncService(
         Guid serverId, DnsActorContext actor, CancellationToken cancellationToken = default) =>
         EnqueueInternalAsync(serverId, actor, DnsSyncTrigger.Manual, 100, Guid.NewGuid(), cancellationToken);
 
+    public Task<DnsAdministrationResult<DnsSyncJobModel>> EnqueuePostMutationAsync(
+        Guid serverId, DnsActorContext actor, CancellationToken cancellationToken = default) =>
+        EnqueueInternalAsync(serverId, actor, DnsSyncTrigger.PostMutation, 200, Guid.NewGuid(), cancellationToken);
+
     public async Task<DnsSyncBatchModel> EnqueueAllEnabledAsync(
         DnsActorContext actor, CancellationToken cancellationToken = default)
     {

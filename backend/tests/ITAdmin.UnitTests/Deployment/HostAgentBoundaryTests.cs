@@ -106,6 +106,7 @@ public sealed class HostAgentBoundaryTests
                      typeof(HostAgentHttpsStatus), typeof(HostAgentDnsProbeResult),
                      typeof(HostAgentDnsCapabilities), typeof(HostAgentDnsInventoryPage),
                      typeof(HostAgentDnsZoneInventoryItem), typeof(HostAgentDnsRecordInventoryItem),
+                     typeof(HostAgentDnsRecordMutationResult),
                  })
         {
             foreach (var property in type.GetProperties())
@@ -136,6 +137,7 @@ public sealed class HostAgentBoundaryTests
     [InlineData(HostAgentOperation.DisableHttps)]
     [InlineData(HostAgentOperation.TestDnsServerConnection)]
     [InlineData(HostAgentOperation.ReadDnsServerInventoryPage)]
+    [InlineData(HostAgentOperation.MutateDnsServerResourceRecord)]
     public void Authorization_WebApplicationMayInvokeTheUpdateAndSettingsOperations(HostAgentOperation operation) =>
         Assert.True(Authorization.Authorize(@"IIS APPPOOL\ITAdmin", false, operation).IsAllowed);
 
@@ -407,6 +409,85 @@ public sealed class HostAgentBoundaryTests
         Assert.DoesNotContain("dns-svc", response.ToJson(), StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Protocol_DnsRecordMutationRequiresTypedBoundedDataAndConcurrencyHash()
+    {
+        var valid = new HostAgentRequest
+        {
+            Operation = HostAgentOperation.MutateDnsServerResourceRecord,
+            DnsHostName = "dns01.example.local",
+            DnsPort = 5986,
+            DnsAuthenticationMode = HostAgentDnsAuthenticationMode.Negotiate,
+            DnsUserName = "EXAMPLE\\dns-svc",
+            DnsPassword = "secret",
+            DnsTimeoutSeconds = 30,
+            DnsRecordMutationKind = HostAgentDnsRecordMutationKind.Update,
+            DnsZoneName = "example.local",
+            DnsRecordRelativeName = "www",
+            DnsRecordType = "A",
+            DnsRecordValues = ["10.0.0.20"],
+            DnsRecordTimeToLiveSeconds = 300,
+            DnsExpectedRecordHash = new string('a', 64),
+            DnsExpectedRecordDataJson = "{\"IPv4Address\":\"10.0.0.10\"}",
+            DnsExpectedRecordTimeToLiveSeconds = 300,
+        };
+
+        Assert.Empty(valid.Validate());
+        Assert.NotEmpty((valid with { DnsRecordType = "SOA" }).Validate());
+        Assert.NotEmpty((valid with { DnsExpectedRecordHash = null }).Validate());
+        Assert.NotEmpty((valid with { DnsRecordValues = [new string('x', 2049)] }).Validate());
+        Assert.Empty((valid with
+        {
+            DnsRecordMutationKind = HostAgentDnsRecordMutationKind.Create,
+            DnsExpectedRecordHash = null,
+        }).Validate());
+    }
+
+    [Fact]
+    public async Task Dispatch_DnsRecordMutationUsesFixedExecutorAndNeverEchoesCredentials()
+    {
+        var executor = new RecordingDnsProbeExecutor();
+        var dispatcher = new HostAgentDispatcher(
+            Authorization, new RecordingOperations(), dnsRemoteProbeExecutor: executor);
+        var request = new HostAgentRequest
+        {
+            Operation = HostAgentOperation.MutateDnsServerResourceRecord,
+            DnsHostName = "dns01.example.local",
+            DnsPort = 5986,
+            DnsAuthenticationMode = HostAgentDnsAuthenticationMode.Negotiate,
+            DnsUserName = "EXAMPLE\\dns-svc",
+            DnsPassword = "secret",
+            DnsTimeoutSeconds = 30,
+            DnsRecordMutationKind = HostAgentDnsRecordMutationKind.Delete,
+            DnsZoneName = "example.local",
+            DnsRecordRelativeName = "www",
+            DnsRecordType = "A",
+            DnsRecordTimeToLiveSeconds = 300,
+            DnsExpectedRecordHash = new string('a', 64),
+            DnsExpectedRecordDataJson = "{\"IPv4Address\":\"10.0.0.10\"}",
+            DnsExpectedRecordTimeToLiveSeconds = 300,
+        };
+
+        var response = await dispatcher.DispatchAsync(request.ToJson(), WebApplication());
+
+        Assert.Equal(1, executor.MutationCallCount);
+        Assert.True(response.DnsRecordMutation!.Success);
+        Assert.DoesNotContain("secret", response.ToJson(), StringComparison.Ordinal);
+        Assert.DoesNotContain("dns-svc", response.ToJson(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DnsRecordMutationScript_IsFixedAndUsesBoundParameters()
+    {
+        Assert.StartsWith("param(", DnsRemoteRecordMutation.Script.TrimStart(), StringComparison.Ordinal);
+        Assert.DoesNotContain("DnsPassword", DnsRemoteRecordMutation.Script, StringComparison.Ordinal);
+        Assert.DoesNotContain("Invoke-Expression", DnsRemoteRecordMutation.Script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ExpectedRecordDataJson", DnsRemoteRecordMutation.Script, StringComparison.Ordinal);
+        System.Management.Automation.Language.Parser.ParseInput(
+            DnsRemoteRecordMutation.Script, out _, out var parseErrors);
+        Assert.Empty(parseErrors);
+    }
+
     // ------------------------------------------------------------------------------------------
     // Configuration
     // ------------------------------------------------------------------------------------------
@@ -512,6 +593,7 @@ public sealed class HostAgentBoundaryTests
     {
         public int CallCount { get; private set; }
         public int InventoryCallCount { get; private set; }
+        public int MutationCallCount { get; private set; }
         public Task<HostAgentDnsProbeResult> ProbeAsync(HostAgentRequest request, CancellationToken cancellationToken)
         {
             CallCount++;
@@ -523,6 +605,13 @@ public sealed class HostAgentBoundaryTests
         {
             InventoryCallCount++;
             return Task.FromResult(new HostAgentDnsInventoryPage { Success = true, Message = "ok" });
+        }
+
+        public Task<HostAgentDnsRecordMutationResult> MutateRecordAsync(
+            HostAgentRequest request, CancellationToken cancellationToken)
+        {
+            MutationCallCount++;
+            return Task.FromResult(new HostAgentDnsRecordMutationResult { Success = true, Message = "ok" });
         }
     }
 

@@ -100,6 +100,26 @@ export type DnsRecordInventory = {
   recordHash: string;
 };
 
+export type DnsRecordMutationInput = {
+  values: string[];
+  timeToLiveSeconds: number;
+};
+
+export type CreateDnsRecord = DnsRecordMutationInput & {
+  relativeName: string;
+  recordType: string;
+  zoneScope?: string | null;
+};
+
+export type DnsRecordMutation = {
+  success: boolean;
+  errorCode?: string | null;
+  message: string;
+  before?: DnsRecordInventory | null;
+  after?: DnsRecordInventory | null;
+  synchronization?: DnsSyncJob | null;
+};
+
 export type DnsComparisonContext = {
   promptForFullSyncOnOpen: boolean;
   lastFullInventorySyncAt: string | null;

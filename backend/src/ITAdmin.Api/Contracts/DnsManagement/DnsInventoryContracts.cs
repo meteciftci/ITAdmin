@@ -50,3 +50,17 @@ public sealed record DnsComparisonResponse(
 public sealed record DnsSyncBatchResponse(
     Guid BatchId, int TargetedCount, int QueuedCount, int AlreadyQueuedCount,
     int FailedCount, IReadOnlyList<DnsSyncJobResponse> Jobs);
+
+public sealed record CreateDnsRecordRequest(
+    string RelativeName, string RecordType, IReadOnlyList<string> Values,
+    int TimeToLiveSeconds, string? ZoneScope);
+
+public sealed record UpdateDnsRecordRequest(
+    IReadOnlyList<string> Values, int TimeToLiveSeconds, string ExpectedRecordHash);
+
+public sealed record DeleteDnsRecordRequest(string ExpectedRecordHash);
+
+public sealed record DnsRecordMutationResponse(
+    bool Success, string? ErrorCode, string Message,
+    DnsRecordInventoryResponse? Before, DnsRecordInventoryResponse? After,
+    DnsSyncJobResponse? Synchronization);

@@ -115,6 +115,18 @@ public sealed class HostAgentDispatcher(
                 HostAgentOperation.ReadDnsServerInventoryPage =>
                     HostAgentResponse.Failed("DNS remote management is unavailable on this host.", request.CorrelationId),
 
+                HostAgentOperation.MutateDnsServerResourceRecord when dnsRemoteProbeExecutor is not null =>
+                    new HostAgentResponse
+                    {
+                        Status = HostAgentResponseStatus.Ok,
+                        Message = "DNS record operation completed.",
+                        CorrelationId = request.CorrelationId,
+                        DnsRecordMutation = await dnsRemoteProbeExecutor.MutateRecordAsync(request, cancellationToken),
+                    },
+
+                HostAgentOperation.MutateDnsServerResourceRecord =>
+                    HostAgentResponse.Failed("DNS remote management is unavailable on this host.", request.CorrelationId),
+
                 _ => HostAgentResponse.Rejected("Unsupported operation.", request.CorrelationId),
             };
         }

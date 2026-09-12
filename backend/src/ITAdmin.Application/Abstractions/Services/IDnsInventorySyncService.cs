@@ -6,6 +6,8 @@ public interface IDnsInventorySyncService
 {
     Task<DnsAdministrationResult<DnsSyncJobModel>> EnqueueAsync(
         Guid serverId, DnsActorContext actor, CancellationToken cancellationToken = default);
+    Task<DnsAdministrationResult<DnsSyncJobModel>> EnqueuePostMutationAsync(
+        Guid serverId, DnsActorContext actor, CancellationToken cancellationToken = default);
     Task<DnsSyncBatchModel> EnqueueAllEnabledAsync(
         DnsActorContext actor, CancellationToken cancellationToken = default);
     Task<int> EnqueueDueAutomaticAsync(

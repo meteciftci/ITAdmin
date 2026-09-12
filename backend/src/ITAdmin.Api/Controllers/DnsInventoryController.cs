@@ -14,7 +14,8 @@ namespace ITAdmin.Api.Controllers;
 [Authorize]
 public sealed class DnsInventoryController(
     IDnsInventoryQueryService service,
-    IDnsInventorySyncService inventorySyncService) : ControllerBase
+    IDnsInventorySyncService inventorySyncService,
+    IDnsRecordMutationService recordMutationService) : ControllerBase
 {
     [HttpGet("servers")]
     [RequireAnyPermission(DnsManagementPermissions.ZonesView, DnsManagementPermissions.RecordsView)]
@@ -65,6 +66,31 @@ public sealed class DnsInventoryController(
             result.Items.Select(MapRecord).ToList(), result.PageNumber, result.PageSize,
             result.TotalCount, result.TotalPages));
     }
+
+    [HttpPost("zones/{id:guid}/records")]
+    [RequirePermission(DnsManagementPermissions.RecordsCreate)]
+    public Task<ActionResult<DnsRecordMutationResponse>> CreateRecord(
+        Guid id, CreateDnsRecordRequest request, CancellationToken cancellationToken) =>
+        MutateRecord(new(id, null, request.RelativeName, request.RecordType, request.Values,
+            request.TimeToLiveSeconds, request.ZoneScope, null,
+            AppModels.DnsRecordMutationKind.Create, DnsManagementActorResolver.Resolve(this)), cancellationToken);
+
+    [HttpPut("zones/{zoneId:guid}/records/{recordId:guid}")]
+    [RequirePermission(DnsManagementPermissions.RecordsUpdate)]
+    public Task<ActionResult<DnsRecordMutationResponse>> UpdateRecord(
+        Guid zoneId, Guid recordId, UpdateDnsRecordRequest request, CancellationToken cancellationToken)
+        => MutateRecord(new(zoneId, recordId, string.Empty, string.Empty,
+            request.Values, request.TimeToLiveSeconds, null, request.ExpectedRecordHash,
+            AppModels.DnsRecordMutationKind.Update, DnsManagementActorResolver.Resolve(this)), cancellationToken);
+
+    [HttpDelete("zones/{zoneId:guid}/records/{recordId:guid}")]
+    [RequirePermission(DnsManagementPermissions.RecordsDelete)]
+    public Task<ActionResult<DnsRecordMutationResponse>> DeleteRecord(
+        Guid zoneId, Guid recordId, [FromBody] DeleteDnsRecordRequest request,
+        CancellationToken cancellationToken)
+        => MutateRecord(new(zoneId, recordId, string.Empty, string.Empty,
+            [], 0, null, request.ExpectedRecordHash,
+            AppModels.DnsRecordMutationKind.Delete, DnsManagementActorResolver.Resolve(this)), cancellationToken);
 
     [HttpGet("comparison/context")]
     [RequirePermission(DnsManagementPermissions.Compare)]
@@ -153,5 +179,20 @@ public sealed class DnsInventoryController(
     private static DnsSyncJobResponse MapJob(AppModels.DnsSyncJobModel x) => new(
         x.Id, x.BatchId, x.ServerId, x.ServerDisplayName, x.Scope, x.Trigger, x.Status,
         x.AttemptCount, x.RequestedAt, x.StartedAt, x.CompletedAt,
-        x.ErrorCode, x.Message, x.AlreadyQueued);
+            x.ErrorCode, x.Message, x.AlreadyQueued);
+
+    private async Task<ActionResult<DnsRecordMutationResponse>> MutateRecord(
+        AppModels.DnsRecordMutationCommand command, CancellationToken cancellationToken)
+    {
+        var result = await recordMutationService.ExecuteAsync(command, cancellationToken);
+        var response = new DnsRecordMutationResponse(
+            result.Success, result.ErrorCode, result.Message,
+            result.Before is null ? null : MapRecord(result.Before),
+            result.After is null ? null : MapRecord(result.After),
+            result.Synchronization is null ? null : MapJob(result.Synchronization));
+        if (result.Success) return Ok(response);
+        return result.ErrorCode is "RecordChanged" or "SnapshotExpired"
+            ? Conflict(response)
+            : BadRequest(response);
+    }
 }

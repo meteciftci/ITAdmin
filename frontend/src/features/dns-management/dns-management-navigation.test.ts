@@ -93,6 +93,25 @@ test("DNS record values are rendered as readable structured text", () => {
   assert.equal(formatDnsRecordValue("plain value"), "plain value");
 });
 
+test("DNS record mutations are typed, permission-aware, confirmed, and refresh cached inventory", () => {
+  const api = readFileSync(join(root, "features/dns-management/api.ts"), "utf8");
+  const page = readFileSync(join(root, "features/dns-management/DnsZoneRecordsPage.tsx"), "utf8");
+  const zonesPage = readFileSync(join(root, "features/dns-management/DnsZonesPage.tsx"), "utf8");
+  const dialog = readFileSync(join(root, "features/dns-management/DnsRecordDialog.tsx"), "utf8");
+  assert.match(api, /expectedRecordHash: record\.recordHash/);
+  assert.match(api, /apiClient\.delete<DnsRecordMutation>/);
+  assert.match(page, /DnsManagement\.Records\.Create/);
+  assert.match(page, /DnsManagement\.Records\.Update/);
+  assert.match(page, /DnsManagement\.Records\.Delete/);
+  assert.match(page, /ConfirmDialog/);
+  assert.match(page, /invalidateQueries\(\{ queryKey: \["dns-management", "inventory"\]/);
+  assert.match(page, /navigate\(DNS_ZONES_PATH\)/);
+  assert.match(zonesPage, /refetchInterval/);
+  assert.match(zonesPage, /snapshotKey/);
+  assert.match(dialog, /writableDnsRecordTypes/);
+  assert.doesNotMatch(api, /power\s*shell/i);
+});
+
 test("DNS locales have matching structures", () => {
   const tr = JSON.parse(readFileSync(join(root, "locales/tr/dnsManagement.json"), "utf8"));
   const en = JSON.parse(readFileSync(join(root, "locales/en/dnsManagement.json"), "utf8"));

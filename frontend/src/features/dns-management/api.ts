@@ -1,5 +1,5 @@
 import { apiClient } from "@/lib/api-client";
-import type { DnsComparisonContext, DnsComparisonRequest, DnsComparisonResponse, DnsComparisonZone, DnsCredentialProfile, DnsInventoryServer, DnsManagementSettings, DnsRecordInventory, DnsServer, DnsServerConnectionTest, DnsSyncBatch, DnsSyncJob, DnsZoneInventory, PagedDnsResponse, SaveDnsCredentialProfile, SaveDnsServer } from "./types";
+import type { CreateDnsRecord, DnsComparisonContext, DnsComparisonRequest, DnsComparisonResponse, DnsComparisonZone, DnsCredentialProfile, DnsInventoryServer, DnsManagementSettings, DnsRecordInventory, DnsRecordMutation, DnsRecordMutationInput, DnsServer, DnsServerConnectionTest, DnsSyncBatch, DnsSyncJob, DnsZoneInventory, PagedDnsResponse, SaveDnsCredentialProfile, SaveDnsServer } from "./types";
 
 const basePath = "/dns-management";
 export const DNS_SETTINGS_QUERY_KEY = ["dns-management", "settings"] as const;
@@ -30,6 +30,12 @@ export const getDnsZone = async (id: string) =>
   (await apiClient.get<DnsZoneInventory>(`${basePath}/inventory/zones/${id}`)).data;
 export const getDnsRecords = async (id: string, params: { search?: string; recordType?: string; pageNumber: number; pageSize: number }) =>
   (await apiClient.get<PagedDnsResponse<DnsRecordInventory>>(`${basePath}/inventory/zones/${id}/records`, { params })).data;
+export const createDnsRecord = async (zoneId: string, request: CreateDnsRecord) =>
+  (await apiClient.post<DnsRecordMutation>(`${basePath}/inventory/zones/${zoneId}/records`, request)).data;
+export const updateDnsRecord = async (zoneId: string, record: DnsRecordInventory, request: DnsRecordMutationInput) =>
+  (await apiClient.put<DnsRecordMutation>(`${basePath}/inventory/zones/${zoneId}/records/${record.id}`, { ...request, expectedRecordHash: record.recordHash })).data;
+export const deleteDnsRecord = async (zoneId: string, record: DnsRecordInventory) =>
+  (await apiClient.delete<DnsRecordMutation>(`${basePath}/inventory/zones/${zoneId}/records/${record.id}`, { data: { expectedRecordHash: record.recordHash } })).data;
 
 export const DNS_COMPARISON_CONTEXT_QUERY_KEY = ["dns-management", "inventory", "comparison", "context"] as const;
 export const DNS_COMPARISON_ZONES_QUERY_KEY = ["dns-management", "inventory", "comparison", "zones"] as const;

@@ -35,9 +35,11 @@ export function DnsZonesPage() {
   const inventory = useQuery({
     queryKey: DNS_INVENTORY_SERVERS_QUERY_KEY,
     queryFn: getDnsInventoryServers,
+    refetchInterval: (query) => query.state.data?.some((server) => server.lastSyncStatus === "Pending" || server.lastSyncStatus === "Running") ? 2000 : false,
   });
+  const snapshotKey = inventory.data?.map((server) => server.snapshotVersion ?? "none").join(":") ?? "loading";
   const zones = useQuery({
-    queryKey: [...DNS_ZONES_QUERY_KEY, serverId, effectiveSearch, pageNumber, pageSize],
+    queryKey: [...DNS_ZONES_QUERY_KEY, snapshotKey, serverId, effectiveSearch, pageNumber, pageSize],
     queryFn: () => getDnsZones({ serverId: serverId || undefined, search: effectiveSearch, pageNumber, pageSize }),
   });
   const columns = useMemo(() => createDnsZoneColumns({

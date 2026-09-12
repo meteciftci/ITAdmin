@@ -174,3 +174,30 @@ only candidate records for that page. Server cells aggregate multi-value RRsets 
 as equal, different, missing, unavailable, or stale. TTL values participate in equality only when
 the user enables the explicit TTL comparison option. Input limits, deterministic ordering, active
 snapshot checks, and the dedicated comparison permission are enforced by the API as well as the UI.
+
+## Record mutation workflow
+
+Record creation, update, and deletion are typed Host Agent operations; neither the API nor the
+browser can submit PowerShell text. The first writable set is A, AAAA, CNAME, MX, NS, PTR, SRV,
+and TXT. Other discovered record types remain visible but read-only until they receive an explicit
+typed contract. Record name and type are immutable during update, matching the Windows DNS object
+model; changing either requires a separately confirmed create/delete workflow.
+
+Updates and deletes carry the SHA-256 fingerprint from the active inventory snapshot. The API uses
+it to bind the request to the cached record, then sends that record's canonical data and TTL through
+the typed Host Agent contract. The Host Agent reads the live RRset, selects exactly one record with
+those expected values, and refuses the operation when the record is missing or has changed. It clones the live CIM record for updates,
+uses the old/new object pair, and deletes by the selected input object so a whole RRset can never be
+removed accidentally. Every successful write is read back before success is returned. ITAdmin then
+writes both the general audit event and the DNS before/after operation log and queues a high-priority,
+deduplicated post-mutation full inventory refresh.
+
+The record screen uses independent create, update, and delete permissions, type-specific fields,
+and an explicit live-system confirmation for deletion. A retained or superseded snapshot cannot be
+used as a mutation target.
+
+Mutation cmdlet references:
+
+- [Add-DnsServerResourceRecord](https://learn.microsoft.com/en-us/powershell/module/dnsserver/add-dnsserverresourcerecord?view=windowsserver2025-ps)
+- [Set-DnsServerResourceRecord](https://learn.microsoft.com/en-us/powershell/module/dnsserver/set-dnsserverresourcerecord?view=windowsserver2025-ps)
+- [Remove-DnsServerResourceRecord](https://learn.microsoft.com/en-us/powershell/module/dnsserver/remove-dnsserverresourcerecord?view=windowsserver2025-ps)

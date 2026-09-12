@@ -26,6 +26,7 @@ public sealed class NamedPipeHostAgentClient : IHostAgentClient
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var operationTimeout = request.Operation is HostAgentOperation.TestDnsServerConnection
             or HostAgentOperation.ReadDnsServerInventoryPage
+            or HostAgentOperation.MutateDnsServerResourceRecord
             ? TimeSpan.FromSeconds(Math.Clamp((request.DnsTimeoutSeconds ?? 30) + 10, 15, 310))
             : OperationTimeout;
         timeout.CancelAfter(operationTimeout);

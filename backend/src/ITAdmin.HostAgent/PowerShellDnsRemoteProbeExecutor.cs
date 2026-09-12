@@ -8,6 +8,7 @@ using System.Security;
 using System.Security.Authentication;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Text.Json;
 using ITAdmin.HostAgent.Contracts;
 using Microsoft.Extensions.Logging;
 
@@ -17,6 +18,8 @@ public interface IDnsRemoteProbeExecutor
 {
     Task<HostAgentDnsProbeResult> ProbeAsync(HostAgentRequest request, CancellationToken cancellationToken);
     Task<HostAgentDnsInventoryPage> ReadInventoryPageAsync(
+        HostAgentRequest request, CancellationToken cancellationToken);
+    Task<HostAgentDnsRecordMutationResult> MutateRecordAsync(
         HostAgentRequest request, CancellationToken cancellationToken);
 }
 
@@ -153,6 +156,188 @@ internal static class DnsRemoteInventoryProbe
         """;
 }
 
+internal static class DnsRemoteRecordMutation
+{
+    // This is an allowlisted, typed command. Request values are bound with AddParameter and never
+    // interpolated into executable text.
+    internal const string Script = """
+        param(
+            [Parameter(Mandatory=$true)][ValidateSet('Create','Update','Delete')][string]$MutationKind,
+            [Parameter(Mandatory=$true)][string]$ZoneName,
+            [string]$ZoneScope,
+            [string]$VirtualizationInstance,
+            [Parameter(Mandatory=$true)][string]$RelativeName,
+            [Parameter(Mandatory=$true)][ValidateSet('A','AAAA','CNAME','MX','NS','PTR','SRV','TXT')][string]$RecordType,
+            [string[]]$RecordValues,
+            [Parameter(Mandatory=$true)][int]$TimeToLiveSeconds,
+            [string]$ExpectedRecordDataJson,
+            [int]$ExpectedRecordTimeToLiveSeconds
+        )
+        $ErrorActionPreference = 'Stop'
+        Import-Module DnsServer -ErrorAction Stop
+
+        function Convert-Record([object]$record) {
+            if ($null -eq $record) { return $null }
+            $data = [ordered]@{}
+            foreach ($property in @($record.RecordData.CimInstanceProperties) | Sort-Object Name) {
+                $value = $property.Value
+                if ($null -eq $value) { $data[$property.Name] = $null }
+                elseif ($value -is [System.Array]) { $data[$property.Name] = @($value | ForEach-Object { "$_" }) }
+                elseif ($value -is [System.Net.IPAddress]) { $data[$property.Name] = $value.IPAddressToString }
+                elseif ($value -is [TimeSpan]) { $data[$property.Name] = [long]$value.TotalSeconds }
+                elseif ($value -is [DateTime]) { $data[$property.Name] = $value.ToUniversalTime().ToString('O') }
+                else { $data[$property.Name] = "$value" }
+            }
+            [pscustomobject]@{
+                RelativeName = if ($record.HostName) { "$($record.HostName)" } else { '@' }
+                RecordType = "$($record.RecordType)".ToUpperInvariant()
+                RecordDataJson = $data | ConvertTo-Json -Compress -Depth 8
+                TimeToLiveSeconds = [int][Math]::Max(0, [Math]::Min([int]::MaxValue, [Math]::Round($record.TimeToLive.TotalSeconds)))
+                Timestamp = if ($record.Timestamp -is [DateTime]) { $record.Timestamp.ToUniversalTime().ToString('O') } else { $null }
+                ZoneScope = if ($ZoneScope) { $ZoneScope } else { $null }
+                VirtualizationInstance = if ($VirtualizationInstance) { $VirtualizationInstance } else { $null }
+            }
+        }
+
+        function Get-RecordHash([object]$record) {
+            $item = Convert-Record $record
+            $hashInput = @(
+                $ZoneName.ToLowerInvariant(), $item.RelativeName.ToLowerInvariant(), $item.RecordType,
+                $item.RecordDataJson, "$($item.TimeToLiveSeconds)",
+                $(if ($ZoneScope) { $ZoneScope.ToLowerInvariant() } else { '' }),
+                $(if ($VirtualizationInstance) { $VirtualizationInstance.ToLowerInvariant() } else { '' })
+            ) -join "`n"
+            $bytes = [Text.Encoding]::UTF8.GetBytes($hashInput)
+            $sha = [Security.Cryptography.SHA256]::Create()
+            try { return ([BitConverter]::ToString($sha.ComputeHash($bytes))).Replace('-', '').ToLowerInvariant() }
+            finally { $sha.Dispose() }
+        }
+
+        function Test-ExpectedRecord([object]$record) {
+            $item = Convert-Record $record
+            $expectedData = ($ExpectedRecordDataJson | ConvertFrom-Json -ErrorAction Stop) |
+                ConvertTo-Json -Compress -Depth 8
+            return $item.RelativeName -ieq $RelativeName -and $item.RecordType -eq $RecordType -and
+                $item.RecordDataJson -ceq $expectedData -and
+                $item.TimeToLiveSeconds -eq $ExpectedRecordTimeToLiveSeconds
+        }
+
+        function Get-RecordParameters {
+            $parameters = @{ ZoneName = $ZoneName; Name = $RelativeName; RRType = $RecordType }
+            if ($ZoneScope) { $parameters.ZoneScope = $ZoneScope }
+            if ($VirtualizationInstance) { $parameters.VirtualizationInstance = $VirtualizationInstance }
+            return $parameters
+        }
+
+        function Get-WriteParameters {
+            $parameters = @{ ZoneName = $ZoneName }
+            if ($ZoneScope) { $parameters.ZoneScope = $ZoneScope }
+            if ($VirtualizationInstance) { $parameters.VirtualizationInstance = $VirtualizationInstance }
+            return $parameters
+        }
+
+        function Set-RecordData([object]$record, [string]$type, [string[]]$values) {
+            switch ($type) {
+                'A' { $record.RecordData.IPv4Address = [Net.IPAddress]::Parse($values[0]) }
+                'AAAA' { $record.RecordData.IPv6Address = [Net.IPAddress]::Parse($values[0]) }
+                'CNAME' { $record.RecordData.HostNameAlias = $values[0] }
+                'MX' { $record.RecordData.Preference = [uint16]$values[0]; $record.RecordData.MailExchange = $values[1] }
+                'NS' { $record.RecordData.NameServer = $values[0] }
+                'PTR' { $record.RecordData.PtrDomainName = $values[0] }
+                'SRV' {
+                    $record.RecordData.Priority = [uint16]$values[0]
+                    $record.RecordData.Weight = [uint16]$values[1]
+                    $record.RecordData.Port = [uint16]$values[2]
+                    $record.RecordData.DomainName = $values[3]
+                }
+                'TXT' { $record.RecordData.DescriptiveText = $values[0] }
+            }
+        }
+
+        function Add-Record {
+            $parameters = Get-WriteParameters
+            $parameters.Name = $RelativeName
+            $parameters.TimeToLive = [TimeSpan]::FromSeconds($TimeToLiveSeconds)
+            $parameters.PassThru = $true
+            switch ($RecordType) {
+                'A' { $parameters.A = $true; $parameters.IPv4Address = [Net.IPAddress]::Parse($RecordValues[0]) }
+                'AAAA' { $parameters.AAAA = $true; $parameters.IPv6Address = [Net.IPAddress]::Parse($RecordValues[0]) }
+                'CNAME' { $parameters.CName = $true; $parameters.HostNameAlias = $RecordValues[0] }
+                'MX' { $parameters.MX = $true; $parameters.Preference = [uint16]$RecordValues[0]; $parameters.MailExchange = $RecordValues[1] }
+                'NS' { $parameters.NS = $true; $parameters.NameServer = $RecordValues[0] }
+                'PTR' { $parameters.Ptr = $true; $parameters.PtrDomainName = $RecordValues[0] }
+                'SRV' {
+                    $parameters.Srv = $true; $parameters.Priority = [uint16]$RecordValues[0]
+                    $parameters.Weight = [uint16]$RecordValues[1]; $parameters.Port = [uint16]$RecordValues[2]
+                    $parameters.DomainName = $RecordValues[3]
+                }
+                'TXT' { $parameters.Txt = $true; $parameters.DescriptiveText = $RecordValues[0] }
+            }
+            return Add-DnsServerResourceRecord @parameters -ErrorAction Stop
+        }
+
+        try {
+            if ($MutationKind -eq 'Create') {
+                $written = Add-Record
+                $writtenHash = Get-RecordHash $written
+                $recordParameters = Get-RecordParameters
+                $readBack = @(Get-DnsServerResourceRecord @recordParameters -ErrorAction Stop |
+                    Where-Object { (Get-RecordHash $_) -eq $writtenHash }) | Select-Object -First 1
+                return [pscustomobject]@{
+                    Success = ($null -ne $readBack); FailureKind = if ($readBack) { $null } else { 'ReadBackFailed' }
+                    Message = if ($readBack) { 'DNS record created.' } else { 'The record was written but could not be verified.' }
+                    BeforeRecordJson = $null
+                    AfterRecordJson = if ($readBack) { (Convert-Record $readBack) | ConvertTo-Json -Compress -Depth 10 } else { $null }
+                }
+            }
+
+            $recordParameters = Get-RecordParameters
+            $matches = @(Get-DnsServerResourceRecord @recordParameters -ErrorAction Stop |
+                Where-Object { Test-ExpectedRecord $_ })
+            if ($matches.Count -ne 1) {
+                return [pscustomobject]@{
+                    Success = $false; FailureKind = 'RecordChanged'
+                    Message = 'The DNS record no longer matches the inventory snapshot. Synchronize and retry.'
+                    BeforeRecordJson = $null; AfterRecordJson = $null
+                }
+            }
+            $old = $matches[0]
+            $beforeJson = (Convert-Record $old) | ConvertTo-Json -Compress -Depth 10
+            $writeParameters = Get-WriteParameters
+            if ($MutationKind -eq 'Delete') {
+                Remove-DnsServerResourceRecord @writeParameters -InputObject $old -Force -ErrorAction Stop
+                $stillPresent = @(Get-DnsServerResourceRecord @recordParameters -ErrorAction SilentlyContinue |
+                    Where-Object { Test-ExpectedRecord $_ }).Count -gt 0
+                return [pscustomobject]@{
+                    Success = (-not $stillPresent); FailureKind = if ($stillPresent) { 'ReadBackFailed' } else { $null }
+                    Message = if ($stillPresent) { 'The record delete could not be verified.' } else { 'DNS record deleted.' }
+                    BeforeRecordJson = $beforeJson; AfterRecordJson = $null
+                }
+            }
+
+            $new = [ciminstance]::new($old)
+            $new.TimeToLive = [TimeSpan]::FromSeconds($TimeToLiveSeconds)
+            Set-RecordData $new $RecordType $RecordValues
+            $written = Set-DnsServerResourceRecord @writeParameters -OldInputObject $old -NewInputObject $new -PassThru -ErrorAction Stop
+            $writtenHash = Get-RecordHash $written
+            $readBack = @(Get-DnsServerResourceRecord @recordParameters -ErrorAction Stop |
+                Where-Object { (Get-RecordHash $_) -eq $writtenHash }) | Select-Object -First 1
+            return [pscustomobject]@{
+                Success = ($null -ne $readBack); FailureKind = if ($readBack) { $null } else { 'ReadBackFailed' }
+                Message = if ($readBack) { 'DNS record updated.' } else { 'The record was written but could not be verified.' }
+                BeforeRecordJson = $beforeJson
+                AfterRecordJson = if ($readBack) { (Convert-Record $readBack) | ConvertTo-Json -Compress -Depth 10 } else { $null }
+            }
+        } catch {
+            return [pscustomobject]@{
+                Success = $false; FailureKind = 'DnsRecordMutationFailed'
+                Message = 'The DNS server rejected the record operation.'
+                BeforeRecordJson = $null; AfterRecordJson = $null
+            }
+        }
+        """;
+}
+
 [SupportedOSPlatform("windows")]
 public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemoteProbeExecutor> logger)
     : IDnsRemoteProbeExecutor
@@ -187,6 +372,86 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             return InventoryFailure("Timeout", "The DNS inventory page timed out.");
+        }
+    }
+
+    public async Task<HostAgentDnsRecordMutationResult> MutateRecordAsync(
+        HostAgentRequest request, CancellationToken cancellationToken)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(request.DnsTimeoutSeconds!.Value));
+        try
+        {
+            return await MutateRecordCoreAsync(request, timeout.Token);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return MutationFailure("Timeout", "The DNS record operation timed out.");
+        }
+    }
+
+    private async Task<HostAgentDnsRecordMutationResult> MutateRecordCoreAsync(
+        HostAgentRequest request, CancellationToken cancellationToken)
+    {
+        var host = request.DnsHostName!.Trim().TrimEnd('.');
+        var tls = await ValidateTlsAsync(host, request.DnsPort!.Value,
+            request.DnsTlsCertificateThumbprint, cancellationToken);
+        if (!tls.NetworkReachable || !tls.Valid)
+        {
+            return MutationFailure(tls.NetworkReachable ? "TlsValidationFailed" : "NetworkUnreachable",
+                tls.NetworkReachable
+                    ? "The WinRM HTTPS certificate could not be validated."
+                    : "The WinRM HTTPS endpoint could not be reached.");
+        }
+
+        using var securePassword = ToSecureString(request.DnsPassword!);
+        var credential = new PSCredential(request.DnsUserName!, securePassword);
+        var endpoint = new UriBuilder("https", host, request.DnsPort.Value, "wsman").Uri;
+        var timeout = request.DnsTimeoutSeconds!.Value * 1000;
+        var connection = new WSManConnectionInfo(endpoint, MicrosoftPowerShellShellUri, credential)
+        {
+            AuthenticationMechanism = request.DnsAuthenticationMode == HostAgentDnsAuthenticationMode.BasicOverTls
+                ? AuthenticationMechanism.Basic : AuthenticationMechanism.Negotiate,
+            OpenTimeout = timeout,
+            OperationTimeout = timeout,
+            CancelTimeout = Math.Min(timeout, 10_000),
+            NoMachineProfile = true,
+        };
+
+        using var runspace = RunspaceFactory.CreateRunspace(connection);
+        try
+        {
+            await Task.Run(runspace.Open, cancellationToken);
+            using var powerShell = PowerShell.Create();
+            powerShell.Runspace = runspace;
+            powerShell.AddScript(DnsRemoteRecordMutation.Script, useLocalScope: true)
+                .AddParameter("MutationKind", request.DnsRecordMutationKind!.Value.ToString())
+                .AddParameter("ZoneName", request.DnsZoneName)
+                .AddParameter("ZoneScope", request.DnsZoneScope)
+                .AddParameter("VirtualizationInstance", request.DnsVirtualizationInstance)
+                .AddParameter("RelativeName", request.DnsRecordRelativeName)
+                .AddParameter("RecordType", request.DnsRecordType)
+                .AddParameter("RecordValues", request.DnsRecordValues?.ToArray() ?? [])
+                .AddParameter("TimeToLiveSeconds", request.DnsRecordTimeToLiveSeconds)
+                .AddParameter("ExpectedRecordDataJson", request.DnsExpectedRecordDataJson)
+                .AddParameter("ExpectedRecordTimeToLiveSeconds", request.DnsExpectedRecordTimeToLiveSeconds);
+            var output = await Task.Run(powerShell.Invoke, cancellationToken);
+            if (powerShell.HadErrors || output.Count != 1)
+                return MutationFailure("DnsRecordMutationFailed", "The DNS server rejected the record operation.");
+            return MapMutation(output[0]);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception) when (exception is PSRemotingTransportException
+                                          or RemoteException
+                                          or RuntimeException
+                                          or InvalidRunspaceStateException)
+        {
+            logger.LogWarning("DNS record mutation failed for {Host}:{Port} ({ExceptionType}).",
+                host, request.DnsPort, exception.GetType().Name);
+            return MutationFailure("DnsRecordMutationFailed", "The DNS server rejected the record operation.");
         }
     }
 
@@ -499,6 +764,32 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
         ZoneScope = ReadString(value, "ZoneScope", 128),
         VirtualizationInstance = ReadString(value, "VirtualizationInstance", 128),
     };
+    private static HostAgentDnsRecordMutationResult MapMutation(PSObject value)
+    {
+        var success = ReadBool(value, "Success");
+        return new HostAgentDnsRecordMutationResult
+        {
+            Success = success,
+            FailureKind = ReadString(value, "FailureKind", 64),
+            Message = ReadString(value, "Message", 2000)
+                ?? (success ? "DNS record operation completed." : "The DNS record operation failed."),
+            Before = ReadRecordJson(value, "BeforeRecordJson"),
+            After = ReadRecordJson(value, "AfterRecordJson"),
+        };
+    }
+    private static HostAgentDnsRecordInventoryItem? ReadRecordJson(PSObject value, string property)
+    {
+        var json = value.Properties[property]?.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            return JsonSerializer.Deserialize<HostAgentDnsRecordInventoryItem>(json, HostAgentProtocol.Json);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
     private static HostAgentDnsProbeResult Failure(string kind, string message, bool network, bool tls, bool authentication = false) =>
         new()
         {
@@ -510,6 +801,8 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
             AuthenticationSucceeded = authentication
         };
     private static HostAgentDnsInventoryPage InventoryFailure(string kind, string message) =>
+        new() { Success = false, FailureKind = kind, Message = message };
+    private static HostAgentDnsRecordMutationResult MutationFailure(string kind, string message) =>
         new() { Success = false, FailureKind = kind, Message = message };
     private static IReadOnlyList<T> FitPayload<T>(IEnumerable<T> source)
     {
