@@ -23,6 +23,8 @@ public interface IDnsRemoteProbeExecutor
         HostAgentRequest request, CancellationToken cancellationToken);
     Task<HostAgentDnsZoneMutationResult> MutateZoneAsync(
         HostAgentRequest request, CancellationToken cancellationToken);
+    Task<HostAgentDnsServerSettingsResult> ManageServerSettingsAsync(
+        HostAgentRequest request, CancellationToken cancellationToken);
 }
 
 internal static class DnsRemoteCapabilityProbe
@@ -47,7 +49,11 @@ internal static class DnsRemoteCapabilityProbe
             ZoneCount = $zones.Count
             Zones = [bool](Get-Command Get-DnsServerZone -ErrorAction SilentlyContinue)
             Records = [bool](Get-Command Get-DnsServerResourceRecord -ErrorAction SilentlyContinue)
-            ServerSettings = [bool](Get-Command Set-DnsServer -ErrorAction SilentlyContinue)
+            ServerSettings = [bool](Get-Command Get-DnsServerForwarder -ErrorAction SilentlyContinue) -and
+                [bool](Get-Command Set-DnsServerForwarder -ErrorAction SilentlyContinue) -and
+                [bool](Get-Command Remove-DnsServerForwarder -ErrorAction SilentlyContinue) -and
+                [bool](Get-Command Get-DnsServerRecursion -ErrorAction SilentlyContinue) -and
+                [bool](Get-Command Set-DnsServerRecursion -ErrorAction SilentlyContinue)
             Dnssec = [bool](Get-Command Get-DnsServerDnsSecZoneSetting -ErrorAction SilentlyContinue)
             Policies = [bool](Get-Command Get-DnsServerQueryResolutionPolicy -ErrorAction SilentlyContinue)
             Scopes = [bool](Get-Command Get-DnsServerZoneScope -ErrorAction SilentlyContinue)
@@ -526,6 +532,120 @@ internal static class DnsRemoteZoneMutation
         """;
 }
 
+internal static class DnsRemoteServerSettings
+{
+    // Fixed allowlisted implementation. Every request value is supplied as a bound parameter.
+    internal const string Script = """
+        param(
+            [Parameter(Mandatory=$true)][ValidateSet('Read','Update','ClearCache')][string]$Action,
+            [string[]]$ForwarderAddresses,
+            [bool]$ForwarderUseRootHint,
+            [ValidateRange(0,15)][int]$ForwarderTimeoutSeconds,
+            [bool]$ForwarderEnableReordering,
+            [bool]$RecursionEnabled,
+            [ValidateRange(0,15)][int]$RecursionAdditionalTimeoutSeconds,
+            [ValidateRange(1,15)][int]$RecursionRetryIntervalSeconds,
+            [ValidateRange(1,15)][int]$RecursionTimeoutSeconds,
+            [bool]$RecursionSecureResponse,
+            [string]$ExpectedServerSettingsJson
+        )
+        $ErrorActionPreference = 'Stop'
+        Import-Module DnsServer -ErrorAction Stop
+
+        function Get-Settings {
+            $forwarder = Get-DnsServerForwarder -ErrorAction Stop
+            $recursion = Get-DnsServerRecursion -ErrorAction Stop
+            [ordered]@{
+                ForwarderAddresses = @($forwarder.IPAddress | ForEach-Object {
+                    if ($_ -is [System.Net.IPAddress]) { $_.IPAddressToString } else { "$_" }
+                } | Sort-Object)
+                ForwarderUseRootHint = [bool]$forwarder.UseRootHint
+                ForwarderTimeoutSeconds = [int]$forwarder.Timeout
+                ForwarderEnableReordering = [bool]$forwarder.EnableReordering
+                RecursionEnabled = [bool]$recursion.Enable
+                RecursionAdditionalTimeoutSeconds = [int]$recursion.AdditionalTimeout
+                RecursionRetryIntervalSeconds = [int]$recursion.RetryInterval
+                RecursionTimeoutSeconds = [int]$recursion.Timeout
+                RecursionSecureResponse = [bool]$recursion.SecureResponse
+            }
+        }
+
+        function Test-Settings([object]$actual, [object]$expected) {
+            $actualForwarders = @($actual.ForwarderAddresses | ForEach-Object { "$($_)".ToLowerInvariant() } | Sort-Object) -join ','
+            $expectedForwarders = @($expected.ForwarderAddresses | ForEach-Object { "$($_)".ToLowerInvariant() } | Sort-Object) -join ','
+            return $actualForwarders -eq $expectedForwarders -and
+                $actual.ForwarderUseRootHint -eq [bool]$expected.ForwarderUseRootHint -and
+                $actual.ForwarderTimeoutSeconds -eq [int]$expected.ForwarderTimeoutSeconds -and
+                $actual.ForwarderEnableReordering -eq [bool]$expected.ForwarderEnableReordering -and
+                $actual.RecursionEnabled -eq [bool]$expected.RecursionEnabled -and
+                $actual.RecursionAdditionalTimeoutSeconds -eq [int]$expected.RecursionAdditionalTimeoutSeconds -and
+                $actual.RecursionRetryIntervalSeconds -eq [int]$expected.RecursionRetryIntervalSeconds -and
+                $actual.RecursionTimeoutSeconds -eq [int]$expected.RecursionTimeoutSeconds -and
+                $actual.RecursionSecureResponse -eq [bool]$expected.RecursionSecureResponse
+        }
+
+        function Set-Forwarders([object]$settings) {
+            $addresses = @($settings.ForwarderAddresses | Sort-Object -Unique)
+            $current = Get-Settings
+            if ($addresses.Count -eq 0) {
+                if ($current.ForwarderAddresses.Count -gt 0) {
+                    Remove-DnsServerForwarder -IPAddress ([System.Net.IPAddress[]]@($current.ForwarderAddresses)) -Force -ErrorAction Stop | Out-Null
+                }
+                Set-DnsServerForwarder -UseRootHint ([bool]$settings.ForwarderUseRootHint) -Timeout ([int]$settings.ForwarderTimeoutSeconds) -EnableReordering ([bool]$settings.ForwarderEnableReordering) -ErrorAction Stop | Out-Null
+            } else {
+                Set-DnsServerForwarder -IPAddress ([System.Net.IPAddress[]]@($addresses)) -UseRootHint ([bool]$settings.ForwarderUseRootHint) -Timeout ([int]$settings.ForwarderTimeoutSeconds) -EnableReordering ([bool]$settings.ForwarderEnableReordering) -ErrorAction Stop | Out-Null
+            }
+        }
+
+        try {
+            if ($Action -eq 'ClearCache') {
+                Clear-DnsServerCache -Force -ErrorAction Stop
+                return [pscustomobject]@{ Success=$true; FailureKind=$null; Message='The DNS server cache was cleared.'; BeforeJson=$null; AfterJson=$null }
+            }
+
+            $before = Get-Settings
+            $beforeJson = $before | ConvertTo-Json -Compress -Depth 5
+            if ($Action -eq 'Read') {
+                return [pscustomobject]@{ Success=$true; FailureKind=$null; Message='DNS server settings read.'; BeforeJson=$null; AfterJson=$beforeJson }
+            }
+
+            $expected = $ExpectedServerSettingsJson | ConvertFrom-Json -ErrorAction Stop
+            if (-not (Test-Settings $before $expected)) {
+                return [pscustomobject]@{ Success=$false; FailureKind='ServerSettingsChanged'; Message='The live DNS server settings changed. Refresh and retry.'; BeforeJson=$beforeJson; AfterJson=$null }
+            }
+
+            $requestedForwarders = @($ForwarderAddresses | Sort-Object -Unique)
+            $requested = [pscustomobject]@{
+                ForwarderAddresses = $requestedForwarders
+                ForwarderUseRootHint = $ForwarderUseRootHint
+                ForwarderTimeoutSeconds = $ForwarderTimeoutSeconds
+                ForwarderEnableReordering = $ForwarderEnableReordering
+                RecursionEnabled = $RecursionEnabled
+                RecursionAdditionalTimeoutSeconds = $RecursionAdditionalTimeoutSeconds
+                RecursionRetryIntervalSeconds = $RecursionRetryIntervalSeconds
+                RecursionTimeoutSeconds = $RecursionTimeoutSeconds
+                RecursionSecureResponse = $RecursionSecureResponse
+            }
+            Set-Forwarders $requested
+            Set-DnsServerRecursion -Enable $RecursionEnabled -AdditionalTimeout $RecursionAdditionalTimeoutSeconds -RetryInterval $RecursionRetryIntervalSeconds -Timeout $RecursionTimeoutSeconds -SecureResponse $RecursionSecureResponse -ErrorAction Stop | Out-Null
+
+            $after = Get-Settings
+            if (-not (Test-Settings $after $requested)) { throw 'Server settings read-back verification failed.' }
+            return [pscustomobject]@{ Success=$true; FailureKind=$null; Message='DNS server settings updated.'; BeforeJson=$beforeJson; AfterJson=($after | ConvertTo-Json -Compress -Depth 5) }
+        } catch {
+            $afterJson = $null
+            if ($Action -eq 'Update' -and $null -ne $before) {
+                try {
+                    Set-Forwarders $before
+                    Set-DnsServerRecursion -Enable $before.RecursionEnabled -AdditionalTimeout $before.RecursionAdditionalTimeoutSeconds -RetryInterval $before.RecursionRetryIntervalSeconds -Timeout $before.RecursionTimeoutSeconds -SecureResponse $before.RecursionSecureResponse -ErrorAction Stop | Out-Null
+                    $afterJson = (Get-Settings) | ConvertTo-Json -Compress -Depth 5
+                } catch { $afterJson = $null }
+            }
+            return [pscustomobject]@{ Success=$false; FailureKind='DnsServerSettingsOperationFailed'; Message='The DNS server rejected the server settings operation. Any partial change was rolled back where possible.'; BeforeJson=$beforeJson; AfterJson=$afterJson }
+        }
+        """;
+}
+
 [SupportedOSPlatform("windows")]
 public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemoteProbeExecutor> logger)
     : IDnsRemoteProbeExecutor
@@ -590,6 +710,87 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             return ZoneMutationFailure("Timeout", "The DNS zone operation timed out.");
+        }
+    }
+
+    public async Task<HostAgentDnsServerSettingsResult> ManageServerSettingsAsync(
+        HostAgentRequest request, CancellationToken cancellationToken)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(request.DnsTimeoutSeconds!.Value));
+        try
+        {
+            return await ManageServerSettingsCoreAsync(request, timeout.Token);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return ServerSettingsFailure("Timeout", "The DNS server settings operation timed out.");
+        }
+    }
+
+    private async Task<HostAgentDnsServerSettingsResult> ManageServerSettingsCoreAsync(
+        HostAgentRequest request, CancellationToken cancellationToken)
+    {
+        var host = request.DnsHostName!.Trim().TrimEnd('.');
+        var tls = await ValidateTlsAsync(host, request.DnsPort!.Value,
+            request.DnsTlsCertificateThumbprint, cancellationToken);
+        if (!tls.NetworkReachable || !tls.Valid)
+        {
+            return ServerSettingsFailure(tls.NetworkReachable ? "TlsValidationFailed" : "NetworkUnreachable",
+                tls.NetworkReachable
+                    ? "The WinRM HTTPS certificate could not be validated."
+                    : "The WinRM HTTPS endpoint could not be reached.");
+        }
+
+        using var securePassword = ToSecureString(request.DnsPassword!);
+        var credential = new PSCredential(request.DnsUserName!, securePassword);
+        var endpoint = new UriBuilder("https", host, request.DnsPort.Value, "wsman").Uri;
+        var timeout = request.DnsTimeoutSeconds!.Value * 1000;
+        var connection = new WSManConnectionInfo(endpoint, MicrosoftPowerShellShellUri, credential)
+        {
+            AuthenticationMechanism = request.DnsAuthenticationMode == HostAgentDnsAuthenticationMode.BasicOverTls
+                ? AuthenticationMechanism.Basic : AuthenticationMechanism.Negotiate,
+            OpenTimeout = timeout,
+            OperationTimeout = timeout,
+            CancelTimeout = Math.Min(timeout, 10_000),
+            NoMachineProfile = true,
+        };
+
+        using var runspace = RunspaceFactory.CreateRunspace(connection);
+        try
+        {
+            await Task.Run(runspace.Open, cancellationToken);
+            using var powerShell = PowerShell.Create();
+            powerShell.Runspace = runspace;
+            powerShell.AddScript(DnsRemoteServerSettings.Script, useLocalScope: true)
+                .AddParameter("Action", request.DnsServerSettingsAction!.Value.ToString())
+                .AddParameter("ForwarderAddresses", request.DnsForwarderAddresses?.ToArray() ?? [])
+                .AddParameter("ForwarderUseRootHint", request.DnsForwarderUseRootHint ?? false)
+                .AddParameter("ForwarderTimeoutSeconds", request.DnsForwarderTimeoutSeconds ?? 5)
+                .AddParameter("ForwarderEnableReordering", request.DnsForwarderEnableReordering ?? true)
+                .AddParameter("RecursionEnabled", request.DnsRecursionEnabled ?? true)
+                .AddParameter("RecursionAdditionalTimeoutSeconds", request.DnsRecursionAdditionalTimeoutSeconds ?? 4)
+                .AddParameter("RecursionRetryIntervalSeconds", request.DnsRecursionRetryIntervalSeconds ?? 3)
+                .AddParameter("RecursionTimeoutSeconds", request.DnsRecursionTimeoutSeconds ?? 8)
+                .AddParameter("RecursionSecureResponse", request.DnsRecursionSecureResponse ?? true)
+                .AddParameter("ExpectedServerSettingsJson", request.DnsExpectedServerSettingsJson);
+            var output = await Task.Run(powerShell.Invoke, cancellationToken);
+            if (powerShell.HadErrors || output.Count != 1)
+                return ServerSettingsFailure("DnsServerSettingsOperationFailed", "The DNS server rejected the server settings operation.");
+            return MapServerSettingsResult(output[0]);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception) when (exception is PSRemotingTransportException
+                                          or RemoteException
+                                          or RuntimeException
+                                          or InvalidRunspaceStateException)
+        {
+            logger.LogWarning("DNS server settings operation failed for {Host}:{Port} ({ExceptionType}).",
+                host, request.DnsPort, exception.GetType().Name);
+            return ServerSettingsFailure("DnsServerSettingsOperationFailed", "The DNS server rejected the server settings operation.");
         }
     }
 
@@ -1090,6 +1291,32 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
             return null;
         }
     }
+    private static HostAgentDnsServerSettingsResult MapServerSettingsResult(PSObject value)
+    {
+        var success = ReadBool(value, "Success");
+        return new HostAgentDnsServerSettingsResult
+        {
+            Success = success,
+            FailureKind = ReadString(value, "FailureKind", 64),
+            Message = ReadString(value, "Message", 2000)
+                ?? (success ? "DNS server settings operation completed." : "The DNS server settings operation failed."),
+            Before = ReadServerSettingsJson(value, "BeforeJson"),
+            After = ReadServerSettingsJson(value, "AfterJson"),
+        };
+    }
+    private static HostAgentDnsServerSettings? ReadServerSettingsJson(PSObject value, string property)
+    {
+        var json = value.Properties[property]?.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            return JsonSerializer.Deserialize<HostAgentDnsServerSettings>(json, HostAgentProtocol.Json);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
     private static HostAgentDnsProbeResult Failure(string kind, string message, bool network, bool tls, bool authentication = false) =>
         new()
         {
@@ -1105,6 +1332,8 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
     private static HostAgentDnsRecordMutationResult MutationFailure(string kind, string message) =>
         new() { Success = false, FailureKind = kind, Message = message };
     private static HostAgentDnsZoneMutationResult ZoneMutationFailure(string kind, string message) =>
+        new() { Success = false, FailureKind = kind, Message = message };
+    private static HostAgentDnsServerSettingsResult ServerSettingsFailure(string kind, string message) =>
         new() { Success = false, FailureKind = kind, Message = message };
     private static IReadOnlyList<T> FitPayload<T>(IEnumerable<T> source)
     {

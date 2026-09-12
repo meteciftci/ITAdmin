@@ -28,6 +28,7 @@ public sealed class NamedPipeHostAgentClient : IHostAgentClient
             or HostAgentOperation.ReadDnsServerInventoryPage
             or HostAgentOperation.MutateDnsServerResourceRecord
             or HostAgentOperation.MutateDnsServerZone
+            or HostAgentOperation.ManageDnsServerSettings
             ? TimeSpan.FromSeconds(Math.Clamp((request.DnsTimeoutSeconds ?? 30) + 10, 15, 310))
             : OperationTimeout;
         timeout.CancelAfter(operationTimeout);

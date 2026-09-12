@@ -33,7 +33,7 @@ namespace ITAdmin.HostAgent.Contracts;
 /// </summary>
 public static class HostAgentProtocol
 {
-    public const int ProtocolVersion = 6;
+    public const int ProtocolVersion = 7;
 
     /// <summary>Pipe name. Machine-local; the agent ACLs it to the app pool identity and administrators.</summary>
     public const string PipeName = "ITAdmin.HostAgent";
@@ -114,6 +114,12 @@ public enum HostAgentOperation
     /// configuration and never carries executable text.
     /// </summary>
     MutateDnsServerZone = 12,
+
+    /// <summary>
+    /// Read or update the allowlisted server-level forwarder and recursion settings, or clear the
+    /// DNS server cache. The request carries typed values only; the agent owns the fixed script.
+    /// </summary>
+    ManageDnsServerSettings = 13,
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -153,6 +159,14 @@ public enum HostAgentDnsZoneKind
     Secondary = 1,
     Stub = 2,
     Forwarder = 3,
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum HostAgentDnsServerSettingsAction
+{
+    Read = 0,
+    Update = 1,
+    ClearCache = 2,
 }
 
 /// <summary>One request across the pipe.</summary>
@@ -280,6 +294,39 @@ public sealed record HostAgentRequest
     [JsonPropertyName("dnsExpectedZoneStateJson")]
     public string? DnsExpectedZoneStateJson { get; init; }
 
+    [JsonPropertyName("dnsServerSettingsAction")]
+    public HostAgentDnsServerSettingsAction? DnsServerSettingsAction { get; init; }
+
+    [JsonPropertyName("dnsForwarderAddresses")]
+    public IReadOnlyList<string>? DnsForwarderAddresses { get; init; }
+
+    [JsonPropertyName("dnsForwarderUseRootHint")]
+    public bool? DnsForwarderUseRootHint { get; init; }
+
+    [JsonPropertyName("dnsForwarderTimeoutSeconds")]
+    public int? DnsForwarderTimeoutSeconds { get; init; }
+
+    [JsonPropertyName("dnsForwarderEnableReordering")]
+    public bool? DnsForwarderEnableReordering { get; init; }
+
+    [JsonPropertyName("dnsRecursionEnabled")]
+    public bool? DnsRecursionEnabled { get; init; }
+
+    [JsonPropertyName("dnsRecursionAdditionalTimeoutSeconds")]
+    public int? DnsRecursionAdditionalTimeoutSeconds { get; init; }
+
+    [JsonPropertyName("dnsRecursionRetryIntervalSeconds")]
+    public int? DnsRecursionRetryIntervalSeconds { get; init; }
+
+    [JsonPropertyName("dnsRecursionTimeoutSeconds")]
+    public int? DnsRecursionTimeoutSeconds { get; init; }
+
+    [JsonPropertyName("dnsRecursionSecureResponse")]
+    public bool? DnsRecursionSecureResponse { get; init; }
+
+    [JsonPropertyName("dnsExpectedServerSettingsJson")]
+    public string? DnsExpectedServerSettingsJson { get; init; }
+
     public string ToJson() => JsonSerializer.Serialize(this, HostAgentProtocol.Json);
 
     public static HostAgentRequest? FromJson(string? json)
@@ -341,7 +388,8 @@ public sealed record HostAgentRequest
         if (Operation is HostAgentOperation.TestDnsServerConnection
             or HostAgentOperation.ReadDnsServerInventoryPage
             or HostAgentOperation.MutateDnsServerResourceRecord
-            or HostAgentOperation.MutateDnsServerZone)
+            or HostAgentOperation.MutateDnsServerZone
+            or HostAgentOperation.ManageDnsServerSettings)
         {
             var hostName = DnsHostName?.Trim().TrimEnd('.');
             if (string.IsNullOrWhiteSpace(hostName) || hostName.Length > 253
@@ -488,6 +536,34 @@ public sealed record HostAgentRequest
             }
         }
 
+
+        if (Operation == HostAgentOperation.ManageDnsServerSettings)
+        {
+            if (DnsServerSettingsAction is null || !Enum.IsDefined(DnsServerSettingsAction.Value))
+                problems.Add("dnsServerSettingsAction is required.");
+            if (DnsServerSettingsAction == HostAgentDnsServerSettingsAction.Update)
+            {
+                if (DnsForwarderAddresses is { Count: > 16 }
+                    || DnsForwarderAddresses?.Any(x => !IPAddress.TryParse(x, out _)) == true)
+                    problems.Add("dnsForwarderAddresses must contain at most 16 IP addresses.");
+                if (DnsForwarderUseRootHint is null || DnsForwarderEnableReordering is null
+                    || DnsRecursionEnabled is null || DnsRecursionSecureResponse is null)
+                    problems.Add("All DNS server boolean settings are required for update.");
+                if (DnsForwarderTimeoutSeconds is null or < 0 or > 15)
+                    problems.Add("dnsForwarderTimeoutSeconds must be between 0 and 15.");
+                if (DnsRecursionAdditionalTimeoutSeconds is null or < 0 or > 15)
+                    problems.Add("dnsRecursionAdditionalTimeoutSeconds must be between 0 and 15.");
+                if (DnsRecursionRetryIntervalSeconds is null or < 1 or > 15)
+                    problems.Add("dnsRecursionRetryIntervalSeconds must be between 1 and 15.");
+                if (DnsRecursionTimeoutSeconds is null or < 1 or > 15)
+                    problems.Add("dnsRecursionTimeoutSeconds must be between 1 and 15.");
+                if (string.IsNullOrWhiteSpace(DnsExpectedServerSettingsJson)
+                    || DnsExpectedServerSettingsJson.Length > 16_384
+                    || !IsJsonObject(DnsExpectedServerSettingsJson))
+                    problems.Add("dnsExpectedServerSettingsJson must be a bounded JSON object.");
+            }
+        }
+
         return problems;
     }
 
@@ -596,6 +672,9 @@ public sealed record HostAgentResponse
 
     [JsonPropertyName("dnsZoneMutation")]
     public HostAgentDnsZoneMutationResult? DnsZoneMutation { get; init; }
+
+    [JsonPropertyName("dnsServerSettings")]
+    public HostAgentDnsServerSettingsResult? DnsServerSettings { get; init; }
 
     [JsonPropertyName("repositoryStatus")]
     public HostAgentRepositoryStatus RepositoryStatus { get; init; } = HostAgentRepositoryStatus.Unknown;
@@ -791,6 +870,42 @@ public sealed record HostAgentDnsZoneMutationResult
     public HostAgentDnsZoneInventoryItem? Before { get; init; }
     [JsonPropertyName("after")]
     public HostAgentDnsZoneInventoryItem? After { get; init; }
+}
+
+public sealed record HostAgentDnsServerSettings
+{
+    [JsonPropertyName("forwarderAddresses")]
+    public IReadOnlyList<string> ForwarderAddresses { get; init; } = [];
+    [JsonPropertyName("forwarderUseRootHint")]
+    public bool ForwarderUseRootHint { get; init; }
+    [JsonPropertyName("forwarderTimeoutSeconds")]
+    public int ForwarderTimeoutSeconds { get; init; }
+    [JsonPropertyName("forwarderEnableReordering")]
+    public bool ForwarderEnableReordering { get; init; }
+    [JsonPropertyName("recursionEnabled")]
+    public bool RecursionEnabled { get; init; }
+    [JsonPropertyName("recursionAdditionalTimeoutSeconds")]
+    public int RecursionAdditionalTimeoutSeconds { get; init; }
+    [JsonPropertyName("recursionRetryIntervalSeconds")]
+    public int RecursionRetryIntervalSeconds { get; init; }
+    [JsonPropertyName("recursionTimeoutSeconds")]
+    public int RecursionTimeoutSeconds { get; init; }
+    [JsonPropertyName("recursionSecureResponse")]
+    public bool RecursionSecureResponse { get; init; }
+}
+
+public sealed record HostAgentDnsServerSettingsResult
+{
+    [JsonPropertyName("success")]
+    public bool Success { get; init; }
+    [JsonPropertyName("failureKind")]
+    public string? FailureKind { get; init; }
+    [JsonPropertyName("message")]
+    public string Message { get; init; } = string.Empty;
+    [JsonPropertyName("before")]
+    public HostAgentDnsServerSettings? Before { get; init; }
+    [JsonPropertyName("after")]
+    public HostAgentDnsServerSettings? After { get; init; }
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]

@@ -24,6 +24,13 @@ export function DnsManagementRedirectPage() {
     return <Navigate to="/dns-management/comparison" replace />;
   }
 
+  if (
+    canAccess(user, PermissionCodes.DnsManagement.ManageServerSettings) ||
+    canAccess(user, PermissionCodes.DnsManagement.ClearCache)
+  ) {
+    return <Navigate to="/dns-management/server-settings" replace />;
+  }
+
   return (
     <Navigate
       to={getErrorRoutePath("FORBIDDEN")}

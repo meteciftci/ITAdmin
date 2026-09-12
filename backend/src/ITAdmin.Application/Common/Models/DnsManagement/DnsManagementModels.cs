@@ -107,3 +107,21 @@ public sealed record DnsZoneMutationModel(
     bool Success, string? ErrorCode, string Message,
     DnsZoneInventoryModel? Before, DnsZoneInventoryModel? After,
     DnsSyncJobModel? Synchronization);
+
+public sealed record DnsServerSettingsModel(
+    IReadOnlyList<string> ForwarderAddresses, bool ForwarderUseRootHint,
+    int ForwarderTimeoutSeconds, bool ForwarderEnableReordering,
+    bool RecursionEnabled, int RecursionAdditionalTimeoutSeconds,
+    int RecursionRetryIntervalSeconds, int RecursionTimeoutSeconds,
+    bool RecursionSecureResponse, string StateToken);
+
+public sealed record DnsServerSettingsCommand(
+    Guid ServerId, IReadOnlyList<string> ForwarderAddresses, bool ForwarderUseRootHint,
+    int ForwarderTimeoutSeconds, bool ForwarderEnableReordering,
+    bool RecursionEnabled, int RecursionAdditionalTimeoutSeconds,
+    int RecursionRetryIntervalSeconds, int RecursionTimeoutSeconds,
+    bool RecursionSecureResponse, string ExpectedStateToken, DnsActorContext Actor);
+
+public sealed record DnsServerSettingsOperationModel(
+    bool Success, string? ErrorCode, string Message,
+    DnsServerSettingsModel? Settings = null);

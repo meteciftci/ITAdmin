@@ -14,7 +14,8 @@ namespace ITAdmin.Api.Controllers;
 public sealed class DnsManagementAdministrationController(
     IDnsManagementAdministrationService service,
     IDnsServerConnectionTestService connectionTestService,
-    IDnsInventorySyncService inventorySyncService) : ControllerBase
+    IDnsInventorySyncService inventorySyncService,
+    IDnsServerSettingsService serverSettingsService) : ControllerBase
 {
     [HttpGet("settings")]
     [RequirePermission(DnsManagementPermissions.ManageSettings)]
@@ -59,7 +60,7 @@ public sealed class DnsManagementAdministrationController(
     }
 
     [HttpGet("servers")]
-    [RequirePermission(DnsManagementPermissions.ServersView)]
+    [RequireAnyPermission(DnsManagementPermissions.ServersView, DnsManagementPermissions.ManageServerSettings, DnsManagementPermissions.ClearCache)]
     public async Task<ActionResult<IReadOnlyList<DnsServerResponse>>> GetServers(CancellationToken cancellationToken) =>
         Ok((await service.GetServersAsync(cancellationToken)).Select(Map));
 
@@ -95,6 +96,46 @@ public sealed class DnsManagementAdministrationController(
         return result.IsSuccess && result.Value is not null
             ? Accepted(Map(result.Value))
             : BadRequest(new { message = result.Message });
+    }
+
+    [HttpGet("servers/{id:guid}/server-settings")]
+    [RequirePermission(DnsManagementPermissions.ManageServerSettings)]
+    public async Task<ActionResult<DnsServerSettingsResponse>> GetServerSettings(
+        Guid id, CancellationToken cancellationToken)
+    {
+        var result = await serverSettingsService.GetAsync(id, cancellationToken);
+        return result.Success && result.Settings is not null
+            ? Ok(Map(result.Settings))
+            : BadRequest(new { code = result.ErrorCode, message = result.Message });
+    }
+
+    [HttpPut("servers/{id:guid}/server-settings")]
+    [RequirePermission(DnsManagementPermissions.ManageServerSettings)]
+    public async Task<ActionResult<DnsServerOperationResponse>> UpdateServerSettings(
+        Guid id, UpdateDnsServerSettingsRequest request, CancellationToken cancellationToken)
+    {
+        var result = await serverSettingsService.UpdateAsync(new(
+            id, request.ForwarderAddresses ?? [], request.ForwarderUseRootHint,
+            request.ForwarderTimeoutSeconds, request.ForwarderEnableReordering,
+            request.RecursionEnabled, request.RecursionAdditionalTimeoutSeconds,
+            request.RecursionRetryIntervalSeconds, request.RecursionTimeoutSeconds,
+            request.RecursionSecureResponse, request.ExpectedStateToken,
+            DnsManagementActorResolver.Resolve(this)), cancellationToken);
+        return result.Success
+            ? Ok(Map(result))
+            : BadRequest(new { code = result.ErrorCode, message = result.Message });
+    }
+
+    [HttpPost("servers/{id:guid}/cache/clear")]
+    [RequirePermission(DnsManagementPermissions.ClearCache)]
+    public async Task<ActionResult<DnsServerOperationResponse>> ClearServerCache(
+        Guid id, CancellationToken cancellationToken)
+    {
+        var result = await serverSettingsService.ClearCacheAsync(
+            id, DnsManagementActorResolver.Resolve(this), cancellationToken);
+        return result.Success
+            ? Ok(Map(result))
+            : BadRequest(new { code = result.ErrorCode, message = result.Message });
     }
 
     private async Task<ActionResult<DnsCredentialProfileResponse>> SaveCredential(
@@ -137,4 +178,11 @@ public sealed class DnsManagementAdministrationController(
     private static DnsSyncJobResponse Map(AppModels.DnsSyncJobModel x) => new(
         x.Id, x.BatchId, x.ServerId, x.ServerDisplayName, x.Scope, x.Trigger, x.Status,
         x.AttemptCount, x.RequestedAt, x.StartedAt, x.CompletedAt, x.ErrorCode, x.Message, x.AlreadyQueued);
+    private static DnsServerSettingsResponse Map(AppModels.DnsServerSettingsModel x) => new(
+        x.ForwarderAddresses, x.ForwarderUseRootHint, x.ForwarderTimeoutSeconds,
+        x.ForwarderEnableReordering, x.RecursionEnabled, x.RecursionAdditionalTimeoutSeconds,
+        x.RecursionRetryIntervalSeconds, x.RecursionTimeoutSeconds,
+        x.RecursionSecureResponse, x.StateToken);
+    private static DnsServerOperationResponse Map(AppModels.DnsServerSettingsOperationModel x) => new(
+        x.Success, x.ErrorCode, x.Message, x.Settings is null ? null : Map(x.Settings));
 }

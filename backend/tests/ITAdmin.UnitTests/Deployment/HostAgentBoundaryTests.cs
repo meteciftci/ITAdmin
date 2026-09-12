@@ -139,6 +139,7 @@ public sealed class HostAgentBoundaryTests
     [InlineData(HostAgentOperation.ReadDnsServerInventoryPage)]
     [InlineData(HostAgentOperation.MutateDnsServerResourceRecord)]
     [InlineData(HostAgentOperation.MutateDnsServerZone)]
+    [InlineData(HostAgentOperation.ManageDnsServerSettings)]
     public void Authorization_WebApplicationMayInvokeTheUpdateAndSettingsOperations(HostAgentOperation operation) =>
         Assert.True(Authorization.Authorize(@"IIS APPPOOL\ITAdmin", false, operation).IsAllowed);
 
@@ -560,6 +561,76 @@ public sealed class HostAgentBoundaryTests
         Assert.Empty(parseErrors);
     }
 
+    [Fact]
+    public void Protocol_DnsServerSettingsUpdateRequiresTypedBoundedConfigurationAndExpectedState()
+    {
+        var valid = new HostAgentRequest
+        {
+            Operation = HostAgentOperation.ManageDnsServerSettings,
+            DnsHostName = "dns01.example.local",
+            DnsPort = 5986,
+            DnsAuthenticationMode = HostAgentDnsAuthenticationMode.Negotiate,
+            DnsUserName = "EXAMPLE\\dns-svc",
+            DnsPassword = "secret",
+            DnsTimeoutSeconds = 30,
+            DnsServerSettingsAction = HostAgentDnsServerSettingsAction.Update,
+            DnsForwarderAddresses = ["192.0.2.10"],
+            DnsForwarderUseRootHint = false,
+            DnsForwarderTimeoutSeconds = 5,
+            DnsForwarderEnableReordering = true,
+            DnsRecursionEnabled = true,
+            DnsRecursionAdditionalTimeoutSeconds = 4,
+            DnsRecursionRetryIntervalSeconds = 3,
+            DnsRecursionTimeoutSeconds = 8,
+            DnsRecursionSecureResponse = true,
+            DnsExpectedServerSettingsJson = "{}",
+        };
+
+        Assert.Empty(valid.Validate());
+        Assert.NotEmpty((valid with { DnsExpectedServerSettingsJson = null }).Validate());
+        Assert.NotEmpty((valid with { DnsForwarderAddresses = ["not-an-ip"] }).Validate());
+        Assert.NotEmpty((valid with { DnsRecursionRetryIntervalSeconds = 16 }).Validate());
+    }
+
+    [Fact]
+    public async Task Dispatch_DnsServerSettingsUsesFixedExecutorAndNeverEchoesCredentials()
+    {
+        var executor = new RecordingDnsProbeExecutor();
+        var dispatcher = new HostAgentDispatcher(
+            Authorization, new RecordingOperations(), dnsRemoteProbeExecutor: executor);
+        var request = new HostAgentRequest
+        {
+            Operation = HostAgentOperation.ManageDnsServerSettings,
+            DnsHostName = "dns01.example.local",
+            DnsPort = 5986,
+            DnsAuthenticationMode = HostAgentDnsAuthenticationMode.Negotiate,
+            DnsUserName = "EXAMPLE\\dns-svc",
+            DnsPassword = "secret",
+            DnsTimeoutSeconds = 30,
+            DnsServerSettingsAction = HostAgentDnsServerSettingsAction.ClearCache,
+        };
+
+        var response = await dispatcher.DispatchAsync(request.ToJson(), WebApplication());
+
+        Assert.Equal(1, executor.ServerSettingsCallCount);
+        Assert.True(response.DnsServerSettings!.Success);
+        Assert.DoesNotContain("secret", response.ToJson(), StringComparison.Ordinal);
+        Assert.DoesNotContain("dns-svc", response.ToJson(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DnsServerSettingsScript_IsFixedAndUsesBoundParameters()
+    {
+        Assert.StartsWith("param(", DnsRemoteServerSettings.Script.TrimStart(), StringComparison.Ordinal);
+        Assert.DoesNotContain("DnsPassword", DnsRemoteServerSettings.Script, StringComparison.Ordinal);
+        Assert.DoesNotContain("Invoke-Expression", DnsRemoteServerSettings.Script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ExpectedServerSettingsJson", DnsRemoteServerSettings.Script, StringComparison.Ordinal);
+        Assert.Contains("Clear-DnsServerCache -Force", DnsRemoteServerSettings.Script, StringComparison.Ordinal);
+        System.Management.Automation.Language.Parser.ParseInput(
+            DnsRemoteServerSettings.Script, out _, out var parseErrors);
+        Assert.Empty(parseErrors);
+    }
+
     // ------------------------------------------------------------------------------------------
     // Configuration
     // ------------------------------------------------------------------------------------------
@@ -667,6 +738,7 @@ public sealed class HostAgentBoundaryTests
         public int InventoryCallCount { get; private set; }
         public int MutationCallCount { get; private set; }
         public int ZoneMutationCallCount { get; private set; }
+        public int ServerSettingsCallCount { get; private set; }
         public Task<HostAgentDnsProbeResult> ProbeAsync(HostAgentRequest request, CancellationToken cancellationToken)
         {
             CallCount++;
@@ -692,6 +764,13 @@ public sealed class HostAgentBoundaryTests
         {
             ZoneMutationCallCount++;
             return Task.FromResult(new HostAgentDnsZoneMutationResult { Success = true, Message = "ok" });
+        }
+
+        public Task<HostAgentDnsServerSettingsResult> ManageServerSettingsAsync(
+            HostAgentRequest request, CancellationToken cancellationToken)
+        {
+            ServerSettingsCallCount++;
+            return Task.FromResult(new HostAgentDnsServerSettingsResult { Success = true, Message = "ok" });
         }
     }
 

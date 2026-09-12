@@ -233,3 +233,32 @@ Zone cmdlet references:
 - [Add-DnsServerStubZone](https://learn.microsoft.com/en-us/powershell/module/dnsserver/add-dnsserverstubzone?view=windowsserver2025-ps)
 - [Add-DnsServerConditionalForwarderZone](https://learn.microsoft.com/en-us/powershell/module/dnsserver/add-dnsserverconditionalforwarderzone?view=windowsserver2025-ps)
 - [Remove-DnsServerZone](https://learn.microsoft.com/en-us/powershell/module/dnsserver/remove-dnsserverzone?view=windowsserver2025-ps)
+
+## Server-wide forwarding, recursion, and cache workflow
+
+Server-wide settings are read live because they are operational configuration rather than inventory
+reporting data. The UI exposes only the bounded settings supported by the typed Host Agent contract:
+the forwarder IP list, root-hints fallback, forwarder timeout and reordering, plus recursion enablement,
+timeouts, retry interval, and secure-response cache-pollution protection. It does not expose a generic
+PowerShell or whole-server configuration surface.
+
+Every settings read returns an opaque token containing the exact live values. An update must return
+that token; the Host Agent reads the settings again and refuses the write if another administrator
+changed them in the meantime. Forwarder and recursion writes are read back before success. Because
+Windows does not provide a transaction spanning the two cmdlets, a later failure triggers a
+best-effort restoration of the captured pre-change values, and the operation log retains the
+observed before/after state for review.
+
+Cache clearing is a separate typed action and permission. The UI always requires a destructive
+confirmation, and the Host Agent invokes the fixed full-cache operation with force only after that
+authorized API call. Settings changes and cache clears both write general audit and DNS operation
+events; passwords never enter summaries or responses. No DNS-server-side agent is installed.
+
+Server-settings cmdlet references:
+
+- [Get-DnsServerForwarder](https://learn.microsoft.com/en-us/powershell/module/dnsserver/get-dnsserverforwarder?view=windowsserver2025-ps)
+- [Set-DnsServerForwarder](https://learn.microsoft.com/en-us/powershell/module/dnsserver/set-dnsserverforwarder?view=windowsserver2025-ps)
+- [Remove-DnsServerForwarder](https://learn.microsoft.com/en-us/powershell/module/dnsserver/remove-dnsserverforwarder?view=windowsserver2025-ps)
+- [Get-DnsServerRecursion](https://learn.microsoft.com/en-us/powershell/module/dnsserver/get-dnsserverrecursion?view=windowsserver2025-ps)
+- [Set-DnsServerRecursion](https://learn.microsoft.com/en-us/powershell/module/dnsserver/set-dnsserverrecursion?view=windowsserver2025-ps)
+- [Clear-DnsServerCache](https://learn.microsoft.com/en-us/powershell/module/dnsserver/clear-dnsservercache?view=windowsserver2025-ps)

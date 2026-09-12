@@ -53,3 +53,21 @@ public sealed record DnsSyncJobResponse(
     DnsSyncScope Scope, DnsSyncTrigger Trigger, DnsSyncStatus Status,
     int AttemptCount, DateTime RequestedAt, DateTime? StartedAt, DateTime? CompletedAt,
     string? ErrorCode, string? Message, bool AlreadyQueued);
+
+public sealed record DnsServerSettingsResponse(
+    IReadOnlyList<string> ForwarderAddresses, bool ForwarderUseRootHint,
+    int ForwarderTimeoutSeconds, bool ForwarderEnableReordering,
+    bool RecursionEnabled, int RecursionAdditionalTimeoutSeconds,
+    int RecursionRetryIntervalSeconds, int RecursionTimeoutSeconds,
+    bool RecursionSecureResponse, string StateToken);
+
+public sealed record UpdateDnsServerSettingsRequest(
+    IReadOnlyList<string>? ForwarderAddresses, bool ForwarderUseRootHint,
+    int ForwarderTimeoutSeconds, bool ForwarderEnableReordering,
+    bool RecursionEnabled, int RecursionAdditionalTimeoutSeconds,
+    int RecursionRetryIntervalSeconds, int RecursionTimeoutSeconds,
+    bool RecursionSecureResponse, string ExpectedStateToken);
+
+public sealed record DnsServerOperationResponse(
+    bool Success, string? ErrorCode, string Message,
+    DnsServerSettingsResponse? Settings = null);

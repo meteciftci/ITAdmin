@@ -48,6 +48,7 @@
       "licenseManagementSeats": "License Assignments",
       "dnsManagement": "DNS Management",
       "dnsManagementServers": "DNS Servers",
+      "dnsManagementServerSettings": "DNS Server Settings",
       "dnsManagementZones": "DNS Zone Inventory",
       "dnsManagementRecords": "DNS Records",
       "dnsManagementComparison": "DNS Comparison",

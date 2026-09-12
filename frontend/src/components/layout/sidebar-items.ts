@@ -176,6 +176,8 @@ function isDnsManagementSectionVisible(user: CurrentUser | null): boolean {
     PermissionCodes.DnsManagement.Zones.View,
     PermissionCodes.DnsManagement.Records.View,
     PermissionCodes.DnsManagement.Compare,
+    PermissionCodes.DnsManagement.ManageServerSettings,
+    PermissionCodes.DnsManagement.ClearCache,
   ]);
 }
 
@@ -206,6 +208,7 @@ export const getSidebarGroups = (
         visible: isDnsManagementSectionVisible(user),
         children: [
           { titleKey: "items.dnsManagementServers", to: "/dns-management/servers", icon: ServerCog, visible: canAccess(user, PermissionCodes.DnsManagement.Servers.View) },
+          { titleKey: "items.dnsManagementServerSettings", to: "/dns-management/server-settings", icon: SlidersHorizontal, visible: canAccessAny(user, [PermissionCodes.DnsManagement.ManageServerSettings, PermissionCodes.DnsManagement.ClearCache]) },
           { titleKey: "items.dnsManagementZones", to: "/dns-management/zones", icon: ListTree, visible: canAccessAny(user, [PermissionCodes.DnsManagement.Zones.View, PermissionCodes.DnsManagement.Records.View]) },
           { titleKey: "items.dnsManagementComparison", to: "/dns-management/comparison", icon: GitCompareArrows, visible: canAccess(user, PermissionCodes.DnsManagement.Compare) },
         ],

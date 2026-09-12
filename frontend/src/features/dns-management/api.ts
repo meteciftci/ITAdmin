@@ -1,5 +1,5 @@
 import { apiClient } from "@/lib/api-client";
-import type { CreateDnsRecord, DnsComparisonContext, DnsComparisonRequest, DnsComparisonResponse, DnsComparisonZone, DnsCredentialProfile, DnsInventoryServer, DnsManagementSettings, DnsRecordInventory, DnsRecordMutation, DnsRecordMutationInput, DnsServer, DnsServerConnectionTest, DnsSyncBatch, DnsSyncJob, DnsZoneInventory, DnsZoneMutation, PagedDnsResponse, SaveDnsCredentialProfile, SaveDnsServer, SaveDnsZone, UpdateDnsZone } from "./types";
+import type { CreateDnsRecord, DnsComparisonContext, DnsComparisonRequest, DnsComparisonResponse, DnsComparisonZone, DnsCredentialProfile, DnsInventoryServer, DnsManagementSettings, DnsRecordInventory, DnsRecordMutation, DnsRecordMutationInput, DnsServer, DnsServerConnectionTest, DnsServerOperation, DnsServerSettings, DnsSyncBatch, DnsSyncJob, DnsZoneInventory, DnsZoneMutation, PagedDnsResponse, SaveDnsCredentialProfile, SaveDnsServer, SaveDnsZone, UpdateDnsServerSettings, UpdateDnsZone } from "./types";
 
 const basePath = "/dns-management";
 export const DNS_SETTINGS_QUERY_KEY = ["dns-management", "settings"] as const;
@@ -19,6 +19,13 @@ export const testDnsServerConnection = async (id: string) =>
   (await apiClient.post<DnsServerConnectionTest>(`${basePath}/servers/${id}/test-connection`)).data;
 export const synchronizeDnsServer = async (id: string) =>
   (await apiClient.post<DnsSyncJob>(`${basePath}/servers/${id}/synchronizations`)).data;
+export const DNS_SERVER_SETTINGS_QUERY_KEY = ["dns-management", "server-settings"] as const;
+export const getDnsServerSettings = async (id: string) =>
+  (await apiClient.get<DnsServerSettings>(`${basePath}/servers/${id}/server-settings`)).data;
+export const updateDnsServerSettings = async (id: string, request: UpdateDnsServerSettings) =>
+  (await apiClient.put<DnsServerOperation>(`${basePath}/servers/${id}/server-settings`, request)).data;
+export const clearDnsServerCache = async (id: string) =>
+  (await apiClient.post<DnsServerOperation>(`${basePath}/servers/${id}/cache/clear`)).data;
 
 export const DNS_INVENTORY_SERVERS_QUERY_KEY = ["dns-management", "inventory", "servers"] as const;
 export const DNS_ZONES_QUERY_KEY = ["dns-management", "inventory", "zones"] as const;

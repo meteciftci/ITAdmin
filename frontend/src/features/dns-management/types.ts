@@ -187,3 +187,27 @@ export type DnsSyncBatch = {
   failedCount: number;
   jobs: DnsSyncJob[];
 };
+
+export type DnsServerSettings = {
+  forwarderAddresses: string[];
+  forwarderUseRootHint: boolean;
+  forwarderTimeoutSeconds: number;
+  forwarderEnableReordering: boolean;
+  recursionEnabled: boolean;
+  recursionAdditionalTimeoutSeconds: number;
+  recursionRetryIntervalSeconds: number;
+  recursionTimeoutSeconds: number;
+  recursionSecureResponse: boolean;
+  stateToken: string;
+};
+
+export type UpdateDnsServerSettings = Omit<DnsServerSettings, "stateToken"> & {
+  expectedStateToken: string;
+};
+
+export type DnsServerOperation = {
+  success: boolean;
+  errorCode?: string | null;
+  message: string;
+  settings?: DnsServerSettings | null;
+};

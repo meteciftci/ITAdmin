@@ -130,6 +130,22 @@ test("DNS zone lifecycle is typed, permission-aware, protected, and refreshes in
   assert.doesNotMatch(api, /power\s*shell/i);
 });
 
+test("DNS server settings and cache operations are live, typed, and independently authorized", () => {
+  const routes = readRouterSource();
+  const api = readFileSync(join(root, "features/dns-management/api.ts"), "utf8");
+  const page = readFileSync(join(root, "features/dns-management/DnsServerSettingsPage.tsx"), "utf8");
+  assert.match(routes, /path: "\/dns-management\/server-settings"/);
+  assert.match(routes, /DnsManagement\.ManageServerSettings/);
+  assert.match(routes, /DnsManagement\.ClearCache/);
+  assert.match(api, /servers\/\$\{id\}\/server-settings/);
+  assert.match(api, /servers\/\$\{id\}\/cache\/clear/);
+  assert.match(page, /DnsManagement\.ManageServerSettings/);
+  assert.match(page, /DnsManagement\.ClearCache/);
+  assert.match(page, /ConfirmDialog/);
+  assert.match(page, /stateToken/);
+  assert.doesNotMatch(api, /power\s*shell/i);
+});
+
 test("DNS locales have matching structures", () => {
   const tr = JSON.parse(readFileSync(join(root, "locales/tr/dnsManagement.json"), "utf8"));
   const en = JSON.parse(readFileSync(join(root, "locales/en/dnsManagement.json"), "utf8"));
