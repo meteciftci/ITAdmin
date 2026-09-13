@@ -10,8 +10,11 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { SectionCard } from "@/components/common/SectionCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { getApiErrorMessage } from "@/lib/api-error";
 import {
   DNS_SERVERS_QUERY_KEY,
@@ -20,9 +23,9 @@ import {
   getDnssecConfiguration,
   mutateDnssecConfiguration,
 } from "./api";
-import type { DnssecMutationInput, DnssecZone } from "./types";
+import type { DnssecMutationInput, DnssecResolverConfiguration, DnssecZone } from "./types";
 
-type PendingAction = Pick<DnssecMutationInput, "action" | "zoneName" | "keyIds">;
+type PendingAction = Omit<DnssecMutationInput, "expectedStateToken">;
 
 export function DnssecManagementPage() {
   const { t } = useTranslation(["dnsManagement", "common"]);
@@ -63,7 +66,7 @@ export function DnssecManagementPage() {
   });
 
   const actionText = pending ? t(`dnssec.actions.${pending.action}`) : "";
-  const isDanger = pending?.action === "Unsign";
+  const isDanger = pending?.action === "Unsign" || pending?.action === "RemoveTrustAnchorType" || (pending?.action === "SetValidationEnabled" && pending.validationEnabled === false);
   return (
     <section className="space-y-4">
       <PageHeader title={t("dnssec.title")} description={t("dnssec.description")} actions={selectedServerId ? <Button variant="outline" disabled={configuration.isFetching || mutation.isPending} onClick={() => configuration.refetch()}>{t("common:actions.refresh")}</Button> : null} />
@@ -88,9 +91,67 @@ export function DnssecManagementPage() {
         {selectedZone ? <ZoneDetails zone={selectedZone} disabled={mutation.isPending} onAction={setPending} /> : null}
       </div> : null}
 
-      <ConfirmDialog open={pending !== null} title={t("dnssec.confirmTitle", { action: actionText })} description={pending ? t(`dnssec.confirmations.${pending.action}`, { zone: pending.zoneName }) : undefined} confirmText={actionText} cancelText={t("common:actions.cancel")} variant={isDanger ? "danger" : "default"} isLoading={mutation.isPending} onOpenChange={(open) => { if (!open) setPending(null); }} onConfirm={() => { if (pending) mutation.mutate(pending); }} />
+      {configuration.data ? <ResolverPanel resolver={configuration.data.resolver} disabled={mutation.isPending} onAction={setPending} /> : null}
+
+      <ConfirmDialog open={pending !== null} title={t("dnssec.confirmTitle", { action: actionText })} description={pending ? t(`dnssec.confirmations.${pending.action}`, { zone: pending.zoneName, trustPoint: pending.trustPointName }) : undefined} confirmText={actionText} cancelText={t("common:actions.cancel")} variant={isDanger ? "danger" : "default"} isLoading={mutation.isPending} onOpenChange={(open) => { if (!open) setPending(null); }} onConfirm={() => { if (pending) mutation.mutate(pending); }} />
     </section>
   );
+}
+
+function ResolverPanel({ resolver, disabled, onAction }: { resolver: DnssecResolverConfiguration; disabled: boolean; onAction: (value: PendingAction) => void }) {
+  const { t } = useTranslation("dnsManagement");
+  const [kind, setKind] = useState<"Ds" | "DnsKey">("Ds");
+  const [name, setName] = useState("");
+  const [algorithm, setAlgorithm] = useState("RsaSha256");
+  const [keyTag, setKeyTag] = useState("");
+  const [digestType, setDigestType] = useState<"Sha1" | "Sha256" | "Sha384">("Sha256");
+  const [digest, setDigest] = useState("");
+  const [base64Data, setBase64Data] = useState("");
+  const digestLength = digestType === "Sha1" ? 40 : digestType === "Sha256" ? 64 : 96;
+  const canAdd = name.trim().length > 0 && (kind === "Ds"
+    ? /^\d+$/.test(keyTag) && Number(keyTag) <= 65535 && digest.length === digestLength && /^[0-9a-f]+$/i.test(digest)
+    : base64Data.trim().length > 0 && base64Data.length <= 16384 && /^[A-Za-z0-9+/]+={0,2}$/.test(base64Data.trim()));
+  const addAnchor = () => onAction(kind === "Ds"
+    ? { action: "AddDsTrustAnchor", trustPointName: name.trim(), cryptoAlgorithm: algorithm, keyTag: Number(keyTag), digestType, digest: digest.trim() }
+    : { action: "AddDnsKeyTrustAnchor", trustPointName: name.trim(), cryptoAlgorithm: algorithm, base64Data: base64Data.trim() });
+
+  return <div className="space-y-4">
+    <SectionCard title={t("dnssec.resolver.title")} description={t("dnssec.resolver.description")} actions={<Button variant="outline" disabled={disabled} onClick={() => onAction({ action: "RetrieveRootTrustAnchor" })}>{t("dnssec.actions.RetrieveRootTrustAnchor")}</Button>}>
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-md border p-3">
+          <div><p className="font-medium">{t("dnssec.resolver.validation")}</p><p className="text-sm text-muted-foreground">{t("dnssec.resolver.validationHelp")}</p></div>
+          <div className="flex items-center gap-2"><Badge variant={resolver.validationEnabled ? "success" : "secondary"}>{resolver.validationEnabled ? t("dnssec.resolver.enabled") : t("dnssec.resolver.disabled")}</Badge><Switch checked={resolver.validationEnabled} disabled={disabled} aria-label={t("dnssec.resolver.validation")} onCheckedChange={(checked) => onAction({ action: "SetValidationEnabled", validationEnabled: checked })} /></div>
+        </div>
+        {resolver.directoryServicesAvailable ? <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">{t("dnssec.resolver.adReplicationWarning")}</div> : null}
+        <dl className="grid gap-3 text-sm sm:grid-cols-3">
+          <Item label={t("dnssec.resolver.storage")} value={resolver.directoryServicesAvailable ? t("dnssec.resolver.activeDirectory") : t("dnssec.resolver.localFile")} />
+          <Item label={t("dnssec.resolver.readOnlyDc")} value={resolver.isReadOnlyDomainController ? t("dnssec.yes") : t("dnssec.no")} />
+          <Item label={t("dnssec.resolver.rootUrl")} value={resolver.rootTrustAnchorsUrl ?? "—"} />
+        </dl>
+      </div>
+    </SectionCard>
+
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(20rem,0.8fr)]">
+      <SectionCard title={t("dnssec.resolver.pointsTitle")} description={t("dnssec.resolver.pointsDescription")}>
+        <div className="space-y-3">{resolver.trustPoints.map((point) => <div key={point.name} className="rounded-md border p-3">
+          <div className="flex flex-wrap items-start justify-between gap-2"><div><p className="font-medium">{point.name}</p><p className="text-xs text-muted-foreground">{point.state ?? t("dnssec.unknown")} · {point.anchors.length} {t("dnssec.resolver.anchorCount")}</p></div><div className="flex gap-2">{[...new Set(point.anchors.map((x) => x.type))].filter((type): type is "DnsKey" | "Ds" => type === "DnsKey" || type === "Ds").map((type) => <Button key={type} size="sm" variant="destructive" disabled={disabled} onClick={() => onAction({ action: "RemoveTrustAnchorType", trustPointName: point.name, trustAnchorType: type })}>{t("dnssec.resolver.removeType", { type })}</Button>)}</div></div>
+          <div className="mt-3 space-y-2">{point.anchors.map((anchor, index) => <div key={anchor.type + "-" + index} className="rounded bg-muted/40 p-2 text-xs"><span className="font-medium">{anchor.type}</span>{anchor.state ? " · " + anchor.state : null}<div className="mt-1 break-all font-mono text-muted-foreground">{anchor.data ?? "—"}</div></div>)}</div>
+          {(point.lastActiveRefreshTime || point.nextActiveRefreshTime) ? <p className="mt-2 text-xs text-muted-foreground">{t("dnssec.resolver.refreshTimes", { last: formatDate(point.lastActiveRefreshTime), next: formatDate(point.nextActiveRefreshTime) })}</p> : null}
+        </div>)}
+        {resolver.trustPoints.length === 0 ? <p className="text-sm text-muted-foreground">{t("dnssec.resolver.noPoints")}</p> : null}</div>
+      </SectionCard>
+
+      <SectionCard title={t("dnssec.resolver.addTitle")} description={t("dnssec.resolver.addDescription")}>
+        <div className="space-y-3">
+          <div className="space-y-1"><Label htmlFor="anchor-kind">{t("dnssec.resolver.type")}</Label><Select id="anchor-kind" value={kind} onChange={(e) => setKind(e.target.value as "Ds" | "DnsKey")}><option value="Ds">DS</option><option value="DnsKey">DNSKEY</option></Select></div>
+          <div className="space-y-1"><Label htmlFor="anchor-name">{t("dnssec.resolver.name")}</Label><Input id="anchor-name" value={name} maxLength={253} onChange={(e) => setName(e.target.value)} placeholder="secure.example.com" /></div>
+          <div className="space-y-1"><Label htmlFor="anchor-algorithm">{t("dnssec.fields.algorithm")}</Label><Select id="anchor-algorithm" value={algorithm} onChange={(e) => setAlgorithm(e.target.value)}>{["RsaSha1","RsaSha256","RsaSha512","RsaSha1NSec3","ECDsaP256Sha256","ECDsaP384Sha384"].map((x) => <option key={x}>{x}</option>)}</Select></div>
+          {kind === "Ds" ? <><div className="space-y-1"><Label htmlFor="anchor-keytag">{t("dnssec.resolver.keyTag")}</Label><Input id="anchor-keytag" type="number" min={0} max={65535} value={keyTag} onChange={(e) => setKeyTag(e.target.value)} /></div><div className="space-y-1"><Label htmlFor="anchor-digest-type">{t("dnssec.resolver.digestType")}</Label><Select id="anchor-digest-type" value={digestType} onChange={(e) => setDigestType(e.target.value as typeof digestType)}><option>Sha1</option><option>Sha256</option><option>Sha384</option></Select></div><div className="space-y-1"><Label htmlFor="anchor-digest">{t("dnssec.resolver.digest")}</Label><Textarea id="anchor-digest" value={digest} maxLength={96} onChange={(e) => setDigest(e.target.value)} /></div></> : <div className="space-y-1"><Label htmlFor="anchor-data">{t("dnssec.resolver.dnskey")}</Label><Textarea id="anchor-data" value={base64Data} maxLength={16384} onChange={(e) => setBase64Data(e.target.value)} /></div>}
+          <Button disabled={disabled || !canAdd} onClick={addAnchor}>{t("dnssec.resolver.add")}</Button>
+        </div>
+      </SectionCard>
+    </div>
+  </div>;
 }
 
 function ZoneDetails({ zone, disabled, onAction }: { zone: DnssecZone; disabled: boolean; onAction: (value: PendingAction) => void }) {
@@ -122,4 +183,8 @@ function Item({ label, value }: { label: string; value: string }) {
 function formatSeconds(value: number | null | undefined, suffix: string) {
   if (value == null) return "—";
   return `${value} ${suffix}`;
+}
+
+function formatDate(value: string | null | undefined) {
+  return value ? new Date(value).toLocaleString() : "—";
 }

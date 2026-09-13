@@ -179,7 +179,9 @@ public sealed class DnsManagementAdministrationController(
         Guid id, DnssecMutationRequest request, CancellationToken cancellationToken)
     {
         var result = await dnssecManagementService.MutateAsync(new(
-            id, request.Action, request.ZoneName, request.KeyIds ?? [], request.ExpectedStateToken,
+            id, request.Action, request.ZoneName, request.KeyIds ?? [], request.ValidationEnabled,
+            request.TrustPointName, request.TrustAnchorType, request.CryptoAlgorithm, request.KeyTag,
+            request.DigestType, request.Digest, request.Base64Data, request.ExpectedStateToken,
             DnsManagementActorResolver.Resolve(this)), cancellationToken);
         return result.Success
             ? Ok(new DnssecOperationResponse(true, null, result.Message,
@@ -250,5 +252,11 @@ public sealed class DnsManagementAdministrationController(
             zone.ParentHasSecureDelegation, zone.SigningKeys.Select(key => new DnssecSigningKeyResponse(
                 key.KeyId, key.KeyType, key.CryptoAlgorithm, key.KeyLength, key.KeyStatus,
                 key.KeyStorageProvider, key.IsRolloverEnabled, key.RolloverPeriodSeconds,
-                key.NextRolloverAction, key.NextRolloverTime)).ToArray())).ToArray(), x.StateToken);
+                key.NextRolloverAction, key.NextRolloverTime)).ToArray())).ToArray(),
+        new DnssecResolverConfigurationResponse(x.Resolver.ValidationEnabled, x.Resolver.IsReadOnlyDomainController,
+            x.Resolver.DirectoryServicesAvailable, x.Resolver.RootTrustAnchorsUrl,
+            x.Resolver.TrustPoints.Select(point => new DnssecTrustPointResponse(point.Name, point.State,
+                point.LastActiveRefreshTime, point.NextActiveRefreshTime,
+                point.Anchors.Select(anchor => new DnssecTrustAnchorResponse(anchor.Type, anchor.State, anchor.Data)).ToArray())).ToArray()),
+        x.StateToken);
 }

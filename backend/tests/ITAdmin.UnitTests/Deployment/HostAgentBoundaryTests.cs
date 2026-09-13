@@ -718,6 +718,45 @@ public sealed class HostAgentBoundaryTests
     }
 
     [Fact]
+    public void Protocol_DnssecResolverMutationsRequireTypedBoundedAnchorData()
+    {
+        var baseline = new HostAgentRequest
+        {
+            Operation = HostAgentOperation.ManageDnssecConfiguration,
+            DnsHostName = "dns01.example.local", DnsPort = 5986,
+            DnsAuthenticationMode = HostAgentDnsAuthenticationMode.Negotiate,
+            DnsUserName = "EXAMPLE\\dns-svc", DnsPassword = "secret", DnsTimeoutSeconds = 120,
+            DnsExpectedDnssecConfigurationJson = "{\"zones\":[],\"resolver\":{}}",
+        };
+
+        Assert.Empty((baseline with { DnssecAction = HostAgentDnssecAction.SetValidationEnabled, DnssecValidationEnabled = true }).Validate());
+        Assert.NotEmpty((baseline with { DnssecAction = HostAgentDnssecAction.SetValidationEnabled }).Validate());
+        Assert.Empty((baseline with { DnssecAction = HostAgentDnssecAction.RetrieveRootTrustAnchor }).Validate());
+        Assert.Empty((baseline with
+        {
+            DnssecAction = HostAgentDnssecAction.AddDsTrustAnchor, DnssecTrustPointName = "secure.example",
+            DnssecCryptoAlgorithm = "RsaSha256", DnssecKeyTag = 1234, DnssecDigestType = "Sha256",
+            DnssecDigest = new string('A', 64),
+        }).Validate());
+        Assert.NotEmpty((baseline with
+        {
+            DnssecAction = HostAgentDnssecAction.AddDsTrustAnchor, DnssecTrustPointName = "secure.example",
+            DnssecCryptoAlgorithm = "Unknown", DnssecKeyTag = 70000, DnssecDigestType = "Sha256",
+            DnssecDigest = "not-hex",
+        }).Validate());
+        Assert.Empty((baseline with
+        {
+            DnssecAction = HostAgentDnssecAction.AddDnsKeyTrustAnchor, DnssecTrustPointName = "secure.example",
+            DnssecCryptoAlgorithm = "ECDsaP256Sha256", DnssecBase64Data = Convert.ToBase64String([1, 2, 3]),
+        }).Validate());
+        Assert.NotEmpty((baseline with
+        {
+            DnssecAction = HostAgentDnssecAction.RemoveTrustAnchorType, DnssecTrustPointName = "secure.example",
+            DnssecTrustAnchorType = "Unknown",
+        }).Validate());
+    }
+
+    [Fact]
     public async Task Dispatch_DnssecUsesFixedExecutorAndNeverEchoesCredentials()
     {
         var executor = new RecordingDnsProbeExecutor();
@@ -740,13 +779,14 @@ public sealed class HostAgentBoundaryTests
     }
 
     [Fact]
-    public void DnssecScript_IsFixedParsesAndUsesOnlyAuthoritativeLifecycleCmdlets()
+    public void DnssecScript_IsFixedParsesAndUsesTypedLifecycleAndTrustCmdlets()
     {
         Assert.StartsWith("param(", DnsRemoteDnssecConfiguration.Script.TrimStart(), StringComparison.Ordinal);
         Assert.DoesNotContain("Invoke-Expression", DnsRemoteDnssecConfiguration.Script, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("ScriptBlock", DnsRemoteDnssecConfiguration.Script, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("Add-DnsServerTrustAnchor", DnsRemoteDnssecConfiguration.Script, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("Remove-DnsServerTrustAnchor", DnsRemoteDnssecConfiguration.Script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Add-DnsServerTrustAnchor", DnsRemoteDnssecConfiguration.Script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Remove-DnsServerTrustAnchor", DnsRemoteDnssecConfiguration.Script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Set-DnsServerSetting", DnsRemoteDnssecConfiguration.Script, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Invoke-DnsServerZoneSign", DnsRemoteDnssecConfiguration.Script, StringComparison.Ordinal);
         Assert.Contains("Invoke-DnsServerZoneUnsign", DnsRemoteDnssecConfiguration.Script, StringComparison.Ordinal);
         Assert.Contains("Invoke-DnsServerSigningKeyRollover", DnsRemoteDnssecConfiguration.Script, StringComparison.Ordinal);

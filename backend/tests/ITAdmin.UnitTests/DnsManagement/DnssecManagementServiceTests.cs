@@ -55,6 +55,7 @@ public sealed class DnssecManagementServiceTests
 
         var result = await service.MutateAsync(new(
             server.Id, DnssecAction.RolloverKeys, "example.local", [keyId],
+            null, null, null, null, null, null, null, null,
             current.Configuration.StateToken, Actor));
 
         Assert.True(result.Success);
@@ -75,11 +76,33 @@ public sealed class DnssecManagementServiceTests
         var service = CreateService(context, agent);
 
         var result = await service.MutateAsync(new(
-            server.Id, DnssecAction.RolloverKeys, "example.local", [], "invalid", Actor));
+            server.Id, DnssecAction.RolloverKeys, "example.local", [],
+            null, null, null, null, null, null, null, null, "invalid", Actor));
 
         Assert.False(result.Success);
         Assert.Equal("ValidationFailed", result.ErrorCode);
         Assert.Null(agent.LastRequest);
+    }
+
+    [Fact]
+    public async Task Validation_update_forwards_typed_value_and_writes_resolver_audit()
+    {
+        await using var context = CreateContext();
+        var server = await SeedAsync(context);
+        var agent = new DnssecAgent();
+        var service = CreateService(context, agent);
+        var current = await service.GetAsync(server.Id);
+
+        var result = await service.MutateAsync(new(
+            server.Id, DnssecAction.SetValidationEnabled, null, [], false,
+            null, null, null, null, null, null, null, current.Configuration!.StateToken, Actor));
+
+        Assert.True(result.Success);
+        Assert.False(agent.LastRequest!.DnssecValidationEnabled);
+        Assert.Null(agent.LastRequest.DnssecZoneName);
+        var log = await context.DnsOperationLogs.SingleAsync();
+        Assert.Equal("DnssecValidationUpdate", log.OperationType);
+        Assert.Equal("Succeeded", log.Status);
     }
 
     private static readonly DnsActorContext Actor = new(null, "admin", "127.0.0.1", "unit-test");
@@ -130,6 +153,12 @@ public sealed class DnssecManagementServiceTests
                     IsSigned = true, IsEligibleForSigning = true,
                     SigningKeys = [new HostAgentDnssecSigningKey { KeyId = KeyId, KeyType = "KeySigningKey" }],
                 }],
+                Resolver = new HostAgentDnssecResolverConfiguration
+                {
+                    ValidationEnabled = true, DirectoryServicesAvailable = true,
+                    RootTrustAnchorsUrl = "https://data.iana.org/root-anchors/root-anchors.xml",
+                    TrustPoints = [new HostAgentDnssecTrustPoint { Name = ".", State = "Active" }],
+                },
             };
             return Task.FromResult(new HostAgentResponse
             {

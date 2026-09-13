@@ -807,13 +807,21 @@ internal static class DnsRemotePolicyConfiguration
 
 internal static class DnsRemoteDnssecConfiguration
 {
-    // Authoritative DNSSEC lifecycle only. Values are parameter-bound and the available cmdlets
-    // are fixed here; trust-anchor and resolver validation management are deliberately excluded.
+    // Authoritative signing and recursive validation are separate concerns, but share one live,
+    // concurrency-protected snapshot. Every value is parameter-bound and every cmdlet is fixed.
     internal const string Script = """
         param(
-            [Parameter(Mandatory=$true)][ValidateSet('Read','SignWithDefaults','Resign','Unsign','RolloverKeys')][string]$Action,
+            [Parameter(Mandatory=$true)][ValidateSet('Read','SignWithDefaults','Resign','Unsign','RolloverKeys','SetValidationEnabled','RetrieveRootTrustAnchor','AddDsTrustAnchor','AddDnsKeyTrustAnchor','RemoveTrustAnchorType')][string]$Action,
             [string]$ZoneName,
             [Guid[]]$KeyIds,
+            [Nullable[bool]]$ValidationEnabled,
+            [string]$TrustPointName,
+            [ValidateSet('','DnsKey','Ds')][string]$TrustAnchorType,
+            [ValidateSet('','RsaSha1','RsaSha256','RsaSha512','RsaSha1NSec3','ECDsaP256Sha256','ECDsaP384Sha384')][string]$CryptoAlgorithm,
+            [Nullable[int]]$KeyTag,
+            [ValidateSet('','Sha1','Sha256','Sha384')][string]$DigestType,
+            [string]$Digest,
+            [string]$Base64Data,
             [string]$ExpectedConfigurationJson
         )
         $ErrorActionPreference = 'Stop'
@@ -873,9 +881,41 @@ internal static class DnsRemoteDnssecConfiguration
                 SigningKeys=$keys
             }
         }
+        function Utc-OrNull([object]$value) {
+            if ($value -is [DateTime]) { return $value.ToUniversalTime().ToString('O') }
+            return $null
+        }
+        function Convert-Anchor([object]$anchor) {
+            [ordered]@{
+                Type=if ($anchor.TrustAnchorType) { "$($anchor.TrustAnchorType)" } else { 'Unknown' }
+                State=(Text-OrNull $anchor.TrustAnchorState)
+                Data=(Text-OrNull $anchor.TrustAnchorData)
+            }
+        }
+        function Get-ResolverConfiguration {
+            $settings = Get-DnsServerSetting -All -ErrorAction Stop
+            $points = @(Get-DnsServerTrustPoint -ErrorAction Stop | ForEach-Object {
+                $point = $_
+                $pointName = "$($point.TrustPointName)"
+                $anchors = @(Get-DnsServerTrustAnchor -Name $pointName -ErrorAction Stop | ForEach-Object { Convert-Anchor $_ } | Sort-Object Type,Data)
+                [ordered]@{
+                    Name=$pointName; State=(Text-OrNull $point.TrustPointState)
+                    LastActiveRefreshTime=(Utc-OrNull $point.LastActiveRefreshTime)
+                    NextActiveRefreshTime=(Utc-OrNull $point.NextActiveRefreshTime)
+                    Anchors=$anchors
+                }
+            } | Sort-Object Name)
+            [ordered]@{
+                ValidationEnabled=[bool]$settings.EnableDnsSec
+                IsReadOnlyDomainController=[bool]$settings.IsReadOnlyDC
+                DirectoryServicesAvailable=[bool]$settings.DsAvailable
+                RootTrustAnchorsUrl=(Text-OrNull $settings.RootTrustAnchorsURL)
+                TrustPoints=$points
+            }
+        }
         function Get-Configuration {
             $zones = @(Get-DnsServerZone -ErrorAction Stop | ForEach-Object { Convert-Zone $_ } | Sort-Object Name)
-            [ordered]@{ Zones=$zones }
+            [ordered]@{ Zones=$zones; Resolver=(Get-ResolverConfiguration) }
         }
         function Normalize-Zone([object]$zone) {
             [ordered]@{
@@ -901,25 +941,48 @@ internal static class DnsRemoteDnssecConfiguration
                 } | Sort-Object KeyType,KeyId)
             }
         }
+        function Normalize-Resolver([object]$resolver) {
+            [ordered]@{
+                ValidationEnabled=[bool]$resolver.ValidationEnabled
+                IsReadOnlyDomainController=[bool]$resolver.IsReadOnlyDomainController
+                DirectoryServicesAvailable=[bool]$resolver.DirectoryServicesAvailable
+                RootTrustAnchorsUrl=(Text-OrNull $resolver.RootTrustAnchorsUrl)
+                TrustPoints=@($resolver.TrustPoints | ForEach-Object {
+                    [ordered]@{
+                        Name="$($_.Name)".ToLowerInvariant(); State=(Text-OrNull $_.State)
+                        LastActiveRefreshTime=(Text-OrNull $_.LastActiveRefreshTime)
+                        NextActiveRefreshTime=(Text-OrNull $_.NextActiveRefreshTime)
+                        Anchors=@($_.Anchors | ForEach-Object { [ordered]@{ Type="$($_.Type)".ToLowerInvariant(); State=(Text-OrNull $_.State); Data=(Text-OrNull $_.Data) } } | Sort-Object Type,Data)
+                    }
+                } | Sort-Object Name)
+            }
+        }
 
         $before = $null
         $beforeJson = $null
         try {
             $before = Get-Configuration
-            if (@($before.Zones).Count -gt 500 -or @($before.Zones.SigningKeys).Count -gt 1000) {
+            if (@($before.Zones).Count -gt 500 -or @($before.Zones.SigningKeys).Count -gt 1000 -or @($before.Resolver.TrustPoints).Count -gt 500 -or @($before.Resolver.TrustPoints.Anchors).Count -gt 2000) {
                 return [pscustomobject]@{ Success=$false; FailureKind='DnssecConfigurationTooLarge'; Message='The DNSSEC configuration exceeds the supported management limit.'; BeforeJson=$null; AfterJson=$null }
             }
             $beforeJson = $before | ConvertTo-Json -Compress -Depth 10
+            if ($beforeJson.Length -gt 600000) {
+                return [pscustomobject]@{ Success=$false; FailureKind='DnssecConfigurationTooLarge'; Message='The DNSSEC configuration exceeds the supported management limit.'; BeforeJson=$null; AfterJson=$null }
+            }
             if ($Action -eq 'Read') { return [pscustomobject]@{ Success=$true; FailureKind=$null; Message='DNSSEC configuration read.'; BeforeJson=$null; AfterJson=$beforeJson } }
 
-            $target = @($before.Zones | Where-Object { $_.Name -ieq $ZoneName })
-            if ($target.Count -ne 1) { return [pscustomobject]@{ Success=$false; FailureKind='ZoneNotFound'; Message='The DNS zone was not found.'; BeforeJson=$beforeJson; AfterJson=$null } }
-            if (-not [bool]$target[0].IsEligibleForSigning) { return [pscustomobject]@{ Success=$false; FailureKind='ZoneNotEligible'; Message='Only non-built-in primary zones support this DNSSEC operation.'; BeforeJson=$beforeJson; AfterJson=$null } }
-
             $expected = $ExpectedConfigurationJson | ConvertFrom-Json -ErrorAction Stop
-            $expectedTarget = @($expected.Zones | Where-Object { $_.Name -ieq $ZoneName })
-            if ($expectedTarget.Count -ne 1 -or ((Normalize-Zone $target[0]) | ConvertTo-Json -Compress -Depth 10) -cne ((Normalize-Zone $expectedTarget[0]) | ConvertTo-Json -Compress -Depth 10)) {
-                return [pscustomobject]@{ Success=$false; FailureKind='DnssecConfigurationChanged'; Message='The live DNSSEC zone state changed. Refresh and retry.'; BeforeJson=$beforeJson; AfterJson=$null }
+            $zoneAction = $Action -in @('SignWithDefaults','Resign','Unsign','RolloverKeys')
+            if ($zoneAction) {
+                $target = @($before.Zones | Where-Object { $_.Name -ieq $ZoneName })
+                if ($target.Count -ne 1) { return [pscustomobject]@{ Success=$false; FailureKind='ZoneNotFound'; Message='The DNS zone was not found.'; BeforeJson=$beforeJson; AfterJson=$null } }
+                if (-not [bool]$target[0].IsEligibleForSigning) { return [pscustomobject]@{ Success=$false; FailureKind='ZoneNotEligible'; Message='Only non-built-in primary zones support this DNSSEC operation.'; BeforeJson=$beforeJson; AfterJson=$null } }
+                $expectedTarget = @($expected.Zones | Where-Object { $_.Name -ieq $ZoneName })
+                if ($expectedTarget.Count -ne 1 -or ((Normalize-Zone $target[0]) | ConvertTo-Json -Compress -Depth 10) -cne ((Normalize-Zone $expectedTarget[0]) | ConvertTo-Json -Compress -Depth 10)) {
+                    return [pscustomobject]@{ Success=$false; FailureKind='DnssecConfigurationChanged'; Message='The live DNSSEC zone state changed. Refresh and retry.'; BeforeJson=$beforeJson; AfterJson=$null }
+                }
+            } elseif (((Normalize-Resolver $before.Resolver) | ConvertTo-Json -Compress -Depth 10) -cne ((Normalize-Resolver $expected.Resolver) | ConvertTo-Json -Compress -Depth 10)) {
+                return [pscustomobject]@{ Success=$false; FailureKind='DnssecConfigurationChanged'; Message='The live DNSSEC resolver state changed. Refresh and retry.'; BeforeJson=$beforeJson; AfterJson=$null }
             }
 
             switch ($Action) {
@@ -941,12 +1004,24 @@ internal static class DnsRemoteDnssecConfiguration
                     foreach ($id in @($KeyIds)) { if (-not $liveIds.Contains("$id".ToLowerInvariant())) { return [pscustomobject]@{ Success=$false; FailureKind='SigningKeyNotFound'; Message='One or more selected signing keys no longer exist.'; BeforeJson=$beforeJson; AfterJson=$null } } }
                     Invoke-DnsServerSigningKeyRollover -ZoneName $ZoneName -KeyId ([Guid[]]$KeyIds) -Force -ErrorAction Stop | Out-Null
                 }
+                'SetValidationEnabled' {
+                    $settings = Get-DnsServerSetting -All -ErrorAction Stop
+                    $settings.EnableDnsSec = [bool]$ValidationEnabled
+                    $settings | Set-DnsServerSetting -Confirm:$false -ErrorAction Stop | Out-Null
+                }
+                'RetrieveRootTrustAnchor' { Add-DnsServerTrustAnchor -Root -ErrorAction Stop | Out-Null }
+                'AddDsTrustAnchor' { Add-DnsServerTrustAnchor -Name $TrustPointName -CryptoAlgorithm $CryptoAlgorithm -KeyTag ([UInt16]$KeyTag) -DigestType $DigestType -Digest $Digest -ErrorAction Stop | Out-Null }
+                'AddDnsKeyTrustAnchor' { Add-DnsServerTrustAnchor -Name $TrustPointName -CryptoAlgorithm $CryptoAlgorithm -KeyProtocol DnsSec -Base64Data $Base64Data -ErrorAction Stop | Out-Null }
+                'RemoveTrustAnchorType' { Remove-DnsServerTrustAnchor -Name $TrustPointName -Type $TrustAnchorType -Force -ErrorAction Stop | Out-Null }
             }
             $after = Get-Configuration
-            $afterTarget = @($after.Zones | Where-Object { $_.Name -ieq $ZoneName })[0]
-            if ($Action -in @('SignWithDefaults','Resign') -and -not [bool]$afterTarget.IsSigned) { throw 'DNSSEC signing read-back verification failed.' }
-            if ($Action -eq 'Unsign' -and [bool]$afterTarget.IsSigned) { throw 'DNSSEC unsigning read-back verification failed.' }
-            $message = if ($Action -eq 'RolloverKeys') { 'DNSSEC signing key rollover initiated.' } else { 'DNSSEC zone operation completed.' }
+            if ($zoneAction) {
+                $afterTarget = @($after.Zones | Where-Object { $_.Name -ieq $ZoneName })[0]
+                if ($Action -in @('SignWithDefaults','Resign') -and -not [bool]$afterTarget.IsSigned) { throw 'DNSSEC signing read-back verification failed.' }
+                if ($Action -eq 'Unsign' -and [bool]$afterTarget.IsSigned) { throw 'DNSSEC unsigning read-back verification failed.' }
+            }
+            if ($Action -eq 'SetValidationEnabled' -and [bool]$after.Resolver.ValidationEnabled -ne [bool]$ValidationEnabled) { throw 'DNSSEC validation setting read-back verification failed.' }
+            $message = if ($Action -eq 'RolloverKeys') { 'DNSSEC signing key rollover initiated.' } elseif ($zoneAction) { 'DNSSEC zone operation completed.' } else { 'DNSSEC resolver trust configuration updated.' }
             return [pscustomobject]@{ Success=$true; FailureKind=$null; Message=$message; BeforeJson=$beforeJson; AfterJson=($after | ConvertTo-Json -Compress -Depth 10) }
         } catch {
             return [pscustomobject]@{ Success=$false; FailureKind='DnssecOperationFailed'; Message='The DNS server rejected the DNSSEC operation.'; BeforeJson=$beforeJson; AfterJson=$null }
@@ -1083,6 +1158,14 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
                 .AddParameter("Action", request.DnssecAction!.Value.ToString())
                 .AddParameter("ZoneName", request.DnssecZoneName)
                 .AddParameter("KeyIds", request.DnssecKeyIds?.ToArray() ?? [])
+                .AddParameter("ValidationEnabled", request.DnssecValidationEnabled)
+                .AddParameter("TrustPointName", request.DnssecTrustPointName)
+                .AddParameter("TrustAnchorType", request.DnssecTrustAnchorType ?? string.Empty)
+                .AddParameter("CryptoAlgorithm", request.DnssecCryptoAlgorithm ?? string.Empty)
+                .AddParameter("KeyTag", request.DnssecKeyTag)
+                .AddParameter("DigestType", request.DnssecDigestType ?? string.Empty)
+                .AddParameter("Digest", request.DnssecDigest)
+                .AddParameter("Base64Data", request.DnssecBase64Data)
                 .AddParameter("ExpectedConfigurationJson", request.DnsExpectedDnssecConfigurationJson);
             var output = await Task.Run(powerShell.Invoke, cancellationToken);
             return powerShell.HadErrors || output.Count != 1

@@ -153,7 +153,7 @@ public sealed record DnsPolicyMutationCommand(
     string ExpectedStateToken, DnsActorContext Actor);
 public sealed record DnsPolicyOperationModel(bool Success, string? ErrorCode, string Message, DnsPolicyConfigurationModel? Configuration = null);
 
-public enum DnssecAction { SignWithDefaults, Resign, Unsign, RolloverKeys }
+public enum DnssecAction { SignWithDefaults, Resign, Unsign, RolloverKeys, SetValidationEnabled, RetrieveRootTrustAnchor, AddDsTrustAnchor, AddDnsKeyTrustAnchor, RemoveTrustAnchorType }
 public sealed record DnssecSigningKeyModel(
     Guid KeyId, string KeyType, string? CryptoAlgorithm, int? KeyLength, string? KeyStatus,
     string? KeyStorageProvider, bool? IsRolloverEnabled, long? RolloverPeriodSeconds,
@@ -165,9 +165,19 @@ public sealed record DnssecZoneModel(
     int? Nsec3Iterations, bool? Nsec3OptOut, long? DnsKeyRecordSetTtlSeconds,
     long? DsRecordSetTtlSeconds, IReadOnlyList<string> DsRecordGenerationAlgorithms,
     bool? ParentHasSecureDelegation, IReadOnlyList<DnssecSigningKeyModel> SigningKeys);
-public sealed record DnssecConfigurationModel(IReadOnlyList<DnssecZoneModel> Zones, string StateToken);
+public sealed record DnssecTrustAnchorModel(string Type, string? State, string? Data);
+public sealed record DnssecTrustPointModel(
+    string Name, string? State, DateTimeOffset? LastActiveRefreshTime, DateTimeOffset? NextActiveRefreshTime,
+    IReadOnlyList<DnssecTrustAnchorModel> Anchors);
+public sealed record DnssecResolverConfigurationModel(
+    bool ValidationEnabled, bool IsReadOnlyDomainController, bool DirectoryServicesAvailable,
+    string? RootTrustAnchorsUrl, IReadOnlyList<DnssecTrustPointModel> TrustPoints);
+public sealed record DnssecConfigurationModel(
+    IReadOnlyList<DnssecZoneModel> Zones, DnssecResolverConfigurationModel Resolver, string StateToken);
 public sealed record DnssecMutationCommand(
-    Guid ServerId, DnssecAction Action, string ZoneName, IReadOnlyList<Guid> KeyIds,
+    Guid ServerId, DnssecAction Action, string? ZoneName, IReadOnlyList<Guid> KeyIds,
+    bool? ValidationEnabled, string? TrustPointName, string? TrustAnchorType,
+    string? CryptoAlgorithm, int? KeyTag, string? DigestType, string? Digest, string? Base64Data,
     string ExpectedStateToken, DnsActorContext Actor);
 public sealed record DnssecOperationModel(
     bool Success, string? ErrorCode, string Message, DnssecConfigurationModel? Configuration = null);

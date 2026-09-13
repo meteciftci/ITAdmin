@@ -163,7 +163,7 @@ test("DNS policy, client subnet, and zone scope operations are live typed and co
   assert.doesNotMatch(api, /power\s*shell/i);
 });
 
-test("DNSSEC authoritative zone lifecycle is live typed separately authorized and confirmed", () => {
+test("DNSSEC authoritative lifecycle and resolver trust are live typed separately authorized and confirmed", () => {
   const routes = readRouterSource();
   const api = readFileSync(join(root, "features/dns-management/api.ts"), "utf8");
   const page = readFileSync(join(root, "features/dns-management/DnssecManagementPage.tsx"), "utf8");
@@ -174,6 +174,11 @@ test("DNSSEC authoritative zone lifecycle is live typed separately authorized an
   assert.match(page, /Resign/);
   assert.match(page, /Unsign/);
   assert.match(page, /RolloverKeys/);
+  assert.match(page, /SetValidationEnabled/);
+  assert.match(page, /RetrieveRootTrustAnchor/);
+  assert.match(page, /AddDsTrustAnchor/);
+  assert.match(page, /AddDnsKeyTrustAnchor/);
+  assert.match(page, /RemoveTrustAnchorType/);
   assert.match(page, /ConfirmDialog/);
   assert.match(page, /stateToken/);
   assert.doesNotMatch(api, /power\s*shell/i);

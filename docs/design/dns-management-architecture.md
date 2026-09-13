@@ -305,8 +305,8 @@ Policy cmdlet references:
 DNSSEC configuration is operational state and is read live from the selected server. This phase
 manages only authoritative primary-zone signing: sign an unsigned zone with Windows defaults,
 re-sign an already signed zone, remove signing, and initiate rollover for an explicitly selected
-KSK or ZSK. Trust-anchor distribution and recursive-resolver validation are intentionally separate
-because they have different replication, failure, and authorization consequences.
+KSK or ZSK. Trust-anchor distribution and recursive-resolver validation remain a separate section
+of the same permission-gated screen because they have different replication and failure consequences.
 
 The Host Agent exposes one typed DNSSEC operation; no cmdlet or script text crosses the API or pipe.
 Every write includes an opaque state token. Immediately before mutation, the agent re-reads and
@@ -322,6 +322,23 @@ must publish the DS record with the parent DNS operator to complete the chain of
 removing signing can cause a validation outage if a parent DS record remains published. The current
 workflow therefore makes no claim that signing alone makes an Internet delegation securely valid.
 
+### Recursive resolver validation and trust anchors
+
+The resolver section reads `EnableDnsSec`, the configured root-anchor source, trust points, and trust
+anchors live from the selected Windows DNS server. Administrators can enable or disable validation,
+retrieve/update the root trust anchor using the server-owned `RootTrustAnchorsURL`, add an explicitly
+typed DS or DNSKEY anchor, and remove all anchors of one selected type from a trust point. Caller-
+provided URLs and executable PowerShell are not accepted. Algorithms, digest lengths, key tags,
+Base64 payloads, names, counts, and total configuration size are bounded at both the API and Host
+Agent boundary.
+
+Resolver mutations compare the complete live resolver trust snapshot with the opaque UI state token
+before changing anything, then perform a live read-back. The UI requires confirmation and warns that
+validation failures produce `SERVFAIL`, root retrieval makes an outbound HTTPS request, and trust
+anchors on domain controllers can replicate through the Active Directory forest partition. On a
+standalone DNS server Windows stores them in `TrustAnchors.dns`. Removing a type is deliberately
+worded as an all-of-type operation because the Windows cmdlet does not address one anchor instance.
+
 DNSSEC references:
 
 - [DNSSEC overview](https://learn.microsoft.com/en-us/windows-server/networking/dns/dnssec-overview)
@@ -331,6 +348,13 @@ DNSSEC references:
 - [Get-DnsServerDnsSecZoneSetting](https://learn.microsoft.com/en-us/powershell/module/dnsserver/get-dnsserverdnsseczonesetting?view=windowsserver2025-ps)
 - [Get-DnsServerSigningKey](https://learn.microsoft.com/en-us/powershell/module/dnsserver/get-dnsserversigningkey?view=windowsserver2025-ps)
 - [Invoke-DnsServerSigningKeyRollover](https://learn.microsoft.com/en-us/powershell/module/dnsserver/invoke-dnsserversigningkeyrollover?view=windowsserver2025-ps)
+- [Validate DNSSEC responses](https://learn.microsoft.com/en-us/windows-server/networking/dns/validate-dnssec-responses)
+- [Get-DnsServerSetting](https://learn.microsoft.com/en-us/powershell/module/dnsserver/get-dnsserversetting?view=windowsserver2025-ps)
+- [Set-DnsServerSetting](https://learn.microsoft.com/en-us/powershell/module/dnsserver/set-dnsserversetting?view=windowsserver2025-ps)
+- [Get-DnsServerTrustPoint](https://learn.microsoft.com/en-us/powershell/module/dnsserver/get-dnsservertrustpoint?view=windowsserver2025-ps)
+- [Get-DnsServerTrustAnchor](https://learn.microsoft.com/en-us/powershell/module/dnsserver/get-dnsservertrustanchor?view=windowsserver2025-ps)
+- [Add-DnsServerTrustAnchor](https://learn.microsoft.com/en-us/powershell/module/dnsserver/add-dnsservertrustanchor?view=windowsserver2025-ps)
+- [Remove-DnsServerTrustAnchor](https://learn.microsoft.com/en-us/powershell/module/dnsserver/remove-dnsservertrustanchor?view=windowsserver2025-ps)
 
 ## Operation history and export workflow
 

@@ -22,7 +22,7 @@ import { DNS_OPERATION_LOGS_QUERY_KEY, getDnsOperationLog, getDnsOperationLogs }
 import { DnsOperationLogDetailDialog } from "./DnsOperationLogDetailDialog";
 import type { DnsOperationLogListItem } from "./types";
 
-const operations = ["InventorySynchronization", "ServerConnectionTest", "RecordCreate", "RecordUpdate", "RecordDelete", "ZoneCreate", "ZoneUpdate", "ZoneDelete", "ServerSettingsUpdate", "CacheClear", "PolicySaveClientSubnet", "PolicyDeleteClientSubnet", "PolicyCreateZoneScope", "PolicyDeleteZoneScope", "PolicySaveQueryPolicy", "PolicyDeleteQueryPolicy", "PolicySetQueryPolicyEnabled", "DnssecZoneSign", "DnssecZoneResign", "DnssecZoneUnsign", "DnssecKeyRollover"];
+const operations = ["InventorySynchronization", "ServerConnectionTest", "RecordCreate", "RecordUpdate", "RecordDelete", "ZoneCreate", "ZoneUpdate", "ZoneDelete", "ServerSettingsUpdate", "CacheClear", "PolicySaveClientSubnet", "PolicyDeleteClientSubnet", "PolicyCreateZoneScope", "PolicyDeleteZoneScope", "PolicySaveQueryPolicy", "PolicyDeleteQueryPolicy", "PolicySetQueryPolicyEnabled", "DnssecZoneSign", "DnssecZoneResign", "DnssecZoneUnsign", "DnssecKeyRollover", "DnssecValidationUpdate", "DnssecRootTrustAnchorRetrieve", "DnssecDsTrustAnchorAdd", "DnssecDnsKeyTrustAnchorAdd", "DnssecTrustAnchorRemove"];
 const statuses = ["Pending", "Succeeded", "Failed"];
 
 export function DnsOperationLogsPage() {

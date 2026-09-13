@@ -106,9 +106,20 @@ public sealed record DnssecZoneResponse(
     int? Nsec3Iterations, bool? Nsec3OptOut, long? DnsKeyRecordSetTtlSeconds,
     long? DsRecordSetTtlSeconds, IReadOnlyList<string> DsRecordGenerationAlgorithms,
     bool? ParentHasSecureDelegation, IReadOnlyList<DnssecSigningKeyResponse> SigningKeys);
-public sealed record DnssecConfigurationResponse(IReadOnlyList<DnssecZoneResponse> Zones, string StateToken);
+public sealed record DnssecTrustAnchorResponse(string Type, string? State, string? Data);
+public sealed record DnssecTrustPointResponse(
+    string Name, string? State, DateTimeOffset? LastActiveRefreshTime, DateTimeOffset? NextActiveRefreshTime,
+    IReadOnlyList<DnssecTrustAnchorResponse> Anchors);
+public sealed record DnssecResolverConfigurationResponse(
+    bool ValidationEnabled, bool IsReadOnlyDomainController, bool DirectoryServicesAvailable,
+    string? RootTrustAnchorsUrl, IReadOnlyList<DnssecTrustPointResponse> TrustPoints);
+public sealed record DnssecConfigurationResponse(
+    IReadOnlyList<DnssecZoneResponse> Zones, DnssecResolverConfigurationResponse Resolver, string StateToken);
 public sealed record DnssecMutationRequest(
-    DnssecAction Action, string ZoneName, IReadOnlyList<Guid>? KeyIds, string ExpectedStateToken);
+    DnssecAction Action, string? ZoneName, IReadOnlyList<Guid>? KeyIds,
+    bool? ValidationEnabled, string? TrustPointName, string? TrustAnchorType,
+    string? CryptoAlgorithm, int? KeyTag, string? DigestType, string? Digest, string? Base64Data,
+    string ExpectedStateToken);
 public sealed record DnssecOperationResponse(
     bool Success, string? ErrorCode, string Message, DnssecConfigurationResponse? Configuration = null);
 

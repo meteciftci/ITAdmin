@@ -242,10 +242,23 @@ export type DnssecZone = {
   dsRecordSetTtlSeconds?: number | null; dsRecordGenerationAlgorithms: string[];
   parentHasSecureDelegation?: boolean | null; signingKeys: DnssecSigningKey[];
 };
-export type DnssecConfiguration = { zones: DnssecZone[]; stateToken: string };
+export type DnssecTrustAnchor = { type: string; state?: string | null; data?: string | null };
+export type DnssecTrustPoint = {
+  name: string; state?: string | null; lastActiveRefreshTime?: string | null;
+  nextActiveRefreshTime?: string | null; anchors: DnssecTrustAnchor[];
+};
+export type DnssecResolverConfiguration = {
+  validationEnabled: boolean; isReadOnlyDomainController: boolean; directoryServicesAvailable: boolean;
+  rootTrustAnchorsUrl?: string | null; trustPoints: DnssecTrustPoint[];
+};
+export type DnssecConfiguration = { zones: DnssecZone[]; resolver: DnssecResolverConfiguration; stateToken: string };
 export type DnssecMutationInput = {
-  action: "SignWithDefaults" | "Resign" | "Unsign" | "RolloverKeys";
-  zoneName: string; keyIds?: string[]; expectedStateToken: string;
+  action: "SignWithDefaults" | "Resign" | "Unsign" | "RolloverKeys" | "SetValidationEnabled" |
+    "RetrieveRootTrustAnchor" | "AddDsTrustAnchor" | "AddDnsKeyTrustAnchor" | "RemoveTrustAnchorType";
+  zoneName?: string | null; keyIds?: string[]; validationEnabled?: boolean | null;
+  trustPointName?: string | null; trustAnchorType?: "DnsKey" | "Ds" | null;
+  cryptoAlgorithm?: string | null; keyTag?: number | null; digestType?: "Sha1" | "Sha256" | "Sha384" | null;
+  digest?: string | null; base64Data?: string | null; expectedStateToken: string;
 };
 export type DnssecOperation = { success: boolean; errorCode?: string | null; message: string; configuration?: DnssecConfiguration | null };
 

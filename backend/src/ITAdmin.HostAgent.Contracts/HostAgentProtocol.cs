@@ -33,7 +33,7 @@ namespace ITAdmin.HostAgent.Contracts;
 /// </summary>
 public static class HostAgentProtocol
 {
-    public const int ProtocolVersion = 9;
+    public const int ProtocolVersion = 10;
 
     /// <summary>Pipe name. Machine-local; the agent ACLs it to the app pool identity and administrators.</summary>
     public const string PipeName = "ITAdmin.HostAgent";
@@ -124,7 +124,7 @@ public enum HostAgentOperation
     /// <summary>Read or mutate allowlisted DNS client subnets, zone scopes, and query policies.</summary>
     ManageDnsPolicyConfiguration = 14,
 
-    /// <summary>Read or mutate the authoritative DNSSEC lifecycle for primary zones.</summary>
+    /// <summary>Read or mutate authoritative signing and recursive resolver DNSSEC trust.</summary>
     ManageDnssecConfiguration = 15,
 }
 
@@ -196,6 +196,11 @@ public enum HostAgentDnssecAction
     Resign = 2,
     Unsign = 3,
     RolloverKeys = 4,
+    SetValidationEnabled = 5,
+    RetrieveRootTrustAnchor = 6,
+    AddDsTrustAnchor = 7,
+    AddDnsKeyTrustAnchor = 8,
+    RemoveTrustAnchorType = 9,
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -430,6 +435,22 @@ public sealed record HostAgentRequest
     public string? DnssecZoneName { get; init; }
     [JsonPropertyName("dnssecKeyIds")]
     public IReadOnlyList<Guid>? DnssecKeyIds { get; init; }
+    [JsonPropertyName("dnssecValidationEnabled")]
+    public bool? DnssecValidationEnabled { get; init; }
+    [JsonPropertyName("dnssecTrustPointName")]
+    public string? DnssecTrustPointName { get; init; }
+    [JsonPropertyName("dnssecTrustAnchorType")]
+    public string? DnssecTrustAnchorType { get; init; }
+    [JsonPropertyName("dnssecCryptoAlgorithm")]
+    public string? DnssecCryptoAlgorithm { get; init; }
+    [JsonPropertyName("dnssecKeyTag")]
+    public int? DnssecKeyTag { get; init; }
+    [JsonPropertyName("dnssecDigestType")]
+    public string? DnssecDigestType { get; init; }
+    [JsonPropertyName("dnssecDigest")]
+    public string? DnssecDigest { get; init; }
+    [JsonPropertyName("dnssecBase64Data")]
+    public string? DnssecBase64Data { get; init; }
     [JsonPropertyName("dnsExpectedDnssecConfigurationJson")]
     public string? DnsExpectedDnssecConfigurationJson { get; init; }
 
@@ -697,14 +718,21 @@ public sealed record HostAgentRequest
                 problems.Add("dnssecAction is required.");
             if (DnssecAction != HostAgentDnssecAction.Read)
             {
-                if (string.IsNullOrWhiteSpace(DnssecZoneName) || DnssecZoneName.Length > 253
-                    || DnssecZoneName.Any(char.IsControl))
-                    problems.Add("dnssecZoneName is required and may contain at most 253 characters.");
                 if (string.IsNullOrWhiteSpace(DnsExpectedDnssecConfigurationJson)
-                    || DnsExpectedDnssecConfigurationJson.Length > 524_288
+                    || DnsExpectedDnssecConfigurationJson.Length > 800_000
                     || !IsJsonObject(DnsExpectedDnssecConfigurationJson))
                     problems.Add("dnsExpectedDnssecConfigurationJson must be a bounded JSON object.");
             }
+            var zoneAction = DnssecAction is HostAgentDnssecAction.SignWithDefaults or HostAgentDnssecAction.Resign
+                or HostAgentDnssecAction.Unsign or HostAgentDnssecAction.RolloverKeys;
+            var namedTrustAction = DnssecAction is HostAgentDnssecAction.AddDsTrustAnchor
+                or HostAgentDnssecAction.AddDnsKeyTrustAnchor or HostAgentDnssecAction.RemoveTrustAnchorType;
+            if (zoneAction
+                && (string.IsNullOrWhiteSpace(DnssecZoneName) || DnssecZoneName.Length > 253
+                    || DnssecZoneName.Any(char.IsControl)))
+                problems.Add("dnssecZoneName is required and may contain at most 253 characters.");
+            if (!zoneAction && !string.IsNullOrWhiteSpace(DnssecZoneName))
+                problems.Add("dnssecZoneName is only valid for authoritative zone actions.");
             if (DnssecAction == HostAgentDnssecAction.RolloverKeys
                 && (DnssecKeyIds is null || DnssecKeyIds.Count is < 1 or > 8
                     || DnssecKeyIds.Any(x => x == Guid.Empty)
@@ -712,6 +740,44 @@ public sealed record HostAgentRequest
                 problems.Add("dnssecKeyIds must contain between 1 and 8 unique key identifiers for rollover.");
             if (DnssecAction != HostAgentDnssecAction.RolloverKeys && DnssecKeyIds is { Count: > 0 })
                 problems.Add("dnssecKeyIds is only valid for key rollover.");
+            if (DnssecAction == HostAgentDnssecAction.SetValidationEnabled && DnssecValidationEnabled is null)
+                problems.Add("dnssecValidationEnabled is required for validation updates.");
+            if (DnssecAction != HostAgentDnssecAction.SetValidationEnabled && DnssecValidationEnabled is not null)
+                problems.Add("dnssecValidationEnabled is only valid for validation updates.");
+            if (namedTrustAction
+                && (string.IsNullOrWhiteSpace(DnssecTrustPointName) || DnssecTrustPointName.Length > 253
+                    || DnssecTrustPointName.Any(char.IsControl)))
+                problems.Add("dnssecTrustPointName is required and may contain at most 253 characters.");
+            if (!namedTrustAction && !string.IsNullOrWhiteSpace(DnssecTrustPointName))
+                problems.Add("dnssecTrustPointName is only valid for named trust-anchor actions.");
+            var algorithms = new[] { "RsaSha1", "RsaSha256", "RsaSha512", "RsaSha1NSec3", "ECDsaP256Sha256", "ECDsaP384Sha384" };
+            if (DnssecAction is HostAgentDnssecAction.AddDsTrustAnchor or HostAgentDnssecAction.AddDnsKeyTrustAnchor
+                && !algorithms.Contains(DnssecCryptoAlgorithm, StringComparer.Ordinal))
+                problems.Add("dnssecCryptoAlgorithm is not supported.");
+            if (DnssecAction == HostAgentDnssecAction.AddDsTrustAnchor)
+            {
+                if (DnssecKeyTag is null or < 0 or > 65535) problems.Add("dnssecKeyTag must be between 0 and 65535.");
+                var lengths = DnssecDigestType switch { "Sha1" => 40, "Sha256" => 64, "Sha384" => 96, _ => 0 };
+                if (lengths == 0 || DnssecDigest?.Length != lengths || DnssecDigest.Any(x => !Uri.IsHexDigit(x)))
+                    problems.Add("dnssecDigest must match the selected digest type.");
+            }
+            if (DnssecAction == HostAgentDnssecAction.AddDnsKeyTrustAnchor
+                && (string.IsNullOrWhiteSpace(DnssecBase64Data) || DnssecBase64Data.Length > 16_384
+                    || !TryDecodeBase64(DnssecBase64Data, out var keyLength) || keyLength is < 1 or > 12_000))
+                problems.Add("dnssecBase64Data must be a bounded base64 DNSKEY value.");
+            if (DnssecAction == HostAgentDnssecAction.RemoveTrustAnchorType
+                && DnssecTrustAnchorType is not ("DnsKey" or "Ds"))
+                problems.Add("dnssecTrustAnchorType must be DnsKey or Ds.");
+            if (DnssecAction != HostAgentDnssecAction.RemoveTrustAnchorType && DnssecTrustAnchorType is not null)
+                problems.Add("dnssecTrustAnchorType is only valid for trust-anchor removal.");
+            if (DnssecAction is not (HostAgentDnssecAction.AddDsTrustAnchor or HostAgentDnssecAction.AddDnsKeyTrustAnchor)
+                && DnssecCryptoAlgorithm is not null)
+                problems.Add("dnssecCryptoAlgorithm is only valid for trust-anchor creation.");
+            if (DnssecAction != HostAgentDnssecAction.AddDsTrustAnchor
+                && (DnssecKeyTag is not null || DnssecDigestType is not null || DnssecDigest is not null))
+                problems.Add("DS fields are only valid for DS trust-anchor creation.");
+            if (DnssecAction != HostAgentDnssecAction.AddDnsKeyTrustAnchor && DnssecBase64Data is not null)
+                problems.Add("dnssecBase64Data is only valid for DNSKEY trust-anchor creation.");
         }
 
         return problems;
@@ -1199,6 +1265,32 @@ public sealed record HostAgentDnssecZone
 public sealed record HostAgentDnssecConfiguration
 {
     [JsonPropertyName("zones")] public IReadOnlyList<HostAgentDnssecZone> Zones { get; init; } = [];
+    [JsonPropertyName("resolver")] public HostAgentDnssecResolverConfiguration Resolver { get; init; } = new();
+}
+
+public sealed record HostAgentDnssecTrustAnchor
+{
+    [JsonPropertyName("type")] public string Type { get; init; } = string.Empty;
+    [JsonPropertyName("state")] public string? State { get; init; }
+    [JsonPropertyName("data")] public string? Data { get; init; }
+}
+
+public sealed record HostAgentDnssecTrustPoint
+{
+    [JsonPropertyName("name")] public string Name { get; init; } = string.Empty;
+    [JsonPropertyName("state")] public string? State { get; init; }
+    [JsonPropertyName("lastActiveRefreshTime")] public DateTimeOffset? LastActiveRefreshTime { get; init; }
+    [JsonPropertyName("nextActiveRefreshTime")] public DateTimeOffset? NextActiveRefreshTime { get; init; }
+    [JsonPropertyName("anchors")] public IReadOnlyList<HostAgentDnssecTrustAnchor> Anchors { get; init; } = [];
+}
+
+public sealed record HostAgentDnssecResolverConfiguration
+{
+    [JsonPropertyName("validationEnabled")] public bool ValidationEnabled { get; init; }
+    [JsonPropertyName("isReadOnlyDomainController")] public bool IsReadOnlyDomainController { get; init; }
+    [JsonPropertyName("directoryServicesAvailable")] public bool DirectoryServicesAvailable { get; init; }
+    [JsonPropertyName("rootTrustAnchorsUrl")] public string? RootTrustAnchorsUrl { get; init; }
+    [JsonPropertyName("trustPoints")] public IReadOnlyList<HostAgentDnssecTrustPoint> TrustPoints { get; init; } = [];
 }
 
 public sealed record HostAgentDnssecConfigurationResult
