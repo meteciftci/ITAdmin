@@ -184,6 +184,22 @@ test("DNSSEC authoritative lifecycle and resolver trust are live typed separatel
   assert.doesNotMatch(api, /power\s*shell/i);
 });
 
+test("DNS aging and scavenging are live typed separately authorized and confirmed", () => {
+  const routes = readRouterSource();
+  const api = readFileSync(join(root, "features/dns-management/api.ts"), "utf8");
+  const page = readFileSync(join(root, "features/dns-management/DnsScavengingPage.tsx"), "utf8");
+  assert.match(routes, /path: "\/dns-management\/scavenging"/);
+  assert.match(routes, /DnsManagement\.ManageScavenging/);
+  assert.match(api, /servers\/\$\{id\}\/scavenging-configuration/);
+  assert.match(page, /UpdateServer/);
+  assert.match(page, /UpdateZone/);
+  assert.match(page, /StartScavenging/);
+  assert.match(page, /ConfirmDialog/);
+  assert.match(page, /expectedStateToken/);
+  assert.match(page, /variant="destructive"/);
+  assert.doesNotMatch(api, /power\s*shell/i);
+});
+
 test("DNS operation history and exports use dedicated permissions and server-generated files", () => {
   const routes = readRouterSource();
   const api = readFileSync(join(root, "features/dns-management/api.ts"), "utf8");

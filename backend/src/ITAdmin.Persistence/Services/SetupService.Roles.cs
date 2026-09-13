@@ -101,6 +101,7 @@ public sealed partial class SetupService
         ("DnsManagement", PermissionCodes.DnsManagement.ManageDnssec, "Manage DNSSEC configuration."),
         ("DnsManagement", PermissionCodes.DnsManagement.ManagePolicies, "Manage DNS policies, scopes, and client subnets."),
         ("DnsManagement", PermissionCodes.DnsManagement.ClearCache, "Clear DNS server cache."),
+        ("DnsManagement", PermissionCodes.DnsManagement.ManageScavenging, "Manage DNS aging and scavenging."),
         ("DnsManagement", PermissionCodes.DnsManagement.ViewOperationLogs, "View DNS operation logs."),
         ("Directory", PermissionCodes.Directory.Users.Lookup, "Lookup directory users for read-only selection."),
         ("Directory", PermissionCodes.Directory.OrganizationalUnits.Lookup, "Lookup directory organizational units for read-only selection."),

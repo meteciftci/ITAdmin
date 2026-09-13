@@ -17,7 +17,8 @@ public sealed class DnsManagementAdministrationController(
     IDnsInventorySyncService inventorySyncService,
     IDnsServerSettingsService serverSettingsService,
     IDnsPolicyManagementService policyManagementService,
-    IDnssecManagementService dnssecManagementService) : ControllerBase
+    IDnssecManagementService dnssecManagementService,
+    IDnsScavengingManagementService scavengingManagementService) : ControllerBase
 {
     [HttpGet("settings")]
     [RequirePermission(DnsManagementPermissions.ManageSettings)]
@@ -62,7 +63,7 @@ public sealed class DnsManagementAdministrationController(
     }
 
     [HttpGet("servers")]
-    [RequireAnyPermission(DnsManagementPermissions.ServersView, DnsManagementPermissions.ManageServerSettings, DnsManagementPermissions.ClearCache, DnsManagementPermissions.ManagePolicies, DnsManagementPermissions.ManageDnssec)]
+    [RequireAnyPermission(DnsManagementPermissions.ServersView, DnsManagementPermissions.ManageServerSettings, DnsManagementPermissions.ClearCache, DnsManagementPermissions.ManagePolicies, DnsManagementPermissions.ManageDnssec, DnsManagementPermissions.ManageScavenging)]
     public async Task<ActionResult<IReadOnlyList<DnsServerResponse>>> GetServers(CancellationToken cancellationToken) =>
         Ok((await service.GetServersAsync(cancellationToken)).Select(Map));
 
@@ -189,6 +190,33 @@ public sealed class DnsManagementAdministrationController(
             : BadRequest(new { code = result.ErrorCode, message = result.Message });
     }
 
+    [HttpGet("servers/{id:guid}/scavenging-configuration")]
+    [RequirePermission(DnsManagementPermissions.ManageScavenging)]
+    public async Task<ActionResult<DnsScavengingConfigurationResponse>> GetScavengingConfiguration(
+        Guid id, CancellationToken cancellationToken)
+    {
+        var result = await scavengingManagementService.GetAsync(id, cancellationToken);
+        return result.Success && result.Configuration is not null
+            ? Ok(Map(result.Configuration))
+            : BadRequest(new { code = result.ErrorCode, message = result.Message });
+    }
+
+    [HttpPost("servers/{id:guid}/scavenging-configuration/mutations")]
+    [RequirePermission(DnsManagementPermissions.ManageScavenging)]
+    public async Task<ActionResult<DnsScavengingOperationResponse>> MutateScavengingConfiguration(
+        Guid id, DnsScavengingMutationRequest request, CancellationToken cancellationToken)
+    {
+        var result = await scavengingManagementService.MutateAsync(new(id, request.Action,
+            request.ScavengingEnabled, request.ScavengingIntervalHours, request.ZoneName,
+            request.ZoneAgingEnabled, request.NoRefreshIntervalHours, request.RefreshIntervalHours,
+            request.ScavengeServers ?? [], request.ExpectedStateToken,
+            DnsManagementActorResolver.Resolve(this)), cancellationToken);
+        return result.Success
+            ? Ok(new DnsScavengingOperationResponse(true, null, result.Message,
+                result.Configuration is null ? null : Map(result.Configuration)))
+            : BadRequest(new { code = result.ErrorCode, message = result.Message });
+    }
+
     private async Task<ActionResult<DnsCredentialProfileResponse>> SaveCredential(
         Guid? id, SaveDnsCredentialProfileRequest request, CancellationToken cancellationToken)
     {
@@ -258,5 +286,12 @@ public sealed class DnsManagementAdministrationController(
             x.Resolver.TrustPoints.Select(point => new DnssecTrustPointResponse(point.Name, point.State,
                 point.LastActiveRefreshTime, point.NextActiveRefreshTime,
                 point.Anchors.Select(anchor => new DnssecTrustAnchorResponse(anchor.Type, anchor.State, anchor.Data)).ToArray())).ToArray()),
+        x.StateToken);
+    private static DnsScavengingConfigurationResponse Map(AppModels.DnsScavengingConfigurationModel x) => new(
+        x.ScavengingEnabled, x.ScavengingIntervalSeconds, x.DefaultNoRefreshIntervalSeconds,
+        x.DefaultRefreshIntervalSeconds, x.LastScavengeTime,
+        x.Zones.Select(zone => new DnsZoneAgingResponse(zone.Name, zone.ZoneType, zone.AgingEnabled,
+            zone.IsEligible, zone.IneligibilityReason, zone.NoRefreshIntervalSeconds,
+            zone.RefreshIntervalSeconds, zone.AvailableForScavengeTime, zone.ScavengeServers)).ToArray(),
         x.StateToken);
 }

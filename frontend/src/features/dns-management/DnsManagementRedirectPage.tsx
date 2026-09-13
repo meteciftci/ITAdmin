@@ -32,6 +32,10 @@ export function DnsManagementRedirectPage() {
     return <Navigate to="/dns-management/dnssec" replace />;
   }
 
+  if (canAccess(user, PermissionCodes.DnsManagement.ManageScavenging)) {
+    return <Navigate to="/dns-management/scavenging" replace />;
+  }
+
   if (
     canAccess(user, PermissionCodes.DnsManagement.ManageServerSettings) ||
     canAccess(user, PermissionCodes.DnsManagement.ClearCache)

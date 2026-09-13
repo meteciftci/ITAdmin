@@ -316,6 +316,9 @@ export const DnsPoliciesPage = lazy(() =>
 export const DnssecManagementPage = lazy(() =>
   import("@/features/dns-management/DnssecManagementPage").then((module) => ({ default: module.DnssecManagementPage })),
 );
+export const DnsScavengingPage = lazy(() =>
+  import("@/features/dns-management/DnsScavengingPage").then((module) => ({ default: module.DnsScavengingPage })),
+);
 export const DnsZonesPage = lazy(() =>
   import("@/features/dns-management/DnsZonesPage").then((module) => ({
     default: module.DnsZonesPage,

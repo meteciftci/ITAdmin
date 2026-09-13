@@ -51,6 +51,7 @@
       "dnsManagementServerSettings": "DNS Server Settings",
       "dnsManagementPolicies": "DNS Policies",
       "dnsManagementDnssec": "DNSSEC Management",
+      "dnsManagementScavenging": "DNS Aging and Scavenging",
       "dnsManagementZones": "DNS Zone Inventory",
       "dnsManagementRecords": "DNS Records",
       "dnsManagementComparison": "DNS Comparison",

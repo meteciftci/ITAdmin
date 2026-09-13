@@ -142,6 +142,7 @@ public sealed class HostAgentBoundaryTests
     [InlineData(HostAgentOperation.ManageDnsServerSettings)]
     [InlineData(HostAgentOperation.ManageDnsPolicyConfiguration)]
     [InlineData(HostAgentOperation.ManageDnssecConfiguration)]
+    [InlineData(HostAgentOperation.ManageDnsScavenging)]
     public void Authorization_WebApplicationMayInvokeTheUpdateAndSettingsOperations(HostAgentOperation operation) =>
         Assert.True(Authorization.Authorize(@"IIS APPPOOL\ITAdmin", false, operation).IsAllowed);
 
@@ -794,6 +795,93 @@ public sealed class HostAgentBoundaryTests
         Assert.Empty(errors);
     }
 
+    [Fact]
+    public void Protocol_DnsScavengingMutationsRequireExpectedStateAndTypedBounds()
+    {
+        var baseline = new HostAgentRequest
+        {
+            Operation = HostAgentOperation.ManageDnsScavenging,
+            DnsHostName = "dns01.example.local", DnsPort = 5986,
+            DnsAuthenticationMode = HostAgentDnsAuthenticationMode.Negotiate,
+            DnsUserName = "EXAMPLE\\dns-svc", DnsPassword = "secret", DnsTimeoutSeconds = 120,
+            DnsExpectedScavengingConfigurationJson = "{\"zones\":[]}",
+        };
+
+        Assert.Empty((baseline with
+        {
+            DnsScavengingAction = HostAgentDnsScavengingAction.UpdateServer,
+            DnsScavengingState = true, DnsScavengingIntervalHours = 168,
+        }).Validate());
+        Assert.NotEmpty((baseline with
+        {
+            DnsScavengingAction = HostAgentDnsScavengingAction.UpdateServer,
+            DnsScavengingState = true, DnsScavengingIntervalHours = 0,
+        }).Validate());
+        Assert.Empty((baseline with
+        {
+            DnsScavengingAction = HostAgentDnsScavengingAction.UpdateZone,
+            DnsAgingZoneName = "example.local", DnsZoneAgingEnabled = true,
+            DnsZoneNoRefreshIntervalHours = 168, DnsZoneRefreshIntervalHours = 168,
+            DnsZoneScavengeServers = ["192.0.2.10"],
+        }).Validate());
+        Assert.NotEmpty((baseline with
+        {
+            DnsScavengingAction = HostAgentDnsScavengingAction.UpdateZone,
+            DnsAgingZoneName = "example.local", DnsZoneAgingEnabled = true,
+            DnsZoneNoRefreshIntervalHours = 9000, DnsZoneRefreshIntervalHours = 168,
+        }).Validate());
+        Assert.NotEmpty((baseline with
+        {
+            DnsScavengingAction = HostAgentDnsScavengingAction.UpdateZone,
+            DnsAgingZoneName = "example.local", DnsZoneAgingEnabled = true,
+            DnsZoneNoRefreshIntervalHours = 168, DnsZoneRefreshIntervalHours = 168,
+            DnsZoneScavengeServers = ["not-an-ip"],
+        }).Validate());
+        Assert.NotEmpty((baseline with
+        {
+            DnsScavengingAction = HostAgentDnsScavengingAction.StartScavenging,
+            DnsExpectedScavengingConfigurationJson = null,
+        }).Validate());
+    }
+
+    [Fact]
+    public async Task Dispatch_DnsScavengingUsesFixedExecutorAndNeverEchoesCredentials()
+    {
+        var executor = new RecordingDnsProbeExecutor();
+        var dispatcher = new HostAgentDispatcher(Authorization, new RecordingOperations(), dnsRemoteProbeExecutor: executor);
+        var request = new HostAgentRequest
+        {
+            Operation = HostAgentOperation.ManageDnsScavenging,
+            DnsHostName = "dns01.example.local", DnsPort = 5986,
+            DnsAuthenticationMode = HostAgentDnsAuthenticationMode.Negotiate,
+            DnsUserName = "EXAMPLE\\dns-svc", DnsPassword = "secret", DnsTimeoutSeconds = 30,
+            DnsScavengingAction = HostAgentDnsScavengingAction.Read,
+        };
+
+        var response = await dispatcher.DispatchAsync(request.ToJson(), WebApplication());
+
+        Assert.Equal(1, executor.ScavengingCallCount);
+        Assert.True(response.DnsScavengingConfiguration!.Success);
+        Assert.DoesNotContain("secret", response.ToJson(), StringComparison.Ordinal);
+        Assert.DoesNotContain("dns-svc", response.ToJson(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DnsScavengingScript_IsFixedParsesAndUsesTypedCmdlets()
+    {
+        Assert.StartsWith("param(", DnsRemoteScavengingConfiguration.Script.TrimStart(), StringComparison.Ordinal);
+        Assert.DoesNotContain("Invoke-Expression", DnsRemoteScavengingConfiguration.Script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ScriptBlock", DnsRemoteScavengingConfiguration.Script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("DnsPassword", DnsRemoteScavengingConfiguration.Script, StringComparison.Ordinal);
+        Assert.Contains("Get-DnsServerScavenging", DnsRemoteScavengingConfiguration.Script, StringComparison.Ordinal);
+        Assert.Contains("Set-DnsServerScavenging", DnsRemoteScavengingConfiguration.Script, StringComparison.Ordinal);
+        Assert.Contains("Set-DnsServerZoneAging", DnsRemoteScavengingConfiguration.Script, StringComparison.Ordinal);
+        Assert.Contains("Start-DnsServerScavenging -Force", DnsRemoteScavengingConfiguration.Script, StringComparison.Ordinal);
+        Assert.Contains("ExpectedConfigurationJson", DnsRemoteScavengingConfiguration.Script, StringComparison.Ordinal);
+        System.Management.Automation.Language.Parser.ParseInput(DnsRemoteScavengingConfiguration.Script, out _, out var errors);
+        Assert.Empty(errors);
+    }
+
     // ------------------------------------------------------------------------------------------
     // Configuration
     // ------------------------------------------------------------------------------------------
@@ -904,6 +992,7 @@ public sealed class HostAgentBoundaryTests
         public int ServerSettingsCallCount { get; private set; }
         public int PolicyCallCount { get; private set; }
         public int DnssecCallCount { get; private set; }
+        public int ScavengingCallCount { get; private set; }
         public Task<HostAgentDnsProbeResult> ProbeAsync(HostAgentRequest request, CancellationToken cancellationToken)
         {
             CallCount++;
@@ -950,6 +1039,13 @@ public sealed class HostAgentBoundaryTests
         {
             DnssecCallCount++;
             return Task.FromResult(new HostAgentDnssecConfigurationResult { Success = true, Message = "ok" });
+        }
+
+        public Task<HostAgentDnsScavengingConfigurationResult> ManageDnsScavengingAsync(
+            HostAgentRequest request, CancellationToken cancellationToken)
+        {
+            ScavengingCallCount++;
+            return Task.FromResult(new HostAgentDnsScavengingConfigurationResult { Success = true, Message = "ok" });
         }
     }
 

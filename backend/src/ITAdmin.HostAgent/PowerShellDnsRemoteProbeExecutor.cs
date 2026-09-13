@@ -29,6 +29,8 @@ public interface IDnsRemoteProbeExecutor
         HostAgentRequest request, CancellationToken cancellationToken);
     Task<HostAgentDnssecConfigurationResult> ManageDnssecConfigurationAsync(
         HostAgentRequest request, CancellationToken cancellationToken);
+    Task<HostAgentDnsScavengingConfigurationResult> ManageDnsScavengingAsync(
+        HostAgentRequest request, CancellationToken cancellationToken);
 }
 
 internal static class DnsRemoteCapabilityProbe
@@ -805,6 +807,135 @@ internal static class DnsRemotePolicyConfiguration
         """;
 }
 
+internal static class DnsRemoteScavengingConfiguration
+{
+    internal const string Script = """
+        param(
+            [Parameter(Mandatory=$true)][ValidateSet('Read','UpdateServer','UpdateZone','StartScavenging')][string]$Action,
+            [Nullable[bool]]$ScavengingState,
+            [Nullable[int]]$ScavengingIntervalHours,
+            [string]$ZoneName,
+            [Nullable[bool]]$ZoneAgingEnabled,
+            [Nullable[int]]$ZoneNoRefreshIntervalHours,
+            [Nullable[int]]$ZoneRefreshIntervalHours,
+            [string[]]$ZoneScavengeServers,
+            [string]$ExpectedConfigurationJson
+        )
+        $ErrorActionPreference = 'Stop'
+        Import-Module DnsServer -ErrorAction Stop
+
+        function Seconds([object]$value) {
+            if ($null -eq $value) { return 0L }
+            if ($value -is [TimeSpan]) { return [long][Math]::Round($value.TotalSeconds) }
+            try { return [long]$value } catch { return 0L }
+        }
+        function Utc-OrNull([object]$value) {
+            if ($value -is [DateTime]) { return $value.ToUniversalTime().ToString('O') }
+            return $null
+        }
+        function Convert-ZoneAging([object]$zone) {
+            $name = "$($zone.ZoneName)"
+            $eligible = "$($zone.ZoneType)" -ieq 'Primary' -and -not [bool]$zone.IsAutoCreated -and $name -ne '.' -and $name -ine 'TrustAnchors'
+            $reason = if ("$($zone.ZoneType)" -ine 'Primary') { 'OnlyPrimaryZonesSupported' } elseif (-not $eligible) { 'BuiltInZoneNotSupported' } else { $null }
+            $aging = $null
+            if ($eligible) { $aging = Get-DnsServerZoneAging -Name $name -ErrorAction Stop }
+            [ordered]@{
+                Name=$name; ZoneType="$($zone.ZoneType)"
+                AgingEnabled=if ($null -ne $aging) { [bool]$aging.AgingEnabled } else { $false }
+                IsEligible=$eligible; IneligibilityReason=$reason
+                NoRefreshIntervalSeconds=if ($null -ne $aging) { Seconds $aging.NoRefreshInterval } else { 0L }
+                RefreshIntervalSeconds=if ($null -ne $aging) { Seconds $aging.RefreshInterval } else { 0L }
+                AvailableForScavengeTime=if ($null -ne $aging) { Utc-OrNull $aging.AvailForScavengeTime } else { $null }
+                ScavengeServers=if ($null -ne $aging) { @($aging.ScavengeServers | ForEach-Object { "$_" } | Sort-Object) } else { @() }
+            }
+        }
+        function Get-Configuration {
+            $server = Get-DnsServerScavenging -ErrorAction Stop
+            $zones = @(Get-DnsServerZone -ErrorAction Stop | ForEach-Object { Convert-ZoneAging $_ } | Sort-Object Name)
+            [ordered]@{
+                ScavengingEnabled=[bool]$server.ScavengingState
+                ScavengingIntervalSeconds=(Seconds $server.ScavengingInterval)
+                DefaultNoRefreshIntervalSeconds=(Seconds $server.DefaultNoRefreshInterval)
+                DefaultRefreshIntervalSeconds=(Seconds $server.DefaultRefreshInterval)
+                LastScavengeTime=(Utc-OrNull $server.LastScavengeTime)
+                Zones=$zones
+            }
+        }
+        function Normalize-Server([object]$value) {
+            [ordered]@{
+                ScavengingEnabled=[bool]$value.ScavengingEnabled
+                ScavengingIntervalSeconds=[long]$value.ScavengingIntervalSeconds
+                DefaultNoRefreshIntervalSeconds=[long]$value.DefaultNoRefreshIntervalSeconds
+                DefaultRefreshIntervalSeconds=[long]$value.DefaultRefreshIntervalSeconds
+            }
+        }
+        function Normalize-Zone([object]$value) {
+            [ordered]@{
+                Name="$($value.Name)".ToLowerInvariant(); ZoneType="$($value.ZoneType)".ToLowerInvariant()
+                AgingEnabled=[bool]$value.AgingEnabled; IsEligible=[bool]$value.IsEligible
+                IneligibilityReason=if ($value.IneligibilityReason) { "$($value.IneligibilityReason)" } else { $null }
+                NoRefreshIntervalSeconds=[long]$value.NoRefreshIntervalSeconds
+                RefreshIntervalSeconds=[long]$value.RefreshIntervalSeconds
+                ScavengeServers=@($value.ScavengeServers | ForEach-Object { "$_".ToLowerInvariant() } | Sort-Object)
+            }
+        }
+
+        $beforeJson = $null
+        try {
+            $before = Get-Configuration
+            if (@($before.Zones).Count -gt 500) {
+                return [pscustomobject]@{ Success=$false; FailureKind='ScavengingConfigurationTooLarge'; Message='The scavenging configuration exceeds the supported management limit.'; BeforeJson=$null; AfterJson=$null }
+            }
+            $beforeJson = $before | ConvertTo-Json -Compress -Depth 8
+            if ($beforeJson.Length -gt 262144) {
+                return [pscustomobject]@{ Success=$false; FailureKind='ScavengingConfigurationTooLarge'; Message='The scavenging configuration exceeds the supported management limit.'; BeforeJson=$null; AfterJson=$null }
+            }
+            if ($Action -eq 'Read') { return [pscustomobject]@{ Success=$true; FailureKind=$null; Message='DNS aging and scavenging configuration read.'; BeforeJson=$null; AfterJson=$beforeJson } }
+
+            $expected = $ExpectedConfigurationJson | ConvertFrom-Json -ErrorAction Stop
+            if ($Action -in @('UpdateServer','StartScavenging')) {
+                if (((Normalize-Server $before) | ConvertTo-Json -Compress) -cne ((Normalize-Server $expected) | ConvertTo-Json -Compress)) {
+                    return [pscustomobject]@{ Success=$false; FailureKind='ScavengingConfigurationChanged'; Message='The live server scavenging state changed. Refresh and retry.'; BeforeJson=$beforeJson; AfterJson=$null }
+                }
+            }
+            if ($Action -eq 'UpdateZone') {
+                $target = @($before.Zones | Where-Object { $_.Name -ieq $ZoneName })
+                $expectedTarget = @($expected.Zones | Where-Object { $_.Name -ieq $ZoneName })
+                if ($target.Count -ne 1) { return [pscustomobject]@{ Success=$false; FailureKind='ZoneNotFound'; Message='The DNS zone was not found.'; BeforeJson=$beforeJson; AfterJson=$null } }
+                if (-not [bool]$target[0].IsEligible) { return [pscustomobject]@{ Success=$false; FailureKind='ZoneNotEligible'; Message='Only non-built-in primary zones support aging.'; BeforeJson=$beforeJson; AfterJson=$null } }
+                if ($expectedTarget.Count -ne 1 -or ((Normalize-Zone $target[0]) | ConvertTo-Json -Compress -Depth 5) -cne ((Normalize-Zone $expectedTarget[0]) | ConvertTo-Json -Compress -Depth 5)) {
+                    return [pscustomobject]@{ Success=$false; FailureKind='ScavengingConfigurationChanged'; Message='The live zone aging state changed. Refresh and retry.'; BeforeJson=$beforeJson; AfterJson=$null }
+                }
+            }
+
+            switch ($Action) {
+                'UpdateServer' {
+                    Set-DnsServerScavenging -ScavengingState ([bool]$ScavengingState) -ScavengingInterval ([TimeSpan]::FromHours([int]$ScavengingIntervalHours)) -Confirm:$false -ErrorAction Stop | Out-Null
+                }
+                'UpdateZone' {
+                    Set-DnsServerZoneAging -Name $ZoneName -Aging ([bool]$ZoneAgingEnabled) -NoRefreshInterval ([TimeSpan]::FromHours([int]$ZoneNoRefreshIntervalHours)) -RefreshInterval ([TimeSpan]::FromHours([int]$ZoneRefreshIntervalHours)) -ScavengeServers ([System.Net.IPAddress[]]@($ZoneScavengeServers)) -Confirm:$false -ErrorAction Stop | Out-Null
+                }
+                'StartScavenging' {
+                    if (-not [bool]$before.ScavengingEnabled -or @($before.Zones | Where-Object { $_.IsEligible -and $_.AgingEnabled }).Count -eq 0) {
+                        return [pscustomobject]@{ Success=$false; FailureKind='ScavengingNotEnabled'; Message='Enable server scavenging and aging on at least one primary zone first.'; BeforeJson=$beforeJson; AfterJson=$null }
+                    }
+                    Start-DnsServerScavenging -Force -ErrorAction Stop | Out-Null
+                }
+            }
+            $after = Get-Configuration
+            if ($Action -eq 'UpdateServer' -and ([bool]$after.ScavengingEnabled -ne [bool]$ScavengingState -or [long]$after.ScavengingIntervalSeconds -ne ([long]$ScavengingIntervalHours * 3600L))) { throw 'Server scavenging read-back verification failed.' }
+            if ($Action -eq 'UpdateZone') {
+                $afterTarget = @($after.Zones | Where-Object { $_.Name -ieq $ZoneName })[0]
+                if ([bool]$afterTarget.AgingEnabled -ne [bool]$ZoneAgingEnabled -or [long]$afterTarget.NoRefreshIntervalSeconds -ne ([long]$ZoneNoRefreshIntervalHours * 3600L) -or [long]$afterTarget.RefreshIntervalSeconds -ne ([long]$ZoneRefreshIntervalHours * 3600L)) { throw 'Zone aging read-back verification failed.' }
+            }
+            $message = if ($Action -eq 'StartScavenging') { 'DNS scavenging was started.' } else { 'DNS aging and scavenging configuration updated.' }
+            return [pscustomobject]@{ Success=$true; FailureKind=$null; Message=$message; BeforeJson=$beforeJson; AfterJson=($after | ConvertTo-Json -Compress -Depth 8) }
+        } catch {
+            return [pscustomobject]@{ Success=$false; FailureKind='DnsScavengingOperationFailed'; Message='The DNS server rejected the aging or scavenging operation.'; BeforeJson=$beforeJson; AfterJson=$null }
+        }
+        """;
+}
+
 internal static class DnsRemoteDnssecConfiguration
 {
     // Authoritative signing and recursive validation are separate concerns, but share one live,
@@ -1129,6 +1260,62 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
         try { return await ManageDnssecConfigurationCoreAsync(request, timeout.Token); }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         { return DnssecConfigurationFailure("Timeout", "The DNSSEC operation timed out."); }
+    }
+
+    public async Task<HostAgentDnsScavengingConfigurationResult> ManageDnsScavengingAsync(
+        HostAgentRequest request, CancellationToken cancellationToken)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(request.DnsTimeoutSeconds!.Value));
+        try { return await ManageDnsScavengingCoreAsync(request, timeout.Token); }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        { return ScavengingConfigurationFailure("Timeout", "The DNS scavenging operation timed out."); }
+    }
+
+    private async Task<HostAgentDnsScavengingConfigurationResult> ManageDnsScavengingCoreAsync(
+        HostAgentRequest request, CancellationToken cancellationToken)
+    {
+        var host = request.DnsHostName!.Trim().TrimEnd('.');
+        var tls = await ValidateTlsAsync(host, request.DnsPort!.Value, request.DnsTlsCertificateThumbprint, cancellationToken);
+        if (!tls.NetworkReachable || !tls.Valid)
+            return ScavengingConfigurationFailure(tls.NetworkReachable ? "TlsValidationFailed" : "NetworkUnreachable",
+                tls.NetworkReachable ? "The WinRM HTTPS certificate could not be validated." : "The WinRM HTTPS endpoint could not be reached.");
+        using var securePassword = ToSecureString(request.DnsPassword!);
+        var credential = new PSCredential(request.DnsUserName!, securePassword);
+        var endpoint = new UriBuilder("https", host, request.DnsPort.Value, "wsman").Uri;
+        var timeout = request.DnsTimeoutSeconds!.Value * 1000;
+        var connection = new WSManConnectionInfo(endpoint, MicrosoftPowerShellShellUri, credential)
+        {
+            AuthenticationMechanism = request.DnsAuthenticationMode == HostAgentDnsAuthenticationMode.BasicOverTls ? AuthenticationMechanism.Basic : AuthenticationMechanism.Negotiate,
+            OpenTimeout = timeout, OperationTimeout = timeout, CancelTimeout = Math.Min(timeout, 10_000), NoMachineProfile = true,
+        };
+        using var runspace = RunspaceFactory.CreateRunspace(connection);
+        try
+        {
+            await Task.Run(runspace.Open, cancellationToken);
+            using var powerShell = PowerShell.Create();
+            powerShell.Runspace = runspace;
+            powerShell.AddScript(DnsRemoteScavengingConfiguration.Script, useLocalScope: true)
+                .AddParameter("Action", request.DnsScavengingAction!.Value.ToString())
+                .AddParameter("ScavengingState", request.DnsScavengingState)
+                .AddParameter("ScavengingIntervalHours", request.DnsScavengingIntervalHours)
+                .AddParameter("ZoneName", request.DnsAgingZoneName)
+                .AddParameter("ZoneAgingEnabled", request.DnsZoneAgingEnabled)
+                .AddParameter("ZoneNoRefreshIntervalHours", request.DnsZoneNoRefreshIntervalHours)
+                .AddParameter("ZoneRefreshIntervalHours", request.DnsZoneRefreshIntervalHours)
+                .AddParameter("ZoneScavengeServers", request.DnsZoneScavengeServers?.ToArray() ?? [])
+                .AddParameter("ExpectedConfigurationJson", request.DnsExpectedScavengingConfigurationJson);
+            var output = await Task.Run(powerShell.Invoke, cancellationToken);
+            return powerShell.HadErrors || output.Count != 1
+                ? ScavengingConfigurationFailure("DnsScavengingOperationFailed", "The DNS server rejected the aging or scavenging operation.")
+                : MapScavengingConfigurationResult(output[0]);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception exception) when (exception is PSRemotingTransportException or RemoteException or RuntimeException or InvalidRunspaceStateException)
+        {
+            logger.LogWarning("DNS scavenging operation failed for {Host}:{Port} ({ExceptionType}).", host, request.DnsPort, exception.GetType().Name);
+            return ScavengingConfigurationFailure("DnsScavengingOperationFailed", "The DNS server rejected the aging or scavenging operation.");
+        }
     }
 
     private async Task<HostAgentDnssecConfigurationResult> ManageDnssecConfigurationCoreAsync(
@@ -1849,6 +2036,26 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
         try { return JsonSerializer.Deserialize<HostAgentDnssecConfiguration>(json, HostAgentProtocol.Json); }
         catch (JsonException) { return null; }
     }
+    private static HostAgentDnsScavengingConfigurationResult MapScavengingConfigurationResult(PSObject value)
+    {
+        var success = ReadBool(value, "Success");
+        return new HostAgentDnsScavengingConfigurationResult
+        {
+            Success = success,
+            FailureKind = ReadString(value, "FailureKind", 64),
+            Message = ReadString(value, "Message", 2000)
+                ?? (success ? "DNS scavenging operation completed." : "The DNS scavenging operation failed."),
+            Before = ReadScavengingConfigurationJson(value, "BeforeJson"),
+            After = ReadScavengingConfigurationJson(value, "AfterJson"),
+        };
+    }
+    private static HostAgentDnsScavengingConfiguration? ReadScavengingConfigurationJson(PSObject value, string property)
+    {
+        var json = value.Properties[property]?.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try { return JsonSerializer.Deserialize<HostAgentDnsScavengingConfiguration>(json, HostAgentProtocol.Json); }
+        catch (JsonException) { return null; }
+    }
     private static HostAgentDnsProbeResult Failure(string kind, string message, bool network, bool tls, bool authentication = false) =>
         new()
         {
@@ -1870,6 +2077,8 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
     private static HostAgentDnsPolicyConfigurationResult PolicyConfigurationFailure(string kind, string message) =>
         new() { Success = false, FailureKind = kind, Message = message };
     private static HostAgentDnssecConfigurationResult DnssecConfigurationFailure(string kind, string message) =>
+        new() { Success = false, FailureKind = kind, Message = message };
+    private static HostAgentDnsScavengingConfigurationResult ScavengingConfigurationFailure(string kind, string message) =>
         new() { Success = false, FailureKind = kind, Message = message };
     private static IReadOnlyList<T> FitPayload<T>(IEnumerable<T> source)
     {

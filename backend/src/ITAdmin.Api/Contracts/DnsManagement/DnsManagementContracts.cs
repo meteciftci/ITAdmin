@@ -123,6 +123,21 @@ public sealed record DnssecMutationRequest(
 public sealed record DnssecOperationResponse(
     bool Success, string? ErrorCode, string Message, DnssecConfigurationResponse? Configuration = null);
 
+public sealed record DnsZoneAgingResponse(
+    string Name, string ZoneType, bool AgingEnabled, bool IsEligible, string? IneligibilityReason,
+    long NoRefreshIntervalSeconds, long RefreshIntervalSeconds, DateTimeOffset? AvailableForScavengeTime,
+    IReadOnlyList<string> ScavengeServers);
+public sealed record DnsScavengingConfigurationResponse(
+    bool ScavengingEnabled, long ScavengingIntervalSeconds, long DefaultNoRefreshIntervalSeconds,
+    long DefaultRefreshIntervalSeconds, DateTimeOffset? LastScavengeTime,
+    IReadOnlyList<DnsZoneAgingResponse> Zones, string StateToken);
+public sealed record DnsScavengingMutationRequest(
+    DnsScavengingAction Action, bool? ScavengingEnabled, int? ScavengingIntervalHours,
+    string? ZoneName, bool? ZoneAgingEnabled, int? NoRefreshIntervalHours, int? RefreshIntervalHours,
+    IReadOnlyList<string>? ScavengeServers, string ExpectedStateToken);
+public sealed record DnsScavengingOperationResponse(
+    bool Success, string? ErrorCode, string Message, DnsScavengingConfigurationResponse? Configuration = null);
+
 public sealed record DnsOperationLogListItemResponse(
     Guid Id, DateTimeOffset CreatedAt, Guid? ServerId, string? ServerDisplayName,
     string OperationType, string Status, string? ZoneName, string? RecordName,

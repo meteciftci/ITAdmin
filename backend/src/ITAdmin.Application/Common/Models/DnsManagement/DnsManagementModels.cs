@@ -182,6 +182,22 @@ public sealed record DnssecMutationCommand(
 public sealed record DnssecOperationModel(
     bool Success, string? ErrorCode, string Message, DnssecConfigurationModel? Configuration = null);
 
+public enum DnsScavengingAction { UpdateServer, UpdateZone, StartScavenging }
+public sealed record DnsZoneAgingModel(
+    string Name, string ZoneType, bool AgingEnabled, bool IsEligible, string? IneligibilityReason,
+    long NoRefreshIntervalSeconds, long RefreshIntervalSeconds, DateTimeOffset? AvailableForScavengeTime,
+    IReadOnlyList<string> ScavengeServers);
+public sealed record DnsScavengingConfigurationModel(
+    bool ScavengingEnabled, long ScavengingIntervalSeconds, long DefaultNoRefreshIntervalSeconds,
+    long DefaultRefreshIntervalSeconds, DateTimeOffset? LastScavengeTime,
+    IReadOnlyList<DnsZoneAgingModel> Zones, string StateToken);
+public sealed record DnsScavengingMutationCommand(
+    Guid ServerId, DnsScavengingAction Action, bool? ScavengingEnabled, int? ScavengingIntervalHours,
+    string? ZoneName, bool? ZoneAgingEnabled, int? NoRefreshIntervalHours, int? RefreshIntervalHours,
+    IReadOnlyList<string> ScavengeServers, string ExpectedStateToken, DnsActorContext Actor);
+public sealed record DnsScavengingOperationModel(
+    bool Success, string? ErrorCode, string Message, DnsScavengingConfigurationModel? Configuration = null);
+
 public sealed record DnsOperationLogQuery(
     Guid? ServerId, string? OperationType, string? Status,
     string? TargetSearch, string? ActorUserName,

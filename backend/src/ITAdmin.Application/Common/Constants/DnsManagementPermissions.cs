@@ -24,5 +24,6 @@ public static class DnsManagementPermissions
     public const string ManageDnssec = PermissionCodes.DnsManagement.ManageDnssec;
     public const string ManagePolicies = PermissionCodes.DnsManagement.ManagePolicies;
     public const string ClearCache = PermissionCodes.DnsManagement.ClearCache;
+    public const string ManageScavenging = PermissionCodes.DnsManagement.ManageScavenging;
     public const string ViewOperationLogs = PermissionCodes.DnsManagement.ViewOperationLogs;
 }

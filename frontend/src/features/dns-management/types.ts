@@ -262,6 +262,23 @@ export type DnssecMutationInput = {
 };
 export type DnssecOperation = { success: boolean; errorCode?: string | null; message: string; configuration?: DnssecConfiguration | null };
 
+export type DnsZoneAging = {
+  name: string; zoneType: string; agingEnabled: boolean; isEligible: boolean; ineligibilityReason?: string | null;
+  noRefreshIntervalSeconds: number; refreshIntervalSeconds: number; availableForScavengeTime?: string | null;
+  scavengeServers: string[];
+};
+export type DnsScavengingConfiguration = {
+  scavengingEnabled: boolean; scavengingIntervalSeconds: number; defaultNoRefreshIntervalSeconds: number;
+  defaultRefreshIntervalSeconds: number; lastScavengeTime?: string | null; zones: DnsZoneAging[]; stateToken: string;
+};
+export type DnsScavengingMutationInput = {
+  action: "UpdateServer" | "UpdateZone" | "StartScavenging"; scavengingEnabled?: boolean | null;
+  scavengingIntervalHours?: number | null; zoneName?: string | null; zoneAgingEnabled?: boolean | null;
+  noRefreshIntervalHours?: number | null; refreshIntervalHours?: number | null;
+  scavengeServers?: string[]; expectedStateToken: string;
+};
+export type DnsScavengingOperation = { success: boolean; errorCode?: string | null; message: string; configuration?: DnsScavengingConfiguration | null };
+
 export type DnsOperationLogListItem = {
   id: string;
   createdAt: string;

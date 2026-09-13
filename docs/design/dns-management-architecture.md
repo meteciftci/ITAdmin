@@ -356,6 +356,37 @@ DNSSEC references:
 - [Add-DnsServerTrustAnchor](https://learn.microsoft.com/en-us/powershell/module/dnsserver/add-dnsservertrustanchor?view=windowsserver2025-ps)
 - [Remove-DnsServerTrustAnchor](https://learn.microsoft.com/en-us/powershell/module/dnsserver/remove-dnsservertrustanchor?view=windowsserver2025-ps)
 
+## DNS aging and scavenging workflow
+
+Aging and scavenging are treated as live operational configuration, not inventory snapshot data.
+The dedicated permission exposes server-level automatic scavenging state and interval, per-primary-
+zone aging state, refresh/no-refresh intervals, optional authorized scavenging-server addresses,
+and an explicitly confirmed manual scavenging trigger. Built-in and non-primary zones remain visible
+but cannot be mutated.
+
+Every write carries the opaque state token returned by the preceding live read. The Host Agent
+compares either the server settings or the selected zone's normalized aging settings immediately
+before changing them, applies a fixed typed command, and reads the configuration back. No script,
+cmdlet, credential, or executable text is supplied by the browser. General audit and DNS operation
+history retain sanitized before/after snapshots for server updates, zone updates, and manual starts.
+
+This area is deliberately isolated because a bad interval can remove valid records. Windows only
+considers timestamped dynamic records; a record becomes stale after its no-refresh and refresh
+periods have both elapsed. Manual start is an immediate *attempt*: Windows still requires scavenging
+on the server and zone, a started zone, and timestamped eligible records. For AD-integrated zones,
+scavenged deletions replicate within the zone's AD replication scope. The UI therefore presents a
+persistent risk warning and requires confirmation for every mutation, with an additional destructive
+confirmation style for manual start.
+
+Aging and scavenging references:
+
+- [Aging and scavenging overview](https://learn.microsoft.com/en-us/windows-server/networking/dns/aging-scavenging)
+- [Get-DnsServerScavenging](https://learn.microsoft.com/en-us/powershell/module/dnsserver/get-dnsserverscavenging?view=windowsserver2025-ps)
+- [Set-DnsServerScavenging](https://learn.microsoft.com/en-us/powershell/module/dnsserver/set-dnsserverscavenging?view=windowsserver2025-ps)
+- [Get-DnsServerZoneAging](https://learn.microsoft.com/en-us/powershell/module/dnsserver/get-dnsserverzoneaging?view=windowsserver2025-ps)
+- [Set-DnsServerZoneAging](https://learn.microsoft.com/en-us/powershell/module/dnsserver/set-dnsserverzoneaging?view=windowsserver2025-ps)
+- [Start-DnsServerScavenging](https://learn.microsoft.com/en-us/powershell/module/dnsserver/start-dnsserverscavenging?view=windowsserver2025-ps)
+
 ## Operation history and export workflow
 
 DNS connection tests, inventory synchronization, record and zone mutations, server-setting updates,

@@ -126,7 +126,7 @@ export const PermissionCodes = {
     Zones: { View: "DnsManagement.Zones.View", Create: "DnsManagement.Zones.Create", Update: "DnsManagement.Zones.Update", Delete: "DnsManagement.Zones.Delete" },
     Records: { View: "DnsManagement.Records.View", Create: "DnsManagement.Records.Create", Update: "DnsManagement.Records.Update", Delete: "DnsManagement.Records.Delete" },
     Compare: "DnsManagement.Compare", Export: "DnsManagement.Export", Synchronize: "DnsManagement.Synchronize",
-    ManageServerSettings: "DnsManagement.ServerSettings.Manage", ManageDnssec: "DnsManagement.Dnssec.Manage", ManagePolicies: "DnsManagement.Policies.Manage", ClearCache: "DnsManagement.Cache.Clear", ViewOperationLogs: "DnsManagement.OperationLogs.View",
+    ManageServerSettings: "DnsManagement.ServerSettings.Manage", ManageDnssec: "DnsManagement.Dnssec.Manage", ManagePolicies: "DnsManagement.Policies.Manage", ClearCache: "DnsManagement.Cache.Clear", ManageScavenging: "DnsManagement.Scavenging.Manage", ViewOperationLogs: "DnsManagement.OperationLogs.View",
   },
   Directory: {
     Users: {
