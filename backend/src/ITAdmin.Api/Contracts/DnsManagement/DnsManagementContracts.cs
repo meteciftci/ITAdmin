@@ -26,7 +26,7 @@ public sealed record SaveDnsCredentialProfileRequest(
     string? Password, bool IsEnabled);
 
 public sealed record DnsServerResponse(
-    Guid Id, string DisplayName, string HostName, int Port, DnsServerEnvironment Environment,
+    Guid Id, string DisplayName, string HostName, int Port, DnsConnectionTransport Transport, DnsServerEnvironment Environment,
     Guid CredentialProfileId, string CredentialProfileName, bool IsEnabled,
     int? SyncIntervalMinutes, string? TlsCertificateThumbprint, string? Notes,
     string? OperatingSystemVersion, string? DnsServerVersion,
@@ -34,7 +34,7 @@ public sealed record DnsServerResponse(
     string? LastSyncStatus, string? LastSyncMessage);
 
 public sealed record SaveDnsServerRequest(
-    string DisplayName, string HostName, int Port, DnsServerEnvironment Environment,
+    string DisplayName, string HostName, int Port, DnsConnectionTransport Transport, DnsServerEnvironment Environment,
     Guid CredentialProfileId, bool IsEnabled, int? SyncIntervalMinutes,
     string? TlsCertificateThumbprint, string? Notes);
 

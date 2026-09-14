@@ -8,6 +8,7 @@ public sealed class DnsServer : AuditableEntity
     public string DisplayName { get; set; } = string.Empty;
     public string HostName { get; set; } = string.Empty;
     public int Port { get; set; } = 5986;
+    public DnsConnectionTransport Transport { get; set; } = DnsConnectionTransport.Https;
     public DnsServerEnvironment Environment { get; set; }
     public Guid DnsCredentialProfileId { get; set; }
     public DnsCredentialProfile CredentialProfile { get; set; } = null!;

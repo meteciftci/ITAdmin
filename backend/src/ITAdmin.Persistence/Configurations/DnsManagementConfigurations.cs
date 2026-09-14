@@ -82,6 +82,7 @@ public sealed class DnsServerConfiguration : IEntityTypeConfiguration<DnsServer>
         builder.Property(x => x.DisplayName).HasColumnName("display_name").HasMaxLength(150).IsRequired();
         builder.Property(x => x.HostName).HasColumnName("host_name").HasMaxLength(253).IsRequired();
         builder.Property(x => x.Port).HasColumnName("port");
+        builder.Property(x => x.Transport).HasColumnName("transport").HasConversion<string>().HasMaxLength(16);
         builder.Property(x => x.Environment).HasColumnName("environment").HasConversion<string>().HasMaxLength(32);
         builder.Property(x => x.DnsCredentialProfileId).HasColumnName("dns_credential_profile_id");
         builder.Property(x => x.IsEnabled).HasColumnName("is_enabled");

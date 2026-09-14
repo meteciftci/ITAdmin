@@ -45,6 +45,15 @@ test("DNS connection test uses the dedicated endpoint and permission", () => {
   assert.match(page, /connectionResult\.capabilities/);
 });
 
+test("DNS server form supports certificate-free WinRM without allowing Basic over HTTP", () => {
+  const types = readFileSync(join(root, "features/dns-management/types.ts"), "utf8");
+  const page = readFileSync(join(root, "features/dns-management/DnsServersPage.tsx"), "utf8");
+  assert.match(types, /DnsConnectionTransport = "Https" \| "Http"/);
+  assert.match(page, /transport: "Http" as DnsConnectionTransport/);
+  assert.match(page, /transport === "Http" \? 5985 : 5986/);
+  assert.match(page, /server\.transport === "Https" \|\| x\.authenticationMode === "Negotiate"/);
+});
+
 test("DNS inventory synchronization is queued with dedicated permission and status polling", () => {
   const api = readFileSync(join(root, "features/dns-management/api.ts"), "utf8");
   const page = readFileSync(join(root, "features/dns-management/DnsServersPage.tsx"), "utf8");

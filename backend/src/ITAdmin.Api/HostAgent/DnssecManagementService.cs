@@ -66,6 +66,7 @@ public sealed class DnssecManagementService(
             {
                 Operation = HostAgentOperation.ManageDnssecConfiguration, CorrelationId = correlationId,
                 DnsHostName = server.HostName, DnsPort = server.Port,
+                DnsUseSsl = server.Transport == DnsConnectionTransport.Https,
                 DnsAuthenticationMode = server.CredentialProfile.AuthenticationMode == DnsAuthenticationMode.BasicOverTls
                     ? HostAgentDnsAuthenticationMode.BasicOverTls : HostAgentDnsAuthenticationMode.Negotiate,
                 DnsUserName = server.CredentialProfile.UserName, DnsPassword = password,

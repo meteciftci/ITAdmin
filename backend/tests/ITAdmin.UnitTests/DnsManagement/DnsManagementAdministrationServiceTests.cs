@@ -64,12 +64,33 @@ public sealed class DnsManagementAdministrationServiceTests
         var service = new DnsManagementAdministrationService(context, new FakeSecretProtector());
 
         var result = await service.SaveServerAsync(new(null, "İç DNS", "DNS01.EXAMPLE.LOCAL.", 5986,
-            DnsServerEnvironment.Internal, credential.Id, true, 30, "AA BB CC DD EE FF 00 11 22 33 44 55 66 77 88 99 AA BB CC DD", null,
+            DnsConnectionTransport.Https, DnsServerEnvironment.Internal, credential.Id, true, 30, "AA BB CC DD EE FF 00 11 22 33 44 55 66 77 88 99 AA BB CC DD", null,
             new(null, "admin", null, null)));
 
         Assert.True(result.IsSuccess);
         Assert.Equal("dns01.example.local", result.Value!.HostName);
         Assert.Equal("AABBCCDDEEFF00112233445566778899AABBCCDD", result.Value.TlsCertificateThumbprint);
+    }
+
+    [Fact]
+    public async Task Http_transport_rejects_basic_authentication()
+    {
+        await using var context = CreateContext();
+        var credential = new DnsCredentialProfile
+        {
+            Name = "Basic", UserName = "dns-user", EncryptedPassword = "protected:x", IsEnabled = true,
+            AuthenticationMode = DnsAuthenticationMode.BasicOverTls,
+        };
+        context.DnsCredentialProfiles.Add(credential);
+        await context.SaveChangesAsync();
+
+        var result = await new DnsManagementAdministrationService(context, new FakeSecretProtector())
+            .SaveServerAsync(new(null, "Public DNS", "192.0.2.10", 5985,
+                DnsConnectionTransport.Http, DnsServerEnvironment.Public, credential.Id, true, 30, null, null,
+                new(null, "admin", null, null)));
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("Basic authentication is not allowed", result.Message);
     }
 
     [Fact]

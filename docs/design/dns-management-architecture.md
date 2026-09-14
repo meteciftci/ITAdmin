@@ -4,7 +4,7 @@
 
 ITAdmin will manage Windows DNS Server instances without installing software on each DNS server.
 The existing ITAdmin Host Agent is the only privileged execution boundary. It will use typed,
-allow-listed operations over WinRM HTTPS/CIM; the browser and API will never submit arbitrary
+allow-listed operations over explicitly selected WinRM HTTPS or HTTP transport; the browser and API will never submit arbitrary
 PowerShell text.
 
 The design supports both domain-joined internal DNS servers and non-domain-joined public DNS
@@ -63,7 +63,7 @@ All values are module settings and the inventory interval may be overridden per 
 ## Agentless connection boundary
 
 DNS servers do not run an ITAdmin component. The existing Host Agent on the portal server opens a
-WinRM HTTPS session to a registered endpoint and executes a script compiled into the Host Agent.
+WinRM session to a registered endpoint and executes a script compiled into the Host Agent.
 The browser and API can supply connection data only; they cannot supply PowerShell, command names,
 script paths, or shell arguments. Credentials cross only the machine-local ACL-protected named pipe,
 are converted to an in-memory secure credential for the remote session, and are never returned.
@@ -73,23 +73,27 @@ same commit. For an application-initiated update, the coordinator activates the 
 after deployment succeeds and restarts the existing portal service. No DNS-server-side installation
 or separate update procedure is required.
 
-## WinRM HTTPS prerequisites
+## WinRM prerequisites and transport policy
 
-- Configure a WinRM HTTPS listener on every managed DNS server and restrict its firewall source to
-  the ITAdmin portal host where possible.
-- Use a non-expired Server Authentication certificate whose subject or SAN matches the registered
-  hostname and whose issuing chain and revocation status are trusted by the portal host. An optional
-  SHA-1 or SHA-256 thumbprint adds an endpoint preflight check; it never disables normal certificate
-  validation.
+- Each server explicitly selects HTTPS (normally port 5986) or certificate-free HTTP (normally port
+  5985). Restrict the selected listener's firewall source to the ITAdmin portal host where possible.
+- HTTPS requires a non-expired Server Authentication certificate whose subject or SAN matches the
+  registered hostname and whose issuing chain and revocation status are trusted by the portal host.
+  An optional SHA-1 or SHA-256 thumbprint adds an endpoint preflight check; it never disables normal
+  certificate validation.
+- HTTP is allowed only with Negotiate authentication. Basic authentication over HTTP is rejected by
+  the administration service and again at the Host Agent protocol boundary.
 - Grant the configured account permission to enter the standard `Microsoft.PowerShell` endpoint and
   only the Windows/DNS administration rights required for the selected management operations.
-- Use Negotiate where domain trust supports it. Use Basic only over the enforced HTTPS transport for
-  workgroup or non-domain public DNS servers. ITAdmin neither requires nor changes `TrustedHosts`.
+- For workgroup targets or targets outside a trusted domain, Negotiate can fall back to NTLM and the
+  portal host may need the exact target in WinRM `TrustedHosts`. ITAdmin displays this prerequisite
+  but never changes `TrustedHosts` automatically.
 - Install the Windows DNS Server PowerShell module on the target, as supplied with the DNS Server
   role/management tools.
 
-The connection test distinguishes portal Host Agent availability, network reachability, certificate
-validation, authentication/remoting, DNS module access, and DNS service capability discovery. The
+The connection test distinguishes portal Host Agent availability, network/transport readiness,
+authentication/remoting, DNS module access, and DNS service capability discovery. HTTPS additionally
+validates the certificate. The
 fixed discovery result records operating system, PowerShell, module and DNS versions, zone count,
 and support for zones, records, server settings, DNSSEC, policies, scopes, and cache operations.
 
@@ -97,6 +101,7 @@ Operational references:
 
 - [PowerShell remoting requirements](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_remote_requirements?view=powershell-7.6)
 - [Configure WinRM for HTTPS](https://learn.microsoft.com/en-us/troubleshoot/windows-client/system-management-components/configure-winrm-for-https)
+- [WinRM authentication](https://learn.microsoft.com/en-us/windows/win32/winrm/authentication-for-remote-connections)
 - [PowerShell remoting FAQ](https://learn.microsoft.com/en-gb/powershell/scripting/security/remoting/powershell-remoting-faq?view=powershell-7.4)
 
 ## Inventory synchronization implementation

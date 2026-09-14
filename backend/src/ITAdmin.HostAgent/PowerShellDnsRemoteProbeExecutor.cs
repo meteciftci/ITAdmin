@@ -45,7 +45,8 @@ internal static class DnsRemoteCapabilityProbe
     internal const string Script = """
         $ErrorActionPreference = 'Stop'
         Import-Module DnsServer -ErrorAction Stop
-        $dnsServer = Get-DnsServer -ErrorAction Stop
+        $dnsServer = $null
+        try { $dnsServer = Get-DnsServer -ErrorAction Stop } catch { $dnsServer = $null }
         $zones = @(Get-DnsServerZone -ErrorAction Stop)
         $module = Get-Module DnsServer
         $versionParts = @(
@@ -1762,13 +1763,13 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
         HostAgentRequest request, CancellationToken cancellationToken)
     {
         var host = request.DnsHostName!.Trim().TrimEnd('.');
-        var tls = await ValidateTlsAsync(host, request.DnsPort!.Value, request.DnsTlsCertificateThumbprint, cancellationToken);
+        var tls = await ValidateTransportAsync(host, request.DnsPort!.Value, request.DnsUseSsl == true, request.DnsTlsCertificateThumbprint, cancellationToken);
         if (!tls.NetworkReachable || !tls.Valid)
             return ZoneDelegationConfigurationFailure(tls.NetworkReachable ? "TlsValidationFailed" : "NetworkUnreachable",
-                tls.NetworkReachable ? "The WinRM HTTPS certificate could not be validated." : "The WinRM HTTPS endpoint could not be reached.");
+                tls.NetworkReachable ? "The WinRM HTTPS certificate could not be validated." : "The configured WinRM endpoint could not be reached.");
         using var securePassword = ToSecureString(request.DnsPassword!);
         var credential = new PSCredential(request.DnsUserName!, securePassword);
-        var endpoint = new UriBuilder("https", host, request.DnsPort.Value, "wsman").Uri;
+        var endpoint = new UriBuilder(request.DnsUseSsl == true ? "https" : "http", host, request.DnsPort.Value, "wsman").Uri;
         var timeout = request.DnsTimeoutSeconds!.Value * 1000;
         var connection = new WSManConnectionInfo(endpoint, MicrosoftPowerShellShellUri, credential)
         {
@@ -1805,13 +1806,13 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
         HostAgentRequest request, CancellationToken cancellationToken)
     {
         var host = request.DnsHostName!.Trim().TrimEnd('.');
-        var tls = await ValidateTlsAsync(host, request.DnsPort!.Value, request.DnsTlsCertificateThumbprint, cancellationToken);
+        var tls = await ValidateTransportAsync(host, request.DnsPort!.Value, request.DnsUseSsl == true, request.DnsTlsCertificateThumbprint, cancellationToken);
         if (!tls.NetworkReachable || !tls.Valid)
             return ZoneTransferConfigurationFailure(tls.NetworkReachable ? "TlsValidationFailed" : "NetworkUnreachable",
-                tls.NetworkReachable ? "The WinRM HTTPS certificate could not be validated." : "The WinRM HTTPS endpoint could not be reached.");
+                tls.NetworkReachable ? "The WinRM HTTPS certificate could not be validated." : "The configured WinRM endpoint could not be reached.");
         using var securePassword = ToSecureString(request.DnsPassword!);
         var credential = new PSCredential(request.DnsUserName!, securePassword);
-        var endpoint = new UriBuilder("https", host, request.DnsPort.Value, "wsman").Uri;
+        var endpoint = new UriBuilder(request.DnsUseSsl == true ? "https" : "http", host, request.DnsPort.Value, "wsman").Uri;
         var timeout = request.DnsTimeoutSeconds!.Value * 1000;
         var connection = new WSManConnectionInfo(endpoint, MicrosoftPowerShellShellUri, credential)
         {
@@ -1849,13 +1850,13 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
         HostAgentRequest request, CancellationToken cancellationToken)
     {
         var host = request.DnsHostName!.Trim().TrimEnd('.');
-        var tls = await ValidateTlsAsync(host, request.DnsPort!.Value, request.DnsTlsCertificateThumbprint, cancellationToken);
+        var tls = await ValidateTransportAsync(host, request.DnsPort!.Value, request.DnsUseSsl == true, request.DnsTlsCertificateThumbprint, cancellationToken);
         if (!tls.NetworkReachable || !tls.Valid)
             return NetworkConfigurationFailure(tls.NetworkReachable ? "TlsValidationFailed" : "NetworkUnreachable",
-                tls.NetworkReachable ? "The WinRM HTTPS certificate could not be validated." : "The WinRM HTTPS endpoint could not be reached.");
+                tls.NetworkReachable ? "The WinRM HTTPS certificate could not be validated." : "The configured WinRM endpoint could not be reached.");
         using var securePassword = ToSecureString(request.DnsPassword!);
         var credential = new PSCredential(request.DnsUserName!, securePassword);
-        var endpoint = new UriBuilder("https", host, request.DnsPort.Value, "wsman").Uri;
+        var endpoint = new UriBuilder(request.DnsUseSsl == true ? "https" : "http", host, request.DnsPort.Value, "wsman").Uri;
         var timeout = request.DnsTimeoutSeconds!.Value * 1000;
         var connection = new WSManConnectionInfo(endpoint, MicrosoftPowerShellShellUri, credential)
         {
@@ -1892,13 +1893,13 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
         HostAgentRequest request, CancellationToken cancellationToken)
     {
         var host = request.DnsHostName!.Trim().TrimEnd('.');
-        var tls = await ValidateTlsAsync(host, request.DnsPort!.Value, request.DnsTlsCertificateThumbprint, cancellationToken);
+        var tls = await ValidateTransportAsync(host, request.DnsPort!.Value, request.DnsUseSsl == true, request.DnsTlsCertificateThumbprint, cancellationToken);
         if (!tls.NetworkReachable || !tls.Valid)
             return ScavengingConfigurationFailure(tls.NetworkReachable ? "TlsValidationFailed" : "NetworkUnreachable",
-                tls.NetworkReachable ? "The WinRM HTTPS certificate could not be validated." : "The WinRM HTTPS endpoint could not be reached.");
+                tls.NetworkReachable ? "The WinRM HTTPS certificate could not be validated." : "The configured WinRM endpoint could not be reached.");
         using var securePassword = ToSecureString(request.DnsPassword!);
         var credential = new PSCredential(request.DnsUserName!, securePassword);
-        var endpoint = new UriBuilder("https", host, request.DnsPort.Value, "wsman").Uri;
+        var endpoint = new UriBuilder(request.DnsUseSsl == true ? "https" : "http", host, request.DnsPort.Value, "wsman").Uri;
         var timeout = request.DnsTimeoutSeconds!.Value * 1000;
         var connection = new WSManConnectionInfo(endpoint, MicrosoftPowerShellShellUri, credential)
         {
@@ -1938,13 +1939,13 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
         HostAgentRequest request, CancellationToken cancellationToken)
     {
         var host = request.DnsHostName!.Trim().TrimEnd('.');
-        var tls = await ValidateTlsAsync(host, request.DnsPort!.Value, request.DnsTlsCertificateThumbprint, cancellationToken);
+        var tls = await ValidateTransportAsync(host, request.DnsPort!.Value, request.DnsUseSsl == true, request.DnsTlsCertificateThumbprint, cancellationToken);
         if (!tls.NetworkReachable || !tls.Valid)
             return DnssecConfigurationFailure(tls.NetworkReachable ? "TlsValidationFailed" : "NetworkUnreachable",
-                tls.NetworkReachable ? "The WinRM HTTPS certificate could not be validated." : "The WinRM HTTPS endpoint could not be reached.");
+                tls.NetworkReachable ? "The WinRM HTTPS certificate could not be validated." : "The configured WinRM endpoint could not be reached.");
         using var securePassword = ToSecureString(request.DnsPassword!);
         var credential = new PSCredential(request.DnsUserName!, securePassword);
-        var endpoint = new UriBuilder("https", host, request.DnsPort.Value, "wsman").Uri;
+        var endpoint = new UriBuilder(request.DnsUseSsl == true ? "https" : "http", host, request.DnsPort.Value, "wsman").Uri;
         var timeout = request.DnsTimeoutSeconds!.Value * 1000;
         var connection = new WSManConnectionInfo(endpoint, MicrosoftPowerShellShellUri, credential)
         {
@@ -1987,13 +1988,13 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
         HostAgentRequest request, CancellationToken cancellationToken)
     {
         var host = request.DnsHostName!.Trim().TrimEnd('.');
-        var tls = await ValidateTlsAsync(host, request.DnsPort!.Value, request.DnsTlsCertificateThumbprint, cancellationToken);
+        var tls = await ValidateTransportAsync(host, request.DnsPort!.Value, request.DnsUseSsl == true, request.DnsTlsCertificateThumbprint, cancellationToken);
         if (!tls.NetworkReachable || !tls.Valid)
             return PolicyConfigurationFailure(tls.NetworkReachable ? "TlsValidationFailed" : "NetworkUnreachable",
-                tls.NetworkReachable ? "The WinRM HTTPS certificate could not be validated." : "The WinRM HTTPS endpoint could not be reached.");
+                tls.NetworkReachable ? "The WinRM HTTPS certificate could not be validated." : "The configured WinRM endpoint could not be reached.");
         using var securePassword = ToSecureString(request.DnsPassword!);
         var credential = new PSCredential(request.DnsUserName!, securePassword);
-        var endpoint = new UriBuilder("https", host, request.DnsPort.Value, "wsman").Uri;
+        var endpoint = new UriBuilder(request.DnsUseSsl == true ? "https" : "http", host, request.DnsPort.Value, "wsman").Uri;
         var timeout = request.DnsTimeoutSeconds!.Value * 1000;
         var connection = new WSManConnectionInfo(endpoint, MicrosoftPowerShellShellUri, credential)
         {
@@ -2027,19 +2028,19 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
         HostAgentRequest request, CancellationToken cancellationToken)
     {
         var host = request.DnsHostName!.Trim().TrimEnd('.');
-        var tls = await ValidateTlsAsync(host, request.DnsPort!.Value,
+        var tls = await ValidateTransportAsync(host, request.DnsPort!.Value, request.DnsUseSsl == true,
             request.DnsTlsCertificateThumbprint, cancellationToken);
         if (!tls.NetworkReachable || !tls.Valid)
         {
             return ServerSettingsFailure(tls.NetworkReachable ? "TlsValidationFailed" : "NetworkUnreachable",
                 tls.NetworkReachable
                     ? "The WinRM HTTPS certificate could not be validated."
-                    : "The WinRM HTTPS endpoint could not be reached.");
+                    : "The configured WinRM endpoint could not be reached.");
         }
 
         using var securePassword = ToSecureString(request.DnsPassword!);
         var credential = new PSCredential(request.DnsUserName!, securePassword);
-        var endpoint = new UriBuilder("https", host, request.DnsPort.Value, "wsman").Uri;
+        var endpoint = new UriBuilder(request.DnsUseSsl == true ? "https" : "http", host, request.DnsPort.Value, "wsman").Uri;
         var timeout = request.DnsTimeoutSeconds!.Value * 1000;
         var connection = new WSManConnectionInfo(endpoint, MicrosoftPowerShellShellUri, credential)
         {
@@ -2093,19 +2094,19 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
         HostAgentRequest request, CancellationToken cancellationToken)
     {
         var host = request.DnsHostName!.Trim().TrimEnd('.');
-        var tls = await ValidateTlsAsync(host, request.DnsPort!.Value,
+        var tls = await ValidateTransportAsync(host, request.DnsPort!.Value, request.DnsUseSsl == true,
             request.DnsTlsCertificateThumbprint, cancellationToken);
         if (!tls.NetworkReachable || !tls.Valid)
         {
             return ZoneMutationFailure(tls.NetworkReachable ? "TlsValidationFailed" : "NetworkUnreachable",
                 tls.NetworkReachable
                     ? "The WinRM HTTPS certificate could not be validated."
-                    : "The WinRM HTTPS endpoint could not be reached.");
+                    : "The configured WinRM endpoint could not be reached.");
         }
 
         using var securePassword = ToSecureString(request.DnsPassword!);
         var credential = new PSCredential(request.DnsUserName!, securePassword);
-        var endpoint = new UriBuilder("https", host, request.DnsPort.Value, "wsman").Uri;
+        var endpoint = new UriBuilder(request.DnsUseSsl == true ? "https" : "http", host, request.DnsPort.Value, "wsman").Uri;
         var timeout = request.DnsTimeoutSeconds!.Value * 1000;
         var connection = new WSManConnectionInfo(endpoint, MicrosoftPowerShellShellUri, credential)
         {
@@ -2160,19 +2161,19 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
         HostAgentRequest request, CancellationToken cancellationToken)
     {
         var host = request.DnsHostName!.Trim().TrimEnd('.');
-        var tls = await ValidateTlsAsync(host, request.DnsPort!.Value,
+        var tls = await ValidateTransportAsync(host, request.DnsPort!.Value, request.DnsUseSsl == true,
             request.DnsTlsCertificateThumbprint, cancellationToken);
         if (!tls.NetworkReachable || !tls.Valid)
         {
             return MutationFailure(tls.NetworkReachable ? "TlsValidationFailed" : "NetworkUnreachable",
                 tls.NetworkReachable
                     ? "The WinRM HTTPS certificate could not be validated."
-                    : "The WinRM HTTPS endpoint could not be reached.");
+                    : "The configured WinRM endpoint could not be reached.");
         }
 
         using var securePassword = ToSecureString(request.DnsPassword!);
         var credential = new PSCredential(request.DnsUserName!, securePassword);
-        var endpoint = new UriBuilder("https", host, request.DnsPort.Value, "wsman").Uri;
+        var endpoint = new UriBuilder(request.DnsUseSsl == true ? "https" : "http", host, request.DnsPort.Value, "wsman").Uri;
         var timeout = request.DnsTimeoutSeconds!.Value * 1000;
         var connection = new WSManConnectionInfo(endpoint, MicrosoftPowerShellShellUri, credential)
         {
@@ -2225,19 +2226,19 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
         HostAgentRequest request, CancellationToken cancellationToken)
     {
         var host = request.DnsHostName!.Trim().TrimEnd('.');
-        var tls = await ValidateTlsAsync(host, request.DnsPort!.Value,
+        var tls = await ValidateTransportAsync(host, request.DnsPort!.Value, request.DnsUseSsl == true,
             request.DnsTlsCertificateThumbprint, cancellationToken);
         if (!tls.NetworkReachable || !tls.Valid)
         {
             return InventoryFailure(tls.NetworkReachable ? "TlsValidationFailed" : "NetworkUnreachable",
                 tls.NetworkReachable
                     ? "The WinRM HTTPS certificate could not be validated."
-                    : "The WinRM HTTPS endpoint could not be reached.");
+                    : "The configured WinRM endpoint could not be reached.");
         }
 
         using var securePassword = ToSecureString(request.DnsPassword!);
         var credential = new PSCredential(request.DnsUserName!, securePassword);
-        var endpoint = new UriBuilder("https", host, request.DnsPort.Value, "wsman").Uri;
+        var endpoint = new UriBuilder(request.DnsUseSsl == true ? "https" : "http", host, request.DnsPort.Value, "wsman").Uri;
         var timeout = request.DnsTimeoutSeconds!.Value * 1000;
         var connection = new WSManConnectionInfo(endpoint, MicrosoftPowerShellShellUri, credential)
         {
@@ -2315,20 +2316,20 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
         HostAgentRequest request, CancellationToken cancellationToken)
     {
         var host = request.DnsHostName!.Trim().TrimEnd('.');
-        var tls = await ValidateTlsAsync(host, request.DnsPort!.Value,
+        var tls = await ValidateTransportAsync(host, request.DnsPort!.Value, request.DnsUseSsl == true,
             request.DnsTlsCertificateThumbprint, cancellationToken);
         if (!tls.NetworkReachable || !tls.Valid)
         {
             return Failure(tls.NetworkReachable ? "TlsValidationFailed" : "NetworkUnreachable",
                 tls.NetworkReachable
                     ? "The WinRM HTTPS certificate could not be validated."
-                    : "The WinRM HTTPS endpoint could not be reached.",
+                    : "The configured WinRM endpoint could not be reached.",
                 tls.NetworkReachable, tls.Valid);
         }
 
         using var securePassword = ToSecureString(request.DnsPassword!);
         var credential = new PSCredential(request.DnsUserName!, securePassword);
-        var endpoint = new UriBuilder("https", host, request.DnsPort.Value, "wsman").Uri;
+        var endpoint = new UriBuilder(request.DnsUseSsl == true ? "https" : "http", host, request.DnsPort.Value, "wsman").Uri;
         var timeout = request.DnsTimeoutSeconds!.Value * 1000;
         var connection = new WSManConnectionInfo(endpoint, MicrosoftPowerShellShellUri, credential)
         {
@@ -2422,6 +2423,24 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
             ZoneDelegations = ReadBool(value, "ZoneDelegations"),
         },
     };
+
+    private static async Task<TlsProbeResult> ValidateTransportAsync(
+        string host, int port, bool useSsl, string? expectedThumbprint, CancellationToken cancellationToken)
+    {
+        if (useSsl)
+            return await ValidateTlsAsync(host, port, expectedThumbprint, cancellationToken);
+
+        using var client = new TcpClient();
+        try
+        {
+            await client.ConnectAsync(host, port, cancellationToken);
+            return new(true, true);
+        }
+        catch (Exception exception) when (exception is SocketException or IOException)
+        {
+            return new(false, false);
+        }
+    }
 
     private static async Task<TlsProbeResult> ValidateTlsAsync(
         string host, int port, string? expectedThumbprint, CancellationToken cancellationToken)

@@ -1,5 +1,6 @@
 export type DnsAuthenticationMode = "Negotiate" | "BasicOverTls";
 export type DnsServerEnvironment = "Internal" | "Public" | "Other";
+export type DnsConnectionTransport = "Https" | "Http";
 
 export type DnsManagementSettings = {
   isEnabled: boolean;
@@ -35,6 +36,7 @@ export type DnsServer = {
   displayName: string;
   hostName: string;
   port: number;
+  transport: DnsConnectionTransport;
   environment: DnsServerEnvironment;
   credentialProfileId: string;
   credentialProfileName: string;

@@ -51,6 +51,7 @@ public sealed class DnsServerConnectionTestServiceTests
         Assert.True(result.Value!.Success);
         Assert.Equal("actual-secret", agent.LastRequest!.DnsPassword);
         Assert.Equal("dns01.example.local", agent.LastRequest.DnsHostName);
+        Assert.True(agent.LastRequest.DnsUseSsl);
         Assert.Equal(45, agent.LastRequest.DnsTimeoutSeconds);
         Assert.Equal("Succeeded", server.CredentialProfile.LastValidationStatus);
         Assert.Equal("Windows Server 2025", server.OperatingSystemVersion);
@@ -59,6 +60,27 @@ public sealed class DnsServerConnectionTestServiceTests
         Assert.DoesNotContain("actual-secret", context.AuditLogs.Single().Description);
         Assert.DoesNotContain("dns-user", context.AuditLogs.Single().Description);
         Assert.Equal("Succeeded", context.DnsOperationLogs.Single().Status);
+    }
+
+    [Fact]
+    public async Task Http_server_is_sent_to_the_agent_without_tls()
+    {
+        await using var context = CreateContext();
+        var server = await SeedServerAsync(context);
+        server.Transport = DnsConnectionTransport.Http;
+        server.Port = 5985;
+        await context.SaveChangesAsync();
+        var agent = new RecordingAgent(new HostAgentResponse
+        {
+            Status = HostAgentResponseStatus.Ok,
+            DnsProbe = new HostAgentDnsProbeResult { Success = false, Message = "Expected test response." },
+        });
+
+        await CreateService(context, agent).TestAsync(server.Id, new(null, "admin", null, null));
+
+        Assert.False(agent.LastRequest!.DnsUseSsl);
+        Assert.Equal(5985, agent.LastRequest.DnsPort);
+        Assert.Equal(HostAgentDnsAuthenticationMode.Negotiate, agent.LastRequest.DnsAuthenticationMode);
     }
 
     [Fact]

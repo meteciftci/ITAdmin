@@ -2,6 +2,7 @@ using ITAdmin.Application.Abstractions.Security;
 using ITAdmin.Application.Abstractions.Services;
 using ITAdmin.Application.Common.Models.DnsManagement;
 using ITAdmin.Domain.Entities;
+using ITAdmin.Domain.Enums;
 using ITAdmin.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 
@@ -74,6 +75,11 @@ public sealed class DnsManagementAdministrationService(AppDbContext context, ISe
                 return new(false, "Password is required.");
             entity.UpdatedAt = now;
             entity.UpdatedBy = ActorName(request.Actor);
+            if (request.AuthenticationMode == DnsAuthenticationMode.BasicOverTls
+                && await context.DnsServers.AnyAsync(
+                    x => x.DnsCredentialProfileId == id && x.Transport == DnsConnectionTransport.Http,
+                    cancellationToken))
+                return new(false, "This profile is assigned to a WinRM HTTP server. Basic authentication requires HTTPS.");
         }
         else
         {
@@ -109,7 +115,7 @@ public sealed class DnsManagementAdministrationService(AppDbContext context, ISe
 
     public async Task<IReadOnlyList<DnsServerModel>> GetServersAsync(CancellationToken cancellationToken = default) =>
         await context.DnsServers.AsNoTracking().OrderBy(x => x.DisplayName)
-            .Select(x => new DnsServerModel(x.Id, x.DisplayName, x.HostName, x.Port, x.Environment,
+            .Select(x => new DnsServerModel(x.Id, x.DisplayName, x.HostName, x.Port, x.Transport, x.Environment,
                 x.DnsCredentialProfileId, x.CredentialProfile.Name, x.IsEnabled, x.SyncIntervalMinutes,
                 x.TlsCertificateThumbprint, x.Notes, x.OperatingSystemVersion, x.DnsServerVersion,
                 x.LastSeenAt, x.LastSuccessfulSyncAt, x.LastSyncStatus, x.LastSyncMessage))
@@ -124,15 +130,24 @@ public sealed class DnsManagementAdministrationService(AppDbContext context, ISe
         if (hostName.Length is < 1 or > 253 || Uri.CheckHostName(hostName) == UriHostNameType.Unknown)
             return new(false, "A valid DNS server host name or IP address is required.");
         if (request.Port is < 1 or > 65535) return new(false, "Port must be between 1 and 65535.");
+        if (!Enum.IsDefined(request.Transport)) return new(false, "Connection transport is invalid.");
         if (request.SyncIntervalMinutes is < 1 or > 1440) return new(false, "Sync interval must be between 1 and 1440 minutes.");
         if (request.Notes?.Trim().Length > 2000) return new(false, "Notes may contain at most 2000 characters.");
+        if (request.Transport == DnsConnectionTransport.Http && !string.IsNullOrWhiteSpace(request.TlsCertificateThumbprint))
+            return new(false, "A certificate thumbprint cannot be used with WinRM HTTP.");
         if (request.TlsCertificateThumbprint?.Any(x => !Uri.IsHexDigit(x) && !char.IsWhiteSpace(x) && x is not ':' and not '-') == true)
             return new(false, "Certificate thumbprint contains invalid characters.");
         var thumbprint = NormalizeThumbprint(request.TlsCertificateThumbprint);
         if (thumbprint is not null && (thumbprint.Length is not (40 or 64) || thumbprint.Any(x => !Uri.IsHexDigit(x))))
             return new(false, "Certificate thumbprint must be a SHA-1 or SHA-256 hexadecimal value.");
-        if (!await context.DnsCredentialProfiles.AnyAsync(x => x.Id == request.CredentialProfileId && x.IsEnabled, cancellationToken))
+        var authenticationMode = await context.DnsCredentialProfiles
+            .Where(x => x.Id == request.CredentialProfileId && x.IsEnabled)
+            .Select(x => (DnsAuthenticationMode?)x.AuthenticationMode)
+            .SingleOrDefaultAsync(cancellationToken);
+        if (authenticationMode is null)
             return new(false, "An active credential profile is required.");
+        if (request.Transport == DnsConnectionTransport.Http && authenticationMode == DnsAuthenticationMode.BasicOverTls)
+            return new(false, "Basic authentication is not allowed over WinRM HTTP. Use a Negotiate credential profile.");
         if (await context.DnsServers.AnyAsync(x => x.Id != request.Id && x.DisplayName.ToLower() == displayName.ToLower(), cancellationToken))
             return new(false, "A DNS server with this display name already exists.");
         if (await context.DnsServers.AnyAsync(x => x.Id != request.Id && x.HostName.ToLower() == hostName && x.Port == request.Port, cancellationToken))
@@ -155,6 +170,7 @@ public sealed class DnsManagementAdministrationService(AppDbContext context, ISe
         entity.DisplayName = displayName;
         entity.HostName = hostName;
         entity.Port = request.Port;
+        entity.Transport = request.Transport;
         entity.Environment = request.Environment;
         entity.DnsCredentialProfileId = request.CredentialProfileId;
         entity.IsEnabled = request.IsEnabled;
@@ -162,7 +178,7 @@ public sealed class DnsManagementAdministrationService(AppDbContext context, ISe
         entity.TlsCertificateThumbprint = thumbprint;
         entity.Notes = Normalize(request.Notes, 2000);
         AddAudit(request.Id is null ? "Create" : "Update", "DnsServer", entity.Id,
-            $"DNS server '{displayName}' ({hostName}:{request.Port}) saved.", request.Actor);
+            $"DNS server '{displayName}' ({request.Transport.ToString().ToUpperInvariant()} {hostName}:{request.Port}) saved.", request.Actor);
         await context.SaveChangesAsync(cancellationToken);
         return new(true, "DNS server saved.", MapServer(entity, await context.DnsCredentialProfiles.AsNoTracking()
             .Where(x => x.Id == entity.DnsCredentialProfileId).Select(x => x.Name).SingleAsync(cancellationToken)));
@@ -184,5 +200,5 @@ public sealed class DnsManagementAdministrationService(AppDbContext context, ISe
     private static string? NormalizeThumbprint(string? value) => string.IsNullOrWhiteSpace(value) ? null : string.Concat(value.Where(Uri.IsHexDigit)).ToUpperInvariant();
     private static DnsManagementSettingsModel MapSettings(DnsManagementSettings x) => new(x.IsEnabled, x.AutomaticSyncEnabled, x.DefaultSyncIntervalMinutes, x.HealthCheckIntervalMinutes, x.CommandTimeoutSeconds, x.MaxParallelServers, x.SnapshotRetentionDays, x.SyncRecordInventory, x.PromptForFullSyncOnComparisonOpen, x.ComparisonSnapshotStaleAfterMinutes, x.UpdatedAt, x.UpdatedBy);
     private static DnsCredentialProfileModel MapCredential(DnsCredentialProfile x) => new(x.Id, x.Name, x.AuthenticationMode, x.UserName, !string.IsNullOrEmpty(x.EncryptedPassword), x.IsEnabled, x.LastValidatedAt, x.LastValidationStatus, x.LastValidationMessage);
-    private static DnsServerModel MapServer(DnsServer x, string credentialProfileName) => new(x.Id, x.DisplayName, x.HostName, x.Port, x.Environment, x.DnsCredentialProfileId, credentialProfileName, x.IsEnabled, x.SyncIntervalMinutes, x.TlsCertificateThumbprint, x.Notes, x.OperatingSystemVersion, x.DnsServerVersion, x.LastSeenAt, x.LastSuccessfulSyncAt, x.LastSyncStatus, x.LastSyncMessage);
+    private static DnsServerModel MapServer(DnsServer x, string credentialProfileName) => new(x.Id, x.DisplayName, x.HostName, x.Port, x.Transport, x.Environment, x.DnsCredentialProfileId, credentialProfileName, x.IsEnabled, x.SyncIntervalMinutes, x.TlsCertificateThumbprint, x.Notes, x.OperatingSystemVersion, x.DnsServerVersion, x.LastSeenAt, x.LastSuccessfulSyncAt, x.LastSyncStatus, x.LastSyncMessage);
 }

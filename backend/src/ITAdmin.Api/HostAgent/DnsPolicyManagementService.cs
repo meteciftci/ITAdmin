@@ -76,6 +76,7 @@ public sealed class DnsPolicyManagementService(
             {
                 Operation = HostAgentOperation.ManageDnsPolicyConfiguration, CorrelationId = correlationId,
                 DnsHostName = server.HostName, DnsPort = server.Port,
+                DnsUseSsl = server.Transport == DnsConnectionTransport.Https,
                 DnsAuthenticationMode = server.CredentialProfile.AuthenticationMode == DnsAuthenticationMode.BasicOverTls ? HostAgentDnsAuthenticationMode.BasicOverTls : HostAgentDnsAuthenticationMode.Negotiate,
                 DnsUserName = server.CredentialProfile.UserName, DnsPassword = password,
                 DnsTlsCertificateThumbprint = server.TlsCertificateThumbprint, DnsTimeoutSeconds = settings.CommandTimeoutSeconds,

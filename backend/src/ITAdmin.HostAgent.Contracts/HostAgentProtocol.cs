@@ -33,7 +33,7 @@ namespace ITAdmin.HostAgent.Contracts;
 /// </summary>
 public static class HostAgentProtocol
 {
-    public const int ProtocolVersion = 15;
+    public const int ProtocolVersion = 16;
 
     /// <summary>Pipe name. Machine-local; the agent ACLs it to the app pool identity and administrators.</summary>
     public const string PipeName = "ITAdmin.HostAgent";
@@ -341,6 +341,9 @@ public sealed record HostAgentRequest
     [JsonPropertyName("dnsPort")]
     public int? DnsPort { get; init; }
 
+    [JsonPropertyName("dnsUseSsl")]
+    public bool DnsUseSsl { get; init; } = true;
+
     [JsonPropertyName("dnsAuthenticationMode")]
     public HostAgentDnsAuthenticationMode? DnsAuthenticationMode { get; init; }
 
@@ -640,6 +643,10 @@ public sealed record HostAgentRequest
                 problems.Add("dnsTlsCertificateThumbprint must be a SHA-1 or SHA-256 hexadecimal value.");
             if (DnsTlsCertificateThumbprint?.Any(x => !Uri.IsHexDigit(x) && !char.IsWhiteSpace(x) && x is not ':' and not '-') == true)
                 problems.Add("dnsTlsCertificateThumbprint contains invalid characters.");
+            if (DnsUseSsl == false && !string.IsNullOrWhiteSpace(DnsTlsCertificateThumbprint))
+                problems.Add("dnsTlsCertificateThumbprint cannot be used when dnsUseSsl is false.");
+            if (DnsUseSsl == false && DnsAuthenticationMode == HostAgentDnsAuthenticationMode.BasicOverTls)
+                problems.Add("Basic authentication is not allowed when dnsUseSsl is false.");
         }
 
         if (Operation == HostAgentOperation.ReadDnsServerInventoryPage)

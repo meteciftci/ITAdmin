@@ -48,6 +48,7 @@ public sealed class DnsServerConnectionTestService(
                 CorrelationId = correlationId,
                 DnsHostName = server.HostName,
                 DnsPort = server.Port,
+                DnsUseSsl = server.Transport == DnsConnectionTransport.Https,
                 DnsAuthenticationMode = server.CredentialProfile.AuthenticationMode == DnsAuthenticationMode.BasicOverTls
                     ? HostAgentDnsAuthenticationMode.BasicOverTls
                     : HostAgentDnsAuthenticationMode.Negotiate,

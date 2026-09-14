@@ -309,7 +309,7 @@ public sealed class DnsManagementAdministrationController(
         Guid? id, SaveDnsServerRequest request, CancellationToken cancellationToken)
     {
         var result = await service.SaveServerAsync(new(id, request.DisplayName, request.HostName, request.Port,
-            request.Environment, request.CredentialProfileId, request.IsEnabled, request.SyncIntervalMinutes,
+            request.Transport, request.Environment, request.CredentialProfileId, request.IsEnabled, request.SyncIntervalMinutes,
             request.TlsCertificateThumbprint, request.Notes, DnsManagementActorResolver.Resolve(this)), cancellationToken);
         return result.IsSuccess && result.Value is not null ? Ok(Map(result.Value)) : BadRequest(new { message = result.Message });
     }
@@ -322,7 +322,7 @@ public sealed class DnsManagementAdministrationController(
         x.Id, x.Name, x.AuthenticationMode, x.UserName, x.HasPassword, x.IsEnabled,
         x.LastValidatedAt, x.LastValidationStatus, x.LastValidationMessage);
     private static DnsServerResponse Map(AppModels.DnsServerModel x) => new(
-        x.Id, x.DisplayName, x.HostName, x.Port, x.Environment, x.CredentialProfileId,
+        x.Id, x.DisplayName, x.HostName, x.Port, x.Transport, x.Environment, x.CredentialProfileId,
         x.CredentialProfileName, x.IsEnabled, x.SyncIntervalMinutes, x.TlsCertificateThumbprint,
         x.Notes, x.OperatingSystemVersion, x.DnsServerVersion, x.LastSeenAt,
         x.LastSuccessfulSyncAt, x.LastSyncStatus, x.LastSyncMessage);

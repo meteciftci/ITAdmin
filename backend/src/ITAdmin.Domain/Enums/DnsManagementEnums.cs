@@ -13,6 +13,12 @@ public enum DnsAuthenticationMode
     BasicOverTls,
 }
 
+public enum DnsConnectionTransport
+{
+    Https,
+    Http,
+}
+
 public enum DnsSyncScope
 {
     Health,

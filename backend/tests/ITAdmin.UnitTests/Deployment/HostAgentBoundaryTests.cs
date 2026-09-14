@@ -321,6 +321,19 @@ public sealed class HostAgentBoundaryTests
         Assert.NotEmpty((valid with { DnsHostName = "https://invalid/path" }).Validate());
         Assert.NotEmpty((valid with { DnsPort = 0 }).Validate());
         Assert.NotEmpty((valid with { DnsTlsCertificateThumbprint = "not-a-thumbprint" }).Validate());
+        Assert.Empty((valid with { DnsUseSsl = false, DnsPort = 5985 }).Validate());
+        Assert.NotEmpty((valid with
+        {
+            DnsUseSsl = false,
+            DnsPort = 5985,
+            DnsAuthenticationMode = HostAgentDnsAuthenticationMode.BasicOverTls,
+        }).Validate());
+        Assert.NotEmpty((valid with
+        {
+            DnsUseSsl = false,
+            DnsPort = 5985,
+            DnsTlsCertificateThumbprint = "AABBCCDDEEFF00112233445566778899AABBCCDD",
+        }).Validate());
     }
 
     [Fact]
