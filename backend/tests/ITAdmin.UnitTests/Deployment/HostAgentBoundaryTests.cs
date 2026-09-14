@@ -665,6 +665,33 @@ public sealed class HostAgentBoundaryTests
     }
 
     [Fact]
+    public void Protocol_ZoneTransferPolicyAllowsOnlyTypedDenyOrIgnoreCriteria()
+    {
+        var valid = new HostAgentRequest
+        {
+            Operation = HostAgentOperation.ManageDnsPolicyConfiguration,
+            DnsHostName = "dns01.example.local", DnsPort = 5986,
+            DnsAuthenticationMode = HostAgentDnsAuthenticationMode.Negotiate,
+            DnsUserName = "EXAMPLE\\dns-svc", DnsPassword = "secret", DnsTimeoutSeconds = 30,
+            DnsPolicyAction = HostAgentDnsPolicyAction.SaveZoneTransferPolicy,
+            DnsExpectedPolicyConfigurationJson = "{}",
+            DnsPolicyMutation = new()
+            {
+                Name = "BlockExternalAxfr", ZoneName = "example.local", Level = HostAgentDnsPolicyLevel.Zone,
+                Decision = HostAgentDnsPolicyDecision.Deny, Condition = HostAgentDnsPolicyCondition.And,
+                ProcessingOrder = 1,
+                ClientSubnet = new() { Operator = HostAgentDnsPolicyMatchOperator.Ne, Values = ["ApprovedSecondaries"] },
+                TimeOfDay = new() { Operator = HostAgentDnsPolicyMatchOperator.Eq, Values = ["01:00-05:00"] },
+            },
+        };
+
+        Assert.Empty(valid.Validate());
+        Assert.NotEmpty((valid with { DnsPolicyMutation = valid.DnsPolicyMutation with { Decision = HostAgentDnsPolicyDecision.Allow } }).Validate());
+        Assert.NotEmpty((valid with { DnsPolicyMutation = valid.DnsPolicyMutation with { ClientSubnet = null, TimeOfDay = null } }).Validate());
+        Assert.NotEmpty((valid with { DnsPolicyMutation = valid.DnsPolicyMutation with { Fqdn = new() { Values = ["example.local"] } } }).Validate());
+    }
+
+    [Fact]
     public async Task Dispatch_DnsPolicyUsesFixedExecutorAndNeverEchoesCredentials()
     {
         var executor = new RecordingDnsProbeExecutor();
@@ -694,6 +721,10 @@ public sealed class HostAgentBoundaryTests
         Assert.DoesNotContain("ScriptBlock", DnsRemotePolicyConfiguration.Script, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("ExpectedConfigurationJson", DnsRemotePolicyConfiguration.Script, StringComparison.Ordinal);
         Assert.Contains("Add-DnsServerZoneScope", DnsRemotePolicyConfiguration.Script, StringComparison.Ordinal);
+        Assert.Contains("Get-DnsServerZoneTransferPolicy", DnsRemotePolicyConfiguration.Script, StringComparison.Ordinal);
+        Assert.Contains("Add-DnsServerZoneTransferPolicy", DnsRemotePolicyConfiguration.Script, StringComparison.Ordinal);
+        Assert.Contains("Set-DnsServerZoneTransferPolicy", DnsRemotePolicyConfiguration.Script, StringComparison.Ordinal);
+        Assert.Contains("Remove-DnsServerZoneTransferPolicy", DnsRemotePolicyConfiguration.Script, StringComparison.Ordinal);
         System.Management.Automation.Language.Parser.ParseInput(DnsRemotePolicyConfiguration.Script, out _, out var errors);
         Assert.Empty(errors);
     }

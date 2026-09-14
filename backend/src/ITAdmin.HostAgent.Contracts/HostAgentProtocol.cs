@@ -33,7 +33,7 @@ namespace ITAdmin.HostAgent.Contracts;
 /// </summary>
 public static class HostAgentProtocol
 {
-    public const int ProtocolVersion = 14;
+    public const int ProtocolVersion = 15;
 
     /// <summary>Pipe name. Machine-local; the agent ACLs it to the app pool identity and administrators.</summary>
     public const string PipeName = "ITAdmin.HostAgent";
@@ -194,6 +194,9 @@ public enum HostAgentDnsPolicyAction
     SaveQueryPolicy = 5,
     DeleteQueryPolicy = 6,
     SetQueryPolicyEnabled = 7,
+    SaveZoneTransferPolicy = 8,
+    DeleteZoneTransferPolicy = 9,
+    SetZoneTransferPolicyEnabled = 10,
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -297,6 +300,8 @@ public sealed record HostAgentDnsPolicyMutation
     public HostAgentDnsPolicyCriterion? InternetProtocol { get; init; }
     [JsonPropertyName("serverInterfaceIp")]
     public HostAgentDnsPolicyCriterion? ServerInterfaceIp { get; init; }
+    [JsonPropertyName("timeOfDay")]
+    public HostAgentDnsPolicyCriterion? TimeOfDay { get; init; }
     [JsonPropertyName("zoneScopes")]
     public IReadOnlyList<HostAgentDnsZoneScopeWeight> ZoneScopes { get; init; } = [];
 }
@@ -1003,21 +1008,32 @@ public sealed record HostAgentRequest
             || value.Ipv4Subnets.Any(x => !IsCidr(x, AddressFamily.InterNetwork, 32))
             || value.Ipv6Subnets.Any(x => !IsCidr(x, AddressFamily.InterNetworkV6, 128)))
             problems.Add("Client subnets must be bounded CIDR values.");
-        if (action is HostAgentDnsPolicyAction.SaveQueryPolicy)
+        var targetsPolicy = action is HostAgentDnsPolicyAction.SaveQueryPolicy or HostAgentDnsPolicyAction.DeleteQueryPolicy
+            or HostAgentDnsPolicyAction.SetQueryPolicyEnabled or HostAgentDnsPolicyAction.SaveZoneTransferPolicy
+            or HostAgentDnsPolicyAction.DeleteZoneTransferPolicy or HostAgentDnsPolicyAction.SetZoneTransferPolicyEnabled;
+        if (targetsPolicy && value.Level == HostAgentDnsPolicyLevel.Zone && string.IsNullOrWhiteSpace(value.ZoneName))
+            problems.Add("zoneName is required for a zone-level policy.");
+        if (action is HostAgentDnsPolicyAction.SaveQueryPolicy or HostAgentDnsPolicyAction.SaveZoneTransferPolicy)
         {
-            if (value.Level == HostAgentDnsPolicyLevel.Zone && string.IsNullOrWhiteSpace(value.ZoneName))
-                problems.Add("zoneName is required for a zone-level policy.");
-            if (value.Level == HostAgentDnsPolicyLevel.Server && value.Decision == HostAgentDnsPolicyDecision.Allow)
-                problems.Add("Server-level query processing policies cannot use Allow.");
+            if ((value.Level == HostAgentDnsPolicyLevel.Server || action == HostAgentDnsPolicyAction.SaveZoneTransferPolicy)
+                && value.Decision == HostAgentDnsPolicyDecision.Allow)
+                problems.Add("This policy type cannot use Allow.");
             if (value.ProcessingOrder is < 1 or > 100_000)
                 problems.Add("processingOrder must be between 1 and 100000.");
-            var criteria = new[] { value.ClientSubnet, value.Fqdn, value.QueryType, value.TransportProtocol, value.InternetProtocol, value.ServerInterfaceIp };
+            var criteria = action == HostAgentDnsPolicyAction.SaveZoneTransferPolicy
+                ? new[] { value.ClientSubnet, value.TransportProtocol, value.InternetProtocol, value.ServerInterfaceIp, value.TimeOfDay }
+                : new[] { value.ClientSubnet, value.Fqdn, value.QueryType, value.TransportProtocol, value.InternetProtocol, value.ServerInterfaceIp };
             if (criteria.All(x => x is null or { Values.Count: 0 }))
-                problems.Add("At least one query policy criterion is required.");
+                problems.Add(action == HostAgentDnsPolicyAction.SaveZoneTransferPolicy
+                    ? "At least one zone transfer policy criterion is required."
+                    : "At least one query policy criterion is required.");
             if (criteria.Where(x => x is not null).Any(x => !Enum.IsDefined(x!.Operator)
                 || x.Values.Count is < 1 or > 64 || x.Values.Any(v => string.IsNullOrWhiteSpace(v) || v.Length > 256
                     || v.Any(char.IsControl) || v.Contains(',') || v.Contains(';'))))
                 problems.Add("Query policy criteria contain invalid values.");
+            if (action == HostAgentDnsPolicyAction.SaveZoneTransferPolicy
+                && (value.Fqdn is not null || value.QueryType is not null || value.ZoneScopes.Count > 0))
+                problems.Add("Zone transfer policies contain unsupported criteria.");
             if (value.ZoneScopes.Count > 32 || value.ZoneScopes.Any(x => string.IsNullOrWhiteSpace(x.Name)
                 || x.Name.Length > 256 || x.Weight is < 1 or > 10_000))
                 problems.Add("Zone scope weights are invalid.");
@@ -1439,6 +1455,23 @@ public sealed record HostAgentDnsPolicyConfiguration
     [JsonPropertyName("clientSubnets")] public IReadOnlyList<HostAgentDnsClientSubnet> ClientSubnets { get; init; } = [];
     [JsonPropertyName("zoneScopes")] public IReadOnlyList<HostAgentDnsZoneScope> ZoneScopes { get; init; } = [];
     [JsonPropertyName("queryPolicies")] public IReadOnlyList<HostAgentDnsQueryPolicy> QueryPolicies { get; init; } = [];
+    [JsonPropertyName("zoneTransferPolicies")] public IReadOnlyList<HostAgentDnsZoneTransferPolicy> ZoneTransferPolicies { get; init; } = [];
+}
+
+public sealed record HostAgentDnsZoneTransferPolicy
+{
+    [JsonPropertyName("name")] public string Name { get; init; } = string.Empty;
+    [JsonPropertyName("level")] public string Level { get; init; } = string.Empty;
+    [JsonPropertyName("zoneName")] public string? ZoneName { get; init; }
+    [JsonPropertyName("action")] public string Action { get; init; } = string.Empty;
+    [JsonPropertyName("condition")] public string Condition { get; init; } = string.Empty;
+    [JsonPropertyName("processingOrder")] public int ProcessingOrder { get; init; }
+    [JsonPropertyName("enabled")] public bool Enabled { get; init; }
+    [JsonPropertyName("clientSubnet")] public string? ClientSubnet { get; init; }
+    [JsonPropertyName("transportProtocol")] public string? TransportProtocol { get; init; }
+    [JsonPropertyName("internetProtocol")] public string? InternetProtocol { get; init; }
+    [JsonPropertyName("serverInterfaceIp")] public string? ServerInterfaceIp { get; init; }
+    [JsonPropertyName("timeOfDay")] public string? TimeOfDay { get; init; }
 }
 
 public sealed record HostAgentDnsPolicyConfigurationResult

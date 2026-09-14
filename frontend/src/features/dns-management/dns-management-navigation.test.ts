@@ -158,6 +158,8 @@ test("DNS policy, client subnet, and zone scope operations are live typed and co
   assert.match(page, /CreateZoneScope/);
   assert.match(page, /SaveQueryPolicy/);
   assert.match(page, /SetQueryPolicyEnabled/);
+  assert.match(page, /SaveZoneTransferPolicy/);
+  assert.match(page, /SetZoneTransferPolicyEnabled/);
   assert.match(page, /ConfirmDialog/);
   assert.match(page, /stateToken/);
   assert.doesNotMatch(api, /power\s*shell/i);

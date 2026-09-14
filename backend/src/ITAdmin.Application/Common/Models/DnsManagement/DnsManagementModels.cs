@@ -127,7 +127,7 @@ public sealed record DnsServerSettingsOperationModel(
     bool Success, string? ErrorCode, string Message,
     DnsServerSettingsModel? Settings = null);
 
-public enum DnsPolicyAction { SaveClientSubnet, DeleteClientSubnet, CreateZoneScope, DeleteZoneScope, SaveQueryPolicy, DeleteQueryPolicy, SetQueryPolicyEnabled }
+public enum DnsPolicyAction { SaveClientSubnet, DeleteClientSubnet, CreateZoneScope, DeleteZoneScope, SaveQueryPolicy, DeleteQueryPolicy, SetQueryPolicyEnabled, SaveZoneTransferPolicy, DeleteZoneTransferPolicy, SetZoneTransferPolicyEnabled }
 public enum DnsPolicyLevel { Server, Zone }
 public enum DnsPolicyDecision { Allow, Deny, Ignore }
 public enum DnsPolicyCondition { And, Or }
@@ -140,9 +140,13 @@ public sealed record DnsQueryPolicyModel(
     string Name, string Level, string? ZoneName, string Action, string Condition, int ProcessingOrder,
     bool Enabled, string? ClientSubnet, string? Fqdn, string? QueryType, string? TransportProtocol,
     string? InternetProtocol, string? ServerInterfaceIp, string? ZoneScope);
+public sealed record DnsZoneTransferPolicyModel(
+    string Name, string Level, string? ZoneName, string Action, string Condition, int ProcessingOrder,
+    bool Enabled, string? ClientSubnet, string? TransportProtocol, string? InternetProtocol,
+    string? ServerInterfaceIp, string? TimeOfDay);
 public sealed record DnsPolicyConfigurationModel(
     IReadOnlyList<DnsClientSubnetModel> ClientSubnets, IReadOnlyList<DnsZoneScopeModel> ZoneScopes,
-    IReadOnlyList<DnsQueryPolicyModel> QueryPolicies, string StateToken);
+    IReadOnlyList<DnsQueryPolicyModel> QueryPolicies, IReadOnlyList<DnsZoneTransferPolicyModel> ZoneTransferPolicies, string StateToken);
 public sealed record DnsPolicyMutationCommand(
     Guid ServerId, DnsPolicyAction Action, string Name, string? ZoneName,
     IReadOnlyList<string> Ipv4Subnets, IReadOnlyList<string> Ipv6Subnets,
@@ -151,7 +155,7 @@ public sealed record DnsPolicyMutationCommand(
     DnsPolicyCriterionModel? Fqdn, DnsPolicyCriterionModel? QueryType,
     DnsPolicyCriterionModel? TransportProtocol, DnsPolicyCriterionModel? InternetProtocol,
     DnsPolicyCriterionModel? ServerInterfaceIp, IReadOnlyList<DnsZoneScopeWeightModel> ZoneScopes,
-    string ExpectedStateToken, DnsActorContext Actor);
+    string ExpectedStateToken, DnsActorContext Actor, DnsPolicyCriterionModel? TimeOfDay = null);
 public sealed record DnsPolicyOperationModel(bool Success, string? ErrorCode, string Message, DnsPolicyConfigurationModel? Configuration = null);
 
 public enum DnssecAction { SignWithDefaults, Resign, Unsign, RolloverKeys, SetValidationEnabled, RetrieveRootTrustAnchor, AddDsTrustAnchor, AddDnsKeyTrustAnchor, RemoveTrustAnchorType }

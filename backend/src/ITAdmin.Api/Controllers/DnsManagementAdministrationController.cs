@@ -162,7 +162,7 @@ public sealed class DnsManagementAdministrationController(
             request.ProcessingOrder, request.Enabled, Criterion(request.ClientSubnet), Criterion(request.Fqdn), Criterion(request.QueryType),
             Criterion(request.TransportProtocol), Criterion(request.InternetProtocol), Criterion(request.ServerInterfaceIp),
             request.ZoneScopes?.Select(x => new AppModels.DnsZoneScopeWeightModel(x.Name, x.Weight)).ToArray() ?? [],
-            request.ExpectedStateToken, DnsManagementActorResolver.Resolve(this)), cancellationToken);
+            request.ExpectedStateToken, DnsManagementActorResolver.Resolve(this), Criterion(request.TimeOfDay)), cancellationToken);
         return result.Success ? Ok(new DnsPolicyOperationResponse(true, null, result.Message, result.Configuration is null ? null : Map(result.Configuration)))
             : BadRequest(new { code = result.ErrorCode, message = result.Message });
     }
@@ -350,6 +350,8 @@ public sealed class DnsManagementAdministrationController(
         x.ZoneScopes.Select(v => new DnsZoneScopeResponse(v.ZoneName, v.Name)).ToArray(),
         x.QueryPolicies.Select(v => new DnsQueryPolicyResponse(v.Name, v.Level, v.ZoneName, v.Action, v.Condition, v.ProcessingOrder,
             v.Enabled, v.ClientSubnet, v.Fqdn, v.QueryType, v.TransportProtocol, v.InternetProtocol, v.ServerInterfaceIp, v.ZoneScope)).ToArray(),
+        x.ZoneTransferPolicies.Select(v => new DnsZoneTransferPolicyResponse(v.Name, v.Level, v.ZoneName, v.Action, v.Condition, v.ProcessingOrder,
+            v.Enabled, v.ClientSubnet, v.TransportProtocol, v.InternetProtocol, v.ServerInterfaceIp, v.TimeOfDay)).ToArray(),
         x.StateToken);
     private static DnssecConfigurationResponse Map(AppModels.DnssecConfigurationModel x) => new(
         x.Zones.Select(zone => new DnssecZoneResponse(

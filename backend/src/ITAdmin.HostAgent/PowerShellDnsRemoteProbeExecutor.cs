@@ -71,7 +71,20 @@ internal static class DnsRemoteCapabilityProbe
                 [bool](Get-Command Invoke-DnsServerZoneSign -ErrorAction SilentlyContinue) -and
                 [bool](Get-Command Invoke-DnsServerZoneUnsign -ErrorAction SilentlyContinue) -and
                 [bool](Get-Command Invoke-DnsServerSigningKeyRollover -ErrorAction SilentlyContinue)
-            Policies = [bool](Get-Command Get-DnsServerQueryResolutionPolicy -ErrorAction SilentlyContinue)
+            Policies = [bool](Get-Command Get-DnsServerClientSubnet -ErrorAction SilentlyContinue) -and
+                [bool](Get-Command Add-DnsServerClientSubnet -ErrorAction SilentlyContinue) -and
+                [bool](Get-Command Set-DnsServerClientSubnet -ErrorAction SilentlyContinue) -and
+                [bool](Get-Command Remove-DnsServerClientSubnet -ErrorAction SilentlyContinue) -and
+                [bool](Get-Command Get-DnsServerQueryResolutionPolicy -ErrorAction SilentlyContinue) -and
+                [bool](Get-Command Add-DnsServerQueryResolutionPolicy -ErrorAction SilentlyContinue) -and
+                [bool](Get-Command Set-DnsServerQueryResolutionPolicy -ErrorAction SilentlyContinue) -and
+                [bool](Get-Command Remove-DnsServerQueryResolutionPolicy -ErrorAction SilentlyContinue) -and
+                [bool](Get-Command Get-DnsServerZoneTransferPolicy -ErrorAction SilentlyContinue) -and
+                [bool](Get-Command Add-DnsServerZoneTransferPolicy -ErrorAction SilentlyContinue) -and
+                [bool](Get-Command Set-DnsServerZoneTransferPolicy -ErrorAction SilentlyContinue) -and
+                [bool](Get-Command Remove-DnsServerZoneTransferPolicy -ErrorAction SilentlyContinue) -and
+                [bool](Get-Command Enable-DnsServerPolicy -ErrorAction SilentlyContinue) -and
+                [bool](Get-Command Disable-DnsServerPolicy -ErrorAction SilentlyContinue)
             Scopes = [bool](Get-Command Get-DnsServerZoneScope -ErrorAction SilentlyContinue)
             Cache = [bool](Get-Command Clear-DnsServerCache -ErrorAction SilentlyContinue)
             NetworkConfiguration = [bool](Get-Command Get-DnsServerSetting -ErrorAction SilentlyContinue) -and
@@ -678,7 +691,7 @@ internal static class DnsRemotePolicyConfiguration
     // Fixed cmdlet allowlist. The browser can supply only the validated JSON DTO bound below.
     internal const string Script = """
         param(
-            [Parameter(Mandatory=$true)][ValidateSet('Read','SaveClientSubnet','DeleteClientSubnet','CreateZoneScope','DeleteZoneScope','SaveQueryPolicy','DeleteQueryPolicy','SetQueryPolicyEnabled')][string]$Action,
+            [Parameter(Mandatory=$true)][ValidateSet('Read','SaveClientSubnet','DeleteClientSubnet','CreateZoneScope','DeleteZoneScope','SaveQueryPolicy','DeleteQueryPolicy','SetQueryPolicyEnabled','SaveZoneTransferPolicy','DeleteZoneTransferPolicy','SetZoneTransferPolicyEnabled')][string]$Action,
             [string]$MutationJson,
             [string]$ExpectedConfigurationJson
         )
@@ -691,8 +704,12 @@ internal static class DnsRemotePolicyConfiguration
             } | Sort-Object Name)
             $scopes = [System.Collections.Generic.List[object]]::new()
             $policies = [System.Collections.Generic.List[object]]::new()
+            $transferPolicies = [System.Collections.Generic.List[object]]::new()
             foreach ($policy in @(Get-DnsServerQueryResolutionPolicy -ErrorAction Stop)) {
                 $policies.Add((Convert-Policy $policy 'Server' $null))
+            }
+            foreach ($policy in @(Get-DnsServerZoneTransferPolicy -ErrorAction Stop)) {
+                $transferPolicies.Add((Convert-TransferPolicy $policy 'Server' $null))
             }
             foreach ($zone in @(Get-DnsServerZone -ErrorAction Stop | Sort-Object ZoneName)) {
                 $zoneName = "$($zone.ZoneName)"
@@ -703,8 +720,31 @@ internal static class DnsRemotePolicyConfiguration
                 foreach ($policy in @(Get-DnsServerQueryResolutionPolicy -ZoneName $zoneName -ErrorAction Stop)) {
                     $policies.Add((Convert-Policy $policy 'Zone' $zoneName))
                 }
+                foreach ($policy in @(Get-DnsServerZoneTransferPolicy -ZoneName $zoneName -ErrorAction Stop)) {
+                    $transferPolicies.Add((Convert-TransferPolicy $policy 'Zone' $zoneName))
+                }
             }
-            [ordered]@{ ClientSubnets=$subnets; ZoneScopes=@($scopes | Sort-Object ZoneName,Name); QueryPolicies=@($policies | Sort-Object Level,ZoneName,ProcessingOrder,Name) }
+            [ordered]@{
+                ClientSubnets=$subnets
+                ZoneScopes=@($scopes | Sort-Object ZoneName,Name)
+                QueryPolicies=@($policies | Sort-Object Level,ZoneName,ProcessingOrder,Name)
+                ZoneTransferPolicies=@($transferPolicies | Sort-Object Level,ZoneName,ProcessingOrder,Name)
+            }
+        }
+        function Convert-TransferPolicy([object]$policy, [string]$level, [string]$zoneName) {
+            $criteria = @{}
+            foreach ($entry in @($policy.Criteria)) {
+                if ($entry.CriteriaType) { $criteria["$($entry.CriteriaType)"] = "$($entry.Criteria)" }
+            }
+            [ordered]@{
+                Name="$($policy.Name)"; Level=$level; ZoneName=$zoneName; Action="$($policy.Action)"; Condition="$($policy.Condition)"
+                ProcessingOrder=[int]$policy.ProcessingOrder; Enabled=[bool]$policy.IsEnabled
+                ClientSubnet=if ($criteria.ClientSubnet) { "$($criteria.ClientSubnet)" } else { $null }
+                TransportProtocol=if ($criteria.TransportProtocol) { "$($criteria.TransportProtocol)" } else { $null }
+                InternetProtocol=if ($criteria.NetworkProtocol) { "$($criteria.NetworkProtocol)" } else { $null }
+                ServerInterfaceIp=if ($criteria.Interface) { "$($criteria.Interface)" } else { $null }
+                TimeOfDay=if ($criteria.TimeOfDay) { "$($criteria.TimeOfDay)" } else { $null }
+            }
         }
         function Convert-Policy([object]$policy, [string]$level, [string]$zoneName) {
             $criteria = @{}
@@ -739,7 +779,18 @@ internal static class DnsRemotePolicyConfiguration
                     ZoneScope=if ($_.ZoneScope) { "$($_.ZoneScope)" } else { $null }
                 }
             } | Sort-Object Level,ZoneName,ProcessingOrder,Name)
-            [ordered]@{ ClientSubnets=$subnets; ZoneScopes=$scopes; QueryPolicies=$policies }
+            $transferPolicies = @($configuration.ZoneTransferPolicies | ForEach-Object {
+                [ordered]@{
+                    Name="$($_.Name)"; Level="$($_.Level)"; ZoneName=if ($_.ZoneName) { "$($_.ZoneName)" } else { $null }
+                    Action="$($_.Action)"; Condition="$($_.Condition)"; ProcessingOrder=[int]$_.ProcessingOrder; Enabled=[bool]$_.Enabled
+                    ClientSubnet=if ($_.ClientSubnet) { "$($_.ClientSubnet)" } else { $null }
+                    TransportProtocol=if ($_.TransportProtocol) { "$($_.TransportProtocol)" } else { $null }
+                    InternetProtocol=if ($_.InternetProtocol) { "$($_.InternetProtocol)" } else { $null }
+                    ServerInterfaceIp=if ($_.ServerInterfaceIp) { "$($_.ServerInterfaceIp)" } else { $null }
+                    TimeOfDay=if ($_.TimeOfDay) { "$($_.TimeOfDay)" } else { $null }
+                }
+            } | Sort-Object Level,ZoneName,ProcessingOrder,Name)
+            [ordered]@{ ClientSubnets=$subnets; ZoneScopes=$scopes; QueryPolicies=$policies; ZoneTransferPolicies=$transferPolicies }
         }
         function Criterion([object]$criterion) {
             if ($null -eq $criterion -or @($criterion.Values).Count -eq 0) { return $null }
@@ -755,10 +806,26 @@ internal static class DnsRemotePolicyConfiguration
             if (@($m.ZoneScopes).Count -gt 0) { $p.ZoneScope=(@($m.ZoneScopes | ForEach-Object { "$($_.Name),$($_.Weight)" }) -join ';') }
             return $p
         }
+        function Transfer-Policy-Parameters([object]$m, [bool]$isCreate) {
+            $p = @{ Name="$($m.Name)"; Condition=("$($m.Condition)".ToUpperInvariant()); ProcessingOrder=[int]$m.ProcessingOrder; ErrorAction='Stop' }
+            if ($isCreate) { $p.Action=("$($m.Decision)".ToUpperInvariant()) }
+            if ("$($m.Level)" -eq 'Zone') { $p.ZoneName="$($m.ZoneName)" }
+            $criteria = @{
+                ClientSubnet=(Criterion $m.ClientSubnet)
+                TransportProtocol=(Criterion $m.TransportProtocol)
+                InternetProtocol=(Criterion $m.InternetProtocol)
+                ServerInterfaceIP=(Criterion $m.ServerInterfaceIp)
+                TimeOfDay=(Criterion $m.TimeOfDay)
+            }
+            foreach ($entry in $criteria.GetEnumerator()) {
+                if ($entry.Value -or -not $isCreate) { $p[$entry.Key]=$entry.Value }
+            }
+            return $p
+        }
 
         try {
             $before = Get-Configuration
-            if (@($before.ClientSubnets).Count -gt 500 -or @($before.ZoneScopes).Count -gt 1000 -or @($before.QueryPolicies).Count -gt 1000) {
+            if (@($before.ClientSubnets).Count -gt 500 -or @($before.ZoneScopes).Count -gt 1000 -or @($before.QueryPolicies).Count -gt 1000 -or @($before.ZoneTransferPolicies).Count -gt 1000) {
                 return [pscustomobject]@{ Success=$false; FailureKind='PolicyConfigurationTooLarge'; Message='The DNS policy configuration exceeds the supported management limit.'; BeforeJson=$null; AfterJson=$null }
             }
             $beforeJson = $before | ConvertTo-Json -Compress -Depth 10
@@ -812,6 +879,23 @@ internal static class DnsRemotePolicyConfiguration
                     Remove-DnsServerQueryResolutionPolicy @p -Force | Out-Null
                 }
                 'SetQueryPolicyEnabled' {
+                    $p=@{ Name="$($m.Name)"; Level="$($m.Level)"; Force=$true; ErrorAction='Stop' }; if ("$($m.Level)" -eq 'Zone') { $p.ZoneName="$($m.ZoneName)" }
+                    if ([bool]$m.Enabled) { Enable-DnsServerPolicy @p | Out-Null } else { Disable-DnsServerPolicy @p | Out-Null }
+                }
+                'SaveZoneTransferPolicy' {
+                    $zoneArgs = @{}; if ("$($m.Level)" -eq 'Zone') { $zoneArgs.ZoneName="$($m.ZoneName)" }
+                    $existing = Get-DnsServerZoneTransferPolicy -Name $m.Name @zoneArgs -ErrorAction SilentlyContinue
+                    if ($existing -and "$($existing.Action)" -ine "$($m.Decision)") { return [pscustomobject]@{ Success=$false; FailureKind='PolicyActionImmutable'; Message='Delete and recreate the policy to change its action.'; BeforeJson=$beforeJson; AfterJson=$null } }
+                    $p = Transfer-Policy-Parameters $m ([bool]($null -eq $existing))
+                    if ($existing) { Set-DnsServerZoneTransferPolicy @p | Out-Null } else { Add-DnsServerZoneTransferPolicy @p | Out-Null }
+                    if ([bool]$m.Enabled) { Enable-DnsServerPolicy -Name $m.Name -Level $m.Level @zoneArgs -Force -ErrorAction Stop | Out-Null }
+                    else { Disable-DnsServerPolicy -Name $m.Name -Level $m.Level @zoneArgs -Force -ErrorAction Stop | Out-Null }
+                }
+                'DeleteZoneTransferPolicy' {
+                    $p=@{ Name="$($m.Name)"; ErrorAction='Stop' }; if ("$($m.Level)" -eq 'Zone') { $p.ZoneName="$($m.ZoneName)" }
+                    Remove-DnsServerZoneTransferPolicy @p -Force | Out-Null
+                }
+                'SetZoneTransferPolicyEnabled' {
                     $p=@{ Name="$($m.Name)"; Level="$($m.Level)"; Force=$true; ErrorAction='Stop' }; if ("$($m.Level)" -eq 'Zone') { $p.ZoneName="$($m.ZoneName)" }
                     if ([bool]$m.Enabled) { Enable-DnsServerPolicy @p | Out-Null } else { Disable-DnsServerPolicy @p | Out-Null }
                 }

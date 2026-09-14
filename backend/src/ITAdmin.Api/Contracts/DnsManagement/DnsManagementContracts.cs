@@ -84,16 +84,20 @@ public sealed record DnsPolicyMutationRequest(
     DnsPolicyCriterionRequest? Fqdn, DnsPolicyCriterionRequest? QueryType,
     DnsPolicyCriterionRequest? TransportProtocol, DnsPolicyCriterionRequest? InternetProtocol,
     DnsPolicyCriterionRequest? ServerInterfaceIp, IReadOnlyList<DnsZoneScopeWeightRequest>? ZoneScopes,
-    string ExpectedStateToken);
+    string ExpectedStateToken, DnsPolicyCriterionRequest? TimeOfDay = null);
 public sealed record DnsClientSubnetResponse(string Name, IReadOnlyList<string> Ipv4Subnets, IReadOnlyList<string> Ipv6Subnets);
 public sealed record DnsZoneScopeResponse(string ZoneName, string Name);
 public sealed record DnsQueryPolicyResponse(
     string Name, string Level, string? ZoneName, string Action, string Condition, int ProcessingOrder,
     bool Enabled, string? ClientSubnet, string? Fqdn, string? QueryType, string? TransportProtocol,
     string? InternetProtocol, string? ServerInterfaceIp, string? ZoneScope);
+public sealed record DnsZoneTransferPolicyResponse(
+    string Name, string Level, string? ZoneName, string Action, string Condition, int ProcessingOrder,
+    bool Enabled, string? ClientSubnet, string? TransportProtocol, string? InternetProtocol,
+    string? ServerInterfaceIp, string? TimeOfDay);
 public sealed record DnsPolicyConfigurationResponse(
     IReadOnlyList<DnsClientSubnetResponse> ClientSubnets, IReadOnlyList<DnsZoneScopeResponse> ZoneScopes,
-    IReadOnlyList<DnsQueryPolicyResponse> QueryPolicies, string StateToken);
+    IReadOnlyList<DnsQueryPolicyResponse> QueryPolicies, IReadOnlyList<DnsZoneTransferPolicyResponse> ZoneTransferPolicies, string StateToken);
 public sealed record DnsPolicyOperationResponse(bool Success, string? ErrorCode, string Message, DnsPolicyConfigurationResponse? Configuration = null);
 
 public sealed record DnssecSigningKeyResponse(

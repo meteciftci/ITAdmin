@@ -309,8 +309,9 @@ store sanitized before/after snapshots.
 `TransferAnyServer` is deliberately presented as a high-risk choice and every update uses a
 destructive confirmation style. Microsoft warns that allowing any reachable host to transfer a zone
 can disclose its contents; the recommended operational choices are NS-record servers or an explicit
-allowlist. Delegations and advanced DNS zone-transfer policies remain separate workflows because
-they have different resource models and evaluation semantics.
+allowlist. Delegations remain a separate workflow. Advanced DNS zone-transfer policies are managed
+with the other Windows DNS policy objects because they reuse client subnets and policy evaluation
+semantics, while remaining visually distinct from the zone's base transfer mode.
 
 Zone transfer references:
 
@@ -350,21 +351,23 @@ Zone delegation references:
 - [Set-DnsServerZoneDelegation](https://learn.microsoft.com/en-us/powershell/module/dnsserver/set-dnsserverzonedelegation?view=windowsserver2025-ps)
 - [Remove-DnsServerZoneDelegation](https://learn.microsoft.com/en-us/powershell/module/dnsserver/remove-dnsserverzonedelegation?view=windowsserver2025-ps)
 
-## Client subnet, zone scope, and query policy workflow
+## Client subnet, zone scope, query policy, and zone-transfer policy workflow
 
 Policy configuration is operational state and is therefore read live from the selected DNS server;
 it is not served from the inventory snapshot. PostgreSQL stores only the immutable audit and DNS
 operation records for changes. One opaque state token represents the complete live client-subnet,
-zone-scope, and query-policy collection. Every mutation re-reads and canonically compares that
-collection before invoking a cmdlet, preventing a stale page from overwriting another
-administrator's work.
+zone-scope, query-policy, and zone-transfer-policy collection. Every mutation re-reads and
+canonically compares that collection before invoking a cmdlet, preventing a stale page from
+overwriting another administrator's work.
 
 The policy permission is independent from server, record, and zone lifecycle permissions. The Host
 Agent accepts a fixed operation enum and typed criteria only. It supports client subnet save/delete,
-zone scope create/delete, query policy save/delete, and policy enable/disable. Query criteria cover
-client subnet, FQDN, query type, transport protocol, IP protocol, and server-interface IP with EQ or
-NE matching, AND/OR composition, processing order, and weighted zone scopes. No cmdlet name, script,
-or executable text crosses the API or named-pipe boundary.
+zone scope create/delete, query policy save/delete, zone-transfer policy save/delete, and policy
+enable/disable. Query criteria cover client subnet, FQDN, query type, transport protocol, IP
+protocol, and server-interface IP with EQ or NE matching, AND/OR composition, processing order, and
+weighted zone scopes. Zone-transfer policy criteria cover client subnet, transport protocol, IP
+protocol, server-interface IP, and time of day. No cmdlet name, script, or executable text crosses
+the API or named-pipe boundary.
 
 Windows DNS query-policy actions have deliberate constraints. Server-level query-processing
 policies can use Deny or Ignore, while weighted zone scopes require a zone-level Allow policy. The
@@ -373,6 +376,13 @@ remove an omitted criterion. ITAdmin refuses those two ambiguous updates and req
 confirmed delete/recreate workflow. Zone scopes with records cannot be deleted. Windows also rejects
 client-subnet deletion while a policy references it; ITAdmin surfaces the normalized failure without
 attempting dependent deletion.
+
+Zone-transfer policies deliberately support only Windows' Deny and Ignore actions; they cannot
+grant transfer access that the zone's base transfer configuration does not allow. Server-level rules
+can affect every primary zone on that DNS server, so the UI separates them from query policies and
+shows an explicit operational warning. Windows keeps an existing action immutable, so changing it
+requires the confirmed delete/recreate workflow. Unlike query-policy updates, its typed set command
+supports explicitly removing an individual criterion; ITAdmin passes those removals as null values.
 
 DNS policies are local server configuration and are not replicated with an AD-integrated zone.
 Administrators must intentionally configure each registered DNS server that needs the policy. The
@@ -386,6 +396,10 @@ Policy cmdlet references:
 - [Add-DnsServerZoneScope](https://learn.microsoft.com/en-us/powershell/module/dnsserver/add-dnsserverzonescope?view=windowsserver2025-ps)
 - [Add-DnsServerQueryResolutionPolicy](https://learn.microsoft.com/en-us/powershell/module/dnsserver/add-dnsserverqueryresolutionpolicy?view=windowsserver2025-ps)
 - [Set-DnsServerQueryResolutionPolicy](https://learn.microsoft.com/en-us/powershell/module/dnsserver/set-dnsserverqueryresolutionpolicy?view=windowsserver2025-ps)
+- [Get-DnsServerZoneTransferPolicy](https://learn.microsoft.com/en-us/powershell/module/dnsserver/get-dnsserverzonetransferpolicy?view=windowsserver2025-ps)
+- [Add-DnsServerZoneTransferPolicy](https://learn.microsoft.com/en-us/powershell/module/dnsserver/add-dnsserverzonetransferpolicy?view=windowsserver2025-ps)
+- [Set-DnsServerZoneTransferPolicy](https://learn.microsoft.com/en-us/powershell/module/dnsserver/set-dnsserverzonetransferpolicy?view=windowsserver2025-ps)
+- [Remove-DnsServerZoneTransferPolicy](https://learn.microsoft.com/en-us/powershell/module/dnsserver/remove-dnsserverzonetransferpolicy?view=windowsserver2025-ps)
 
 ## Authoritative DNSSEC lifecycle workflow
 

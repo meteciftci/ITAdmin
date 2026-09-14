@@ -65,6 +65,7 @@ public sealed class DnsPolicyManagementService(
             Condition = (HostAgentDnsPolicyCondition)command.Condition, ProcessingOrder = command.ProcessingOrder, Enabled = command.Enabled,
             ClientSubnet = Map(command.ClientSubnet), Fqdn = Map(command.Fqdn), QueryType = Map(command.QueryType),
             TransportProtocol = Map(command.TransportProtocol), InternetProtocol = Map(command.InternetProtocol), ServerInterfaceIp = Map(command.ServerInterfaceIp),
+            TimeOfDay = Map(command.TimeOfDay),
             ZoneScopes = command.ZoneScopes.Select(x => new HostAgentDnsZoneScopeWeight { Name = x.Name.Trim(), Weight = x.Weight }).ToArray(),
         };
         var correlationId = Guid.NewGuid().ToString("N");
@@ -117,11 +118,16 @@ public sealed class DnsPolicyManagementService(
         if (x.Action is DnsPolicyAction.CreateZoneScope or DnsPolicyAction.DeleteZoneScope && string.IsNullOrWhiteSpace(x.ZoneName)) return "A zone is required for the scope.";
         if (x.Action == DnsPolicyAction.SaveClientSubnet && x.Ipv4Subnets.Concat(x.Ipv6Subnets).All(string.IsNullOrWhiteSpace)) return "At least one CIDR subnet is required.";
         if (x.Ipv4Subnets.Any(v => !ValidCidr(v, 32)) || x.Ipv6Subnets.Any(v => !ValidCidr(v, 128))) return "Client subnets must be valid IPv4 or IPv6 CIDR values.";
-        if (x.Action == DnsPolicyAction.SaveQueryPolicy && x.Level == DnsPolicyLevel.Zone && string.IsNullOrWhiteSpace(x.ZoneName)) return "A zone is required for a zone-level policy.";
-        if (x.Action == DnsPolicyAction.SaveQueryPolicy && x.Level == DnsPolicyLevel.Server && x.Decision == DnsPolicyDecision.Allow) return "Server-level query processing policies cannot use Allow.";
+        var targetsPolicy = x.Action is DnsPolicyAction.SaveQueryPolicy or DnsPolicyAction.DeleteQueryPolicy or DnsPolicyAction.SetQueryPolicyEnabled
+            or DnsPolicyAction.SaveZoneTransferPolicy or DnsPolicyAction.DeleteZoneTransferPolicy or DnsPolicyAction.SetZoneTransferPolicyEnabled;
+        if (targetsPolicy && x.Level == DnsPolicyLevel.Zone && string.IsNullOrWhiteSpace(x.ZoneName)) return "A zone is required for a zone-level policy.";
+        var savesPolicy = x.Action is DnsPolicyAction.SaveQueryPolicy or DnsPolicyAction.SaveZoneTransferPolicy;
+        if (savesPolicy && x.Decision == DnsPolicyDecision.Allow && (x.Level == DnsPolicyLevel.Server || x.Action == DnsPolicyAction.SaveZoneTransferPolicy)) return "This policy type cannot use Allow.";
         if (x.Action == DnsPolicyAction.SaveQueryPolicy && new[] { x.ClientSubnet, x.Fqdn, x.QueryType, x.TransportProtocol, x.InternetProtocol, x.ServerInterfaceIp }.All(v => v is null || v.Values.Count == 0)) return "At least one policy criterion is required.";
-        if (x.Action == DnsPolicyAction.SaveQueryPolicy && x.ProcessingOrder is < 1 or > 100_000) return "Processing order must be between 1 and 100000.";
-        if (x.Action == DnsPolicyAction.SaveQueryPolicy && Criteria(x).Any(c => c.Values.Count is < 1 or > 64 || c.Values.Any(v => string.IsNullOrWhiteSpace(v) || v.Length > 256 || v.Contains(',') || v.Contains(';') || v.Any(char.IsControl)))) return "Policy criteria contain invalid values.";
+        if (x.Action == DnsPolicyAction.SaveZoneTransferPolicy && new[] { x.ClientSubnet, x.TransportProtocol, x.InternetProtocol, x.ServerInterfaceIp, x.TimeOfDay }.All(v => v is null || v.Values.Count == 0)) return "At least one zone transfer policy criterion is required.";
+        if (x.Action == DnsPolicyAction.SaveZoneTransferPolicy && (x.Fqdn is not null || x.QueryType is not null || x.ZoneScopes.Count > 0)) return "Zone transfer policies contain unsupported criteria.";
+        if (savesPolicy && x.ProcessingOrder is < 1 or > 100_000) return "Processing order must be between 1 and 100000.";
+        if (savesPolicy && Criteria(x).Any(c => c.Values.Count is < 1 or > 64 || c.Values.Any(v => string.IsNullOrWhiteSpace(v) || v.Length > 256 || v.Contains(',') || v.Contains(';') || v.Any(char.IsControl)))) return "Policy criteria contain invalid values.";
         if (x.QueryType is not null && x.QueryType.Values.Any(v => v.Trim().ToUpperInvariant() is not ("A" or "AAAA" or "ANY" or "CNAME" or "MX" or "NS" or "PTR" or "SOA" or "SRV" or "TXT"))) return "The query type criterion contains an unsupported value.";
         if (x.TransportProtocol is not null && x.TransportProtocol.Values.Any(v => v.Trim().ToUpperInvariant() is not ("TCP" or "UDP"))) return "Transport protocol must be TCP or UDP.";
         if (x.InternetProtocol is not null && x.InternetProtocol.Values.Any(v => v.Trim().ToUpperInvariant() is not ("IPV4" or "IPV6"))) return "Internet protocol must be IPv4 or IPv6.";
@@ -132,19 +138,33 @@ public sealed class DnsPolicyManagementService(
         return null;
     }
     private static IEnumerable<DnsPolicyCriterionModel> Criteria(DnsPolicyMutationCommand x) =>
-        new[] { x.ClientSubnet, x.Fqdn, x.QueryType, x.TransportProtocol, x.InternetProtocol, x.ServerInterfaceIp }.OfType<DnsPolicyCriterionModel>();
+        new[] { x.ClientSubnet, x.Fqdn, x.QueryType, x.TransportProtocol, x.InternetProtocol, x.ServerInterfaceIp, x.TimeOfDay }.OfType<DnsPolicyCriterionModel>();
     private static bool ValidCidr(string value, int maxPrefix)
     { var parts = value.Trim().Split('/'); return parts.Length == 2 && IPAddress.TryParse(parts[0], out var address) && int.TryParse(parts[1], out var prefix) && prefix >= 0 && prefix <= maxPrefix && (maxPrefix == 32 ? address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork : address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6); }
     private static HostAgentDnsPolicyCriterion? Map(DnsPolicyCriterionModel? x) => x is null || x.Values.Count == 0 ? null : new() { Operator = (HostAgentDnsPolicyMatchOperator)x.Operator, Values = Normalize(x.Values) };
     private static IReadOnlyList<string> Normalize(IReadOnlyList<string> values) => values.Select(x => x.Trim()).Where(x => x.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
     private static string? Normalize(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-    private static HostAgentDnsPolicyAction Map(DnsPolicyAction x) => x switch { DnsPolicyAction.SaveClientSubnet => HostAgentDnsPolicyAction.SaveClientSubnet, DnsPolicyAction.DeleteClientSubnet => HostAgentDnsPolicyAction.DeleteClientSubnet, DnsPolicyAction.CreateZoneScope => HostAgentDnsPolicyAction.CreateZoneScope, DnsPolicyAction.DeleteZoneScope => HostAgentDnsPolicyAction.DeleteZoneScope, DnsPolicyAction.SaveQueryPolicy => HostAgentDnsPolicyAction.SaveQueryPolicy, DnsPolicyAction.DeleteQueryPolicy => HostAgentDnsPolicyAction.DeleteQueryPolicy, _ => HostAgentDnsPolicyAction.SetQueryPolicyEnabled };
+    private static HostAgentDnsPolicyAction Map(DnsPolicyAction x) => x switch
+    {
+        DnsPolicyAction.SaveClientSubnet => HostAgentDnsPolicyAction.SaveClientSubnet,
+        DnsPolicyAction.DeleteClientSubnet => HostAgentDnsPolicyAction.DeleteClientSubnet,
+        DnsPolicyAction.CreateZoneScope => HostAgentDnsPolicyAction.CreateZoneScope,
+        DnsPolicyAction.DeleteZoneScope => HostAgentDnsPolicyAction.DeleteZoneScope,
+        DnsPolicyAction.SaveQueryPolicy => HostAgentDnsPolicyAction.SaveQueryPolicy,
+        DnsPolicyAction.DeleteQueryPolicy => HostAgentDnsPolicyAction.DeleteQueryPolicy,
+        DnsPolicyAction.SetQueryPolicyEnabled => HostAgentDnsPolicyAction.SetQueryPolicyEnabled,
+        DnsPolicyAction.SaveZoneTransferPolicy => HostAgentDnsPolicyAction.SaveZoneTransferPolicy,
+        DnsPolicyAction.DeleteZoneTransferPolicy => HostAgentDnsPolicyAction.DeleteZoneTransferPolicy,
+        DnsPolicyAction.SetZoneTransferPolicyEnabled => HostAgentDnsPolicyAction.SetZoneTransferPolicyEnabled,
+        _ => throw new ArgumentOutOfRangeException(nameof(x), x, null),
+    };
     private static DnsPolicyConfigurationModel Map(Guid serverId, HostAgentDnsPolicyConfiguration x)
     {
         var json = JsonSerializer.Serialize(new { ServerId = serverId, Configuration = x }, HostAgentProtocol.Json);
         return new(x.ClientSubnets.Select(v => new DnsClientSubnetModel(v.Name, v.Ipv4Subnets, v.Ipv6Subnets)).ToArray(),
             x.ZoneScopes.Select(v => new DnsZoneScopeModel(v.ZoneName, v.Name)).ToArray(),
             x.QueryPolicies.Select(v => new DnsQueryPolicyModel(v.Name, v.Level, v.ZoneName, v.Action, v.Condition, v.ProcessingOrder, v.Enabled, v.ClientSubnet, v.Fqdn, v.QueryType, v.TransportProtocol, v.InternetProtocol, v.ServerInterfaceIp, v.ZoneScope)).ToArray(),
+            x.ZoneTransferPolicies.Select(v => new DnsZoneTransferPolicyModel(v.Name, v.Level, v.ZoneName, v.Action, v.Condition, v.ProcessingOrder, v.Enabled, v.ClientSubnet, v.TransportProtocol, v.InternetProtocol, v.ServerInterfaceIp, v.TimeOfDay)).ToArray(),
             Convert.ToBase64String(Encoding.UTF8.GetBytes(json)));
     }
     private static string? Limit(string? value, int max) { var v = Normalize(value); return v is null ? null : v[..Math.Min(v.Length, max)]; }
