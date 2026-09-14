@@ -36,6 +36,10 @@ export function DnsManagementRedirectPage() {
     return <Navigate to="/dns-management/scavenging" replace />;
   }
 
+  if (canAccess(user, PermissionCodes.DnsManagement.ManageNetworkConfiguration)) {
+    return <Navigate to="/dns-management/network-configuration" replace />;
+  }
+
   if (
     canAccess(user, PermissionCodes.DnsManagement.ManageServerSettings) ||
     canAccess(user, PermissionCodes.DnsManagement.ClearCache)

@@ -1,6 +1,6 @@
 import axios from "axios";
 import { apiClient } from "@/lib/api-client";
-import type { CreateDnsRecord, DnsComparisonContext, DnsComparisonRequest, DnsComparisonResponse, DnsComparisonZone, DnsCredentialProfile, DnsDownload, DnsInventoryServer, DnsManagementSettings, DnsOperationLogDetail, DnsOperationLogListItem, DnsOperationLogQuery, DnsPolicyConfiguration, DnsPolicyMutationInput, DnsPolicyOperation, DnsRecordInventory, DnsRecordMutation, DnsRecordMutationInput, DnsScavengingConfiguration, DnsScavengingMutationInput, DnsScavengingOperation, DnsServer, DnsServerConnectionTest, DnsServerOperation, DnsServerSettings, DnsSyncBatch, DnsSyncJob, DnsZoneInventory, DnsZoneMutation, DnssecConfiguration, DnssecMutationInput, DnssecOperation, PagedDnsResponse, SaveDnsCredentialProfile, SaveDnsServer, SaveDnsZone, UpdateDnsServerSettings, UpdateDnsZone } from "./types";
+import type { CreateDnsRecord, DnsComparisonContext, DnsComparisonRequest, DnsComparisonResponse, DnsComparisonZone, DnsCredentialProfile, DnsDownload, DnsInventoryServer, DnsManagementSettings, DnsNetworkConfiguration, DnsNetworkMutationInput, DnsNetworkOperation, DnsOperationLogDetail, DnsOperationLogListItem, DnsOperationLogQuery, DnsPolicyConfiguration, DnsPolicyMutationInput, DnsPolicyOperation, DnsRecordInventory, DnsRecordMutation, DnsRecordMutationInput, DnsScavengingConfiguration, DnsScavengingMutationInput, DnsScavengingOperation, DnsServer, DnsServerConnectionTest, DnsServerOperation, DnsServerSettings, DnsSyncBatch, DnsSyncJob, DnsZoneInventory, DnsZoneMutation, DnssecConfiguration, DnssecMutationInput, DnssecOperation, PagedDnsResponse, SaveDnsCredentialProfile, SaveDnsServer, SaveDnsZone, UpdateDnsServerSettings, UpdateDnsZone } from "./types";
 
 const basePath = "/dns-management";
 export const DNS_SETTINGS_QUERY_KEY = ["dns-management", "settings"] as const;
@@ -42,6 +42,11 @@ export const getDnsScavengingConfiguration = async (id: string) =>
   (await apiClient.get<DnsScavengingConfiguration>(`${basePath}/servers/${id}/scavenging-configuration`)).data;
 export const mutateDnsScavengingConfiguration = async (id: string, request: DnsScavengingMutationInput) =>
   (await apiClient.post<DnsScavengingOperation>(`${basePath}/servers/${id}/scavenging-configuration/mutations`, request)).data;
+export const DNS_NETWORK_CONFIGURATION_QUERY_KEY = ["dns-management", "network-configuration"] as const;
+export const getDnsNetworkConfiguration = async (id: string) =>
+  (await apiClient.get<DnsNetworkConfiguration>(`${basePath}/servers/${id}/network-configuration`)).data;
+export const mutateDnsNetworkConfiguration = async (id: string, request: DnsNetworkMutationInput) =>
+  (await apiClient.post<DnsNetworkOperation>(`${basePath}/servers/${id}/network-configuration/mutations`, request)).data;
 
 export const DNS_INVENTORY_SERVERS_QUERY_KEY = ["dns-management", "inventory", "servers"] as const;
 export const DNS_ZONES_QUERY_KEY = ["dns-management", "inventory", "zones"] as const;

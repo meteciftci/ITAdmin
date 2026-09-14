@@ -33,7 +33,7 @@ namespace ITAdmin.HostAgent.Contracts;
 /// </summary>
 public static class HostAgentProtocol
 {
-    public const int ProtocolVersion = 11;
+    public const int ProtocolVersion = 12;
 
     /// <summary>Pipe name. Machine-local; the agent ACLs it to the app pool identity and administrators.</summary>
     public const string PipeName = "ITAdmin.HostAgent";
@@ -128,6 +128,8 @@ public enum HostAgentOperation
     ManageDnssecConfiguration = 15,
     /// <summary>Read or mutate DNS aging and scavenging configuration.</summary>
     ManageDnsScavenging = 16,
+    /// <summary>Read or mutate DNS listening addresses and root hints.</summary>
+    ManageDnsNetworkConfiguration = 17,
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -212,6 +214,16 @@ public enum HostAgentDnsScavengingAction
     UpdateServer = 1,
     UpdateZone = 2,
     StartScavenging = 3,
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum HostAgentDnsNetworkAction
+{
+    Read = 0,
+    UpdateListeningAddresses = 1,
+    AddRootHint = 2,
+    UpdateRootHint = 3,
+    RemoveRootHint = 4,
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -482,6 +494,18 @@ public sealed record HostAgentRequest
     public IReadOnlyList<string>? DnsZoneScavengeServers { get; init; }
     [JsonPropertyName("dnsExpectedScavengingConfigurationJson")]
     public string? DnsExpectedScavengingConfigurationJson { get; init; }
+    [JsonPropertyName("dnsNetworkAction")]
+    public HostAgentDnsNetworkAction? DnsNetworkAction { get; init; }
+    [JsonPropertyName("dnsListeningIpAddresses")]
+    public IReadOnlyList<string>? DnsListeningIpAddresses { get; init; }
+    [JsonPropertyName("dnsRootHintNameServer")]
+    public string? DnsRootHintNameServer { get; init; }
+    [JsonPropertyName("dnsRootHintIpAddresses")]
+    public IReadOnlyList<string>? DnsRootHintIpAddresses { get; init; }
+    [JsonPropertyName("dnsOriginalRootHintNameServer")]
+    public string? DnsOriginalRootHintNameServer { get; init; }
+    [JsonPropertyName("dnsExpectedNetworkConfigurationJson")]
+    public string? DnsExpectedNetworkConfigurationJson { get; init; }
 
     public string ToJson() => JsonSerializer.Serialize(this, HostAgentProtocol.Json);
 
@@ -548,7 +572,8 @@ public sealed record HostAgentRequest
             or HostAgentOperation.ManageDnsServerSettings
             or HostAgentOperation.ManageDnsPolicyConfiguration
             or HostAgentOperation.ManageDnssecConfiguration
-            or HostAgentOperation.ManageDnsScavenging)
+            or HostAgentOperation.ManageDnsScavenging
+            or HostAgentOperation.ManageDnsNetworkConfiguration)
         {
             var hostName = DnsHostName?.Trim().TrimEnd('.');
             if (string.IsNullOrWhiteSpace(hostName) || hostName.Length > 253
@@ -836,6 +861,34 @@ public sealed record HostAgentRequest
             }
         }
 
+        if (Operation == HostAgentOperation.ManageDnsNetworkConfiguration)
+        {
+            if (DnsNetworkAction is null || !Enum.IsDefined(DnsNetworkAction.Value))
+                problems.Add("dnsNetworkAction is required.");
+            if (DnsNetworkAction != HostAgentDnsNetworkAction.Read
+                && (string.IsNullOrWhiteSpace(DnsExpectedNetworkConfigurationJson)
+                    || DnsExpectedNetworkConfigurationJson.Length > 131_072
+                    || !IsJsonObject(DnsExpectedNetworkConfigurationJson)))
+                problems.Add("dnsExpectedNetworkConfigurationJson must be a bounded JSON object.");
+            if (DnsNetworkAction == HostAgentDnsNetworkAction.UpdateListeningAddresses
+                && (DnsListeningIpAddresses is not { Count: > 0 and <= 64 }
+                    || DnsListeningIpAddresses.Any(x => !IPAddress.TryParse(x, out _))))
+                problems.Add("dnsListeningIpAddresses must contain between 1 and 64 IP addresses.");
+            if (DnsNetworkAction is HostAgentDnsNetworkAction.AddRootHint
+                or HostAgentDnsNetworkAction.UpdateRootHint or HostAgentDnsNetworkAction.RemoveRootHint)
+            {
+                if (!IsBoundedDnsName(DnsRootHintNameServer))
+                    problems.Add("dnsRootHintNameServer must be a valid bounded DNS name.");
+                if (DnsNetworkAction != HostAgentDnsNetworkAction.RemoveRootHint
+                    && (DnsRootHintIpAddresses is not { Count: > 0 and <= 16 }
+                        || DnsRootHintIpAddresses.Any(x => !IPAddress.TryParse(x, out _))))
+                    problems.Add("dnsRootHintIpAddresses must contain between 1 and 16 IP addresses.");
+                if (DnsNetworkAction == HostAgentDnsNetworkAction.UpdateRootHint
+                    && !IsBoundedDnsName(DnsOriginalRootHintNameServer))
+                    problems.Add("dnsOriginalRootHintNameServer must be a valid bounded DNS name.");
+            }
+        }
+
         return problems;
     }
 
@@ -886,6 +939,13 @@ public sealed record HostAgentRequest
         return parts.Length == 2 && IPAddress.TryParse(parts[0], out var address)
             && address.AddressFamily == family && int.TryParse(parts[1], out var prefix)
             && prefix >= 0 && prefix <= maxPrefix;
+    }
+
+    private static bool IsBoundedDnsName(string? value)
+    {
+        var normalized = value?.Trim().TrimEnd('.');
+        return !string.IsNullOrWhiteSpace(normalized) && normalized.Length <= 253
+            && !normalized.Any(char.IsControl) && Uri.CheckHostName(normalized) == UriHostNameType.Dns;
     }
 
     private static string? NormalizeThumbprint(string? value) =>
@@ -1004,6 +1064,8 @@ public sealed record HostAgentResponse
     public HostAgentDnssecConfigurationResult? DnssecConfiguration { get; init; }
     [JsonPropertyName("dnsScavengingConfiguration")]
     public HostAgentDnsScavengingConfigurationResult? DnsScavengingConfiguration { get; init; }
+    [JsonPropertyName("dnsNetworkConfiguration")]
+    public HostAgentDnsNetworkConfigurationResult? DnsNetworkConfiguration { get; init; }
 
     [JsonPropertyName("repositoryStatus")]
     public HostAgentRepositoryStatus RepositoryStatus { get; init; } = HostAgentRepositoryStatus.Unknown;
@@ -1101,6 +1163,8 @@ public sealed record HostAgentDnsCapabilities
     public bool Scopes { get; init; }
     [JsonPropertyName("cache")]
     public bool Cache { get; init; }
+    [JsonPropertyName("networkConfiguration")]
+    public bool NetworkConfiguration { get; init; }
 }
 
 public sealed record HostAgentDnsInventoryPage
@@ -1396,6 +1460,28 @@ public sealed record HostAgentDnsScavengingConfigurationResult
     [JsonPropertyName("message")] public string Message { get; init; } = string.Empty;
     [JsonPropertyName("before")] public HostAgentDnsScavengingConfiguration? Before { get; init; }
     [JsonPropertyName("after")] public HostAgentDnsScavengingConfiguration? After { get; init; }
+}
+
+public sealed record HostAgentDnsRootHint
+{
+    [JsonPropertyName("nameServer")] public string NameServer { get; init; } = string.Empty;
+    [JsonPropertyName("ipAddresses")] public IReadOnlyList<string> IpAddresses { get; init; } = [];
+}
+
+public sealed record HostAgentDnsNetworkConfiguration
+{
+    [JsonPropertyName("listeningIpAddresses")] public IReadOnlyList<string> ListeningIpAddresses { get; init; } = [];
+    [JsonPropertyName("availableIpAddresses")] public IReadOnlyList<string> AvailableIpAddresses { get; init; } = [];
+    [JsonPropertyName("rootHints")] public IReadOnlyList<HostAgentDnsRootHint> RootHints { get; init; } = [];
+}
+
+public sealed record HostAgentDnsNetworkConfigurationResult
+{
+    [JsonPropertyName("success")] public bool Success { get; init; }
+    [JsonPropertyName("failureKind")] public string? FailureKind { get; init; }
+    [JsonPropertyName("message")] public string Message { get; init; } = string.Empty;
+    [JsonPropertyName("before")] public HostAgentDnsNetworkConfiguration? Before { get; init; }
+    [JsonPropertyName("after")] public HostAgentDnsNetworkConfiguration? After { get; init; }
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]

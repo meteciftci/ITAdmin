@@ -263,6 +263,35 @@ Server-settings cmdlet references:
 - [Set-DnsServerRecursion](https://learn.microsoft.com/en-us/powershell/module/dnsserver/set-dnsserverrecursion?view=windowsserver2025-ps)
 - [Clear-DnsServerCache](https://learn.microsoft.com/en-us/powershell/module/dnsserver/clear-dnsservercache?view=windowsserver2025-ps)
 
+## DNS listening addresses and root hints workflow
+
+The network-configuration screen reads effective DNS listening addresses, the server-reported set
+of available addresses, and root hints live from the selected server. Listening-address writes must
+select between one and sixty-four addresses from that live available set. The UI and Host Agent both
+reject an empty selection so a malformed request cannot intentionally unbind DNS from every address.
+Because changing bindings can make DNS unavailable to clients, the action uses a destructive-style
+confirmation even though the portal's WinRM management connection is independent from DNS port 53.
+
+Root hints use typed add, update, and remove actions with bounded FQDN and IPv4/IPv6 lists. The final
+hint cannot be removed. Updates deliberately avoid `Set-DnsServerRootHint`: Windows documents that
+command as replacing the complete root-hint list. Instead, ITAdmin removes only the selected hint,
+adds its replacement, and attempts to restore the captured original if the add fails. A live read-back
+verifies every successful action.
+
+One opaque state token covers listening addresses, available addresses, and the complete root-hint
+collection. The Host Agent compares it immediately before a write, uses the just-read full DNS server
+settings object when changing `ListeningIPAddress`, and preserves every other property on that object.
+All actions use a dedicated permission and produce sanitized general-audit and DNS-operation entries.
+
+Network configuration references:
+
+- [Install and configure DNS Server](https://learn.microsoft.com/en-us/windows-server/networking/dns/quickstart-install-configure-dns-server)
+- [Get-DnsServerSetting](https://learn.microsoft.com/en-us/powershell/module/dnsserver/get-dnsserversetting?view=windowsserver2025-ps)
+- [Set-DnsServerSetting](https://learn.microsoft.com/en-us/powershell/module/dnsserver/set-dnsserversetting?view=windowsserver2025-ps)
+- [Get-DnsServerRootHint](https://learn.microsoft.com/en-us/powershell/module/dnsserver/get-dnsserverroothint?view=windowsserver2025-ps)
+- [Add-DnsServerRootHint](https://learn.microsoft.com/en-us/powershell/module/dnsserver/add-dnsserverroothint?view=windowsserver2025-ps)
+- [Remove-DnsServerRootHint](https://learn.microsoft.com/en-us/powershell/module/dnsserver/remove-dnsserverroothint?view=windowsserver2025-ps)
+
 ## Client subnet, zone scope, and query policy workflow
 
 Policy configuration is operational state and is therefore read live from the selected DNS server;

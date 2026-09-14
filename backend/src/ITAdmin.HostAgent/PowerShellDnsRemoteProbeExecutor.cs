@@ -31,6 +31,8 @@ public interface IDnsRemoteProbeExecutor
         HostAgentRequest request, CancellationToken cancellationToken);
     Task<HostAgentDnsScavengingConfigurationResult> ManageDnsScavengingAsync(
         HostAgentRequest request, CancellationToken cancellationToken);
+    Task<HostAgentDnsNetworkConfigurationResult> ManageDnsNetworkConfigurationAsync(
+        HostAgentRequest request, CancellationToken cancellationToken);
 }
 
 internal static class DnsRemoteCapabilityProbe
@@ -68,6 +70,11 @@ internal static class DnsRemoteCapabilityProbe
             Policies = [bool](Get-Command Get-DnsServerQueryResolutionPolicy -ErrorAction SilentlyContinue)
             Scopes = [bool](Get-Command Get-DnsServerZoneScope -ErrorAction SilentlyContinue)
             Cache = [bool](Get-Command Clear-DnsServerCache -ErrorAction SilentlyContinue)
+            NetworkConfiguration = [bool](Get-Command Get-DnsServerSetting -ErrorAction SilentlyContinue) -and
+                [bool](Get-Command Set-DnsServerSetting -ErrorAction SilentlyContinue) -and
+                [bool](Get-Command Get-DnsServerRootHint -ErrorAction SilentlyContinue) -and
+                [bool](Get-Command Add-DnsServerRootHint -ErrorAction SilentlyContinue) -and
+                [bool](Get-Command Remove-DnsServerRootHint -ErrorAction SilentlyContinue)
         }
         """;
 }
@@ -936,6 +943,132 @@ internal static class DnsRemoteScavengingConfiguration
         """;
 }
 
+internal static class DnsRemoteNetworkConfiguration
+{
+    internal const string Script = """
+        param(
+            [Parameter(Mandatory=$true)][ValidateSet('Read','UpdateListeningAddresses','AddRootHint','UpdateRootHint','RemoveRootHint')][string]$Action,
+            [string[]]$ListeningIpAddresses,
+            [string]$RootHintNameServer,
+            [string[]]$RootHintIpAddresses,
+            [string]$OriginalRootHintNameServer,
+            [string]$ExpectedConfigurationJson
+        )
+        $ErrorActionPreference = 'Stop'
+        Import-Module DnsServer -ErrorAction Stop
+
+        function Canonical-Ip([object]$value) {
+            try { return ([System.Net.IPAddress]::Parse("$value")).ToString().ToLowerInvariant() } catch { return $null }
+        }
+        function Canonical-Name([object]$value) {
+            $name = "$value".Trim().TrimEnd('.').ToLowerInvariant()
+            if ($name) { return "$name." }
+            return ''
+        }
+        function Convert-RootHint([object]$hint) {
+            $addresses = @($hint.IPAddress | ForEach-Object {
+                $candidate = if ($_.RecordData.IPv4Address) { $_.RecordData.IPv4Address } elseif ($_.RecordData.IPv6Address) { $_.RecordData.IPv6Address } else { $_.RecordData }
+                Canonical-Ip $candidate
+            } | Where-Object { $_ } | Sort-Object -Unique)
+            [ordered]@{ NameServer=(Canonical-Name $hint.NameServer.RecordData.NameServer); IpAddresses=$addresses }
+        }
+        function Get-Configuration {
+            $settings = Get-DnsServerSetting -All -ErrorAction Stop
+            $listening = @($settings.ListeningIPAddress | ForEach-Object { Canonical-Ip $_ } | Where-Object { $_ } | Sort-Object -Unique)
+            $available = @($settings.AllIPAddress | ForEach-Object { Canonical-Ip $_ } | Where-Object { $_ } | Sort-Object -Unique)
+            if ($available.Count -eq 0) { $available = $listening }
+            $hints = @(Get-DnsServerRootHint -ErrorAction Stop | ForEach-Object { Convert-RootHint $_ } | Sort-Object NameServer)
+            [ordered]@{ ListeningIpAddresses=$listening; AvailableIpAddresses=$available; RootHints=$hints }
+        }
+        function Normalize([object]$value) {
+            [ordered]@{
+                ListeningIpAddresses=@($value.ListeningIpAddresses | ForEach-Object { Canonical-Ip $_ } | Where-Object { $_ } | Sort-Object -Unique)
+                AvailableIpAddresses=@($value.AvailableIpAddresses | ForEach-Object { Canonical-Ip $_ } | Where-Object { $_ } | Sort-Object -Unique)
+                RootHints=@($value.RootHints | ForEach-Object {
+                    [ordered]@{ NameServer=(Canonical-Name $_.NameServer); IpAddresses=@($_.IpAddresses | ForEach-Object { Canonical-Ip $_ } | Where-Object { $_ } | Sort-Object -Unique) }
+                } | Sort-Object NameServer)
+            }
+        }
+        function Same-Strings([object[]]$left, [object[]]$right) {
+            return ((@($left | Sort-Object -Unique) -join '|') -ceq (@($right | Sort-Object -Unique) -join '|'))
+        }
+
+        $beforeJson = $null
+        try {
+            $before = Get-Configuration
+            if (@($before.RootHints).Count -gt 64) {
+                return [pscustomobject]@{ Success=$false; FailureKind='NetworkConfigurationTooLarge'; Message='The DNS network configuration exceeds the supported management limit.'; BeforeJson=$null; AfterJson=$null }
+            }
+            $beforeJson = $before | ConvertTo-Json -Compress -Depth 7
+            if ($beforeJson.Length -gt 131072) {
+                return [pscustomobject]@{ Success=$false; FailureKind='NetworkConfigurationTooLarge'; Message='The DNS network configuration exceeds the supported management limit.'; BeforeJson=$null; AfterJson=$null }
+            }
+            if ($Action -eq 'Read') { return [pscustomobject]@{ Success=$true; FailureKind=$null; Message='DNS network configuration read.'; BeforeJson=$null; AfterJson=$beforeJson } }
+
+            $expected = $ExpectedConfigurationJson | ConvertFrom-Json -ErrorAction Stop
+            if (((Normalize $before) | ConvertTo-Json -Compress -Depth 7) -cne ((Normalize $expected) | ConvertTo-Json -Compress -Depth 7)) {
+                return [pscustomobject]@{ Success=$false; FailureKind='NetworkConfigurationChanged'; Message='The live DNS network configuration changed. Refresh and retry.'; BeforeJson=$beforeJson; AfterJson=$null }
+            }
+
+            switch ($Action) {
+                'UpdateListeningAddresses' {
+                    $requested = @($ListeningIpAddresses | ForEach-Object { Canonical-Ip $_ } | Where-Object { $_ } | Sort-Object -Unique)
+                    if ($requested.Count -eq 0 -or @($requested | Where-Object { $_ -notin $before.AvailableIpAddresses }).Count -gt 0) {
+                        return [pscustomobject]@{ Success=$false; FailureKind='ListeningAddressUnavailable'; Message='A selected listening address is not available on the DNS server.'; BeforeJson=$beforeJson; AfterJson=$null }
+                    }
+                    $settings = Get-DnsServerSetting -All -ErrorAction Stop
+                    $settings.ListeningIPAddress = [string[]]$requested
+                    Set-DnsServerSetting -InputObject $settings -Force -ErrorAction Stop | Out-Null
+                }
+                'AddRootHint' {
+                    $name = Canonical-Name $RootHintNameServer
+                    if (@($before.RootHints | Where-Object { $_.NameServer -ceq $name }).Count -gt 0) {
+                        return [pscustomobject]@{ Success=$false; FailureKind='RootHintAlreadyExists'; Message='The root hint already exists.'; BeforeJson=$beforeJson; AfterJson=$null }
+                    }
+                    Add-DnsServerRootHint -NameServer $name -IPAddress ([System.Net.IPAddress[]]@($RootHintIpAddresses)) -ErrorAction Stop | Out-Null
+                }
+                'UpdateRootHint' {
+                    $oldName = Canonical-Name $OriginalRootHintNameServer
+                    $newName = Canonical-Name $RootHintNameServer
+                    $old = @($before.RootHints | Where-Object { $_.NameServer -ceq $oldName })
+                    if ($old.Count -ne 1) { return [pscustomobject]@{ Success=$false; FailureKind='RootHintNotFound'; Message='The root hint was not found.'; BeforeJson=$beforeJson; AfterJson=$null } }
+                    if ($newName -cne $oldName -and @($before.RootHints | Where-Object { $_.NameServer -ceq $newName }).Count -gt 0) {
+                        return [pscustomobject]@{ Success=$false; FailureKind='RootHintAlreadyExists'; Message='The replacement root hint already exists.'; BeforeJson=$beforeJson; AfterJson=$null }
+                    }
+                    Remove-DnsServerRootHint -NameServer $oldName -Force -ErrorAction Stop | Out-Null
+                    try { Add-DnsServerRootHint -NameServer $newName -IPAddress ([System.Net.IPAddress[]]@($RootHintIpAddresses)) -ErrorAction Stop | Out-Null }
+                    catch {
+                        try { Add-DnsServerRootHint -NameServer $oldName -IPAddress ([System.Net.IPAddress[]]@($old[0].IpAddresses)) -ErrorAction Stop | Out-Null } catch {}
+                        throw
+                    }
+                }
+                'RemoveRootHint' {
+                    $name = Canonical-Name $RootHintNameServer
+                    if (@($before.RootHints).Count -le 1) { return [pscustomobject]@{ Success=$false; FailureKind='LastRootHintCannotBeRemoved'; Message='The final root hint cannot be removed.'; BeforeJson=$beforeJson; AfterJson=$null } }
+                    if (@($before.RootHints | Where-Object { $_.NameServer -ceq $name }).Count -ne 1) { return [pscustomobject]@{ Success=$false; FailureKind='RootHintNotFound'; Message='The root hint was not found.'; BeforeJson=$beforeJson; AfterJson=$null } }
+                    Remove-DnsServerRootHint -NameServer $name -Force -ErrorAction Stop | Out-Null
+                }
+            }
+
+            $after = Get-Configuration
+            if ($Action -eq 'UpdateListeningAddresses') {
+                $wanted = @($ListeningIpAddresses | ForEach-Object { Canonical-Ip $_ } | Where-Object { $_ })
+                if (-not (Same-Strings $after.ListeningIpAddresses $wanted)) { throw 'DNS listening address read-back verification failed.' }
+            }
+            if ($Action -in @('AddRootHint','UpdateRootHint')) {
+                $name = Canonical-Name $RootHintNameServer
+                $actual = @($after.RootHints | Where-Object { $_.NameServer -ceq $name })
+                $wanted = @($RootHintIpAddresses | ForEach-Object { Canonical-Ip $_ } | Where-Object { $_ })
+                if ($actual.Count -ne 1 -or -not (Same-Strings $actual[0].IpAddresses $wanted)) { throw 'DNS root hint read-back verification failed.' }
+            }
+            if ($Action -eq 'RemoveRootHint' -and @($after.RootHints | Where-Object { $_.NameServer -ceq (Canonical-Name $RootHintNameServer) }).Count -gt 0) { throw 'DNS root hint removal verification failed.' }
+            return [pscustomobject]@{ Success=$true; FailureKind=$null; Message='DNS network configuration updated.'; BeforeJson=$beforeJson; AfterJson=($after | ConvertTo-Json -Compress -Depth 7) }
+        } catch {
+            return [pscustomobject]@{ Success=$false; FailureKind='DnsNetworkOperationFailed'; Message='The DNS server rejected the network configuration operation.'; BeforeJson=$beforeJson; AfterJson=$null }
+        }
+        """;
+}
+
 internal static class DnsRemoteDnssecConfiguration
 {
     // Authoritative signing and recursive validation are separate concerns, but share one live,
@@ -1270,6 +1403,59 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
         try { return await ManageDnsScavengingCoreAsync(request, timeout.Token); }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         { return ScavengingConfigurationFailure("Timeout", "The DNS scavenging operation timed out."); }
+    }
+
+    public async Task<HostAgentDnsNetworkConfigurationResult> ManageDnsNetworkConfigurationAsync(
+        HostAgentRequest request, CancellationToken cancellationToken)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(request.DnsTimeoutSeconds!.Value));
+        try { return await ManageDnsNetworkConfigurationCoreAsync(request, timeout.Token); }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        { return NetworkConfigurationFailure("Timeout", "The DNS network configuration operation timed out."); }
+    }
+
+    private async Task<HostAgentDnsNetworkConfigurationResult> ManageDnsNetworkConfigurationCoreAsync(
+        HostAgentRequest request, CancellationToken cancellationToken)
+    {
+        var host = request.DnsHostName!.Trim().TrimEnd('.');
+        var tls = await ValidateTlsAsync(host, request.DnsPort!.Value, request.DnsTlsCertificateThumbprint, cancellationToken);
+        if (!tls.NetworkReachable || !tls.Valid)
+            return NetworkConfigurationFailure(tls.NetworkReachable ? "TlsValidationFailed" : "NetworkUnreachable",
+                tls.NetworkReachable ? "The WinRM HTTPS certificate could not be validated." : "The WinRM HTTPS endpoint could not be reached.");
+        using var securePassword = ToSecureString(request.DnsPassword!);
+        var credential = new PSCredential(request.DnsUserName!, securePassword);
+        var endpoint = new UriBuilder("https", host, request.DnsPort.Value, "wsman").Uri;
+        var timeout = request.DnsTimeoutSeconds!.Value * 1000;
+        var connection = new WSManConnectionInfo(endpoint, MicrosoftPowerShellShellUri, credential)
+        {
+            AuthenticationMechanism = request.DnsAuthenticationMode == HostAgentDnsAuthenticationMode.BasicOverTls ? AuthenticationMechanism.Basic : AuthenticationMechanism.Negotiate,
+            OpenTimeout = timeout, OperationTimeout = timeout, CancelTimeout = Math.Min(timeout, 10_000), NoMachineProfile = true,
+        };
+        using var runspace = RunspaceFactory.CreateRunspace(connection);
+        try
+        {
+            await Task.Run(runspace.Open, cancellationToken);
+            using var powerShell = PowerShell.Create();
+            powerShell.Runspace = runspace;
+            powerShell.AddScript(DnsRemoteNetworkConfiguration.Script, useLocalScope: true)
+                .AddParameter("Action", request.DnsNetworkAction!.Value.ToString())
+                .AddParameter("ListeningIpAddresses", request.DnsListeningIpAddresses?.ToArray() ?? [])
+                .AddParameter("RootHintNameServer", request.DnsRootHintNameServer)
+                .AddParameter("RootHintIpAddresses", request.DnsRootHintIpAddresses?.ToArray() ?? [])
+                .AddParameter("OriginalRootHintNameServer", request.DnsOriginalRootHintNameServer)
+                .AddParameter("ExpectedConfigurationJson", request.DnsExpectedNetworkConfigurationJson);
+            var output = await Task.Run(powerShell.Invoke, cancellationToken);
+            return powerShell.HadErrors || output.Count != 1
+                ? NetworkConfigurationFailure("DnsNetworkOperationFailed", "The DNS server rejected the network configuration operation.")
+                : MapNetworkConfigurationResult(output[0]);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception exception) when (exception is PSRemotingTransportException or RemoteException or RuntimeException or InvalidRunspaceStateException)
+        {
+            logger.LogWarning("DNS network configuration operation failed for {Host}:{Port} ({ExceptionType}).", host, request.DnsPort, exception.GetType().Name);
+            return NetworkConfigurationFailure("DnsNetworkOperationFailed", "The DNS server rejected the network configuration operation.");
+        }
     }
 
     private async Task<HostAgentDnsScavengingConfigurationResult> ManageDnsScavengingCoreAsync(
@@ -2056,6 +2242,26 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
         try { return JsonSerializer.Deserialize<HostAgentDnsScavengingConfiguration>(json, HostAgentProtocol.Json); }
         catch (JsonException) { return null; }
     }
+    private static HostAgentDnsNetworkConfigurationResult MapNetworkConfigurationResult(PSObject value)
+    {
+        var success = ReadBool(value, "Success");
+        return new HostAgentDnsNetworkConfigurationResult
+        {
+            Success = success,
+            FailureKind = ReadString(value, "FailureKind", 64),
+            Message = ReadString(value, "Message", 2000)
+                ?? (success ? "DNS network configuration operation completed." : "The DNS network configuration operation failed."),
+            Before = ReadNetworkConfigurationJson(value, "BeforeJson"),
+            After = ReadNetworkConfigurationJson(value, "AfterJson"),
+        };
+    }
+    private static HostAgentDnsNetworkConfiguration? ReadNetworkConfigurationJson(PSObject value, string property)
+    {
+        var json = value.Properties[property]?.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try { return JsonSerializer.Deserialize<HostAgentDnsNetworkConfiguration>(json, HostAgentProtocol.Json); }
+        catch (JsonException) { return null; }
+    }
     private static HostAgentDnsProbeResult Failure(string kind, string message, bool network, bool tls, bool authentication = false) =>
         new()
         {
@@ -2079,6 +2285,8 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
     private static HostAgentDnssecConfigurationResult DnssecConfigurationFailure(string kind, string message) =>
         new() { Success = false, FailureKind = kind, Message = message };
     private static HostAgentDnsScavengingConfigurationResult ScavengingConfigurationFailure(string kind, string message) =>
+        new() { Success = false, FailureKind = kind, Message = message };
+    private static HostAgentDnsNetworkConfigurationResult NetworkConfigurationFailure(string kind, string message) =>
         new() { Success = false, FailureKind = kind, Message = message };
     private static IReadOnlyList<T> FitPayload<T>(IEnumerable<T> source)
     {

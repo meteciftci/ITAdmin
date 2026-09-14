@@ -43,7 +43,8 @@ public sealed record SaveDnsServerRequest(
 public sealed record DnsAdministrationResult<T>(bool IsSuccess, string Message, T? Value = default);
 
 public sealed record DnsServerCapabilitiesModel(
-    bool Zones, bool Records, bool ServerSettings, bool Dnssec, bool Policies, bool Scopes, bool Cache);
+    bool Zones, bool Records, bool ServerSettings, bool Dnssec, bool Policies, bool Scopes, bool Cache,
+    bool NetworkConfiguration);
 
 public sealed record DnsServerConnectionTestModel(
     Guid ServerId, string ServerDisplayName, bool Success, string? FailureKind, string Message,
@@ -197,6 +198,18 @@ public sealed record DnsScavengingMutationCommand(
     IReadOnlyList<string> ScavengeServers, string ExpectedStateToken, DnsActorContext Actor);
 public sealed record DnsScavengingOperationModel(
     bool Success, string? ErrorCode, string Message, DnsScavengingConfigurationModel? Configuration = null);
+
+public enum DnsNetworkAction { UpdateListeningAddresses, AddRootHint, UpdateRootHint, RemoveRootHint }
+public sealed record DnsRootHintModel(string NameServer, IReadOnlyList<string> IpAddresses);
+public sealed record DnsNetworkConfigurationModel(
+    IReadOnlyList<string> ListeningIpAddresses, IReadOnlyList<string> AvailableIpAddresses,
+    IReadOnlyList<DnsRootHintModel> RootHints, string StateToken);
+public sealed record DnsNetworkMutationCommand(
+    Guid ServerId, DnsNetworkAction Action, IReadOnlyList<string> ListeningIpAddresses,
+    string? RootHintNameServer, IReadOnlyList<string> RootHintIpAddresses,
+    string? OriginalRootHintNameServer, string ExpectedStateToken, DnsActorContext Actor);
+public sealed record DnsNetworkOperationModel(
+    bool Success, string? ErrorCode, string Message, DnsNetworkConfigurationModel? Configuration = null);
 
 public sealed record DnsOperationLogQuery(
     Guid? ServerId, string? OperationType, string? Status,

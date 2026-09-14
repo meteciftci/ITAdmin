@@ -52,7 +52,7 @@ export type DnsServer = {
 
 export type SaveDnsServer = Omit<DnsServer, "id" | "credentialProfileName" | "operatingSystemVersion" | "dnsServerVersion" | "lastSeenAt" | "lastSuccessfulSyncAt" | "lastSyncStatus" | "lastSyncMessage">;
 
-export type DnsServerCapabilities = { zones: boolean; records: boolean; serverSettings: boolean; dnssec: boolean; policies: boolean; scopes: boolean; cache: boolean };
+export type DnsServerCapabilities = { zones: boolean; records: boolean; serverSettings: boolean; dnssec: boolean; policies: boolean; scopes: boolean; cache: boolean; networkConfiguration: boolean };
 export type DnsServerConnectionTest = {
   serverId: string; serverDisplayName: string; success: boolean; failureKind?: string | null; message: string;
   hostAgentAvailable: boolean; networkReachable: boolean; tlsValidated: boolean;
@@ -278,6 +278,17 @@ export type DnsScavengingMutationInput = {
   scavengeServers?: string[]; expectedStateToken: string;
 };
 export type DnsScavengingOperation = { success: boolean; errorCode?: string | null; message: string; configuration?: DnsScavengingConfiguration | null };
+
+export type DnsRootHint = { nameServer: string; ipAddresses: string[] };
+export type DnsNetworkConfiguration = {
+  listeningIpAddresses: string[]; availableIpAddresses: string[]; rootHints: DnsRootHint[]; stateToken: string;
+};
+export type DnsNetworkMutationInput = {
+  action: "UpdateListeningAddresses" | "AddRootHint" | "UpdateRootHint" | "RemoveRootHint";
+  listeningIpAddresses?: string[]; rootHintNameServer?: string | null; rootHintIpAddresses?: string[];
+  originalRootHintNameServer?: string | null; expectedStateToken: string;
+};
+export type DnsNetworkOperation = { success: boolean; errorCode?: string | null; message: string; configuration?: DnsNetworkConfiguration | null };
 
 export type DnsOperationLogListItem = {
   id: string;

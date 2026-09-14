@@ -143,6 +143,7 @@ public sealed class HostAgentBoundaryTests
     [InlineData(HostAgentOperation.ManageDnsPolicyConfiguration)]
     [InlineData(HostAgentOperation.ManageDnssecConfiguration)]
     [InlineData(HostAgentOperation.ManageDnsScavenging)]
+    [InlineData(HostAgentOperation.ManageDnsNetworkConfiguration)]
     public void Authorization_WebApplicationMayInvokeTheUpdateAndSettingsOperations(HostAgentOperation operation) =>
         Assert.True(Authorization.Authorize(@"IIS APPPOOL\ITAdmin", false, operation).IsAllowed);
 
@@ -882,6 +883,68 @@ public sealed class HostAgentBoundaryTests
         Assert.Empty(errors);
     }
 
+    [Fact]
+    public void Protocol_DnsNetworkMutationsRequireExpectedStateAndTypedAddresses()
+    {
+        var baseline = new HostAgentRequest
+        {
+            Operation = HostAgentOperation.ManageDnsNetworkConfiguration,
+            DnsHostName = "dns01.example.local", DnsPort = 5986,
+            DnsAuthenticationMode = HostAgentDnsAuthenticationMode.Negotiate,
+            DnsUserName = "EXAMPLE\\dns-svc", DnsPassword = "secret", DnsTimeoutSeconds = 120,
+            DnsExpectedNetworkConfigurationJson = "{\"rootHints\":[]}",
+        };
+
+        Assert.Empty((baseline with { DnsNetworkAction = HostAgentDnsNetworkAction.UpdateListeningAddresses, DnsListeningIpAddresses = ["192.0.2.53"] }).Validate());
+        Assert.NotEmpty((baseline with { DnsNetworkAction = HostAgentDnsNetworkAction.UpdateListeningAddresses, DnsListeningIpAddresses = [] }).Validate());
+        Assert.NotEmpty((baseline with { DnsNetworkAction = HostAgentDnsNetworkAction.UpdateListeningAddresses, DnsListeningIpAddresses = ["bad"] }).Validate());
+        Assert.Empty((baseline with { DnsNetworkAction = HostAgentDnsNetworkAction.AddRootHint, DnsRootHintNameServer = "a.root-servers.net.", DnsRootHintIpAddresses = ["198.41.0.4", "2001:503:ba3e::2:30"] }).Validate());
+        Assert.NotEmpty((baseline with { DnsNetworkAction = HostAgentDnsNetworkAction.AddRootHint, DnsRootHintNameServer = "bad name", DnsRootHintIpAddresses = ["198.41.0.4"] }).Validate());
+        Assert.NotEmpty((baseline with { DnsNetworkAction = HostAgentDnsNetworkAction.UpdateRootHint, DnsRootHintNameServer = "a.root-servers.net", DnsRootHintIpAddresses = ["198.41.0.4"] }).Validate());
+        Assert.Empty((baseline with { DnsNetworkAction = HostAgentDnsNetworkAction.RemoveRootHint, DnsRootHintNameServer = "a.root-servers.net" }).Validate());
+        Assert.NotEmpty((baseline with { DnsNetworkAction = HostAgentDnsNetworkAction.RemoveRootHint, DnsRootHintNameServer = "a.root-servers.net", DnsExpectedNetworkConfigurationJson = null }).Validate());
+    }
+
+    [Fact]
+    public async Task Dispatch_DnsNetworkConfigurationUsesFixedExecutorAndNeverEchoesCredentials()
+    {
+        var executor = new RecordingDnsProbeExecutor();
+        var dispatcher = new HostAgentDispatcher(Authorization, new RecordingOperations(), dnsRemoteProbeExecutor: executor);
+        var request = new HostAgentRequest
+        {
+            Operation = HostAgentOperation.ManageDnsNetworkConfiguration,
+            DnsHostName = "dns01.example.local", DnsPort = 5986,
+            DnsAuthenticationMode = HostAgentDnsAuthenticationMode.Negotiate,
+            DnsUserName = "EXAMPLE\\dns-svc", DnsPassword = "secret", DnsTimeoutSeconds = 30,
+            DnsNetworkAction = HostAgentDnsNetworkAction.Read,
+        };
+
+        var response = await dispatcher.DispatchAsync(request.ToJson(), WebApplication());
+
+        Assert.Equal(1, executor.NetworkConfigurationCallCount);
+        Assert.True(response.DnsNetworkConfiguration!.Success);
+        Assert.DoesNotContain("secret", response.ToJson(), StringComparison.Ordinal);
+        Assert.DoesNotContain("dns-svc", response.ToJson(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DnsNetworkConfigurationScript_IsFixedParsesAndUsesTypedCmdlets()
+    {
+        Assert.StartsWith("param(", DnsRemoteNetworkConfiguration.Script.TrimStart(), StringComparison.Ordinal);
+        Assert.DoesNotContain("Invoke-Expression", DnsRemoteNetworkConfiguration.Script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ScriptBlock", DnsRemoteNetworkConfiguration.Script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("DnsPassword", DnsRemoteNetworkConfiguration.Script, StringComparison.Ordinal);
+        Assert.Contains("Get-DnsServerSetting -All", DnsRemoteNetworkConfiguration.Script, StringComparison.Ordinal);
+        Assert.Contains("Set-DnsServerSetting -InputObject", DnsRemoteNetworkConfiguration.Script, StringComparison.Ordinal);
+        Assert.Contains("Get-DnsServerRootHint", DnsRemoteNetworkConfiguration.Script, StringComparison.Ordinal);
+        Assert.Contains("Add-DnsServerRootHint", DnsRemoteNetworkConfiguration.Script, StringComparison.Ordinal);
+        Assert.Contains("Remove-DnsServerRootHint", DnsRemoteNetworkConfiguration.Script, StringComparison.Ordinal);
+        Assert.DoesNotContain("Set-DnsServerRootHint", DnsRemoteNetworkConfiguration.Script, StringComparison.Ordinal);
+        Assert.Contains("ExpectedConfigurationJson", DnsRemoteNetworkConfiguration.Script, StringComparison.Ordinal);
+        System.Management.Automation.Language.Parser.ParseInput(DnsRemoteNetworkConfiguration.Script, out _, out var errors);
+        Assert.Empty(errors);
+    }
+
     // ------------------------------------------------------------------------------------------
     // Configuration
     // ------------------------------------------------------------------------------------------
@@ -993,6 +1056,7 @@ public sealed class HostAgentBoundaryTests
         public int PolicyCallCount { get; private set; }
         public int DnssecCallCount { get; private set; }
         public int ScavengingCallCount { get; private set; }
+        public int NetworkConfigurationCallCount { get; private set; }
         public Task<HostAgentDnsProbeResult> ProbeAsync(HostAgentRequest request, CancellationToken cancellationToken)
         {
             CallCount++;
@@ -1046,6 +1110,13 @@ public sealed class HostAgentBoundaryTests
         {
             ScavengingCallCount++;
             return Task.FromResult(new HostAgentDnsScavengingConfigurationResult { Success = true, Message = "ok" });
+        }
+
+        public Task<HostAgentDnsNetworkConfigurationResult> ManageDnsNetworkConfigurationAsync(
+            HostAgentRequest request, CancellationToken cancellationToken)
+        {
+            NetworkConfigurationCallCount++;
+            return Task.FromResult(new HostAgentDnsNetworkConfigurationResult { Success = true, Message = "ok" });
         }
     }
 

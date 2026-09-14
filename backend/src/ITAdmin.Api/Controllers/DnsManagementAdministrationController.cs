@@ -18,7 +18,8 @@ public sealed class DnsManagementAdministrationController(
     IDnsServerSettingsService serverSettingsService,
     IDnsPolicyManagementService policyManagementService,
     IDnssecManagementService dnssecManagementService,
-    IDnsScavengingManagementService scavengingManagementService) : ControllerBase
+    IDnsScavengingManagementService scavengingManagementService,
+    IDnsNetworkConfigurationService networkConfigurationService) : ControllerBase
 {
     [HttpGet("settings")]
     [RequirePermission(DnsManagementPermissions.ManageSettings)]
@@ -63,7 +64,7 @@ public sealed class DnsManagementAdministrationController(
     }
 
     [HttpGet("servers")]
-    [RequireAnyPermission(DnsManagementPermissions.ServersView, DnsManagementPermissions.ManageServerSettings, DnsManagementPermissions.ClearCache, DnsManagementPermissions.ManagePolicies, DnsManagementPermissions.ManageDnssec, DnsManagementPermissions.ManageScavenging)]
+    [RequireAnyPermission(DnsManagementPermissions.ServersView, DnsManagementPermissions.ManageServerSettings, DnsManagementPermissions.ClearCache, DnsManagementPermissions.ManagePolicies, DnsManagementPermissions.ManageDnssec, DnsManagementPermissions.ManageScavenging, DnsManagementPermissions.ManageNetworkConfiguration)]
     public async Task<ActionResult<IReadOnlyList<DnsServerResponse>>> GetServers(CancellationToken cancellationToken) =>
         Ok((await service.GetServersAsync(cancellationToken)).Select(Map));
 
@@ -217,6 +218,32 @@ public sealed class DnsManagementAdministrationController(
             : BadRequest(new { code = result.ErrorCode, message = result.Message });
     }
 
+    [HttpGet("servers/{id:guid}/network-configuration")]
+    [RequirePermission(DnsManagementPermissions.ManageNetworkConfiguration)]
+    public async Task<ActionResult<DnsNetworkConfigurationResponse>> GetNetworkConfiguration(
+        Guid id, CancellationToken cancellationToken)
+    {
+        var result = await networkConfigurationService.GetAsync(id, cancellationToken);
+        return result.Success && result.Configuration is not null
+            ? Ok(Map(result.Configuration))
+            : BadRequest(new { code = result.ErrorCode, message = result.Message });
+    }
+
+    [HttpPost("servers/{id:guid}/network-configuration/mutations")]
+    [RequirePermission(DnsManagementPermissions.ManageNetworkConfiguration)]
+    public async Task<ActionResult<DnsNetworkOperationResponse>> MutateNetworkConfiguration(
+        Guid id, DnsNetworkMutationRequest request, CancellationToken cancellationToken)
+    {
+        var result = await networkConfigurationService.MutateAsync(new(id, request.Action,
+            request.ListeningIpAddresses ?? [], request.RootHintNameServer,
+            request.RootHintIpAddresses ?? [], request.OriginalRootHintNameServer,
+            request.ExpectedStateToken, DnsManagementActorResolver.Resolve(this)), cancellationToken);
+        return result.Success
+            ? Ok(new DnsNetworkOperationResponse(true, null, result.Message,
+                result.Configuration is null ? null : Map(result.Configuration)))
+            : BadRequest(new { code = result.ErrorCode, message = result.Message });
+    }
+
     private async Task<ActionResult<DnsCredentialProfileResponse>> SaveCredential(
         Guid? id, SaveDnsCredentialProfileRequest request, CancellationToken cancellationToken)
     {
@@ -252,7 +279,8 @@ public sealed class DnsManagementAdministrationController(
         x.DnsServiceReachable, x.OperatingSystemVersion, x.PowerShellVersion, x.DnsModuleVersion,
         x.DnsServerVersion, x.ZoneCount, x.Capabilities is null ? null : new(
             x.Capabilities.Zones, x.Capabilities.Records, x.Capabilities.ServerSettings,
-            x.Capabilities.Dnssec, x.Capabilities.Policies, x.Capabilities.Scopes, x.Capabilities.Cache),
+            x.Capabilities.Dnssec, x.Capabilities.Policies, x.Capabilities.Scopes, x.Capabilities.Cache,
+            x.Capabilities.NetworkConfiguration),
         x.TestedAt);
     private static DnsSyncJobResponse Map(AppModels.DnsSyncJobModel x) => new(
         x.Id, x.BatchId, x.ServerId, x.ServerDisplayName, x.Scope, x.Trigger, x.Status,
@@ -293,5 +321,9 @@ public sealed class DnsManagementAdministrationController(
         x.Zones.Select(zone => new DnsZoneAgingResponse(zone.Name, zone.ZoneType, zone.AgingEnabled,
             zone.IsEligible, zone.IneligibilityReason, zone.NoRefreshIntervalSeconds,
             zone.RefreshIntervalSeconds, zone.AvailableForScavengeTime, zone.ScavengeServers)).ToArray(),
+        x.StateToken);
+    private static DnsNetworkConfigurationResponse Map(AppModels.DnsNetworkConfigurationModel x) => new(
+        x.ListeningIpAddresses, x.AvailableIpAddresses,
+        x.RootHints.Select(hint => new DnsRootHintResponse(hint.NameServer, hint.IpAddresses)).ToArray(),
         x.StateToken);
 }

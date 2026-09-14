@@ -200,6 +200,23 @@ test("DNS aging and scavenging are live typed separately authorized and confirme
   assert.doesNotMatch(api, /power\s*shell/i);
 });
 
+test("DNS listening addresses and root hints are live typed separately authorized and confirmed", () => {
+  const routes = readRouterSource();
+  const api = readFileSync(join(root, "features/dns-management/api.ts"), "utf8");
+  const page = readFileSync(join(root, "features/dns-management/DnsNetworkConfigurationPage.tsx"), "utf8");
+  assert.match(routes, /path: "\/dns-management\/network-configuration"/);
+  assert.match(routes, /DnsManagement\.ManageNetworkConfiguration/);
+  assert.match(api, /servers\/\$\{id\}\/network-configuration/);
+  assert.match(page, /UpdateListeningAddresses/);
+  assert.match(page, /AddRootHint/);
+  assert.match(page, /UpdateRootHint/);
+  assert.match(page, /RemoveRootHint/);
+  assert.match(page, /ConfirmDialog/);
+  assert.match(page, /expectedStateToken/);
+  assert.match(page, /variant="destructive"/);
+  assert.doesNotMatch(api, /power\s*shell/i);
+});
+
 test("DNS operation history and exports use dedicated permissions and server-generated files", () => {
   const routes = readRouterSource();
   const api = readFileSync(join(root, "features/dns-management/api.ts"), "utf8");

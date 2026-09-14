@@ -205,6 +205,7 @@ public static class PermissionCodes
         public const string ManagePolicies = "DnsManagement.Policies.Manage";
         public const string ClearCache = "DnsManagement.Cache.Clear";
         public const string ManageScavenging = "DnsManagement.Scavenging.Manage";
+        public const string ManageNetworkConfiguration = "DnsManagement.NetworkConfiguration.Manage";
         public const string ViewOperationLogs = "DnsManagement.OperationLogs.View";
     }
 

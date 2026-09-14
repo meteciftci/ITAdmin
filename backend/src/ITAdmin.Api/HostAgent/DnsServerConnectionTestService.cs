@@ -132,7 +132,8 @@ public sealed class DnsServerConnectionTestService(
         x.DnsServiceReachable, x.OperatingSystemVersion, x.PowerShellVersion, x.DnsModuleVersion,
         x.DnsServerVersion, x.ZoneCount, x.Capabilities is null ? null : new(
             x.Capabilities.Zones, x.Capabilities.Records, x.Capabilities.ServerSettings,
-            x.Capabilities.Dnssec, x.Capabilities.Policies, x.Capabilities.Scopes, x.Capabilities.Cache),
+            x.Capabilities.Dnssec, x.Capabilities.Policies, x.Capabilities.Scopes, x.Capabilities.Cache,
+            x.Capabilities.NetworkConfiguration),
         DateTime.UtcNow);
 
     private static DnsServerConnectionTestModel Failure(DnsServer server, string kind, string message,

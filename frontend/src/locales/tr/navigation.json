@@ -52,6 +52,7 @@
       "dnsManagementPolicies": "DNS Politikaları",
       "dnsManagementDnssec": "DNSSEC Yönetimi",
       "dnsManagementScavenging": "DNS Aging ve Scavenging",
+      "dnsManagementNetworkConfiguration": "DNS Ağ ve Root Hints",
       "dnsManagementZones": "DNS Zone Envanteri",
       "dnsManagementRecords": "DNS Kayıtları",
       "dnsManagementComparison": "DNS Karşılaştırma",

@@ -39,7 +39,8 @@ public sealed record SaveDnsServerRequest(
     string? TlsCertificateThumbprint, string? Notes);
 
 public sealed record DnsServerCapabilitiesResponse(
-    bool Zones, bool Records, bool ServerSettings, bool Dnssec, bool Policies, bool Scopes, bool Cache);
+    bool Zones, bool Records, bool ServerSettings, bool Dnssec, bool Policies, bool Scopes, bool Cache,
+    bool NetworkConfiguration);
 
 public sealed record DnsServerConnectionTestResponse(
     Guid ServerId, string ServerDisplayName, bool Success, string? FailureKind, string Message,
@@ -137,6 +138,17 @@ public sealed record DnsScavengingMutationRequest(
     IReadOnlyList<string>? ScavengeServers, string ExpectedStateToken);
 public sealed record DnsScavengingOperationResponse(
     bool Success, string? ErrorCode, string Message, DnsScavengingConfigurationResponse? Configuration = null);
+
+public sealed record DnsRootHintResponse(string NameServer, IReadOnlyList<string> IpAddresses);
+public sealed record DnsNetworkConfigurationResponse(
+    IReadOnlyList<string> ListeningIpAddresses, IReadOnlyList<string> AvailableIpAddresses,
+    IReadOnlyList<DnsRootHintResponse> RootHints, string StateToken);
+public sealed record DnsNetworkMutationRequest(
+    DnsNetworkAction Action, IReadOnlyList<string>? ListeningIpAddresses,
+    string? RootHintNameServer, IReadOnlyList<string>? RootHintIpAddresses,
+    string? OriginalRootHintNameServer, string ExpectedStateToken);
+public sealed record DnsNetworkOperationResponse(
+    bool Success, string? ErrorCode, string Message, DnsNetworkConfigurationResponse? Configuration = null);
 
 public sealed record DnsOperationLogListItemResponse(
     Guid Id, DateTimeOffset CreatedAt, Guid? ServerId, string? ServerDisplayName,
