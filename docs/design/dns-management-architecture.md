@@ -318,6 +318,38 @@ Zone transfer references:
 - [DNS zone types and transfers](https://learn.microsoft.com/en-us/windows-server/networking/dns/zone-types)
 - [Set-DnsServerPrimaryZone](https://learn.microsoft.com/en-us/powershell/module/dnsserver/set-dnsserverprimaryzone?view=windowsserver2025-ps)
 
+## Authoritative zone delegation workflow
+
+Delegations are live parent-zone configuration and are intentionally separate from inventory and
+zone transfers. The dedicated permission-gated screen lists non-system primary parent zones, groups
+each relative child zone with its authoritative name servers, and displays the IPv4/IPv6 glue
+records Windows associates with each server. It can create a new delegation, add another server to
+an existing delegation, update that server's glue addresses, remove one explicitly selected server,
+or delete the entire delegation.
+
+The API and Host Agent expose those operations as a closed enum with bounded DNS names and IP
+addresses. Every mutation carries a server-bound token for the complete live delegation snapshot;
+the Host Agent re-reads and canonically compares that snapshot before calling the dedicated Windows
+cmdlet and then verifies the result with another live read. Removing the final name server through
+the single-server action is blocked because Windows would implicitly remove the delegation; users
+must instead choose the separately confirmed delete-delegation action. This preserves the semantic
+difference in the UI and operation history.
+
+The browser cannot submit executable text. The Host Agent owns fixed calls to
+`Get-DnsServerZoneDelegation`, `Add-DnsServerZoneDelegation`, `Set-DnsServerZoneDelegation`, and
+`Remove-DnsServerZoneDelegation`. General audit plus DNS operation history store sanitized request
+metadata and before/after snapshots. These operations manage NS/glue referral data only; they do
+not create the child zone or change DNSSEC DS records in the parent.
+
+Zone delegation references:
+
+- [Manage DNS zones](https://learn.microsoft.com/en-us/windows-server/networking/dns/manage-dns-zones)
+- [DNS zone types](https://learn.microsoft.com/en-us/windows-server/networking/dns/zone-types)
+- [Get-DnsServerZoneDelegation](https://learn.microsoft.com/en-us/powershell/module/dnsserver/get-dnsserverzonedelegation?view=windowsserver2025-ps)
+- [Add-DnsServerZoneDelegation](https://learn.microsoft.com/en-us/powershell/module/dnsserver/add-dnsserverzonedelegation?view=windowsserver2025-ps)
+- [Set-DnsServerZoneDelegation](https://learn.microsoft.com/en-us/powershell/module/dnsserver/set-dnsserverzonedelegation?view=windowsserver2025-ps)
+- [Remove-DnsServerZoneDelegation](https://learn.microsoft.com/en-us/powershell/module/dnsserver/remove-dnsserverzonedelegation?view=windowsserver2025-ps)
+
 ## Client subnet, zone scope, and query policy workflow
 
 Policy configuration is operational state and is therefore read live from the selected DNS server;

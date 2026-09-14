@@ -178,6 +178,12 @@ public sealed class HostAgentDispatcher(
                         DnsZoneTransferConfiguration = await dnsRemoteProbeExecutor.ManageDnsZoneTransfersAsync(request, cancellationToken),
                     },
 
+                HostAgentOperation.ManageDnsZoneDelegations when dnsRemoteProbeExecutor is not null =>
+                    HostAgentResponse.Ok("DNS zone delegation operation completed.", request.CorrelationId) with
+                    {
+                        DnsZoneDelegationConfiguration = await dnsRemoteProbeExecutor.ManageDnsZoneDelegationsAsync(request, cancellationToken),
+                    },
+
                 HostAgentOperation.ManageDnsServerSettings =>
                     HostAgentResponse.Failed("DNS remote management is unavailable on this host.", request.CorrelationId),
                 HostAgentOperation.ManageDnsPolicyConfiguration =>
@@ -189,6 +195,8 @@ public sealed class HostAgentDispatcher(
                 HostAgentOperation.ManageDnsNetworkConfiguration =>
                     HostAgentResponse.Failed("DNS remote management is unavailable on this host.", request.CorrelationId),
                 HostAgentOperation.ManageDnsZoneTransfers =>
+                    HostAgentResponse.Failed("DNS remote management is unavailable on this host.", request.CorrelationId),
+                HostAgentOperation.ManageDnsZoneDelegations =>
                     HostAgentResponse.Failed("DNS remote management is unavailable on this host.", request.CorrelationId),
 
                 _ => HostAgentResponse.Rejected("Unsupported operation.", request.CorrelationId),

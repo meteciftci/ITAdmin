@@ -27,5 +27,6 @@ public static class DnsManagementPermissions
     public const string ManageScavenging = PermissionCodes.DnsManagement.ManageScavenging;
     public const string ManageNetworkConfiguration = PermissionCodes.DnsManagement.ManageNetworkConfiguration;
     public const string ManageZoneTransfers = PermissionCodes.DnsManagement.ManageZoneTransfers;
+    public const string ManageZoneDelegations = PermissionCodes.DnsManagement.ManageZoneDelegations;
     public const string ViewOperationLogs = PermissionCodes.DnsManagement.ViewOperationLogs;
 }

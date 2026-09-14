@@ -54,6 +54,7 @@
       "dnsManagementScavenging": "DNS Aging ve Scavenging",
       "dnsManagementNetworkConfiguration": "DNS Ağ ve Root Hints",
       "dnsManagementZoneTransfers": "Zone Transferleri",
+      "dnsManagementZoneDelegations": "Zone Delegasyonları",
       "dnsManagementZones": "DNS Zone Envanteri",
       "dnsManagementRecords": "DNS Kayıtları",
       "dnsManagementComparison": "DNS Karşılaştırma",

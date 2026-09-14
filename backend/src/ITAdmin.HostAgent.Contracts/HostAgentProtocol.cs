@@ -33,7 +33,7 @@ namespace ITAdmin.HostAgent.Contracts;
 /// </summary>
 public static class HostAgentProtocol
 {
-    public const int ProtocolVersion = 13;
+    public const int ProtocolVersion = 14;
 
     /// <summary>Pipe name. Machine-local; the agent ACLs it to the app pool identity and administrators.</summary>
     public const string PipeName = "ITAdmin.HostAgent";
@@ -132,6 +132,8 @@ public enum HostAgentOperation
     ManageDnsNetworkConfiguration = 17,
     /// <summary>Read or update primary-zone transfer and notification settings.</summary>
     ManageDnsZoneTransfers = 18,
+    /// <summary>Read or mutate authoritative child-zone delegations.</summary>
+    ManageDnsZoneDelegations = 19,
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -230,6 +232,9 @@ public enum HostAgentDnsNetworkAction
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum HostAgentDnsZoneTransferAction { Read = 0, Update = 1 }
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum HostAgentDnsZoneDelegationAction { Read = 0, AddNameServer = 1, UpdateNameServerAddresses = 2, RemoveNameServer = 3, DeleteDelegation = 4 }
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum HostAgentDnsZoneTransferMode { NoTransfer = 0, TransferAnyServer = 1, TransferToZoneNameServer = 2, TransferToSecureServers = 3 }
 [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -527,6 +532,18 @@ public sealed record HostAgentRequest
     public IReadOnlyList<string>? DnsZoneNotifyServers { get; init; }
     [JsonPropertyName("dnsExpectedZoneTransferConfigurationJson")]
     public string? DnsExpectedZoneTransferConfigurationJson { get; init; }
+    [JsonPropertyName("dnsZoneDelegationAction")]
+    public HostAgentDnsZoneDelegationAction? DnsZoneDelegationAction { get; init; }
+    [JsonPropertyName("dnsDelegationParentZoneName")]
+    public string? DnsDelegationParentZoneName { get; init; }
+    [JsonPropertyName("dnsDelegationChildZoneName")]
+    public string? DnsDelegationChildZoneName { get; init; }
+    [JsonPropertyName("dnsDelegationNameServer")]
+    public string? DnsDelegationNameServer { get; init; }
+    [JsonPropertyName("dnsDelegationIpAddresses")]
+    public IReadOnlyList<string>? DnsDelegationIpAddresses { get; init; }
+    [JsonPropertyName("dnsExpectedZoneDelegationConfigurationJson")]
+    public string? DnsExpectedZoneDelegationConfigurationJson { get; init; }
 
     public string ToJson() => JsonSerializer.Serialize(this, HostAgentProtocol.Json);
 
@@ -595,7 +612,8 @@ public sealed record HostAgentRequest
             or HostAgentOperation.ManageDnssecConfiguration
             or HostAgentOperation.ManageDnsScavenging
             or HostAgentOperation.ManageDnsNetworkConfiguration
-            or HostAgentOperation.ManageDnsZoneTransfers)
+            or HostAgentOperation.ManageDnsZoneTransfers
+            or HostAgentOperation.ManageDnsZoneDelegations)
         {
             var hostName = DnsHostName?.Trim().TrimEnd('.');
             if (string.IsNullOrWhiteSpace(hostName) || hostName.Length > 253
@@ -941,6 +959,30 @@ public sealed record HostAgentRequest
             }
         }
 
+        if (Operation == HostAgentOperation.ManageDnsZoneDelegations)
+        {
+            if (DnsZoneDelegationAction is null || !Enum.IsDefined(DnsZoneDelegationAction.Value))
+                problems.Add("dnsZoneDelegationAction is required.");
+            if (DnsZoneDelegationAction != HostAgentDnsZoneDelegationAction.Read)
+            {
+                if (!IsBoundedDnsName(DnsDelegationParentZoneName))
+                    problems.Add("dnsDelegationParentZoneName must be a valid bounded DNS name.");
+                if (!IsBoundedDnsName(DnsDelegationChildZoneName))
+                    problems.Add("dnsDelegationChildZoneName must be a valid bounded DNS name.");
+                if (DnsZoneDelegationAction is HostAgentDnsZoneDelegationAction.AddNameServer or HostAgentDnsZoneDelegationAction.UpdateNameServerAddresses or HostAgentDnsZoneDelegationAction.RemoveNameServer
+                    && !IsBoundedDnsName(DnsDelegationNameServer))
+                    problems.Add("dnsDelegationNameServer must be a valid bounded DNS name.");
+                if (DnsZoneDelegationAction is HostAgentDnsZoneDelegationAction.AddNameServer or HostAgentDnsZoneDelegationAction.UpdateNameServerAddresses
+                    && (DnsDelegationIpAddresses is not { Count: > 0 and <= 16 }
+                        || DnsDelegationIpAddresses.Any(x => !IPAddress.TryParse(x, out _))))
+                    problems.Add("dnsDelegationIpAddresses must contain between 1 and 16 IP addresses.");
+                if (string.IsNullOrWhiteSpace(DnsExpectedZoneDelegationConfigurationJson)
+                    || DnsExpectedZoneDelegationConfigurationJson.Length > 262_144
+                    || !IsJsonObject(DnsExpectedZoneDelegationConfigurationJson))
+                    problems.Add("dnsExpectedZoneDelegationConfigurationJson must be a bounded JSON object.");
+            }
+        }
+
         return problems;
     }
 
@@ -1120,6 +1162,8 @@ public sealed record HostAgentResponse
     public HostAgentDnsNetworkConfigurationResult? DnsNetworkConfiguration { get; init; }
     [JsonPropertyName("dnsZoneTransferConfiguration")]
     public HostAgentDnsZoneTransferConfigurationResult? DnsZoneTransferConfiguration { get; init; }
+    [JsonPropertyName("dnsZoneDelegationConfiguration")]
+    public HostAgentDnsZoneDelegationConfigurationResult? DnsZoneDelegationConfiguration { get; init; }
 
     [JsonPropertyName("repositoryStatus")]
     public HostAgentRepositoryStatus RepositoryStatus { get; init; } = HostAgentRepositoryStatus.Unknown;
@@ -1221,6 +1265,8 @@ public sealed record HostAgentDnsCapabilities
     public bool NetworkConfiguration { get; init; }
     [JsonPropertyName("zoneTransfers")]
     public bool ZoneTransfers { get; init; }
+    [JsonPropertyName("zoneDelegations")]
+    public bool ZoneDelegations { get; init; }
 }
 
 public sealed record HostAgentDnsInventoryPage
@@ -1562,6 +1608,34 @@ public sealed record HostAgentDnsZoneTransferConfigurationResult
     [JsonPropertyName("message")] public string Message { get; init; } = string.Empty;
     [JsonPropertyName("before")] public HostAgentDnsZoneTransferConfiguration? Before { get; init; }
     [JsonPropertyName("after")] public HostAgentDnsZoneTransferConfiguration? After { get; init; }
+}
+
+public sealed record HostAgentDnsZoneDelegationNameServer
+{
+    [JsonPropertyName("nameServer")] public string NameServer { get; init; } = string.Empty;
+    [JsonPropertyName("ipAddresses")] public IReadOnlyList<string> IpAddresses { get; init; } = [];
+}
+
+public sealed record HostAgentDnsZoneDelegation
+{
+    [JsonPropertyName("parentZoneName")] public string ParentZoneName { get; init; } = string.Empty;
+    [JsonPropertyName("childZoneName")] public string ChildZoneName { get; init; } = string.Empty;
+    [JsonPropertyName("nameServers")] public IReadOnlyList<HostAgentDnsZoneDelegationNameServer> NameServers { get; init; } = [];
+}
+
+public sealed record HostAgentDnsZoneDelegationConfiguration
+{
+    [JsonPropertyName("parentZones")] public IReadOnlyList<string> ParentZones { get; init; } = [];
+    [JsonPropertyName("delegations")] public IReadOnlyList<HostAgentDnsZoneDelegation> Delegations { get; init; } = [];
+}
+
+public sealed record HostAgentDnsZoneDelegationConfigurationResult
+{
+    [JsonPropertyName("success")] public bool Success { get; init; }
+    [JsonPropertyName("failureKind")] public string? FailureKind { get; init; }
+    [JsonPropertyName("message")] public string Message { get; init; } = string.Empty;
+    [JsonPropertyName("before")] public HostAgentDnsZoneDelegationConfiguration? Before { get; init; }
+    [JsonPropertyName("after")] public HostAgentDnsZoneDelegationConfiguration? After { get; init; }
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]

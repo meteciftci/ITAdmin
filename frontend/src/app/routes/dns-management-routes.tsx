@@ -1,5 +1,5 @@
 import type { RouteObject } from "react-router-dom";
-import { DnsComparisonPage, DnsNetworkConfigurationPage, DnsOperationLogsPage, DnsPoliciesPage, DnsScavengingPage, DnsServersPage, DnsServerSettingsPage, DnsZoneRecordsPage, DnsZonesPage, DnsZoneTransfersPage, DnssecManagementPage } from "@/app/lazy-pages";
+import { DnsComparisonPage, DnsNetworkConfigurationPage, DnsOperationLogsPage, DnsPoliciesPage, DnsScavengingPage, DnsServersPage, DnsServerSettingsPage, DnsZoneDelegationsPage, DnsZoneRecordsPage, DnsZonesPage, DnsZoneTransfersPage, DnssecManagementPage } from "@/app/lazy-pages";
 import { LazyRoute } from "@/app/route-helpers";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { RequireAuth } from "@/features/auth/RequireAuth";
@@ -17,6 +17,7 @@ export const dnsManagementRoutes: RouteObject[] = [
   { path: "/dns-management/scavenging", element: <RequireAuth><RequirePermission permission={PermissionCodes.DnsManagement.ManageScavenging}><AppLayout><LazyRoute><DnsScavengingPage /></LazyRoute></AppLayout></RequirePermission></RequireAuth> },
   { path: "/dns-management/network-configuration", element: <RequireAuth><RequirePermission permission={PermissionCodes.DnsManagement.ManageNetworkConfiguration}><AppLayout><LazyRoute><DnsNetworkConfigurationPage /></LazyRoute></AppLayout></RequirePermission></RequireAuth> },
   { path: "/dns-management/zone-transfers", element: <RequireAuth><RequirePermission permission={PermissionCodes.DnsManagement.ManageZoneTransfers}><AppLayout><LazyRoute><DnsZoneTransfersPage /></LazyRoute></AppLayout></RequirePermission></RequireAuth> },
+  { path: "/dns-management/zone-delegations", element: <RequireAuth><RequirePermission permission={PermissionCodes.DnsManagement.ManageZoneDelegations}><AppLayout><LazyRoute><DnsZoneDelegationsPage /></LazyRoute></AppLayout></RequirePermission></RequireAuth> },
   { path: "/dns-management/zones", element: <RequireAuth><RequireAnyPermission permissions={[PermissionCodes.DnsManagement.Zones.View, PermissionCodes.DnsManagement.Records.View]}><AppLayout><LazyRoute><DnsZonesPage /></LazyRoute></AppLayout></RequireAnyPermission></RequireAuth> },
   { path: "/dns-management/zones/:zoneSnapshotId/records", element: <RequireAuth><RequirePermission permission={PermissionCodes.DnsManagement.Records.View}><AppLayout><LazyRoute><DnsZoneRecordsPage /></LazyRoute></AppLayout></RequirePermission></RequireAuth> },
   { path: "/dns-management/comparison", element: <RequireAuth><RequirePermission permission={PermissionCodes.DnsManagement.Compare}><AppLayout><LazyRoute><DnsComparisonPage /></LazyRoute></AppLayout></RequirePermission></RequireAuth> },

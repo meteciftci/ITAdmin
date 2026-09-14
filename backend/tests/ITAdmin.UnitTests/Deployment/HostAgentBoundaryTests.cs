@@ -145,6 +145,7 @@ public sealed class HostAgentBoundaryTests
     [InlineData(HostAgentOperation.ManageDnsScavenging)]
     [InlineData(HostAgentOperation.ManageDnsNetworkConfiguration)]
     [InlineData(HostAgentOperation.ManageDnsZoneTransfers)]
+    [InlineData(HostAgentOperation.ManageDnsZoneDelegations)]
     public void Authorization_WebApplicationMayInvokeTheUpdateAndSettingsOperations(HostAgentOperation operation) =>
         Assert.True(Authorization.Authorize(@"IIS APPPOOL\ITAdmin", false, operation).IsAllowed);
 
@@ -1000,6 +1001,63 @@ public sealed class HostAgentBoundaryTests
         Assert.Empty(errors);
     }
 
+    [Fact]
+    public void Protocol_DnsZoneDelegationsRequireTypedNamesAddressesAndExpectedState()
+    {
+        var baseline = new HostAgentRequest
+        {
+            Operation = HostAgentOperation.ManageDnsZoneDelegations,
+            DnsHostName = "dns01.example.local", DnsPort = 5986,
+            DnsAuthenticationMode = HostAgentDnsAuthenticationMode.Negotiate,
+            DnsUserName = "EXAMPLE\\dns-svc", DnsPassword = "secret", DnsTimeoutSeconds = 120,
+            DnsZoneDelegationAction = HostAgentDnsZoneDelegationAction.AddNameServer,
+            DnsDelegationParentZoneName = "example.com", DnsDelegationChildZoneName = "south",
+            DnsDelegationNameServer = "ns1.south.example.com", DnsDelegationIpAddresses = ["192.0.2.10"],
+            DnsExpectedZoneDelegationConfigurationJson = "{\"parentZones\":[],\"delegations\":[]}",
+        };
+
+        Assert.Empty(baseline.Validate());
+        Assert.NotEmpty((baseline with { DnsDelegationIpAddresses = ["bad"] }).Validate());
+        Assert.NotEmpty((baseline with { DnsDelegationNameServer = null }).Validate());
+        Assert.NotEmpty((baseline with { DnsExpectedZoneDelegationConfigurationJson = null }).Validate());
+        Assert.Empty((baseline with { DnsZoneDelegationAction = HostAgentDnsZoneDelegationAction.DeleteDelegation, DnsDelegationNameServer = null, DnsDelegationIpAddresses = [] }).Validate());
+    }
+
+    [Fact]
+    public async Task Dispatch_DnsZoneDelegationsUsesFixedExecutorAndNeverEchoesCredentials()
+    {
+        var executor = new RecordingDnsProbeExecutor();
+        var dispatcher = new HostAgentDispatcher(Authorization, new RecordingOperations(), dnsRemoteProbeExecutor: executor);
+        var response = await dispatcher.DispatchAsync(new HostAgentRequest
+        {
+            Operation = HostAgentOperation.ManageDnsZoneDelegations,
+            DnsHostName = "dns01.example.local", DnsPort = 5986,
+            DnsAuthenticationMode = HostAgentDnsAuthenticationMode.Negotiate,
+            DnsUserName = "EXAMPLE\\dns-svc", DnsPassword = "secret", DnsTimeoutSeconds = 30,
+            DnsZoneDelegationAction = HostAgentDnsZoneDelegationAction.Read,
+        }.ToJson(), WebApplication());
+
+        Assert.Equal(1, executor.ZoneDelegationCallCount);
+        Assert.True(response.DnsZoneDelegationConfiguration!.Success);
+        Assert.DoesNotContain("secret", response.ToJson(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DnsZoneDelegationScript_IsFixedParsesAndUsesDedicatedCmdlets()
+    {
+        Assert.StartsWith("param(", DnsRemoteZoneDelegationConfiguration.Script.TrimStart(), StringComparison.Ordinal);
+        Assert.DoesNotContain("Invoke-Expression", DnsRemoteZoneDelegationConfiguration.Script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("DnsPassword", DnsRemoteZoneDelegationConfiguration.Script, StringComparison.Ordinal);
+        Assert.Contains("Get-DnsServerZoneDelegation", DnsRemoteZoneDelegationConfiguration.Script, StringComparison.Ordinal);
+        Assert.Contains("Add-DnsServerZoneDelegation", DnsRemoteZoneDelegationConfiguration.Script, StringComparison.Ordinal);
+        Assert.Contains("Set-DnsServerZoneDelegation", DnsRemoteZoneDelegationConfiguration.Script, StringComparison.Ordinal);
+        Assert.Contains("Remove-DnsServerZoneDelegation", DnsRemoteZoneDelegationConfiguration.Script, StringComparison.Ordinal);
+        Assert.Contains("ExpectedConfigurationJson", DnsRemoteZoneDelegationConfiguration.Script, StringComparison.Ordinal);
+        Assert.Contains("LastDelegationNameServer", DnsRemoteZoneDelegationConfiguration.Script, StringComparison.Ordinal);
+        System.Management.Automation.Language.Parser.ParseInput(DnsRemoteZoneDelegationConfiguration.Script, out _, out var errors);
+        Assert.Empty(errors);
+    }
+
     // ------------------------------------------------------------------------------------------
     // Configuration
     // ------------------------------------------------------------------------------------------
@@ -1113,6 +1171,7 @@ public sealed class HostAgentBoundaryTests
         public int ScavengingCallCount { get; private set; }
         public int NetworkConfigurationCallCount { get; private set; }
         public int ZoneTransferCallCount { get; private set; }
+        public int ZoneDelegationCallCount { get; private set; }
         public Task<HostAgentDnsProbeResult> ProbeAsync(HostAgentRequest request, CancellationToken cancellationToken)
         {
             CallCount++;
@@ -1180,6 +1239,13 @@ public sealed class HostAgentBoundaryTests
         {
             ZoneTransferCallCount++;
             return Task.FromResult(new HostAgentDnsZoneTransferConfigurationResult { Success = true, Message = "ok" });
+        }
+
+        public Task<HostAgentDnsZoneDelegationConfigurationResult> ManageDnsZoneDelegationsAsync(
+            HostAgentRequest request, CancellationToken cancellationToken)
+        {
+            ZoneDelegationCallCount++;
+            return Task.FromResult(new HostAgentDnsZoneDelegationConfigurationResult { Success = true, Message = "ok" });
         }
     }
 

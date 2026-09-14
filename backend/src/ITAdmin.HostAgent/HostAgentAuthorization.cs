@@ -46,6 +46,7 @@ public sealed class HostAgentAuthorization
         HostAgentOperation.ManageDnsScavenging,
         HostAgentOperation.ManageDnsNetworkConfiguration,
         HostAgentOperation.ManageDnsZoneTransfers,
+        HostAgentOperation.ManageDnsZoneDelegations,
     ];
 
     private readonly string _appPoolIdentity;

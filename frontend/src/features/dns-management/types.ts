@@ -52,7 +52,7 @@ export type DnsServer = {
 
 export type SaveDnsServer = Omit<DnsServer, "id" | "credentialProfileName" | "operatingSystemVersion" | "dnsServerVersion" | "lastSeenAt" | "lastSuccessfulSyncAt" | "lastSyncStatus" | "lastSyncMessage">;
 
-export type DnsServerCapabilities = { zones: boolean; records: boolean; serverSettings: boolean; dnssec: boolean; policies: boolean; scopes: boolean; cache: boolean; networkConfiguration: boolean; zoneTransfers: boolean };
+export type DnsServerCapabilities = { zones: boolean; records: boolean; serverSettings: boolean; dnssec: boolean; policies: boolean; scopes: boolean; cache: boolean; networkConfiguration: boolean; zoneTransfers: boolean; zoneDelegations: boolean };
 export type DnsServerConnectionTest = {
   serverId: string; serverDisplayName: string; success: boolean; failureKind?: string | null; message: string;
   hostAgentAvailable: boolean; networkReachable: boolean; tlsValidated: boolean;
@@ -299,6 +299,16 @@ export type DnsZoneTransferSetting = {
 export type DnsZoneTransferConfiguration = { zones: DnsZoneTransferSetting[]; stateToken: string };
 export type DnsZoneTransferMutationInput = Omit<DnsZoneTransferSetting, "isDsIntegrated"> & { expectedStateToken: string };
 export type DnsZoneTransferOperation = { success: boolean; errorCode?: string | null; message: string; configuration?: DnsZoneTransferConfiguration | null };
+
+export type DnsZoneDelegationAction = "AddNameServer" | "UpdateNameServerAddresses" | "RemoveNameServer" | "DeleteDelegation";
+export type DnsZoneDelegationNameServer = { nameServer: string; ipAddresses: string[] };
+export type DnsZoneDelegation = { parentZoneName: string; childZoneName: string; nameServers: DnsZoneDelegationNameServer[] };
+export type DnsZoneDelegationConfiguration = { parentZones: string[]; delegations: DnsZoneDelegation[]; stateToken: string };
+export type DnsZoneDelegationMutationInput = {
+  action: DnsZoneDelegationAction; parentZoneName: string; childZoneName: string;
+  nameServer?: string | null; ipAddresses?: string[]; expectedStateToken: string;
+};
+export type DnsZoneDelegationOperation = { success: boolean; errorCode?: string | null; message: string; configuration?: DnsZoneDelegationConfiguration | null };
 
 export type DnsOperationLogListItem = {
   id: string;

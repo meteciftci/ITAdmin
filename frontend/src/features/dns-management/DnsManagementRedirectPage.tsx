@@ -44,6 +44,10 @@ export function DnsManagementRedirectPage() {
     return <Navigate to="/dns-management/zone-transfers" replace />;
   }
 
+  if (canAccess(user, PermissionCodes.DnsManagement.ManageZoneDelegations)) {
+    return <Navigate to="/dns-management/zone-delegations" replace />;
+  }
+
   if (
     canAccess(user, PermissionCodes.DnsManagement.ManageServerSettings) ||
     canAccess(user, PermissionCodes.DnsManagement.ClearCache)

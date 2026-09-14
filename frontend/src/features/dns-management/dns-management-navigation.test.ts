@@ -234,6 +234,23 @@ test("DNS primary-zone transfers are live typed separately authorized and high-r
   assert.doesNotMatch(api, /power\s*shell/i);
 });
 
+test("DNS zone delegations are live typed separately authorized and destructive changes confirmed", () => {
+  const routes = readRouterSource();
+  const api = readFileSync(join(root, "features/dns-management/api.ts"), "utf8");
+  const page = readFileSync(join(root, "features/dns-management/DnsZoneDelegationsPage.tsx"), "utf8");
+  assert.match(routes, /path: "\/dns-management\/zone-delegations"/);
+  assert.match(routes, /DnsManagement\.ManageZoneDelegations/);
+  assert.match(api, /servers\/\$\{id\}\/zone-delegation-configuration/);
+  assert.match(page, /AddNameServer/);
+  assert.match(page, /UpdateNameServerAddresses/);
+  assert.match(page, /RemoveNameServer/);
+  assert.match(page, /DeleteDelegation/);
+  assert.match(page, /ConfirmDialog/);
+  assert.match(page, /expectedStateToken/);
+  assert.match(page, /variant="danger"/);
+  assert.doesNotMatch(api, /power\s*shell/i);
+});
+
 test("DNS operation history and exports use dedicated permissions and server-generated files", () => {
   const routes = readRouterSource();
   const api = readFileSync(join(root, "features/dns-management/api.ts"), "utf8");

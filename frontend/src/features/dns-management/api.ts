@@ -1,6 +1,6 @@
 import axios from "axios";
 import { apiClient } from "@/lib/api-client";
-import type { CreateDnsRecord, DnsComparisonContext, DnsComparisonRequest, DnsComparisonResponse, DnsComparisonZone, DnsCredentialProfile, DnsDownload, DnsInventoryServer, DnsManagementSettings, DnsNetworkConfiguration, DnsNetworkMutationInput, DnsNetworkOperation, DnsOperationLogDetail, DnsOperationLogListItem, DnsOperationLogQuery, DnsPolicyConfiguration, DnsPolicyMutationInput, DnsPolicyOperation, DnsRecordInventory, DnsRecordMutation, DnsRecordMutationInput, DnsScavengingConfiguration, DnsScavengingMutationInput, DnsScavengingOperation, DnsServer, DnsServerConnectionTest, DnsServerOperation, DnsServerSettings, DnsSyncBatch, DnsSyncJob, DnsZoneInventory, DnsZoneMutation, DnsZoneTransferConfiguration, DnsZoneTransferMutationInput, DnsZoneTransferOperation, DnssecConfiguration, DnssecMutationInput, DnssecOperation, PagedDnsResponse, SaveDnsCredentialProfile, SaveDnsServer, SaveDnsZone, UpdateDnsServerSettings, UpdateDnsZone } from "./types";
+import type { CreateDnsRecord, DnsComparisonContext, DnsComparisonRequest, DnsComparisonResponse, DnsComparisonZone, DnsCredentialProfile, DnsDownload, DnsInventoryServer, DnsManagementSettings, DnsNetworkConfiguration, DnsNetworkMutationInput, DnsNetworkOperation, DnsOperationLogDetail, DnsOperationLogListItem, DnsOperationLogQuery, DnsPolicyConfiguration, DnsPolicyMutationInput, DnsPolicyOperation, DnsRecordInventory, DnsRecordMutation, DnsRecordMutationInput, DnsScavengingConfiguration, DnsScavengingMutationInput, DnsScavengingOperation, DnsServer, DnsServerConnectionTest, DnsServerOperation, DnsServerSettings, DnsSyncBatch, DnsSyncJob, DnsZoneDelegationConfiguration, DnsZoneDelegationMutationInput, DnsZoneDelegationOperation, DnsZoneInventory, DnsZoneMutation, DnsZoneTransferConfiguration, DnsZoneTransferMutationInput, DnsZoneTransferOperation, DnssecConfiguration, DnssecMutationInput, DnssecOperation, PagedDnsResponse, SaveDnsCredentialProfile, SaveDnsServer, SaveDnsZone, UpdateDnsServerSettings, UpdateDnsZone } from "./types";
 
 const basePath = "/dns-management";
 export const DNS_SETTINGS_QUERY_KEY = ["dns-management", "settings"] as const;
@@ -52,6 +52,11 @@ export const getDnsZoneTransferConfiguration = async (id: string) =>
   (await apiClient.get<DnsZoneTransferConfiguration>(`${basePath}/servers/${id}/zone-transfer-configuration`)).data;
 export const updateDnsZoneTransferConfiguration = async (id: string, request: DnsZoneTransferMutationInput) =>
   (await apiClient.put<DnsZoneTransferOperation>(`${basePath}/servers/${id}/zone-transfer-configuration`, request)).data;
+export const DNS_ZONE_DELEGATION_CONFIGURATION_QUERY_KEY = ["dns-management", "zone-delegation-configuration"] as const;
+export const getDnsZoneDelegationConfiguration = async (id: string) =>
+  (await apiClient.get<DnsZoneDelegationConfiguration>(`${basePath}/servers/${id}/zone-delegation-configuration`)).data;
+export const mutateDnsZoneDelegationConfiguration = async (id: string, request: DnsZoneDelegationMutationInput) =>
+  (await apiClient.post<DnsZoneDelegationOperation>(`${basePath}/servers/${id}/zone-delegation-configuration/mutations`, request)).data;
 
 export const DNS_INVENTORY_SERVERS_QUERY_KEY = ["dns-management", "inventory", "servers"] as const;
 export const DNS_ZONES_QUERY_KEY = ["dns-management", "inventory", "zones"] as const;

@@ -44,7 +44,7 @@ public sealed record DnsAdministrationResult<T>(bool IsSuccess, string Message, 
 
 public sealed record DnsServerCapabilitiesModel(
     bool Zones, bool Records, bool ServerSettings, bool Dnssec, bool Policies, bool Scopes, bool Cache,
-    bool NetworkConfiguration, bool ZoneTransfers);
+    bool NetworkConfiguration, bool ZoneTransfers, bool ZoneDelegations);
 
 public sealed record DnsServerConnectionTestModel(
     Guid ServerId, string ServerDisplayName, bool Success, string? FailureKind, string Message,
@@ -225,6 +225,18 @@ public sealed record DnsZoneTransferMutationCommand(
     IReadOnlyList<string> NotifyServers, string ExpectedStateToken, DnsActorContext Actor);
 public sealed record DnsZoneTransferOperationModel(
     bool Success, string? ErrorCode, string Message, DnsZoneTransferConfigurationModel? Configuration = null);
+
+public enum DnsZoneDelegationAction { AddNameServer, UpdateNameServerAddresses, RemoveNameServer, DeleteDelegation }
+public sealed record DnsZoneDelegationNameServerModel(string NameServer, IReadOnlyList<string> IpAddresses);
+public sealed record DnsZoneDelegationModel(
+    string ParentZoneName, string ChildZoneName, IReadOnlyList<DnsZoneDelegationNameServerModel> NameServers);
+public sealed record DnsZoneDelegationConfigurationModel(
+    IReadOnlyList<string> ParentZones, IReadOnlyList<DnsZoneDelegationModel> Delegations, string StateToken);
+public sealed record DnsZoneDelegationMutationCommand(
+    Guid ServerId, DnsZoneDelegationAction Action, string ParentZoneName, string ChildZoneName,
+    string? NameServer, IReadOnlyList<string> IpAddresses, string ExpectedStateToken, DnsActorContext Actor);
+public sealed record DnsZoneDelegationOperationModel(
+    bool Success, string? ErrorCode, string Message, DnsZoneDelegationConfigurationModel? Configuration = null);
 
 public sealed record DnsOperationLogQuery(
     Guid? ServerId, string? OperationType, string? Status,

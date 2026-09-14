@@ -35,6 +35,8 @@ public interface IDnsRemoteProbeExecutor
         HostAgentRequest request, CancellationToken cancellationToken);
     Task<HostAgentDnsZoneTransferConfigurationResult> ManageDnsZoneTransfersAsync(
         HostAgentRequest request, CancellationToken cancellationToken);
+    Task<HostAgentDnsZoneDelegationConfigurationResult> ManageDnsZoneDelegationsAsync(
+        HostAgentRequest request, CancellationToken cancellationToken);
 }
 
 internal static class DnsRemoteCapabilityProbe
@@ -79,6 +81,10 @@ internal static class DnsRemoteCapabilityProbe
                 [bool](Get-Command Remove-DnsServerRootHint -ErrorAction SilentlyContinue)
             ZoneTransfers = [bool](Get-Command Get-DnsServerZone -ErrorAction SilentlyContinue) -and
                 [bool](Get-Command Set-DnsServerPrimaryZone -ErrorAction SilentlyContinue)
+            ZoneDelegations = [bool](Get-Command Get-DnsServerZoneDelegation -ErrorAction SilentlyContinue) -and
+                [bool](Get-Command Add-DnsServerZoneDelegation -ErrorAction SilentlyContinue) -and
+                [bool](Get-Command Set-DnsServerZoneDelegation -ErrorAction SilentlyContinue) -and
+                [bool](Get-Command Remove-DnsServerZoneDelegation -ErrorAction SilentlyContinue)
         }
         """;
 }
@@ -1172,6 +1178,136 @@ internal static class DnsRemoteZoneTransferConfiguration
         """;
 }
 
+internal static class DnsRemoteZoneDelegationConfiguration
+{
+    // Delegations are managed with the dedicated DNS Server cmdlets. Request data is passed only
+    // as typed parameters; this fixed script never evaluates caller-provided PowerShell.
+    internal const string Script = """
+        param(
+            [Parameter(Mandatory=$true)][ValidateSet('Read','AddNameServer','UpdateNameServerAddresses','RemoveNameServer','DeleteDelegation')][string]$Action,
+            [string]$ParentZoneName,
+            [string]$ChildZoneName,
+            [string]$NameServer,
+            [string[]]$IpAddresses,
+            [string]$ExpectedConfigurationJson
+        )
+        $ErrorActionPreference = 'Stop'
+        Import-Module DnsServer -ErrorAction Stop
+
+        function Canonical-Name([object]$value) {
+            if ($null -eq $value) { return '' }
+            return "$value".Trim().TrimEnd('.').ToLowerInvariant()
+        }
+        function Canonical-Ip([object]$value) {
+            if ($null -eq $value -or "$value" -eq '') { return $null }
+            try { return ([System.Net.IPAddress]::Parse("$value")).ToString() } catch { return $null }
+        }
+        function Record-Ip([object]$record) {
+            if ($null -eq $record -or $null -eq $record.RecordData) { return $null }
+            foreach ($property in @('IPv4Address','IPv6Address','IPAddress')) {
+                $candidate=$record.RecordData.$property
+                if ($candidate) { return Canonical-Ip $candidate }
+            }
+            return $null
+        }
+        function Same-Strings([object[]]$left, [object[]]$right) {
+            return ((@($left | Sort-Object -Unique) -join '|') -ceq (@($right | Sort-Object -Unique) -join '|'))
+        }
+        function Convert-Delegation([string]$parent, [object[]]$items) {
+            $child=Canonical-Name $items[0].ChildZoneName
+            $servers=@($items | ForEach-Object {
+                $server=Canonical-Name $_.NameServer.RecordData.NameServer
+                if (-not $server) { $server=Canonical-Name $_.NameServer }
+                if ($server) {
+                    [ordered]@{ NameServer=$server; IpAddresses=@($_.IPAddress | ForEach-Object { Record-Ip $_ } | Where-Object { $_ } | Sort-Object -Unique) }
+                }
+            } | Sort-Object NameServer)
+            [ordered]@{ ParentZoneName=(Canonical-Name $parent); ChildZoneName=$child; NameServers=$servers }
+        }
+        function Get-Configuration {
+            $parents=@(Get-DnsServerZone -ErrorAction Stop | Where-Object {
+                "$($_.ZoneType)" -eq 'Primary' -and -not [bool]$_.IsAutoCreated -and "$($_.ZoneName)" -ne '.' -and "$($_.ZoneName)" -ine 'TrustAnchors'
+            } | ForEach-Object { Canonical-Name $_.ZoneName } | Sort-Object -Unique)
+            $delegations=@()
+            foreach ($parent in $parents) {
+                $raw=@(Get-DnsServerZoneDelegation -Name $parent -ErrorAction Stop)
+                foreach ($group in @($raw | Group-Object { Canonical-Name $_.ChildZoneName })) {
+                    if ($group.Name) { $delegations += Convert-Delegation $parent @($group.Group) }
+                }
+            }
+            [ordered]@{ ParentZones=$parents; Delegations=@($delegations | Sort-Object ParentZoneName,ChildZoneName) }
+        }
+        function Normalize([object]$value) {
+            [ordered]@{
+                ParentZones=@($value.ParentZones | ForEach-Object { Canonical-Name $_ } | Sort-Object -Unique)
+                Delegations=@($value.Delegations | ForEach-Object {
+                    [ordered]@{
+                        ParentZoneName=(Canonical-Name $_.ParentZoneName); ChildZoneName=(Canonical-Name $_.ChildZoneName)
+                        NameServers=@($_.NameServers | ForEach-Object { [ordered]@{
+                            NameServer=(Canonical-Name $_.NameServer)
+                            IpAddresses=@($_.IpAddresses | ForEach-Object { Canonical-Ip $_ } | Where-Object { $_ } | Sort-Object -Unique)
+                        }} | Sort-Object NameServer)
+                    }
+                } | Sort-Object ParentZoneName,ChildZoneName)
+            }
+        }
+
+        $beforeJson=$null
+        try {
+            $before=Get-Configuration
+            if (@($before.Delegations).Count -gt 10000) { return [pscustomobject]@{ Success=$false; FailureKind='ZoneDelegationConfigurationTooLarge'; Message='The zone delegation configuration exceeds the supported management limit.'; BeforeJson=$null; AfterJson=$null } }
+            $beforeJson=$before | ConvertTo-Json -Compress -Depth 8
+            if ($beforeJson.Length -gt 262144) { return [pscustomobject]@{ Success=$false; FailureKind='ZoneDelegationConfigurationTooLarge'; Message='The zone delegation configuration exceeds the supported management limit.'; BeforeJson=$null; AfterJson=$null } }
+            if ($Action -eq 'Read') { return [pscustomobject]@{ Success=$true; FailureKind=$null; Message='DNS zone delegation configuration read.'; BeforeJson=$null; AfterJson=$beforeJson } }
+            $expected=$ExpectedConfigurationJson | ConvertFrom-Json -ErrorAction Stop
+            if (((Normalize $before) | ConvertTo-Json -Compress -Depth 8) -cne ((Normalize $expected) | ConvertTo-Json -Compress -Depth 8)) {
+                return [pscustomobject]@{ Success=$false; FailureKind='ZoneDelegationConfigurationChanged'; Message='The live zone delegation configuration changed. Refresh and retry.'; BeforeJson=$beforeJson; AfterJson=$null }
+            }
+            $parent=Canonical-Name $ParentZoneName; $child=Canonical-Name $ChildZoneName; $server=Canonical-Name $NameServer
+            if ($parent -notin @($before.ParentZones)) { return [pscustomobject]@{ Success=$false; FailureKind='PrimaryZoneNotFound'; Message='The parent primary DNS zone was not found.'; BeforeJson=$beforeJson; AfterJson=$null } }
+            $target=@($before.Delegations | Where-Object { $_.ParentZoneName -ceq $parent -and $_.ChildZoneName -ceq $child })
+            switch ($Action) {
+                'AddNameServer' {
+                    if ($target.Count -gt 0 -and @($target[0].NameServers | Where-Object { $_.NameServer -ceq $server }).Count -gt 0) {
+                        return [pscustomobject]@{ Success=$false; FailureKind='DelegationNameServerAlreadyExists'; Message='The name server already exists in this delegation.'; BeforeJson=$beforeJson; AfterJson=$null }
+                    }
+                    Add-DnsServerZoneDelegation -Name $parent -ChildZoneName $child -NameServer $server -IPAddress ([System.Net.IPAddress[]]@($IpAddresses)) -PassThru -Confirm:$false -ErrorAction Stop | Out-Null
+                }
+                'UpdateNameServerAddresses' {
+                    if ($target.Count -ne 1 -or @($target[0].NameServers | Where-Object { $_.NameServer -ceq $server }).Count -ne 1) {
+                        return [pscustomobject]@{ Success=$false; FailureKind='DelegationNameServerNotFound'; Message='The delegation name server was not found.'; BeforeJson=$beforeJson; AfterJson=$null }
+                    }
+                    Set-DnsServerZoneDelegation -Name $parent -ChildZoneName $child -NameServer $server -IPAddress ([System.Net.IPAddress[]]@($IpAddresses)) -PassThru -Confirm:$false -ErrorAction Stop | Out-Null
+                }
+                'RemoveNameServer' {
+                    if ($target.Count -ne 1) { return [pscustomobject]@{ Success=$false; FailureKind='DelegationNotFound'; Message='The DNS zone delegation was not found.'; BeforeJson=$beforeJson; AfterJson=$null } }
+                    $matches=@($target[0].NameServers | Where-Object { $_.NameServer -ceq $server })
+                    if ($matches.Count -ne 1) { return [pscustomobject]@{ Success=$false; FailureKind='DelegationNameServerNotFound'; Message='The delegation name server was not found.'; BeforeJson=$beforeJson; AfterJson=$null } }
+                    if (@($target[0].NameServers).Count -le 1) { return [pscustomobject]@{ Success=$false; FailureKind='LastDelegationNameServer'; Message='Use delete delegation to remove its final name server.'; BeforeJson=$beforeJson; AfterJson=$null } }
+                    Remove-DnsServerZoneDelegation -Name $parent -ChildZoneName $child -NameServer $server -Force -ErrorAction Stop | Out-Null
+                }
+                'DeleteDelegation' {
+                    if ($target.Count -ne 1) { return [pscustomobject]@{ Success=$false; FailureKind='DelegationNotFound'; Message='The DNS zone delegation was not found.'; BeforeJson=$beforeJson; AfterJson=$null } }
+                    Remove-DnsServerZoneDelegation -Name $parent -ChildZoneName $child -Force -ErrorAction Stop | Out-Null
+                }
+            }
+            $after=Get-Configuration
+            $actual=@($after.Delegations | Where-Object { $_.ParentZoneName -ceq $parent -and $_.ChildZoneName -ceq $child })
+            if ($Action -in @('AddNameServer','UpdateNameServerAddresses')) {
+                if ($actual.Count -ne 1) { throw 'DNS zone delegation name server read-back verification failed.' }
+                $actualServer=@($actual[0].NameServers | Where-Object { $_.NameServer -ceq $server })
+                $wantedIps=@($IpAddresses | ForEach-Object { Canonical-Ip $_ } | Where-Object { $_ })
+                if ($actualServer.Count -ne 1 -or -not (Same-Strings $actualServer[0].IpAddresses $wantedIps)) { throw 'DNS zone delegation name server read-back verification failed.' }
+            }
+            if ($Action -eq 'RemoveNameServer' -and ($actual.Count -ne 1 -or @($actual[0].NameServers | Where-Object { $_.NameServer -ceq $server }).Count -gt 0)) { throw 'DNS zone delegation name server removal verification failed.' }
+            if ($Action -eq 'DeleteDelegation' -and $actual.Count -gt 0) { throw 'DNS zone delegation removal read-back verification failed.' }
+            return [pscustomobject]@{ Success=$true; FailureKind=$null; Message='DNS zone delegation configuration updated.'; BeforeJson=$beforeJson; AfterJson=($after | ConvertTo-Json -Compress -Depth 8) }
+        } catch {
+            return [pscustomobject]@{ Success=$false; FailureKind='DnsZoneDelegationOperationFailed'; Message='The DNS server rejected the zone delegation operation.'; BeforeJson=$beforeJson; AfterJson=$null }
+        }
+        """;
+}
+
 internal static class DnsRemoteDnssecConfiguration
 {
     // Authoritative signing and recursive validation are separate concerns, but share one live,
@@ -1526,6 +1662,59 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
         try { return await ManageDnsZoneTransfersCoreAsync(request, timeout.Token); }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         { return ZoneTransferConfigurationFailure("Timeout", "The DNS zone transfer operation timed out."); }
+    }
+
+    public async Task<HostAgentDnsZoneDelegationConfigurationResult> ManageDnsZoneDelegationsAsync(
+        HostAgentRequest request, CancellationToken cancellationToken)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(request.DnsTimeoutSeconds!.Value));
+        try { return await ManageDnsZoneDelegationsCoreAsync(request, timeout.Token); }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        { return ZoneDelegationConfigurationFailure("Timeout", "The DNS zone delegation operation timed out."); }
+    }
+
+    private async Task<HostAgentDnsZoneDelegationConfigurationResult> ManageDnsZoneDelegationsCoreAsync(
+        HostAgentRequest request, CancellationToken cancellationToken)
+    {
+        var host = request.DnsHostName!.Trim().TrimEnd('.');
+        var tls = await ValidateTlsAsync(host, request.DnsPort!.Value, request.DnsTlsCertificateThumbprint, cancellationToken);
+        if (!tls.NetworkReachable || !tls.Valid)
+            return ZoneDelegationConfigurationFailure(tls.NetworkReachable ? "TlsValidationFailed" : "NetworkUnreachable",
+                tls.NetworkReachable ? "The WinRM HTTPS certificate could not be validated." : "The WinRM HTTPS endpoint could not be reached.");
+        using var securePassword = ToSecureString(request.DnsPassword!);
+        var credential = new PSCredential(request.DnsUserName!, securePassword);
+        var endpoint = new UriBuilder("https", host, request.DnsPort.Value, "wsman").Uri;
+        var timeout = request.DnsTimeoutSeconds!.Value * 1000;
+        var connection = new WSManConnectionInfo(endpoint, MicrosoftPowerShellShellUri, credential)
+        {
+            AuthenticationMechanism = request.DnsAuthenticationMode == HostAgentDnsAuthenticationMode.BasicOverTls ? AuthenticationMechanism.Basic : AuthenticationMechanism.Negotiate,
+            OpenTimeout = timeout, OperationTimeout = timeout, CancelTimeout = Math.Min(timeout, 10_000), NoMachineProfile = true,
+        };
+        using var runspace = RunspaceFactory.CreateRunspace(connection);
+        try
+        {
+            await Task.Run(runspace.Open, cancellationToken);
+            using var powerShell = PowerShell.Create();
+            powerShell.Runspace = runspace;
+            powerShell.AddScript(DnsRemoteZoneDelegationConfiguration.Script, useLocalScope: true)
+                .AddParameter("Action", request.DnsZoneDelegationAction!.Value.ToString())
+                .AddParameter("ParentZoneName", request.DnsDelegationParentZoneName)
+                .AddParameter("ChildZoneName", request.DnsDelegationChildZoneName)
+                .AddParameter("NameServer", request.DnsDelegationNameServer)
+                .AddParameter("IpAddresses", request.DnsDelegationIpAddresses?.ToArray() ?? [])
+                .AddParameter("ExpectedConfigurationJson", request.DnsExpectedZoneDelegationConfigurationJson);
+            var output = await Task.Run(powerShell.Invoke, cancellationToken);
+            return powerShell.HadErrors || output.Count != 1
+                ? ZoneDelegationConfigurationFailure("DnsZoneDelegationOperationFailed", "The DNS server rejected the zone delegation operation.")
+                : MapZoneDelegationConfigurationResult(output[0]);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception exception) when (exception is PSRemotingTransportException or RemoteException or RuntimeException or InvalidRunspaceStateException)
+        {
+            logger.LogWarning("DNS zone delegation operation failed for {Host}:{Port} ({ExceptionType}).", host, request.DnsPort, exception.GetType().Name);
+            return ZoneDelegationConfigurationFailure("DnsZoneDelegationOperationFailed", "The DNS server rejected the zone delegation operation.");
+        }
     }
 
     private async Task<HostAgentDnsZoneTransferConfigurationResult> ManageDnsZoneTransfersCoreAsync(
@@ -2144,6 +2333,9 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
             Policies = ReadBool(value, "Policies"),
             Scopes = ReadBool(value, "Scopes"),
             Cache = ReadBool(value, "Cache"),
+            NetworkConfiguration = ReadBool(value, "NetworkConfiguration"),
+            ZoneTransfers = ReadBool(value, "ZoneTransfers"),
+            ZoneDelegations = ReadBool(value, "ZoneDelegations"),
         },
     };
 
@@ -2439,6 +2631,26 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
         try { return JsonSerializer.Deserialize<HostAgentDnsZoneTransferConfiguration>(json, HostAgentProtocol.Json); }
         catch (JsonException) { return null; }
     }
+    private static HostAgentDnsZoneDelegationConfigurationResult MapZoneDelegationConfigurationResult(PSObject value)
+    {
+        var success = ReadBool(value, "Success");
+        return new HostAgentDnsZoneDelegationConfigurationResult
+        {
+            Success = success,
+            FailureKind = ReadString(value, "FailureKind", 64),
+            Message = ReadString(value, "Message", 2000)
+                ?? (success ? "DNS zone delegation operation completed." : "The DNS zone delegation operation failed."),
+            Before = ReadZoneDelegationConfigurationJson(value, "BeforeJson"),
+            After = ReadZoneDelegationConfigurationJson(value, "AfterJson"),
+        };
+    }
+    private static HostAgentDnsZoneDelegationConfiguration? ReadZoneDelegationConfigurationJson(PSObject value, string property)
+    {
+        var json = value.Properties[property]?.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try { return JsonSerializer.Deserialize<HostAgentDnsZoneDelegationConfiguration>(json, HostAgentProtocol.Json); }
+        catch (JsonException) { return null; }
+    }
     private static HostAgentDnsProbeResult Failure(string kind, string message, bool network, bool tls, bool authentication = false) =>
         new()
         {
@@ -2466,6 +2678,8 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
     private static HostAgentDnsNetworkConfigurationResult NetworkConfigurationFailure(string kind, string message) =>
         new() { Success = false, FailureKind = kind, Message = message };
     private static HostAgentDnsZoneTransferConfigurationResult ZoneTransferConfigurationFailure(string kind, string message) =>
+        new() { Success = false, FailureKind = kind, Message = message };
+    private static HostAgentDnsZoneDelegationConfigurationResult ZoneDelegationConfigurationFailure(string kind, string message) =>
         new() { Success = false, FailureKind = kind, Message = message };
     private static IReadOnlyList<T> FitPayload<T>(IEnumerable<T> source)
     {

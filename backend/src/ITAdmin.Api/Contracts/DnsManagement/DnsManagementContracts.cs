@@ -40,7 +40,7 @@ public sealed record SaveDnsServerRequest(
 
 public sealed record DnsServerCapabilitiesResponse(
     bool Zones, bool Records, bool ServerSettings, bool Dnssec, bool Policies, bool Scopes, bool Cache,
-    bool NetworkConfiguration, bool ZoneTransfers);
+    bool NetworkConfiguration, bool ZoneTransfers, bool ZoneDelegations);
 
 public sealed record DnsServerConnectionTestResponse(
     Guid ServerId, string ServerDisplayName, bool Success, string? FailureKind, string Message,
@@ -161,6 +161,17 @@ public sealed record DnsZoneTransferMutationRequest(
     DnsZoneNotifyMode NotifyMode, IReadOnlyList<string>? NotifyServers, string ExpectedStateToken);
 public sealed record DnsZoneTransferOperationResponse(
     bool Success, string? ErrorCode, string Message, DnsZoneTransferConfigurationResponse? Configuration = null);
+
+public sealed record DnsZoneDelegationNameServerResponse(string NameServer, IReadOnlyList<string> IpAddresses);
+public sealed record DnsZoneDelegationResponse(
+    string ParentZoneName, string ChildZoneName, IReadOnlyList<DnsZoneDelegationNameServerResponse> NameServers);
+public sealed record DnsZoneDelegationConfigurationResponse(
+    IReadOnlyList<string> ParentZones, IReadOnlyList<DnsZoneDelegationResponse> Delegations, string StateToken);
+public sealed record DnsZoneDelegationMutationRequest(
+    DnsZoneDelegationAction Action, string ParentZoneName, string ChildZoneName,
+    string? NameServer, IReadOnlyList<string>? IpAddresses, string ExpectedStateToken);
+public sealed record DnsZoneDelegationOperationResponse(
+    bool Success, string? ErrorCode, string Message, DnsZoneDelegationConfigurationResponse? Configuration = null);
 
 public sealed record DnsOperationLogListItemResponse(
     Guid Id, DateTimeOffset CreatedAt, Guid? ServerId, string? ServerDisplayName,
