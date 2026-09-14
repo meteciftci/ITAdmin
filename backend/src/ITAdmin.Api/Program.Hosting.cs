@@ -64,6 +64,7 @@ public partial class Program
         builder.Services.AddScoped<IDnssecManagementService, DnssecManagementService>();
 builder.Services.AddScoped<IDnsScavengingManagementService, DnsScavengingManagementService>();
 builder.Services.AddScoped<IDnsNetworkConfigurationService, DnsNetworkConfigurationService>();
+builder.Services.AddScoped<IDnsZoneTransferManagementService, DnsZoneTransferManagementService>();
         builder.Services.AddScoped<IDnsInventoryExportService, DnsInventoryExportService>();
 
         // IIS / reverse proxy support: honor X-Forwarded-For / X-Forwarded-Proto only from

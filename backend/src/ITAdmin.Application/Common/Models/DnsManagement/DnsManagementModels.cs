@@ -44,7 +44,7 @@ public sealed record DnsAdministrationResult<T>(bool IsSuccess, string Message, 
 
 public sealed record DnsServerCapabilitiesModel(
     bool Zones, bool Records, bool ServerSettings, bool Dnssec, bool Policies, bool Scopes, bool Cache,
-    bool NetworkConfiguration);
+    bool NetworkConfiguration, bool ZoneTransfers);
 
 public sealed record DnsServerConnectionTestModel(
     Guid ServerId, string ServerDisplayName, bool Success, string? FailureKind, string Message,
@@ -210,6 +210,21 @@ public sealed record DnsNetworkMutationCommand(
     string? OriginalRootHintNameServer, string ExpectedStateToken, DnsActorContext Actor);
 public sealed record DnsNetworkOperationModel(
     bool Success, string? ErrorCode, string Message, DnsNetworkConfigurationModel? Configuration = null);
+
+public enum DnsZoneTransferMode { NoTransfer, TransferAnyServer, TransferToZoneNameServer, TransferToSecureServers }
+public enum DnsZoneNotifyMode { NoNotify, Notify, NotifyServers }
+public sealed record DnsZoneTransferSettingModel(
+    string ZoneName, bool IsDsIntegrated, DnsZoneTransferMode TransferMode,
+    IReadOnlyList<string> SecondaryServers, DnsZoneNotifyMode NotifyMode,
+    IReadOnlyList<string> NotifyServers);
+public sealed record DnsZoneTransferConfigurationModel(
+    IReadOnlyList<DnsZoneTransferSettingModel> Zones, string StateToken);
+public sealed record DnsZoneTransferMutationCommand(
+    Guid ServerId, string ZoneName, DnsZoneTransferMode TransferMode,
+    IReadOnlyList<string> SecondaryServers, DnsZoneNotifyMode NotifyMode,
+    IReadOnlyList<string> NotifyServers, string ExpectedStateToken, DnsActorContext Actor);
+public sealed record DnsZoneTransferOperationModel(
+    bool Success, string? ErrorCode, string Message, DnsZoneTransferConfigurationModel? Configuration = null);
 
 public sealed record DnsOperationLogQuery(
     Guid? ServerId, string? OperationType, string? Status,

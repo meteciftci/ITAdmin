@@ -103,6 +103,7 @@ public sealed partial class SetupService
         ("DnsManagement", PermissionCodes.DnsManagement.ClearCache, "Clear DNS server cache."),
         ("DnsManagement", PermissionCodes.DnsManagement.ManageScavenging, "Manage DNS aging and scavenging."),
         ("DnsManagement", PermissionCodes.DnsManagement.ManageNetworkConfiguration, "Manage DNS listening addresses and root hints."),
+        ("DnsManagement", PermissionCodes.DnsManagement.ManageZoneTransfers, "Manage DNS primary-zone transfers and notifications."),
         ("DnsManagement", PermissionCodes.DnsManagement.ViewOperationLogs, "View DNS operation logs."),
         ("Directory", PermissionCodes.Directory.Users.Lookup, "Lookup directory users for read-only selection."),
         ("Directory", PermissionCodes.Directory.OrganizationalUnits.Lookup, "Lookup directory organizational units for read-only selection."),

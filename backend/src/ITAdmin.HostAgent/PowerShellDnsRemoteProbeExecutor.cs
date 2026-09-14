@@ -33,6 +33,8 @@ public interface IDnsRemoteProbeExecutor
         HostAgentRequest request, CancellationToken cancellationToken);
     Task<HostAgentDnsNetworkConfigurationResult> ManageDnsNetworkConfigurationAsync(
         HostAgentRequest request, CancellationToken cancellationToken);
+    Task<HostAgentDnsZoneTransferConfigurationResult> ManageDnsZoneTransfersAsync(
+        HostAgentRequest request, CancellationToken cancellationToken);
 }
 
 internal static class DnsRemoteCapabilityProbe
@@ -75,6 +77,8 @@ internal static class DnsRemoteCapabilityProbe
                 [bool](Get-Command Get-DnsServerRootHint -ErrorAction SilentlyContinue) -and
                 [bool](Get-Command Add-DnsServerRootHint -ErrorAction SilentlyContinue) -and
                 [bool](Get-Command Remove-DnsServerRootHint -ErrorAction SilentlyContinue)
+            ZoneTransfers = [bool](Get-Command Get-DnsServerZone -ErrorAction SilentlyContinue) -and
+                [bool](Get-Command Set-DnsServerPrimaryZone -ErrorAction SilentlyContinue)
         }
         """;
 }
@@ -1069,6 +1073,105 @@ internal static class DnsRemoteNetworkConfiguration
         """;
 }
 
+internal static class DnsRemoteZoneTransferConfiguration
+{
+    internal const string Script = """
+        param(
+            [Parameter(Mandatory=$true)][ValidateSet('Read','Update')][string]$Action,
+            [string]$ZoneName,
+            [ValidateSet('','NoTransfer','TransferAnyServer','TransferToZoneNameServer','TransferToSecureServers')][string]$TransferMode,
+            [string[]]$SecondaryServers,
+            [ValidateSet('','NoNotify','Notify','NotifyServers')][string]$NotifyMode,
+            [string[]]$NotifyServers,
+            [string]$ExpectedConfigurationJson
+        )
+        $ErrorActionPreference = 'Stop'
+        Import-Module DnsServer -ErrorAction Stop
+
+        function Canonical-Ip([object]$value) {
+            try { return ([System.Net.IPAddress]::Parse("$value")).ToString().ToLowerInvariant() } catch { return $null }
+        }
+        function Transfer-Mode([object]$value) {
+            switch ("$value") {
+                '0' { return 'NoTransfer' }; 'NoTransfer' { return 'NoTransfer' }
+                '1' { return 'TransferAnyServer' }; 'TransferAnyServer' { return 'TransferAnyServer' }
+                '2' { return 'TransferToZoneNameServer' }; 'TransferToZoneNameServer' { return 'TransferToZoneNameServer' }
+                '3' { return 'TransferToSecureServers' }; 'TransferToSecureServers' { return 'TransferToSecureServers' }
+                default { throw 'Unsupported DNS zone transfer mode.' }
+            }
+        }
+        function Notify-Mode([object]$value) {
+            switch ("$value") {
+                '0' { return 'NoNotify' }; 'NoNotify' { return 'NoNotify' }
+                '1' { return 'Notify' }; 'Notify' { return 'Notify' }
+                '2' { return 'NotifyServers' }; 'NotifyServers' { return 'NotifyServers' }
+                default { throw 'Unsupported DNS zone notification mode.' }
+            }
+        }
+        function Convert-Zone([object]$zone) {
+            $transfer = Transfer-Mode $zone.SecureSecondaries
+            $notify = Notify-Mode $zone.Notify
+            [ordered]@{
+                ZoneName="$($zone.ZoneName)".TrimEnd('.').ToLowerInvariant()
+                IsDsIntegrated=[bool]$zone.IsDsIntegrated
+                TransferMode=$transfer
+                SecondaryServers=if ($transfer -eq 'TransferToSecureServers') { @($zone.SecondaryServers | ForEach-Object { Canonical-Ip $_ } | Where-Object { $_ } | Sort-Object -Unique) } else { @() }
+                NotifyMode=$notify
+                NotifyServers=if ($notify -eq 'NotifyServers') { @($zone.NotifyServers | ForEach-Object { Canonical-Ip $_ } | Where-Object { $_ } | Sort-Object -Unique) } else { @() }
+            }
+        }
+        function Get-Configuration {
+            $zones = @(Get-DnsServerZone -ErrorAction Stop | Where-Object {
+                "$($_.ZoneType)" -eq 'Primary' -and -not [bool]$_.IsAutoCreated -and "$($_.ZoneName)" -ne '.' -and "$($_.ZoneName)" -ine 'TrustAnchors'
+            } | ForEach-Object { Convert-Zone $_ } | Sort-Object ZoneName)
+            [ordered]@{ Zones=$zones }
+        }
+        function Normalize([object]$value) {
+            [ordered]@{ Zones=@($value.Zones | ForEach-Object {
+                $transfer="$($_.TransferMode)"; $notify="$($_.NotifyMode)"
+                [ordered]@{
+                    ZoneName="$($_.ZoneName)".TrimEnd('.').ToLowerInvariant(); IsDsIntegrated=[bool]$_.IsDsIntegrated; TransferMode=$transfer
+                    SecondaryServers=if ($transfer -eq 'TransferToSecureServers') { @($_.SecondaryServers | ForEach-Object { Canonical-Ip $_ } | Where-Object { $_ } | Sort-Object -Unique) } else { @() }
+                    NotifyMode=$notify; NotifyServers=if ($notify -eq 'NotifyServers') { @($_.NotifyServers | ForEach-Object { Canonical-Ip $_ } | Where-Object { $_ } | Sort-Object -Unique) } else { @() }
+                }
+            } | Sort-Object ZoneName) }
+        }
+        function Same-Strings([object[]]$left, [object[]]$right) {
+            return ((@($left | Sort-Object -Unique) -join '|') -ceq (@($right | Sort-Object -Unique) -join '|'))
+        }
+
+        $beforeJson=$null
+        try {
+            $before=Get-Configuration
+            if (@($before.Zones).Count -gt 10000) { return [pscustomobject]@{ Success=$false; FailureKind='ZoneTransferConfigurationTooLarge'; Message='The zone transfer configuration exceeds the supported management limit.'; BeforeJson=$null; AfterJson=$null } }
+            $beforeJson=$before | ConvertTo-Json -Compress -Depth 7
+            if ($beforeJson.Length -gt 262144) { return [pscustomobject]@{ Success=$false; FailureKind='ZoneTransferConfigurationTooLarge'; Message='The zone transfer configuration exceeds the supported management limit.'; BeforeJson=$null; AfterJson=$null } }
+            if ($Action -eq 'Read') { return [pscustomobject]@{ Success=$true; FailureKind=$null; Message='DNS zone transfer configuration read.'; BeforeJson=$null; AfterJson=$beforeJson } }
+            $expected=$ExpectedConfigurationJson | ConvertFrom-Json -ErrorAction Stop
+            if (((Normalize $before) | ConvertTo-Json -Compress -Depth 7) -cne ((Normalize $expected) | ConvertTo-Json -Compress -Depth 7)) {
+                return [pscustomobject]@{ Success=$false; FailureKind='ZoneTransferConfigurationChanged'; Message='The live zone transfer configuration changed. Refresh and retry.'; BeforeJson=$beforeJson; AfterJson=$null }
+            }
+            $name="$ZoneName".TrimEnd('.').ToLowerInvariant()
+            $target=@($before.Zones | Where-Object { $_.ZoneName -ceq $name })
+            if ($target.Count -ne 1) { return [pscustomobject]@{ Success=$false; FailureKind='PrimaryZoneNotFound'; Message='The primary DNS zone was not found.'; BeforeJson=$beforeJson; AfterJson=$null } }
+            $parameters=@{ Name=$name; SecureSecondaries=$TransferMode; Notify=$NotifyMode; PassThru=$true; Confirm=$false; ErrorAction='Stop' }
+            if ($TransferMode -eq 'TransferToSecureServers') { $parameters.SecondaryServers=[System.Net.IPAddress[]]@($SecondaryServers) }
+            if ($NotifyMode -eq 'NotifyServers') { $parameters.NotifyServers=[System.Net.IPAddress[]]@($NotifyServers) }
+            Set-DnsServerPrimaryZone @parameters | Out-Null
+            $after=Get-Configuration
+            $actual=@($after.Zones | Where-Object { $_.ZoneName -ceq $name })
+            $wantedSecondary=@($SecondaryServers | ForEach-Object { Canonical-Ip $_ } | Where-Object { $_ })
+            $wantedNotify=@($NotifyServers | ForEach-Object { Canonical-Ip $_ } | Where-Object { $_ })
+            if ($actual.Count -ne 1 -or "$($actual[0].TransferMode)" -ne $TransferMode -or "$($actual[0].NotifyMode)" -ne $NotifyMode -or
+                ($TransferMode -eq 'TransferToSecureServers' -and -not (Same-Strings $actual[0].SecondaryServers $wantedSecondary)) -or
+                ($NotifyMode -eq 'NotifyServers' -and -not (Same-Strings $actual[0].NotifyServers $wantedNotify))) { throw 'DNS zone transfer read-back verification failed.' }
+            return [pscustomobject]@{ Success=$true; FailureKind=$null; Message='DNS zone transfer configuration updated.'; BeforeJson=$beforeJson; AfterJson=($after | ConvertTo-Json -Compress -Depth 7) }
+        } catch {
+            return [pscustomobject]@{ Success=$false; FailureKind='DnsZoneTransferOperationFailed'; Message='The DNS server rejected the zone transfer operation.'; BeforeJson=$beforeJson; AfterJson=$null }
+        }
+        """;
+}
+
 internal static class DnsRemoteDnssecConfiguration
 {
     // Authoritative signing and recursive validation are separate concerns, but share one live,
@@ -1413,6 +1516,60 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
         try { return await ManageDnsNetworkConfigurationCoreAsync(request, timeout.Token); }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         { return NetworkConfigurationFailure("Timeout", "The DNS network configuration operation timed out."); }
+    }
+
+    public async Task<HostAgentDnsZoneTransferConfigurationResult> ManageDnsZoneTransfersAsync(
+        HostAgentRequest request, CancellationToken cancellationToken)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(request.DnsTimeoutSeconds!.Value));
+        try { return await ManageDnsZoneTransfersCoreAsync(request, timeout.Token); }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        { return ZoneTransferConfigurationFailure("Timeout", "The DNS zone transfer operation timed out."); }
+    }
+
+    private async Task<HostAgentDnsZoneTransferConfigurationResult> ManageDnsZoneTransfersCoreAsync(
+        HostAgentRequest request, CancellationToken cancellationToken)
+    {
+        var host = request.DnsHostName!.Trim().TrimEnd('.');
+        var tls = await ValidateTlsAsync(host, request.DnsPort!.Value, request.DnsTlsCertificateThumbprint, cancellationToken);
+        if (!tls.NetworkReachable || !tls.Valid)
+            return ZoneTransferConfigurationFailure(tls.NetworkReachable ? "TlsValidationFailed" : "NetworkUnreachable",
+                tls.NetworkReachable ? "The WinRM HTTPS certificate could not be validated." : "The WinRM HTTPS endpoint could not be reached.");
+        using var securePassword = ToSecureString(request.DnsPassword!);
+        var credential = new PSCredential(request.DnsUserName!, securePassword);
+        var endpoint = new UriBuilder("https", host, request.DnsPort.Value, "wsman").Uri;
+        var timeout = request.DnsTimeoutSeconds!.Value * 1000;
+        var connection = new WSManConnectionInfo(endpoint, MicrosoftPowerShellShellUri, credential)
+        {
+            AuthenticationMechanism = request.DnsAuthenticationMode == HostAgentDnsAuthenticationMode.BasicOverTls ? AuthenticationMechanism.Basic : AuthenticationMechanism.Negotiate,
+            OpenTimeout = timeout, OperationTimeout = timeout, CancelTimeout = Math.Min(timeout, 10_000), NoMachineProfile = true,
+        };
+        using var runspace = RunspaceFactory.CreateRunspace(connection);
+        try
+        {
+            await Task.Run(runspace.Open, cancellationToken);
+            using var powerShell = PowerShell.Create();
+            powerShell.Runspace = runspace;
+            powerShell.AddScript(DnsRemoteZoneTransferConfiguration.Script, useLocalScope: true)
+                .AddParameter("Action", request.DnsZoneTransferAction!.Value.ToString())
+                .AddParameter("ZoneName", request.DnsZoneName)
+                .AddParameter("TransferMode", request.DnsZoneTransferMode?.ToString() ?? string.Empty)
+                .AddParameter("SecondaryServers", request.DnsZoneSecondaryServers?.ToArray() ?? [])
+                .AddParameter("NotifyMode", request.DnsZoneNotifyMode?.ToString() ?? string.Empty)
+                .AddParameter("NotifyServers", request.DnsZoneNotifyServers?.ToArray() ?? [])
+                .AddParameter("ExpectedConfigurationJson", request.DnsExpectedZoneTransferConfigurationJson);
+            var output = await Task.Run(powerShell.Invoke, cancellationToken);
+            return powerShell.HadErrors || output.Count != 1
+                ? ZoneTransferConfigurationFailure("DnsZoneTransferOperationFailed", "The DNS server rejected the zone transfer operation.")
+                : MapZoneTransferConfigurationResult(output[0]);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception exception) when (exception is PSRemotingTransportException or RemoteException or RuntimeException or InvalidRunspaceStateException)
+        {
+            logger.LogWarning("DNS zone transfer operation failed for {Host}:{Port} ({ExceptionType}).", host, request.DnsPort, exception.GetType().Name);
+            return ZoneTransferConfigurationFailure("DnsZoneTransferOperationFailed", "The DNS server rejected the zone transfer operation.");
+        }
     }
 
     private async Task<HostAgentDnsNetworkConfigurationResult> ManageDnsNetworkConfigurationCoreAsync(
@@ -2262,6 +2419,26 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
         try { return JsonSerializer.Deserialize<HostAgentDnsNetworkConfiguration>(json, HostAgentProtocol.Json); }
         catch (JsonException) { return null; }
     }
+    private static HostAgentDnsZoneTransferConfigurationResult MapZoneTransferConfigurationResult(PSObject value)
+    {
+        var success = ReadBool(value, "Success");
+        return new HostAgentDnsZoneTransferConfigurationResult
+        {
+            Success = success,
+            FailureKind = ReadString(value, "FailureKind", 64),
+            Message = ReadString(value, "Message", 2000)
+                ?? (success ? "DNS zone transfer operation completed." : "The DNS zone transfer operation failed."),
+            Before = ReadZoneTransferConfigurationJson(value, "BeforeJson"),
+            After = ReadZoneTransferConfigurationJson(value, "AfterJson"),
+        };
+    }
+    private static HostAgentDnsZoneTransferConfiguration? ReadZoneTransferConfigurationJson(PSObject value, string property)
+    {
+        var json = value.Properties[property]?.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try { return JsonSerializer.Deserialize<HostAgentDnsZoneTransferConfiguration>(json, HostAgentProtocol.Json); }
+        catch (JsonException) { return null; }
+    }
     private static HostAgentDnsProbeResult Failure(string kind, string message, bool network, bool tls, bool authentication = false) =>
         new()
         {
@@ -2287,6 +2464,8 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
     private static HostAgentDnsScavengingConfigurationResult ScavengingConfigurationFailure(string kind, string message) =>
         new() { Success = false, FailureKind = kind, Message = message };
     private static HostAgentDnsNetworkConfigurationResult NetworkConfigurationFailure(string kind, string message) =>
+        new() { Success = false, FailureKind = kind, Message = message };
+    private static HostAgentDnsZoneTransferConfigurationResult ZoneTransferConfigurationFailure(string kind, string message) =>
         new() { Success = false, FailureKind = kind, Message = message };
     private static IReadOnlyList<T> FitPayload<T>(IEnumerable<T> source)
     {

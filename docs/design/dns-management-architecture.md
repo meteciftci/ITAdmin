@@ -292,6 +292,32 @@ Network configuration references:
 - [Add-DnsServerRootHint](https://learn.microsoft.com/en-us/powershell/module/dnsserver/add-dnsserverroothint?view=windowsserver2025-ps)
 - [Remove-DnsServerRootHint](https://learn.microsoft.com/en-us/powershell/module/dnsserver/remove-dnsserverroothint?view=windowsserver2025-ps)
 
+## Primary-zone transfer and notification workflow
+
+Zone transfer access and RFC 1996 change notifications are live operational settings. The dedicated
+screen enumerates only non-system primary zones and exposes Windows' four transfer modes: disabled,
+any server, servers named by the zone's NS records, or an explicit secondary-server IP list. Change
+notifications can be disabled, sent to all secondaries, or restricted to an explicit IP list.
+
+Every write carries the complete state token from the live read. The Host Agent re-reads and
+canonically compares every manageable primary zone before applying the fixed
+`Set-DnsServerPrimaryZone` command, then verifies the selected zone by reading it back. Names,
+addresses, modes, counts, and serialized state size are bounded at the API and privileged boundary.
+The browser cannot submit script or cmdlet text, and both general audit and DNS operation history
+store sanitized before/after snapshots.
+
+`TransferAnyServer` is deliberately presented as a high-risk choice and every update uses a
+destructive confirmation style. Microsoft warns that allowing any reachable host to transfer a zone
+can disclose its contents; the recommended operational choices are NS-record servers or an explicit
+allowlist. Delegations and advanced DNS zone-transfer policies remain separate workflows because
+they have different resource models and evaluation semantics.
+
+Zone transfer references:
+
+- [Manage DNS zones](https://learn.microsoft.com/en-us/windows-server/networking/dns/manage-dns-zones)
+- [DNS zone types and transfers](https://learn.microsoft.com/en-us/windows-server/networking/dns/zone-types)
+- [Set-DnsServerPrimaryZone](https://learn.microsoft.com/en-us/powershell/module/dnsserver/set-dnsserverprimaryzone?view=windowsserver2025-ps)
+
 ## Client subnet, zone scope, and query policy workflow
 
 Policy configuration is operational state and is therefore read live from the selected DNS server;

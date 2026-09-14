@@ -33,7 +33,7 @@ namespace ITAdmin.HostAgent.Contracts;
 /// </summary>
 public static class HostAgentProtocol
 {
-    public const int ProtocolVersion = 12;
+    public const int ProtocolVersion = 13;
 
     /// <summary>Pipe name. Machine-local; the agent ACLs it to the app pool identity and administrators.</summary>
     public const string PipeName = "ITAdmin.HostAgent";
@@ -130,6 +130,8 @@ public enum HostAgentOperation
     ManageDnsScavenging = 16,
     /// <summary>Read or mutate DNS listening addresses and root hints.</summary>
     ManageDnsNetworkConfiguration = 17,
+    /// <summary>Read or update primary-zone transfer and notification settings.</summary>
+    ManageDnsZoneTransfers = 18,
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -225,6 +227,13 @@ public enum HostAgentDnsNetworkAction
     UpdateRootHint = 3,
     RemoveRootHint = 4,
 }
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum HostAgentDnsZoneTransferAction { Read = 0, Update = 1 }
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum HostAgentDnsZoneTransferMode { NoTransfer = 0, TransferAnyServer = 1, TransferToZoneNameServer = 2, TransferToSecureServers = 3 }
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum HostAgentDnsZoneNotifyMode { NoNotify = 0, Notify = 1, NotifyServers = 2 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum HostAgentDnsPolicyLevel { Server = 0, Zone = 1 }
@@ -506,6 +515,18 @@ public sealed record HostAgentRequest
     public string? DnsOriginalRootHintNameServer { get; init; }
     [JsonPropertyName("dnsExpectedNetworkConfigurationJson")]
     public string? DnsExpectedNetworkConfigurationJson { get; init; }
+    [JsonPropertyName("dnsZoneTransferAction")]
+    public HostAgentDnsZoneTransferAction? DnsZoneTransferAction { get; init; }
+    [JsonPropertyName("dnsZoneTransferMode")]
+    public HostAgentDnsZoneTransferMode? DnsZoneTransferMode { get; init; }
+    [JsonPropertyName("dnsZoneSecondaryServers")]
+    public IReadOnlyList<string>? DnsZoneSecondaryServers { get; init; }
+    [JsonPropertyName("dnsZoneNotifyMode")]
+    public HostAgentDnsZoneNotifyMode? DnsZoneNotifyMode { get; init; }
+    [JsonPropertyName("dnsZoneNotifyServers")]
+    public IReadOnlyList<string>? DnsZoneNotifyServers { get; init; }
+    [JsonPropertyName("dnsExpectedZoneTransferConfigurationJson")]
+    public string? DnsExpectedZoneTransferConfigurationJson { get; init; }
 
     public string ToJson() => JsonSerializer.Serialize(this, HostAgentProtocol.Json);
 
@@ -573,7 +594,8 @@ public sealed record HostAgentRequest
             or HostAgentOperation.ManageDnsPolicyConfiguration
             or HostAgentOperation.ManageDnssecConfiguration
             or HostAgentOperation.ManageDnsScavenging
-            or HostAgentOperation.ManageDnsNetworkConfiguration)
+            or HostAgentOperation.ManageDnsNetworkConfiguration
+            or HostAgentOperation.ManageDnsZoneTransfers)
         {
             var hostName = DnsHostName?.Trim().TrimEnd('.');
             if (string.IsNullOrWhiteSpace(hostName) || hostName.Length > 253
@@ -889,6 +911,36 @@ public sealed record HostAgentRequest
             }
         }
 
+        if (Operation == HostAgentOperation.ManageDnsZoneTransfers)
+        {
+            if (DnsZoneTransferAction is null || !Enum.IsDefined(DnsZoneTransferAction.Value))
+                problems.Add("dnsZoneTransferAction is required.");
+            if (DnsZoneTransferAction == HostAgentDnsZoneTransferAction.Update)
+            {
+                if (!IsBoundedDnsName(DnsZoneName)) problems.Add("dnsZoneName must be a valid bounded DNS name.");
+                if (DnsZoneTransferMode is null || !Enum.IsDefined(DnsZoneTransferMode.Value))
+                    problems.Add("dnsZoneTransferMode is required.");
+                if (DnsZoneNotifyMode is null || !Enum.IsDefined(DnsZoneNotifyMode.Value))
+                    problems.Add("dnsZoneNotifyMode is required.");
+                if (DnsZoneSecondaryServers is { Count: > 32 }
+                    || DnsZoneSecondaryServers?.Any(x => !IPAddress.TryParse(x, out _)) == true)
+                    problems.Add("dnsZoneSecondaryServers must contain at most 32 IP addresses.");
+                if (DnsZoneNotifyServers is { Count: > 32 }
+                    || DnsZoneNotifyServers?.Any(x => !IPAddress.TryParse(x, out _)) == true)
+                    problems.Add("dnsZoneNotifyServers must contain at most 32 IP addresses.");
+                if (DnsZoneTransferMode == HostAgentDnsZoneTransferMode.TransferToSecureServers
+                    && DnsZoneSecondaryServers is not { Count: > 0 })
+                    problems.Add("dnsZoneSecondaryServers is required for restricted transfers.");
+                if (DnsZoneNotifyMode == HostAgentDnsZoneNotifyMode.NotifyServers
+                    && DnsZoneNotifyServers is not { Count: > 0 })
+                    problems.Add("dnsZoneNotifyServers is required for selective notifications.");
+                if (string.IsNullOrWhiteSpace(DnsExpectedZoneTransferConfigurationJson)
+                    || DnsExpectedZoneTransferConfigurationJson.Length > 262_144
+                    || !IsJsonObject(DnsExpectedZoneTransferConfigurationJson))
+                    problems.Add("dnsExpectedZoneTransferConfigurationJson must be a bounded JSON object.");
+            }
+        }
+
         return problems;
     }
 
@@ -1066,6 +1118,8 @@ public sealed record HostAgentResponse
     public HostAgentDnsScavengingConfigurationResult? DnsScavengingConfiguration { get; init; }
     [JsonPropertyName("dnsNetworkConfiguration")]
     public HostAgentDnsNetworkConfigurationResult? DnsNetworkConfiguration { get; init; }
+    [JsonPropertyName("dnsZoneTransferConfiguration")]
+    public HostAgentDnsZoneTransferConfigurationResult? DnsZoneTransferConfiguration { get; init; }
 
     [JsonPropertyName("repositoryStatus")]
     public HostAgentRepositoryStatus RepositoryStatus { get; init; } = HostAgentRepositoryStatus.Unknown;
@@ -1165,6 +1219,8 @@ public sealed record HostAgentDnsCapabilities
     public bool Cache { get; init; }
     [JsonPropertyName("networkConfiguration")]
     public bool NetworkConfiguration { get; init; }
+    [JsonPropertyName("zoneTransfers")]
+    public bool ZoneTransfers { get; init; }
 }
 
 public sealed record HostAgentDnsInventoryPage
@@ -1482,6 +1538,30 @@ public sealed record HostAgentDnsNetworkConfigurationResult
     [JsonPropertyName("message")] public string Message { get; init; } = string.Empty;
     [JsonPropertyName("before")] public HostAgentDnsNetworkConfiguration? Before { get; init; }
     [JsonPropertyName("after")] public HostAgentDnsNetworkConfiguration? After { get; init; }
+}
+
+public sealed record HostAgentDnsZoneTransferSetting
+{
+    [JsonPropertyName("zoneName")] public string ZoneName { get; init; } = string.Empty;
+    [JsonPropertyName("isDsIntegrated")] public bool IsDsIntegrated { get; init; }
+    [JsonPropertyName("transferMode")] public HostAgentDnsZoneTransferMode TransferMode { get; init; }
+    [JsonPropertyName("secondaryServers")] public IReadOnlyList<string> SecondaryServers { get; init; } = [];
+    [JsonPropertyName("notifyMode")] public HostAgentDnsZoneNotifyMode NotifyMode { get; init; }
+    [JsonPropertyName("notifyServers")] public IReadOnlyList<string> NotifyServers { get; init; } = [];
+}
+
+public sealed record HostAgentDnsZoneTransferConfiguration
+{
+    [JsonPropertyName("zones")] public IReadOnlyList<HostAgentDnsZoneTransferSetting> Zones { get; init; } = [];
+}
+
+public sealed record HostAgentDnsZoneTransferConfigurationResult
+{
+    [JsonPropertyName("success")] public bool Success { get; init; }
+    [JsonPropertyName("failureKind")] public string? FailureKind { get; init; }
+    [JsonPropertyName("message")] public string Message { get; init; } = string.Empty;
+    [JsonPropertyName("before")] public HostAgentDnsZoneTransferConfiguration? Before { get; init; }
+    [JsonPropertyName("after")] public HostAgentDnsZoneTransferConfiguration? After { get; init; }
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]

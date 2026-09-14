@@ -322,6 +322,9 @@ export const DnsScavengingPage = lazy(() =>
 export const DnsNetworkConfigurationPage = lazy(() =>
   import("@/features/dns-management/DnsNetworkConfigurationPage").then((module) => ({ default: module.DnsNetworkConfigurationPage })),
 );
+export const DnsZoneTransfersPage = lazy(() =>
+  import("@/features/dns-management/DnsZoneTransfersPage").then((module) => ({ default: module.DnsZoneTransfersPage })),
+);
 export const DnsZonesPage = lazy(() =>
   import("@/features/dns-management/DnsZonesPage").then((module) => ({
     default: module.DnsZonesPage,

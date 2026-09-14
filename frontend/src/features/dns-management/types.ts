@@ -52,7 +52,7 @@ export type DnsServer = {
 
 export type SaveDnsServer = Omit<DnsServer, "id" | "credentialProfileName" | "operatingSystemVersion" | "dnsServerVersion" | "lastSeenAt" | "lastSuccessfulSyncAt" | "lastSyncStatus" | "lastSyncMessage">;
 
-export type DnsServerCapabilities = { zones: boolean; records: boolean; serverSettings: boolean; dnssec: boolean; policies: boolean; scopes: boolean; cache: boolean; networkConfiguration: boolean };
+export type DnsServerCapabilities = { zones: boolean; records: boolean; serverSettings: boolean; dnssec: boolean; policies: boolean; scopes: boolean; cache: boolean; networkConfiguration: boolean; zoneTransfers: boolean };
 export type DnsServerConnectionTest = {
   serverId: string; serverDisplayName: string; success: boolean; failureKind?: string | null; message: string;
   hostAgentAvailable: boolean; networkReachable: boolean; tlsValidated: boolean;
@@ -289,6 +289,16 @@ export type DnsNetworkMutationInput = {
   originalRootHintNameServer?: string | null; expectedStateToken: string;
 };
 export type DnsNetworkOperation = { success: boolean; errorCode?: string | null; message: string; configuration?: DnsNetworkConfiguration | null };
+
+export type DnsZoneTransferMode = "NoTransfer" | "TransferAnyServer" | "TransferToZoneNameServer" | "TransferToSecureServers";
+export type DnsZoneNotifyMode = "NoNotify" | "Notify" | "NotifyServers";
+export type DnsZoneTransferSetting = {
+  zoneName: string; isDsIntegrated: boolean; transferMode: DnsZoneTransferMode;
+  secondaryServers: string[]; notifyMode: DnsZoneNotifyMode; notifyServers: string[];
+};
+export type DnsZoneTransferConfiguration = { zones: DnsZoneTransferSetting[]; stateToken: string };
+export type DnsZoneTransferMutationInput = Omit<DnsZoneTransferSetting, "isDsIntegrated"> & { expectedStateToken: string };
+export type DnsZoneTransferOperation = { success: boolean; errorCode?: string | null; message: string; configuration?: DnsZoneTransferConfiguration | null };
 
 export type DnsOperationLogListItem = {
   id: string;

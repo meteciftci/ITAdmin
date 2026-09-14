@@ -217,6 +217,23 @@ test("DNS listening addresses and root hints are live typed separately authorize
   assert.doesNotMatch(api, /power\s*shell/i);
 });
 
+test("DNS primary-zone transfers are live typed separately authorized and high-risk confirmed", () => {
+  const routes = readRouterSource();
+  const api = readFileSync(join(root, "features/dns-management/api.ts"), "utf8");
+  const page = readFileSync(join(root, "features/dns-management/DnsZoneTransfersPage.tsx"), "utf8");
+  assert.match(routes, /path: "\/dns-management\/zone-transfers"/);
+  assert.match(routes, /DnsManagement\.ManageZoneTransfers/);
+  assert.match(api, /servers\/\$\{id\}\/zone-transfer-configuration/);
+  assert.match(page, /TransferAnyServer/);
+  assert.match(page, /TransferToZoneNameServer/);
+  assert.match(page, /TransferToSecureServers/);
+  assert.match(page, /NotifyServers/);
+  assert.match(page, /ConfirmDialog/);
+  assert.match(page, /expectedStateToken/);
+  assert.match(page, /variant="danger"/);
+  assert.doesNotMatch(api, /power\s*shell/i);
+});
+
 test("DNS operation history and exports use dedicated permissions and server-generated files", () => {
   const routes = readRouterSource();
   const api = readFileSync(join(root, "features/dns-management/api.ts"), "utf8");

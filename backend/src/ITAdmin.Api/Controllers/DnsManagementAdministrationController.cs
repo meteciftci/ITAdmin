@@ -19,7 +19,8 @@ public sealed class DnsManagementAdministrationController(
     IDnsPolicyManagementService policyManagementService,
     IDnssecManagementService dnssecManagementService,
     IDnsScavengingManagementService scavengingManagementService,
-    IDnsNetworkConfigurationService networkConfigurationService) : ControllerBase
+    IDnsNetworkConfigurationService networkConfigurationService,
+    IDnsZoneTransferManagementService zoneTransferManagementService) : ControllerBase
 {
     [HttpGet("settings")]
     [RequirePermission(DnsManagementPermissions.ManageSettings)]
@@ -64,7 +65,7 @@ public sealed class DnsManagementAdministrationController(
     }
 
     [HttpGet("servers")]
-    [RequireAnyPermission(DnsManagementPermissions.ServersView, DnsManagementPermissions.ManageServerSettings, DnsManagementPermissions.ClearCache, DnsManagementPermissions.ManagePolicies, DnsManagementPermissions.ManageDnssec, DnsManagementPermissions.ManageScavenging, DnsManagementPermissions.ManageNetworkConfiguration)]
+    [RequireAnyPermission(DnsManagementPermissions.ServersView, DnsManagementPermissions.ManageServerSettings, DnsManagementPermissions.ClearCache, DnsManagementPermissions.ManagePolicies, DnsManagementPermissions.ManageDnssec, DnsManagementPermissions.ManageScavenging, DnsManagementPermissions.ManageNetworkConfiguration, DnsManagementPermissions.ManageZoneTransfers)]
     public async Task<ActionResult<IReadOnlyList<DnsServerResponse>>> GetServers(CancellationToken cancellationToken) =>
         Ok((await service.GetServersAsync(cancellationToken)).Select(Map));
 
@@ -244,6 +245,32 @@ public sealed class DnsManagementAdministrationController(
             : BadRequest(new { code = result.ErrorCode, message = result.Message });
     }
 
+    [HttpGet("servers/{id:guid}/zone-transfer-configuration")]
+    [RequirePermission(DnsManagementPermissions.ManageZoneTransfers)]
+    public async Task<ActionResult<DnsZoneTransferConfigurationResponse>> GetZoneTransferConfiguration(
+        Guid id, CancellationToken cancellationToken)
+    {
+        var result = await zoneTransferManagementService.GetAsync(id, cancellationToken);
+        return result.Success && result.Configuration is not null
+            ? Ok(Map(result.Configuration))
+            : BadRequest(new { code = result.ErrorCode, message = result.Message });
+    }
+
+    [HttpPut("servers/{id:guid}/zone-transfer-configuration")]
+    [RequirePermission(DnsManagementPermissions.ManageZoneTransfers)]
+    public async Task<ActionResult<DnsZoneTransferOperationResponse>> UpdateZoneTransferConfiguration(
+        Guid id, DnsZoneTransferMutationRequest request, CancellationToken cancellationToken)
+    {
+        var result = await zoneTransferManagementService.UpdateAsync(new(id, request.ZoneName,
+            request.TransferMode, request.SecondaryServers ?? [], request.NotifyMode,
+            request.NotifyServers ?? [], request.ExpectedStateToken,
+            DnsManagementActorResolver.Resolve(this)), cancellationToken);
+        return result.Success
+            ? Ok(new DnsZoneTransferOperationResponse(true, null, result.Message,
+                result.Configuration is null ? null : Map(result.Configuration)))
+            : BadRequest(new { code = result.ErrorCode, message = result.Message });
+    }
+
     private async Task<ActionResult<DnsCredentialProfileResponse>> SaveCredential(
         Guid? id, SaveDnsCredentialProfileRequest request, CancellationToken cancellationToken)
     {
@@ -280,7 +307,7 @@ public sealed class DnsManagementAdministrationController(
         x.DnsServerVersion, x.ZoneCount, x.Capabilities is null ? null : new(
             x.Capabilities.Zones, x.Capabilities.Records, x.Capabilities.ServerSettings,
             x.Capabilities.Dnssec, x.Capabilities.Policies, x.Capabilities.Scopes, x.Capabilities.Cache,
-            x.Capabilities.NetworkConfiguration),
+            x.Capabilities.NetworkConfiguration, x.Capabilities.ZoneTransfers),
         x.TestedAt);
     private static DnsSyncJobResponse Map(AppModels.DnsSyncJobModel x) => new(
         x.Id, x.BatchId, x.ServerId, x.ServerDisplayName, x.Scope, x.Trigger, x.Status,
@@ -326,4 +353,7 @@ public sealed class DnsManagementAdministrationController(
         x.ListeningIpAddresses, x.AvailableIpAddresses,
         x.RootHints.Select(hint => new DnsRootHintResponse(hint.NameServer, hint.IpAddresses)).ToArray(),
         x.StateToken);
+    private static DnsZoneTransferConfigurationResponse Map(AppModels.DnsZoneTransferConfigurationModel x) => new(
+        x.Zones.Select(v => new DnsZoneTransferSettingResponse(v.ZoneName, v.IsDsIntegrated,
+            v.TransferMode, v.SecondaryServers, v.NotifyMode, v.NotifyServers)).ToArray(), x.StateToken);
 }

@@ -133,7 +133,7 @@ public sealed class DnsServerConnectionTestService(
         x.DnsServerVersion, x.ZoneCount, x.Capabilities is null ? null : new(
             x.Capabilities.Zones, x.Capabilities.Records, x.Capabilities.ServerSettings,
             x.Capabilities.Dnssec, x.Capabilities.Policies, x.Capabilities.Scopes, x.Capabilities.Cache,
-            x.Capabilities.NetworkConfiguration),
+            x.Capabilities.NetworkConfiguration, x.Capabilities.ZoneTransfers),
         DateTime.UtcNow);
 
     private static DnsServerConnectionTestModel Failure(DnsServer server, string kind, string message,

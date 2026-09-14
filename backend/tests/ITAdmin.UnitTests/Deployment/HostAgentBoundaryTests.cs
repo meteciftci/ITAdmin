@@ -144,6 +144,7 @@ public sealed class HostAgentBoundaryTests
     [InlineData(HostAgentOperation.ManageDnssecConfiguration)]
     [InlineData(HostAgentOperation.ManageDnsScavenging)]
     [InlineData(HostAgentOperation.ManageDnsNetworkConfiguration)]
+    [InlineData(HostAgentOperation.ManageDnsZoneTransfers)]
     public void Authorization_WebApplicationMayInvokeTheUpdateAndSettingsOperations(HostAgentOperation operation) =>
         Assert.True(Authorization.Authorize(@"IIS APPPOOL\ITAdmin", false, operation).IsAllowed);
 
@@ -945,6 +946,60 @@ public sealed class HostAgentBoundaryTests
         Assert.Empty(errors);
     }
 
+    [Fact]
+    public void Protocol_DnsZoneTransfersRequireTypedModesAddressesAndExpectedState()
+    {
+        var baseline = new HostAgentRequest
+        {
+            Operation = HostAgentOperation.ManageDnsZoneTransfers,
+            DnsHostName = "dns01.example.local", DnsPort = 5986,
+            DnsAuthenticationMode = HostAgentDnsAuthenticationMode.Negotiate,
+            DnsUserName = "EXAMPLE\\dns-svc", DnsPassword = "secret", DnsTimeoutSeconds = 120,
+            DnsZoneTransferAction = HostAgentDnsZoneTransferAction.Update,
+            DnsZoneName = "example.com", DnsZoneTransferMode = HostAgentDnsZoneTransferMode.NoTransfer,
+            DnsZoneNotifyMode = HostAgentDnsZoneNotifyMode.NoNotify,
+            DnsExpectedZoneTransferConfigurationJson = "{\"zones\":[]}",
+        };
+
+        Assert.Empty(baseline.Validate());
+        Assert.NotEmpty((baseline with { DnsZoneTransferMode = HostAgentDnsZoneTransferMode.TransferToSecureServers }).Validate());
+        Assert.Empty((baseline with { DnsZoneTransferMode = HostAgentDnsZoneTransferMode.TransferToSecureServers, DnsZoneSecondaryServers = ["192.0.2.10"] }).Validate());
+        Assert.NotEmpty((baseline with { DnsZoneNotifyMode = HostAgentDnsZoneNotifyMode.NotifyServers }).Validate());
+        Assert.NotEmpty((baseline with { DnsZoneSecondaryServers = ["bad"] }).Validate());
+        Assert.NotEmpty((baseline with { DnsExpectedZoneTransferConfigurationJson = null }).Validate());
+    }
+
+    [Fact]
+    public async Task Dispatch_DnsZoneTransfersUsesFixedExecutorAndNeverEchoesCredentials()
+    {
+        var executor = new RecordingDnsProbeExecutor();
+        var dispatcher = new HostAgentDispatcher(Authorization, new RecordingOperations(), dnsRemoteProbeExecutor: executor);
+        var response = await dispatcher.DispatchAsync(new HostAgentRequest
+        {
+            Operation = HostAgentOperation.ManageDnsZoneTransfers,
+            DnsHostName = "dns01.example.local", DnsPort = 5986,
+            DnsAuthenticationMode = HostAgentDnsAuthenticationMode.Negotiate,
+            DnsUserName = "EXAMPLE\\dns-svc", DnsPassword = "secret", DnsTimeoutSeconds = 30,
+            DnsZoneTransferAction = HostAgentDnsZoneTransferAction.Read,
+        }.ToJson(), WebApplication());
+
+        Assert.Equal(1, executor.ZoneTransferCallCount);
+        Assert.True(response.DnsZoneTransferConfiguration!.Success);
+        Assert.DoesNotContain("secret", response.ToJson(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DnsZoneTransferScript_IsFixedParsesAndUsesTypedCmdlet()
+    {
+        Assert.StartsWith("param(", DnsRemoteZoneTransferConfiguration.Script.TrimStart(), StringComparison.Ordinal);
+        Assert.DoesNotContain("Invoke-Expression", DnsRemoteZoneTransferConfiguration.Script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("DnsPassword", DnsRemoteZoneTransferConfiguration.Script, StringComparison.Ordinal);
+        Assert.Contains("Set-DnsServerPrimaryZone @parameters", DnsRemoteZoneTransferConfiguration.Script, StringComparison.Ordinal);
+        Assert.Contains("ExpectedConfigurationJson", DnsRemoteZoneTransferConfiguration.Script, StringComparison.Ordinal);
+        System.Management.Automation.Language.Parser.ParseInput(DnsRemoteZoneTransferConfiguration.Script, out _, out var errors);
+        Assert.Empty(errors);
+    }
+
     // ------------------------------------------------------------------------------------------
     // Configuration
     // ------------------------------------------------------------------------------------------
@@ -1057,6 +1112,7 @@ public sealed class HostAgentBoundaryTests
         public int DnssecCallCount { get; private set; }
         public int ScavengingCallCount { get; private set; }
         public int NetworkConfigurationCallCount { get; private set; }
+        public int ZoneTransferCallCount { get; private set; }
         public Task<HostAgentDnsProbeResult> ProbeAsync(HostAgentRequest request, CancellationToken cancellationToken)
         {
             CallCount++;
@@ -1117,6 +1173,13 @@ public sealed class HostAgentBoundaryTests
         {
             NetworkConfigurationCallCount++;
             return Task.FromResult(new HostAgentDnsNetworkConfigurationResult { Success = true, Message = "ok" });
+        }
+
+        public Task<HostAgentDnsZoneTransferConfigurationResult> ManageDnsZoneTransfersAsync(
+            HostAgentRequest request, CancellationToken cancellationToken)
+        {
+            ZoneTransferCallCount++;
+            return Task.FromResult(new HostAgentDnsZoneTransferConfigurationResult { Success = true, Message = "ok" });
         }
     }
 

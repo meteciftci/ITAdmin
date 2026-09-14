@@ -40,6 +40,10 @@ export function DnsManagementRedirectPage() {
     return <Navigate to="/dns-management/network-configuration" replace />;
   }
 
+  if (canAccess(user, PermissionCodes.DnsManagement.ManageZoneTransfers)) {
+    return <Navigate to="/dns-management/zone-transfers" replace />;
+  }
+
   if (
     canAccess(user, PermissionCodes.DnsManagement.ManageServerSettings) ||
     canAccess(user, PermissionCodes.DnsManagement.ClearCache)

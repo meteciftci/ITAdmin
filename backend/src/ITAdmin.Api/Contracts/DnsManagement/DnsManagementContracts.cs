@@ -40,7 +40,7 @@ public sealed record SaveDnsServerRequest(
 
 public sealed record DnsServerCapabilitiesResponse(
     bool Zones, bool Records, bool ServerSettings, bool Dnssec, bool Policies, bool Scopes, bool Cache,
-    bool NetworkConfiguration);
+    bool NetworkConfiguration, bool ZoneTransfers);
 
 public sealed record DnsServerConnectionTestResponse(
     Guid ServerId, string ServerDisplayName, bool Success, string? FailureKind, string Message,
@@ -149,6 +149,18 @@ public sealed record DnsNetworkMutationRequest(
     string? OriginalRootHintNameServer, string ExpectedStateToken);
 public sealed record DnsNetworkOperationResponse(
     bool Success, string? ErrorCode, string Message, DnsNetworkConfigurationResponse? Configuration = null);
+
+public sealed record DnsZoneTransferSettingResponse(
+    string ZoneName, bool IsDsIntegrated, DnsZoneTransferMode TransferMode,
+    IReadOnlyList<string> SecondaryServers, DnsZoneNotifyMode NotifyMode,
+    IReadOnlyList<string> NotifyServers);
+public sealed record DnsZoneTransferConfigurationResponse(
+    IReadOnlyList<DnsZoneTransferSettingResponse> Zones, string StateToken);
+public sealed record DnsZoneTransferMutationRequest(
+    string ZoneName, DnsZoneTransferMode TransferMode, IReadOnlyList<string>? SecondaryServers,
+    DnsZoneNotifyMode NotifyMode, IReadOnlyList<string>? NotifyServers, string ExpectedStateToken);
+public sealed record DnsZoneTransferOperationResponse(
+    bool Success, string? ErrorCode, string Message, DnsZoneTransferConfigurationResponse? Configuration = null);
 
 public sealed record DnsOperationLogListItemResponse(
     Guid Id, DateTimeOffset CreatedAt, Guid? ServerId, string? ServerDisplayName,
