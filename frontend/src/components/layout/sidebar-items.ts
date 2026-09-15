@@ -11,7 +11,6 @@ import {
   ListTree,
   Monitor,
   Network,
-  Route,
   Shield,
   ShieldAlert,
   SlidersHorizontal,
@@ -23,7 +22,6 @@ import {
   GitCompareArrows,
   RefreshCw,
   ServerCog,
-  TimerReset,
 } from "lucide-react";
 
 import type { CurrentUser } from "@/features/auth/types";
@@ -61,11 +59,15 @@ export type SidebarGroup = {
   items: SidebarGroupItem[];
 };
 
-export function isSidebarLinkItem(item: SidebarGroupItem): item is SidebarLinkItem {
+export function isSidebarLinkItem(
+  item: SidebarGroupItem,
+): item is SidebarLinkItem {
   return item.kind === "link";
 }
 
-export function isSidebarCollapsibleItem(item: SidebarGroupItem): item is SidebarCollapsibleItem {
+export function isSidebarCollapsibleItem(
+  item: SidebarGroupItem,
+): item is SidebarCollapsibleItem {
   return item.kind === "collapsible";
 }
 
@@ -75,7 +77,9 @@ export type AdManagementModuleSidebarState = {
   isLoading?: boolean;
 };
 
-export function getVisibleSidebarGroupItems(items: SidebarGroupItem[]): SidebarGroupItem[] {
+export function getVisibleSidebarGroupItems(
+  items: SidebarGroupItem[],
+): SidebarGroupItem[] {
   return items
     .map((item) => {
       if (isSidebarLinkItem(item)) {
@@ -161,11 +165,13 @@ function isAdManagementSectionVisible(
   user: CurrentUser | null,
   moduleState?: AdManagementModuleSidebarState,
 ): boolean {
-  return isAdManagementUsersVisible(user, moduleState)
-    || isAdManagementGroupsVisible(user, moduleState)
-    || isAdManagementComputersVisible(user, moduleState)
-    || isAdManagementOrganizationalUnitsVisible(user, moduleState)
-    || isAdManagementDeletedObjectsVisible(user, moduleState);
+  return (
+    isAdManagementUsersVisible(user, moduleState) ||
+    isAdManagementGroupsVisible(user, moduleState) ||
+    isAdManagementComputersVisible(user, moduleState) ||
+    isAdManagementOrganizationalUnitsVisible(user, moduleState) ||
+    isAdManagementDeletedObjectsVisible(user, moduleState)
+  );
 }
 
 function isLicenseManagementSectionVisible(user: CurrentUser | null): boolean {
@@ -174,7 +180,6 @@ function isLicenseManagementSectionVisible(user: CurrentUser | null): boolean {
 
 function isDnsManagementSectionVisible(user: CurrentUser | null): boolean {
   return canAccessAny(user, [
-    PermissionCodes.DnsManagement.Servers.View,
     PermissionCodes.DnsManagement.Zones.View,
     PermissionCodes.DnsManagement.Records.View,
     PermissionCodes.DnsManagement.Compare,
@@ -184,9 +189,6 @@ function isDnsManagementSectionVisible(user: CurrentUser | null): boolean {
     PermissionCodes.DnsManagement.ManageNetworkConfiguration,
     PermissionCodes.DnsManagement.ManageZoneTransfers,
     PermissionCodes.DnsManagement.ManageZoneDelegations,
-    PermissionCodes.DnsManagement.ManageServerSettings,
-    PermissionCodes.DnsManagement.ClearCache,
-    PermissionCodes.DnsManagement.ViewOperationLogs,
   ]);
 }
 
@@ -216,17 +218,34 @@ export const getSidebarGroups = (
         icon: ServerCog,
         visible: isDnsManagementSectionVisible(user),
         children: [
-          { titleKey: "items.dnsManagementServers", to: "/dns-management/servers", icon: ServerCog, visible: canAccess(user, PermissionCodes.DnsManagement.Servers.View) },
-          { titleKey: "items.dnsManagementServerSettings", to: "/dns-management/server-settings", icon: SlidersHorizontal, visible: canAccessAny(user, [PermissionCodes.DnsManagement.ManageServerSettings, PermissionCodes.DnsManagement.ClearCache]) },
-          { titleKey: "items.dnsManagementPolicies", to: "/dns-management/policies", icon: Route, visible: canAccess(user, PermissionCodes.DnsManagement.ManagePolicies) },
-          { titleKey: "items.dnsManagementDnssec", to: "/dns-management/dnssec", icon: Shield, visible: canAccess(user, PermissionCodes.DnsManagement.ManageDnssec) },
-          { titleKey: "items.dnsManagementScavenging", to: "/dns-management/scavenging", icon: TimerReset, visible: canAccess(user, PermissionCodes.DnsManagement.ManageScavenging) },
-          { titleKey: "items.dnsManagementNetworkConfiguration", to: "/dns-management/network-configuration", icon: Network, visible: canAccess(user, PermissionCodes.DnsManagement.ManageNetworkConfiguration) },
-          { titleKey: "items.dnsManagementZoneTransfers", to: "/dns-management/zone-transfers", icon: RefreshCw, visible: canAccess(user, PermissionCodes.DnsManagement.ManageZoneTransfers) },
-          { titleKey: "items.dnsManagementZoneDelegations", to: "/dns-management/zone-delegations", icon: FolderTree, visible: canAccess(user, PermissionCodes.DnsManagement.ManageZoneDelegations) },
-          { titleKey: "items.dnsManagementZones", to: "/dns-management/zones", icon: ListTree, visible: canAccessAny(user, [PermissionCodes.DnsManagement.Zones.View, PermissionCodes.DnsManagement.Records.View]) },
-          { titleKey: "items.dnsManagementComparison", to: "/dns-management/comparison", icon: GitCompareArrows, visible: canAccess(user, PermissionCodes.DnsManagement.Compare) },
-          { titleKey: "items.dnsManagementOperationLogs", to: "/dns-management/operation-logs", icon: Activity, visible: canAccess(user, PermissionCodes.DnsManagement.ViewOperationLogs) },
+          {
+            titleKey: "items.dnsManagementZones",
+            to: "/dns-management/zones",
+            icon: ListTree,
+            visible: canAccessAny(user, [
+              PermissionCodes.DnsManagement.Zones.View,
+              PermissionCodes.DnsManagement.Records.View,
+            ]),
+          },
+          {
+            titleKey: "items.dnsManagementComparison",
+            to: "/dns-management/comparison",
+            icon: GitCompareArrows,
+            visible: canAccess(user, PermissionCodes.DnsManagement.Compare),
+          },
+          {
+            titleKey: "items.dnsManagementAdvanced",
+            to: "/dns-management/manage",
+            icon: SlidersHorizontal,
+            visible: canAccessAny(user, [
+              PermissionCodes.DnsManagement.ManagePolicies,
+              PermissionCodes.DnsManagement.ManageDnssec,
+              PermissionCodes.DnsManagement.ManageScavenging,
+              PermissionCodes.DnsManagement.ManageNetworkConfiguration,
+              PermissionCodes.DnsManagement.ManageZoneTransfers,
+              PermissionCodes.DnsManagement.ManageZoneDelegations,
+            ]),
+          },
         ],
       },
       {
@@ -258,13 +277,19 @@ export const getSidebarGroups = (
             titleKey: "items.adManagementOrganizationalUnits",
             to: "/ad-management/organizational-units",
             icon: FolderTree,
-            visible: isAdManagementOrganizationalUnitsVisible(user, adManagementModule),
+            visible: isAdManagementOrganizationalUnitsVisible(
+              user,
+              adManagementModule,
+            ),
           },
           {
             titleKey: "items.adManagementDeletedObjects",
             to: "/ad-management/deleted-objects",
             icon: Archive,
-            visible: isAdManagementDeletedObjectsVisible(user, adManagementModule),
+            visible: isAdManagementDeletedObjectsVisible(
+              user,
+              adManagementModule,
+            ),
           },
         ],
       },
@@ -343,13 +368,25 @@ export const getSidebarGroups = (
         titleKey: "items.moduleLogs",
         routePrefix: "/monitoring/module-logs",
         icon: ListTree,
-        visible: canAccess(user, PermissionCodes.AdOperationLogs.View),
+        visible: canAccessAny(user, [
+          PermissionCodes.AdOperationLogs.View,
+          PermissionCodes.DnsManagement.ViewOperationLogs,
+        ]),
         children: [
           {
             titleKey: "items.adOperationLogs",
             to: "/monitoring/module-logs/ad-operation-logs",
             icon: Activity,
             visible: canAccess(user, PermissionCodes.AdOperationLogs.View),
+          },
+          {
+            titleKey: "items.dnsManagementOperationLogs",
+            to: "/monitoring/module-logs/dns-operation-logs",
+            icon: Activity,
+            visible: canAccess(
+              user,
+              PermissionCodes.DnsManagement.ViewOperationLogs,
+            ),
           },
         ],
       },
@@ -399,6 +436,9 @@ export const getSidebarGroups = (
           PermissionCodes.LicenseManagement.ManageSettings,
           PermissionCodes.SystemUpdates.View,
           PermissionCodes.DnsManagement.ManageSettings,
+          PermissionCodes.DnsManagement.Servers.View,
+          PermissionCodes.DnsManagement.ManageServerSettings,
+          PermissionCodes.DnsManagement.ClearCache,
         ]),
         children: [
           {
@@ -430,6 +470,9 @@ export const getSidebarGroups = (
               PermissionCodes.AdManagement.Settings.View,
               PermissionCodes.LicenseManagement.ManageSettings,
               PermissionCodes.DnsManagement.ManageSettings,
+              PermissionCodes.DnsManagement.Servers.View,
+              PermissionCodes.DnsManagement.ManageServerSettings,
+              PermissionCodes.DnsManagement.ClearCache,
             ]),
           },
         ],

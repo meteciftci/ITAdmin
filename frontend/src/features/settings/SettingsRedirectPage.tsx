@@ -28,6 +28,23 @@ export function SettingsRedirectPage() {
     return <Navigate to="/settings/modules/ad-management" replace />;
   }
 
+  if (canAccess(user, PermissionCodes.DnsManagement.ManageSettings)) {
+    return <Navigate to="/settings/modules/dns-management" replace />;
+  }
+
+  if (canAccess(user, PermissionCodes.DnsManagement.Servers.View)) {
+    return <Navigate to="/settings/modules/dns-management/servers" replace />;
+  }
+
+  if (
+    canAccess(user, PermissionCodes.DnsManagement.ManageServerSettings) ||
+    canAccess(user, PermissionCodes.DnsManagement.ClearCache)
+  ) {
+    return (
+      <Navigate to="/settings/modules/dns-management/server-settings" replace />
+    );
+  }
+
   return (
     <Navigate
       to={getErrorRoutePath("FORBIDDEN")}

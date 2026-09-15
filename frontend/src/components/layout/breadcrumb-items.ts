@@ -8,10 +8,31 @@ const breadcrumbItems: BreadcrumbItem[] = [
     to: "/ad-management/organizational-units/create",
     titleKey: "items.adManagementOrganizationalUnitsCreate",
   },
-  { to: "/ad-management/organizational-units", titleKey: "items.adManagementOrganizationalUnits" },
-  { to: "/ad-management/users/create", titleKey: "items.adManagementUsersCreate" },
+  {
+    to: "/ad-management/organizational-units",
+    titleKey: "items.adManagementOrganizationalUnits",
+  },
+  {
+    to: "/ad-management/users/create",
+    titleKey: "items.adManagementUsersCreate",
+  },
   { to: "/ad-management/users", titleKey: "items.adManagementUsers" },
-  { to: "/settings/modules/ad-management", titleKey: "items.adManagementSettings" },
+  {
+    to: "/settings/modules/ad-management",
+    titleKey: "items.adManagementSettings",
+  },
+  {
+    to: "/settings/modules/dns-management/server-settings",
+    titleKey: "items.dnsManagementServerSettings",
+  },
+  {
+    to: "/settings/modules/dns-management/servers",
+    titleKey: "items.dnsManagementServers",
+  },
+  {
+    to: "/settings/modules/dns-management",
+    titleKey: "items.dnsManagementSettings",
+  },
   { to: "/settings/application", titleKey: "items.applicationSettings" },
   { to: "/settings/modules", titleKey: "items.moduleSettings" },
   { to: "/users", titleKey: "items.users" },
@@ -20,12 +41,16 @@ const breadcrumbItems: BreadcrumbItem[] = [
   { to: "/audit-logs", titleKey: "items.auditLogs" },
   { to: "/security-logs", titleKey: "items.securityLogs" },
   { to: "/dns-management/zones", titleKey: "items.dnsManagementZones" },
-  { to: "/dns-management/servers", titleKey: "items.dnsManagementServers" },
-  { to: "/dns-management/server-settings", titleKey: "items.dnsManagementServerSettings" },
   { to: "/dns-management/policies", titleKey: "items.dnsManagementPolicies" },
   { to: "/dns-management/dnssec", titleKey: "items.dnsManagementDnssec" },
-  { to: "/dns-management/comparison", titleKey: "items.dnsManagementComparison" },
-  { to: "/dns-management/operation-logs", titleKey: "items.dnsManagementOperationLogs" },
+  {
+    to: "/dns-management/comparison",
+    titleKey: "items.dnsManagementComparison",
+  },
+  {
+    to: "/monitoring/module-logs/dns-operation-logs",
+    titleKey: "items.dnsManagementOperationLogs",
+  },
   {
     to: "/monitoring/module-logs/ad-operation-logs",
     titleKey: "items.adOperationLogs",
@@ -58,8 +83,8 @@ export function getBreadcrumbKeyByPath(pathname: string): string | null {
   }
 
   if (
-    /^\/ad-management\/organizational-units\/[^/]+$/.test(pathname)
-    && pathname !== "/ad-management/organizational-units/create"
+    /^\/ad-management\/organizational-units\/[^/]+$/.test(pathname) &&
+    pathname !== "/ad-management/organizational-units/create"
   ) {
     return "items.adManagementOrganizationalUnitDetail";
   }

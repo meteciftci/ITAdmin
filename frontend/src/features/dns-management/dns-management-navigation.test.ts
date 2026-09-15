@@ -51,7 +51,34 @@ test("DNS server form supports certificate-free WinRM without allowing Basic ove
   assert.match(types, /DnsConnectionTransport = "Https" \| "Http"/);
   assert.match(page, /transport: "Http" as DnsConnectionTransport/);
   assert.match(page, /transport === "Http" \? 5985 : 5986/);
-  assert.match(page, /server\.transport === "Https" \|\| x\.authenticationMode === "Negotiate"/);
+  assert.match(page, /server\.transport === "Https" \|\|\s*x\.authenticationMode === "Negotiate"/);
+});
+
+test("DNS navigation groups settings, advanced management, and module logs", () => {
+  const routes = readRouterSource();
+  const sidebar = readFileSync(join(root, "components/layout/sidebar-items.ts"), "utf8");
+  const tabs = readFileSync(join(root, "features/dns-management/DnsNavigationTabs.tsx"), "utf8");
+
+  assert.match(routes, /path: "\/settings\/modules\/dns-management\/servers"/);
+  assert.match(routes, /path: "\/settings\/modules\/dns-management\/server-settings"/);
+  assert.match(routes, /path: "\/monitoring\/module-logs\/dns-operation-logs"/);
+  assert.match(sidebar, /items\.dnsManagementZones[\s\S]*items\.dnsManagementComparison[\s\S]*items\.dnsManagementAdvanced/);
+  assert.match(sidebar, /items\.moduleLogs[\s\S]*items\.dnsManagementOperationLogs/);
+  assert.match(tabs, /DnsModuleSettingsTabs/);
+  assert.match(tabs, /DnsAdvancedManagementTabs/);
+});
+
+test("DNS boolean settings use switches while multi-selection stays checkbox based", () => {
+  const settings = readFileSync(join(root, "features/settings/DnsManagementSettingsPage.tsx"), "utf8");
+  const servers = readFileSync(join(root, "features/dns-management/DnsServersPage.tsx"), "utf8");
+  const comparison = readFileSync(join(root, "features/dns-management/DnsComparisonPage.tsx"), "utf8");
+  const network = readFileSync(join(root, "features/dns-management/DnsNetworkConfigurationPage.tsx"), "utf8");
+
+  assert.match(settings, /SwitchField/);
+  assert.doesNotMatch(settings, /CheckboxField/);
+  assert.match(servers, /SwitchField/);
+  assert.match(comparison, /SwitchField/);
+  assert.match(network, /CheckboxField/);
 });
 
 test("DNS inventory synchronization is queued with dedicated permission and status polling", () => {

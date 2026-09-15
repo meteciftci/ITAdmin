@@ -12,6 +12,8 @@ import {
   SettingsRedirectPage,
   SystemUpdatesPage,
   DnsManagementSettingsPage,
+  DnsServersPage,
+  DnsServerSettingsPage,
 } from "@/app/lazy-pages";
 import { LazyRoute } from "@/app/route-helpers";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -19,6 +21,7 @@ import { RequireAnyPermission } from "@/features/auth/RequireAnyPermission";
 import { RequireAuth } from "@/features/auth/RequireAuth";
 import { RequirePermission } from "@/features/auth/RequirePermission";
 import { PermissionCodes } from "@/lib/permission-codes";
+import { DnsModuleSettingsPageShell } from "@/features/dns-management/DnsNavigationTabs";
 
 export const settingsRoutes: RouteObject[] = [
   {
@@ -34,6 +37,9 @@ export const settingsRoutes: RouteObject[] = [
             PermissionCodes.LicenseManagement.ManageSettings,
             PermissionCodes.SystemUpdates.View,
             PermissionCodes.DnsManagement.ManageSettings,
+            PermissionCodes.DnsManagement.Servers.View,
+            PermissionCodes.DnsManagement.ManageServerSettings,
+            PermissionCodes.DnsManagement.ClearCache,
           ]}
         >
           <AppLayout>
@@ -94,7 +100,10 @@ export const settingsRoutes: RouteObject[] = [
     element: (
       <RequireAuth>
         <RequireAnyPermission
-          permissions={[PermissionCodes.NotificationProviders.View, PermissionCodes.NotificationTemplates.View]}
+          permissions={[
+            PermissionCodes.NotificationProviders.View,
+            PermissionCodes.NotificationTemplates.View,
+          ]}
         >
           <AppLayout>
             <LazyRoute>
@@ -109,7 +118,9 @@ export const settingsRoutes: RouteObject[] = [
     path: "/settings/notifications/providers",
     element: (
       <RequireAuth>
-        <RequirePermission permission={PermissionCodes.NotificationProviders.View}>
+        <RequirePermission
+          permission={PermissionCodes.NotificationProviders.View}
+        >
           <AppLayout>
             <LazyRoute>
               <NotificationSettingsProvidersPage activeTab="providers" />
@@ -123,7 +134,9 @@ export const settingsRoutes: RouteObject[] = [
     path: "/settings/notifications/templates",
     element: (
       <RequireAuth>
-        <RequirePermission permission={PermissionCodes.NotificationTemplates.View}>
+        <RequirePermission
+          permission={PermissionCodes.NotificationTemplates.View}
+        >
           <AppLayout>
             <LazyRoute>
               <NotificationSettingsTemplatesPage activeTab="templates" />
@@ -137,7 +150,9 @@ export const settingsRoutes: RouteObject[] = [
     path: "/settings/notifications/templates/create",
     element: (
       <RequireAuth>
-        <RequirePermission permission={PermissionCodes.NotificationTemplates.Update}>
+        <RequirePermission
+          permission={PermissionCodes.NotificationTemplates.Update}
+        >
           <AppLayout>
             <LazyRoute>
               <NotificationTemplateFormPage mode="create" />
@@ -151,7 +166,9 @@ export const settingsRoutes: RouteObject[] = [
     path: "/settings/notifications/templates/:id/edit",
     element: (
       <RequireAuth>
-        <RequirePermission permission={PermissionCodes.NotificationTemplates.Update}>
+        <RequirePermission
+          permission={PermissionCodes.NotificationTemplates.Update}
+        >
           <AppLayout>
             <LazyRoute>
               <NotificationTemplateFormPage mode="edit" />
@@ -165,11 +182,16 @@ export const settingsRoutes: RouteObject[] = [
     path: "/settings/modules",
     element: (
       <RequireAuth>
-        <RequireAnyPermission permissions={[
-          PermissionCodes.AdManagement.Settings.View,
-          PermissionCodes.LicenseManagement.ManageSettings,
-          PermissionCodes.DnsManagement.ManageSettings,
-        ]}>
+        <RequireAnyPermission
+          permissions={[
+            PermissionCodes.AdManagement.Settings.View,
+            PermissionCodes.LicenseManagement.ManageSettings,
+            PermissionCodes.DnsManagement.ManageSettings,
+            PermissionCodes.DnsManagement.Servers.View,
+            PermissionCodes.DnsManagement.ManageServerSettings,
+            PermissionCodes.DnsManagement.ClearCache,
+          ]}
+        >
           <AppLayout>
             <LazyRoute>
               <ModuleSettingsPage />
@@ -183,9 +205,44 @@ export const settingsRoutes: RouteObject[] = [
     path: "/settings/modules/dns-management",
     element: (
       <RequireAuth>
-        <RequirePermission permission={PermissionCodes.DnsManagement.ManageSettings}>
-          <AppLayout><LazyRoute><DnsManagementSettingsPage /></LazyRoute></AppLayout>
+        <RequirePermission
+          permission={PermissionCodes.DnsManagement.ManageSettings}
+        >
+          <DnsModuleSettingsPageShell>
+            <DnsManagementSettingsPage />
+          </DnsModuleSettingsPageShell>
         </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/settings/modules/dns-management/servers",
+    element: (
+      <RequireAuth>
+        <RequirePermission
+          permission={PermissionCodes.DnsManagement.Servers.View}
+        >
+          <DnsModuleSettingsPageShell>
+            <DnsServersPage />
+          </DnsModuleSettingsPageShell>
+        </RequirePermission>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/settings/modules/dns-management/server-settings",
+    element: (
+      <RequireAuth>
+        <RequireAnyPermission
+          permissions={[
+            PermissionCodes.DnsManagement.ManageServerSettings,
+            PermissionCodes.DnsManagement.ClearCache,
+          ]}
+        >
+          <DnsModuleSettingsPageShell>
+            <DnsServerSettingsPage />
+          </DnsModuleSettingsPageShell>
+        </RequireAnyPermission>
       </RequireAuth>
     ),
   },
@@ -193,7 +250,9 @@ export const settingsRoutes: RouteObject[] = [
     path: "/settings/modules/ad-management",
     element: (
       <RequireAuth>
-        <RequirePermission permission={PermissionCodes.AdManagement.Settings.View}>
+        <RequirePermission
+          permission={PermissionCodes.AdManagement.Settings.View}
+        >
           <AppLayout>
             <LazyRoute>
               <AdManagementSettingsPage />
@@ -207,7 +266,9 @@ export const settingsRoutes: RouteObject[] = [
     path: "/settings/modules/license-management",
     element: (
       <RequireAuth>
-        <RequirePermission permission={PermissionCodes.LicenseManagement.ManageSettings}>
+        <RequirePermission
+          permission={PermissionCodes.LicenseManagement.ManageSettings}
+        >
           <AppLayout>
             <LazyRoute>
               <LicenseManagementSettingsPage />

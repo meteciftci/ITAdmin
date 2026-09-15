@@ -9,10 +9,6 @@ export function DnsManagementRedirectPage() {
   const location = useLocation();
   const user = useAuthStore((state) => state.user);
 
-  if (canAccess(user, PermissionCodes.DnsManagement.Servers.View)) {
-    return <Navigate to="/dns-management/servers" replace />;
-  }
-
   if (
     canAccess(user, PermissionCodes.DnsManagement.Zones.View) ||
     canAccess(user, PermissionCodes.DnsManagement.Records.View)
@@ -52,11 +48,15 @@ export function DnsManagementRedirectPage() {
     canAccess(user, PermissionCodes.DnsManagement.ManageServerSettings) ||
     canAccess(user, PermissionCodes.DnsManagement.ClearCache)
   ) {
-    return <Navigate to="/dns-management/server-settings" replace />;
+    return <Navigate to="/settings/modules/dns-management/server-settings" replace />;
   }
 
   if (canAccess(user, PermissionCodes.DnsManagement.ViewOperationLogs)) {
-    return <Navigate to="/dns-management/operation-logs" replace />;
+    return <Navigate to="/monitoring/module-logs/dns-operation-logs" replace />;
+  }
+
+  if (canAccess(user, PermissionCodes.DnsManagement.Servers.View)) {
+    return <Navigate to="/settings/modules/dns-management/servers" replace />;
   }
 
   return (

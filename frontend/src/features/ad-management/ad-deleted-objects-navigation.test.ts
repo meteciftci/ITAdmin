@@ -51,7 +51,7 @@ describe("ad deleted objects navigation", () => {
     assert.match(sidebarSource, /isAdManagementDeletedObjectsVisible/);
     assert.match(
       sidebarSource,
-      /isAdManagementDeletedObjectsVisible\(user, adManagementModule\)/,
+      /isAdManagementDeletedObjectsVisible\(\s*user,\s*adManagementModule,?\s*\)/,
     );
   });
 
