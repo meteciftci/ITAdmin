@@ -192,17 +192,27 @@ public sealed class DnsInventoryQueryService(AppDbContext context) : IDnsInvento
                 || x.RecordType.ToLower().Contains(search)
                 || x.CanonicalValue.ToLower().Contains(search));
 
-        var keys = source.Select(x => new ComparisonKey(
-                x.ZoneSnapshot.Name.ToLower(), x.RelativeName.ToLower(), x.RecordType.ToUpper(),
-                x.ZoneScope == null ? null : x.ZoneScope.ToLower(),
-                x.VirtualizationInstance == null ? null : x.VirtualizationInstance.ToLower()))
+        // Keep the database-side key as an anonymous shape. Ordering/distinct over a custom
+        // positional record is not translated by the Npgsql EF provider (the same failure mode as
+        // the zone inventory projection); map to ComparisonKey only after the page is materialized.
+        var keys = source.Select(x => new
+            {
+                ZoneName = x.ZoneSnapshot.Name.ToLower(),
+                RelativeName = x.RelativeName.ToLower(),
+                RecordType = x.RecordType.ToUpper(),
+                ZoneScope = x.ZoneScope == null ? null : x.ZoneScope.ToLower(),
+                VirtualizationInstance = x.VirtualizationInstance == null
+                    ? null : x.VirtualizationInstance.ToLower(),
+            })
             .Distinct();
         var totalCount = await keys.CountAsync(cancellationToken);
-        var pageKeys = await keys
+        var pageKeyRows = await keys
             .OrderBy(x => x.ZoneName).ThenBy(x => x.RelativeName).ThenBy(x => x.RecordType)
             .ThenBy(x => x.ZoneScope).ThenBy(x => x.VirtualizationInstance)
             .Skip((pageNumber - 1) * pageSize).Take(pageSize)
             .ToListAsync(cancellationToken);
+        var pageKeys = pageKeyRows.Select(x => new ComparisonKey(
+            x.ZoneName, x.RelativeName, x.RecordType, x.ZoneScope, x.VirtualizationInstance)).ToList();
         if (pageKeys.Count == 0)
             return new(servers, [], pageNumber, pageSize, totalCount,
                 TotalPages(totalCount, pageSize));

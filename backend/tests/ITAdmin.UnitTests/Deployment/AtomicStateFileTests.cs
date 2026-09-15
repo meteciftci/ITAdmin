@@ -1,4 +1,5 @@
 using ITAdmin.HostAgent;
+using ITAdmin.HostAgent.Contracts;
 
 namespace ITAdmin.UnitTests.Deployment;
 
@@ -48,5 +49,28 @@ public sealed class AtomicStateFileTests : IDisposable
 
         Assert.Equal("new", AtomicStateFile.Read(path));
         Assert.Empty(Directory.GetFiles(_dir, "held.json.*.tmp"));
+    }
+
+    [Fact]
+    public void UpdateHistory_AlwaysIncludesAndDeduplicatesTheCurrentTerminalOperation()
+    {
+        var current = new UpdateOperationRecord
+        {
+            OperationId = "current",
+            Phase = HostAgentUpdatePhase.Completed,
+            CompletedAtUtc = DateTimeOffset.UtcNow,
+        };
+        var staleCopy = current with { Phase = HostAgentUpdatePhase.Failed };
+        var older = new UpdateOperationRecord
+        {
+            OperationId = "older",
+            Phase = HostAgentUpdatePhase.Completed,
+        };
+
+        var result = DeploymentHostAgentOperations.MergeCurrentIntoHistory(
+            current, [older, staleCopy]);
+
+        Assert.Equal(["current", "older"], result.Select(x => x.OperationId));
+        Assert.Equal(HostAgentUpdatePhase.Completed, result[0].Phase);
     }
 }

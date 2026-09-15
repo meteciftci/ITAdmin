@@ -226,13 +226,14 @@ public sealed class DeploymentHostAgentOperations(
 
     public Task<HostAgentResponse> GetUpdateStatusAsync(HostAgentRequest request, CancellationToken cancellationToken)
     {
+        var operation = ReadOperation();
         return Task.FromResult(new HostAgentResponse
         {
             Status = HostAgentResponseStatus.Ok,
             Message = "Update status read.",
             CorrelationId = request.CorrelationId,
-            Update = ToStatus(ReadOperation()),
-            UpdateHistory = ReadHistory().Select(ToStatus).ToList(),
+            Update = ToStatus(operation),
+            UpdateHistory = BuildHistoryResponse(operation),
         });
     }
 
@@ -517,6 +518,26 @@ public sealed class DeploymentHostAgentOperations(
             logger.LogWarning(exception, "Could not read update history from {Path}.", settings.UpdateHistoryPath);
             return [];
         }
+    }
+
+    private IReadOnlyList<HostAgentUpdateStatus> BuildHistoryResponse(UpdateOperationRecord? current)
+    {
+        return MergeCurrentIntoHistory(current, ReadHistory()).Select(ToStatus).ToList();
+    }
+
+    internal static IReadOnlyList<UpdateOperationRecord> MergeCurrentIntoHistory(
+        UpdateOperationRecord? current, IReadOnlyList<UpdateOperationRecord> persisted)
+    {
+        if (current is null
+            || current.Phase is HostAgentUpdatePhase.Idle
+            || !IsTerminal(current.Phase))
+            return persisted.Take(50).ToList();
+
+        return persisted
+            .Where(item => !string.Equals(item.OperationId, current.OperationId, StringComparison.Ordinal))
+            .Prepend(current)
+            .Take(50)
+            .ToList();
     }
 
     private void WriteOperation(UpdateOperationRecord record)
