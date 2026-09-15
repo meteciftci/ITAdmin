@@ -74,10 +74,13 @@ public sealed class DnsInventoryQueryService(AppDbContext context) : IDnsInvento
                 || x.InventorySnapshot.DnsServer.DisplayName.ToLower().Contains(search));
 
         var totalCount = await source.CountAsync(cancellationToken);
-        var rows = await ProjectZones(source)
-            .OrderBy(x => x.ServerDisplayName).ThenBy(x => x.Name).ThenBy(x => x.VirtualizationInstance)
+        var page = source
+            .OrderBy(x => x.InventorySnapshot.DnsServer.DisplayName)
+            .ThenBy(x => x.Name)
+            .ThenBy(x => x.VirtualizationInstance)
             .ThenBy(x => x.Id)
-            .Skip((pageNumber - 1) * pageSize).Take(pageSize)
+            .Skip((pageNumber - 1) * pageSize).Take(pageSize);
+        var rows = await ProjectZones(page)
             .ToListAsync(cancellationToken);
         return Page(rows.Select(MapZone).ToList(), pageNumber, pageSize, totalCount);
     }
@@ -158,9 +161,9 @@ public sealed class DnsInventoryQueryService(AppDbContext context) : IDnsInvento
 
         return await source
             .GroupBy(x => x.Name.ToLower())
+            .OrderBy(x => x.Key)
             .Select(x => new DnsComparisonZoneModel(
                 x.Key, x.Select(y => y.InventorySnapshot.DnsServerId).Distinct().Count()))
-            .OrderBy(x => x.Name)
             .Take(Math.Clamp(limit, 1, 200))
             .ToListAsync(cancellationToken);
     }

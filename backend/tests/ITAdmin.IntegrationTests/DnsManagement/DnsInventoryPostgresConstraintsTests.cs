@@ -95,8 +95,14 @@ public sealed class DnsInventoryPostgresConstraintsTests
 
             await using (var queryContext = new AppDbContext(options))
             {
-                var result = await new DnsInventoryQueryService(queryContext).CompareAsync(new(
+                var service = new DnsInventoryQueryService(queryContext);
+                var zones = await service.GetZonesAsync(new(serverId, null, 1, 20));
+                var comparisonZones = await service.GetComparisonZonesAsync([serverId], null, 20);
+                var result = await service.CompareAsync(new(
                     [serverId], ["EXAMPLE.TEST"], false, "192.0.2", 1, 20));
+
+                Assert.Equal("example.test", Assert.Single(zones.Items).Name);
+                Assert.Equal("example.test", Assert.Single(comparisonZones).Name);
                 Assert.Equal("www", Assert.Single(result.Items).RelativeName);
             }
         }

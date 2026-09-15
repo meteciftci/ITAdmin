@@ -1,6 +1,7 @@
 using System.Management.Automation;
 using System.Management.Automation.Runspaces;
 using System.Management.Automation.Remoting;
+using System.Collections.Concurrent;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Runtime.Versioning;
@@ -37,6 +38,23 @@ public interface IDnsRemoteProbeExecutor
         HostAgentRequest request, CancellationToken cancellationToken);
     Task<HostAgentDnsZoneDelegationConfigurationResult> ManageDnsZoneDelegationsAsync(
         HostAgentRequest request, CancellationToken cancellationToken);
+}
+
+internal static class DnsTrustedHostConfiguration
+{
+    // The target is a typed parameter. This fixed script preserves unrelated entries, adds one
+    // exact host, and never widens the machine-wide WinRM trust boundary with a wildcard.
+    internal const string Script = """
+        param([Parameter(Mandatory = $true)][string]$HostName)
+        $ErrorActionPreference = 'Stop'
+        Import-Module Microsoft.WSMan.Management -ErrorAction Stop
+        $path = 'WSMan:\localhost\Client\TrustedHosts'
+        $current = "$(Get-Item -Path $path -ErrorAction Stop | Select-Object -ExpandProperty Value)"
+        $entries = @($current -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+        if ($entries -contains '*' -or $entries -contains $HostName) { return }
+        $updated = @($entries + $HostName) -join ','
+        Set-Item -Path $path -Value $updated -Force -ErrorAction Stop
+        """;
 }
 
 internal static class DnsRemoteCapabilityProbe
@@ -1631,6 +1649,10 @@ internal static class DnsRemoteDnssecConfiguration
 public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemoteProbeExecutor> logger)
     : IDnsRemoteProbeExecutor
 {
+    private static readonly SemaphoreSlim TrustedHostsGate = new(1, 1);
+    private static readonly ConcurrentDictionary<string, byte> TrustedHostsCache =
+        new(StringComparer.OrdinalIgnoreCase);
+
     private const string MicrosoftPowerShellShellUri = "http://schemas.microsoft.com/powershell/Microsoft.PowerShell";
     private const int InventoryPayloadBudgetBytes = 700_000;
 
@@ -2438,7 +2460,7 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
         },
     };
 
-    private static async Task<TlsProbeResult> ValidateTransportAsync(
+    private async Task<TlsProbeResult> ValidateTransportAsync(
         string host, int port, bool useSsl, string? expectedThumbprint, CancellationToken cancellationToken)
     {
         if (useSsl)
@@ -2448,11 +2470,46 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
         try
         {
             await client.ConnectAsync(host, port, cancellationToken);
+            await EnsureTrustedHostAsync(host, cancellationToken);
             return new(true, true);
         }
         catch (Exception exception) when (exception is SocketException or IOException)
         {
             return new(false, false);
+        }
+    }
+
+    private async Task EnsureTrustedHostAsync(string host, CancellationToken cancellationToken)
+    {
+        if (TrustedHostsCache.ContainsKey(host)) return;
+
+        await TrustedHostsGate.WaitAsync(cancellationToken);
+        try
+        {
+            if (TrustedHostsCache.ContainsKey(host)) return;
+
+            using var powerShell = PowerShell.Create();
+            powerShell.AddScript(DnsTrustedHostConfiguration.Script, useLocalScope: true)
+                .AddParameter("HostName", host);
+            await Task.Run(powerShell.Invoke, cancellationToken);
+            if (powerShell.HadErrors)
+                throw new RuntimeException("The exact local WinRM TrustedHosts entry could not be configured.");
+
+            TrustedHostsCache.TryAdd(host, 0);
+            logger.LogInformation(
+                "Added or verified exact WinRM TrustedHosts entry for DNS target {Host}.", host);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception exception)
+        {
+            // Continue to the actual WSMan open so the caller still receives the established
+            // authentication/remoting failure classification rather than a local setup detail.
+            logger.LogWarning(exception,
+                "Could not add exact WinRM TrustedHosts entry for DNS target {Host}.", host);
+        }
+        finally
+        {
+            TrustedHostsGate.Release();
         }
     }
 

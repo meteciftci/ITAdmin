@@ -86,8 +86,10 @@ or separate update procedure is required.
 - Grant the configured account permission to enter the standard `Microsoft.PowerShell` endpoint and
   only the Windows/DNS administration rights required for the selected management operations.
 - For workgroup targets or targets outside a trusted domain, Negotiate can fall back to NTLM and the
-  portal host may need the exact target in WinRM `TrustedHosts`. ITAdmin displays this prerequisite
-  but never changes `TrustedHosts` automatically.
+  portal host needs the target in WinRM `TrustedHosts`. Before opening a certificate-free session,
+  the LocalSystem Host Agent idempotently adds that exact hostname/IP while preserving existing
+  entries. It never writes `*`; the resulting machine-wide setting is recorded in the Host Agent
+  operational log. HTTPS connections do not modify `TrustedHosts`.
 - Install the Windows DNS Server PowerShell module on the target, as supplied with the DNS Server
   role/management tools.
 

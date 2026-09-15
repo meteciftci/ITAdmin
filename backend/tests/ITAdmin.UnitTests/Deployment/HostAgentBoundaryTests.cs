@@ -1133,6 +1133,19 @@ public sealed class HostAgentBoundaryTests
         Assert.Empty(errors);
     }
 
+    [Fact]
+    public void DnsTrustedHostsScript_AppendsOnlyTheTypedExactHost()
+    {
+        Assert.StartsWith("param(", DnsTrustedHostConfiguration.Script.TrimStart(), StringComparison.Ordinal);
+        Assert.Contains("$entries + $HostName", DnsTrustedHostConfiguration.Script, StringComparison.Ordinal);
+        Assert.Contains("Set-Item -Path $path -Value $updated", DnsTrustedHostConfiguration.Script, StringComparison.Ordinal);
+        Assert.DoesNotContain("Invoke-Expression", DnsTrustedHostConfiguration.Script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Set-Item -Path $path -Value '*'", DnsTrustedHostConfiguration.Script, StringComparison.Ordinal);
+        System.Management.Automation.Language.Parser.ParseInput(
+            DnsTrustedHostConfiguration.Script, out _, out var errors);
+        Assert.Empty(errors);
+    }
+
     // ------------------------------------------------------------------------------------------
     // Configuration
     // ------------------------------------------------------------------------------------------
