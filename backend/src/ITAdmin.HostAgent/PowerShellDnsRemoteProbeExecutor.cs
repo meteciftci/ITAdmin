@@ -127,6 +127,7 @@ internal static class DnsRemoteInventoryProbe
                     $instanceName = if ($instance.VirtualizationInstance) {
                         "$($instance.VirtualizationInstance)"
                     } elseif ($instance.Name) { "$($instance.Name)" } else { '' }
+                    if ($instanceName -eq '.') { $instanceName = '' }
                     if ($instanceName -and -not $instances.Contains($instanceName)) {
                         $instances.Add($instanceName)
                     }
@@ -143,10 +144,19 @@ internal static class DnsRemoteInventoryProbe
                         (-not $instanceName -or $zoneScopeCommand.Parameters.ContainsKey('VirtualizationInstance'))) {
                         $scopeParameters = @{ ZoneName = "$($zone.ZoneName)" }
                         if ($instanceName) { $scopeParameters.VirtualizationInstance = $instanceName }
-                        $scopes = @(Get-DnsServerZoneScope @scopeParameters -ErrorAction Stop | ForEach-Object {
-                            $scopeName = if ($_.ZoneScope) { "$($_.ZoneScope)" } elseif ($_.Name) { "$($_.Name)" } else { '' }
-                            if ($scopeName -and $scopeName -ne "$($zone.ZoneName)") { $scopeName }
-                        } | Sort-Object -Unique)
+                        try {
+                            $scopes = @(Get-DnsServerZoneScope @scopeParameters -ErrorAction Stop | ForEach-Object {
+                                $scopeName = if ($_.ZoneScope) { "$($_.ZoneScope)" } elseif ($_.Name) { "$($_.Name)" } else { '' }
+                                if ($scopeName -and $scopeName -ne "$($zone.ZoneName)") { $scopeName }
+                            } | Sort-Object -Unique)
+                        } catch {
+                            $scopeErrorId = "$($_.FullyQualifiedErrorId)"
+                            $scopeUnsupported = $scopeErrorId -like 'WIN32 9603,*'
+                            $trustAnchorScopeUnsupported =
+                                "$($zone.ZoneName)" -eq 'TrustAnchors' -and $scopeErrorId -like 'WIN32 9611,*'
+                            if (-not $scopeUnsupported -and -not $trustAnchorScopeUnsupported) { throw }
+                            $scopes = @()
+                        }
                     }
                     $items.Add([pscustomobject]@{
                         Name = "$($zone.ZoneName)"
@@ -2267,6 +2277,9 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
             var output = await Task.Run(powerShell.Invoke, cancellationToken);
             if (powerShell.HadErrors)
             {
+                var errorId = powerShell.Streams.Error.FirstOrDefault()?.FullyQualifiedErrorId ?? "Unknown";
+                logger.LogWarning("DNS inventory read failed for {Host}:{Port} ({ErrorId}).",
+                    host, request.DnsPort, errorId);
                 return InventoryFailure("DnsInventoryReadFailed", "The DNS inventory page could not be read.");
             }
 
@@ -2306,8 +2319,9 @@ public sealed class PowerShellDnsRemoteProbeExecutor(ILogger<PowerShellDnsRemote
                                           or RuntimeException
                                           or InvalidRunspaceStateException)
         {
-            logger.LogWarning("DNS inventory read failed for {Host}:{Port} ({ExceptionType}).",
-                host, request.DnsPort, exception.GetType().Name);
+            var errorId = (exception as RuntimeException)?.ErrorRecord?.FullyQualifiedErrorId;
+            logger.LogWarning("DNS inventory read failed for {Host}:{Port} ({ExceptionType}, {ErrorId}).",
+                host, request.DnsPort, exception.GetType().Name, errorId ?? "Unknown");
             return InventoryFailure("DnsInventoryReadFailed", "The DNS inventory page could not be read.");
         }
     }

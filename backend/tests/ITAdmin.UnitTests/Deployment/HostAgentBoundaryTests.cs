@@ -400,6 +400,13 @@ public sealed class HostAgentBoundaryTests
         Assert.DoesNotContain("DnsPassword", DnsRemoteInventoryProbe.Script, StringComparison.Ordinal);
         Assert.DoesNotContain("Invoke-Expression", DnsRemoteInventoryProbe.Script, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("ValidateRange(1,500)", DnsRemoteInventoryProbe.Script, StringComparison.Ordinal);
+        Assert.Contains("WIN32 9603,*", DnsRemoteInventoryProbe.Script, StringComparison.Ordinal);
+        Assert.Contains("TrustAnchors", DnsRemoteInventoryProbe.Script, StringComparison.Ordinal);
+        Assert.Contains("WIN32 9611,*", DnsRemoteInventoryProbe.Script, StringComparison.Ordinal);
+        Assert.Contains("if ($instanceName -eq '.') { $instanceName = '' }",
+            DnsRemoteInventoryProbe.Script, StringComparison.Ordinal);
+        Assert.Contains("if (-not $scopeUnsupported -and -not $trustAnchorScopeUnsupported) { throw }",
+            DnsRemoteInventoryProbe.Script, StringComparison.Ordinal);
     }
 
     [Fact]
