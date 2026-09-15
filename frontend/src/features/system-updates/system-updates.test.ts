@@ -19,6 +19,13 @@ describe("system updates UI contract", () => {
     assert.match(page, /RequiresOperatorReview/);
   });
 
+  it("shows live deployment stages and a real multi-row history", () => {
+    assert.match(page, /UPDATE_STAGES/);
+    assert.match(page, /aria-current=\{active \? "step"/);
+    assert.match(page, /status\.history.*\.map/s);
+    assert.equal(tr.systemUpdates.history.title, "Güncelleme geçmişi");
+  });
+
   it("keeps Turkish and English locale structures aligned", () => {
     const keys = (value: unknown, prefix = ""): string[] =>
       Object.entries(value as Record<string, unknown>).flatMap(([key, child]) => {

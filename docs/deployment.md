@@ -84,7 +84,8 @@ non-zero; nothing is left half-active. The newest three builds are kept under `a
   config\hostagent.json  repository URL, branch, install/data roots, updatesEnabled
   secrets\runtime.secrets.dpapi   DPAPI LocalMachine: connection string, JWT key, setup key(+hash)
   state\deploy.json      active/previous commit, last migration
-  state\update-operation.json     progress of the most recent in-app update
+  state\update-operation.json     live progress of the current/most recent in-app update
+  state\update-history.json       last 50 completed in-app update attempts
   DataProtection-Keys\   ASP.NET Data Protection key ring - back this up with the database
   uploads\branding\      branding logo/favicon - outside the versioned build so updates keep them
   logs\
@@ -92,6 +93,8 @@ non-zero; nothing is left half-active. The newest three builds are kept under `a
 
 Branding uploads are served at `/uploads` from `%ProgramData%\ITAdmin\uploads` (the app pool gets
 `ITADMIN_Uploads__Root`); they used to sit under the build's `wwwroot` and 404 after every update.
+The deployment resets `state\` to a protected `SYSTEM`/local Administrators ACL on every run; the
+Host Agent also repairs this ACL at startup so legacy ownership cannot strand update progress.
 
 ---
 
@@ -153,7 +156,9 @@ numbering to track.
 The Host Agent fetches the branch (`git fetch --prune origin <branch>`) to answer `CheckForUpdates`
 and compare `HEAD` against `origin/<branch>`; it never mutates the working tree until an update is
 actually requested. `RequestUpdate` hands off to the Update Coordinator (§4), which performs the
-real deployment via `Deploy-ITAdmin.ps1`.
+real deployment via `Deploy-ITAdmin.ps1`. The Coordinator maps that script's stable step output to
+the live `Pulling`, `Building`, `Migrating`, and `Activating` phases. Terminal attempts are upserted
+by operation id into a newest-first, 50-entry history rather than replacing the only visible row.
 
 ---
 

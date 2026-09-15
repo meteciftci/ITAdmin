@@ -23,6 +23,7 @@ export type SystemUpdateStatus = {
   latestCommit: string | null;
   latestSubject: string | null;
   operation: SystemUpdateOperation | null;
+  history: SystemUpdateOperation[];
   checkedAtUtc: string;
 };
 

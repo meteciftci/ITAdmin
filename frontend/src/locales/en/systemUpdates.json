@@ -27,7 +27,19 @@
     "operation": {
       "title": "Update operation",
       "available": "{{count}} commit(s) behind the branch tip.",
-      "upToDate": "The deployed build is at the branch tip."
+      "upToDate": "The deployed build is at the branch tip.",
+      "progressLabel": "Update progress",
+      "startedAt": "Started",
+      "completedAt": "Completed"
+    },
+    "history": {
+      "title": "Update history",
+      "status": "Status",
+      "commit": "Commit",
+      "startedAt": "Started",
+      "completedAt": "Completed",
+      "detail": "Detail",
+      "empty": "There are no completed update operations yet."
     },
     "status": {
       "available": "Available",

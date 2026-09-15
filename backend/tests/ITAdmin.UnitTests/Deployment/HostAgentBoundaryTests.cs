@@ -121,6 +121,30 @@ public sealed class HostAgentBoundaryTests
         }
     }
 
+    [Fact]
+    public void Protocol_UpdateStatusCarriesABoundedHistoryShape()
+    {
+        var response = new HostAgentResponse
+        {
+            Status = HostAgentResponseStatus.Ok,
+            UpdateHistory =
+            [
+                new HostAgentUpdateStatus
+                {
+                    OperationId = "abc",
+                    Phase = HostAgentUpdatePhase.Completed,
+                    TargetCommit = "1234567",
+                },
+            ],
+        };
+
+        var restored = HostAgentResponse.FromJson(response.ToJson());
+
+        Assert.NotNull(restored);
+        Assert.Single(restored!.UpdateHistory);
+        Assert.Equal(HostAgentUpdatePhase.Completed, restored.UpdateHistory[0].Phase);
+    }
+
     // ------------------------------------------------------------------------------------------
     // Authorization
     // ------------------------------------------------------------------------------------------
@@ -1138,6 +1162,8 @@ public sealed class HostAgentBoundaryTests
             Path.Combine("src", "scripts", "deploy", "Deploy-ITAdmin.ps1"),
             restored.DeployScriptPath,
             StringComparison.Ordinal);
+        Assert.EndsWith(Path.Combine("state", "update-operation.json"), restored.UpdateOperationPath, StringComparison.Ordinal);
+        Assert.EndsWith(Path.Combine("state", "update-history.json"), restored.UpdateHistoryPath, StringComparison.Ordinal);
     }
 
     [Fact]

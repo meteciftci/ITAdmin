@@ -1,10 +1,15 @@
 using System.Diagnostics;
+using System.Runtime.Versioning;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Hosting.WindowsServices;
 using Microsoft.Win32;
+
+[assembly: SupportedOSPlatform("windows")]
 
 // ITAdmin Update Coordinator: the one-shot handoff used when an in-app update needs to replace the
 // release that contains the currently running ITAdmin Host Agent.
@@ -159,9 +164,11 @@ internal static class CoordinatorRunner
     internal static async Task<int> RunAsync(string operationId, string dataRoot, CancellationToken cancellationToken)
     {
         var operationPath = Path.Combine(dataRoot, "state", "update-operation.json");
+        var historyPath = Path.Combine(dataRoot, "state", "update-history.json");
 
         try
         {
+            EnsureStateDirectoryAccess(Path.GetDirectoryName(operationPath)!, operationPath, historyPath);
             var settingsPath = Path.Combine(dataRoot, "config", "hostagent.json");
             var settings = JsonSerializer.Deserialize<CoordinatorHostSettings>(
                 await File.ReadAllTextAsync(settingsPath, cancellationToken), JsonOptions)
@@ -190,16 +197,17 @@ internal static class CoordinatorRunner
                 operation = operation with { OperationId = operationId };
             }
 
-            WriteOperation(operationPath, operation with
+            operation = operation with
             {
-                Phase = "Building",
-                Message = "Fetching the branch tip and building it on this host.",
-            });
+                Phase = "Pulling",
+                Message = "Synchronising the configured branch on this host.",
+            };
+            WriteOperation(operationPath, operation);
 
             var deployScript = Path.Combine(settings.InstallRoot, "src", "scripts", "deploy", "Deploy-ITAdmin.ps1");
             if (!File.Exists(deployScript))
             {
-                WriteOperation(operationPath, operation with
+                CompleteOperation(operationPath, historyPath, operation with
                 {
                     Phase = "Failed",
                     CompletedAtUtc = DateTimeOffset.UtcNow,
@@ -215,6 +223,7 @@ internal static class CoordinatorRunner
             var coordinatorLog = Path.Combine(
                 logDirectory, $"update-coordinator-{DateTime.UtcNow:yyyyMMdd-HHmmss}.log");
 
+            var operationLock = new object();
             var (exitCode, output) = await RunProcessAsync("powershell.exe",
             [
                 "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
@@ -225,14 +234,27 @@ internal static class CoordinatorRunner
                 "-DataRoot", dataRoot,
                 "-Unattended",
                 "-NoHostAgentService",
-            ], cancellationToken);
+            ], cancellationToken, line =>
+            {
+                var progress = MapDeploymentProgress(line);
+                if (progress is null) return;
+
+                lock (operationLock)
+                {
+                    if (PhaseRank(progress.Value.Phase) < PhaseRank(operation.Phase)
+                        || (progress.Value.Phase == operation.Phase && progress.Value.Message == operation.Message)) return;
+                    operation = operation with { Phase = progress.Value.Phase, Message = progress.Value.Message };
+                    try { WriteOperation(operationPath, operation); }
+                    catch (Exception exception) { CoordinatorStartupLog.Write($"progress state write failed: {exception.Message}"); }
+                }
+            });
 
             try { await File.WriteAllTextAsync(coordinatorLog, output, cancellationToken); }
             catch (Exception) { /* diagnostics only */ }
 
             if (exitCode != 0)
             {
-                WriteOperation(operationPath, operation with
+                CompleteOperation(operationPath, historyPath, operation with
                 {
                     Phase = "Failed",
                     CompletedAtUtc = DateTimeOffset.UtcNow,
@@ -249,7 +271,7 @@ internal static class CoordinatorRunner
                 await SwapHostAgentServiceAsync(newestHostAgentExecutable, cancellationToken);
             }
 
-            WriteOperation(operationPath, operation with
+            CompleteOperation(operationPath, historyPath, operation with
             {
                 Phase = "Completed",
                 CompletedAtUtc = DateTimeOffset.UtcNow,
@@ -265,7 +287,7 @@ internal static class CoordinatorRunner
                 var operation = ReadOperation(operationPath);
                 if (operation is not null)
                 {
-                    WriteOperation(operationPath, operation with
+                    CompleteOperation(operationPath, historyPath, operation with
                     {
                         Phase = "Failed",
                         CompletedAtUtc = DateTimeOffset.UtcNow,
@@ -373,8 +395,117 @@ internal static class CoordinatorRunner
         }
     }
 
+    private static void CompleteOperation(string operationPath, string historyPath, UpdateOperationRecord operation)
+    {
+        WriteOperation(operationPath, operation);
+        try
+        {
+            var history = ReadHistory(historyPath)
+                .Where(item => !string.Equals(item.OperationId, operation.OperationId, StringComparison.Ordinal))
+                .Append(operation)
+                .OrderByDescending(item => item.CompletedAtUtc ?? item.StartedAtUtc)
+                .Take(50)
+                .ToList();
+            WriteJson(historyPath, history);
+        }
+        catch (Exception exception)
+        {
+            // History must never turn a successfully deployed release into a failed deployment.
+            // The Host Agent imports the terminal current record into history on its next start.
+            CoordinatorStartupLog.Write($"history state write failed: {exception.Message}");
+        }
+    }
+
+    private static IReadOnlyList<UpdateOperationRecord> ReadHistory(string path)
+    {
+        if (!File.Exists(path)) return [];
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        return JsonSerializer.Deserialize<List<UpdateOperationRecord>>(stream, JsonOptions) ?? [];
+    }
+
+    private static void WriteJson<T>(string path, T value)
+    {
+        var content = JsonSerializer.Serialize(value, JsonOptions);
+        var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            File.WriteAllText(temporary, content);
+            for (var attempt = 1; attempt <= 5; attempt++)
+            {
+                try
+                {
+                    File.Move(temporary, path, overwrite: true);
+                    return;
+                }
+                catch (Exception exception)
+                    when ((exception is IOException or UnauthorizedAccessException) && attempt < 5)
+                {
+                    Thread.Sleep(100);
+                }
+            }
+        }
+        catch (Exception) { File.WriteAllText(path, content); }
+        finally
+        {
+            try { if (File.Exists(temporary)) File.Delete(temporary); } catch (Exception) { }
+        }
+    }
+
+    private static (string Phase, string Message)? MapDeploymentProgress(string line)
+    {
+        if (line.Contains("Building release ", StringComparison.OrdinalIgnoreCase))
+            return ("Building", "Building and publishing the selected commit.");
+        if (line.Contains("Applying database migrations", StringComparison.OrdinalIgnoreCase))
+            return ("Migrating", "Applying database migrations.");
+        if (line.Contains("Pointing IIS at ", StringComparison.OrdinalIgnoreCase))
+            return ("Activating", "Activating the new release in IIS.");
+        if (line.Contains("Health check", StringComparison.OrdinalIgnoreCase))
+            return ("Activating", "The new release is active; waiting for the health check.");
+        return null;
+    }
+
+    private static int PhaseRank(string phase) => phase switch
+    {
+        "Pulling" => 1,
+        "Building" => 2,
+        "Migrating" => 3,
+        "Activating" => 4,
+        _ => 0,
+    };
+
+    private static void EnsureStateDirectoryAccess(string directory, params string[] stateFiles)
+    {
+        Directory.CreateDirectory(directory);
+        var directorySecurity = new DirectorySecurity();
+        directorySecurity.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
+        var inheritance = InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit;
+        directorySecurity.AddAccessRule(new FileSystemAccessRule(
+            new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null),
+            FileSystemRights.FullControl, inheritance, PropagationFlags.None, AccessControlType.Allow));
+        directorySecurity.AddAccessRule(new FileSystemAccessRule(
+            new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null),
+            FileSystemRights.FullControl, inheritance, PropagationFlags.None, AccessControlType.Allow));
+        new DirectoryInfo(directory).SetAccessControl(directorySecurity);
+
+        foreach (var path in stateFiles.Where(File.Exists))
+        {
+            var fileSecurity = new FileSecurity();
+            fileSecurity.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
+            fileSecurity.AddAccessRule(new FileSystemAccessRule(
+                new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null),
+                FileSystemRights.FullControl, AccessControlType.Allow));
+            fileSecurity.AddAccessRule(new FileSystemAccessRule(
+                new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null),
+                FileSystemRights.FullControl, AccessControlType.Allow));
+            new FileInfo(path).SetAccessControl(fileSecurity);
+        }
+    }
+
     private static async Task<(int ExitCode, string Output)> RunProcessAsync(
-        string fileName, IReadOnlyList<string> arguments, CancellationToken cancellationToken)
+        string fileName,
+        IReadOnlyList<string> arguments,
+        CancellationToken cancellationToken,
+        Action<string>? onOutputLine = null)
     {
         var info = new ProcessStartInfo
         {
@@ -391,8 +522,14 @@ internal static class CoordinatorRunner
 
         using var process = Process.Start(info) ?? throw new InvalidOperationException("Process could not be started.");
         var buffer = new System.Text.StringBuilder();
-        process.OutputDataReceived += (_, e) => { if (e.Data is not null) { lock (buffer) { buffer.AppendLine(e.Data); } } };
-        process.ErrorDataReceived += (_, e) => { if (e.Data is not null) { lock (buffer) { buffer.AppendLine(e.Data); } } };
+        void Capture(string? line)
+        {
+            if (line is null) return;
+            lock (buffer) { buffer.AppendLine(line); }
+            onOutputLine?.Invoke(line);
+        }
+        process.OutputDataReceived += (_, e) => Capture(e.Data);
+        process.ErrorDataReceived += (_, e) => Capture(e.Data);
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
         await process.WaitForExitAsync(cancellationToken);

@@ -16,6 +16,7 @@ public sealed record SystemUpdateStatusResponse(
     string? LatestCommit,
     string? LatestSubject,
     SystemUpdateOperationResponse? Operation,
+    IReadOnlyList<SystemUpdateOperationResponse> History,
     DateTimeOffset CheckedAtUtc);
 
 public sealed record SystemUpdateOperationResponse(

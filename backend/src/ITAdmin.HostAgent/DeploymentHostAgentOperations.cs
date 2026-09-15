@@ -36,22 +36,43 @@ public sealed class DeploymentHostAgentOperations(
 
     public void ReconcileInterruptedOperation()
     {
+        EnsureStateDirectoryAccess();
         var record = ReadOperation();
-        if (record is null || IsTerminal(record.Phase))
+        if (record is null)
         {
             return;
         }
 
-        // The service died mid-update (often because the update swapped the Host Agent binary and
-        // restarted this very service). Record it as Failed - a terminal, non-blocking state - so
-        // the operator can simply retry from Settings -> Updates. Migrations are forward-only and
-        // activation is health-gated with automatic rollback, so a fresh run converges.
+        if (IsTerminal(record.Phase))
+        {
+            if (record.Phase is not HostAgentUpdatePhase.Idle)
+            {
+                UpsertHistory(record);
+            }
+            return;
+        }
+
+        if (record.StartedAtUtc is { } startedAtUtc
+            && DateTimeOffset.UtcNow - startedAtUtc < StaleRunningThreshold)
+        {
+            // During a normal self-update the Coordinator restarts this service before it writes
+            // the terminal Completed record. The fresh operation still belongs to that independent
+            // process; marking it failed here would create a false failure on every agent upgrade.
+            logger.LogInformation(
+                "Leaving fresh update {OperationId} in phase {Phase} for the Update Coordinator to finish.",
+                record.OperationId, record.Phase);
+            return;
+        }
+
+        // A record older than the maximum plausible deployment window is no longer owned by a
+        // live Coordinator. Make it terminal so the operator can retry instead of seeing a
+        // permanently running update.
         logger.LogWarning(
             "An update ({OperationId}) targeting {TargetCommit} was in phase {Phase} when the agent last stopped; "
             + "marking it Failed so it does not block a retry.",
             record.OperationId, record.TargetCommit, record.Phase);
 
-        WriteOperation(record with
+        WriteCompletedOperation(record with
         {
             Phase = HostAgentUpdatePhase.Failed,
             CompletedAtUtc = DateTimeOffset.UtcNow,
@@ -126,6 +147,7 @@ public sealed class DeploymentHostAgentOperations(
 
         try
         {
+            EnsureStateDirectoryAccess();
             var existing = ReadOperation();
 
             // Only a genuinely fresh, still-running update blocks a new request. A Failed /
@@ -174,7 +196,7 @@ public sealed class DeploymentHostAgentOperations(
             var handoff = await executor.ApplyUpdateAsync(operationId, cancellationToken);
             if (!handoff.Succeeded)
             {
-                WriteOperation(new UpdateOperationRecord
+                WriteCompletedOperation(new UpdateOperationRecord
                 {
                     OperationId = operationId,
                     Phase = HostAgentUpdatePhase.Failed,
@@ -210,6 +232,7 @@ public sealed class DeploymentHostAgentOperations(
             Message = "Update status read.",
             CorrelationId = request.CorrelationId,
             Update = ToStatus(ReadOperation()),
+            UpdateHistory = ReadHistory().Select(ToStatus).ToList(),
         });
     }
 
@@ -480,6 +503,22 @@ public sealed class DeploymentHostAgentOperations(
         }
     }
 
+    private IReadOnlyList<UpdateOperationRecord> ReadHistory()
+    {
+        try
+        {
+            var json = AtomicStateFile.Read(settings.UpdateHistoryPath);
+            return json is null
+                ? []
+                : JsonSerializer.Deserialize<List<UpdateOperationRecord>>(json, JsonOptions) ?? [];
+        }
+        catch (Exception exception) when (exception is IOException or JsonException or UnauthorizedAccessException)
+        {
+            logger.LogWarning(exception, "Could not read update history from {Path}.", settings.UpdateHistoryPath);
+            return [];
+        }
+    }
+
     private void WriteOperation(UpdateOperationRecord record)
     {
         try
@@ -492,6 +531,79 @@ public sealed class DeploymentHostAgentOperations(
             // not a warning-level event - it strands the operation.
             logger.LogError(exception, "Could not persist the update operation record to {Path}.",
                 settings.UpdateOperationPath);
+        }
+    }
+
+    private void WriteCompletedOperation(UpdateOperationRecord record)
+    {
+        WriteOperation(record);
+        UpsertHistory(record);
+    }
+
+    private void UpsertHistory(UpdateOperationRecord record)
+    {
+        if (string.IsNullOrWhiteSpace(record.OperationId) || !IsTerminal(record.Phase))
+        {
+            return;
+        }
+
+        try
+        {
+            var history = ReadHistory()
+                .Where(item => !string.Equals(item.OperationId, record.OperationId, StringComparison.Ordinal))
+                .Append(record)
+                .OrderByDescending(item => item.CompletedAtUtc ?? item.StartedAtUtc)
+                .Take(50)
+                .ToList();
+            AtomicStateFile.Write(settings.UpdateHistoryPath, JsonSerializer.Serialize(history, JsonOptions));
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "Could not persist update history to {Path}.", settings.UpdateHistoryPath);
+        }
+    }
+
+    private void EnsureStateDirectoryAccess()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            Directory.CreateDirectory(settings.StateRoot);
+            return;
+        }
+
+        try
+        {
+            var directorySecurity = new DirectorySecurity();
+            directorySecurity.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
+            var inheritance = InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit;
+            var propagation = PropagationFlags.None;
+            directorySecurity.AddAccessRule(new FileSystemAccessRule(
+                new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null),
+                FileSystemRights.FullControl, inheritance, propagation, AccessControlType.Allow));
+            directorySecurity.AddAccessRule(new FileSystemAccessRule(
+                new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null),
+                FileSystemRights.FullControl, inheritance, propagation, AccessControlType.Allow));
+
+            Directory.CreateDirectory(settings.StateRoot);
+            new DirectoryInfo(settings.StateRoot).SetAccessControl(directorySecurity);
+
+            foreach (var path in new[] { settings.UpdateOperationPath, settings.UpdateHistoryPath })
+            {
+                if (!File.Exists(path)) continue;
+                var fileSecurity = new FileSecurity();
+                fileSecurity.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
+                fileSecurity.AddAccessRule(new FileSystemAccessRule(
+                    new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null),
+                    FileSystemRights.FullControl, AccessControlType.Allow));
+                fileSecurity.AddAccessRule(new FileSystemAccessRule(
+                    new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null),
+                    FileSystemRights.FullControl, AccessControlType.Allow));
+                new FileInfo(path).SetAccessControl(fileSecurity);
+            }
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "Could not repair the update-state ACL at {Path}.", settings.StateRoot);
         }
     }
 

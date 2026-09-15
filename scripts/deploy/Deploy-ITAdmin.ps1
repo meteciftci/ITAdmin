@@ -856,6 +856,37 @@ function New-MachineDirectories {
     }
 }
 
+function Set-StateDirectoryPermissions {
+    <#
+        Update progress is shared by two LocalSystem processes: the long-running Host Agent and the
+        one-shot Update Coordinator. An older installation may have inherited a restrictive ACL or
+        left a state file owned by a different identity. Reset this small machine-state directory
+        on every deployment so both privileged writers can replace the atomic JSON files reliably.
+    #>
+    $systemSid = New-Object System.Security.Principal.SecurityIdentifier('S-1-5-18')
+    $administratorsSid = New-Object System.Security.Principal.SecurityIdentifier('S-1-5-32-544')
+    $inheritance = [System.Security.AccessControl.InheritanceFlags]'ContainerInherit, ObjectInherit'
+    $none = [System.Security.AccessControl.PropagationFlags]::None
+    $allow = [System.Security.AccessControl.AccessControlType]::Allow
+
+    $directoryAcl = New-Object System.Security.AccessControl.DirectorySecurity
+    $directoryAcl.SetAccessRuleProtection($true, $false)
+    $directoryAcl.AddAccessRule([System.Security.AccessControl.FileSystemAccessRule]::new(
+        $systemSid, [System.Security.AccessControl.FileSystemRights]::FullControl, $inheritance, $none, $allow))
+    $directoryAcl.AddAccessRule([System.Security.AccessControl.FileSystemAccessRule]::new(
+        $administratorsSid, [System.Security.AccessControl.FileSystemRights]::FullControl, $inheritance, $none, $allow))
+    Set-Acl -LiteralPath $Script:Layout.StateRoot -AclObject $directoryAcl -ErrorAction Stop
+
+    $fileAcl = New-Object System.Security.AccessControl.FileSecurity
+    $fileAcl.SetAccessRuleProtection($true, $false)
+    $fileAcl.AddAccessRule([System.Security.AccessControl.FileSystemAccessRule]::new(
+        $systemSid, [System.Security.AccessControl.FileSystemRights]::FullControl, $allow))
+    $fileAcl.AddAccessRule([System.Security.AccessControl.FileSystemAccessRule]::new(
+        $administratorsSid, [System.Security.AccessControl.FileSystemRights]::FullControl, $allow))
+    Get-ChildItem -LiteralPath $Script:Layout.StateRoot -File -Force -ErrorAction Stop |
+        ForEach-Object { Set-Acl -LiteralPath $_.FullName -AclObject $fileAcl -ErrorAction Stop }
+}
+
 function Move-LegacyUploads {
     <#
         Branding uploads used to live under the versioned build's wwwroot, so every update
@@ -1501,11 +1532,11 @@ try {
     Test-Preflight
     Import-Module WebAdministration -ErrorAction Stop
 
-    $state = Get-DeployState
-    $firstRun = [string]::IsNullOrWhiteSpace($state.activeSha) -or -not (Test-Path -LiteralPath $Script:AppConfigPath)
-
     $config = Resolve-AppConfig
     New-MachineDirectories
+    Set-StateDirectoryPermissions
+    $state = Get-DeployState
+    $firstRun = [string]::IsNullOrWhiteSpace($state.activeSha) -or -not (Test-Path -LiteralPath $Script:AppConfigPath)
     Register-MachineLayout
     Save-AppConfig -Config $config
 

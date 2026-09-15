@@ -33,7 +33,7 @@ namespace ITAdmin.HostAgent.Contracts;
 /// </summary>
 public static class HostAgentProtocol
 {
-    public const int ProtocolVersion = 16;
+    public const int ProtocolVersion = 17;
 
     /// <summary>Pipe name. Machine-local; the agent ACLs it to the app pool identity and administrators.</summary>
     public const string PipeName = "ITAdmin.HostAgent";
@@ -1152,6 +1152,9 @@ public sealed record HostAgentResponse
 
     [JsonPropertyName("update")]
     public HostAgentUpdateStatus? Update { get; init; }
+
+    [JsonPropertyName("updateHistory")]
+    public IReadOnlyList<HostAgentUpdateStatus> UpdateHistory { get; init; } = [];
 
     [JsonPropertyName("availability")]
     public HostAgentUpdateAvailability? Availability { get; init; }

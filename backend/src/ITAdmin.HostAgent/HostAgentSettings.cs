@@ -74,6 +74,9 @@ public sealed record HostAgentSettings
     /// <summary>Where the agent and the Update Coordinator record update progress.</summary>
     public string UpdateOperationPath => Path.Combine(StateRoot, "update-operation.json");
 
+    /// <summary>Bounded history of completed update attempts.</summary>
+    public string UpdateHistoryPath => Path.Combine(StateRoot, "update-history.json");
+
     public string HostAgentBuildsRoot => Path.Combine(InstallRoot, "hostagent");
     public string CoordinatorBuildsRoot => Path.Combine(InstallRoot, "update-coordinator");
 

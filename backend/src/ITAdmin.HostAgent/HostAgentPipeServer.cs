@@ -30,15 +30,10 @@ namespace ITAdmin.HostAgent;
 public sealed class HostAgentPipeServer(
     HostAgentDispatcher dispatcher,
     HostAgentAuthorization authorization,
-    IHostAgentOperations operations,
     ILogger<HostAgentPipeServer> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // Before accepting a single request, work out what the previous run of this service left
-        // behind. A restart during an update must not leave a machine that cannot be classified.
-        operations.ReconcileInterruptedOperation();
-
         logger.LogInformation(
             "ITAdmin Host Agent listening on pipe {Pipe} for {Identity}.",
             HostAgentProtocol.PipeName,

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2, RefreshCw, ServerCog } from "lucide-react";
+import { AlertTriangle, Check, CheckCircle2, Circle, LoaderCircle, RefreshCw, ServerCog } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { CheckboxField } from "@/components/common/CheckboxField";
@@ -25,6 +25,7 @@ import { PermissionCodes } from "@/lib/permission-codes";
 import { canAccess } from "@/lib/permissions";
 
 const ACTIVE_PHASES = new Set(["Pulling", "Building", "Migrating", "Activating"]);
+const UPDATE_STAGES = ["Pulling", "Building", "Migrating", "Activating"] as const;
 
 export function SystemUpdatesPage() {
   const { t } = useTranslation(["systemUpdates", "common"]);
@@ -179,7 +180,18 @@ export function SystemUpdatesPage() {
                 </Badge>
                 {status.operation.targetCommit ? <span className="text-sm">{status.operation.targetCommit}</span> : null}
               </div>
+              {isRunning || phase === "Completed" ? <UpdateProgress phase={phase} /> : null}
               <p className="text-sm text-muted-foreground">{status.operation.message}</p>
+              <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted-foreground">
+                <span>
+                  {t("systemUpdates:operation.startedAt")}: {status.operation.startedAtUtc ? <DateTimeText value={status.operation.startedAtUtc} /> : "-"}
+                </span>
+                {status.operation.completedAtUtc ? (
+                  <span>
+                    {t("systemUpdates:operation.completedAt")}: <DateTimeText value={status.operation.completedAtUtc} />
+                  </span>
+                ) : null}
+              </div>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
@@ -187,6 +199,37 @@ export function SystemUpdatesPage() {
                 ? t("systemUpdates:operation.available", { count: status.commitsBehind })
                 : t("systemUpdates:operation.upToDate")}
             </p>
+          )}
+        </SectionCard>
+
+        <SectionCard title={t("systemUpdates:history.title")}>
+          {status?.history?.length ? (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[760px] text-left text-sm">
+                <thead className="border-b text-xs uppercase tracking-wide text-muted-foreground">
+                  <tr>
+                    <th className="px-3 py-3 font-medium">{t("systemUpdates:history.status")}</th>
+                    <th className="px-3 py-3 font-medium">{t("systemUpdates:history.commit")}</th>
+                    <th className="px-3 py-3 font-medium">{t("systemUpdates:history.startedAt")}</th>
+                    <th className="px-3 py-3 font-medium">{t("systemUpdates:history.completedAt")}</th>
+                    <th className="px-3 py-3 font-medium">{t("systemUpdates:history.detail")}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {(status.history ?? []).map((item, index) => (
+                    <tr key={item.operationId ?? `${item.startedAtUtc}-${index}`}>
+                      <td className="px-3 py-3 align-top"><PhaseBadge phase={item.phase} /></td>
+                      <td className="px-3 py-3 align-top font-mono text-xs">{item.targetCommit ?? "-"}</td>
+                      <td className="px-3 py-3 align-top whitespace-nowrap">{item.startedAtUtc ? <DateTimeText value={item.startedAtUtc} /> : "-"}</td>
+                      <td className="px-3 py-3 align-top whitespace-nowrap">{item.completedAtUtc ? <DateTimeText value={item.completedAtUtc} /> : "-"}</td>
+                      <td className="max-w-md px-3 py-3 align-top text-muted-foreground">{item.message}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">{t("systemUpdates:history.empty")}</p>
           )}
         </SectionCard>
       </div>
@@ -215,6 +258,41 @@ export function SystemUpdatesPage() {
         onConfirm={() => installMutation.mutate()}
       />
     </PageContainer>
+  );
+}
+
+function UpdateProgress({ phase }: { phase: string | undefined }) {
+  const { t } = useTranslation("systemUpdates");
+  const activeIndex = phase === "Completed" ? UPDATE_STAGES.length : UPDATE_STAGES.indexOf(phase as typeof UPDATE_STAGES[number]);
+
+  return (
+    <ol className="grid gap-2 sm:grid-cols-4" aria-label={t("operation.progressLabel")}>
+      {UPDATE_STAGES.map((stage, index) => {
+        const completed = activeIndex > index;
+        const active = activeIndex === index;
+        return (
+          <li
+            key={stage}
+            aria-current={active ? "step" : undefined}
+            className={`flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-medium ${
+              active ? "border-primary bg-primary/10 text-primary" : completed ? "border-emerald-600/30 bg-emerald-600/10 text-emerald-700 dark:text-emerald-400" : "text-muted-foreground"
+            }`}
+          >
+            {completed ? <Check className="size-4" /> : active ? <LoaderCircle className="size-4 animate-spin" /> : <Circle className="size-4" />}
+            {t(`phases.${stage}`)}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+function PhaseBadge({ phase }: { phase: string }) {
+  const { t } = useTranslation("systemUpdates");
+  return (
+    <Badge variant={phase === "Failed" || phase === "RequiresOperatorReview" ? "destructive" : phase === "Completed" ? "success" : "secondary"}>
+      {t(`phases.${phase}`, { defaultValue: phase })}
+    </Badge>
   );
 }
 

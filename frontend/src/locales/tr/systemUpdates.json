@@ -27,7 +27,19 @@
     "operation": {
       "title": "Güncelleme işlemi",
       "available": "Dal ucundan {{count}} commit geride.",
-      "upToDate": "Dağıtılan sürüm dal ucuyla aynı."
+      "upToDate": "Dağıtılan sürüm dal ucuyla aynı.",
+      "progressLabel": "Güncelleme ilerlemesi",
+      "startedAt": "Başladı",
+      "completedAt": "Tamamlandı"
+    },
+    "history": {
+      "title": "Güncelleme geçmişi",
+      "status": "Durum",
+      "commit": "Commit",
+      "startedAt": "Başlangıç",
+      "completedAt": "Bitiş",
+      "detail": "Açıklama",
+      "empty": "Henüz tamamlanmış bir güncelleme işlemi yok."
     },
     "status": {
       "available": "Erişilebilir",

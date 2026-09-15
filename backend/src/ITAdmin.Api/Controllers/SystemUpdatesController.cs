@@ -178,6 +178,7 @@ public sealed class SystemUpdatesController(
             LatestCommit: availability?.Availability?.LatestCommit,
             LatestSubject: availability?.Availability?.LatestSubject,
             Operation: MapOperation(update.Update),
+            History: update.UpdateHistory.Select(item => MapOperation(item)!).ToList(),
             CheckedAtUtc: DateTimeOffset.UtcNow);
     }
 
@@ -217,5 +218,6 @@ public sealed class SystemUpdatesController(
         LatestCommit: null,
         LatestSubject: null,
         Operation: null,
+        History: [],
         CheckedAtUtc: DateTimeOffset.UtcNow);
 }
