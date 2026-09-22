@@ -744,7 +744,7 @@
       "loadFailed": "DNS yönetim bilgileri yüklenemedi."
     },
     "settings": {
-      "title": "DNS Yönetimi ayarları",
+      "title": "DNS Yönetimi",
       "description": "Envanter toplama, zamanlama ve karşılaştırma davranışını yapılandırın.",
       "moduleTitle": "Modül ve senkronizasyon",
       "moduleDescription": "DNS sunucuları verinin kaynağıdır; karşılaştırmalar son başarılı veritabanı anlık görüntüsünü kullanır.",

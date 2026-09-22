@@ -27,6 +27,7 @@ export const AD_NOTIFICATION_EVENT_KEYS = {
   userEnabled: "UserEnabled",
   userDisabled: "UserDisabled",
   userUnlocked: "UserUnlocked",
+  userManagerAssigned: "UserManagerAssigned",
 } as const;
 
 export const AD_NOTIFICATION_CHANNELS = {

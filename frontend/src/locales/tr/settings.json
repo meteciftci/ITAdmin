@@ -335,6 +335,7 @@
         "rulesTitle": "Bildirim Kuralları",
         "empty": "Henüz bildirim kuralı tanımlanmadı.",
         "searchPlaceholder": "Olay, kanal, alıcı kaynağı veya şablon durumu ara",
+        "managerRecipientHint": "Bu olayda alıcı kaynağı, atanan yöneticinin AD hesabından okunur.",
         "fields": {
           "event": "Olay",
           "channel": "Kanal",
@@ -375,6 +376,9 @@
           },
           "userUnlocked": {
             "label": "Kullanıcı kilidi açıldı"
+          },
+          "userManagerAssigned": {
+            "label": "Kullanıcı yönetici ataması"
           }
         },
         "templateStatus": {

@@ -90,6 +90,74 @@ public sealed class AdManagementNotificationEnqueueServiceTests
         Assert.Equal(NotificationChannels.Email, outbox.Requests[0].Channel);
     }
 
+    [Fact]
+    public async Task EnqueueUserManagerAssigned_SendsToManagerAndRendersAssignedUser()
+    {
+        await using var dbContext = CreateDbContext();
+        var notificationSettings = new AdManagementNotificationSettings
+        {
+            Rules =
+            [
+                new AdManagementNotificationRule
+                {
+                    Id = Guid.NewGuid(),
+                    EventKey = AdManagementNotificationEventKeys.UserManagerAssigned,
+                    Channel = NotificationChannels.Email,
+                    IsEnabled = true,
+                    RecipientSource = new AdManagementNotificationRecipientSource
+                    {
+                        Type = AdManagementNotificationRecipientSourceTypes.MailAttribute,
+                    },
+                },
+            ],
+        };
+        await dbContext.AdManagementSettings.AddAsync(new AdManagementSettings
+        {
+            IsEnabled = true,
+            NotificationSettingsJson = AdManagementNotificationSettingsSerializer.Serialize(notificationSettings),
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "test",
+        });
+        await dbContext.NotificationTemplates.AddAsync(new NotificationTemplate
+        {
+            ModuleKey = NotificationModuleKeys.AdManagement,
+            EventKey = AdManagementNotificationEventKeys.UserManagerAssigned,
+            Channel = NotificationChannels.Email,
+            Name = "Manager assignment",
+            IsEnabled = true,
+            SubjectTemplate = "{{displayName}} için yönetici ataması",
+            BodyTemplate = "Merhaba {{managerDisplayName}}, {{displayName}} kullanıcısının yöneticisisiniz.",
+            CreatedAt = DateTimeOffset.UtcNow,
+            CreatedBy = "test",
+        });
+        await dbContext.SaveChangesAsync();
+
+        var outbox = new FakeNotificationOutboxService();
+        var service = CreateService(dbContext, outbox);
+        var user = BuildNotificationContext(
+            "user-id",
+            "alovelace",
+            "alovelace@example.com",
+            "Ada Lovelace",
+            "ada@example.com");
+        var manager = BuildNotificationContext(
+            "manager-id",
+            "gmanager",
+            "gmanager@example.com",
+            "Grace Manager",
+            "grace.manager@example.com");
+
+        var summary = await service.EnqueueUserManagerAssignedAsync(
+            new AdUserManagerAssignedNotificationRequest(user, manager),
+            CancellationToken.None);
+
+        Assert.Equal(1, summary.QueuedCount);
+        Assert.Single(outbox.Requests);
+        Assert.Equal("grace.manager@example.com", outbox.Requests[0].Recipient);
+        Assert.Contains("Ada Lovelace", outbox.Requests[0].Body);
+        Assert.Contains("Grace Manager", outbox.Requests[0].Body);
+    }
+
     private static AdManagementNotificationEnqueueService CreateService(
         AppDbContext dbContext,
         INotificationOutboxService outbox) =>
@@ -155,6 +223,24 @@ public sealed class AdManagementNotificationEnqueueServiceTests
 
         return new AdUserCreatedNotificationEnqueueRequest(createRequest, createdUser, mappings, "admin");
     }
+
+    private static AdManagementNotificationUserContext BuildNotificationContext(
+        string id,
+        string username,
+        string upn,
+        string displayName,
+        string mail) =>
+        new(
+            id,
+            username,
+            upn,
+            displayName,
+            mail,
+            null,
+            new Dictionary<string, string>(),
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["mail"] = mail },
+            [],
+            "admin");
 
     private static async Task SeedDisabledNotificationSettingsAsync(AppDbContext dbContext)
     {

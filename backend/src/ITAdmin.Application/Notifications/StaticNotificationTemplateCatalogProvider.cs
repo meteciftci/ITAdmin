@@ -97,6 +97,20 @@ public sealed class StaticNotificationTemplateCatalogProvider : INotificationTem
                             "operationDate",
                             "helpDeskPhone",
                             "applicationName")),
+                    new NotificationTemplateCatalogEvent(
+                        AdManagementNotificationEventKeys.UserManagerAssigned,
+                        [NotificationChannels.Sms, NotificationChannels.Email],
+                        Variables(
+                            "displayName",
+                            "username",
+                            "upn",
+                            "department",
+                            "managerDisplayName",
+                            "managerUsername",
+                            "managerUpn",
+                            "applicationName",
+                            "operationDate",
+                            "actorName")),
                 ]),
             new NotificationTemplateCatalogModule(
                 "LicenseManagement",

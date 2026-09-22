@@ -1,4 +1,4 @@
-import { NavLink, Navigate, useLocation } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import type { ReactNode } from "react";
 
@@ -8,7 +8,7 @@ import { useAuthStore } from "@/features/auth/auth-store";
 import { PermissionCodes } from "@/lib/permission-codes";
 import { canAccess, canAccessAny } from "@/lib/permissions";
 import { getErrorRoutePath } from "@/lib/route-error";
-import { cn } from "@/lib/utils";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type NavigationTab = {
   path: string;
@@ -18,30 +18,24 @@ type NavigationTab = {
 
 function RouteTabs({ tabs }: { tabs: NavigationTab[] }) {
   const { t } = useTranslation("dnsManagement");
+  const location = useLocation();
+  const navigate = useNavigate();
+  const visibleTabs = tabs.filter((tab) => tab.visible);
+  const activePath = visibleTabs.find((tab) => tab.path === location.pathname)?.path
+    ?? visibleTabs[0]?.path
+    ?? "";
 
   return (
-    <nav
-      aria-label={t("navigationTabs.label")}
-      className="flex flex-wrap gap-2 border-b pb-3"
-    >
-      {tabs
-        .filter((tab) => tab.visible)
-        .map((tab) => (
-          <NavLink
-            key={tab.path}
-            to={tab.path}
-            className={({ isActive }) =>
-              cn(
-                "inline-flex items-center rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-              )
-            }
-          >
-            {t(tab.labelKey)}
-          </NavLink>
-        ))}
+    <nav aria-label={t("navigationTabs.label")}>
+      <Tabs value={activePath} onValueChange={navigate}>
+        <TabsList>
+          {visibleTabs.map((tab) => (
+            <TabsTrigger key={tab.path} value={tab.path}>
+              {t(tab.labelKey)}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
     </nav>
   );
 }

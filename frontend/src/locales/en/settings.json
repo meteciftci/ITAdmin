@@ -335,6 +335,7 @@
         "rulesTitle": "Notification Rules",
         "empty": "No notification rules defined yet.",
         "searchPlaceholder": "Search event, channel, recipient source or template status",
+        "managerRecipientHint": "For this event, the recipient source is read from the assigned manager's AD account.",
         "fields": {
           "event": "Event",
           "channel": "Channel",
@@ -375,6 +376,9 @@
           },
           "userUnlocked": {
             "label": "User unlocked"
+          },
+          "userManagerAssigned": {
+            "label": "User manager assignment"
           }
         },
         "templateStatus": {

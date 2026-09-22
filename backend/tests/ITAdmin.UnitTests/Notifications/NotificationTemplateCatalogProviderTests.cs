@@ -37,6 +37,26 @@ public sealed class NotificationTemplateCatalogProviderTests
     }
 
     [Fact]
+    public void GetCatalog_ContainsAdManagement_UserManagerAssigned_WithManagerVariables()
+    {
+        var catalog = _provider.GetCatalog();
+
+        var adManagement = catalog.Modules.Single(m => m.Key == "AdManagement");
+        var managerAssigned = adManagement.Events.Single(
+            e => e.Key == AdManagementNotificationEventKeys.UserManagerAssigned);
+        var variableKeys = managerAssigned.Variables
+            .Select(v => v.Key)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        Assert.Contains(NotificationChannels.Sms, managerAssigned.SupportedChannels);
+        Assert.Contains(NotificationChannels.Email, managerAssigned.SupportedChannels);
+        Assert.Contains("displayName", variableKeys);
+        Assert.Contains("managerDisplayName", variableKeys);
+        Assert.Contains("managerUsername", variableKeys);
+        Assert.Contains("managerUpn", variableKeys);
+    }
+
+    [Fact]
     public void ValidateTemplateKeys_UnknownModule_ReturnsError()
     {
         var error = _provider.ValidateTemplateKeys("Unknown", "UserCreated", NotificationChannels.Sms);

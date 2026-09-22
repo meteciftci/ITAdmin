@@ -205,6 +205,7 @@ export function AdManagementNotificationsForm({
         UserEnabled: t("settings:adManagement.notifications.events.userEnabled.label"),
         UserDisabled: t("settings:adManagement.notifications.events.userDisabled.label"),
         UserUnlocked: t("settings:adManagement.notifications.events.userUnlocked.label"),
+        UserManagerAssigned: t("settings:adManagement.notifications.events.userManagerAssigned.label"),
       }) as Record<string, string>,
     [t],
   );

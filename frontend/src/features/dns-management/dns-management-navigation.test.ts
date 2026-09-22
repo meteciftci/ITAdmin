@@ -66,6 +66,9 @@ test("DNS navigation groups settings, advanced management, and module logs", () 
   assert.match(sidebar, /items\.moduleLogs[\s\S]*items\.dnsManagementOperationLogs/);
   assert.match(tabs, /DnsModuleSettingsTabs/);
   assert.match(tabs, /DnsAdvancedManagementTabs/);
+  assert.match(tabs, /TabsList/);
+  assert.match(tabs, /TabsTrigger/);
+  assert.doesNotMatch(tabs, /NavLink/);
 });
 
 test("DNS boolean settings use switches while multi-selection stays checkbox based", () => {

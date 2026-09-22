@@ -385,6 +385,11 @@ public sealed class AdUserDirectoryServiceGroupMembershipLoggingTests
       AdManagementAccountOperationNotificationRequest request,
       CancellationToken cancellationToken = default) =>
       throw new NotSupportedException();
+
+    public Task<AdManagementNotificationSummary> EnqueueUserManagerAssignedAsync(
+      AdUserManagerAssignedNotificationRequest request,
+      CancellationToken cancellationToken = default) =>
+      throw new NotSupportedException();
   }
 
   private sealed class StubAdDeletedObjectRestoreCommandRunner : IAdDeletedObjectRestoreCommandRunner

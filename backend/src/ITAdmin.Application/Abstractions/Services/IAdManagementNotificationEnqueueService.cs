@@ -11,4 +11,8 @@ public interface IAdManagementNotificationEnqueueService
     Task<AdManagementNotificationSummary> EnqueueAccountOperationAsync(
         AdManagementAccountOperationNotificationRequest request,
         CancellationToken cancellationToken = default);
+
+    Task<AdManagementNotificationSummary> EnqueueUserManagerAssignedAsync(
+        AdUserManagerAssignedNotificationRequest request,
+        CancellationToken cancellationToken = default);
 }

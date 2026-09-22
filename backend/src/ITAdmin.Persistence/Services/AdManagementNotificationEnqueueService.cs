@@ -79,11 +79,24 @@ public sealed partial class AdManagementNotificationEnqueueService(
             request.UserContext.UserId,
             cancellationToken);
 
+    public Task<AdManagementNotificationSummary> EnqueueUserManagerAssignedAsync(
+        AdUserManagerAssignedNotificationRequest request,
+        CancellationToken cancellationToken = default) =>
+        EnqueueForEventAsync(
+            AdManagementNotificationEventKeys.UserManagerAssigned,
+            request.ManagerContext,
+            request.UserContext.UserId,
+            cancellationToken,
+            request.UserContext,
+            request.ManagerContext);
+
     private async Task<AdManagementNotificationSummary> EnqueueForEventAsync(
         string eventKey,
         AdManagementNotificationUserContext userContext,
         string relatedEntityId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        AdManagementNotificationUserContext? templateUserContext = null,
+        AdManagementNotificationUserContext? managerContext = null)
     {
         var messages = new List<string>();
         var queuedCount = 0;
@@ -117,7 +130,9 @@ public sealed partial class AdManagementNotificationEnqueueService(
                     eventKey,
                     userContext,
                     relatedEntityId,
-                    cancellationToken);
+                    cancellationToken,
+                    templateUserContext,
+                    managerContext);
                 queuedCount += channelResult.QueuedCount;
                 skippedCount += channelResult.SkippedCount;
                 messages.AddRange(channelResult.Messages);
@@ -142,7 +157,9 @@ public sealed partial class AdManagementNotificationEnqueueService(
         string eventKey,
         AdManagementNotificationUserContext userContext,
         string relatedEntityId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        AdManagementNotificationUserContext? templateUserContext,
+        AdManagementNotificationUserContext? managerContext)
     {
         var messages = new List<string>();
         var channel = rule.Channel.Trim();
@@ -171,7 +188,10 @@ public sealed partial class AdManagementNotificationEnqueueService(
             return new ChannelEnqueueResult(0, 1, messages);
         }
 
-        var variables = BuildTemplateVariables(eventKey, userContext);
+        var variables = BuildTemplateVariables(
+            eventKey,
+            templateUserContext ?? userContext,
+            managerContext);
         var body = templateRenderer.Render(template.BodyTemplate, variables);
         var subject = string.IsNullOrWhiteSpace(template.SubjectTemplate)
             ? null
@@ -231,7 +251,8 @@ public sealed partial class AdManagementNotificationEnqueueService(
 
     private static IReadOnlyDictionary<string, object?> BuildTemplateVariables(
         string eventKey,
-        AdManagementNotificationUserContext userContext)
+        AdManagementNotificationUserContext userContext,
+        AdManagementNotificationUserContext? managerContext = null)
     {
         var variables = new Dictionary<string, object?>(StringComparer.Ordinal)
         {
@@ -245,6 +266,11 @@ public sealed partial class AdManagementNotificationEnqueueService(
                 "yyyy-MM-dd HH:mm:ss",
                 CultureInfo.InvariantCulture),
             ["actorName"] = userContext.ActorUserName ?? string.Empty,
+            ["managerDisplayName"] = managerContext?.DisplayName
+                ?? managerContext?.SamAccountName
+                ?? string.Empty,
+            ["managerUsername"] = managerContext?.SamAccountName ?? string.Empty,
+            ["managerUpn"] = managerContext?.UserPrincipalName ?? string.Empty,
         };
 
         return variables;

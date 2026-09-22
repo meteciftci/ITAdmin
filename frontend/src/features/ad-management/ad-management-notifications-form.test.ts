@@ -84,6 +84,13 @@ describe("AdManagementNotificationRuleDialog channel readiness", () => {
     assert.match(source, /validation\.channelUnavailable/);
     assert.match(source, /isAdNotificationChannelReady/);
   });
+
+  it("offers manager assignment and explains that recipient fields belong to the manager", () => {
+    const source = readSource("components/AdManagementNotificationRuleDialog.tsx");
+
+    assert.match(source, /userManagerAssigned/);
+    assert.match(source, /managerRecipientHint/);
+  });
 });
 
 describe("ad notification rule columns mutation guard", () => {

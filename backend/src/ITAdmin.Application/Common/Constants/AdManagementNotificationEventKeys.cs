@@ -6,6 +6,7 @@ public static class AdManagementNotificationEventKeys
     public const string UserEnabled = "UserEnabled";
     public const string UserDisabled = "UserDisabled";
     public const string UserUnlocked = "UserUnlocked";
+    public const string UserManagerAssigned = "UserManagerAssigned";
 
     public static readonly IReadOnlySet<string> All = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
@@ -13,5 +14,6 @@ public static class AdManagementNotificationEventKeys
         UserEnabled,
         UserDisabled,
         UserUnlocked,
+        UserManagerAssigned,
     };
 }

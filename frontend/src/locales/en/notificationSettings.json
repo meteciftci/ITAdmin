@@ -104,6 +104,7 @@
           "UserEnabled": "User enabled",
           "UserDisabled": "User disabled",
           "UserUnlocked": "User unlocked",
+          "UserManagerAssigned": "User manager assignment",
           "PasswordReset": "Password reset"
         }
       },
@@ -142,6 +143,18 @@
         "department": {
           "label": "Department",
           "description": "User department"
+        },
+        "managerDisplayName": {
+          "label": "Manager display name",
+          "description": "AD display name of the assigned manager"
+        },
+        "managerUsername": {
+          "label": "Manager username",
+          "description": "SamAccountName of the assigned manager"
+        },
+        "managerUpn": {
+          "label": "Manager UPN",
+          "description": "User Principal Name of the assigned manager"
         },
         "helpDeskPhone": {
           "label": "Help desk phone",

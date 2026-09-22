@@ -104,6 +104,7 @@
           "UserEnabled": "Kullanıcı aktife alındı",
           "UserDisabled": "Kullanıcı pasife alındı",
           "UserUnlocked": "Kullanıcı kilidi açıldı",
+          "UserManagerAssigned": "Kullanıcı yönetici ataması",
           "PasswordReset": "Parola sıfırlandı"
         }
       },
@@ -142,6 +143,18 @@
         "department": {
           "label": "Departman",
           "description": "Kullanıcı departman bilgisi"
+        },
+        "managerDisplayName": {
+          "label": "Yöneticinin görünen adı",
+          "description": "Atanan yöneticinin AD görünen adı"
+        },
+        "managerUsername": {
+          "label": "Yönetici kullanıcı adı",
+          "description": "Atanan yöneticinin SamAccountName bilgisi"
+        },
+        "managerUpn": {
+          "label": "Yönetici UPN bilgisi",
+          "description": "Atanan yöneticinin User Principal Name bilgisi"
         },
         "helpDeskPhone": {
           "label": "Yardım masası telefonu",

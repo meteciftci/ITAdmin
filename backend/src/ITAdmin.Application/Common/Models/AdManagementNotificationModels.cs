@@ -20,3 +20,7 @@ public sealed record AdManagementNotificationUserContext(
 public sealed record AdManagementAccountOperationNotificationRequest(
     string EventKey,
     AdManagementNotificationUserContext UserContext);
+
+public sealed record AdUserManagerAssignedNotificationRequest(
+    AdManagementNotificationUserContext UserContext,
+    AdManagementNotificationUserContext ManagerContext);

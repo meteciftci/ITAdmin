@@ -110,6 +110,24 @@ public sealed class AdManagementNotificationSettingsTests
         Assert.Equal(AdManagementApiMessageKeys.NotificationSettings.RecipientSourceRequired, error);
     }
 
+    [Fact]
+    public void Validate_UserManagerAssignedRule_IsAccepted()
+    {
+        var settings = new AdManagementNotificationSettings
+        {
+            Rules =
+            [
+                CreateRule(
+                    AdManagementNotificationEventKeys.UserManagerAssigned,
+                    NotificationChannels.Email),
+            ],
+        };
+
+        var error = AdManagementNotificationSettingsValidator.Validate(settings);
+
+        Assert.Null(error);
+    }
+
     private static AdManagementNotificationRule CreateRule(string eventKey, string channel)
     {
         var isSms = string.Equals(channel, NotificationChannels.Sms, StringComparison.OrdinalIgnoreCase);

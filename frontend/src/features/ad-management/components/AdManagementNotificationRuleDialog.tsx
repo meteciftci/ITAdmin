@@ -179,6 +179,10 @@ const AdManagementNotificationRuleDialogForm = forwardRef<
       value: AD_NOTIFICATION_EVENT_KEYS.userUnlocked,
       label: t("settings:adManagement.notifications.events.userUnlocked.label"),
     },
+    {
+      value: AD_NOTIFICATION_EVENT_KEYS.userManagerAssigned,
+      label: t("settings:adManagement.notifications.events.userManagerAssigned.label"),
+    },
   ];
 
   const validate = useCallback((): string | null => {
@@ -325,6 +329,11 @@ const AdManagementNotificationRuleDialogForm = forwardRef<
               </option>
             ))}
           </Select>
+          {form.eventKey === AD_NOTIFICATION_EVENT_KEYS.userManagerAssigned ? (
+            <p className="text-xs text-muted-foreground">
+              {t("settings:adManagement.notifications.managerRecipientHint")}
+            </p>
+          ) : null}
         </div>
       ) : null}
 

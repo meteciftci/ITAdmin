@@ -179,7 +179,8 @@ public sealed partial class AdUsersDirectoryService : IAdUserManagerUpdateServic
                     connection,
                     beforeContext,
                     beforeContext,
-                    cancellationToken);
+                    enqueueManagerAssignedNotification: false,
+                    cancellationToken: cancellationToken);
             }
 
             if (request.ClearManager)
@@ -221,7 +222,8 @@ public sealed partial class AdUsersDirectoryService : IAdUserManagerUpdateServic
                 connection,
                 beforeContext,
                 afterContext,
-                cancellationToken);
+                enqueueManagerAssignedNotification: !request.ClearManager,
+                cancellationToken: cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -277,6 +279,7 @@ public sealed partial class AdUsersDirectoryService : IAdUserManagerUpdateServic
         AdManagementConnectionParameters connection,
         AdUserManagerOperationContext beforeContext,
         AdUserManagerOperationContext afterContext,
+        bool enqueueManagerAssignedNotification,
         CancellationToken cancellationToken)
     {
         await WriteManagerUpdateSuccessLogsSafelyAsync(
@@ -288,6 +291,14 @@ public sealed partial class AdUsersDirectoryService : IAdUserManagerUpdateServic
             afterContext,
             cancellationToken);
 
+        if (enqueueManagerAssignedNotification && request.ManagerUserId is { } managerUserId)
+        {
+            await TryEnqueueManagerAssignedNotificationAsync(
+                request,
+                managerUserId,
+                cancellationToken);
+        }
+
         return new UpdateAdUserManagerResult(
             true,
             string.Empty,
@@ -295,6 +306,60 @@ public sealed partial class AdUsersDirectoryService : IAdUserManagerUpdateServic
             afterContext.SamAccountName,
             afterContext.Manager?.DistinguishedName,
             afterContext.Manager?.DisplayName);
+    }
+
+    private async Task TryEnqueueManagerAssignedNotificationAsync(
+        UpdateAdUserManagerRequest request,
+        Guid managerUserId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var connectionResult = await ResolveConnectionAsync(cancellationToken);
+            if (!connectionResult.IsSuccess || connectionResult.Context is null)
+            {
+                return;
+            }
+
+            var mappings = await attributeMappingService.GetMappingsAsync(cancellationToken);
+            var activeMappings = mappings.Where(static mapping => mapping.IsEnabled).ToList();
+            var searchBase = ResolveDetailSearchBase(connectionResult.Context.Connection);
+            if (string.IsNullOrWhiteSpace(searchBase))
+            {
+                return;
+            }
+
+            using var ldapConnection = CreateBoundConnection(connectionResult.Context, cancellationToken);
+            if (!TryLoadUserNotificationContext(
+                    ldapConnection,
+                    searchBase,
+                    request.UserId,
+                    activeMappings,
+                    out var userContext)
+                || !TryLoadUserNotificationContext(
+                    ldapConnection,
+                    searchBase,
+                    managerUserId,
+                    activeMappings,
+                    out var managerContext))
+            {
+                return;
+            }
+
+            await notificationEnqueueService.EnqueueUserManagerAssignedAsync(
+                new AdUserManagerAssignedNotificationRequest(
+                    userContext with { ActorUserName = request.ActorUserName },
+                    managerContext with { ActorUserName = request.ActorUserName }),
+                cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            LogBestEffortDirectoryFailure(ex);
+        }
     }
 
     private async Task<UpdateAdUserManagerResult> FailManagerUpdateAsync(
